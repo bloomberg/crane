@@ -23,12 +23,13 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 template <typename T>
-std::vector<T> list_to_vec(std::shared_ptr<List<T>> l) {
+std::vector<T> list_to_vec(const List<T> &l) {
   std::vector<T> result;
-  while (std::holds_alternative<typename List<T>::Cons>(l->v())) {
-    auto &c = std::get<typename List<T>::Cons>(l->v());
+  const List<T> *cur = &l;
+  while (std::holds_alternative<typename List<T>::Cons>(cur->v())) {
+    auto &c = std::get<typename List<T>::Cons>(cur->v());
     result.push_back(c.d_a0);
-    l = c.d_a1;
+    cur = c.d_a1.get();
   }
   return result;
 }
@@ -48,7 +49,8 @@ int main() {
 
   // Test 3: countdown_list 4 = [4, 3, 2, 1, 0]
   {
-    auto v = list_to_vec(LoopifyItreeSeq::test_clist_4());
+    auto clist = LoopifyItreeSeq::test_clist_4();
+    auto v = list_to_vec(clist);
     ASSERT(v[0] == 4);
     ASSERT(v[1] == 3);
     ASSERT(v[2] == 2);

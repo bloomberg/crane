@@ -6,9 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct RecRecord {
   template <typename t_A> struct rlist {
@@ -17,7 +15,7 @@ struct RecRecord {
 
     struct Rcons {
       t_A d_a0;
-      std::shared_ptr<rlist<t_A>> d_a1;
+      std::unique_ptr<rlist<t_A>> d_a1;
     };
 
     using variant_t = std::variant<Rnil, Rcons>;
@@ -28,103 +26,195 @@ struct RecRecord {
 
   public:
     // CREATORS
+    rlist() {}
+
     explicit rlist(Rnil _v) : d_v_(_v) {}
 
     explicit rlist(Rcons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<rlist<t_A>> rnil() {
-      return std::make_shared<rlist<t_A>>(Rnil{});
+    rlist(const rlist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    rlist(rlist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    rlist<t_A> &operator=(const rlist<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<rlist<t_A>>
-    rcons(t_A a0, const std::shared_ptr<rlist<t_A>> &a1) {
-      return std::make_shared<rlist<t_A>>(Rcons{std::move(a0), a1});
+    rlist<t_A> &operator=(rlist<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<rlist<t_A>> rcons(t_A a0,
-                                             std::shared_ptr<rlist<t_A>> &&a1) {
-      return std::make_shared<rlist<t_A>>(Rcons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    rlist<t_A> clone() const {
+      rlist<t_A> _out{};
+
+      struct _CloneFrame {
+        const rlist<t_A> *_src;
+        rlist<t_A> *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const rlist<t_A> *_src = _frame._src;
+        rlist<t_A> *_dst = _frame._dst;
+        if (std::holds_alternative<Rnil>(_src->v())) {
+          _dst->d_v_ = Rnil{};
+        } else {
+          const auto &_alt = std::get<Rcons>(_src->v());
+          _dst->d_v_ = Rcons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<rlist<t_A>>() : nullptr};
+          auto &_dst_alt = std::get<Rcons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    template <typename _U> explicit rlist(const rlist<_U> &_other) {
+      if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
+        d_v_ = Rnil{};
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename rlist<_U>::Rcons>(_other.v());
+        d_v_ = Rcons{t_A(d_a0),
+                     d_a1 ? std::make_unique<rlist<t_A>>(*d_a1) : nullptr};
+      }
+    }
+
+    static rlist<t_A> rnil() { return rlist(Rnil{}); }
+
+    static rlist<t_A> rcons(t_A a0, rlist<t_A> a1) {
+      return rlist(
+          Rcons{std::move(a0), std::make_unique<rlist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~rlist() {
+      std::vector<std::unique_ptr<rlist<t_A>>> _stack{};
+      auto _drain = [&](rlist<t_A> &_node) {
+        if (std::holds_alternative<Rcons>(_node.d_v_)) {
+          auto &_alt = std::get<Rcons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<rlist<T1>>, T2> F1>
-  static T2 rlist_rect(const T2 f, F1 &&f0,
-                       const std::shared_ptr<rlist<T1>> &r) {
-    if (std::holds_alternative<typename rlist<T1>::Rnil>(r->v())) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
+  static T2 rlist_rect(const T2 f, F1 &&f0, const rlist<T1> &r) {
+    if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r->v());
-      return f0(d_a0, d_a1, rlist_rect<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r.v());
+      return f0(d_a0, *(d_a1), rlist_rect<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<rlist<T1>>, T2> F1>
-  static T2 rlist_rec(const T2 f, F1 &&f0,
-                      const std::shared_ptr<rlist<T1>> &r) {
-    if (std::holds_alternative<typename rlist<T1>::Rnil>(r->v())) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
+  static T2 rlist_rec(const T2 f, F1 &&f0, const rlist<T1> &r) {
+    if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r->v());
-      return f0(d_a0, d_a1, rlist_rec<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r.v());
+      return f0(d_a0, *(d_a1), rlist_rec<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
   struct RNode {
     unsigned int rn_value;
-    std::optional<std::shared_ptr<RNode>> rn_next;
+    std::optional<std::unique_ptr<RNode>> rn_next;
+
+    // ACCESSORS
+    RNode clone() const {
+      return RNode{(*(this)).rn_value,
+                   (*this).rn_next.has_value()
+                       ? std::make_optional(std::make_unique<RNode>(
+                             (*(*this).rn_next)->clone()))
+                       : std::nullopt};
+    }
   };
 
-  template <typename T1,
-            MapsTo<T1, unsigned int, std::optional<std::shared_ptr<RNode>>> F0>
-  static T1 RNode_rect(F0 &&f, const std::shared_ptr<RNode> &r) {
-    unsigned int rn_value0 = r->rn_value;
-    std::optional<std::shared_ptr<RNode>> rn_next0 = r->rn_next;
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
+                                   std::optional<RNode> &>
+  static T1 RNode_rect(F0 &&f, const RNode &r) {
+    unsigned int rn_value0 = r.rn_value;
+    std::optional<RNode> rn_next0 =
+        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
+                              : std::nullopt;
     return f(rn_value0, rn_next0);
   }
 
-  template <typename T1,
-            MapsTo<T1, unsigned int, std::optional<std::shared_ptr<RNode>>> F0>
-  static T1 RNode_rec(F0 &&f, const std::shared_ptr<RNode> &r) {
-    unsigned int rn_value0 = r->rn_value;
-    std::optional<std::shared_ptr<RNode>> rn_next0 = r->rn_next;
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
+                                   std::optional<RNode> &>
+  static T1 RNode_rec(F0 &&f, const RNode &r) {
+    unsigned int rn_value0 = r.rn_value;
+    std::optional<RNode> rn_next0 =
+        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
+                              : std::nullopt;
     return f(rn_value0, rn_next0);
   }
 
   struct Employee {
     unsigned int emp_name;
     unsigned int emp_dept;
+
+    // ACCESSORS
+    Employee clone() const {
+      return Employee{(*(this)).emp_name, (*(this)).emp_dept};
+    }
   };
 
   struct Department {
     unsigned int dept_id;
-    std::shared_ptr<Employee> dept_head;
+    Employee dept_head;
     unsigned int dept_size;
+
+    // ACCESSORS
+    Department clone() const {
+      return Department{(*(this)).dept_id, (*(this)).dept_head.clone(),
+                        (*(this)).dept_size};
+    }
   };
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  rlist_length(const std::shared_ptr<rlist<T1>> &l) {
-    if (std::holds_alternative<typename rlist<T1>::Rnil>(l->v())) {
+  template <typename T1> static unsigned int rlist_length(const rlist<T1> &l) {
+    if (std::holds_alternative<typename rlist<T1>::Rnil>(l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(l->v());
-      return (rlist_length<T1>(d_a1) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(l.v());
+      return (rlist_length<T1>(*(d_a1)) + 1);
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  rlist_sum(const std::shared_ptr<rlist<unsigned int>> &l);
-  __attribute__((pure)) static unsigned int
-  rnode_depth(const std::shared_ptr<RNode> &r);
-  static inline const std::shared_ptr<rlist<unsigned int>> test_rlist =
+  static unsigned int rlist_sum(const rlist<unsigned int> &l);
+  static unsigned int rnode_depth(const RNode &r);
+  static inline const rlist<unsigned int> test_rlist =
       rlist<unsigned int>::rcons(
           1u,
           rlist<unsigned int>::rcons(
@@ -132,21 +222,34 @@ struct RecRecord {
   static inline const unsigned int test_rlist_len =
       rlist_length<unsigned int>(test_rlist);
   static inline const unsigned int test_rlist_sum = rlist_sum(test_rlist);
-  static inline const std::shared_ptr<RNode> test_rnode =
-      std::make_shared<RNode>(RNode{
-          1u,
-          std::make_optional<std::shared_ptr<RNode>>(std::make_shared<RNode>(
-              RNode{2u,
-                    std::make_optional<std::shared_ptr<RNode>>(
-                        std::make_shared<RNode>(RNode{
-                            3u, std::optional<std::shared_ptr<RNode>>()}))}))});
+  static inline const RNode test_rnode = RNode{
+      1u,
+      [](auto &&__x)
+          -> std::optional<std::unique_ptr<RNode>> {
+        return __x.has_value()
+                   ? std::make_optional(std::make_unique<RNode>((*__x).clone()))
+                   : std::nullopt;
+      }(std::make_optional<RNode>(RNode{
+              2u,
+              [](auto &&__x)
+                  -> std::optional<std::unique_ptr<RNode>> {
+                return __x.has_value()
+                           ? std::make_optional(
+                                 std::make_unique<RNode>((*__x).clone()))
+                           : std::nullopt;
+              }(std::make_optional<RNode>(RNode{
+                      3u,
+                      [](auto &&__x) -> std::optional<std::unique_ptr<RNode>> {
+                        return __x.has_value()
+                                   ? std::make_optional(std::make_unique<RNode>(
+                                         (*__x).clone()))
+                                   : std::nullopt;
+                      }(std::optional<RNode>())}))}))};
   static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
-  static inline const std::shared_ptr<Employee> test_emp =
-      std::make_shared<Employee>(Employee{42u, 7u});
-  static inline const std::shared_ptr<Department> test_dept =
-      std::make_shared<Department>(Department{7u, test_emp, 50u});
+  static inline const Employee test_emp = Employee{42u, 7u};
+  static inline const Department test_dept = Department{7u, test_emp, 50u};
   static inline const unsigned int test_dept_head_name =
-      test_dept->dept_head->emp_name;
+      test_dept.dept_head.emp_name;
 };
 
 #endif // INCLUDED_REC_RECORD

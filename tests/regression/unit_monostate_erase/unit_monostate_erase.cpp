@@ -1,13 +1,5 @@
 #include <unit_monostate_erase.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// --- Example 1: sequenced if returning unit ---
 ///
 /// The if result has type itree ioE unit, but its value is discarded

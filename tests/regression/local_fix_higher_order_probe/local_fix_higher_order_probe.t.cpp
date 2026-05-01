@@ -3,12 +3,12 @@
 #include <cassert>
 #include <iostream>
 
-int nat_to_int(const std::shared_ptr<Nat> &n) {
+int nat_to_int(const Nat &n) {
   int count = 0;
-  auto cur = n;
+  const Nat *cur = &n;
   while (std::holds_alternative<Nat::S>(cur->v())) {
     const auto &[pred] = std::get<Nat::S>(cur->v());
-    cur = pred;
+    cur = pred.get();
     ++count;
   }
   return count;

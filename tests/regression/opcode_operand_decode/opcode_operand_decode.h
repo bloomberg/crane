@@ -1,11 +1,10 @@
 #ifndef INCLUDED_OPCODE_OPERAND_DECODE
 #define INCLUDED_OPCODE_OPERAND_DECODE
 
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct OpcodeOperandDecode {
   enum class Instruction { e_NOP_, e_WRM_, e_WRR_, e_RDM_, e_DCL_ };
@@ -58,8 +57,7 @@ struct OpcodeOperandDecode {
     }
   }
 
-  __attribute__((pure)) static Instruction decode(const unsigned int b1,
-                                                  const unsigned int _x);
+  static Instruction decode(const unsigned int b1, const unsigned int _x);
   static inline const unsigned int t = []() {
     switch (decode(224u, 0u)) {
     case Instruction::e_WRM_: {

@@ -1,13 +1,5 @@
 #include <count_down.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Single effect then recurse: effect ;; recursive_call
 void CountDown::count_down(const unsigned int n) {
   unsigned int _loop_n = n;
@@ -97,8 +89,7 @@ void CountDown::run_fixpoint() {
 }
 
 /// Helper: compare two strings
-__attribute__((pure)) bool CountDown::string_eq(const std::string s1,
-                                                const std::string s2) {
+bool CountDown::string_eq(const std::string s1, const std::string s2) {
   switch ((s1 == s2 ? Comparison::e_EQ
                     : (s1 < s2 ? Comparison::e_LT : Comparison::e_GT))) {
   case Comparison::e_EQ: {

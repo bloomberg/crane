@@ -31,7 +31,7 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-std::shared_ptr<Nat> int_to_nat(int x) {
+Nat int_to_nat(int x) {
   if (x <= 0) {
     return Nat::o();
   } else {
@@ -42,8 +42,8 @@ std::shared_ptr<Nat> int_to_nat(int x) {
 int main() {
 
   // Functions are now methods on the eponymous nat type
-  ASSERT(5 == int_to_nat(5)->nat_to_int());
-  ASSERT(9 == int_to_nat(5)->add(int_to_nat(4))->nat_to_int());
+  ASSERT(5 == int_to_nat(5).nat_to_int());
+  ASSERT(9 == int_to_nat(5).add(int_to_nat(4)).nat_to_int());
 
   return 0;
 }

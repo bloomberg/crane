@@ -1,24 +1,10 @@
 #include <unit_void_edge2.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
-__attribute__((pure)) unsigned int
-UnitVoidEdge2::take_unit(const std::monostate) {
-  return 42u;
-}
+unsigned int UnitVoidEdge2::take_unit(const std::monostate &) { return 42u; }
 
 void UnitVoidEdge2::opaque_unit(const unsigned int) { return; }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge2::let_use_as_arg(const unsigned int n) {
+unsigned int UnitVoidEdge2::let_use_as_arg(const unsigned int n) {
   opaque_unit(n);
   std::monostate x = std::monostate{};
   return take_unit(x);
@@ -29,8 +15,7 @@ void UnitVoidEdge2::let_return_unit(const unsigned int _x0) {
   return;
 }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge2::let_match_unit(const unsigned int n) {
+unsigned int UnitVoidEdge2::let_match_unit(const unsigned int n) {
   opaque_unit(n);
   std::monostate x = std::monostate{};
   {
@@ -38,15 +23,14 @@ UnitVoidEdge2::let_match_unit(const unsigned int n) {
   }
 }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge2::let_chain_use(const unsigned int n) {
+unsigned int UnitVoidEdge2::let_chain_use(const unsigned int n) {
   opaque_unit(n);
   std::monostate a = std::monostate{};
   return take_unit(a);
 }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge2::let_use_in_if(const unsigned int n, const bool flag) {
+unsigned int UnitVoidEdge2::let_use_in_if(const unsigned int n,
+                                          const bool flag) {
   opaque_unit(n);
   std::monostate x = std::monostate{};
   if (flag) {
@@ -95,8 +79,7 @@ void UnitVoidEdge2::count_down_unit(const unsigned int n) {
   }
 }
 
-__attribute__((pure)) std::optional<std::monostate>
-UnitVoidEdge2::make_some_unit(const bool b) {
+std::optional<std::monostate> UnitVoidEdge2::make_some_unit(const bool b) {
   if (b) {
     return std::make_optional<std::monostate>(std::monostate{});
   } else {
@@ -104,8 +87,8 @@ UnitVoidEdge2::make_some_unit(const bool b) {
   }
 }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> o) {
+unsigned int
+UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> &o) {
   if (o.has_value()) {
     const std::monostate &u = *o;
     return take_unit(u);
@@ -114,14 +97,13 @@ UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> o) {
   }
 }
 
-__attribute__((pure)) unsigned int
-UnitVoidEdge2::compose_option_unit(const bool b1, const bool b2) {
+unsigned int UnitVoidEdge2::compose_option_unit(const bool b1, const bool b2) {
   std::optional<std::monostate> o1 = make_some_unit(b1);
   std::optional<std::monostate> o2 = make_some_unit(b2);
   return (use_option_unit(o1) + use_option_unit(o2));
 }
 
-std::shared_ptr<UnitVoidEdge2::pair<unsigned int, std::monostate>>
+UnitVoidEdge2::pair<unsigned int, std::monostate>
 UnitVoidEdge2::make_nat_unit_pair(const unsigned int n) {
   return pair<unsigned int, std::monostate>::pair0(n, std::monostate{});
 }

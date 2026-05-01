@@ -4,21 +4,18 @@
 #include <any>
 #include <crane_itree.h>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct LoopifyItreeReified {
   /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
   /// fixpoint with recursion on fuel that processes reified ITrees. Should
   /// be loopified normally (nontail with _Enter/_Call frames).
-  __attribute__((pure)) static unsigned int
-  count_taus(const unsigned int fuel,
-             const std::shared_ptr<ITree<unsigned int>> t);
+  static unsigned int count_taus(const unsigned int fuel,
+                                 const std::shared_ptr<ITree<unsigned int>> &t);
 
   /// HOF-pattern cofixpoint body: identity traversal on ITrees. Takes the
   /// recursive function as a parameter rec instead of calling itself
@@ -26,7 +23,8 @@ struct LoopifyItreeReified {
   /// The guardedness checker unfolds this transparent definition to verify
   /// that recursive calls are under Tau/Vis constructors.
   template <typename T1, typename F0>
-  static std::shared_ptr<ITree<T1>> pass_body(F0 &&rec, const itreeF_t<T1> ot) {
+  static std::shared_ptr<ITree<T1>> pass_body(F0 &&rec,
+                                              const itreeF_t<T1> &ot) {
     if (std::holds_alternative<typename ITree<T1>::Ret>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&ot);
       auto r = _itf.value;

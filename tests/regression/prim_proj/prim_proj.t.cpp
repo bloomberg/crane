@@ -3,7 +3,6 @@
 #include "prim_proj.h"
 
 #include <iostream>
-#include <memory>
 
 namespace {
 
@@ -27,27 +26,17 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   // Test 1: origin is (0, 0)
   {
-    ASSERT(PrimProj::origin->px == 0);
-    ASSERT(PrimProj::origin->py == 0);
+    ASSERT(PrimProj::origin.px == 0);
+    ASSERT(PrimProj::origin.py == 0);
     std::cout << "Test 1 (origin): PASSED" << std::endl;
   }
 
-  // Test 2: add_points — currently not extracted (primitive projection bug)
-  // {
-  //   auto p1 = std::make_shared<point>(point{3, 4});
-  //   auto p2 = std::make_shared<point>(point{1, 2});
-  //   auto sum = add_points(p1, p2);
-  //   ASSERT(PrimProj::sum->px == 4);
-  //   ASSERT(PrimProj::sum->py == 6);
-  //   std::cout << "Test 2 (add_points): PASSED" << std::endl;
-  // }
-
   // Test 3: translate
   {
-    auto p = std::make_shared<PrimProj::point>(PrimProj::point{10, 20});
+    PrimProj::point p{10, 20};
     auto moved = PrimProj::translate(5, 3, p);
-    ASSERT(moved->px == 15);
-    ASSERT(moved->py == 23);
+    ASSERT(moved.px == 15);
+    ASSERT(moved.py == 23);
     std::cout << "Test 3 (translate): PASSED" << std::endl;
   }
 

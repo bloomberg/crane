@@ -1,13 +1,5 @@
 #include <effect_complex_args.h>
 
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// 1. set_env with concatenated key — complex expr as first arg
 void EffectComplexArgs::set_prefixed(const std::string prefix,
                                      const std::string suffix,

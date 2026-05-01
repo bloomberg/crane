@@ -4,7 +4,7 @@
 #include <cpu_emulator.h>
 int main() {
   // sample: acc=3, regs[4]=5, carry=false
-  assert(CpuEmulator::sample->ex_acc == 3u);
+  assert(CpuEmulator::sample.ex_acc == 3u);
   // ADD 4: 3+5+0=8
   assert(CpuEmulator::add_result == 8u);
   // NOP preserves accumulator

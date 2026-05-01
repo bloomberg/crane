@@ -2,12 +2,10 @@
 #define INCLUDED_NAME_CLASH_CTOR_FIELD
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct NameClashCtorField {
   /// Fields named like structured binding names: d_a0, d_a1
@@ -26,32 +24,61 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    clash1() {}
+
     explicit clash1(C1 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<clash1> c1(unsigned int d_a0, unsigned int d_a1) {
-      return std::make_shared<clash1>(C1{std::move(d_a0), std::move(d_a1)});
+    clash1(const clash1 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    clash1(clash1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    clash1 &operator=(const clash1 &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    clash1 &operator=(clash1 &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    clash1 clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<C1>(_sv.v());
+      return clash1(C1{d_d_a0, d_d_a1});
+    }
+
+    // CREATORS
+    static clash1 c1(unsigned int d_a0, unsigned int d_a1) {
+      return clash1(C1{std::move(d_a0), std::move(d_a1)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int sum_clash1() const {
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
+    unsigned int sum_clash1() const {
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return (d_d_a0 + d_d_a1);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 clash1_rec(F0 &&f) const {
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return f(d_d_a0, d_d_a1);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 clash1_rect(F0 &&f) const {
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
       return f(d_d_a0, d_d_a1);
     }
   };
@@ -75,54 +102,86 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    clash2() {}
+
     explicit clash2(C2a _v) : d_v_(std::move(_v)) {}
 
     explicit clash2(C2b _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<clash2> c2a(unsigned int v) {
-      return std::make_shared<clash2>(C2a{std::move(v)});
+    clash2(const clash2 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    clash2(clash2 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    clash2 &operator=(const clash2 &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<clash2> c2b(unsigned int result) {
-      return std::make_shared<clash2>(C2b{std::move(result)});
+    clash2 &operator=(clash2 &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    clash2 clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<C2a>(_sv.v());
+        return clash2(C2a{d_v});
+      } else {
+        const auto &[d_result] = std::get<C2b>(_sv.v());
+        return clash2(C2b{d_result});
+      }
+    }
+
+    // CREATORS
+    static clash2 c2a(unsigned int v) { return clash2(C2a{std::move(v)}); }
+
+    static clash2 c2b(unsigned int result) {
+      return clash2(C2b{std::move(result)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int get_clash2() const {
-      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
+    unsigned int get_clash2() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
         return d_v;
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
         return d_result;
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 clash2_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
         return f(d_v);
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
         return f0(d_result);
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F0,
-              MapsTo<T1, unsigned int> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+               std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 clash2_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
         return f(d_v);
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
         return f0(d_result);
       }
     }
@@ -144,32 +203,61 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    pair_ind() {}
+
     explicit pair_ind(MkPair _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<pair_ind> mkpair(unsigned int a0, unsigned int a1) {
-      return std::make_shared<pair_ind>(MkPair{std::move(a0), std::move(a1)});
+    pair_ind(const pair_ind &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    pair_ind(pair_ind &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    pair_ind &operator=(const pair_ind &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    pair_ind &operator=(pair_ind &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    pair_ind clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
+      return pair_ind(MkPair{d_a0, d_a1});
+    }
+
+    // CREATORS
+    static pair_ind mkpair(unsigned int a0, unsigned int a1) {
+      return pair_ind(MkPair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    std::shared_ptr<pair_ind> swap_pair() const {
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
+    pair_ind swap_pair() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return pair_ind::mkpair(d_a1, d_a0);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_ind_rec(F0 &&f) const {
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_ind_rect(F0 &&f) const {
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
       return f(d_a0, d_a1);
     }
   };
@@ -178,7 +266,7 @@ struct NameClashCtorField {
   struct box {
     // TYPES
     struct Box0 {
-      std::shared_ptr<pair_ind> d_a0;
+      pair_ind d_a0;
     };
 
     struct EmptyBox {};
@@ -191,33 +279,54 @@ struct NameClashCtorField {
 
   public:
     // CREATORS
+    box() {}
+
     explicit box(Box0 _v) : d_v_(std::move(_v)) {}
 
     explicit box(EmptyBox _v) : d_v_(_v) {}
 
-    static std::shared_ptr<box> box0(const std::shared_ptr<pair_ind> &a0) {
-      return std::make_shared<box>(Box0{a0});
+    box(const box &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    box &operator=(const box &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<box> box0(std::shared_ptr<pair_ind> &&a0) {
-      return std::make_shared<box>(Box0{std::move(a0)});
+    box &operator=(box &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    static std::shared_ptr<box> emptybox() {
-      return std::make_shared<box>(EmptyBox{});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    box clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Box0>(_sv.v())) {
+        const auto &[d_a0] = std::get<Box0>(_sv.v());
+        return box(Box0{d_a0.clone()});
+      } else {
+        return box(EmptyBox{});
+      }
+    }
 
-    __attribute__((pure)) unsigned int unbox_sum() const {
-      if (std::holds_alternative<typename box::Box0>(this->v())) {
-        const auto &[d_a0] = std::get<typename box::Box0>(this->v());
+    // CREATORS
+    static box box0(pair_ind a0) { return box(Box0{std::move(a0)}); }
+
+    static box emptybox() { return box(EmptyBox{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
+
+    unsigned int unbox_sum() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename box::Box0>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());
         const auto &[d_a00, d_a10] =
-            std::get<typename pair_ind::MkPair>(d_a0->v());
+            std::get<typename pair_ind::MkPair>(d_a0.v());
         return (d_a00 + d_a10);
       } else {
         return 0u;
@@ -225,20 +334,22 @@ struct NameClashCtorField {
     }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<pair_ind>> F0>
-  static T1 box_rect(F0 &&f, const T1 f0, const std::shared_ptr<box> &b) {
-    if (std::holds_alternative<typename box::Box0>(b->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
+  static T1 box_rect(F0 &&f, const T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);
     } else {
       return f0;
     }
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<pair_ind>> F0>
-  static T1 box_rec(F0 &&f, const T1 f0, const std::shared_ptr<box> &b) {
-    if (std::holds_alternative<typename box::Box0>(b->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
+  static T1 box_rec(F0 &&f, const T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);
     } else {
       return f0;

@@ -2,11 +2,10 @@
 #define INCLUDED_Z_DIV_MIN
 
 #include <cstdint>
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ZDivMin {
   /// Build INT64_MIN = -9223372036854775808 via Z.opp(Z.of_nat ...)

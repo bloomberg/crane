@@ -3,11 +3,9 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct FixChainBuild {
   /// Recursive construction of a closure chain. Each level creates a
@@ -19,8 +17,7 @@ struct FixChainBuild {
   /// current stack frame's parameter), prev (a local variable),
   /// and step itself. When build_chain returns, the stack frame
   /// is destroyed, and the returned closure holds dangling references.
-  __attribute__((pure)) static std::pair<
-      unsigned int, std::function<unsigned int(unsigned int)>>
+  static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
   build_chain(const unsigned int n);
   /// test1: build_chain(1) = (1, step1).
   /// step1(0) = 1.

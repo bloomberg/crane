@@ -1,11 +1,10 @@
 #ifndef INCLUDED_ENUM_SWITCH_QUALIFIED
 #define INCLUDED_ENUM_SWITCH_QUALIFIED
 
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct EnumSwitchQualified {
   struct Outer {
@@ -39,8 +38,8 @@ struct EnumSwitchQualified {
       }
     }
 
-    __attribute__((pure)) static Color flip(const Color c);
-    __attribute__((pure)) static unsigned int code(const Color c);
+    static Color flip(const Color c);
+    static unsigned int code(const Color c);
   };
 
   static inline const unsigned int t =

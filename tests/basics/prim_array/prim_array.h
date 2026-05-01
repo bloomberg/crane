@@ -2,11 +2,10 @@
 #define INCLUDED_PRIM_ARRAY
 
 #include <cstdint>
+#include <memory>
+#include <optional>
 #include <persistent_array.h>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct PrimArray {
   static inline const persistent_array<unsigned int> arr5 =

@@ -4,14 +4,14 @@
 #include <chrono>
 #include <cstdint>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <string>
 #include <thread>
 #include <type_traits>
 #include <variant>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct threadtest {
   static void fun1(const unsigned int n);

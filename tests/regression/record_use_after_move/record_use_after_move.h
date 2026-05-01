@@ -2,33 +2,32 @@
 #define INCLUDED_RECORD_USE_AFTER_MOVE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct RecordUseAfterMove {
   struct box {
     unsigned int payload;
     bool enabled;
+
+    // ACCESSORS
+    box clone() const { return box{(*(this)).payload, (*(this)).enabled}; }
   };
 
-  static std::shared_ptr<box> clone_box(const std::shared_ptr<box> &b);
-  static std::shared_ptr<box> keep_box(std::shared_ptr<box> b);
-  __attribute__((pure)) static unsigned int
-  use_box(const std::shared_ptr<box> &b);
-  static inline const std::shared_ptr<box> initial_box = std::make_shared<box>(
-      box{41u, true}); /// BUG: The same shared_ptr local b is moved into
-                       /// multiple call sites.
+  static box clone_box(const box &b);
+  static box keep_box(box b);
+  static unsigned int use_box(const box &b);
+  static inline const box initial_box = box{41u, true};
+  /// BUG: The same shared_ptr local b is moved into multiple call sites.
   /// After the first std::move(b), subsequent uses dereference a
   /// moved-from shared_ptr, causing a segfault.
-  static inline const std::shared_ptr<box> problematic = []() {
-    std::shared_ptr<box> b = keep_box(initial_box);
-    std::shared_ptr<box> b1 = clone_box(b);
-    std::shared_ptr<box> b2 = clone_box(b);
-    if (keep_box(b)->enabled) {
-      if (std::move(b)->enabled) {
+  static inline const box problematic = []() {
+    box b = keep_box(initial_box);
+    box b1 = clone_box(b);
+    box b2 = clone_box(b);
+    if (keep_box(b).enabled) {
+      if (std::move(b).enabled) {
         return b2;
       } else {
         return b1;
@@ -39,8 +38,8 @@ struct RecordUseAfterMove {
   }();
   /// Simple case: same record used twice in let bindings.
   static inline const unsigned int double_let = []() {
-    unsigned int x = initial_box->payload;
-    unsigned int y = initial_box->payload;
+    unsigned int x = initial_box.payload;
+    unsigned int y = initial_box.payload;
     return (x + y);
   }();
   /// Record passed to two different functions.

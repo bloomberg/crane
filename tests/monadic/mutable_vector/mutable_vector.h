@@ -2,12 +2,11 @@
 #define INCLUDED_MUTABLE_VECTOR
 
 #include <cstdint>
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <variant>
 #include <vector>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct MutableVectorTest {
   static int64_t test1(const int64_t _x);

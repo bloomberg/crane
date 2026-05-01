@@ -3,12 +3,11 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct ClosureRecursiveBuild {
   /// A list of closures, each one of which captures a different value.
@@ -18,7 +17,7 @@ struct ClosureRecursiveBuild {
 
     struct FCons {
       std::function<unsigned int(unsigned int)> d_a0;
-      std::shared_ptr<fn_list> d_a1;
+      std::unique_ptr<fn_list> d_a1;
     };
 
     using variant_t = std::variant<FNil, FCons>;
@@ -29,56 +28,114 @@ struct ClosureRecursiveBuild {
 
   public:
     // CREATORS
+    fn_list() {}
+
     explicit fn_list(FNil _v) : d_v_(_v) {}
 
     explicit fn_list(FCons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<fn_list> fnil() {
-      return std::make_shared<fn_list>(FNil{});
+    fn_list(const fn_list &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    fn_list(fn_list &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    fn_list &operator=(const fn_list &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<fn_list>
-    fcons(std::function<unsigned int(unsigned int)> a0,
-          const std::shared_ptr<fn_list> &a1) {
-      return std::make_shared<fn_list>(FCons{std::move(a0), a1});
+    fn_list &operator=(fn_list &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<fn_list>
-    fcons(std::function<unsigned int(unsigned int)> a0,
-          std::shared_ptr<fn_list> &&a1) {
-      return std::make_shared<fn_list>(FCons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    fn_list clone() const {
+      fn_list _out{};
+
+      struct _CloneFrame {
+        const fn_list *_src;
+        fn_list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const fn_list *_src = _frame._src;
+        fn_list *_dst = _frame._dst;
+        if (std::holds_alternative<FNil>(_src->v())) {
+          _dst->d_v_ = FNil{};
+        } else {
+          const auto &_alt = std::get<FCons>(_src->v());
+          _dst->d_v_ = FCons{_alt.d_a0,
+                             _alt.d_a1 ? std::make_unique<fn_list>() : nullptr};
+          auto &_dst_alt = std::get<FCons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static fn_list fnil() { return fn_list(FNil{}); }
+
+    static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
+                         fn_list a1) {
+      return fn_list(
+          FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~fn_list() {
+      std::vector<std::unique_ptr<fn_list>> _stack{};
+      auto _drain = [&](fn_list &_node) {
+        if (std::holds_alternative<FCons>(_node.d_v_)) {
+          auto &_alt = std::get<FCons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                std::shared_ptr<fn_list>, T1>
-                             F1>
-  static T1 fn_list_rect(const T1 f, F1 &&f0,
-                         const std::shared_ptr<fn_list> &f1) {
-    if (std::holds_alternative<typename fn_list::FNil>(f1->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<
+        T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
+  static T1 fn_list_rect(const T1 f, F1 &&f0, const fn_list &f1) {
+    if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1->v());
-      return f0(d_a0, d_a1, fn_list_rect<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1.v());
+      return f0(d_a0, *(d_a1), fn_list_rect<T1>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                std::shared_ptr<fn_list>, T1>
-                             F1>
-  static T1 fn_list_rec(const T1 f, F1 &&f0,
-                        const std::shared_ptr<fn_list> &f1) {
-    if (std::holds_alternative<typename fn_list::FNil>(f1->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<
+        T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
+  static T1 fn_list_rec(const T1 f, F1 &&f0, const fn_list &f1) {
+    if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1->v());
-      return f0(d_a0, d_a1, fn_list_rec<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1.v());
+      return f0(d_a0, *(d_a1), fn_list_rec<T1>(f, f0, *(d_a1)));
     }
   }
 
@@ -89,11 +146,9 @@ struct ClosureRecursiveBuild {
   /// by &. The closures are stored in FCons constructors. After
   /// build_adders returns, all intermediate stack frames are gone,
   /// and every closure holds a dangling reference.
-  static std::shared_ptr<fn_list> build_adders(const unsigned int n);
-  __attribute__((pure)) static unsigned int
-  apply_first(const std::shared_ptr<fn_list> &fl, const unsigned int x);
-  __attribute__((pure)) static unsigned int
-  apply_all_sum(const std::shared_ptr<fn_list> &fl, const unsigned int x);
+  static fn_list build_adders(const unsigned int n);
+  static unsigned int apply_first(const fn_list &fl, const unsigned int x);
+  static unsigned int apply_all_sum(const fn_list &fl, const unsigned int x);
   /// test1: build_adders(3) = adder_3, adder_2, adder_1.
   /// apply_first returns adder_3(10) = 3 + 10 = 13.
   static inline const unsigned int test1 = apply_first(build_adders(3u), 10u);
@@ -103,7 +158,7 @@ struct ClosureRecursiveBuild {
   /// test3: with noise between build and use.
   /// build_adders(5), noise, then apply_first(fns, 0) = 5.
   static inline const unsigned int test3 = []() {
-    std::shared_ptr<fn_list> fns = build_adders(5u);
+    fn_list fns = build_adders(5u);
     unsigned int noise = ((99u + 88u) + 77u);
     return (apply_first(std::move(fns), 0u) + noise);
   }();

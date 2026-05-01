@@ -5,12 +5,10 @@
 #include <concepts>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename t_A, typename t_P> struct SigT {
   // TYPES
@@ -27,28 +25,60 @@ private:
 
 public:
   // CREATORS
+  SigT() {}
+
   explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<SigT<t_A, t_P>> existt(t_A x, t_P a1) {
-    return std::make_shared<SigT<t_A, t_P>>(
-        ExistT{std::move(x), std::move(a1)});
+  SigT(const SigT<t_A, t_P> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  SigT<t_A, t_P> &operator=(const SigT<t_A, t_P> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
+  }
+
+  SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
+  }
+
+  // ACCESSORS
+  SigT<t_A, t_P> clone() const {
+    auto &&_sv = *(this);
+    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
+    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
+  }
+
+  // CREATORS
+  template <typename _U0, typename _U1>
+  explicit SigT(const SigT<_U0, _U1> &_other) {
+    const auto &[d_x, d_a1] =
+        std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
+    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+  }
+
+  static SigT<t_A, t_P> existt(t_A x, t_P a1) {
+    return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
+    auto &&_sv = *(this);
     const auto &[d_x, d_a1] =
-        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
+        std::get<typename SigT<t_A, t_P>::ExistT>(_sv.v());
     return d_x;
   }
 
   t_P projT2() const {
+    auto &&_sv = *(this);
     const auto &[d_x, d_a1] =
-        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
+        std::get<typename SigT<t_A, t_P>::ExistT>(_sv.v());
     return d_a1;
   }
 };
@@ -80,34 +110,49 @@ struct DoubleOppositeWitnessesCase {
 
   public:
     // CREATORS
+    Path() {}
+
     explicit Path(Path_refl _v) : d_v_(_v) {}
 
-    static std::shared_ptr<Path<t_A>> path_refl() {
-      return std::make_shared<Path<t_A>>(Path_refl{});
+    Path(const Path<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    Path(Path<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    Path<t_A> &operator=(const Path<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    Path<t_A> &operator=(Path<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    Path<t_A> clone() const { return Path<t_A>(Path_refl{}); }
+
+    // CREATORS
+    static Path<t_A> path_refl() { return Path(Path_refl{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename T2>
-  static T2 Path_rect(const T1, const T2 f, const T1,
-                      const std::shared_ptr<Path<T1>> &) {
+  static T2 Path_rect(const T1, const T2 f, const T1, const Path<T1> &) {
     return f;
   }
 
   template <typename T1, typename T2>
-  static T2 Path_rec(const T1, const T2 f, const T1,
-                     const std::shared_ptr<Path<T1>> &) {
+  static T2 Path_rec(const T1, const T2 f, const T1, const Path<T1> &) {
     return f;
   }
 
   template <typename T1>
-  __attribute__((pure)) static unsigned int
-  path_code(const T1, const T1, const std::shared_ptr<Path<T1>> &) {
+  static unsigned int path_code(const T1, const T1, const Path<T1> &) {
     return 1u;
   }
 
@@ -127,17 +172,21 @@ struct DoubleOppositeWitnessesCase {
   struct Functor {
     std::function<Obj(Obj)> object_of;
     std::function<Hom(Obj, Obj, Hom)> morphism_of;
+
+    // ACCESSORS
+    Functor clone() const {
+      return Functor{(*(this)).object_of, (*(this)).morphism_of};
+    }
   };
 
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
-  static std::shared_ptr<Functor> compose_functor(std::shared_ptr<Functor> f,
-                                                  std::shared_ptr<Functor> g) {
-    return std::make_shared<Functor>(Functor{
-        [=](const std::any x) mutable { return f->object_of(g->object_of(x)); },
+  static Functor compose_functor(Functor f, Functor g) {
+    return Functor{
+        [=](const std::any x) mutable { return f.object_of(g.object_of(x)); },
         [=](const std::any x, const std::any y, const std::any f0) mutable {
-          return f->morphism_of(g->object_of(x), g->object_of(y),
-                                g->morphism_of(x, y, f0));
-        }});
+          return f.morphism_of(g.object_of(x), g.object_of(y),
+                               g.morphism_of(x, y, f0));
+        }};
   }
 
   template <PreStableCategory _tcI0> struct opposite_prestable_category {
@@ -174,50 +223,42 @@ struct DoubleOppositeWitnessesCase {
 
   static_assert(PreStableCategory<toy_prestable>);
 
-  template <PreCategory _tcI0>
-  static std::shared_ptr<Functor> into_double_opposite_functor() {
-    return std::make_shared<Functor>(Functor{
+  template <PreCategory _tcI0> static Functor into_double_opposite_functor() {
+    return Functor{
         [](const std::any x) { return x; },
-        [](const std::any, const std::any, const std::any f) { return f; }});
+        [](const std::any, const std::any, const std::any f) { return f; }};
   }
 
-  template <PreCategory _tcI0>
-  static std::shared_ptr<Functor> out_of_double_opposite_functor() {
-    return std::make_shared<Functor>(Functor{
+  template <PreCategory _tcI0> static Functor out_of_double_opposite_functor() {
+    return Functor{
         [](const std::any x) { return x; },
-        [](const std::any, const std::any, const std::any f) { return f; }});
+        [](const std::any, const std::any, const std::any f) { return f; }};
   }
 
   template <PreStableCategory _tcI0>
-  static std::shared_ptr<
-      SigT<std::shared_ptr<Functor>,
-           std::shared_ptr<
-               SigT<std::shared_ptr<Functor>,
-                    std::pair<std::function<std::shared_ptr<
-                                  Path<typename _tcI0::base_category::Obj>>(
-                                  typename _tcI0::base_category::Obj)>,
-                              std::function<std::shared_ptr<
-                                  Path<typename _tcI0::base_category::Obj>>(
-                                  typename _tcI0::base_category::Obj)>>>>>>
+  static SigT<
+      Functor,
+      SigT<Functor,
+           std::pair<std::function<Path<typename _tcI0::base_category::Obj>(
+                         typename _tcI0::base_category::Obj)>,
+                     std::function<Path<typename _tcI0::base_category::Obj>(
+                         typename _tcI0::base_category::Obj)>>>>
   duality_involution() {
-    return SigT<std::shared_ptr<Functor>,
-                std::shared_ptr<SigT<
-                    std::shared_ptr<Functor>,
-                    std::pair<std::function<std::shared_ptr<
-                                  Path<typename _tcI0::base_category::Obj>>(
-                                  typename _tcI0::base_category::Obj)>,
-                              std::function<std::shared_ptr<
-                                  Path<typename _tcI0::base_category::Obj>>(
-                                  typename _tcI0::base_category::Obj)>>>>>::
+    return SigT<
+        Functor,
+        SigT<Functor,
+             std::pair<std::function<Path<typename _tcI0::base_category::Obj>(
+                           typename _tcI0::base_category::Obj)>,
+                       std::function<Path<typename _tcI0::base_category::Obj>(
+                           typename _tcI0::base_category::Obj)>>>>::
         existt(
             into_double_opposite_functor<typename _tcI0::base_category>(),
-            SigT<std::shared_ptr<Functor>,
-                 std::pair<std::function<std::shared_ptr<
-                               Path<typename _tcI0::base_category::Obj>>(
-                               typename _tcI0::base_category::Obj)>,
-                           std::function<std::shared_ptr<
-                               Path<typename _tcI0::base_category::Obj>>(
-                               typename _tcI0::base_category::Obj)>>>::
+            SigT<Functor,
+                 std::pair<
+                     std::function<Path<typename _tcI0::base_category::Obj>(
+                         typename _tcI0::base_category::Obj)>,
+                     std::function<Path<typename _tcI0::base_category::Obj>(
+                         typename _tcI0::base_category::Obj)>>>::
                 existt(
                     out_of_double_opposite_functor<
                         typename _tcI0::base_category>(),
@@ -232,42 +273,31 @@ struct DoubleOppositeWitnessesCase {
                         })));
   }
 
-  static inline const std::shared_ptr<SigT<
-      std::shared_ptr<Functor>,
-      std::shared_ptr<SigT<std::shared_ptr<Functor>,
-                           std::pair<std::function<std::shared_ptr<
-                                         Path<unsigned int>>(unsigned int)>,
-                                     std::function<std::shared_ptr<
-                                         Path<unsigned int>>(unsigned int)>>>>>>
-      toy_duality_involution = std::any_cast<std::shared_ptr<
-          SigT<std::shared_ptr<Functor>,
-               std::shared_ptr<SigT<
-                   std::shared_ptr<Functor>,
-                   std::pair<std::function<std::shared_ptr<Path<unsigned int>>(
-                                 unsigned int)>,
-                             std::function<std::shared_ptr<Path<unsigned int>>(
-                                 unsigned int)>>>>>>>(
+  static inline const SigT<
+      Functor,
+      SigT<Functor, std::pair<std::function<Path<unsigned int>(unsigned int)>,
+                              std::function<Path<unsigned int>(unsigned int)>>>>
+      toy_duality_involution = std::any_cast<SigT<
+          Functor,
+          SigT<Functor,
+               std::pair<std::function<Path<unsigned int>(unsigned int)>,
+                         std::function<Path<unsigned int>(unsigned int)>>>>>(
           duality_involution<toy_prestable>());
-  static inline const std::shared_ptr<Functor> forward_functor =
-      toy_duality_involution->projT1();
-  static inline const std::shared_ptr<SigT<
-      std::shared_ptr<Functor>,
-      std::pair<
-          std::function<std::shared_ptr<Path<unsigned int>>(unsigned int)>,
-          std::function<std::shared_ptr<Path<unsigned int>>(unsigned int)>>>>
-      backward_package = toy_duality_involution->projT2();
-  static inline const std::shared_ptr<Functor> backward_functor =
-      backward_package->projT1();
-  static inline const std::pair<
-      std::function<std::shared_ptr<Path<unsigned int>>(unsigned int)>,
-      std::function<std::shared_ptr<Path<unsigned int>>(unsigned int)>>
-      identity_witnesses = backward_package->projT2();
+  static inline const Functor forward_functor = toy_duality_involution.projT1();
+  static inline const SigT<
+      Functor, std::pair<std::function<Path<unsigned int>(unsigned int)>,
+                         std::function<Path<unsigned int>(unsigned int)>>>
+      backward_package = toy_duality_involution.projT2();
+  static inline const Functor backward_functor = backward_package.projT1();
+  static inline const std::pair<std::function<Path<unsigned int>(unsigned int)>,
+                                std::function<Path<unsigned int>(unsigned int)>>
+      identity_witnesses = backward_package.projT2();
   static inline const unsigned int forward_object_7 =
-      std::any_cast<unsigned int>(forward_functor->object_of(7u));
+      std::any_cast<unsigned int>(forward_functor.object_of(7u));
   static inline const unsigned int backward_object_9 =
-      std::any_cast<unsigned int>(backward_functor->object_of(9u));
+      std::any_cast<unsigned int>(backward_functor.object_of(9u));
   static inline const unsigned int forward_morphism_3 =
-      std::any_cast<unsigned int>(forward_functor->morphism_of(4u, 7u, 3u));
+      std::any_cast<unsigned int>(forward_functor.morphism_of(4u, 7u, 3u));
   static inline const unsigned int roundtrip_left_11 =
       std::any_cast<unsigned int>(
           compose_functor<
@@ -276,7 +306,7 @@ struct DoubleOppositeWitnessesCase {
                   opposite_prestable_category<toy_prestable>>::base_category,
               typename toy_prestable::base_category>(backward_functor,
                                                      forward_functor)
-              ->object_of(11u));
+              .object_of(11u));
   static inline const unsigned int roundtrip_right_13 =
       std::any_cast<unsigned int>(
           compose_functor<
@@ -286,7 +316,7 @@ struct DoubleOppositeWitnessesCase {
               typename opposite_prestable_category<
                   opposite_prestable_category<toy_prestable>>::base_category>(
               forward_functor, backward_functor)
-              ->object_of(13u));
+              .object_of(13u));
   static inline const unsigned int roundtrip_morphism_5 =
       std::any_cast<unsigned int>(
           compose_functor<
@@ -295,7 +325,7 @@ struct DoubleOppositeWitnessesCase {
                   opposite_prestable_category<toy_prestable>>::base_category,
               typename toy_prestable::base_category>(backward_functor,
                                                      forward_functor)
-              ->morphism_of(2u, 9u, 5u));
+              .morphism_of(2u, 9u, 5u));
   static inline const unsigned int left_identity_code_11 = path_code<
       unsigned int>(
       std::any_cast<unsigned int>(
@@ -304,8 +334,8 @@ struct DoubleOppositeWitnessesCase {
               typename opposite_prestable_category<
                   opposite_prestable_category<toy_prestable>>::base_category,
               typename toy_prestable::base_category>(
-              backward_package->projT1(), toy_duality_involution->projT1())
-              ->object_of(11u)),
+              backward_package.projT1(), toy_duality_involution.projT1())
+              .object_of(11u)),
       11u, identity_witnesses.first(11u));
   static inline const unsigned int right_identity_code_13 = path_code<
       unsigned int>(
@@ -316,8 +346,8 @@ struct DoubleOppositeWitnessesCase {
               typename toy_prestable::base_category,
               typename opposite_prestable_category<
                   opposite_prestable_category<toy_prestable>>::base_category>(
-              toy_duality_involution->projT1(), backward_package->projT1())
-              ->object_of(13u)),
+              toy_duality_involution.projT1(), backward_package.projT1())
+              .object_of(13u)),
       13u, identity_witnesses.second(13u));
   static inline const unsigned int suspended_zero = std::any_cast<unsigned int>(
       toy_prestable::suspension(toy_prestable::zero_object()));

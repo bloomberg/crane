@@ -1,15 +1,5 @@
 #include <effect_cross_module.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Inner module defines a helper that returns a value
 void EffectCrossModule::Inner::greet(const std::string name) {
   std::cout << "Hello, "s + name << '\n';
@@ -39,15 +29,14 @@ int64_t EffectCrossModule::test_with_greeting() {
 }
 
 /// Use Inner's helper in a recursive function
-void EffectCrossModule::greet_all(
-    const std::shared_ptr<List<std::string>> &names) {
-  if (std::holds_alternative<typename List<std::string>::Nil>(names->v())) {
+void EffectCrossModule::greet_all(const List<std::string> &names) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(names.v())) {
     return;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(names->v());
+        std::get<typename List<std::string>::Cons>(names.v());
     Inner::greet(d_a0);
-    greet_all(d_a1);
+    greet_all(*(d_a1));
     return;
   }
 }

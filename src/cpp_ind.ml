@@ -146,6 +146,19 @@ let pp_decl = function
       let defs =
         List.filter (fun (_, _, l) -> l == []) (gen_dfuns (rv, defs, typs))
       in
+      (* Pre-register all Dfix functions for mutual recursion detection before
+         any of them are individually loopified via pp_cpp_decl/maybe_loopify.
+         Without this, the first function rendered can't see the second in the
+         mutual table, so mutual inlining fails. *)
+      List.iter
+        (fun (ds, _env, _) ->
+          match ds with
+          | Dfundef (names, _, params, body, _) ->
+            Loopify.register_fundef names params body
+          | Dtemplate (_, _, Dfundef (names, _, params, body, _)) ->
+            Loopify.register_fundef names params body
+          | _ -> () )
+        defs;
       pp_list_stmt (fun (ds, env, _) -> pp_cpp_decl env ds) defs
 
 (** Render inductive type header (.h file).
@@ -490,10 +503,25 @@ let pp_cpp_ind_header kn ind =
               if Translation.type_is_erased ret_cpp then
                 register_method_returns_any r )
             methods;
+          let mutual_partners =
+            if is_mutual then
+              let partners = ref [] in
+              for j = Array.length ind.ind_packets - 1 downto 0 do
+                if j <> i then begin
+                  let pj = ind.ind_packets.(j) in
+                  partners :=
+                    (names.(j), cnames.(j), pj.ip_types,
+                     pj.ip_consarg_names) :: !partners
+                end
+              done;
+              !partners
+            else []
+          in
           let decl =
             gen_ind_header_v2
               ~is_mutual
               ~consarg_names:p.ip_consarg_names
+              ~mutual_partners
               param_vars
               names.(i)
               cnames.(i)
@@ -583,6 +611,7 @@ let pp_hdecl d =
   | Dtype (r, l, t) ->
     let name = pp_global Type r in
     let l = rename_tvars keywords l in
+    let saved_method_ns = set_method_ns_for_locals () in
     let ids, def =
       match find_type_custom_opt r with
       | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
@@ -590,10 +619,12 @@ let pp_hdecl d =
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
+            Cpp_state.require_header "any";
             str " = std::any /* AXIOM TO BE REALIZED */" )
           else
             str " =" ++ spc () ++ pp_type false l t )
     in
+    restore_method_self_ns saved_method_ns;
     pp_tydef l name def
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =
@@ -719,6 +750,7 @@ let pp_hdecl_spec_only = function
   | Dtype (r, l, t) ->
     let name = pp_global Type r in
     let l = rename_tvars keywords l in
+    let saved_method_ns = set_method_ns_for_locals () in
     let ids, def =
       match find_type_custom_opt r with
       | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
@@ -726,10 +758,12 @@ let pp_hdecl_spec_only = function
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
+            Cpp_state.require_header "any";
             str " = std::any /* AXIOM TO BE REALIZED */" )
           else
             str " =" ++ spc () ++ pp_type false l t )
     in
+    restore_method_self_ns saved_method_ns;
     pp_tydef l name def
   | Dterm (r, _, _)
     when List.exists
@@ -778,6 +812,7 @@ let pp_spec = function
   | Stype (r, vl, ot) ->
     let name = pp_global_name Type r in
     let l = rename_tvars keywords vl in
+    let saved_method_ns = set_method_ns_for_locals () in
     let ids, def =
       match find_type_custom_opt r with
       | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
@@ -787,7 +822,9 @@ let pp_spec = function
         | None -> (ids, mt ())
         | Some Taxiom ->
           register_axiom_type r;
+          Cpp_state.require_header "any";
           (ids, str " = std::any /* AXIOM TO BE REALIZED */")
         | Some t -> (ids, str " =" ++ spc () ++ pp_type false l t) )
     in
+    restore_method_self_ns saved_method_ns;
     pp_tydef l name def

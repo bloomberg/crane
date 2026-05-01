@@ -1,11 +1,5 @@
 #include <closure_map_escape.h>
 
-#include <functional>
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// Build a list of closures from a list of nats using LOCAL FIXPOINTS.
 /// Each recursive call creates a fixpoint add that captures the
 /// pattern variable h from the match.
@@ -19,57 +13,58 @@
 /// Difference from fix_escape_match: uses a USER-DEFINED list type
 /// (not stdlib option), and the fixpoints are built RECURSIVELY
 /// from list elements (not a single fixpoint).
-std::shared_ptr<
-    ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>>
+ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
 ClosureMapEscape::map_to_adders(
-    const std::shared_ptr<ClosureMapEscape::mylist<unsigned int>> &l) {
+    const ClosureMapEscape::mylist<unsigned int> &l) {
   if (std::holds_alternative<
-          typename ClosureMapEscape::mylist<unsigned int>::Mynil>(l->v())) {
+          typename ClosureMapEscape::mylist<unsigned int>::Mynil>(l.v())) {
     return mylist<std::function<unsigned int(unsigned int)>>::mynil();
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename ClosureMapEscape::mylist<unsigned int>::Mycons>(
-            l->v());
-    auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-    *add = [=](unsigned int x) mutable -> unsigned int {
+            l.v());
+    ClosureMapEscape::mylist<unsigned int> d_a1_value = *(d_a1);
+    auto add_impl = [=](auto &_self_add,
+                        unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return d_a0;
       } else {
         unsigned int x_ = x - 1;
-        return ((*add)(x_) + 1);
+        return (_self_add(_self_add, x_) + 1);
       }
     };
+    auto add = [=](unsigned int x) mutable -> unsigned int {
+      return add_impl(add_impl, x);
+    };
     return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-        *add, map_to_adders(d_a1));
+        add, map_to_adders(d_a1_value));
   }
 }
 
-__attribute__((pure)) unsigned int ClosureMapEscape::apply_first(
-    const std::shared_ptr<
-        ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>>
+unsigned int ClosureMapEscape::apply_first(
+    const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
     const unsigned int arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns->v())) {
+          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename ClosureMapEscape::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns->v());
+        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
     return d_a0(arg);
   }
 }
 
-__attribute__((pure)) unsigned int ClosureMapEscape::sum_apply(
-    const std::shared_ptr<
-        ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>>
+unsigned int ClosureMapEscape::sum_apply(
+    const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
     const unsigned int arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns->v())) {
+          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename ClosureMapEscape::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns->v());
-    return (d_a0(arg) + sum_apply(d_a1, arg));
+        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
+    return (d_a0(arg) + sum_apply(*(d_a1), arg));
   }
 }

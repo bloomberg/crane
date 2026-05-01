@@ -1,21 +1,20 @@
 #ifndef INCLUDED_WRAPPER_COLLISION_POS
 #define INCLUDED_WRAPPER_COLLISION_POS
 
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct WrapperCollisionPos {
   struct Left {
     struct Pos {
-      __attribute__((pure)) static unsigned int id_left(const unsigned int n);
+      static unsigned int id_left(const unsigned int n);
     };
   };
 
   struct Right {
     struct Pos {
-      __attribute__((pure)) static unsigned int inc_right(const unsigned int n);
+      static unsigned int inc_right(const unsigned int n);
     };
   };
 

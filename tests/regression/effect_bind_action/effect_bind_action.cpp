@@ -1,19 +1,8 @@
 #include <effect_bind_action.h>
 
-#include <chrono>
-#include <cstdint>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Bool match inside bind action: one branch block template
 std::string EffectBindAction::conditional_read(const bool use_stdin) {
-  return [&]() -> std::string {
+  return [=]() mutable -> std::string {
     if (use_stdin) {
       return []() -> std::string {
         std::string _r;
@@ -28,16 +17,11 @@ std::string EffectBindAction::conditional_read(const bool use_stdin) {
 
 /// 2. Bool match where both branches are effects
 int64_t EffectBindAction::conditional_effect(const bool flag) {
-  return [&]() -> int64_t {
-    if (flag) {
-      return static_cast<int64_t>(
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now().time_since_epoch())
-              .count());
-    } else {
-      return int64_t(0);
-    }
-  }();
+  return (flag ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : int64_t(0));
 }
 
 /// 3. Option match inside bind: conditional effect based on env
@@ -47,7 +31,7 @@ std::string EffectBindAction::maybe_override(const std::string name,
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
-  return [&]() -> std::string {
+  return [=]() mutable -> std::string {
     if (r.has_value()) {
       const std::string &v = *r;
       return v;
@@ -60,26 +44,18 @@ std::string EffectBindAction::maybe_override(const std::string name,
 /// 4. Nested: effect result used in another conditional effect
 std::pair<int64_t, int64_t>
 EffectBindAction::timed_if_needed(const bool measure) {
-  int64_t t1 = [&]() -> int64_t {
-    if (measure) {
-      return static_cast<int64_t>(
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now().time_since_epoch())
-              .count());
-    } else {
-      return int64_t(0);
-    }
-  }();
-  int64_t t2 = [&]() -> int64_t {
-    if (measure) {
-      return static_cast<int64_t>(
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              std::chrono::steady_clock::now().time_since_epoch())
-              .count());
-    } else {
-      return int64_t(0);
-    }
-  }();
+  int64_t t1 =
+      (measure ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : int64_t(0));
+  int64_t t2 =
+      (measure ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : int64_t(0));
   return std::make_pair(t1, t2);
 }
 
@@ -105,7 +81,7 @@ std::string EffectBindAction::helper(const std::string s) {
 }
 
 std::string EffectBindAction::use_helper(const bool flag) {
-  return [&]() -> std::string {
+  return [=]() mutable -> std::string {
     if (flag) {
       return helper("yes");
     } else {

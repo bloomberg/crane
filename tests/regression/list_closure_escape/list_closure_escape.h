@@ -3,12 +3,11 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct ListClosureEscape {
   struct tree {
@@ -16,9 +15,9 @@ struct ListClosureEscape {
     struct Leaf {};
 
     struct Node {
-      std::shared_ptr<tree> d_a0;
+      std::unique_ptr<tree> d_a0;
       unsigned int d_a1;
-      std::shared_ptr<tree> d_a2;
+      std::unique_ptr<tree> d_a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -29,80 +28,147 @@ struct ListClosureEscape {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf() {
-      return std::make_shared<tree>(Leaf{});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
-                                      unsigned int a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{a0, std::move(a1), a2});
+    tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
-                                      unsigned int a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
+    // ACCESSORS
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
+          if (_alt.d_a2) {
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static tree leaf() { return tree(Leaf{}); }
+
+    static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~tree() {
+      std::vector<std::unique_ptr<tree>> _stack{};
+      auto _drain = [&](tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back(std::move(_alt.d_a0));
+          }
+          if (_alt.d_a2) {
+            _stack.push_back(std::move(_alt.d_a2));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+    unsigned int sum_values(const unsigned int x) const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        auto &&_sv0 = *(d_a0);
+        if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (d_a1 + x);
         } else {
           const auto &[d_a00, d_a10, d_a20] =
-              std::get<typename tree::Node>(d_a0->v());
-          if (std::holds_alternative<typename tree::Leaf>(d_a2->v())) {
+              std::get<typename tree::Node>(_sv0.v());
+          auto &&_sv1 = *(d_a2);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (d_a10 + x);
           } else {
             const auto &[d_a01, d_a11, d_a21] =
-                std::get<typename tree::Node>(d_a2->v());
+                std::get<typename tree::Node>(_sv1.v());
             return (((d_a10 + d_a11) + d_a1) + x);
           }
         }
       }
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                  std::shared_ptr<tree>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(d_a0, d_a0->template tree_rec<T1>(f, f0), d_a1, d_a2,
-                  d_a2->template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
+                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
       }
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                  std::shared_ptr<tree>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(d_a0, d_a0->template tree_rect<T1>(f, f0), d_a1, d_a2,
-                  d_a2->template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
+                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -114,7 +180,7 @@ struct ListClosureEscape {
 
     struct FCons {
       std::function<unsigned int(unsigned int)> d_a0;
-      std::shared_ptr<fn_list> d_a1;
+      std::unique_ptr<fn_list> d_a1;
     };
 
     using variant_t = std::variant<FNil, FCons>;
@@ -125,62 +191,127 @@ struct ListClosureEscape {
 
   public:
     // CREATORS
+    fn_list() {}
+
     explicit fn_list(FNil _v) : d_v_(_v) {}
 
     explicit fn_list(FCons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<fn_list> fnil() {
-      return std::make_shared<fn_list>(FNil{});
+    fn_list(const fn_list &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    fn_list(fn_list &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    fn_list &operator=(const fn_list &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<fn_list>
-    fcons(std::function<unsigned int(unsigned int)> a0,
-          const std::shared_ptr<fn_list> &a1) {
-      return std::make_shared<fn_list>(FCons{std::move(a0), a1});
+    fn_list &operator=(fn_list &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<fn_list>
-    fcons(std::function<unsigned int(unsigned int)> a0,
-          std::shared_ptr<fn_list> &&a1) {
-      return std::make_shared<fn_list>(FCons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    fn_list clone() const {
+      fn_list _out{};
+
+      struct _CloneFrame {
+        const fn_list *_src;
+        fn_list *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const fn_list *_src = _frame._src;
+        fn_list *_dst = _frame._dst;
+        if (std::holds_alternative<FNil>(_src->v())) {
+          _dst->d_v_ = FNil{};
+        } else {
+          const auto &_alt = std::get<FCons>(_src->v());
+          _dst->d_v_ = FCons{_alt.d_a0,
+                             _alt.d_a1 ? std::make_unique<fn_list>() : nullptr};
+          auto &_dst_alt = std::get<FCons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static fn_list fnil() { return fn_list(FNil{}); }
+
+    static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
+                         fn_list a1) {
+      return fn_list(
+          FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~fn_list() {
+      std::vector<std::unique_ptr<fn_list>> _stack{};
+      auto _drain = [&](fn_list &_node) {
+        if (std::holds_alternative<FCons>(_node.d_v_)) {
+          auto &_alt = std::get<FCons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int apply_first(const unsigned int x) const {
-      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
+    unsigned int apply_first(const unsigned int x) const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
         return d_a0(x);
       }
     }
 
-    template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                  std::shared_ptr<fn_list>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<
+          T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
+          T1 &>
     T1 fn_list_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template fn_list_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template fn_list_rec<T1>(f, f0));
       }
     }
 
-    template <typename T1, MapsTo<T1, std::function<unsigned int(unsigned int)>,
-                                  std::shared_ptr<fn_list>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<
+          T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
+          T1 &>
     T1 fn_list_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template fn_list_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template fn_list_rect<T1>(f, f0));
       }
     }
   };
@@ -188,17 +319,14 @@ struct ListClosureEscape {
   /// BUG: partial applications stored in a custom list via FCons.
   /// Each lambda for (sum_values t_i) captures t_i by &.
   /// When build_fns returns, t1 and t2 are destroyed.
-  static std::shared_ptr<fn_list> build_fns(std::shared_ptr<tree> t1,
-                                            std::shared_ptr<tree> t2);
+  static fn_list build_fns(tree t1, tree t2);
   static inline const unsigned int bug_list_clobber = []() {
-    std::shared_ptr<tree> t1 =
-        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                   tree::node(tree::leaf(), 30u, tree::leaf()));
-    std::shared_ptr<tree> t2 =
-        tree::node(tree::node(tree::leaf(), 77u, tree::leaf()), 88u,
-                   tree::node(tree::leaf(), 99u, tree::leaf()));
-    std::shared_ptr<fn_list> fns = build_fns(std::move(t1), std::move(t2));
-    return std::move(fns)->apply_first(0u);
+    tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                         tree::node(tree::leaf(), 30u, tree::leaf()));
+    tree t2 = tree::node(tree::node(tree::leaf(), 77u, tree::leaf()), 88u,
+                         tree::node(tree::leaf(), 99u, tree::leaf()));
+    fn_list fns = build_fns(std::move(t1), std::move(t2));
+    return std::move(fns).apply_first(0u);
   }();
 };
 

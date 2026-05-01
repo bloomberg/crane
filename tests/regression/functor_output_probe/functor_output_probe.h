@@ -2,10 +2,9 @@
 #define INCLUDED_FUNCTOR_OUTPUT_PROBE
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename M>
 concept S = requires {
@@ -30,7 +29,7 @@ template <S X> struct F {
 struct N {
   using t = unsigned int;
   static inline const unsigned int zero = 0u;
-  __attribute__((pure)) static unsigned int to_nat(const unsigned int n);
+  static unsigned int to_nat(const unsigned int n);
 };
 
 using FN = F<N>;

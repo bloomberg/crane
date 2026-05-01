@@ -7,9 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct HigherKinded {
   template <typename T1, typename T2 = void, typename T3 = void, typename F0,
@@ -25,8 +23,8 @@ struct HigherKinded {
     };
 
     struct Branch {
-      std::shared_ptr<Tree<t_A>> d_a0;
-      std::shared_ptr<Tree<t_A>> d_a1;
+      std::unique_ptr<Tree<t_A>> d_a0;
+      std::unique_ptr<Tree<t_A>> d_a1;
     };
 
     using variant_t = std::variant<Leaf, Branch>;
@@ -37,94 +35,170 @@ struct HigherKinded {
 
   public:
     // CREATORS
+    Tree() {}
+
     explicit Tree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit Tree(Branch _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<Tree<t_A>> leaf(t_A a0) {
-      return std::make_shared<Tree<t_A>>(Leaf{std::move(a0)});
+    Tree(const Tree<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    Tree(Tree<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    Tree<t_A> &operator=(const Tree<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<Tree<t_A>>
-    branch(const std::shared_ptr<Tree<t_A>> &a0,
-           const std::shared_ptr<Tree<t_A>> &a1) {
-      return std::make_shared<Tree<t_A>>(Branch{a0, a1});
+    Tree<t_A> &operator=(Tree<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<Tree<t_A>> branch(std::shared_ptr<Tree<t_A>> &&a0,
-                                             std::shared_ptr<Tree<t_A>> &&a1) {
-      return std::make_shared<Tree<t_A>>(Branch{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    Tree<t_A> clone() const {
+      Tree<t_A> _out{};
+
+      struct _CloneFrame {
+        const Tree<t_A> *_src;
+        Tree<t_A> *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const Tree<t_A> *_src = _frame._src;
+        Tree<t_A> *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Branch>(_src->v());
+          _dst->d_v_ =
+              Branch{_alt.d_a0 ? std::make_unique<Tree<t_A>>() : nullptr,
+                     _alt.d_a1 ? std::make_unique<Tree<t_A>>() : nullptr};
+          auto &_dst_alt = std::get<Branch>(_dst->d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    template <typename _U> explicit Tree(const Tree<_U> &_other) {
+      if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
+        const auto &[d_a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
+        d_v_ = Leaf{t_A(d_a0)};
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename Tree<_U>::Branch>(_other.v());
+        d_v_ = Branch{d_a0 ? std::make_unique<Tree<t_A>>(*d_a0) : nullptr,
+                      d_a1 ? std::make_unique<Tree<t_A>>(*d_a1) : nullptr};
+      }
+    }
+
+    static Tree<t_A> leaf(t_A a0) { return Tree(Leaf{std::move(a0)}); }
+
+    static Tree<t_A> branch(Tree<t_A> a0, Tree<t_A> a1) {
+      return Tree(Branch{std::make_unique<Tree<t_A>>(std::move(a0)),
+                         std::make_unique<Tree<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~Tree() {
+      std::vector<std::unique_ptr<Tree<t_A>>> _stack{};
+      auto _drain = [&](Tree<t_A> &_node) {
+        if (std::holds_alternative<Branch>(_node.d_v_)) {
+          auto &_alt = std::get<Branch>(_node.d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back(std::move(_alt.d_a0));
+          }
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <
-      typename T1, typename T2, MapsTo<T2, T1> F0,
-      MapsTo<T2, std::shared_ptr<Tree<T1>>, T2, std::shared_ptr<Tree<T1>>, T2>
-          F1>
-  static T2 Tree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<Tree<T1>> &t) {
-    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
-      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t->v());
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, Tree<T1> &, T2 &, Tree<T1> &, T2 &>
+  static T2 Tree_rect(F0 &&f, F1 &&f0, const Tree<T1> &t) {
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
+      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t->v());
-      return f0(d_a0, Tree_rect<T1, T2>(f, f0, d_a0), d_a1,
-                Tree_rect<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
+      return f0(*(d_a0), Tree_rect<T1, T2>(f, f0, *(d_a0)), *(d_a1),
+                Tree_rect<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  template <
-      typename T1, typename T2, MapsTo<T2, T1> F0,
-      MapsTo<T2, std::shared_ptr<Tree<T1>>, T2, std::shared_ptr<Tree<T1>>, T2>
-          F1>
-  static T2 Tree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<Tree<T1>> &t) {
-    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
-      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t->v());
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, Tree<T1> &, T2 &, Tree<T1> &, T2 &>
+  static T2 Tree_rec(F0 &&f, F1 &&f0, const Tree<T1> &t) {
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
+      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t->v());
-      return f0(d_a0, Tree_rec<T1, T2>(f, f0, d_a0), d_a1,
-                Tree_rec<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
+      return f0(*(d_a0), Tree_rec<T1, T2>(f, f0, *(d_a0)), *(d_a1),
+                Tree_rec<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::shared_ptr<Tree<T2>>
-  tree_map(F0 &&f, const std::shared_ptr<Tree<T1>> &t) {
-    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
-      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t->v());
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+  static Tree<T2> tree_map(F0 &&f, const Tree<T1> &t) {
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
+      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
       return Tree<T2>::leaf(f(d_a0));
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t->v());
-      return Tree<T2>::branch(tree_map<T1, T2>(f, d_a0),
-                              tree_map<T1, T2>(f, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
+      return Tree<T2>::branch(tree_map<T1, T2>(f, *(d_a0)),
+                              tree_map<T1, T2>(f, *(d_a1)));
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0, MapsTo<T2, T2, T2> F1>
-  static T2 tree_fold(F0 &&leaf_f, F1 &&branch_f,
-                      const std::shared_ptr<Tree<T1>> &t) {
-    if (std::holds_alternative<typename Tree<T1>::Leaf>(t->v())) {
-      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t->v());
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
+             std::is_invocable_r_v<T2, F1 &, T2 &, T2 &>
+  static T2 tree_fold(F0 &&leaf_f, F1 &&branch_f, const Tree<T1> &t) {
+    if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
+      const auto &[d_a0] = std::get<typename Tree<T1>::Leaf>(t.v());
       return leaf_f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t->v());
-      return branch_f(tree_fold<T1, T2>(leaf_f, branch_f, d_a0),
-                      tree_fold<T1, T2>(leaf_f, branch_f, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
+      return branch_f(tree_fold<T1, T2>(leaf_f, branch_f, *(d_a0)),
+                      tree_fold<T1, T2>(leaf_f, branch_f, *(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const std::shared_ptr<Tree<unsigned int>> &t);
+  static unsigned int tree_sum(const Tree<unsigned int> &t);
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  tree_size(const std::shared_ptr<Tree<T1>> &t) {
+  template <typename T1> static unsigned int tree_size(const Tree<T1> &t) {
     return tree_fold<T1, unsigned int>(
         [](const T1) { return 1u; },
         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
@@ -133,9 +207,9 @@ struct HigherKinded {
         t);
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  __attribute__((pure)) static std::optional<T2>
-  map_option(F0 &&f, const std::optional<T1> o) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+  static std::optional<T2> map_option(F0 &&f, const std::optional<T1> &o) {
     if (o.has_value()) {
       const T1 &x = *o;
       return std::make_optional<T2>(f(x));
@@ -144,15 +218,14 @@ struct HigherKinded {
     }
   }
 
-  static inline const std::shared_ptr<Tree<unsigned int>> test_tree =
-      Tree<unsigned int>::branch(
-          Tree<unsigned int>::leaf(1u),
-          Tree<unsigned int>::branch(Tree<unsigned int>::leaf(2u),
-                                     Tree<unsigned int>::leaf(3u)));
+  static inline const Tree<unsigned int> test_tree = Tree<unsigned int>::branch(
+      Tree<unsigned int>::leaf(1u),
+      Tree<unsigned int>::branch(Tree<unsigned int>::leaf(2u),
+                                 Tree<unsigned int>::leaf(3u)));
   static inline const unsigned int test_tree_sum = tree_sum(test_tree);
   static inline const unsigned int test_tree_size =
       tree_size<unsigned int>(test_tree);
-  static inline const std::shared_ptr<Tree<unsigned int>> test_tree_map =
+  static inline const Tree<unsigned int> test_tree_map =
       tree_map<unsigned int, unsigned int>(
           [](const unsigned int n) { return (n * 2u); }, test_tree);
   static inline const std::optional<unsigned int> test_hk_option = hk_map(
@@ -163,9 +236,8 @@ struct HigherKinded {
       },
       [](const unsigned int n) { return (n + 1u); },
       std::make_optional<unsigned int>(5u));
-  static inline const std::shared_ptr<Tree<unsigned int>> test_hk_tree = hk_map(
-      []<typename _T1>(auto &&d_a0, const std::shared_ptr<Tree<_T1>> &d_a1)
-          -> decltype(auto) {
+  static inline const Tree<unsigned int> test_hk_tree = hk_map(
+      []<typename _T1>(auto &&d_a0, const Tree<_T1> &d_a1) -> decltype(auto) {
         return tree_map<_T1, std::invoke_result_t<decltype(d_a0) &, _T1 &>>(
             std::forward<decltype(d_a0)>(d_a0), d_a1);
       },

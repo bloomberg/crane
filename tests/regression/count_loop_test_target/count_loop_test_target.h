@@ -2,12 +2,10 @@
 #define INCLUDED_COUNT_LOOP_TEST_TARGET
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct CountLoopTestTarget {
   struct instruction {
@@ -27,51 +25,76 @@ struct CountLoopTestTarget {
 
   public:
     // CREATORS
+    instruction() {}
+
     explicit instruction(ISZ _v) : d_v_(std::move(_v)) {}
 
     explicit instruction(NOP _v) : d_v_(_v) {}
 
-    static std::shared_ptr<instruction> isz(unsigned int a0, unsigned int a1) {
-      return std::make_shared<instruction>(ISZ{std::move(a0), std::move(a1)});
+    instruction(const instruction &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instruction(instruction &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    instruction &operator=(const instruction &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction> nop() {
-      return std::make_shared<instruction>(NOP{});
+    instruction &operator=(instruction &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    instruction clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<ISZ>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
+        return instruction(ISZ{d_a0, d_a1});
+      } else {
+        return instruction(NOP{});
+      }
+    }
+
+    // CREATORS
+    static instruction isz(unsigned int a0, unsigned int a1) {
+      return instruction(ISZ{std::move(a0), std::move(a1)});
+    }
+
+    static instruction nop() { return instruction(NOP{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
-  static T1 instruction_rect(F0 &&f, const T1 f0,
-                             const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::ISZ>(i->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename instruction::ISZ>(i->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+  static T1 instruction_rect(F0 &&f, const T1 f0, const instruction &i) {
+    if (std::holds_alternative<typename instruction::ISZ>(i.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename instruction::ISZ>(i.v());
       return f(d_a0, d_a1);
     } else {
       return f0;
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
-  static T1 instruction_rec(F0 &&f, const T1 f0,
-                            const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::ISZ>(i->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename instruction::ISZ>(i->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+  static T1 instruction_rec(F0 &&f, const T1 f0, const instruction &i) {
+    if (std::holds_alternative<typename instruction::ISZ>(i.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename instruction::ISZ>(i.v());
       return f(d_a0, d_a1);
     } else {
       return f0;
     }
   }
 
-  static std::shared_ptr<instruction>
-  count_loop_test(const unsigned int loop_addr);
-  __attribute__((pure)) static unsigned int
-  target_of(const std::shared_ptr<instruction> &i);
+  static instruction count_loop_test(const unsigned int loop_addr);
+  static unsigned int target_of(const instruction &i);
   static inline const unsigned int t = target_of(count_loop_test(37u));
 };
 

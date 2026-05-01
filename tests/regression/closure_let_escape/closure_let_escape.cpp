@@ -1,10 +1,5 @@
 #include <closure_let_escape.h>
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 /// A local fixpoint captures a LET-BINDING (not a function parameter)
 /// and escapes through Some (std::optional).
 ///
@@ -16,35 +11,40 @@
 /// Difference from fix_escape_capture: captures a LET-BINDING
 /// (not a function parameter). The let-binding involves a computation
 /// (n * 2), so it can't be optimized away.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 ClosureLetEscape::make_fn_fix(const unsigned int n) {
   unsigned int base = (n * 2u);
-  auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *add = [=](unsigned int x) mutable -> unsigned int {
+  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
     } else {
       unsigned int x_ = x - 1;
-      return ((*add)(x_) + 1);
+      return (_self_add(_self_add, x_) + 1);
     }
   };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(*add);
+  auto add = [=](unsigned int x) mutable -> unsigned int {
+    return add_impl(add_impl, x);
+  };
+  return std::make_optional<std::function<unsigned int(unsigned int)>>(add);
 }
 
 /// test3: Captures from multiple let bindings.
 /// BUG: Both a and b are captured by &, both dangle.
-__attribute__((pure)) std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<unsigned int(unsigned int)>>
 ClosureLetEscape::make_fn_multi(const unsigned int n) {
   unsigned int a = (n + 1u);
   unsigned int b = (a * 3u);
-  auto helper = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *helper = [=](unsigned int x) mutable -> unsigned int {
+  auto helper_impl = [=](auto &_self_helper,
+                         unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return (a + b);
     } else {
       unsigned int x_ = x - 1;
-      return ((*helper)(x_) + 1);
+      return (_self_helper(_self_helper, x_) + 1);
     }
   };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(*helper);
+  auto helper = [=](unsigned int x) mutable -> unsigned int {
+    return helper_impl(helper_impl, x);
+  };
+  return std::make_optional<std::function<unsigned int(unsigned int)>>(helper);
 }

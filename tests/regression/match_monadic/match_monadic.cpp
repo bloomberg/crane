@@ -1,16 +1,5 @@
 #include <match_monadic.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Match on custom inductive with effects in each arm
 std::string MatchMonadic::color_name(const Color c) {
   switch (c) {
@@ -65,7 +54,7 @@ std::string MatchMonadic::nested_match(const unsigned int n, const bool b) {
 }
 
 /// 4. Match on option in monadic context
-unsigned int MatchMonadic::handle_option(const std::optional<unsigned int> o) {
+unsigned int MatchMonadic::handle_option(const std::optional<unsigned int> &o) {
   if (o.has_value()) {
     const unsigned int &n = *o;
     std::cout << "found"s << '\n';
@@ -77,16 +66,15 @@ unsigned int MatchMonadic::handle_option(const std::optional<unsigned int> o) {
 }
 
 /// 5. Recursive function matching on tree
-unsigned int
-MatchMonadic::tree_sum(const std::shared_ptr<Tree<unsigned int>> &t) {
-  if (std::holds_alternative<typename Tree<unsigned int>::Leaf>(t->v())) {
+unsigned int MatchMonadic::tree_sum(const Tree<unsigned int> &t) {
+  if (std::holds_alternative<typename Tree<unsigned int>::Leaf>(t.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename Tree<unsigned int>::Node>(t->v());
+        std::get<typename Tree<unsigned int>::Node>(t.v());
     std::cout << "visiting"s << '\n';
-    unsigned int sl = tree_sum(d_a0);
-    unsigned int sr = tree_sum(d_a2);
+    unsigned int sl = tree_sum(*(d_a0));
+    unsigned int sr = tree_sum(*(d_a2));
     return ((sl + d_a1) + sr);
   }
 }

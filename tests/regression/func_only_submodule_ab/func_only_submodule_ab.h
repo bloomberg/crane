@@ -1,19 +1,18 @@
 #ifndef INCLUDED_FUNC_ONLY_SUBMODULE_AB
 #define INCLUDED_FUNC_ONLY_SUBMODULE_AB
 
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct FuncOnlySubmoduleAb {
   struct Root {
     struct A {
-      __attribute__((pure)) static unsigned int inc(const unsigned int n);
+      static unsigned int inc(const unsigned int n);
     };
 
     struct B {
-      __attribute__((pure)) static unsigned int dec(const unsigned int _x0);
+      static unsigned int dec(const unsigned int _x0);
     };
   };
 

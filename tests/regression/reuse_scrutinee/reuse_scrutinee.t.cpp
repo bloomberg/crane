@@ -29,10 +29,10 @@ int main() {
   std::visit(
       Overloaded{
           [](const RS::tree::Leaf) { std::cout << "Leaf"; },
-          [](const RS::tree::Node n) {
+          [](const RS::tree::Node &n) {
             std::cout << "Node(_, " << n.d_a1 << ", _)";
           }},
-      rd->v());
+      rd.v());
   std::cout << std::endl;
 
   std::cout << "All reuse_scrutinee tests passed!" << std::endl;

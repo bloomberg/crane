@@ -4,12 +4,11 @@
 #include <any>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,7 +16,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -28,29 +27,100 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename I>
@@ -58,9 +128,8 @@ concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
   typename I::carrier;
   { I::op(a0, a1) } -> std::convertible_to<typename I::carrier>;
 };
-template <typename I>
-concept Monoid = requires (typename I::m_carrier a0, typename I::m_carrier
-a1) {
+template <typename I>concept Monoid = requires (typename I::m_carrier a0,
+typename I::m_carrier a1) {
   typename I::m_carrier;
   { I::m_op(a0,
 a1) } -> std::convertible_to<typename I::m_carrier>;
@@ -76,7 +145,7 @@ struct DepRecord {
   struct nat_magma {
     using carrier = unsigned int;
 
-    constexpr static unsigned int op(unsigned int a0, unsigned int a1) {
+    static unsigned int op(unsigned int a0, unsigned int a1) {
       return (a0 + a1);
     }
   };
@@ -86,7 +155,7 @@ struct DepRecord {
   struct bool_magma {
     using carrier = bool;
 
-    constexpr static bool op(bool a0, bool a1) { return (a0 && a1); }
+    static bool op(bool a0, bool a1) { return (a0 && a1); }
   };
 
   static_assert(Magma<bool_magma>);
@@ -95,11 +164,11 @@ struct DepRecord {
   struct nat_monoid {
     using m_carrier = unsigned int;
 
-    constexpr static unsigned int m_op(unsigned int a0, unsigned int a1) {
+    static unsigned int m_op(unsigned int a0, unsigned int a1) {
       return (a0 + a1);
     }
 
-    constexpr static unsigned int m_id() { return 0u; }
+    static unsigned int m_id() { return 0u; }
   };
 
   static_assert(Monoid<nat_monoid>);
@@ -107,25 +176,25 @@ struct DepRecord {
   struct nat_mul_monoid {
     using m_carrier = unsigned int;
 
-    constexpr static unsigned int m_op(unsigned int a0, unsigned int a1) {
+    static unsigned int m_op(unsigned int a0, unsigned int a1) {
       return (a0 * a1);
     }
 
-    constexpr static unsigned int m_id() { return 1u; }
+    static unsigned int m_id() { return 1u; }
   };
 
   static_assert(Monoid<nat_mul_monoid>);
 
   template <Monoid _tcI0>
-  __attribute__((pure)) static typename _tcI0::m_carrier
-  mfold(const std::shared_ptr<List<typename _tcI0::m_carrier>> &l) {
+  static typename _tcI0::m_carrier
+  mfold(const List<typename _tcI0::m_carrier> &l) {
     if (std::holds_alternative<typename List<typename _tcI0::m_carrier>::Nil>(
-            l->v())) {
+            l.v())) {
       return _tcI0::m_id();
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<typename _tcI0::m_carrier>::Cons>(l->v());
-      return _tcI0::m_op(d_a0, mfold<_tcI0>(d_a1));
+          std::get<typename List<typename _tcI0::m_carrier>::Cons>(l.v());
+      return _tcI0::m_op(d_a0, mfold<_tcI0>(*(d_a1)));
     }
   }
 
@@ -175,12 +244,15 @@ struct DepRecord {
   struct Tagged {
     Tag the_tag;
     tag_type the_value;
+
+    // ACCESSORS
+    Tagged clone() const {
+      return Tagged{(*(this)).the_tag, (*(this)).the_value};
+    }
   };
 
-  static inline const std::shared_ptr<Tagged> tagged_nat =
-      std::make_shared<Tagged>(Tagged{Tag::e_TNAT, 42u});
-  static inline const std::shared_ptr<Tagged> tagged_bool =
-      std::make_shared<Tagged>(Tagged{Tag::e_TBOOL, true});
+  static inline const Tagged tagged_nat = Tagged{Tag::e_TNAT, 42u};
+  static inline const Tagged tagged_bool = Tagged{Tag::e_TBOOL, true};
 };
 
 #endif // INCLUDED_DEP_RECORD

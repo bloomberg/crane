@@ -7,19 +7,17 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct ThisCaptureDangling {
-  struct tree : public std::enable_shared_from_this<tree> {
+  struct tree {
     // TYPES
     struct Leaf {};
 
     struct Node {
-      std::shared_ptr<tree> d_a0;
+      std::unique_ptr<tree> d_a0;
       unsigned int d_a1;
-      std::shared_ptr<tree> d_a2;
+      std::unique_ptr<tree> d_a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -30,32 +28,97 @@ struct ThisCaptureDangling {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf() {
-      return std::make_shared<tree>(Leaf{});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
-                                      unsigned int a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{a0, std::move(a1), a2});
+    tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
-                                      unsigned int a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
+    // ACCESSORS
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
+          if (_alt.d_a2) {
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static tree leaf() { return tree(Leaf{}); }
+
+    static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~tree() {
+      std::vector<std::unique_ptr<tree>> _stack{};
+      auto _drain = [&](tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back(std::move(_alt.d_a0));
+          }
+          if (_alt.d_a2) {
+            _stack.push_back(std::move(_alt.d_a2));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// BUG HYPOTHESIS: When get_fn is methodified (tree is the only inductive),
     /// the first argument t becomes the raw this pointer.
@@ -70,58 +133,55 @@ struct ThisCaptureDangling {
     /// tree's shared_ptr, we have use-after-free.
     ///
     /// Note: option is custom-extracted to std::optional.
-    __attribute__((pure))
-    std::optional<std::function<unsigned int(unsigned int)>>
-    get_fn() const {
-      std::shared_ptr<tree> _self =
-          std::const_pointer_cast<tree>(this->shared_from_this());
-      auto _cs = this->tree_sum();
+    std::optional<std::function<unsigned int(unsigned int)>> get_fn() const {
+      tree _self = *(this);
+      auto _cs = (*(this)).tree_sum();
       if (_cs <= 0) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
         unsigned int _x = _cs - 1;
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
             [=](const unsigned int x) mutable {
-              return (x + _self->tree_sum());
+              return (x + _self.tree_sum());
             });
       }
     }
 
-    __attribute__((pure)) unsigned int tree_sum() const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+    unsigned int tree_sum() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return ((d_a0->tree_sum() + d_a1) + d_a2->tree_sum());
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        return (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum());
       }
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                  std::shared_ptr<tree>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(d_a0, d_a0->template tree_rec<T1>(f, f0), d_a1, d_a2,
-                  d_a2->template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
+                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
       }
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                  std::shared_ptr<tree>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(d_a0, d_a0->template tree_rect<T1>(f, f0), d_a1, d_a2,
-                  d_a2->template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
+                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -129,7 +189,7 @@ struct ThisCaptureDangling {
   struct wrapper {
     // TYPES
     struct Wrap {
-      std::shared_ptr<tree> d_a0;
+      tree d_a0;
     };
 
     using variant_t = std::variant<Wrap>;
@@ -140,32 +200,52 @@ struct ThisCaptureDangling {
 
   public:
     // CREATORS
+    wrapper() {}
+
     explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<wrapper> wrap(const std::shared_ptr<tree> &a0) {
-      return std::make_shared<wrapper>(Wrap{a0});
+    wrapper(const wrapper &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    wrapper &operator=(const wrapper &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<wrapper> wrap(std::shared_ptr<tree> &&a0) {
-      return std::make_shared<wrapper>(Wrap{std::move(a0)});
+    wrapper &operator=(wrapper &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    wrapper clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<Wrap>(_sv.v());
+      return wrapper(Wrap{d_a0.clone()});
+    }
+
+    // CREATORS
+    static wrapper wrap(tree a0) { return wrapper(Wrap{std::move(a0)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>> F0>
-  static T1 wrapper_rect(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, tree &>
+  static T1 wrapper_rect(F0 &&f, const wrapper &w) {
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>> F0>
-  static T1 wrapper_rec(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, tree &>
+  static T1 wrapper_rec(F0 &&f, const wrapper &w) {
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
@@ -175,7 +255,7 @@ struct ThisCaptureDangling {
   /// the dangling this.
   /// Expected: match result is Some f, then f 10 = 10 + 42 = 52.
   static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs = tree::node(tree::leaf(), 42u, tree::leaf())->get_fn();
+    auto _cs = tree::node(tree::leaf(), 42u, tree::leaf()).get_fn();
     if (_cs.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *_cs;
       return f(10u);
@@ -188,7 +268,7 @@ struct ThisCaptureDangling {
   static inline const unsigned int test2 = []() -> unsigned int {
     auto _cs = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                           tree::node(tree::leaf(), 12u, tree::leaf()))
-                   ->get_fn();
+                   .get_fn();
     if (_cs.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *_cs;
       return f(5u);
@@ -201,11 +281,11 @@ struct ThisCaptureDangling {
   /// Expected: f noise = noise + 100 where noise = 1+2+3 = 6. So 106.
   static inline const unsigned int test3 = []() {
     std::optional<std::function<unsigned int(unsigned int)>> opt =
-        tree::node(tree::leaf(), 100u, tree::leaf())->get_fn();
+        tree::node(tree::leaf(), 100u, tree::leaf()).get_fn();
     unsigned int noise =
         tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
                    tree::node(tree::leaf(), 3u, tree::leaf()))
-            ->tree_sum();
+            .tree_sum();
     if (opt.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *opt;
       return f(noise);

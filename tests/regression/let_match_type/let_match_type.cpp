@@ -1,17 +1,7 @@
 #include <let_match_type.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. let-bound bool match returning nat
-__attribute__((pure)) unsigned int LetMatchType::let_match_nat(const bool b) {
+unsigned int LetMatchType::let_match_nat(const bool b) {
   unsigned int x;
   if (b) {
     x = 1u;
@@ -22,8 +12,7 @@ __attribute__((pure)) unsigned int LetMatchType::let_match_nat(const bool b) {
 }
 
 /// 2. let-bound nat match returning string — TRIGGERS std::any bug
-__attribute__((pure)) std::string
-LetMatchType::let_match_string(const unsigned int n) {
+std::string LetMatchType::let_match_string(const unsigned int n) {
   std::string s;
   if (n <= 0) {
     s = "zero";
@@ -35,8 +24,8 @@ LetMatchType::let_match_string(const unsigned int n) {
 }
 
 /// 3. let-bound option match
-__attribute__((pure)) unsigned int
-LetMatchType::let_match_option(const std::optional<unsigned int> o) {
+unsigned int
+LetMatchType::let_match_option(const std::optional<unsigned int> &o) {
   unsigned int x;
   if (o.has_value()) {
     const unsigned int &n = *o;
@@ -48,8 +37,7 @@ LetMatchType::let_match_option(const std::optional<unsigned int> o) {
 }
 
 /// 4. let-bound nested bool match
-__attribute__((pure)) unsigned int LetMatchType::let_nested_bool(const bool a,
-                                                                 const bool b) {
+unsigned int LetMatchType::let_nested_bool(const bool a, const bool b) {
   if (a) {
     if (b) {
       return 3u;
@@ -66,8 +54,7 @@ __attribute__((pure)) unsigned int LetMatchType::let_nested_bool(const bool a,
 }
 
 /// 5. Multiple let-bound matches
-__attribute__((pure)) unsigned int LetMatchType::multi_let_match(const bool a,
-                                                                 const bool b) {
+unsigned int LetMatchType::multi_let_match(const bool a, const bool b) {
   unsigned int x;
   if (a) {
     x = 10u;
@@ -84,8 +71,7 @@ __attribute__((pure)) unsigned int LetMatchType::multi_let_match(const bool a,
 }
 
 /// 6. let-bound match used in function argument
-__attribute__((pure)) unsigned int
-LetMatchType::let_match_in_arg(const unsigned int n) {
+unsigned int LetMatchType::let_match_in_arg(const unsigned int n) {
   unsigned int x;
   if (n <= 0) {
     x = 0u;
@@ -108,7 +94,7 @@ std::string LetMatchType::let_match_monadic(const bool b) {
   return msg;
 }
 
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
+std::pair<unsigned int, unsigned int>
 LetMatchType::direction_offset(const LetMatchType::Direction d) {
   unsigned int dx = [&]() {
     switch (d) {

@@ -1,15 +1,5 @@
 #include <effect_getline_stress.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. get_line in both branches of if-then-else
 std::string EffectGetlineStress::get_or_default(const bool ask) {
   if (ask) {
@@ -49,16 +39,15 @@ std::string EffectGetlineStress::get_nth_line(const unsigned int n) {
 }
 
 /// 3. Recursive function that uses get_line in a loop
-std::shared_ptr<List<std::string>>
-EffectGetlineStress::read_lines(const unsigned int n,
-                                std::shared_ptr<List<std::string>> acc) {
+List<std::string> EffectGetlineStress::read_lines(const unsigned int n,
+                                                  List<std::string> acc) {
   if (n <= 0) {
     return acc;
   } else {
     unsigned int n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    return read_lines(n_, List<std::string>::cons(line, acc));
+    return read_lines(n_, List<std::string>::cons(line, std::move(acc)));
   }
 }
 

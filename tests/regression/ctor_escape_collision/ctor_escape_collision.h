@@ -1,11 +1,10 @@
 #ifndef INCLUDED_CTOR_ESCAPE_COLLISION
 #define INCLUDED_CTOR_ESCAPE_COLLISION
 
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct CtorEscapeCollision {
   enum class Item { e_D_, e_D_0, e_D__, e_D__0, e_D__1, e_D__2 };
@@ -64,7 +63,7 @@ struct CtorEscapeCollision {
     }
   }
 
-  __attribute__((pure)) static unsigned int tag(const Item x);
+  static unsigned int tag(const Item x);
   static inline const unsigned int t =
       (((((tag(Item::e_D_) + tag(Item::e_D_0)) + tag(Item::e_D__)) +
          tag(Item::e_D__0)) +

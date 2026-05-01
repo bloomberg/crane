@@ -2,11 +2,10 @@
 #define INCLUDED_ROCQ_BUG_3923
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 enum class Unit { e_TT };
 template <typename M>

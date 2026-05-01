@@ -2,19 +2,18 @@
 #define INCLUDED_POLYMORPHIC_HELPER
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct Nat {
   // TYPES
   struct O {};
 
   struct S {
-    std::shared_ptr<Nat> d_a0;
+    std::unique_ptr<Nat> d_a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -25,32 +24,94 @@ private:
 
 public:
   // CREATORS
+  Nat() {}
+
   explicit Nat(O _v) : d_v_(_v) {}
 
   explicit Nat(S _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Nat> o() { return std::make_shared<Nat>(O{}); }
+  Nat(const Nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
 
-  static std::shared_ptr<Nat> s(const std::shared_ptr<Nat> &a0) {
-    return std::make_shared<Nat>(S{a0});
+  Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  Nat &operator=(const Nat &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Nat> s(std::shared_ptr<Nat> &&a0) {
-    return std::make_shared<Nat>(S{std::move(a0)});
+  Nat &operator=(Nat &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
-
-  // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  Nat clone() const {
+    Nat _out{};
 
-  std::shared_ptr<Nat> add(std::shared_ptr<Nat> m) const {
-    if (std::holds_alternative<typename Nat::O>(this->v())) {
+    struct _CloneFrame {
+      const Nat *_src;
+      Nat *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Nat *_src = _frame._src;
+      Nat *_dst = _frame._dst;
+      if (std::holds_alternative<O>(_src->v())) {
+        _dst->d_v_ = O{};
+      } else {
+        const auto &_alt = std::get<S>(_src->v());
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  static Nat o() { return Nat(O{}); }
+
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+
+  // MANIPULATORS
+  ~Nat() {
+    std::vector<std::unique_ptr<Nat>> _stack{};
+    auto _drain = [&](Nat &_node) {
+      if (std::holds_alternative<S>(_node.d_v_)) {
+        auto &_alt = std::get<S>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return d_v_; }
+
+  Nat add(Nat m) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename Nat::O>(_sv.v())) {
       return m;
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
-      return Nat::s(d_a0->add(m));
+      const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
+      return Nat::s((*(d_a0)).add(std::move(m)));
     }
   }
 };
@@ -61,7 +122,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -72,61 +133,128 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  std::shared_ptr<Nat> length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  Nat length() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return Nat::o();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return Nat::s(d_a1->length());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return Nat::s((*(d_a1)).length());
     }
   }
 };
 
 struct ListDef {
-  template <typename T1>
-  static std::shared_ptr<List<T1>> repeat(const T1 x,
-                                          const std::shared_ptr<Nat> &n);
+  template <typename T1> static List<T1> repeat(const T1 x, const Nat &n);
 };
 
-template <typename T1>
-std::shared_ptr<Nat> _foo_aux(const T1 a, const std::shared_ptr<Nat> &n) {
-  return ListDef::template repeat<T1>(a, n)->length();
+template <typename T1> Nat _foo_aux(const T1 a, const Nat n) {
+  return ListDef::template repeat<T1>(a, n).length();
 }
 
-std::shared_ptr<Nat> foo(std::shared_ptr<Nat> n, const bool b);
+Nat foo(Nat n, const bool b);
 
-template <typename T1>
-std::shared_ptr<List<T1>> ListDef::repeat(const T1 x,
-                                          const std::shared_ptr<Nat> &n) {
-  if (std::holds_alternative<typename Nat::O>(n->v())) {
+template <typename T1> List<T1> ListDef::repeat(const T1 x, const Nat &n) {
+  if (std::holds_alternative<typename Nat::O>(n.v())) {
     return List<T1>::nil();
   } else {
-    const auto &[d_a0] = std::get<typename Nat::S>(n->v());
-    return List<T1>::cons(x, ListDef::template repeat<T1>(x, d_a0));
+    const auto &[d_a0] = std::get<typename Nat::S>(n.v());
+    return List<T1>::cons(x, ListDef::template repeat<T1>(x, *(d_a0)));
   }
 }
 

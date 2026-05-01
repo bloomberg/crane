@@ -3,13 +3,11 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,7 +15,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -28,49 +26,122 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  std::shared_ptr<List<t_A>> app(std::shared_ptr<List<t_A>> m) const {
-    std::shared_ptr<List<t_A>> _head{};
-    std::shared_ptr<List<t_A>> *_write = &_head;
+  List<t_A> app(List<t_A> m) const {
+    std::unique_ptr<List<t_A>> _head{};
+    std::unique_ptr<List<t_A>> *_write = &_head;
     const List *_loop_self = this;
+    List<t_A> _loop_m = std::move(m);
     while (true) {
-      if (std::holds_alternative<typename List<t_A>::Nil>(_loop_self->v())) {
-        *_write = m;
+      auto &&_sv = *(_loop_self);
+      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<t_A>::Cons>(_loop_self->v());
-        auto _cell = List<t_A>::cons(d_a0, nullptr);
-        *_write = _cell;
-        _write = &std::get<typename List<t_A>::Cons>(_cell->v_mut()).d_a1;
+        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+        auto _cell = std::make_unique<List<t_A>>(
+            typename List<t_A>::Cons(d_a0, nullptr));
+        *(_write) = std::move(_cell);
+        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return _head;
+    return std::move(*(_head));
   }
 };
 
@@ -80,9 +151,9 @@ struct LoopifyMoreTrees {
     struct Leaf {};
 
     struct Node {
-      std::shared_ptr<tree> d_a0;
+      std::unique_ptr<tree> d_a0;
       unsigned int d_a1;
-      std::shared_ptr<tree> d_a2;
+      std::unique_ptr<tree> d_a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -93,176 +164,144 @@ struct LoopifyMoreTrees {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf() {
-      return std::make_shared<tree>(Leaf{});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
-                                      unsigned int a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{a0, std::move(a1), a2});
+    tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
-                                      unsigned int a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
+    // ACCESSORS
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
+          if (_alt.d_a2) {
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static tree leaf() { return tree(Leaf{}); }
+
+    static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~tree() {
+      std::vector<std::unique_ptr<tree>> _stack{};
+      auto _drain = [&](tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back(std::move(_alt.d_a0));
+          }
+          if (_alt.d_a2) {
+            _stack.push_back(std::move(_alt.d_a2));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree> t;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<tree> _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<tree> t = _f.t;
-        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
-          _result = f;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree::Node>(t->v());
-          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a2});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        const auto &_f = std::get<_Call2>(_frame);
-        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-      }
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
+  static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rect<T1>(f, f0, *(d_a2)));
     }
-    return _result;
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    struct _Enter {
-      const std::shared_ptr<tree> t;
-    };
-
-    struct _Call1 {
-      std::shared_ptr<tree> _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    struct _Call2 {
-      T1 _s0;
-      std::shared_ptr<tree> _s1;
-      unsigned int _s2;
-      std::shared_ptr<tree> _s3;
-    };
-
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
-    T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{t});
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<tree> t = _f.t;
-        if (std::holds_alternative<typename tree::Leaf>(t->v())) {
-          _result = f;
-        } else {
-          const auto &[d_a0, d_a1, d_a2] =
-              std::get<typename tree::Node>(t->v());
-          _stack.emplace_back(_Call1{d_a0, d_a2, d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a2});
-        }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
-        _stack.emplace_back(_Enter{_f._s0});
-      } else {
-        const auto &_f = std::get<_Call2>(_frame);
-        _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
-      }
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
+  static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
+      return f;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rec<T1>(f, f0, *(d_a2)));
     }
-    return _result;
   }
 
-  static std::shared_ptr<tree> mirror(const std::shared_ptr<tree> &t);
-  __attribute__((pure)) static bool same_shape(const std::shared_ptr<tree> &t1,
-                                               const std::shared_ptr<tree> &t2);
-  static std::shared_ptr<List<unsigned int>>
-  tree_to_list(const std::shared_ptr<tree> &t);
-  __attribute__((pure)) static bool
-  mirror_equal(const std::shared_ptr<tree> &t);
-  __attribute__((pure)) static unsigned int
-  count_nodes(const std::shared_ptr<tree> &t);
-  static std::shared_ptr<tree> tree_max(std::shared_ptr<tree> t1,
-                                        std::shared_ptr<tree> t2);
-  __attribute__((pure)) static unsigned int
-  sum_of_max_branches(const std::shared_ptr<tree> &t);
-  static std::shared_ptr<tree> insert_bst(const unsigned int x,
-                                          const std::shared_ptr<tree> &t);
-  static std::shared_ptr<tree>
-  build_bst(const std::shared_ptr<List<unsigned int>> &l);
-  static std::shared_ptr<List<unsigned int>>
-  append_lists(const std::shared_ptr<List<unsigned int>> &l1,
-               std::shared_ptr<List<unsigned int>> l2);
-  static std::shared_ptr<List<unsigned int>>
-  flatten(const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &ll);
-  static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-  map_tree_to_list(const std::shared_ptr<List<std::shared_ptr<tree>>> &lt);
-  static std::shared_ptr<List<std::shared_ptr<tree>>>
-  tree_children(const std::shared_ptr<tree> &t);
-  static std::shared_ptr<List<std::shared_ptr<tree>>>
-  append_trees(const std::shared_ptr<List<std::shared_ptr<tree>>> &l1,
-               std::shared_ptr<List<std::shared_ptr<tree>>> l2);
-  static std::shared_ptr<List<std::shared_ptr<tree>>>
-  concat_map_children(const std::shared_ptr<List<std::shared_ptr<tree>>> &lt);
-  static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-  tree_levels_fuel(const unsigned int fuel,
-                   const std::shared_ptr<List<std::shared_ptr<tree>>> &level);
-  static std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-  tree_levels(std::shared_ptr<tree> t);
+  static tree mirror(const tree &t);
+  static bool same_shape(const tree &t1, const tree &t2);
+  static List<unsigned int> tree_to_list(const tree &t);
+  static bool mirror_equal(const tree &t);
+  static unsigned int count_nodes(const tree &t);
+  static tree tree_max(tree t1, tree t2);
+  static unsigned int sum_of_max_branches(const tree &t);
+  static tree insert_bst(const unsigned int x, const tree &t);
+  static tree build_bst(const List<unsigned int> &l);
+  static List<unsigned int> append_lists(const List<unsigned int> &l1,
+                                         List<unsigned int> l2);
+  static List<unsigned int> flatten(const List<List<unsigned int>> &ll);
+  static List<List<unsigned int>> map_tree_to_list(const List<tree> &lt);
+  static List<tree> tree_children(const tree &t);
+  static List<tree> append_trees(const List<tree> &l1, List<tree> l2);
+  static List<tree> concat_map_children(const List<tree> &lt);
+  static List<List<unsigned int>> tree_levels_fuel(const unsigned int fuel,
+                                                   const List<tree> &level);
+  static List<List<unsigned int>> tree_levels(tree t);
 };
 
 #endif // INCLUDED_LOOPIFY_MORE_TREES

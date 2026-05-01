@@ -2,10 +2,9 @@
 #define INCLUDED_TODO_WITH_MODULE_CONSTRAINT
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename M>
 concept INNER = requires {
@@ -36,7 +35,7 @@ struct TodoWithModuleConstraint {
 
   struct NatOuter {
     using Inner = NatInner;
-    __attribute__((pure)) static Inner::t step(const unsigned int n);
+    static Inner::t step(const unsigned int n);
   };
 
   template <OUTER_NAT X> struct UseNat {

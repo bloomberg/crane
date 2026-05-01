@@ -4,13 +4,12 @@
 #include <any>
 #include <crane_itree.h>
 #include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <variant>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ITreeReified {
   /// Pass-through: takes a reified itree and returns it unchanged.
@@ -26,7 +25,7 @@ struct ITreeReified {
   /// the right, logging effects (IO) on the left.
   template <typename T1 = void, typename T2, typename F0>
   static std::shared_ptr<ITree<T2>> with_logging_body(F0 &&rec,
-                                                      const itreeF_t<T2> ot) {
+                                                      const itreeF_t<T2> &ot) {
     if (std::holds_alternative<typename ITree<T2>::Ret>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T2>::Ret>(&ot);
       auto r = _itf.value;

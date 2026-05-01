@@ -2,12 +2,10 @@
 #define INCLUDED_LARGE_ENUM
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct LargeEnum {
   enum class Color {
@@ -119,9 +117,9 @@ struct LargeEnum {
     }
   }
 
-  __attribute__((pure)) static unsigned int color_to_nat(const Color c);
-  __attribute__((pure)) static bool is_warm(const Color c);
-  __attribute__((pure)) static bool is_neutral(const Color c);
+  static unsigned int color_to_nat(const Color c);
+  static bool is_warm(const Color c);
+  static bool is_neutral(const Color c);
 
   struct tok {
     // TYPES
@@ -163,6 +161,8 @@ struct LargeEnum {
 
   public:
     // CREATORS
+    tok() {}
+
     explicit tok(TNum _v) : d_v_(std::move(_v)) {}
 
     explicit tok(TPlus _v) : d_v_(_v) {}
@@ -187,130 +187,156 @@ struct LargeEnum {
 
     explicit tok(TEOF _v) : d_v_(_v) {}
 
-    static std::shared_ptr<tok> tnum(unsigned int a0) {
-      return std::make_shared<tok>(TNum{std::move(a0)});
+    tok(const tok &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tok(tok &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tok &operator=(const tok &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tok> tplus() {
-      return std::make_shared<tok>(TPlus{});
+    tok &operator=(tok &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    static std::shared_ptr<tok> tminus() {
-      return std::make_shared<tok>(TMinus{});
-    }
-
-    static std::shared_ptr<tok> tstar() {
-      return std::make_shared<tok>(TStar{});
-    }
-
-    static std::shared_ptr<tok> tslash() {
-      return std::make_shared<tok>(TSlash{});
-    }
-
-    static std::shared_ptr<tok> tlparen() {
-      return std::make_shared<tok>(TLParen{});
-    }
-
-    static std::shared_ptr<tok> trparen() {
-      return std::make_shared<tok>(TRParen{});
-    }
-
-    static std::shared_ptr<tok> teq() { return std::make_shared<tok>(TEq{}); }
-
-    static std::shared_ptr<tok> tbang() {
-      return std::make_shared<tok>(TBang{});
-    }
-
-    static std::shared_ptr<tok> tsemicolon() {
-      return std::make_shared<tok>(TSemicolon{});
-    }
-
-    static std::shared_ptr<tok> tident(unsigned int a0) {
-      return std::make_shared<tok>(TIdent{std::move(a0)});
-    }
-
-    static std::shared_ptr<tok> teof() { return std::make_shared<tok>(TEOF{}); }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    tok clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<TNum>(_sv.v())) {
+        const auto &[d_a0] = std::get<TNum>(_sv.v());
+        return tok(TNum{d_a0});
+      } else if (std::holds_alternative<TPlus>(_sv.v())) {
+        return tok(TPlus{});
+      } else if (std::holds_alternative<TMinus>(_sv.v())) {
+        return tok(TMinus{});
+      } else if (std::holds_alternative<TStar>(_sv.v())) {
+        return tok(TStar{});
+      } else if (std::holds_alternative<TSlash>(_sv.v())) {
+        return tok(TSlash{});
+      } else if (std::holds_alternative<TLParen>(_sv.v())) {
+        return tok(TLParen{});
+      } else if (std::holds_alternative<TRParen>(_sv.v())) {
+        return tok(TRParen{});
+      } else if (std::holds_alternative<TEq>(_sv.v())) {
+        return tok(TEq{});
+      } else if (std::holds_alternative<TBang>(_sv.v())) {
+        return tok(TBang{});
+      } else if (std::holds_alternative<TSemicolon>(_sv.v())) {
+        return tok(TSemicolon{});
+      } else if (std::holds_alternative<TIdent>(_sv.v())) {
+        const auto &[d_a0] = std::get<TIdent>(_sv.v());
+        return tok(TIdent{d_a0});
+      } else {
+        return tok(TEOF{});
+      }
+    }
+
+    // CREATORS
+    static tok tnum(unsigned int a0) { return tok(TNum{std::move(a0)}); }
+
+    static tok tplus() { return tok(TPlus{}); }
+
+    static tok tminus() { return tok(TMinus{}); }
+
+    static tok tstar() { return tok(TStar{}); }
+
+    static tok tslash() { return tok(TSlash{}); }
+
+    static tok tlparen() { return tok(TLParen{}); }
+
+    static tok trparen() { return tok(TRParen{}); }
+
+    static tok teq() { return tok(TEq{}); }
+
+    static tok tbang() { return tok(TBang{}); }
+
+    static tok tsemicolon() { return tok(TSemicolon{}); }
+
+    static tok tident(unsigned int a0) { return tok(TIdent{std::move(a0)}); }
+
+    static tok teof() { return tok(TEOF{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F10>
+  template <typename T1, typename F0, typename F10>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F10 &, unsigned int &>
   static T1 tok_rect(F0 &&f, const T1 f0, const T1 f1, const T1 f2, const T1 f3,
                      const T1 f4, const T1 f5, const T1 f6, const T1 f7,
-                     const T1 f8, F10 &&f9, const T1 f10,
-                     const std::shared_ptr<tok> &t) {
-    if (std::holds_alternative<typename tok::TNum>(t->v())) {
-      const auto &[d_a0] = std::get<typename tok::TNum>(t->v());
+                     const T1 f8, F10 &&f9, const T1 f10, const tok &t) {
+    if (std::holds_alternative<typename tok::TNum>(t.v())) {
+      const auto &[d_a0] = std::get<typename tok::TNum>(t.v());
       return f(d_a0);
-    } else if (std::holds_alternative<typename tok::TPlus>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TPlus>(t.v())) {
       return f0;
-    } else if (std::holds_alternative<typename tok::TMinus>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TMinus>(t.v())) {
       return f1;
-    } else if (std::holds_alternative<typename tok::TStar>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TStar>(t.v())) {
       return f2;
-    } else if (std::holds_alternative<typename tok::TSlash>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TSlash>(t.v())) {
       return f3;
-    } else if (std::holds_alternative<typename tok::TLParen>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TLParen>(t.v())) {
       return f4;
-    } else if (std::holds_alternative<typename tok::TRParen>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TRParen>(t.v())) {
       return f5;
-    } else if (std::holds_alternative<typename tok::TEq>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TEq>(t.v())) {
       return f6;
-    } else if (std::holds_alternative<typename tok::TBang>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TBang>(t.v())) {
       return f7;
-    } else if (std::holds_alternative<typename tok::TSemicolon>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TSemicolon>(t.v())) {
       return f8;
-    } else if (std::holds_alternative<typename tok::TIdent>(t->v())) {
-      const auto &[d_a0] = std::get<typename tok::TIdent>(t->v());
+    } else if (std::holds_alternative<typename tok::TIdent>(t.v())) {
+      const auto &[d_a0] = std::get<typename tok::TIdent>(t.v());
       return f9(d_a0);
     } else {
       return f10;
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F10>
+  template <typename T1, typename F0, typename F10>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F10 &, unsigned int &>
   static T1 tok_rec(F0 &&f, const T1 f0, const T1 f1, const T1 f2, const T1 f3,
                     const T1 f4, const T1 f5, const T1 f6, const T1 f7,
-                    const T1 f8, F10 &&f9, const T1 f10,
-                    const std::shared_ptr<tok> &t) {
-    if (std::holds_alternative<typename tok::TNum>(t->v())) {
-      const auto &[d_a0] = std::get<typename tok::TNum>(t->v());
+                    const T1 f8, F10 &&f9, const T1 f10, const tok &t) {
+    if (std::holds_alternative<typename tok::TNum>(t.v())) {
+      const auto &[d_a0] = std::get<typename tok::TNum>(t.v());
       return f(d_a0);
-    } else if (std::holds_alternative<typename tok::TPlus>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TPlus>(t.v())) {
       return f0;
-    } else if (std::holds_alternative<typename tok::TMinus>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TMinus>(t.v())) {
       return f1;
-    } else if (std::holds_alternative<typename tok::TStar>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TStar>(t.v())) {
       return f2;
-    } else if (std::holds_alternative<typename tok::TSlash>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TSlash>(t.v())) {
       return f3;
-    } else if (std::holds_alternative<typename tok::TLParen>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TLParen>(t.v())) {
       return f4;
-    } else if (std::holds_alternative<typename tok::TRParen>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TRParen>(t.v())) {
       return f5;
-    } else if (std::holds_alternative<typename tok::TEq>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TEq>(t.v())) {
       return f6;
-    } else if (std::holds_alternative<typename tok::TBang>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TBang>(t.v())) {
       return f7;
-    } else if (std::holds_alternative<typename tok::TSemicolon>(t->v())) {
+    } else if (std::holds_alternative<typename tok::TSemicolon>(t.v())) {
       return f8;
-    } else if (std::holds_alternative<typename tok::TIdent>(t->v())) {
-      const auto &[d_a0] = std::get<typename tok::TIdent>(t->v());
+    } else if (std::holds_alternative<typename tok::TIdent>(t.v())) {
+      const auto &[d_a0] = std::get<typename tok::TIdent>(t.v());
       return f9(d_a0);
     } else {
       return f10;
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tok_to_nat(const std::shared_ptr<tok> &t);
-  __attribute__((pure)) static bool is_operator(const std::shared_ptr<tok> &t);
+  static unsigned int tok_to_nat(const tok &t);
+  static bool is_operator(const tok &t);
   static inline const unsigned int test_red = color_to_nat(Color::e_RED);
   static inline const unsigned int test_pink = color_to_nat(Color::e_PINK);
   static inline const bool test_warm_red = is_warm(Color::e_RED);

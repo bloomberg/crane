@@ -3,10 +3,8 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct FixDirectReturn {
   /// A local fixpoint is captured by an outer lambda and returned.
@@ -17,21 +15,24 @@ struct FixDirectReturn {
   /// outer lambda uses = capture (via return_captures_by_value),
   /// the COPY of add (a std::function) inside the outer lambda
   /// still holds & references to the destroyed stack variables.
-  template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int
-  make_callback(const unsigned int base, F1 &&_x0) {
-    return [&]() {
-      auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-      *add = [=](unsigned int x) mutable -> unsigned int {
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
+  static unsigned int make_callback(const unsigned int base, F1 &&_x0) {
+    return [=]() mutable {
+      auto add_impl = [=](auto &_self_add,
+                          unsigned int x) mutable -> unsigned int {
         if (x <= 0) {
           return base;
         } else {
           unsigned int x_ = x - 1;
-          return ((*add)(x_) + 1);
+          return (_self_add(_self_add, x_) + 1);
         }
       };
+      auto add = [=](unsigned int x) mutable -> unsigned int {
+        return add_impl(add_impl, x);
+      };
       return [=](const std::function<unsigned int(unsigned int)> g) mutable {
-        return (g((*add)(0u)) + (*add)(1u));
+        return (g(add(0u)) + add(1u));
       };
     }()(_x0);
   }

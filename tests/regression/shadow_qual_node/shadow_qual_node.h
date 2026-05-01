@@ -1,10 +1,9 @@
 #ifndef INCLUDED_SHADOW_QUAL_NODE
 #define INCLUDED_SHADOW_QUAL_NODE
 
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ShadowQualNode {
   struct Node {
@@ -19,7 +18,7 @@ struct ShadowQualNode {
     }
   };
 
-  __attribute__((pure)) static Node::Shadow id(const Node::Shadow x);
+  static Node::Shadow id(const Node::Shadow x);
   static inline const Node::Shadow t = id(Node::Shadow::e_TAG);
 };
 

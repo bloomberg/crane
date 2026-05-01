@@ -1,26 +1,18 @@
 #include <loop_body_iteration.h>
 
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
-__attribute__((pure)) unsigned int LoopBodyIteration::get_reg0(
-    const std::shared_ptr<LoopBodyIteration::state> &s) {
-  return ListDef::template nth<unsigned int>(0u, s->regs_, 0u);
+unsigned int LoopBodyIteration::get_reg0(const LoopBodyIteration::state &s) {
+  return ListDef::template nth<unsigned int>(0u, s.regs_, 0u);
 }
 
-std::shared_ptr<LoopBodyIteration::state> LoopBodyIteration::count_loop_body(
-    const std::shared_ptr<LoopBodyIteration::state> &s) {
-  return std::make_shared<LoopBodyIteration::state>(
-      state{update_nth<unsigned int>(
-          0u, (16u ? (get_reg0(s) + 1u) % 16u : (get_reg0(s) + 1u)),
-          s->regs_)});
+LoopBodyIteration::state
+LoopBodyIteration::count_loop_body(const LoopBodyIteration::state &s) {
+  return state{update_nth<unsigned int>(
+      0u, (16u ? (get_reg0(s) + 1u) % 16u : (get_reg0(s) + 1u)), s.regs_)};
 }
 
-std::shared_ptr<LoopBodyIteration::state>
+LoopBodyIteration::state
 LoopBodyIteration::iterate_body(const unsigned int n,
-                                std::shared_ptr<LoopBodyIteration::state> s) {
+                                LoopBodyIteration::state s) {
   if (n <= 0) {
     return s;
   } else {

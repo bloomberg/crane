@@ -1,10 +1,9 @@
 #ifndef INCLUDED_ROCQ_BUG_14100
 #define INCLUDED_ROCQ_BUG_14100
 
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename M>
 concept MinSIG = requires { typename M::template otherE<void>; };

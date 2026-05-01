@@ -2,22 +2,21 @@
 #define INCLUDED_STEPS_COUNTER_UNROLL
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct StepsCounterUnroll {
   struct state {
     unsigned int pc;
+
+    // ACCESSORS
+    state clone() const { return state{(*(this)).pc}; }
   };
 
-  static std::shared_ptr<state> step(const std::shared_ptr<state> &s);
-  static std::shared_ptr<state> steps(const unsigned int n,
-                                      std::shared_ptr<state> s);
-  static inline const unsigned int t =
-      steps(5u, std::make_shared<state>(state{4094u}))->pc;
+  static state step(const state &s);
+  static state steps(const unsigned int n, state s);
+  static inline const unsigned int t = steps(5u, state{4094u}).pc;
 };
 
 #endif // INCLUDED_STEPS_COUNTER_UNROLL

@@ -1,10 +1,6 @@
 #include <anon_fixpoint.h>
 
-#include <functional>
-#include <type_traits>
-#include <utility>
-
-__attribute__((pure)) unsigned int AnonFixpoint::sum_to(const unsigned int n) {
+unsigned int AnonFixpoint::sum_to(const unsigned int n) {
   std::function<unsigned int(unsigned int, unsigned int)> go;
   go = [&](unsigned int m, unsigned int acc) -> unsigned int {
     if (m <= 0) {
@@ -17,8 +13,7 @@ __attribute__((pure)) unsigned int AnonFixpoint::sum_to(const unsigned int n) {
   return go(n, 0u);
 }
 
-__attribute__((pure)) unsigned int
-AnonFixpoint::factorial(const unsigned int m) {
+unsigned int AnonFixpoint::factorial(const unsigned int m) {
   if (m <= 0) {
     return 1u;
   } else {
@@ -27,8 +22,7 @@ AnonFixpoint::factorial(const unsigned int m) {
   }
 }
 
-__attribute__((pure)) unsigned int
-AnonFixpoint::double_sum(const unsigned int m) {
+unsigned int AnonFixpoint::double_sum(const unsigned int m) {
   if (m <= 0) {
     return 0u;
   } else {
@@ -46,8 +40,7 @@ AnonFixpoint::double_sum(const unsigned int m) {
   }
 }
 
-__attribute__((pure)) unsigned int AnonFixpoint::gcd(const unsigned int a,
-                                                     const unsigned int b) {
+unsigned int AnonFixpoint::gcd(const unsigned int a, const unsigned int b) {
   std::function<unsigned int(unsigned int, unsigned int, unsigned int)> go;
   go = [&](unsigned int fuel, unsigned int x, unsigned int y) -> unsigned int {
     if (fuel <= 0) {
@@ -65,8 +58,7 @@ __attribute__((pure)) unsigned int AnonFixpoint::gcd(const unsigned int a,
   return go((a + b), a, b);
 }
 
-__attribute__((pure)) unsigned int
-AnonFixpoint::test_shadow(const unsigned int n) {
+unsigned int AnonFixpoint::test_shadow(const unsigned int n) {
   unsigned int foo = (n + n);
   std::function<unsigned int(unsigned int)> foo0;
   foo0 = [&](unsigned int n0) -> unsigned int {

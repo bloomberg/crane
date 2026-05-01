@@ -20,12 +20,11 @@ void aSsErT(bool condition, const char *message, int line) {
 }
 
 template <typename A>
-A list_nth(const std::shared_ptr<List<A>> &l, unsigned int n) {
-  auto cur = l;
+A list_nth(const List<A> &l, unsigned int n) {
+  const List<A> *cur = &l;
   for (unsigned int i = 0; i < n; ++i) {
-    auto &v = cur->v();
-    auto &c = std::get<typename List<A>::Cons>(v);
-    cur = c.d_a1;
+    auto &c = std::get<typename List<A>::Cons>(cur->v());
+    cur = c.d_a1.get();
   }
   return std::get<typename List<A>::Cons>(cur->v()).d_a0;
 }

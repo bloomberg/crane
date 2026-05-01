@@ -1,10 +1,6 @@
 #include <signature_parity_fix.h>
 
-#include <functional>
-#include <type_traits>
-
-__attribute__((pure)) unsigned int
-SignatureParityFix::f(const unsigned int seed) {
+unsigned int SignatureParityFix::f(const unsigned int seed) {
   std::function<unsigned int(unsigned int)> aux;
   aux = [&](unsigned int n) -> unsigned int {
     if (n <= 0) {

@@ -3,12 +3,11 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -16,7 +15,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -27,36 +26,108 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  unsigned int length() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
@@ -75,112 +146,136 @@ private:
 
 public:
   // CREATORS
+  Sig() {}
+
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Sig<t_A>> exist(t_A x) {
-    return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
+  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  Sig<t_A> &operator=(const Sig<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  Sig<t_A> &operator=(Sig<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
+  }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  Sig<t_A> clone() const {
+    auto &&_sv = *(this);
+    const auto &[d_x] = std::get<Exist>(_sv.v());
+    return Sig<t_A>(Exist{d_x});
+  }
+
+  // CREATORS
+  template <typename _U> explicit Sig(const Sig<_U> &_other) {
+    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
+    d_v_ = Exist{t_A(d_x)};
+  }
+
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Compare_dec {
-  __attribute__((pure)) static bool le_lt_dec(const unsigned int n,
-                                              const unsigned int m);
-  __attribute__((pure)) static bool le_gt_dec(const unsigned int _x0,
-                                              const unsigned int _x1);
-  __attribute__((pure)) static bool le_dec(const unsigned int n,
-                                           const unsigned int m);
+  static bool le_lt_dec(const unsigned int n, const unsigned int m);
+  static bool le_gt_dec(const unsigned int _x0, const unsigned int _x1);
+  static bool le_dec(const unsigned int n, const unsigned int m);
 };
 
 struct Sort {
-  template <
-      typename T1, typename T2,
-      MapsTo<std::pair<std::shared_ptr<List<T1>>, std::shared_ptr<List<T1>>>,
-             std::shared_ptr<List<T1>>>
-          F0,
-      MapsTo<T2, T1> F2, MapsTo<T2, std::shared_ptr<List<T1>>, T2, T2> F3>
+  template <typename T1, typename T2, typename F0, typename F2, typename F3>
+    requires std::is_invocable_r_v<std::pair<List<T1>, List<T1>>, F0 &,
+                                   List<T1> &> &&
+             std::is_invocable_r_v<T2, F2 &, T1 &> &&
+             std::is_invocable_r_v<T2, F3 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq(F0 &&splitF, const T2 x, F2 &&x0, F3 &&x1,
-                     const std::shared_ptr<List<T1>> &ls) {
-    bool s = Compare_dec::le_lt_dec(2u, ls->length());
+                     const List<T1> &ls) {
+    bool s = Compare_dec::le_lt_dec(2u, ls.length());
     if (s) {
       return x1(ls, div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).first),
                 div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
     } else {
-      if (std::holds_alternative<typename List<T1>::Nil>(ls->v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(ls.v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(ls->v());
+        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(ls.v());
         return x0(d_a0);
       }
     }
   }
 
   template <typename T1>
-  __attribute__((pure)) static std::pair<std::shared_ptr<List<T1>>,
-                                         std::shared_ptr<List<T1>>>
-  split(const std::shared_ptr<List<T1>> &ls) {
-    if (std::holds_alternative<typename List<T1>::Nil>(ls->v())) {
+  static std::pair<List<T1>, List<T1>> split(const List<T1> &ls) {
+    if (std::holds_alternative<typename List<T1>::Nil>(ls.v())) {
       return std::make_pair(List<T1>::nil(), List<T1>::nil());
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(ls->v());
-      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(ls.v());
+      auto &&_sv0 = *(d_a1);
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv0.v())) {
         return std::make_pair(List<T1>::cons(d_a0, List<T1>::nil()),
                               List<T1>::nil());
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<T1>::Cons>(d_a1->v());
-        auto _cs = split<T1>(d_a10);
-        const std::shared_ptr<List<T1>> &ls1 = _cs.first;
-        const std::shared_ptr<List<T1>> &ls2 = _cs.second;
+            std::get<typename List<T1>::Cons>(_sv0.v());
+        auto _cs = split<T1>(*(d_a10));
+        const List<T1> &ls1 = _cs.first;
+        const List<T1> &ls2 = _cs.second;
         return std::make_pair(List<T1>::cons(d_a0, ls1),
                               List<T1>::cons(d_a00, ls2));
       }
     }
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F1,
-            MapsTo<T2, std::shared_ptr<List<T1>>, T2, T2> F2>
-  static T2 div_conq_split(const T2 x, F1 &&_x0, F2 &&_x1,
-                           std::shared_ptr<List<T1>> _x2) {
+  template <typename T1, typename T2, typename F1, typename F2>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F2 &, List<T1> &, T2 &, T2 &>
+  static T2 div_conq_split(const T2 x, F1 &&_x0, F2 &&_x1, List<T1> _x2) {
     return div_conq<T1, T2>(split<T1>, x, _x0, _x1, std::move(_x2));
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F1, MapsTo<T2, T1, T1> F2,
-            MapsTo<T2, T1, T1, std::shared_ptr<List<T1>>, T2, T2> F3>
+  template <typename T1, typename T2, typename F1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F2 &, T1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F3 &, T1 &, T1 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq_pair(const T2 x, F1 &&x0, F2 &&x1, F3 &&x2,
-                          const std::shared_ptr<List<T1>> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+                          const List<T1> &l) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return x;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-      if (std::holds_alternative<typename List<T1>::Nil>(d_a1->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+      auto &&_sv0 = *(d_a1);
+      if (std::holds_alternative<typename List<T1>::Nil>(_sv0.v())) {
         return x0(d_a0);
       } else {
         const auto &[d_a00, d_a10] =
-            std::get<typename List<T1>::Cons>(d_a1->v());
-        return x2(d_a0, d_a00, d_a10, x1(d_a0, d_a00),
-                  div_conq_pair<T1, T2>(x, x0, x1, x2, d_a10));
+            std::get<typename List<T1>::Cons>(_sv0.v());
+        return x2(d_a0, d_a00, *(d_a10), x1(d_a0, d_a00),
+                  div_conq_pair<T1, T2>(x, x0, x1, x2, *(d_a10)));
       }
     }
   }
 
-  template <typename T1, MapsTo<bool, T1, T1> F0>
-  __attribute__((pure)) static std::pair<std::shared_ptr<List<T1>>,
-                                         std::shared_ptr<List<T1>>>
-  split_pivot(F0 &&le_dec0, const T1 pivot,
-              const std::shared_ptr<List<T1>> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
+  static std::pair<List<T1>, List<T1>> split_pivot(F0 &&le_dec0, const T1 pivot,
+                                                   const List<T1> &l) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return std::make_pair(List<T1>::nil(), List<T1>::nil());
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-      auto _cs = split_pivot<T1>(le_dec0, pivot, d_a1);
-      const std::shared_ptr<List<T1>> &l1 = _cs.first;
-      const std::shared_ptr<List<T1>> &l2 = _cs.second;
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+      auto _cs = split_pivot<T1>(le_dec0, pivot, *(d_a1));
+      const List<T1> &l1 = _cs.first;
+      const List<T1> &l2 = _cs.second;
       if (le_dec0(d_a0, pivot)) {
         return std::make_pair(List<T1>::cons(d_a0, l1), l2);
       } else {
@@ -189,46 +284,41 @@ struct Sort {
     }
   }
 
-  template <typename T1, typename T2, MapsTo<bool, T1, T1> F0,
-            MapsTo<T2, T1, std::shared_ptr<List<T1>>, T2, T2> F2>
+  template <typename T1, typename T2, typename F0, typename F2>
+    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &> &&
+             std::is_invocable_r_v<T2, F2 &, T1 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq_pivot(F0 &&le_dec0, const T2 x, F2 &&x0,
-                           const std::shared_ptr<List<T1>> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+                           const List<T1> &l) {
+    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return x;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-      return x0(d_a0, d_a1,
-                div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                       split_pivot(le_dec0, d_a0, d_a1).first),
-                div_conq_pivot<T1, T2>(
-                    le_dec0, x, x0, split_pivot(le_dec0, d_a0, d_a1).second));
+      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+      return x0(
+          d_a0, *(d_a1),
+          div_conq_pivot<T1, T2>(le_dec0, x, x0,
+                                 split_pivot(le_dec0, d_a0, *(d_a1)).first),
+          div_conq_pivot<T1, T2>(le_dec0, x, x0,
+                                 split_pivot(le_dec0, d_a0, *(d_a1)).second));
     }
   }
 
-  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  sort_cons_prog(const unsigned int a,
-                 const std::shared_ptr<List<unsigned int>> &_x,
-                 const std::shared_ptr<List<unsigned int>> &l_);
-  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  isort(const std::shared_ptr<List<unsigned int>> &l);
-  static std::shared_ptr<List<unsigned int>>
-  merge(std::shared_ptr<List<unsigned int>> l1,
-        const std::shared_ptr<List<unsigned int>> &l2);
-  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  merge_prog(const std::shared_ptr<List<unsigned int>> &_x,
-             const std::shared_ptr<List<unsigned int>> &l1,
-             const std::shared_ptr<List<unsigned int>> &l2);
-  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  msort(const std::shared_ptr<List<unsigned int>> &_x0);
-  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  pair_merge_prog(const unsigned int _x, const unsigned int _x0,
-                  const std::shared_ptr<List<unsigned int>> &_x1,
-                  const std::shared_ptr<List<unsigned int>> &l_,
-                  const std::shared_ptr<List<unsigned int>> &l_0);
-  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  psort(const std::shared_ptr<List<unsigned int>> &_x0);
-  static std::shared_ptr<Sig<std::shared_ptr<List<unsigned int>>>>
-  qsort(const std::shared_ptr<List<unsigned int>> &_x0);
+  static Sig<List<unsigned int>> sort_cons_prog(const unsigned int a,
+                                                const List<unsigned int> &_x,
+                                                const List<unsigned int> &l_);
+  static Sig<List<unsigned int>> isort(const List<unsigned int> &l);
+  static List<unsigned int> merge(List<unsigned int> l1,
+                                  const List<unsigned int> &l2);
+  static Sig<List<unsigned int>> merge_prog(const List<unsigned int> &_x,
+                                            const List<unsigned int> &l1,
+                                            const List<unsigned int> &l2);
+  static Sig<List<unsigned int>> msort(const List<unsigned int> &_x0);
+  static Sig<List<unsigned int>> pair_merge_prog(const unsigned int _x,
+                                                 const unsigned int _x0,
+                                                 const List<unsigned int> &_x1,
+                                                 const List<unsigned int> &l_,
+                                                 const List<unsigned int> &l_0);
+  static Sig<List<unsigned int>> psort(const List<unsigned int> &_x0);
+  static Sig<List<unsigned int>> qsort(const List<unsigned int> &_x0);
 };
 
 #endif // INCLUDED_SORT

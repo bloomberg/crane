@@ -1,15 +1,5 @@
 #include <monadic_void_edge.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Bind where LHS is void and RHS returns a value
 unsigned int MonadicVoidEdge::bind_void_then_value() {
   std::cout << "hello"s << '\n';
@@ -42,13 +32,7 @@ void MonadicVoidEdge::unit_chain() {
 /// 5. Match on a value obtained from a bind
 unsigned int MonadicVoidEdge::match_after_bind() {
   bool b = true;
-  return [&]() -> unsigned int {
-    if (b) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }();
+  return (b ? 1u : 0u);
 }
 
 /// 6. Void function called in a non-tail bind position
@@ -97,7 +81,7 @@ std::pair<unsigned int, unsigned int> MonadicVoidEdge::bind_into_pair() {
 }
 
 /// 11. Void function result stored in list (should stay Unit, not void)
-std::shared_ptr<List<std::monostate>> MonadicVoidEdge::unit_in_list() {
+List<std::monostate> MonadicVoidEdge::unit_in_list() {
   std::monostate x = std::monostate{};
   std::monostate y = std::monostate{};
   return List<std::monostate>::cons(
@@ -115,8 +99,8 @@ unsigned int MonadicVoidEdge::mixed_binds() {
 }
 
 /// 13. Function that takes itree as argument and sequences
-void MonadicVoidEdge::sequence_effects(const std::monostate e1,
-                                       const std::monostate) {
+void MonadicVoidEdge::sequence_effects(const std::monostate &e1,
+                                       std::monostate) {
   e1;
   return;
 }

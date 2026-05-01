@@ -1,24 +1,14 @@
 #include <block_template_stress.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Block template in a fixpoint body
-std::shared_ptr<List<std::string>>
-BlockTemplateStress::read_n_lines(const unsigned int n) {
+List<std::string> BlockTemplateStress::read_n_lines(const unsigned int n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
     unsigned int n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    std::shared_ptr<List<std::string>> rest = read_n_lines(n_);
+    List<std::string> rest = read_n_lines(n_);
     return List<std::string>::cons(line, rest);
   }
 }
@@ -82,13 +72,13 @@ void BlockTemplateStress::block_result_as_arg() {
 }
 
 /// 9. Block template with %a0 inside a fixpoint
-std::shared_ptr<List<std::string>> BlockTemplateStress::read_files(
-    const std::shared_ptr<List<std::string>> &paths) {
-  if (std::holds_alternative<typename List<std::string>::Nil>(paths->v())) {
+List<std::string>
+BlockTemplateStress::read_files(const List<std::string> &paths) {
+  if (std::holds_alternative<typename List<std::string>::Nil>(paths.v())) {
     return List<std::string>::nil();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(paths->v());
+        std::get<typename List<std::string>::Cons>(paths.v());
     std::string content;
     {
       std::ifstream _f(d_a0);
@@ -97,7 +87,7 @@ std::shared_ptr<List<std::string>> BlockTemplateStress::read_files(
       else
         content = d_a0;
     };
-    std::shared_ptr<List<std::string>> rest = read_files(d_a1);
+    List<std::string> rest = read_files(*(d_a1));
     return List<std::string>::cons(content, rest);
   }
 }

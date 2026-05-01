@@ -3,9 +3,9 @@
 #include <cassert>
 #include <iostream>
 
-static unsigned int nat_to_uint(const std::shared_ptr<Nat> &n) {
+static unsigned int nat_to_uint(const Nat &n) {
   unsigned int acc = 0;
-  const Nat *cur = n.get();
+  const Nat *cur = &n;
   while (std::holds_alternative<Nat::S>(cur->v())) {
     ++acc;
     cur = std::get<Nat::S>(cur->v()).d_a0.get();

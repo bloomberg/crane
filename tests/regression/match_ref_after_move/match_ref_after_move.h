@@ -2,12 +2,11 @@
 #define INCLUDED_MATCH_REF_AFTER_MOVE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct MatchRefAfterMove {
   /// This test exercises patterns where a value is destructured
@@ -19,7 +18,7 @@ struct MatchRefAfterMove {
 
     struct Mycons {
       t_A d_a0;
-      std::shared_ptr<mylist<t_A>> d_a1;
+      std::unique_ptr<mylist<t_A>> d_a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -30,63 +29,139 @@ struct MatchRefAfterMove {
 
   public:
     // CREATORS
+    mylist() {}
+
     explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mylist<t_A>> mynil() {
-      return std::make_shared<mylist<t_A>>(Mynil{});
+    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mylist<t_A> &operator=(const mylist<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-      return std::make_shared<mylist<t_A>>(Mycons{std::move(a0), a1});
+    mylist<t_A> &operator=(mylist<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
-      return std::make_shared<mylist<t_A>>(
-          Mycons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    mylist<t_A> clone() const {
+      mylist<t_A> _out{};
+
+      struct _CloneFrame {
+        const mylist<t_A> *_src;
+        mylist<t_A> *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist<t_A> *_src = _frame._src;
+        mylist<t_A> *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    template <typename _U> explicit mylist(const mylist<_U> &_other) {
+      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
+        d_v_ = Mynil{};
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename mylist<_U>::Mycons>(_other.v());
+        d_v_ = Mycons{t_A(d_a0),
+                      d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+      }
+    }
+
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~mylist() {
+      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      auto _drain = [&](mylist<t_A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.d_v_)) {
+          auto &_alt = std::get<Mycons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// Pattern 1: Match on a list, return head AND apply a function
     /// to the tail that also takes the head as argument.
     /// The generated code must ensure h survives until both uses.
-    __attribute__((pure)) unsigned int mylist_length() const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+    unsigned int mylist_length() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return 0u;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return (1u + d_a1->mylist_length());
+            std::get<typename mylist<t_A>::Mycons>(_sv.v());
+        return (1u + (*(d_a1)).mylist_length());
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template mylist_rec<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A, std::shared_ptr<mylist<t_A>>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template mylist_rect<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -106,36 +181,71 @@ struct MatchRefAfterMove {
 
   public:
     // CREATORS
+    mypair() {}
+
     explicit mypair(Mkpair _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mypair<t_A, t_B>> mkpair(t_A a0, t_B a1) {
-      return std::make_shared<mypair<t_A, t_B>>(
-          Mkpair{std::move(a0), std::move(a1)});
+    mypair(const mypair<t_A, t_B> &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mypair(mypair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mypair<t_A, t_B> &operator=(const mypair<t_A, t_B> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    mypair<t_A, t_B> &operator=(mypair<t_A, t_B> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    mypair<t_A, t_B> clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<Mkpair>(_sv.v());
+      return mypair<t_A, t_B>(Mkpair{d_a0, d_a1});
+    }
+
+    // CREATORS
+    template <typename _U0, typename _U1>
+    explicit mypair(const mypair<_U0, _U1> &_other) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename mypair<_U0, _U1>::Mkpair>(_other.v());
+      d_v_ = Mkpair{t_A(d_a0), t_B(d_a1)};
+    }
+
+    static mypair<t_A, t_B> mkpair(t_A a0, t_B a1) {
+      return mypair(Mkpair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 mypair_rec(F0 &&f) const {
+      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename mypair<t_A, t_B>::Mkpair>(this->v());
+          std::get<typename mypair<t_A, t_B>::Mkpair>(_sv.v());
       return f(d_a0, d_a1);
     }
 
-    template <typename T1, MapsTo<T1, t_A, t_B> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 mypair_rect(F0 &&f) const {
+      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename mypair<t_A, t_B>::Mkpair>(this->v());
+          std::get<typename mypair<t_A, t_B>::Mkpair>(_sv.v());
       return f(d_a0, d_a1);
     }
   };
 
-  static std::shared_ptr<mypair<unsigned int, unsigned int>>
-  head_and_tail_length(const std::shared_ptr<mylist<unsigned int>> &l);
+  static mypair<unsigned int, unsigned int>
+  head_and_tail_length(const mylist<unsigned int> &l);
   /// Pattern 2: Nested match where inner match is on a field of outer.
   /// After inner match, outer pattern variables are still used.
   ///
@@ -144,31 +254,26 @@ struct MatchRefAfterMove {
   /// If the outer head h is a reference into the outer value, and
   /// the outer value is freed because the inner match consumes the
   /// tail (sole remaining reference), h dangles.
-  __attribute__((pure)) static unsigned int
-  nested_match_probe(const std::shared_ptr<mylist<unsigned int>> &l);
+  static unsigned int nested_match_probe(const mylist<unsigned int> &l);
   /// Pattern 3: Build a pair where one element is from a match
   /// and the other is a function of the matched value.
   /// Tests evaluation order in pair construction.
-  static std::shared_ptr<
-      mypair<unsigned int, std::shared_ptr<mylist<unsigned int>>>>
-  match_into_pair(const std::shared_ptr<mylist<unsigned int>> &l);
+  static mypair<unsigned int, mylist<unsigned int>>
+  match_into_pair(const mylist<unsigned int> &l);
   /// Pattern 4: Double match on same value.
   /// First match extracts head, second match extracts tail.
   /// Between matches, the value might be moved.
-  static std::shared_ptr<
-      mypair<unsigned int, std::shared_ptr<mylist<unsigned int>>>>
-  double_match(const std::shared_ptr<mylist<unsigned int>> &l);
-  __attribute__((pure)) static unsigned int
-  mylist_sum(const std::shared_ptr<mylist<unsigned int>>
-                 &l); /// test1: head_and_tail_length 10,20,30 = (10, 2)
+  static mypair<unsigned int, mylist<unsigned int>>
+  double_match(const mylist<unsigned int> &l);
+  static unsigned int mylist_sum(const mylist<unsigned int> &l);
+  /// test1: head_and_tail_length 10,20,30 = (10, 2)
   static inline const unsigned int test1 = []() {
     auto &&_sv0 = head_and_tail_length(mylist<unsigned int>::mycons(
         10u, mylist<unsigned int>::mycons(
                  20u, mylist<unsigned int>::mycons(
                           30u, mylist<unsigned int>::mynil()))));
     const auto &[d_a00, d_a10] =
-        std::get<typename mypair<unsigned int, unsigned int>::Mkpair>(
-            _sv0->v());
+        std::get<typename mypair<unsigned int, unsigned int>::Mkpair>(_sv0.v());
     return (d_a00 + d_a10);
   }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
@@ -181,9 +286,9 @@ struct MatchRefAfterMove {
   static inline const unsigned int test3 = []() {
     auto &&_sv1 = match_into_pair(mylist<unsigned int>::mycons(
         5u, mylist<unsigned int>::mycons(10u, mylist<unsigned int>::mynil())));
-    const auto &[d_a01, d_a11] = std::get<typename mypair<
-        unsigned int, std::shared_ptr<mylist<unsigned int>>>::Mkpair>(
-        _sv1->v());
+    const auto &[d_a01, d_a11] =
+        std::get<typename mypair<unsigned int, mylist<unsigned int>>::Mkpair>(
+            _sv1.v());
     return (d_a01 + mylist_sum(d_a11));
   }();
   /// test4: double_match 7,8,9 = (7, 8,9)
@@ -192,23 +297,24 @@ struct MatchRefAfterMove {
         7u, mylist<unsigned int>::mycons(
                 8u, mylist<unsigned int>::mycons(
                         9u, mylist<unsigned int>::mynil()))));
-    const auto &[d_a02, d_a12] = std::get<typename mypair<
-        unsigned int, std::shared_ptr<mylist<unsigned int>>>::Mkpair>(
-        _sv2->v());
+    const auto &[d_a02, d_a12] =
+        std::get<typename mypair<unsigned int, mylist<unsigned int>>::Mkpair>(
+            _sv2.v());
     return (d_a02 + mylist_sum(d_a12));
   }();
 
   /// Pattern 5: CPS with explicit continuation that captures from match.
   /// The continuation is a SIMPLE lambda, not a fixpoint.
-  template <MapsTo<unsigned int, unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int
-  match_with_cont(const std::shared_ptr<mylist<unsigned int>> &l, F1 &&k) {
-    if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l->v())) {
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
+                                   unsigned int &>
+  static unsigned int match_with_cont(const mylist<unsigned int> &l, F1 &&k) {
+    if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
       return k(0u, 0u);
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename mylist<unsigned int>::Mycons>(l->v());
-      return k(d_a0, d_a1->mylist_length());
+          std::get<typename mylist<unsigned int>::Mycons>(l.v());
+      return k(d_a0, (*(d_a1)).mylist_length());
     }
   }
 
@@ -241,61 +347,104 @@ struct MatchRefAfterMove {
 
   public:
     // CREATORS
+    either() {}
+
     explicit either(Left _v) : d_v_(std::move(_v)) {}
 
     explicit either(Right _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<either<t_A, t_B>> left(t_A a0) {
-      return std::make_shared<either<t_A, t_B>>(Left{std::move(a0)});
+    either(const either<t_A, t_B> &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    either(either<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    either<t_A, t_B> &operator=(const either<t_A, t_B> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<either<t_A, t_B>> right(t_B a0) {
-      return std::make_shared<either<t_A, t_B>>(Right{std::move(a0)});
+    either<t_A, t_B> &operator=(either<t_A, t_B> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    either<t_A, t_B> clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<Left>(_sv.v());
+        return either<t_A, t_B>(Left{d_a0});
+      } else {
+        const auto &[d_a0] = std::get<Right>(_sv.v());
+        return either<t_A, t_B>(Right{d_a0});
+      }
+    }
+
+    // CREATORS
+    template <typename _U0, typename _U1>
+    explicit either(const either<_U0, _U1> &_other) {
+      if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
+        const auto &[d_a0] =
+            std::get<typename either<_U0, _U1>::Left>(_other.v());
+        d_v_ = Left{t_A(d_a0)};
+      } else {
+        const auto &[d_a0] =
+            std::get<typename either<_U0, _U1>::Right>(_other.v());
+        d_v_ = Right{t_B(d_a0)};
+      }
+    }
+
+    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
+
+    static either<t_A, t_B> right(t_B a0) {
+      return either(Right{std::move(a0)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
-        const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Left>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
         return f(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(this->v());
+            std::get<typename either<t_A, t_B>::Right>(_sv.v());
         return f0(d_a0);
       }
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0, MapsTo<T1, t_B> F1>
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
+               std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
-        const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Left>(this->v());
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
         return f(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(this->v());
+            std::get<typename either<t_A, t_B>::Right>(_sv.v());
         return f0(d_a0);
       }
     }
   };
 
-  __attribute__((pure)) static unsigned int complex_match(
-      const std::shared_ptr<either<std::shared_ptr<mylist<unsigned int>>,
-                                   std::shared_ptr<mylist<unsigned int>>>> &e);
+  static unsigned int
+  complex_match(const either<mylist<unsigned int>, mylist<unsigned int>> &e);
   /// test6: complex_match (Right 50, 60) = 50 + 1 = 51
   static inline const unsigned int test6 =
-      complex_match(either<std::shared_ptr<mylist<unsigned int>>,
-                           std::shared_ptr<mylist<unsigned int>>>::
-                        right(mylist<unsigned int>::mycons(
-                            50u, mylist<unsigned int>::mycons(
-                                     60u, mylist<unsigned int>::mynil()))));
+      complex_match(either<mylist<unsigned int>, mylist<unsigned int>>::right(
+          mylist<unsigned int>::mycons(
+              50u, mylist<unsigned int>::mycons(
+                       60u, mylist<unsigned int>::mynil()))));
 };
 
 #endif // INCLUDED_MATCH_REF_AFTER_MOVE

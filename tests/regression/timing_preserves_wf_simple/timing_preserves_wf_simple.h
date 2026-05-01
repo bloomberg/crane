@@ -2,11 +2,9 @@
 #define INCLUDED_TIMING_PRESERVES_WF_SIMPLE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct TimingPreservesWfSimple {
   enum class Instr { e_NOP, e_ADD, e_WRM, e_FIM, e_JMS };
@@ -64,14 +62,18 @@ struct TimingPreservesWfSimple {
     unsigned int rom_len;
     unsigned int pc;
     unsigned int stack_len;
+
+    // ACCESSORS
+    state clone() const {
+      return state{(*(this)).regs_len, (*(this)).rom_len, (*(this)).pc,
+                   (*(this)).stack_len};
+    }
   };
 
-  __attribute__((pure)) static bool wf(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int cycles(const Instr i);
-  static std::shared_ptr<state> execute(const std::shared_ptr<state> &s,
-                                        const Instr i);
-  static inline const std::shared_ptr<state> sample =
-      std::make_shared<state>(state{4u, 4u, 100u, 2u});
+  static bool wf(const state &s);
+  static unsigned int cycles(const Instr i);
+  static state execute(const state &s, const Instr i);
+  static inline const state sample = state{4u, 4u, 100u, 2u};
   static inline const bool t =
       (wf(sample) &&
        (cycles(Instr::e_JMS) == 24u && (wf(execute(sample, Instr::e_NOP)) &&

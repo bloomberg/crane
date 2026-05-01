@@ -1,17 +1,10 @@
 #include <block_template_edge.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <type_traits>
-
 /// 1. Block template result used immediately in if-then-else
 std::string BlockTemplateEdge::block_in_if() {
   bool b;
   b = true;
-  return [&]() -> std::string {
+  return [=]() mutable -> std::string {
     if (b) {
       return "yes";
     } else {

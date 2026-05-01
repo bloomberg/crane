@@ -2,10 +2,9 @@
 #define INCLUDED_TODO_ERASED_INSTANCE_PARAM
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename I, typename t_A>
 concept Default = requires {
@@ -14,7 +13,7 @@ concept Default = requires {
 
 struct TodoErasedInstanceParam {
   struct natDefault {
-    constexpr static unsigned int def() { return 4u; }
+    static unsigned int def() { return 4u; }
   };
 
   static_assert(Default<natDefault, unsigned int>);

@@ -255,6 +255,11 @@ val add_enum_inductive : GlobRef.t -> unit
 (** Check if inductive is enum. *)
 val is_enum_inductive : GlobRef.t -> bool
 
+(** Check if the inductive has any constructor field whose type refers
+    back to the same MutInd (recursive self-reference).  Such inductives
+    store self-refs as [shared_ptr] internally. *)
+val has_recursive_fields : GlobRef.t -> bool
+
 (** Check if an inductive packet qualifies as an enum based on its structure.
     Returns true if all constructors are nullary, no type parameters are kept,
     and at least one constructor exists. *)
@@ -524,6 +529,18 @@ val find_custom : GlobRef.t -> string
 
 (** Find custom extraction code if exists. *)
 val find_custom_opt : GlobRef.t -> string option
+
+(** True when [s] names a C++ scalar type that is trivially copyable
+    (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]). *)
+val is_trivially_copyable_cpp_name : string -> bool
+
+(** True when [r] is a custom-extracted inductive whose C++ representation is
+    a trivially-copyable scalar (e.g. [nat] → [unsigned int]). *)
+val is_custom_scalar_ref : GlobRef.t -> bool
+
+(** Append [_] to struct names that collide with C++ global names
+    (e.g. [std], [crane], [persistent_array]). *)
+val escape_reserved_struct_name : string -> string
 
 (** Find custom type extraction (imports and code). *)
 val find_type_custom : GlobRef.t -> string list * string

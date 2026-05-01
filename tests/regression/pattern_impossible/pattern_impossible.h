@@ -2,12 +2,11 @@
 #define INCLUDED_PATTERN_IMPOSSIBLE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct PatternImpossible {
   enum class Three { e_ONE, e_TWO, e_THREE0 };
@@ -53,8 +52,8 @@ struct PatternImpossible {
     };
 
     struct Node {
-      std::shared_ptr<nested> d_a0;
-      std::shared_ptr<nested> d_a1;
+      std::unique_ptr<nested> d_a0;
+      std::unique_ptr<nested> d_a1;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -65,66 +64,131 @@ struct PatternImpossible {
 
   public:
     // CREATORS
+    nested() {}
+
     explicit nested(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit nested(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<nested> leaf(unsigned int a0) {
-      return std::make_shared<nested>(Leaf{std::move(a0)});
+    nested(const nested &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    nested(nested &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    nested &operator=(const nested &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<nested> node(const std::shared_ptr<nested> &a0,
-                                        const std::shared_ptr<nested> &a1) {
-      return std::make_shared<nested>(Node{a0, a1});
+    nested &operator=(nested &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<nested> node(std::shared_ptr<nested> &&a0,
-                                        std::shared_ptr<nested> &&a1) {
-      return std::make_shared<nested>(Node{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    nested clone() const {
+      nested _out{};
+
+      struct _CloneFrame {
+        const nested *_src;
+        nested *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const nested *_src = _frame._src;
+        nested *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          const auto &_alt = std::get<Leaf>(_src->v());
+          _dst->d_v_ = Leaf{_alt.d_a0};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ = Node{_alt.d_a0 ? std::make_unique<nested>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<nested>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static nested leaf(unsigned int a0) { return nested(Leaf{std::move(a0)}); }
+
+    static nested node(nested a0, nested a1) {
+      return nested(Node{std::make_unique<nested>(std::move(a0)),
+                         std::make_unique<nested>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~nested() {
+      std::vector<std::unique_ptr<nested>> _stack{};
+      auto _drain = [&](nested &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back(std::move(_alt.d_a0));
+          }
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<nested>, T1, std::shared_ptr<nested>, T1> F1>
-  static T1 nested_rect(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    if (std::holds_alternative<typename nested::Leaf>(n->v())) {
-      const auto &[d_a0] = std::get<typename nested::Leaf>(n->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
+  static T1 nested_rect(F0 &&f, F1 &&f0, const nested &n) {
+    if (std::holds_alternative<typename nested::Leaf>(n.v())) {
+      const auto &[d_a0] = std::get<typename nested::Leaf>(n.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n->v());
-      return f0(d_a0, nested_rect<T1>(f, f0, d_a0), d_a1,
-                nested_rect<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n.v());
+      return f0(*(d_a0), nested_rect<T1>(f, f0, *(d_a0)), *(d_a1),
+                nested_rect<T1>(f, f0, *(d_a1)));
     }
   }
 
-  template <
-      typename T1, MapsTo<T1, unsigned int> F0,
-      MapsTo<T1, std::shared_ptr<nested>, T1, std::shared_ptr<nested>, T1> F1>
-  static T1 nested_rec(F0 &&f, F1 &&f0, const std::shared_ptr<nested> &n) {
-    if (std::holds_alternative<typename nested::Leaf>(n->v())) {
-      const auto &[d_a0] = std::get<typename nested::Leaf>(n->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
+  static T1 nested_rec(F0 &&f, F1 &&f0, const nested &n) {
+    if (std::holds_alternative<typename nested::Leaf>(n.v())) {
+      const auto &[d_a0] = std::get<typename nested::Leaf>(n.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n->v());
-      return f0(d_a0, nested_rec<T1>(f, f0, d_a0), d_a1,
-                nested_rec<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n.v());
+      return f0(*(d_a0), nested_rec<T1>(f, f0, *(d_a0)), *(d_a1),
+                nested_rec<T1>(f, f0, *(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int complex_match(const Three x);
-  __attribute__((pure)) static unsigned int
-  nested_match(const std::shared_ptr<nested> &n);
-  __attribute__((pure)) static unsigned int double_match(const Three x,
-                                                         const Three y);
-  __attribute__((pure)) static unsigned int
-  multi_arg_pattern(const std::shared_ptr<nested> &n);
+  static unsigned int complex_match(const Three x);
+  static unsigned int nested_match(const nested &n);
+  static unsigned int double_match(const Three x, const Three y);
+  static unsigned int multi_arg_pattern(const nested &n);
   static inline const unsigned int test1 = complex_match(Three::e_ONE);
   static inline const unsigned int test2 =
       nested_match(nested::node(nested::leaf(5u), nested::leaf(10u)));

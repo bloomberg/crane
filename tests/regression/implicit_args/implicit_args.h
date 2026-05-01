@@ -2,12 +2,11 @@
 #define INCLUDED_IMPLICIT_ARGS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct ImplicitArgs {
   template <typename T1> static T1 id(const T1 x) { return x; }
@@ -16,7 +15,8 @@ struct ImplicitArgs {
     return x;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 apply(F0 &&f, const T1 _x0) {
     return f(_x0);
   }
@@ -33,7 +33,7 @@ struct ImplicitArgs {
 
     struct Mycons {
       t_A d_a0;
-      std::shared_ptr<mylist<t_A>> d_a1;
+      std::unique_ptr<mylist<t_A>> d_a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -44,103 +44,168 @@ struct ImplicitArgs {
 
   public:
     // CREATORS
+    mylist() {}
+
     explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mylist<t_A>> mynil() {
-      return std::make_shared<mylist<t_A>>(Mynil{});
+    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mylist<t_A> &operator=(const mylist<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-      return std::make_shared<mylist<t_A>>(Mycons{std::move(a0), a1});
+    mylist<t_A> &operator=(mylist<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
-      return std::make_shared<mylist<t_A>>(
-          Mycons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    mylist<t_A> clone() const {
+      mylist<t_A> _out{};
+
+      struct _CloneFrame {
+        const mylist<t_A> *_src;
+        mylist<t_A> *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist<t_A> *_src = _frame._src;
+        mylist<t_A> *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    template <typename _U> explicit mylist(const mylist<_U> &_other) {
+      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
+        d_v_ = Mynil{};
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename mylist<_U>::Mycons>(_other.v());
+        d_v_ = Mycons{t_A(d_a0),
+                      d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+      }
+    }
+
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~mylist() {
+      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      auto _drain = [&](mylist<t_A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.d_v_)) {
+          auto &_alt = std::get<Mycons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rect(const T2 f, F1 &&f0,
-                        const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
+  static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rec(const T2 f, F1 &&f0,
-                       const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
+  static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  length(const std::shared_ptr<mylist<T1>> &l) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
+  template <typename T1> static unsigned int length(const mylist<T1> &l) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
-      return (1u + length<T1>(d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+      return (1u + length<T1>(*(d_a1)));
     }
   }
 
   static inline const unsigned int explicit_id = id<unsigned int>(5u);
   static inline const unsigned int explicit_fst =
       fst_of<unsigned int, bool>(3u, true);
-  __attribute__((pure)) static unsigned int add_one(const unsigned int _x0);
-  __attribute__((pure)) static unsigned int double_nat(const unsigned int n);
-  __attribute__((pure)) static unsigned int
-  add_implicit(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int add_one(const unsigned int _x0);
+  static unsigned int double_nat(const unsigned int n);
+  static unsigned int add_implicit(const unsigned int _x0,
+                                   const unsigned int _x1);
   static inline const unsigned int use_add_implicit = add_implicit(5u, 3u);
-  __attribute__((pure)) static unsigned int scale(const unsigned int _x0,
-                                                  const unsigned int _x1);
+  static unsigned int scale(const unsigned int _x0, const unsigned int _x1);
   static inline const unsigned int use_scale = scale(3u, 7u);
-  __attribute__((pure)) static unsigned int
-  combine(const unsigned int a, const unsigned int b, const unsigned int x);
+  static unsigned int combine(const unsigned int a, const unsigned int b,
+                              const unsigned int x);
   static inline const unsigned int use_combine = combine(2u, 3u, 4u);
 
-  template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  apply_implicit(F0 &&f, const unsigned int _x0) {
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+  static unsigned int apply_implicit(F0 &&f, const unsigned int _x0) {
     return f(_x0);
   }
 
   static inline const unsigned int use_apply_implicit = apply_implicit(
       [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
-  __attribute__((pure)) static unsigned int with_base(const unsigned int _x0,
-                                                      const unsigned int _x1);
-  __attribute__((pure)) static unsigned int from_zero(const unsigned int _x0);
-  __attribute__((pure)) static unsigned int from_ten(const unsigned int _x0);
+  static unsigned int with_base(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int from_zero(const unsigned int _x0);
+  static unsigned int from_ten(const unsigned int _x0);
   static inline const unsigned int use_from_zero = from_zero(5u);
   static inline const unsigned int use_from_ten = from_ten(5u);
 
   template <typename T1>
-  static T1 head_or(const T1 default0, const std::shared_ptr<mylist<T1>> &l) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
+  static T1 head_or(const T1 default0, const mylist<T1> &l) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       return d_a0;
     }
   }
@@ -149,19 +214,18 @@ struct ImplicitArgs {
       head_or<unsigned int>(0u, mylist<unsigned int>::mynil());
   static inline const unsigned int use_head_nonempty = head_or<unsigned int>(
       0u, mylist<unsigned int>::mycons(7u, mylist<unsigned int>::mynil()));
-  __attribute__((pure)) static unsigned int
-  sum_with_init(const unsigned int init,
-                const std::shared_ptr<mylist<unsigned int>> &l);
+  static unsigned int sum_with_init(const unsigned int init,
+                                    const mylist<unsigned int> &l);
   static inline const unsigned int use_sum_init = sum_with_init(
       5u,
       mylist<unsigned int>::mycons(
           1u, mylist<unsigned int>::mycons(2u, mylist<unsigned int>::mynil())));
-  __attribute__((pure)) static unsigned int
-  nested_implicits(const unsigned int a, const unsigned int b,
-                   const unsigned int c);
+  static unsigned int nested_implicits(const unsigned int a,
+                                       const unsigned int b,
+                                       const unsigned int c);
   static inline const unsigned int use_nested = nested_implicits(1u, 2u, 3u);
-  __attribute__((pure)) static unsigned int
-  choose_branch(const bool flag, const unsigned int t, const unsigned int f);
+  static unsigned int choose_branch(const bool flag, const unsigned int t,
+                                    const unsigned int f);
   static inline const unsigned int use_choose_true =
       choose_branch(true, 7u, 3u);
   static inline const unsigned int use_choose_false =

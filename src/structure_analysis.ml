@@ -200,7 +200,7 @@ let classify_module ~main_mp (mp, sel) =
     | None -> false
   in
   if has_bare && all_bare && is_modfile mp && has_func && not is_main then
-    Some (String.capitalize_ascii (string_of_modfile mp))
+    Some (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp)))
   else
     None
 

@@ -9,10 +9,9 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -20,7 +19,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -31,62 +30,133 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct EffectRecursiveList {
   /// 1. Recursive function building a list from stdin lines
-  static std::shared_ptr<List<std::string>> read_n_lines(const unsigned int n);
+  static List<std::string> read_n_lines(const unsigned int n);
 
   /// 2. Map a function over a list with effects
-  template <MapsTo<void, std::string> F0>
-  static void map_effect(F0 &&f, const std::shared_ptr<List<std::string>> &xs) {
-    if (std::holds_alternative<typename List<std::string>::Nil>(xs->v())) {
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, std::string &>
+  static void map_effect(F0 &&f, const List<std::string> &xs) {
+    if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<std::string>::Cons>(xs->v());
+          std::get<typename List<std::string>::Cons>(xs.v());
       f(d_a0);
-      map_effect(f, d_a1);
+      map_effect(f, *(d_a1));
       return;
     }
   }
 
   /// 3. Fold a list with effects, accumulating a result
-  static std::string fold_effect(const std::shared_ptr<List<std::string>> &xs,
+  static std::string fold_effect(const List<std::string> &xs,
                                  const std::string acc);
   /// 4. Read lines and store each in env with index
   static unsigned int store_lines(const std::string prefix,
                                   const unsigned int n);
   /// 5. Collect env values into a list
-  static std::shared_ptr<List<std::optional<std::string>>>
-  collect_envs(const std::shared_ptr<List<std::string>> &names);
+  static List<std::optional<std::string>>
+  collect_envs(const List<std::string> &names);
 
   /// 6. Read a line and prepend to existing list
-  static std::shared_ptr<List<std::string>>
-  read_and_prepend(std::shared_ptr<List<std::string>> xs);
+  static List<std::string> read_and_prepend(List<std::string> xs);
 };
 
 #endif // INCLUDED_EFFECT_RECURSIVE_LIST

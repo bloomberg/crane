@@ -7,9 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,7 +15,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -28,50 +26,122 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, T1, t_A> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, const T1 a0) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 };
 
 struct Monadic {
-  template <typename T1>
-  __attribute__((pure)) static std::optional<T1> option_return(const T1 x) {
+  template <typename T1> static std::optional<T1> option_return(const T1 x) {
     return std::make_optional<T1>(x);
   }
 
-  template <typename T1, typename T2, MapsTo<std::optional<T2>, T1> F1>
-  __attribute__((pure)) static std::optional<T2>
-  option_bind(const std::optional<T1> ma, F1 &&f) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<std::optional<T2>, F1 &, T1 &>
+  static std::optional<T2> option_bind(const std::optional<T1> &ma, F1 &&f) {
     if (ma.has_value()) {
       const T1 &a = *ma;
       return f(a);
@@ -80,24 +150,24 @@ struct Monadic {
     }
   }
 
-  __attribute__((pure)) static std::optional<unsigned int>
-  safe_div(const unsigned int n, const unsigned int m);
-  __attribute__((pure)) static std::optional<unsigned int>
-  safe_sub(const unsigned int n, const unsigned int m);
-  __attribute__((pure)) static std::optional<unsigned int>
-  div_then_sub(const unsigned int a, const unsigned int b,
-               const unsigned int c);
+  static std::optional<unsigned int> safe_div(const unsigned int n,
+                                              const unsigned int m);
+  static std::optional<unsigned int> safe_sub(const unsigned int n,
+                                              const unsigned int m);
+  static std::optional<unsigned int> div_then_sub(const unsigned int a,
+                                                  const unsigned int b,
+                                                  const unsigned int c);
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static State<T1, T2> state_return(const T2 x) {
+  static State<T1, T2> state_return(const T2 x) {
     return [=](const T1 s) mutable { return std::make_pair(x, s); };
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<State<T1, T3>, T2> F1>
-  __attribute__((pure)) static State<T1, T3> state_bind(const State<T1, T2> ma,
-                                                        F1 &&f) {
+  template <typename T1, typename T2, typename T3, typename F1>
+    requires std::is_invocable_r_v<State<T1, T3>, F1 &, T2 &>
+  static State<T1, T3> state_bind(const State<T1, T2> ma, F1 &&f) {
     return [=](const T1 s) mutable {
       auto _cs = ma(s);
       const T2 &a = _cs.first;
@@ -114,15 +184,14 @@ struct Monadic {
   }
 
   template <typename T1>
-  __attribute__((pure)) static State<T1, std::monostate> state_put(const T1 s) {
+  static State<T1, std::monostate> state_put(const T1 s) {
     return
         [=](const T1) mutable { return std::make_pair(std::monostate{}, s); };
   }
 
   template <typename T1>
-  __attribute__((pure)) static State<unsigned int, unsigned int>
-  count_elements(const std::shared_ptr<List<T1>> &l) {
-    return l->template fold_left<State<unsigned int, unsigned int>>(
+  static State<unsigned int, unsigned int> count_elements(const List<T1> &l) {
+    return l.template fold_left<State<unsigned int, unsigned int>>(
         [](const std::function<std::pair<unsigned int, unsigned int>(
                unsigned int)>
                acc,
@@ -133,7 +202,7 @@ struct Monadic {
                 state_get<unsigned int>(), [](const unsigned int n) {
                   return state_bind<unsigned int, std::monostate, unsigned int>(
                       state_put<unsigned int>((n + 1)),
-                      [=](const std::monostate) mutable {
+                      [=](const std::monostate &) mutable {
                         return state_return<unsigned int, unsigned int>(n);
                       });
                 });

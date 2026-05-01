@@ -1,12 +1,5 @@
 #include <effect_compose.h>
 
-#include <functional>
-#include <future>
-#include <iostream>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// Spawn a future that doubles a number, retrieve the result.
 unsigned int EffectCompose::par_double(const unsigned int n) {
   std::function<unsigned int(unsigned int)> double0 = [](const unsigned int x) {

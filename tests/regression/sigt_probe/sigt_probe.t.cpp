@@ -11,9 +11,9 @@ int main() {
   auto result = SigTProbe::sample;
   // sample = match packed with existT _ _ _ => 0 end = 0
   std::cout << "sample = "
-            << (std::holds_alternative<Nat::O>(result->v()) ? "0" : "other")
+            << (std::holds_alternative<Nat::O>(result.v()) ? "0" : "other")
             << std::endl;
-  assert(std::holds_alternative<Nat::O>(result->v()));
+  assert(std::holds_alternative<Nat::O>(result.v()));
 
   return 0;
 }

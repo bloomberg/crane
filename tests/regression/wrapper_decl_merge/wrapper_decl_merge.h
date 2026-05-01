@@ -1,21 +1,20 @@
 #ifndef INCLUDED_WRAPPER_DECL_MERGE
 #define INCLUDED_WRAPPER_DECL_MERGE
 
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct WrapperDeclMerge {
   struct A {
     struct Nat {
-      __attribute__((pure)) static unsigned int fa(const unsigned int n);
+      static unsigned int fa(const unsigned int n);
     };
   };
 
   struct B {
     struct Nat {
-      __attribute__((pure)) static unsigned int fb(const unsigned int n);
+      static unsigned int fb(const unsigned int n);
     };
   };
 

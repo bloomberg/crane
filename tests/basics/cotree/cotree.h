@@ -4,12 +4,11 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,7 +16,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -28,37 +27,110 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, t_A> F0>
-  std::shared_ptr<List<T1>> map(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+  List<T1> map(F0 &&f) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return List<T1>::cons(f(d_a0), d_a1->template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
     }
   }
 };
@@ -90,41 +162,28 @@ struct Cotree {
     explicit colist(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static std::shared_ptr<colist<t_A>> conil() {
-      return std::make_shared<colist<t_A>>(Conil{});
+    static colist<t_A> conil() { return colist(Conil{}); }
+
+    static colist<t_A> cocons(t_A a0, const colist<t_A> &a1) {
+      return colist(Cocons{std::move(a0), std::make_shared<colist<t_A>>(a1)});
     }
 
-    static std::shared_ptr<colist<t_A>>
-    cocons(t_A a0, const std::shared_ptr<colist<t_A>> &a1) {
-      return std::make_shared<colist<t_A>>(Cocons{std::move(a0), a1});
-    }
-
-    static std::shared_ptr<colist<t_A>>
-    cocons(t_A a0, std::shared_ptr<colist<t_A>> &&a1) {
-      return std::make_shared<colist<t_A>>(
-          Cocons{std::move(a0), std::move(a1)});
-    }
-
-    static std::shared_ptr<colist<t_A>>
-    lazy_(std::function<std::shared_ptr<colist<t_A>>()> thunk) {
-      return std::make_shared<colist<t_A>>(
-          std::function<variant_t()>([=]() mutable -> variant_t {
-            std::shared_ptr<colist<t_A>> _tmp = thunk();
-            return _tmp->v();
-          }));
+    static colist<t_A> lazy_(std::function<colist<t_A>()> thunk) {
+      return colist<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
+        colist<t_A> _tmp = thunk();
+        return _tmp.v();
+      }));
     }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const {
-      return d_lazyV_.force();
-    }
+    const variant_t &v() const { return d_lazyV_.force(); }
   };
 
   template <typename t_A> struct cotree {
     // TYPES
     struct Conode {
       t_A d_a0;
-      std::shared_ptr<colist<std::shared_ptr<cotree<t_A>>>> d_a1;
+      std::shared_ptr<colist<cotree<t_A>>> d_a1;
     };
 
     using variant_t = std::variant<Conode>;
@@ -141,31 +200,20 @@ struct Cotree {
     explicit cotree(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static std::shared_ptr<cotree<t_A>>
-    conode(t_A a0,
-           const std::shared_ptr<colist<std::shared_ptr<cotree<t_A>>>> &a1) {
-      return std::make_shared<cotree<t_A>>(Conode{std::move(a0), a1});
+    static cotree<t_A> conode(t_A a0, const colist<cotree<t_A>> &a1) {
+      return cotree(
+          Conode{std::move(a0), std::make_shared<colist<cotree<t_A>>>(a1)});
     }
 
-    static std::shared_ptr<cotree<t_A>>
-    conode(t_A a0, std::shared_ptr<colist<std::shared_ptr<cotree<t_A>>>> &&a1) {
-      return std::make_shared<cotree<t_A>>(
-          Conode{std::move(a0), std::move(a1)});
-    }
-
-    static std::shared_ptr<cotree<t_A>>
-    lazy_(std::function<std::shared_ptr<cotree<t_A>>()> thunk) {
-      return std::make_shared<cotree<t_A>>(
-          std::function<variant_t()>([=]() mutable -> variant_t {
-            std::shared_ptr<cotree<t_A>> _tmp = thunk();
-            return _tmp->v();
-          }));
+    static cotree<t_A> lazy_(std::function<cotree<t_A>()> thunk) {
+      return cotree<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
+        cotree<t_A> _tmp = thunk();
+        return _tmp.v();
+      }));
     }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const {
-      return d_lazyV_.force();
-    }
+    const variant_t &v() const { return d_lazyV_.force(); }
 
     t_A root() const {
       const auto &[d_a0, d_a1] =
@@ -173,29 +221,25 @@ struct Cotree {
       return d_a0;
     }
 
-    std::shared_ptr<colist<std::shared_ptr<cotree<t_A>>>> children() const {
+    colist<cotree<t_A>> children() const {
       const auto &[d_a0, d_a1] =
           std::get<typename cotree<t_A>::Conode>(this->v());
       return colist<std::shared_ptr<cotree<t_A>>>::lazy_(
-          [=]() mutable
-              -> std::shared_ptr<colist<std::shared_ptr<cotree<t_A>>>> {
-            return d_a1;
-          });
+          [=]() mutable -> colist<cotree<t_A>> { return *(d_a1); });
     }
 
-    template <typename T1, MapsTo<T1, t_A> F0>
-    std::shared_ptr<cotree<T1>> comap_cotree(F0 &&g) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, t_A &>
+    cotree<T1> comap_cotree(F0 &&g) const {
       const auto &[d_a0, d_a1] =
           std::get<typename cotree<t_A>::Conode>(this->v());
-      return cotree<T1>::lazy_([=]() mutable -> std::shared_ptr<cotree<T1>> {
+      return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
         return cotree<T1>::conode(
-            g(d_a0),
-            comap<std::shared_ptr<cotree<t_A>>, std::shared_ptr<cotree<T1>>>(
-                [=](const std::shared_ptr<cotree<t_A>> &_x0) mutable
-                    -> std::shared_ptr<cotree<T1>> {
-                  return _x0->template comap_cotree<T1>(g);
-                },
-                d_a1));
+            g(d_a0), comap<cotree<t_A>, cotree<T1>>(
+                         [=](cotree<t_A> _x0) mutable -> cotree<T1> {
+                           return _x0.template comap_cotree<T1>(g);
+                         },
+                         *(d_a1)));
       });
     }
   };
@@ -204,7 +248,7 @@ struct Cotree {
     // TYPES
     struct Node {
       t_A d_a0;
-      std::shared_ptr<List<std::shared_ptr<tree<t_A>>>> d_a1;
+      std::unique_ptr<List<tree<t_A>>> d_a1;
     };
 
     using variant_t = std::variant<Node>;
@@ -215,164 +259,255 @@ struct Cotree {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree<t_A>>
-    node(t_A a0, const std::shared_ptr<List<std::shared_ptr<tree<t_A>>>> &a1) {
-      return std::make_shared<tree<t_A>>(Node{std::move(a0), a1});
+    tree(const tree<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tree<t_A> &operator=(const tree<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree<t_A>>
-    node(t_A a0, std::shared_ptr<List<std::shared_ptr<tree<t_A>>>> &&a1) {
-      return std::make_shared<tree<t_A>>(Node{std::move(a0), std::move(a1)});
+    tree<t_A> &operator=(tree<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    tree<t_A> clone() const {
+      tree<t_A> _out{};
+
+      struct _CloneFrame {
+        const tree<t_A> *_src;
+        tree<t_A> *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree<t_A> *_src = _frame._src;
+        tree<t_A> *_dst = _frame._dst;
+        const auto &_alt = std::get<Node>(_src->v());
+        _dst->d_v_ = Node{
+            _alt.d_a0,
+            _alt.d_a1 ? std::make_unique<List<Cotree::tree<t_A>>>() : nullptr};
+        auto &_dst_alt = std::get<Node>(_dst->d_v_);
+        [&] {
+          if (_alt.d_a1) {
+            const List<Cotree::tree<t_A>> *_lsrc = _alt.d_a1.get();
+            List<Cotree::tree<t_A>> *_ldst = _dst_alt.d_a1.get();
+            while (
+                std::holds_alternative<typename List<Cotree::tree<t_A>>::Cons>(
+                    _lsrc->v())) {
+              const auto &_lsrc_c =
+                  std::get<typename List<Cotree::tree<t_A>>::Cons>(_lsrc->v());
+              _ldst->v_mut() = typename List<Cotree::tree<t_A>>::Cons{
+                  Cotree::tree<t_A>{},
+                  _lsrc_c.d_a1 ? std::make_unique<List<Cotree::tree<t_A>>>()
+                               : nullptr};
+              auto &_ldst_c = std::get<typename List<Cotree::tree<t_A>>::Cons>(
+                  _ldst->v_mut());
+              _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
+              if (_lsrc_c.d_a1) {
+                _lsrc = _lsrc_c.d_a1.get();
+                _ldst = _ldst_c.d_a1.get();
+              } else {
+                break;
+              }
+            }
+            if (std::holds_alternative<typename List<Cotree::tree<t_A>>::Nil>(
+                    _lsrc->v())) {
+              _ldst->v_mut() = typename List<Cotree::tree<t_A>>::Nil{};
+            }
+          }
+        }();
+      }
+      return _out;
+    }
+
+    // CREATORS
+    template <typename _U> explicit tree(const tree<_U> &_other) {
+      const auto &[d_a0, d_a1] = std::get<typename tree<_U>::Node>(_other.v());
+      d_v_ = Node{t_A(d_a0),
+                  d_a1 ? std::make_unique<List<tree<t_A>>>(*d_a1) : nullptr};
+    }
+
+    static tree<t_A> node(t_A a0, List<tree<t_A>> a1) {
+      return tree(Node{std::move(a0),
+                       std::make_unique<List<tree<t_A>>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~tree() {
+      std::vector<std::unique_ptr<tree<t_A>>> _stack{};
+      auto _drain = [&](tree<t_A> &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a1) {
+            auto *_lp = _alt.d_a1.get();
+            while (
+                std::holds_alternative<typename List<Cotree::tree<t_A>>::Cons>(
+                    _lp->v())) {
+              auto &_lc = std::get<typename List<Cotree::tree<t_A>>::Cons>(
+                  _lp->v_mut());
+              _stack.push_back(
+                  std::make_unique<Cotree::tree<t_A>>(std::move(_lc.d_a0)));
+              if (_lc.d_a1) {
+                _lp = _lc.d_a1.get();
+              } else {
+                break;
+              }
+            }
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<List<std::shared_ptr<tree<T1>>>>> F0>
-  static T2 tree_rect(F0 &&f, const std::shared_ptr<tree<T1>> &t) {
-    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t->v());
-    return f(d_a0, d_a1);
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &, List<tree<T1>> &>
+  static T2 tree_rect(F0 &&f, const tree<T1> &t) {
+    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
+    return f(d_a0, *(d_a1));
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<List<std::shared_ptr<tree<T1>>>>> F0>
-  static T2 tree_rec(F0 &&f, const std::shared_ptr<tree<T1>> &t) {
-    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t->v());
-    return f(d_a0, d_a1);
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &, List<tree<T1>> &>
+  static T2 tree_rec(F0 &&f, const tree<T1> &t) {
+    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
+    return f(d_a0, *(d_a1));
   }
 
-  template <typename T1>
-  static T1 tree_root(const std::shared_ptr<tree<T1>> &t) {
-    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t->v());
+  template <typename T1> static T1 tree_root(const tree<T1> &t) {
+    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
     return d_a0;
   }
 
-  template <typename T1, typename T2, MapsTo<T2, T1> F0>
-  static std::shared_ptr<colist<T2>>
-  comap(F0 &&f, const std::shared_ptr<colist<T1>> &l) {
-    if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+  static colist<T2> comap(F0 &&f, const colist<T1> l) {
+    if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
       return colist<T2>::lazy_(
-          []() -> std::shared_ptr<colist<T2>> { return colist<T2>::conil(); });
+          []() -> colist<T2> { return colist<T2>::conil(); });
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l->v());
-      return colist<T2>::lazy_([=]() mutable -> std::shared_ptr<colist<T2>> {
-        return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
+      return colist<T2>::lazy_([=]() mutable -> colist<T2> {
+        return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, *(d_a1)));
       });
     }
   }
 
-  template <typename T1>
-  static std::shared_ptr<cotree<T1>> singleton_cotree(const T1 a) {
-    return cotree<T1>::lazy_([=]() mutable -> std::shared_ptr<cotree<T1>> {
-      return cotree<T1>::conode(a,
-                                colist<std::shared_ptr<cotree<T1>>>::conil());
+  template <typename T1> static cotree<T1> singleton_cotree(const T1 a) {
+    return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
+      return cotree<T1>::conode(a, colist<cotree<T1>>::conil());
     });
   }
 
-  template <typename T1, MapsTo<std::shared_ptr<colist<T1>>, T1> F0>
-  static std::shared_ptr<cotree<T1>> unfold_cotree(F0 &&next, const T1 init) {
-    return cotree<T1>::lazy_([=]() mutable -> std::shared_ptr<cotree<T1>> {
-      return cotree<T1>::conode(
-          init, comap<T1, std::shared_ptr<cotree<T1>>>(
-                    [=](T1 _x0) mutable -> std::shared_ptr<cotree<T1>> {
-                      return unfold_cotree<T1>(next, _x0);
-                    },
-                    next(init)));
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<colist<T1>, F0 &, T1 &>
+  static cotree<T1> unfold_cotree(F0 &&next, const T1 init) {
+    return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
+      return cotree<T1>::conode(init, comap<T1, cotree<T1>>(
+                                          [=](T1 _x0) mutable -> cotree<T1> {
+                                            return unfold_cotree<T1>(next, _x0);
+                                          },
+                                          next(init)));
     });
   }
 
   template <typename T1>
-  static std::shared_ptr<List<T1>>
-  list_of_colist(const unsigned int fuel,
-                 const std::shared_ptr<colist<T1>> &l) {
+  static List<T1> list_of_colist(const unsigned int fuel, const colist<T1> l) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
       unsigned int fuel_ = fuel - 1;
-      if (std::holds_alternative<typename colist<T1>::Conil>(l->v())) {
+      if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename colist<T1>::Cocons>(l->v());
-        return List<T1>::cons(d_a0, list_of_colist<T1>(fuel_, d_a1));
+        const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
+        return List<T1>::cons(d_a0, list_of_colist<T1>(fuel_, *(d_a1)));
       }
     }
   }
 
   template <typename T1>
-  static std::shared_ptr<tree<T1>>
-  tree_of_cotree(const unsigned int fuel,
-                 const std::shared_ptr<cotree<T1>> &t) {
-    const auto &[d_a0, d_a1] = std::get<typename cotree<T1>::Conode>(t->v());
+  static tree<T1> tree_of_cotree(const unsigned int fuel, const cotree<T1> t) {
+    const auto &[d_a0, d_a1] = std::get<typename cotree<T1>::Conode>(t.v());
     if (fuel <= 0) {
-      return tree<T1>::node(d_a0, List<std::shared_ptr<tree<T1>>>::nil());
+      return tree<T1>::node(d_a0, List<tree<T1>>::nil());
     } else {
       unsigned int fuel_ = fuel - 1;
       return tree<T1>::node(
-          d_a0, list_of_colist<std::shared_ptr<cotree<T1>>>(fuel, d_a1)
-                    ->template map<std::shared_ptr<tree<T1>>>(
-                        [=](const std::shared_ptr<cotree<T1>> &_x0) mutable
-                            -> std::shared_ptr<tree<T1>> {
-                          return tree_of_cotree<T1>(fuel_, _x0);
-                        }));
+          d_a0,
+          list_of_colist<cotree<T1>>(fuel, *(d_a1))
+              .template map<tree<T1>>([=](cotree<T1> _x0) mutable -> tree<T1> {
+                return tree_of_cotree<T1>(fuel_, _x0);
+              }));
     }
   }
 
-  template <typename T1>
-  __attribute__((pure)) static unsigned int
-  tree_size(const std::shared_ptr<tree<T1>> &t) {
-    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t->v());
+  template <typename T1> static unsigned int tree_size(const tree<T1> &t) {
+    const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
+    List<tree<T1>> d_a1_value = List<Cotree::tree<T1>>(*(d_a1));
     return ([&]() {
-      std::function<unsigned int(
-          std::shared_ptr<List<std::shared_ptr<tree<T1>>>>)>
-          aux;
-      aux = [&](std::shared_ptr<List<std::shared_ptr<tree<T1>>>> l)
-          -> unsigned int {
-        if (std::holds_alternative<
-                typename List<std::shared_ptr<tree<T1>>>::Nil>(l->v())) {
+      std::function<unsigned int(List<tree<T1>>)> aux;
+      aux = [&](List<tree<T1>> l) -> unsigned int {
+        if (std::holds_alternative<typename List<tree<T1>>::Nil>(l.v())) {
           return 0u;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<std::shared_ptr<tree<T1>>>::Cons>(l->v());
-          return (tree_size<T1>(d_a0) + aux(d_a1));
+              std::get<typename List<tree<T1>>::Cons>(l.v());
+          return (tree_size<T1>(d_a0) + aux(*(d_a1)));
         }
       };
-      return aux(d_a1);
+      return aux(d_a1_value);
     }() + 1);
   }
 
-  static inline const std::shared_ptr<cotree<unsigned int>> sample_cotree =
+  static inline const cotree<unsigned int> sample_cotree =
       cotree<unsigned int>::conode(
-          1u, colist<std::shared_ptr<cotree<unsigned int>>>::cocons(
+          1u, colist<cotree<unsigned int>>::cocons(
                   singleton_cotree<unsigned int>(2u),
-                  colist<std::shared_ptr<cotree<unsigned int>>>::cocons(
+                  colist<cotree<unsigned int>>::cocons(
                       singleton_cotree<unsigned int>(3u),
-                      colist<std::shared_ptr<cotree<unsigned int>>>::conil())));
-  static inline const unsigned int test_root = sample_cotree->root();
+                      colist<cotree<unsigned int>>::conil())));
+  static inline const unsigned int test_root = sample_cotree.root();
   static inline const unsigned int test_doubled_root =
       sample_cotree
-          ->template comap_cotree<unsigned int>(
+          .template comap_cotree<unsigned int>(
               [](const unsigned int n) { return (n * 2u); })
-          ->root();
-  static std::shared_ptr<colist<unsigned int>> nats(const unsigned int n);
-  static inline const std::shared_ptr<List<unsigned int>> test_first_five =
+          .root();
+  static colist<unsigned int> nats(const unsigned int n);
+  static inline const List<unsigned int> test_first_five =
       list_of_colist<unsigned int>(5u, nats(0u));
-  static std::shared_ptr<colist<unsigned int>>
-  binary_children(const unsigned int n);
-  static inline const std::shared_ptr<cotree<unsigned int>> binary_tree =
+  static colist<unsigned int> binary_children(const unsigned int n);
+  static inline const cotree<unsigned int> binary_tree =
       unfold_cotree<unsigned int>(binary_children, 0u);
-  static inline const unsigned int test_binary_root = binary_tree->root();
-  static inline const std::shared_ptr<tree<unsigned int>> test_approx =
+  static inline const unsigned int test_binary_root = binary_tree.root();
+  static inline const tree<unsigned int> test_approx =
       tree_of_cotree<unsigned int>(2u, binary_tree);
   static inline const unsigned int test_approx_root =
       tree_root<unsigned int>(test_approx);
+
   static inline const unsigned int test_approx_size =
       tree_size<unsigned int>(test_approx);
 };

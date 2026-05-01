@@ -1,21 +1,20 @@
 #ifndef INCLUDED_MODPATH_ESCAPE_COLLISION
 #define INCLUDED_MODPATH_ESCAPE_COLLISION
 
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ModpathEscapeCollision {
   struct A {
     struct Token_ {
-      __attribute__((pure)) static unsigned int f(const unsigned int n);
+      static unsigned int f(const unsigned int n);
     };
   };
 
   struct B {
     struct Token_ {
-      __attribute__((pure)) static unsigned int g(const unsigned int n);
+      static unsigned int g(const unsigned int n);
     };
   };
 

@@ -1,22 +1,15 @@
 #include <program_wf_prop.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
-__attribute__((pure)) std::optional<unsigned int> ProgramWfProp::jump_target(
-    const std::shared_ptr<ProgramWfProp::instruction> &i) {
-  if (std::holds_alternative<typename ProgramWfProp::instruction::JUN>(
-          i->v())) {
+std::optional<unsigned int>
+ProgramWfProp::jump_target(const ProgramWfProp::instruction &i) {
+  if (std::holds_alternative<typename ProgramWfProp::instruction::JUN>(i.v())) {
     const auto &[d_a0] =
-        std::get<typename ProgramWfProp::instruction::JUN>(i->v());
+        std::get<typename ProgramWfProp::instruction::JUN>(i.v());
     return std::make_optional<unsigned int>(d_a0);
   } else if (std::holds_alternative<typename ProgramWfProp::instruction::JMS>(
-                 i->v())) {
+                 i.v())) {
     const auto &[d_a0] =
-        std::get<typename ProgramWfProp::instruction::JMS>(i->v());
+        std::get<typename ProgramWfProp::instruction::JMS>(i.v());
     return std::make_optional<unsigned int>(d_a0);
   } else {
     return std::optional<unsigned int>();

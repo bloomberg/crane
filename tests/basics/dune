@@ -519,17 +519,6 @@
   (deps z_int.t.exe)
   (action (run ./z_int.t.exe))))
 
-(subdir cotree
- (rule
-  (targets cotree.t.exe)
-  (deps Cotree.vo cotree.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} cotree.t.exe cotree.cpp cotree.t.cpp)))
- (rule
-  (alias runtest)
-  (deps cotree.t.exe)
-  (action (run ./cotree.t.exe))))
-
 (subdir doc_comments
  (rule
   (targets doc_comments.t.exe)
@@ -540,3 +529,14 @@
   (alias runtest)
   (deps doc_comments.t.exe)
   (action (run ./doc_comments.t.exe))))
+
+(subdir cotree
+ (rule
+  (targets cotree.t.exe)
+  (deps Cotree.vo cotree.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cotree.t.exe cotree.cpp cotree.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cotree.t.exe)
+  (action (run ./cotree.t.exe))))

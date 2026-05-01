@@ -4,12 +4,10 @@
 #include <any>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ExistentialClosureProbe {
   /// Type-indexed inductive wrapping a value of erased type.
@@ -29,52 +27,72 @@ struct ExistentialClosureProbe {
 
   public:
     // CREATORS
+    wrap() {}
+
     explicit wrap(Wrap0 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<wrap> wrap0(std::any a) {
-      return std::make_shared<wrap>(Wrap0{std::move(a)});
+    wrap(const wrap &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    wrap(wrap &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    wrap &operator=(const wrap &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    wrap &operator=(wrap &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    wrap clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a] = std::get<Wrap0>(_sv.v());
+      return wrap(Wrap0{d_a});
+    }
+
+    // CREATORS
+    static wrap wrap0(std::any a) { return wrap(Wrap0{std::move(a)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename F0>
-  static T1 wrap_rect(F0 &&f, const std::shared_ptr<wrap> &w) {
-    const auto &[d_a] = std::get<typename wrap::Wrap0>(w->v());
+  static T1 wrap_rect(F0 &&f, const wrap &w) {
+    const auto &[d_a] = std::get<typename wrap::Wrap0>(w.v());
     return std::any_cast<T1>(f(d_a));
   }
 
   template <typename T1, typename F0>
-  static T1 wrap_rec(F0 &&f, const std::shared_ptr<wrap> &w) {
-    const auto &[d_a] = std::get<typename wrap::Wrap0>(w->v());
+  static T1 wrap_rec(F0 &&f, const wrap &w) {
+    const auto &[d_a] = std::get<typename wrap::Wrap0>(w.v());
     return std::any_cast<T1>(f(d_a));
   }
 
-  template <typename T1> static T1 unwrap(const std::shared_ptr<wrap> &w) {
-    const auto &[d_a] = std::get<typename wrap::Wrap0>(w->v());
+  template <typename T1> static T1 unwrap(const wrap &w) {
+    const auto &[d_a] = std::get<typename wrap::Wrap0>(w.v());
     return std::any_cast<T1>(d_a);
   }
 
   /// Pack a closure into a type-erased wrapper.
-  static std::shared_ptr<wrap> pack_fn(const unsigned int base);
+  static wrap pack_fn(const unsigned int base);
   /// Unpack and apply.
-  __attribute__((pure)) static unsigned int
-  apply_packed(const std::shared_ptr<wrap> &_x0, const unsigned int _x1);
+  static unsigned int apply_packed(const wrap &_x0, const unsigned int _x1);
   /// test1: pack base=10, apply to 5. Expected: 15.
   static inline const unsigned int test1 = apply_packed(pack_fn(10u), 5u);
   /// test2: Pack and unpack through a let binding.
   /// base=42, apply to 0. Expected: 42.
   static inline const unsigned int test2 = []() {
-    std::shared_ptr<wrap> p = pack_fn(42u);
+    wrap p = pack_fn(42u);
     return apply_packed(std::move(p), 0u);
   }();
   /// Store a closure that captures another closure.
-  static std::shared_ptr<wrap> pack_composed(const unsigned int a,
-                                             const unsigned int b);
+  static wrap pack_composed(const unsigned int a, const unsigned int b);
   /// test3: a=3, b=2, g(5) = (5+3)*2 = 16.
   static inline const unsigned int test3 =
       apply_packed(pack_composed(3u, 2u), 5u);

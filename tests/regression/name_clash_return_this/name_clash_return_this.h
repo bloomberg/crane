@@ -2,12 +2,10 @@
 #define INCLUDED_NAME_CLASH_RETURN_THIS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct NameClashReturnThis {
   /// Test: match-as-expression where one branch returns the scrutinee itself.
@@ -32,45 +30,76 @@ struct NameClashReturnThis {
 
   public:
     // CREATORS
+    shape() {}
+
     explicit shape(Circle _v) : d_v_(std::move(_v)) {}
 
     explicit shape(Square _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<shape> circle(unsigned int a0) {
-      return std::make_shared<shape>(Circle{std::move(a0)});
+    shape(const shape &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    shape(shape &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    shape &operator=(const shape &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<shape> square(unsigned int a0, unsigned int a1) {
-      return std::make_shared<shape>(Square{std::move(a0), std::move(a1)});
+    shape &operator=(shape &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    shape clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Circle>(_sv.v())) {
+        const auto &[d_a0] = std::get<Circle>(_sv.v());
+        return shape(Circle{d_a0});
+      } else {
+        const auto &[d_a0, d_a1] = std::get<Square>(_sv.v());
+        return shape(Square{d_a0, d_a1});
+      }
+    }
+
+    // CREATORS
+    static shape circle(unsigned int a0) {
+      return shape(Circle{std::move(a0)});
+    }
+
+    static shape square(unsigned int a0, unsigned int a1) {
+      return shape(Square{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, unsigned int> F1>
-  static T1 shape_rect(F0 &&f, F1 &&f0, const std::shared_ptr<shape> &s) {
-    if (std::holds_alternative<typename shape::Circle>(s->v())) {
-      const auto &[d_a0] = std::get<typename shape::Circle>(s->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+  static T1 shape_rect(F0 &&f, F1 &&f0, const shape &s) {
+    if (std::holds_alternative<typename shape::Circle>(s.v())) {
+      const auto &[d_a0] = std::get<typename shape::Circle>(s.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename shape::Square>(s->v());
+      const auto &[d_a0, d_a1] = std::get<typename shape::Square>(s.v());
       return f0(d_a0, d_a1);
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int, unsigned int> F1>
-  static T1 shape_rec(F0 &&f, F1 &&f0, const std::shared_ptr<shape> &s) {
-    if (std::holds_alternative<typename shape::Circle>(s->v())) {
-      const auto &[d_a0] = std::get<typename shape::Circle>(s->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+  static T1 shape_rec(F0 &&f, F1 &&f0, const shape &s) {
+    if (std::holds_alternative<typename shape::Circle>(s.v())) {
+      const auto &[d_a0] = std::get<typename shape::Circle>(s.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename shape::Square>(s->v());
+      const auto &[d_a0, d_a1] = std::get<typename shape::Square>(s.v());
       return f0(d_a0, d_a1);
     }
   }
@@ -78,17 +107,13 @@ struct NameClashReturnThis {
   /// Inner match returns shape in all branches, one branch returns the
   /// argument itself. The function takes shape as input, so it gets
   /// methodified. In the Blue branch, `s` becomes `this`.
-  static std::shared_ptr<shape> maybe_transform(const bool flag,
-                                                std::shared_ptr<shape> s);
+  static shape maybe_transform(const bool flag, shape s);
   /// Match on shape where one branch returns the same shape unchanged.
-  static std::shared_ptr<shape>
-  identity_or_double(const std::shared_ptr<shape> &s);
+  static shape identity_or_double(const shape &s);
   /// Two shapes, return one of them based on a match on the other.
-  static std::shared_ptr<shape> pick_shape(std::shared_ptr<shape> s1,
-                                           std::shared_ptr<shape> s2);
+  static shape pick_shape(shape s1, shape s2);
   /// Nested: match on result of a function that may return this
-  __attribute__((pure)) static unsigned int
-  nested_this(const std::shared_ptr<shape> &s);
+  static unsigned int nested_this(const shape &s);
 };
 
 #endif // INCLUDED_NAME_CLASH_RETURN_THIS

@@ -2,10 +2,9 @@
 #define INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename I, typename t_A>
 concept Boxed = requires {
@@ -14,7 +13,7 @@ concept Boxed = requires {
 
 struct TodoTypeAppInstanceAlias {
   struct natBoxed {
-    constexpr static unsigned int boxed_default() { return 7u; }
+    static unsigned int boxed_default() { return 7u; }
   };
 
   static_assert(Boxed<natBoxed, unsigned int>);

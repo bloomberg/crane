@@ -4,8 +4,8 @@
 #include <ram_init_reset.h>
 int main() {
   assert(RamInitReset::reset_pc == 0u);
-  assert(RamInitReset::init_state->state_acc == 0u);
-  assert(RamInitReset::init_state->state_pc == 0u);
-  assert(RamInitReset::init_state->state_carry == false);
+  assert(RamInitReset::init_state.state_acc == 0u);
+  assert(RamInitReset::init_state.state_pc == 0u);
+  assert(RamInitReset::init_state.state_carry == false);
   return 0;
 }

@@ -15,13 +15,13 @@ int main() {
   std::cout << "count_true ok" << std::endl;
 
   // sum_flagged([{true,10}, {false,99}, {true,5}])  =  15
-  auto items = List<std::shared_ptr<LD::item>>::cons(
-      std::make_shared<LD::item>(LD::item{true, 10u}),
-      List<std::shared_ptr<LD::item>>::cons(
-          std::make_shared<LD::item>(LD::item{false, 99u}),
-          List<std::shared_ptr<LD::item>>::cons(
-              std::make_shared<LD::item>(LD::item{true, 5u}),
-              List<std::shared_ptr<LD::item>>::nil())));
+  auto items = List<LD::item>::cons(
+      LD::item{true, 10u},
+      List<LD::item>::cons(
+          LD::item{false, 99u},
+          List<LD::item>::cons(
+              LD::item{true, 5u},
+              List<LD::item>::nil())));
   assert(LD::sum_flagged(items) == 15u);
   std::cout << "sum_flagged ok" << std::endl;
 

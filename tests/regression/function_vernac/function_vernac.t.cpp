@@ -3,7 +3,6 @@
 #include "function_vernac.h"
 
 #include <iostream>
-#include <memory>
 #include <variant>
 #include <vector>
 
@@ -31,31 +30,11 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-std::vector<unsigned int>
-list_to_vector(const std::shared_ptr<List<unsigned int>> &l) {
-  std::vector<unsigned int> result;
-  auto current = l;
-  while (true) {
-    bool done = false;
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil &) {
-                            done = true;
-                          },
-                          [&](const typename List<unsigned int>::Cons &c) {
-                            result.push_back(c.d_a0);
-                            current = c.d_a1;
-                          }},
-               current->v());
-    if (done)
-      break;
-  }
-  return result;
-}
-
-std::shared_ptr<List<unsigned int>>
+List<unsigned int>
 vector_to_list(const std::vector<unsigned int> &vec) {
   auto result = List<unsigned int>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<unsigned int>::cons(*it, result);
+    result = List<unsigned int>::cons(*it, std::move(result));
   }
   return result;
 }

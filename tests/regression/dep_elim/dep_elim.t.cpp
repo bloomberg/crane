@@ -33,14 +33,14 @@ int main() {
 
   // Test 2: vec_to_list
   {
-    auto l = DepElim::test_vec_list;
+    const List<unsigned int> *l = &DepElim::test_vec_list;
     unsigned int expected[] = {10, 20, 30};
     for (int i = 0; i < 3; i++) {
       auto &v = l->v();
       ASSERT(std::holds_alternative<List<unsigned int>::Cons>(v));
       auto &c = std::get<List<unsigned int>::Cons>(v);
       ASSERT(c.d_a0 == expected[i]);
-      l = c.d_a1;
+      l = c.d_a1.get();
     }
     ASSERT(std::holds_alternative<List<unsigned int>::Nil>(l->v()));
     std::cout << "Test 2 (vec_to_list): PASSED" << std::endl;

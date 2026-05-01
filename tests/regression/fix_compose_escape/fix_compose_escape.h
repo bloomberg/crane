@@ -3,10 +3,8 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct FixComposeEscape {
   /// A local fixpoint is composed with another function.
@@ -17,20 +15,24 @@ struct FixComposeEscape {
   /// variable that is destroyed when compose_add returns.  The =
   /// capture copies the std::function VALUE, including its dangling
   /// & references.
-  template <MapsTo<unsigned int, unsigned int> F1>
-  __attribute__((pure)) static unsigned int
-  compose_add(const unsigned int base, F1 &&g, const unsigned int _x0) {
-    return [&]() {
-      auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-      *add = [=](unsigned int x) mutable -> unsigned int {
+  template <typename F1>
+    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
+  static unsigned int compose_add(const unsigned int base, F1 &&g,
+                                  const unsigned int _x0) {
+    return [=]() mutable {
+      auto add_impl = [=](auto &_self_add,
+                          unsigned int x) mutable -> unsigned int {
         if (x <= 0) {
           return base;
         } else {
           unsigned int x_ = x - 1;
-          return ((*add)(x_) + 1);
+          return (_self_add(_self_add, x_) + 1);
         }
       };
-      return [=](const unsigned int x) mutable { return g((*add)(x)); };
+      auto add = [=](unsigned int x) mutable -> unsigned int {
+        return add_impl(add_impl, x);
+      };
+      return [=](const unsigned int x) mutable { return g(add(x)); };
     }()(_x0);
   }
 

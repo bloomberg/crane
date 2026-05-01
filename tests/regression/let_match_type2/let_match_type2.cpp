@@ -1,13 +1,7 @@
 #include <let_match_type2.h>
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Match returning bool — should be fine
-__attribute__((pure)) bool LetMatchType2::let_match_bool(const unsigned int n) {
+bool LetMatchType2::let_match_bool(const unsigned int n) {
   bool b;
   if (n <= 0) {
     b = true;
@@ -19,7 +13,7 @@ __attribute__((pure)) bool LetMatchType2::let_match_bool(const unsigned int n) {
 }
 
 /// 2. Match returning pair — might trigger std::any
-__attribute__((pure)) unsigned int LetMatchType2::let_match_pair(const bool b) {
+unsigned int LetMatchType2::let_match_pair(const bool b) {
   std::pair<unsigned int, unsigned int> p;
   if (b) {
     p = std::make_pair(1u, 2u);
@@ -30,8 +24,7 @@ __attribute__((pure)) unsigned int LetMatchType2::let_match_pair(const bool b) {
 }
 
 /// 3. Match returning list — might trigger std::any
-std::shared_ptr<List<unsigned int>>
-LetMatchType2::let_match_list(const bool b) {
+List<unsigned int> LetMatchType2::let_match_list(const bool b) {
   if (b) {
     return List<unsigned int>::cons(1u, List<unsigned int>::nil());
   } else {
@@ -40,8 +33,7 @@ LetMatchType2::let_match_list(const bool b) {
 }
 
 /// 4. Match returning option — might trigger std::any
-__attribute__((pure)) std::optional<unsigned int>
-LetMatchType2::let_match_opt(const bool b) {
+std::optional<unsigned int> LetMatchType2::let_match_opt(const bool b) {
   if (b) {
     return std::make_optional<unsigned int>(1u);
   } else {
@@ -50,8 +42,8 @@ LetMatchType2::let_match_opt(const bool b) {
 }
 
 /// 5. Cascading let-matches all returning nat — should be fine
-__attribute__((pure)) unsigned int
-LetMatchType2::cascading_nat(const bool a, const bool b, const bool c) {
+unsigned int LetMatchType2::cascading_nat(const bool a, const bool b,
+                                          const bool c) {
   unsigned int x;
   if (a) {
     x = 10u;
@@ -74,7 +66,7 @@ LetMatchType2::cascading_nat(const bool a, const bool b, const bool c) {
 }
 
 /// 6. Match returning function type
-__attribute__((pure)) unsigned int LetMatchType2::let_match_fun(const bool b) {
+unsigned int LetMatchType2::let_match_fun(const bool b) {
   unsigned int x = 5u;
   if (b) {
     return (x + 1);
@@ -84,8 +76,7 @@ __attribute__((pure)) unsigned int LetMatchType2::let_match_fun(const bool b) {
 }
 
 /// 7. Match result used in another match
-__attribute__((pure)) unsigned int
-LetMatchType2::match_of_match(const unsigned int n) {
+unsigned int LetMatchType2::match_of_match(const unsigned int n) {
   unsigned int x;
   if (n <= 0) {
     x = 1u;
@@ -107,8 +98,7 @@ LetMatchType2::match_of_match(const unsigned int n) {
 }
 
 /// 8. let-bound match where arms have bindings
-__attribute__((pure)) unsigned int
-LetMatchType2::let_match_bindings(const unsigned int n) {
+unsigned int LetMatchType2::let_match_bindings(const unsigned int n) {
   unsigned int x;
   if (n <= 0) {
     x = 0u;

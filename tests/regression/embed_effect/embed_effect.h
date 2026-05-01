@@ -3,12 +3,11 @@
 
 #include <cstdint>
 #include <embed_effect_helper.h>
+#include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 void bug_create(const std::string title);
 

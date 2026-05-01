@@ -2,11 +2,9 @@
 #define INCLUDED_JCN_OPS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct JcnOps {
   struct state {
@@ -14,32 +12,34 @@ struct JcnOps {
     bool carry;
     bool test_pin;
     unsigned int pc;
+
+    // ACCESSORS
+    state clone() const {
+      return state{(*(this)).acc, (*(this)).carry, (*(this)).test_pin,
+                   (*(this)).pc};
+    }
   };
 
-  __attribute__((pure)) static bool
-  jcn_condition(const std::shared_ptr<state> &s, const unsigned int cond);
-  __attribute__((pure)) static unsigned int addr12_of_nat(const unsigned int n);
-  __attribute__((pure)) static unsigned int
-  pc_inc2(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int page_of(const unsigned int p);
-  __attribute__((pure)) static unsigned int page_base(const unsigned int p);
-  __attribute__((pure)) static unsigned int
-  base_for_next2(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int
-  branch_target(const std::shared_ptr<state> &s, const unsigned int cond,
-                const unsigned int off);
-  static inline const unsigned int test_branch_target = branch_target(
-      std::make_shared<state>(state{0u, true, false, 300u}), 2u, 17u);
+  static bool jcn_condition(const state &s, const unsigned int cond);
+  static unsigned int addr12_of_nat(const unsigned int n);
+  static unsigned int pc_inc2(const state &s);
+  static unsigned int page_of(const unsigned int p);
+  static unsigned int page_base(const unsigned int p);
+  static unsigned int base_for_next2(const state &s);
+  static unsigned int branch_target(const state &s, const unsigned int cond,
+                                    const unsigned int off);
+  static inline const unsigned int test_branch_target =
+      branch_target(state{0u, true, false, 300u}, 2u, 17u);
   static inline const bool check_carry_clear_gate =
-      jcn_condition(std::make_shared<state>(state{1u, false, true, 0u}), 10u);
+      jcn_condition(state{1u, false, true, 0u}, 10u);
   static inline const bool check_nonzero_gate =
-      jcn_condition(std::make_shared<state>(state{3u, false, true, 0u}), 12u);
+      jcn_condition(state{3u, false, true, 0u}, 12u);
   static inline const bool check_test_high =
-      jcn_condition(std::make_shared<state>(state{1u, false, true, 0u}), 9u);
+      jcn_condition(state{1u, false, true, 0u}, 9u);
   static inline const bool check_test_low =
-      jcn_condition(std::make_shared<state>(state{1u, false, false, 0u}), 1u);
+      jcn_condition(state{1u, false, false, 0u}, 1u);
   static inline const bool check_zero_gate =
-      jcn_condition(std::make_shared<state>(state{0u, false, true, 0u}), 4u);
+      jcn_condition(state{0u, false, true, 0u}, 4u);
   static inline const bool test_condition =
       (check_carry_clear_gate &&
        (check_nonzero_gate &&
@@ -52,28 +52,10 @@ struct JcnOps {
   static inline const unsigned int JCN_JNZ = 12u;
   static inline const unsigned int test_constants = []() {
     return []() {
-      std::shared_ptr<state> s =
-          std::make_shared<state>(state{0u, true, false, 0u});
-      return (([&]() -> unsigned int {
-                if (jcn_condition(s, JCN_JC)) {
-                  return 1u;
-                } else {
-                  return 0u;
-                }
-              }() + [&]() -> unsigned int {
-                if (jcn_condition(s, JCN_JZ)) {
-                  return 1u;
-                } else {
-                  return 0u;
-                }
-              }()) +
-                  [&]() -> unsigned int {
-        if (jcn_condition(s, JCN_JNT)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      state s = state{0u, true, false, 0u};
+      return (((jcn_condition(s, JCN_JC) ? 1u : 0u) +
+               (jcn_condition(s, JCN_JZ) ? 1u : 0u)) +
+              (jcn_condition(s, JCN_JNT) ? 1u : 0u));
     }();
   }();
   static inline const std::pair<std::pair<unsigned int, bool>, unsigned int> t =

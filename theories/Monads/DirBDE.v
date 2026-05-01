@@ -13,7 +13,7 @@ From Crane Require Export Monads.DirDefs.
 Crane Extract Inductive dirE => ""
   [ "(bdls::FilesystemUtil::createDirectories(%a0.c_str(), true) == 0)"
     "(bdls::FilesystemUtil::remove(%a0.c_str(), true) == 0)"
-    "[&]() -> bsl::shared_ptr<List<bsl::string>> {
+    "[&]() -> List<bsl::string> {
   auto result = List<bsl::string>::nil();
   for (const auto& entry : std::filesystem::directory_iterator(%a0)) {
     result = List<bsl::string>::cons(entry.path().filename().string(), std::move(result));
@@ -32,7 +32,7 @@ Crane Extract Inlined Constant remove_directory =>
   From "bdls_filesystemutil.h".
 
 Crane Extract Inlined Constant list_directory =>
-"[&]() -> bsl::shared_ptr<List<bsl::string>> {
+"[&]() -> List<bsl::string> {
   auto result = List<bsl::string>::nil();
   for (const auto& entry : std::filesystem::directory_iterator(%a0)) {
     result = List<bsl::string>::cons(entry.path().filename().string(), std::move(result));

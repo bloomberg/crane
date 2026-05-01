@@ -1,18 +1,7 @@
 #include <tokenizer.h>
 
-#include <cstdint>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
-__attribute__((pure)) std::pair<std::optional<std::basic_string_view<char>>,
-                                std::basic_string_view<char>>
+std::pair<std::optional<std::basic_string_view<char>>,
+          std::basic_string_view<char>>
 Tokenizer::next_token(const std::basic_string_view<char> input,
                       const std::basic_string_view<char> soft,
                       const std::basic_string_view<char> hard) {
@@ -67,15 +56,15 @@ Tokenizer::next_token(const std::basic_string_view<char> input,
   return aux(static_cast<unsigned int>(input.length()), int64_t(0), input);
 }
 
-std::shared_ptr<List<std::basic_string_view<char>>>
+List<std::basic_string_view<char>>
 Tokenizer::list_tokens(const std::basic_string_view<char> input,
                        const std::basic_string_view<char> soft,
                        const std::basic_string_view<char> hard) {
-  std::function<std::shared_ptr<List<std::basic_string_view<char>>>(
+  std::function<List<std::basic_string_view<char>>(
       unsigned int, std::basic_string_view<char>)>
       aux;
   aux = [&](unsigned int fuel, std::basic_string_view<char> rest)
-      -> std::shared_ptr<List<std::basic_string_view<char>>> {
+      -> List<std::basic_string_view<char>> {
     if (fuel <= 0) {
       return List<std::basic_string_view<char>>::nil();
     } else {

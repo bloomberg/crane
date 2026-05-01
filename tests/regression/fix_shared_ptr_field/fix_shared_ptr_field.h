@@ -7,9 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct FixSharedPtrField {
   /// A value-type inductive with recursive self-reference (shared_ptr).
@@ -34,7 +32,7 @@ struct FixSharedPtrField {
 
     struct Mycons {
       unsigned int d_a0;
-      std::shared_ptr<mylist> d_a1;
+      std::unique_ptr<mylist> d_a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -45,91 +43,159 @@ struct FixSharedPtrField {
 
   public:
     // CREATORS
+    mylist() {}
+
     explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mylist> mynil() {
-      return std::make_shared<mylist>(Mynil{});
+    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mylist &operator=(const mylist &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist> mycons(unsigned int a0,
-                                          const std::shared_ptr<mylist> &a1) {
-      return std::make_shared<mylist>(Mycons{std::move(a0), a1});
+    mylist &operator=(mylist &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist> mycons(unsigned int a0,
-                                          std::shared_ptr<mylist> &&a1) {
-      return std::make_shared<mylist>(Mycons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static mylist mynil() { return mylist(Mynil{}); }
+
+    static mylist mycons(unsigned int a0, mylist a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~mylist() {
+      std::vector<std::unique_ptr<mylist>> _stack{};
+      auto _drain = [&](mylist &_node) {
+        if (std::holds_alternative<Mycons>(_node.d_v_)) {
+          auto &_alt = std::get<Mycons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// Local fixpoint captures h : nat (POD) and t : shared_ptr<mylist>
     /// from the match on value-type mylist. Both are captured by &.
-    __attribute__((pure))
     std::optional<std::function<unsigned int(unsigned int)>>
     make_list_fn() const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        auto compute =
-            std::make_shared<std::function<unsigned int(unsigned int)>>();
-        *compute = [=](unsigned int x) mutable -> unsigned int {
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        mylist d_a1_value = *(d_a1);
+        auto compute_impl = [=](auto &_self_compute,
+                                unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
-            return (d_a0 + d_a1->mylist_sum());
+            return (d_a0 + d_a1_value.mylist_sum());
           } else {
             unsigned int x_ = x - 1;
-            return (1u + (*compute)(x_));
+            return (1u + _self_compute(_self_compute, x_));
           }
         };
+        auto compute = [=](unsigned int x) mutable -> unsigned int {
+          return compute_impl(compute_impl, x);
+        };
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            *compute);
+            compute);
       }
     }
 
-    __attribute__((pure)) unsigned int mylist_length() const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+    unsigned int mylist_length() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return (1u + d_a1->mylist_length());
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return (1u + (*(d_a1)).mylist_length());
       }
     }
 
-    __attribute__((pure)) unsigned int mylist_sum() const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+    unsigned int mylist_sum() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return (d_a0 + d_a1->mylist_sum());
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return (d_a0 + (*(d_a1)).mylist_sum());
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, std::shared_ptr<mylist>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rec(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template mylist_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
       }
     }
 
-    template <typename T1,
-              MapsTo<T1, unsigned int, std::shared_ptr<mylist>, T1> F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rect(const T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(d_a0, d_a1, d_a1->template mylist_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
+        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -138,7 +204,7 @@ struct FixSharedPtrField {
   struct wrapper {
     // TYPES
     struct Wrap {
-      std::shared_ptr<mylist> d_a0;
+      mylist d_a0;
     };
 
     using variant_t = std::variant<Wrap>;
@@ -149,32 +215,52 @@ struct FixSharedPtrField {
 
   public:
     // CREATORS
+    wrapper() {}
+
     explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<wrapper> wrap(const std::shared_ptr<mylist> &a0) {
-      return std::make_shared<wrapper>(Wrap{a0});
+    wrapper(const wrapper &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    wrapper &operator=(const wrapper &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<wrapper> wrap(std::shared_ptr<mylist> &&a0) {
-      return std::make_shared<wrapper>(Wrap{std::move(a0)});
+    wrapper &operator=(wrapper &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    wrapper clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<Wrap>(_sv.v());
+      return wrapper(Wrap{d_a0.clone()});
+    }
+
+    // CREATORS
+    static wrapper wrap(mylist a0) { return wrapper(Wrap{std::move(a0)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<mylist>> F0>
-  static T1 wrapper_rect(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, mylist &>
+  static T1 wrapper_rect(F0 &&f, const wrapper &w) {
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<mylist>> F0>
-  static T1 wrapper_rec(F0 &&f, const std::shared_ptr<wrapper> &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, mylist &>
+  static T1 wrapper_rec(F0 &&f, const wrapper &w) {
+    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
     return f(d_a0);
   }
 
@@ -185,7 +271,7 @@ struct FixSharedPtrField {
     auto _cs =
         mylist::mycons(
             10u, mylist::mycons(20u, mylist::mycons(30u, mylist::mynil())))
-            ->make_list_fn();
+            .make_list_fn();
     if (_cs.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *_cs;
       return f(5u);
@@ -199,11 +285,11 @@ struct FixSharedPtrField {
   static inline const unsigned int test2 = []() {
     std::optional<std::function<unsigned int(unsigned int)>> opt =
         mylist::mycons(100u, mylist::mycons(200u, mylist::mynil()))
-            ->make_list_fn();
+            .make_list_fn();
     unsigned int noise =
         mylist::mycons(1u,
                        mylist::mycons(2u, mylist::mycons(3u, mylist::mynil())))
-            ->mylist_sum();
+            .mylist_sum();
     if (opt.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *opt;
       return f(0u);
@@ -222,7 +308,7 @@ struct FixSharedPtrField {
                 10u, mylist::mycons(
                          15u, mylist::mycons(
                                   20u, mylist::mycons(25u, mylist::mynil())))))
-            ->make_list_fn();
+            .make_list_fn();
     if (_cs.has_value()) {
       const std::function<unsigned int(unsigned int)> &f = *_cs;
       return f(10u);
@@ -231,7 +317,7 @@ struct FixSharedPtrField {
     }
   }();
   /// Dummy use of wrapper to keep it alive for extraction.
-  static std::shared_ptr<wrapper> wrap_list(std::shared_ptr<mylist> l);
+  static wrapper wrap_list(mylist l);
 };
 
 #endif // INCLUDED_FIX_SHARED_PTR_FIELD

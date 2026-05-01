@@ -2,32 +2,24 @@
 #define INCLUDED_VALID_LAYOUT_WINDOW
 
 #include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ValidLayoutWindow {
   struct layout {
     unsigned int base_addr;
     unsigned int code_size;
+
+    // ACCESSORS
+    layout clone() const {
+      return layout{(*(this)).base_addr, (*(this)).code_size};
+    }
   };
 
-  __attribute__((pure)) static bool
-  valid_layoutb(const std::shared_ptr<layout> &l);
-  static inline const unsigned int t = ([]() -> unsigned int {
-    if (valid_layoutb(std::make_shared<layout>(layout{128u, 256u}))) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }() + []() -> unsigned int {
-    if (valid_layoutb(std::make_shared<layout>(layout{4090u, 20u}))) {
-      return 1u;
-    } else {
-      return 0u;
-    }
-  }());
+  static bool valid_layoutb(const layout &l);
+  static inline const unsigned int t =
+      ((valid_layoutb(layout{128u, 256u}) ? 1u : 0u) +
+       (valid_layoutb(layout{4090u, 20u}) ? 1u : 0u));
 };
 
 #endif // INCLUDED_VALID_LAYOUT_WINDOW

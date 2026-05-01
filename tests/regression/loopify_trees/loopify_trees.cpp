@@ -1,230 +1,239 @@
 #include <loopify_trees.h>
 
-#include <functional>
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Consolidated UNIQUE tree algorithms - domain-specific tree operations.
-__attribute__((pure)) unsigned int LoopifyTrees::tree_sum(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
+unsigned int LoopifyTrees::tree_sum(const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
+    const LoopifyTrees::tree<unsigned int> *t;
   };
 
-  struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    unsigned int _s1;
+  /// Intermediate: saves [_s0, d_a1], dispatches next recursive call.
+  struct _After2 {
+    const LoopifyTrees::tree<unsigned int> *_s0;
+    unsigned int d_a1;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    unsigned int _result;
+    unsigned int d_a1;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a0, d_a1});
-        _stack.emplace_back(_Enter{d_a2});
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+        _stack.emplace_back(_After2{d_a0.get(), d_a1});
+        _stack.emplace_back(_Enter{d_a2.get()});
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result, _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result, _f.d_a1});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = (_f._s1 + (_result + _f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_f.d_a1 + (_result + _f._result));
     }
   }
   return _result;
 }
 
 /// leaf_sum sums only leaf values.
-__attribute__((pure)) unsigned int LoopifyTrees::leaf_sum(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
+unsigned int LoopifyTrees::leaf_sum(const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
+    const LoopifyTrees::tree<unsigned int> *t;
   };
 
-  struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
+  /// Intermediate: saves [_s0], dispatches next recursive call.
+  struct _After2 {
+    const LoopifyTrees::tree<unsigned int> *_s0;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
+  /// Intermediate: saves [_s0], dispatches next recursive call.
+  struct _After4 {
+    const LoopifyTrees::tree<unsigned int> *_s0;
   };
 
-  struct _Call3 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    unsigned int _result;
   };
 
-  struct _Call4 {
-    unsigned int _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine3 {
+    unsigned int _result;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+  using _Frame = std::variant<_Enter, _After2, _After4, _Combine1, _Combine3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
+  /// Frame dispatch: _Enter, _After2, _After4, _Combine1, _Combine3.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+        auto &&_sv = *(d_a0);
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(d_a0->v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(_sv.v())) {
+          auto &&_sv = *(d_a2);
           if (std::holds_alternative<
-                  typename LoopifyTrees::tree<unsigned int>::Leaf>(d_a2->v())) {
+                  typename LoopifyTrees::tree<unsigned int>::Leaf>(_sv.v())) {
             _result = d_a1;
           } else {
-            _stack.emplace_back(_Call1{d_a0});
-            _stack.emplace_back(_Enter{d_a2});
+            _stack.emplace_back(_After2{d_a0.get()});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else {
-          _stack.emplace_back(_Call3{d_a0});
-          _stack.emplace_back(_Enter{d_a2});
+          _stack.emplace_back(_After4{d_a0.get()});
+          _stack.emplace_back(_Enter{d_a2.get()});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result});
       _stack.emplace_back(_Enter{_f._s0});
-    } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = (_result + _f._s0);
-    } else if (std::holds_alternative<_Call3>(_frame)) {
-      const auto &_f = std::get<_Call3>(_frame);
-      _stack.emplace_back(_Call4{_result});
+    } else if (std::holds_alternative<_After4>(_frame)) {
+      auto _f = std::move(std::get<_After4>(_frame));
+      _stack.emplace_back(_Combine3{_result});
       _stack.emplace_back(_Enter{_f._s0});
+    } else if (std::holds_alternative<_Combine1>(_frame)) {
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_result + _f._result);
     } else {
-      const auto &_f = std::get<_Call4>(_frame);
-      _result = (_result + _f._s0);
+      auto _f = std::move(std::get<_Combine3>(_frame));
+      _result = (_result + _f._result);
     }
   }
   return _result;
 }
 
 /// insert_bst BST insertion.
-std::shared_ptr<LoopifyTrees::tree<unsigned int>> LoopifyTrees::insert_bst(
-    const unsigned int x,
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
+LoopifyTrees::tree<unsigned int>
+LoopifyTrees::insert_bst(const unsigned int x,
+                         const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
+    const LoopifyTrees::tree<unsigned int> *t;
   };
 
-  struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    unsigned int _s1;
+  /// Continuation: saves [_s0, d_a1] across recursive call.
+  struct _Resume1 {
+    LoopifyTrees::tree<unsigned int> _s0;
+    unsigned int d_a1;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
+  /// Continuation: saves [d_a1, _s1] across recursive call.
+  struct _Resume2 {
+    unsigned int d_a1;
+    LoopifyTrees::tree<unsigned int> _s1;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::shared_ptr<LoopifyTrees::tree<unsigned int>> _result{};
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
+  LoopifyTrees::tree<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
+  /// Frame dispatch: _Enter, _Resume1, _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
         _result = tree<unsigned int>::node(tree<unsigned int>::leaf(), x,
                                            tree<unsigned int>::leaf());
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
         if (x <= d_a1) {
-          _stack.emplace_back(_Call1{d_a2, d_a1});
-          _stack.emplace_back(_Enter{d_a0});
+          _stack.emplace_back(_Resume1{*(d_a2), d_a1});
+          _stack.emplace_back(_Enter{d_a0.get()});
         } else {
-          _stack.emplace_back(_Call2{d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a2});
+          _stack.emplace_back(_Resume2{d_a1, *(d_a0)});
+          _stack.emplace_back(_Enter{d_a2.get()});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _result = tree<unsigned int>::node(_result, _f._s1, _f._s0);
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = tree<unsigned int>::node(_result, _f.d_a1, _f._s0);
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = tree<unsigned int>::node(_f._s1, _f._s0, _result);
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result = tree<unsigned int>::node(_f._s1, _f.d_a1, _result);
     }
   }
   return _result;
 }
 
 /// count_paths t n counts root-to-leaf paths that sum to n.
-__attribute__((pure)) unsigned int LoopifyTrees::count_paths(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t,
-    const unsigned int n) {
+unsigned int
+LoopifyTrees::count_paths(const LoopifyTrees::tree<unsigned int> &t,
+                          const unsigned int n) {
   struct _Enter {
-    const unsigned int n;
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
+    unsigned int n;
+    const LoopifyTrees::tree<unsigned int> *t;
   };
 
-  struct _Call1 {
+  /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
+  struct _After2 {
     decltype(0u) _s0;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
+    const LoopifyTrees::tree<unsigned int> *_s1;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
+  /// Intermediate: saves [remaining, _s1], dispatches next recursive call.
+  struct _After4 {
+    unsigned int remaining;
+    const LoopifyTrees::tree<unsigned int> *_s1;
   };
 
-  struct _Call3 {
-    unsigned int _s0;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    unsigned int _result;
   };
 
-  struct _Call4 {
-    unsigned int _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine3 {
+    unsigned int _result;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2, _Call3, _Call4>;
+  using _Frame = std::variant<_Enter, _After2, _After4, _Combine1, _Combine3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{n, t});
+  _stack.emplace_back(_Enter{n, &t});
+  /// Frame dispatch: _Enter, _After2, _After4, _Combine1, _Combine3.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
+      auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int n = _f.n;
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
+      const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
         if (n == 0u) {
           _result = 1u;
         } else {
@@ -232,830 +241,687 @@ __attribute__((pure)) unsigned int LoopifyTrees::count_paths(
         }
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
         if (n <= d_a1) {
           if (n == d_a1) {
-            _stack.emplace_back(_Call1{0u, d_a0});
-            _stack.emplace_back(_Enter{0u, d_a2});
+            _stack.emplace_back(_After2{0u, d_a0.get()});
+            _stack.emplace_back(_Enter{0u, d_a2.get()});
           } else {
             _result = 0u;
           }
         } else {
           unsigned int remaining = (((n - d_a1) > n ? 0 : (n - d_a1)));
-          _stack.emplace_back(_Call3{remaining, d_a0});
-          _stack.emplace_back(_Enter{remaining, d_a2});
+          _stack.emplace_back(_After4{remaining, d_a0.get()});
+          _stack.emplace_back(_Enter{remaining, d_a2.get()});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result});
       _stack.emplace_back(_Enter{_f._s0, _f._s1});
-    } else if (std::holds_alternative<_Call2>(_frame)) {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = (_result + _f._s0);
-    } else if (std::holds_alternative<_Call3>(_frame)) {
-      const auto &_f = std::get<_Call3>(_frame);
-      _stack.emplace_back(_Call4{_result});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    } else if (std::holds_alternative<_After4>(_frame)) {
+      auto _f = std::move(std::get<_After4>(_frame));
+      _stack.emplace_back(_Combine3{_result});
+      _stack.emplace_back(_Enter{_f.remaining, _f._s1});
+    } else if (std::holds_alternative<_Combine1>(_frame)) {
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_result + _f._result);
     } else {
-      const auto &_f = std::get<_Call4>(_frame);
-      _result = (_result + _f._s0);
+      auto _f = std::move(std::get<_Combine3>(_frame));
+      _result = (_result + _f._result);
     }
   }
   return _result;
 }
 
 /// sum_of_max_branches sums maximum values along each path.
-__attribute__((pure)) unsigned int LoopifyTrees::sum_of_max_branches(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
-  struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
-  };
-
-  struct _Call1 {
-    unsigned int _s0;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  unsigned int _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
-      if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
-        _result = 0u;
-      } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a1, d_a2});
-        _stack.emplace_back(_Enter{d_a0});
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      unsigned int d_a1 = _f._s0;
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> d_a2 = _f._s1;
-      unsigned int lsum = _result;
-      _stack.emplace_back(_Call2{d_a1, lsum});
-      _stack.emplace_back(_Enter{d_a2});
-    } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      unsigned int d_a1 = _f._s0;
-      unsigned int lsum = _f._s1;
-      unsigned int rsum = _result;
-      _result = (d_a1 + [&]() -> unsigned int {
-        if (lsum <= rsum) {
-          return rsum;
-        } else {
-          return lsum;
-        }
-      }());
-    }
+unsigned int
+LoopifyTrees::sum_of_max_branches(const LoopifyTrees::tree<unsigned int> &t) {
+  if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
+          t.v())) {
+    return 0u;
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+    unsigned int lsum = sum_of_max_branches(*(d_a0));
+    unsigned int rsum = sum_of_max_branches(*(d_a2));
+    return (d_a1 + (lsum <= rsum ? rsum : lsum));
   }
-  return _result;
 }
 
 /// Helper: sum all values in a list of rose trees (processes both tree and
 /// list levels in one recursive function to enable full loopification).
-__attribute__((pure)) unsigned int LoopifyTrees::sum_rose_list_fuel(
-    const unsigned int fuel,
-    const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> &cs) {
+unsigned int
+LoopifyTrees::sum_rose_list_fuel(const unsigned int fuel,
+                                 const List<LoopifyTrees::rose> &cs) {
   struct _Enter {
-    const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> cs;
-    const unsigned int fuel;
+    const List<LoopifyTrees::rose> *cs;
+    unsigned int fuel;
   };
 
-  struct _Call1 {
-    std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> _s0;
-    unsigned int _s1;
-    unsigned int _s2;
+  /// Intermediate: saves [_s0, f, d_a00], dispatches next recursive call.
+  struct _After2 {
+    const List<LoopifyTrees::rose> *_s0;
+    unsigned int f;
+    unsigned int d_a00;
   };
 
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    unsigned int _result;
+    unsigned int d_a00;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{cs, fuel});
+  _stack.emplace_back(_Enter{&cs, fuel});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> cs =
-          _f.cs;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<LoopifyTrees::rose> &cs = *(_f.cs);
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
         unsigned int f = fuel - 1;
-        if (std::holds_alternative<
-                typename List<std::shared_ptr<LoopifyTrees::rose>>::Nil>(
-                cs->v())) {
+        if (std::holds_alternative<typename List<LoopifyTrees::rose>::Nil>(
+                cs.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] = std::get<
-              typename List<std::shared_ptr<LoopifyTrees::rose>>::Cons>(
-              cs->v());
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
-              std::get<typename LoopifyTrees::rose::RNode>(d_a0->v());
-          _stack.emplace_back(_Call1{d_a10, f, d_a00});
-          _stack.emplace_back(_Enter{d_a1, f});
+              std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
+          _stack.emplace_back(_After2{d_a10.get(), f, d_a00});
+          _stack.emplace_back(_Enter{d_a1.get(), f});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result, _f._s2});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result, _f.d_a00});
+      _stack.emplace_back(_Enter{_f._s0, _f.f});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = (_f._s1 + (_result + _f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_f.d_a00 + (_result + _f._result));
     }
   }
   return _result;
 }
 
 /// Helper: flatten a list of rose trees to a flat list of nats.
-std::shared_ptr<List<unsigned int>> LoopifyTrees::flatten_rose_list_fuel(
-    const unsigned int fuel,
-    const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> &cs) {
+List<unsigned int>
+LoopifyTrees::flatten_rose_list_fuel(const unsigned int fuel,
+                                     const List<LoopifyTrees::rose> &cs) {
   struct _Enter {
-    const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> cs;
-    const unsigned int fuel;
+    const List<LoopifyTrees::rose> *cs;
+    unsigned int fuel;
   };
 
-  struct _Call1 {
-    std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> _s0;
-    unsigned int _s1;
-    unsigned int _s2;
+  /// Intermediate: saves [_s0, f, d_a00], dispatches next recursive call.
+  struct _After2 {
+    const List<LoopifyTrees::rose> *_s0;
+    unsigned int f;
+    unsigned int d_a00;
   };
 
-  struct _Call2 {
-    std::shared_ptr<List<unsigned int>> _s0;
-    unsigned int _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    List<unsigned int> _result;
+    unsigned int d_a00;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::shared_ptr<List<unsigned int>> _result{};
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{cs, fuel});
+  _stack.emplace_back(_Enter{&cs, fuel});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> cs =
-          _f.cs;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<LoopifyTrees::rose> &cs = *(_f.cs);
       const unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
         unsigned int f = fuel - 1;
-        if (std::holds_alternative<
-                typename List<std::shared_ptr<LoopifyTrees::rose>>::Nil>(
-                cs->v())) {
+        if (std::holds_alternative<typename List<LoopifyTrees::rose>::Nil>(
+                cs.v())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &[d_a0, d_a1] = std::get<
-              typename List<std::shared_ptr<LoopifyTrees::rose>>::Cons>(
-              cs->v());
+          const auto &[d_a0, d_a1] =
+              std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
           const auto &[d_a00, d_a10] =
-              std::get<typename LoopifyTrees::rose::RNode>(d_a0->v());
-          _stack.emplace_back(_Call1{d_a10, f, d_a00});
-          _stack.emplace_back(_Enter{d_a1, f});
+              std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
+          _stack.emplace_back(_After2{d_a10.get(), f, d_a00});
+          _stack.emplace_back(_Enter{d_a1.get(), f});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result, _f._s2});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{std::move(_result), _f.d_a00});
+      _stack.emplace_back(_Enter{_f._s0, _f.f});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = List<unsigned int>::cons(_f._s1, _result->app(_f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = List<unsigned int>::cons(_f.d_a00, _result.app(_f._result));
     }
   }
   return _result;
 }
 
 /// Helper: compute maximum depth among a list of rose trees.
-__attribute__((pure)) unsigned int LoopifyTrees::depth_rose_list_fuel(
-    const unsigned int fuel,
-    const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> &cs) {
-  struct _Enter {
-    const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> cs;
-    const unsigned int fuel;
-  };
-
-  struct _Call1 {
-    std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> _s0;
-    unsigned int _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  unsigned int _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{cs, fuel});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> cs =
-          _f.cs;
-      const unsigned int fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = 0u;
-      } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<
-                typename List<std::shared_ptr<LoopifyTrees::rose>>::Nil>(
-                cs->v())) {
-          _result = 0u;
-        } else {
-          const auto &[d_a0, d_a1] = std::get<
-              typename List<std::shared_ptr<LoopifyTrees::rose>>::Cons>(
-              cs->v());
-          const auto &[d_a00, d_a10] =
-              std::get<typename LoopifyTrees::rose::RNode>(d_a0->v());
-          _stack.emplace_back(_Call1{d_a1, f});
-          _stack.emplace_back(_Enter{d_a10, f});
-        }
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      std::shared_ptr<List<std::shared_ptr<LoopifyTrees::rose>>> d_a1 = _f._s0;
-      unsigned int f = _f._s1;
-      unsigned int d = (_result + 1);
-      _stack.emplace_back(_Call2{d});
-      _stack.emplace_back(_Enter{d_a1, f});
+unsigned int
+LoopifyTrees::depth_rose_list_fuel(const unsigned int fuel,
+                                   const List<LoopifyTrees::rose> &cs) {
+  if (fuel <= 0) {
+    return 0u;
+  } else {
+    unsigned int f = fuel - 1;
+    if (std::holds_alternative<typename List<LoopifyTrees::rose>::Nil>(
+            cs.v())) {
+      return 0u;
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      unsigned int d = _f._s0;
-      unsigned int rest_max = _result;
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<LoopifyTrees::rose>::Cons>(cs.v());
+      const auto &[d_a00, d_a10] =
+          std::get<typename LoopifyTrees::rose::RNode>(d_a0.v());
+      unsigned int d = (depth_rose_list_fuel(f, *(d_a10)) + 1);
+      unsigned int rest_max = depth_rose_list_fuel(f, *(d_a1));
       if (d <= rest_max) {
-        _result = rest_max;
+        return rest_max;
       } else {
-        _result = d;
+        return d;
       }
     }
   }
-  return _result;
 }
 
 /// tree_max t1 t2 element-wise maximum of two trees.
-std::shared_ptr<LoopifyTrees::tree<unsigned int>>
-LoopifyTrees::tree_max(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1,
-                       std::shared_ptr<LoopifyTrees::tree<unsigned int>> t2) {
+LoopifyTrees::tree<unsigned int>
+LoopifyTrees::tree_max(LoopifyTrees::tree<unsigned int> t1,
+                       LoopifyTrees::tree<unsigned int> t2) {
   struct _Enter {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> t2;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1;
+    LoopifyTrees::tree<unsigned int> t2;
+    LoopifyTrees::tree<unsigned int> t1;
   };
 
-  struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
-    unsigned int _s2;
+  /// Intermediate: saves [_s0, _s1, max_val], dispatches next recursive call.
+  struct _After2 {
+    LoopifyTrees::tree<unsigned int> _s0;
+    LoopifyTrees::tree<unsigned int> _s1;
+    unsigned int max_val;
   };
 
-  struct _Call2 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    unsigned int _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    LoopifyTrees::tree<unsigned int> _result;
+    unsigned int max_val;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::shared_ptr<LoopifyTrees::tree<unsigned int>> _result{};
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  LoopifyTrees::tree<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{t2, t1});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> t2 = _f.t2;
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> t1 = _f.t1;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      LoopifyTrees::tree<unsigned int> t2 = std::move(_f.t2);
+      LoopifyTrees::tree<unsigned int> t1 = std::move(_f.t1);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t1->v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t1.v_mut())) {
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2->v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v_mut())) {
           _result = tree<unsigned int>::leaf();
         } else {
-          _result = std::move(t2);
+          _result = t2;
         }
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t1->v());
+        auto &[d_a0, d_a1, d_a2] =
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
+                t1.v_mut());
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2->v())) {
-          _result = std::move(t1);
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v_mut())) {
+          _result = t1;
         } else {
-          const auto &[d_a00, d_a10, d_a20] =
+          auto &[d_a00, d_a10, d_a20] =
               std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
-                  t2->v());
+                  t2.v_mut());
           unsigned int max_val;
           if (d_a1 <= d_a10) {
             max_val = d_a10;
           } else {
             max_val = d_a1;
           }
-          _stack.emplace_back(_Call1{d_a00, d_a0, max_val});
-          _stack.emplace_back(_Enter{d_a20, d_a2});
+          _stack.emplace_back(_After2{*(d_a00), *(d_a0), max_val});
+          _stack.emplace_back(_Enter{*(d_a20), *(d_a2)});
         }
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result, _f._s2});
-      _stack.emplace_back(_Enter{_f._s0, _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{std::move(_result), _f.max_val});
+      _stack.emplace_back(_Enter{std::move(_f._s0), std::move(_f._s1)});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = tree<unsigned int>::node(_result, _f._s1, _f._s0);
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = tree<unsigned int>::node(_result, _f.max_val, _f._result);
     }
   }
   return _result;
 }
 
 /// Helper: extract values from trees.
-std::shared_ptr<List<unsigned int>> LoopifyTrees::extract_tree_values(
-    const std::shared_ptr<
-        List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>> &ts) {
-  std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> *_write = &_head;
-  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-      _loop_ts = ts;
+List<unsigned int> LoopifyTrees::extract_tree_values(
+    const List<LoopifyTrees::tree<unsigned int>> &ts) {
+  std::unique_ptr<List<unsigned int>> _head{};
+  std::unique_ptr<List<unsigned int>> *_write = &_head;
+  const List<LoopifyTrees::tree<unsigned int>> *_loop_ts = &ts;
   while (true) {
-    if (std::holds_alternative<typename List<
-            std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil>(
+    if (std::holds_alternative<
+            typename List<LoopifyTrees::tree<unsigned int>>::Nil>(
             _loop_ts->v())) {
-      *_write = List<unsigned int>::nil();
+      *(_write) =
+          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<
-          std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Cons>(
-          _loop_ts->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<LoopifyTrees::tree<unsigned int>>::Cons>(
+              _loop_ts->v());
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(d_a0->v())) {
-        _loop_ts = d_a1;
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(d_a0.v())) {
+        _loop_ts = d_a1.get();
         continue;
       } else {
         const auto &[d_a00, d_a10, d_a20] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
-                d_a0->v());
-        auto _cell = List<unsigned int>::cons(d_a10, nullptr);
-        *_write = _cell;
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(d_a0.v());
+        auto _cell = std::make_unique<List<unsigned int>>(
+            typename List<unsigned int>::Cons(d_a10, nullptr));
+        *(_write) = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
-        _loop_ts = d_a1;
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                 .d_a1;
+        _loop_ts = d_a1.get();
         continue;
       }
     }
   }
-  return _head;
+  return std::move(*(_head));
 }
 
 /// Helper: extract children from trees.
-std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-LoopifyTrees::extract_tree_children(
-    const std::shared_ptr<
-        List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>> &ts) {
-  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-      _head{};
-  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-      *_write = &_head;
-  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-      _loop_ts = ts;
+List<LoopifyTrees::tree<unsigned int>> LoopifyTrees::extract_tree_children(
+    const List<LoopifyTrees::tree<unsigned int>> &ts) {
+  std::unique_ptr<List<LoopifyTrees::tree<unsigned int>>> _head{};
+  std::unique_ptr<List<LoopifyTrees::tree<unsigned int>>> *_write = &_head;
+  const List<LoopifyTrees::tree<unsigned int>> *_loop_ts = &ts;
   while (true) {
-    if (std::holds_alternative<typename List<
-            std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Nil>(
+    if (std::holds_alternative<
+            typename List<LoopifyTrees::tree<unsigned int>>::Nil>(
             _loop_ts->v())) {
-      *_write = List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::nil();
+      *(_write) = std::make_unique<List<LoopifyTrees::tree<unsigned int>>>(
+          List<LoopifyTrees::tree<unsigned int>>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<
-          std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Cons>(
-          _loop_ts->v());
+      const auto &[d_a0, d_a1] =
+          std::get<typename List<LoopifyTrees::tree<unsigned int>>::Cons>(
+              _loop_ts->v());
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(d_a0->v())) {
-        _loop_ts = d_a1;
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(d_a0.v())) {
+        _loop_ts = d_a1.get();
         continue;
       } else {
         const auto &[d_a00, d_a10, d_a20] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
-                d_a0->v());
-        auto _cell =
-            List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::cons(
-                d_a00, nullptr);
-        auto _cell1 =
-            List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::cons(
-                d_a20, nullptr);
-        std::get<typename List<
-            std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Cons>(
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(d_a0.v());
+        auto _cell = std::make_unique<List<LoopifyTrees::tree<unsigned int>>>(
+            typename List<LoopifyTrees::tree<unsigned int>>::Cons(*(d_a00),
+                                                                  nullptr));
+        auto _cell1 = std::make_unique<List<LoopifyTrees::tree<unsigned int>>>(
+            typename List<LoopifyTrees::tree<unsigned int>>::Cons(*(d_a20),
+                                                                  nullptr));
+        std::get<typename List<LoopifyTrees::tree<unsigned int>>::Cons>(
             _cell->v_mut())
-            .d_a1 = _cell1;
-        *_write = _cell;
-        _write = &std::get<typename List<
-            std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::Cons>(
-                      _cell1->v_mut())
-                      .d_a1;
-        _loop_ts = d_a1;
+            .d_a1 = std::move(_cell1);
+        *(_write) = std::move(_cell);
+        _write =
+            &std::get<typename List<LoopifyTrees::tree<unsigned int>>::Cons>(
+                 std::get<
+                     typename List<LoopifyTrees::tree<unsigned int>>::Cons>(
+                     (*_write)->v_mut())
+                     .d_a1->v_mut())
+                 .d_a1;
+        _loop_ts = d_a1.get();
         continue;
       }
     }
   }
-  return _head;
+  return std::move(*(_head));
 }
 
 /// tree_levels t returns list of lists, one per level (breadth-first).
-std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-LoopifyTrees::tree_levels_fuel(
+List<List<unsigned int>> LoopifyTrees::tree_levels_fuel(
     const unsigned int fuel,
-    const std::shared_ptr<
-        List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>> &trees) {
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> *_write = &_head;
-  std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-      _loop_trees = trees;
+    const List<LoopifyTrees::tree<unsigned int>> &trees) {
+  std::unique_ptr<List<List<unsigned int>>> _head{};
+  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
+  List<LoopifyTrees::tree<unsigned int>> _loop_trees = trees;
   unsigned int _loop_fuel = fuel;
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+      *(_write) = std::make_unique<List<List<unsigned int>>>(
+          List<List<unsigned int>>::nil());
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
-      std::shared_ptr<List<unsigned int>> values =
-          extract_tree_values(_loop_trees);
+      List<unsigned int> values = extract_tree_values(_loop_trees);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              values->v())) {
-        *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+              values.v_mut())) {
+        *(_write) = std::make_unique<List<List<unsigned int>>>(
+            List<List<unsigned int>>::nil());
         break;
       } else {
-        std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-            children = extract_tree_children(_loop_trees);
-        auto _cell =
-            List<std::shared_ptr<List<unsigned int>>>::cons(values, nullptr);
-        *_write = _cell;
-        _write =
-            &std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-                 _cell->v_mut())
-                 .d_a1;
-        std::shared_ptr<List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>>
-            _next_trees = children;
-        unsigned int _next_fuel = f;
-        _loop_trees = std::move(_next_trees);
-        _loop_fuel = std::move(_next_fuel);
+        List<LoopifyTrees::tree<unsigned int>> children =
+            extract_tree_children(_loop_trees);
+        auto _cell = std::make_unique<List<List<unsigned int>>>(
+            typename List<List<unsigned int>>::Cons(values, nullptr));
+        *(_write) = std::move(_cell);
+        _write = &std::get<typename List<List<unsigned int>>::Cons>(
+                      (*_write)->v_mut())
+                      .d_a1;
+        _loop_trees = std::move(children);
+        _loop_fuel = f;
         continue;
       }
     }
   }
-  return _head;
+  return std::move(*(_head));
 }
 
-std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-LoopifyTrees::tree_levels(std::shared_ptr<LoopifyTrees::tree<unsigned int>> t) {
+List<List<unsigned int>>
+LoopifyTrees::tree_levels(LoopifyTrees::tree<unsigned int> t) {
   return tree_levels_fuel(
-      100u,
-      List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::cons(
-          t, List<std::shared_ptr<LoopifyTrees::tree<unsigned int>>>::nil()));
+      100u, List<LoopifyTrees::tree<unsigned int>>::cons(
+                std::move(t), List<LoopifyTrees::tree<unsigned int>>::nil()));
 }
 
 /// count_nodes t returns tuple (node_count, sum_of_values).
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-LoopifyTrees::count_nodes(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
-  struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
-  };
-
-  struct _Call1 {
-    unsigned int _s0;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
-    unsigned int _s2;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::pair<unsigned int, unsigned int> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
-      if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
-        _result = std::make_pair(0u, 0u);
-      } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a1, d_a2});
-        _stack.emplace_back(_Enter{d_a0});
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      unsigned int d_a1 = _f._s0;
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> d_a2 = _f._s1;
-      const unsigned int &lc = _result.first;
-      const unsigned int &ls = _result.second;
-      _stack.emplace_back(_Call2{d_a1, lc, ls});
-      _stack.emplace_back(_Enter{d_a2});
-    } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      unsigned int d_a1 = _f._s0;
-      unsigned int lc = _f._s1;
-      unsigned int ls = _f._s2;
-      const unsigned int &rc = _result.first;
-      const unsigned int &rs = _result.second;
-      _result = std::make_pair(((lc + rc) + 1), (d_a1 + (ls + rs)));
-    }
+std::pair<unsigned int, unsigned int>
+LoopifyTrees::count_nodes(const LoopifyTrees::tree<unsigned int> &t) {
+  if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
+          t.v())) {
+    return std::make_pair(0u, 0u);
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+    auto _cs = count_nodes(*(d_a0));
+    const unsigned int &lc = _cs.first;
+    const unsigned int &ls = _cs.second;
+    auto _cs1 = count_nodes(*(d_a2));
+    const unsigned int &rc = _cs1.first;
+    const unsigned int &rs = _cs1.second;
+    return std::make_pair(((lc + rc) + 1), (d_a1 + (ls + rs)));
   }
-  return _result;
 }
 
 /// Helper: append two lists of lists.
-std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-LoopifyTrees::append_list_lists(
-    const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &l1,
-    std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> l2) {
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> *_write = &_head;
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_l1 = l1;
+List<List<unsigned int>>
+LoopifyTrees::append_list_lists(const List<List<unsigned int>> &l1,
+                                List<List<unsigned int>> l2) {
+  std::unique_ptr<List<List<unsigned int>>> _head{};
+  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
+  List<List<unsigned int>> _loop_l2 = std::move(l2);
+  const List<List<unsigned int>> *_loop_l1 = &l1;
   while (true) {
-    if (std::holds_alternative<
-            typename List<std::shared_ptr<List<unsigned int>>>::Nil>(
+    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
             _loop_l1->v())) {
-      *_write = std::move(l2);
+      *(_write) =
+          std::make_unique<List<List<unsigned int>>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-              _loop_l1->v());
-      auto _cell =
-          List<std::shared_ptr<List<unsigned int>>>::cons(d_a0, nullptr);
-      *_write = _cell;
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_l1->v());
+      auto _cell = std::make_unique<List<List<unsigned int>>>(
+          typename List<List<unsigned int>>::Cons(d_a0, nullptr));
+      *(_write) = std::move(_cell);
       _write =
-          &std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-               _cell->v_mut())
+          &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      _loop_l1 = d_a1;
+      _loop_l1 = d_a1.get();
       continue;
     }
   }
-  return _head;
+  return std::move(*(_head));
 }
 
 /// Helper: prepend value to all lists in a list of lists.
-std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>>
-LoopifyTrees::map_cons_to_all(
-    const unsigned int x,
-    const std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> &lsts) {
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _head{};
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> *_write = &_head;
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _loop_lsts = lsts;
+List<List<unsigned int>>
+LoopifyTrees::map_cons_to_all(const unsigned int x,
+                              const List<List<unsigned int>> &lsts) {
+  std::unique_ptr<List<List<unsigned int>>> _head{};
+  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
+  const List<List<unsigned int>> *_loop_lsts = &lsts;
   while (true) {
-    if (std::holds_alternative<
-            typename List<std::shared_ptr<List<unsigned int>>>::Nil>(
+    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
             _loop_lsts->v())) {
-      *_write = List<std::shared_ptr<List<unsigned int>>>::nil();
+      *(_write) = std::make_unique<List<List<unsigned int>>>(
+          List<List<unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-              _loop_lsts->v());
-      auto _cell = List<std::shared_ptr<List<unsigned int>>>::cons(
-          List<unsigned int>::cons(x, d_a0), nullptr);
-      *_write = _cell;
+          std::get<typename List<List<unsigned int>>::Cons>(_loop_lsts->v());
+      auto _cell = std::make_unique<List<List<unsigned int>>>(
+          typename List<List<unsigned int>>::Cons(
+              List<unsigned int>::cons(x, d_a0), nullptr));
+      *(_write) = std::move(_cell);
       _write =
-          &std::get<typename List<std::shared_ptr<List<unsigned int>>>::Cons>(
-               _cell->v_mut())
+          &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
-      _loop_lsts = d_a1;
+      _loop_lsts = d_a1.get();
       continue;
     }
   }
-  return _head;
+  return std::move(*(_head));
 }
 
 /// paths t returns all root-to-leaf paths in tree.
-std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> LoopifyTrees::paths(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
+List<List<unsigned int>>
+LoopifyTrees::paths(const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
+    const LoopifyTrees::tree<unsigned int> *t;
   };
 
-  struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    unsigned int _s1;
-    unsigned int _s2;
+  /// Intermediate: saves [_s0, d_a1_0, d_a1_1], dispatches next recursive call.
+  struct _After2 {
+    const LoopifyTrees::tree<unsigned int> *_s0;
+    unsigned int d_a1_0;
+    unsigned int d_a1_1;
   };
 
-  struct _Call2 {
-    std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _s0;
-    unsigned int _s1;
-    unsigned int _s2;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    List<List<unsigned int>> _result;
+    unsigned int d_a1_0;
+    unsigned int d_a1_1;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::shared_ptr<List<std::shared_ptr<List<unsigned int>>>> _result{};
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
-        _result = List<std::shared_ptr<List<unsigned int>>>::cons(
-            List<unsigned int>::nil(),
-            List<std::shared_ptr<List<unsigned int>>>::nil());
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
+        _result = List<List<unsigned int>>::cons(
+            List<unsigned int>::nil(), List<List<unsigned int>>::nil());
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a0, d_a1, d_a1});
-        _stack.emplace_back(_Enter{d_a2});
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+        _stack.emplace_back(_After2{d_a0.get(), d_a1, d_a1});
+        _stack.emplace_back(_Enter{d_a2.get()});
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result, _f._s1, _f._s2});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{std::move(_result), _f.d_a1_0, _f.d_a1_1});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = append_list_lists(map_cons_to_all(_f._s2, _result),
-                                  map_cons_to_all(_f._s1, _f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = append_list_lists(map_cons_to_all(_f.d_a1_1, _result),
+                                  map_cons_to_all(_f.d_a1_0, _f._result));
     }
   }
   return _result;
 }
 
 /// collect_sorted t collects and sorts all tree values.
-std::shared_ptr<List<unsigned int>> LoopifyTrees::collect_unsorted(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
+List<unsigned int>
+LoopifyTrees::collect_unsorted(const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
+    const LoopifyTrees::tree<unsigned int> *t;
   };
 
-  struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-    unsigned int _s1;
+  /// Intermediate: saves [_s0, d_a1], dispatches next recursive call.
+  struct _After2 {
+    const LoopifyTrees::tree<unsigned int> *_s0;
+    unsigned int d_a1;
   };
 
-  struct _Call2 {
-    std::shared_ptr<List<unsigned int>> _s0;
-    unsigned int _s1;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    List<unsigned int> _result;
+    unsigned int d_a1;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::shared_ptr<List<unsigned int>> _result{};
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
         _result = List<unsigned int>::nil();
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a0, d_a1});
-        _stack.emplace_back(_Enter{d_a2});
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+        _stack.emplace_back(_After2{d_a0.get(), d_a1});
+        _stack.emplace_back(_Enter{d_a2.get()});
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result, _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{std::move(_result), _f.d_a1});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = _result->app(List<unsigned int>::cons(_f._s1, _f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = _result.app(List<unsigned int>::cons(_f.d_a1, _f._result));
     }
   }
   return _result;
 }
 
 /// Simple insertion sort for collect_sorted.
-std::shared_ptr<List<unsigned int>>
-LoopifyTrees::insert_sorted(const unsigned int x,
-                            const std::shared_ptr<List<unsigned int>> &l) {
-  std::shared_ptr<List<unsigned int>> _head{};
-  std::shared_ptr<List<unsigned int>> *_write = &_head;
-  std::shared_ptr<List<unsigned int>> _loop_l = l;
+List<unsigned int> LoopifyTrees::insert_sorted(const unsigned int x,
+                                               const List<unsigned int> &l) {
+  std::unique_ptr<List<unsigned int>> _head{};
+  std::unique_ptr<List<unsigned int>> *_write = &_head;
+  const List<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *_write = List<unsigned int>::cons(x, List<unsigned int>::nil());
+      *(_write) = std::make_unique<List<unsigned int>>(
+          List<unsigned int>::cons(x, List<unsigned int>::nil()));
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x <= d_a0) {
-        *_write =
-            List<unsigned int>::cons(x, List<unsigned int>::cons(d_a0, d_a1));
+        *(_write) =
+            std::make_unique<List<unsigned int>>(List<unsigned int>::cons(
+                x, List<unsigned int>::cons(d_a0, *(d_a1))));
         break;
       } else {
-        auto _cell = List<unsigned int>::cons(d_a0, nullptr);
-        *_write = _cell;
+        auto _cell = std::make_unique<List<unsigned int>>(
+            typename List<unsigned int>::Cons(d_a0, nullptr));
+        *(_write) = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1;
-        _loop_l = d_a1;
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
+                 .d_a1;
+        _loop_l = d_a1.get();
         continue;
       }
     }
   }
-  return _head;
+  return std::move(*(_head));
 }
 
-std::shared_ptr<List<unsigned int>>
-LoopifyTrees::sort_list(const std::shared_ptr<List<unsigned int>> &l) {
+List<unsigned int> LoopifyTrees::sort_list(const List<unsigned int> &l) {
   struct _Enter {
-    const std::shared_ptr<List<unsigned int>> l;
+    const List<unsigned int> *l;
   };
 
-  struct _Call1 {
-    unsigned int _s0;
+  /// Continuation: saves [d_a0] across recursive call.
+  struct _Resume1 {
+    unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
-  std::shared_ptr<List<unsigned int>> _result{};
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{&l});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<unsigned int>> l = _f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<unsigned int> &l = *(_f.l);
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(l->v());
-        _stack.emplace_back(_Call1{d_a0});
-        _stack.emplace_back(_Enter{d_a1});
+            std::get<typename List<unsigned int>::Cons>(l.v());
+        _stack.emplace_back(_Resume1{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
-      _result = insert_sorted(_f._s0, _result);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = insert_sorted(_f.d_a0, _result);
     }
   }
   return _result;
 }
 
-std::shared_ptr<List<unsigned int>> LoopifyTrees::collect_sorted(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
+List<unsigned int>
+LoopifyTrees::collect_sorted(const LoopifyTrees::tree<unsigned int> &t) {
   return sort_list(collect_unsorted(t));
 }
 
 /// Helper: max of 4 values using nested max.
-__attribute__((pure)) unsigned int
-LoopifyTrees::max4_impl(const unsigned int a, const unsigned int b,
-                        const unsigned int c, const unsigned int d) {
-  if ([&]() -> unsigned int {
-        if (a <= b) {
-          return b;
-        } else {
-          return a;
-        }
-      }() <= [&]() -> unsigned int {
-        if (c <= d) {
-          return d;
-        } else {
-          return c;
-        }
-      }()) {
+unsigned int LoopifyTrees::max4_impl(const unsigned int a, const unsigned int b,
+                                     const unsigned int c,
+                                     const unsigned int d) {
+  if ((a <= b ? b : a) <= (c <= d ? d : c)) {
     if (c <= d) {
       return d;
     } else {
@@ -1071,9 +937,8 @@ LoopifyTrees::max4_impl(const unsigned int a, const unsigned int b,
 }
 
 /// Helper: compute minimum of three values.
-__attribute__((pure)) unsigned int LoopifyTrees::min3(const unsigned int a,
-                                                      const unsigned int b,
-                                                      const unsigned int c) {
+unsigned int LoopifyTrees::min3(const unsigned int a, const unsigned int b,
+                                const unsigned int c) {
   if (a <= b) {
     if (a <= c) {
       return a;
@@ -1090,9 +955,8 @@ __attribute__((pure)) unsigned int LoopifyTrees::min3(const unsigned int a,
 }
 
 /// Helper: compute maximum of three values.
-__attribute__((pure)) unsigned int LoopifyTrees::max3(const unsigned int a,
-                                                      const unsigned int b,
-                                                      const unsigned int c) {
+unsigned int LoopifyTrees::max3(const unsigned int a, const unsigned int b,
+                                const unsigned int c) {
   if (b <= a) {
     if (c <= a) {
       return a;
@@ -1109,131 +973,77 @@ __attribute__((pure)) unsigned int LoopifyTrees::max3(const unsigned int a,
 }
 
 /// tree_min_max t finds minimum and maximum values in tree.
-__attribute__((pure)) std::pair<unsigned int, unsigned int>
-LoopifyTrees::tree_min_max(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
-  struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
-  };
-
-  struct _Call1 {
-    unsigned int _s0;
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s1;
-  };
-
-  struct _Call2 {
-    unsigned int _s0;
-    unsigned int _s1;
-    unsigned int _s2;
-  };
-
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
-  std::pair<unsigned int, unsigned int> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
-      if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
-        _result = std::make_pair(0u, 0u);
-      } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a1, d_a2});
-        _stack.emplace_back(_Enter{d_a0});
-      }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      unsigned int d_a1 = _f._s0;
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> d_a2 = _f._s1;
-      const unsigned int &lmin = _result.first;
-      const unsigned int &lmax = _result.second;
-      _stack.emplace_back(_Call2{d_a1, lmax, lmin});
-      _stack.emplace_back(_Enter{d_a2});
-    } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      unsigned int d_a1 = _f._s0;
-      unsigned int lmax = _f._s1;
-      unsigned int lmin = _f._s2;
-      const unsigned int &rmin = _result.first;
-      const unsigned int &rmax = _result.second;
-      _result = std::make_pair(min3(
-                                   [&]() -> unsigned int {
-                                     if (lmin == 0u) {
-                                       return d_a1;
-                                     } else {
-                                       return lmin;
-                                     }
-                                   }(),
-                                   [&]() -> unsigned int {
-                                     if (rmin == 0u) {
-                                       return d_a1;
-                                     } else {
-                                       return rmin;
-                                     }
-                                   }(),
-                                   d_a1),
-                               max3(lmax, rmax, d_a1));
-    }
+std::pair<unsigned int, unsigned int>
+LoopifyTrees::tree_min_max(const LoopifyTrees::tree<unsigned int> &t) {
+  if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
+          t.v())) {
+    return std::make_pair(0u, 0u);
+  } else {
+    const auto &[d_a0, d_a1, d_a2] =
+        std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+    auto _cs = tree_min_max(*(d_a0));
+    const unsigned int &lmin = _cs.first;
+    const unsigned int &lmax = _cs.second;
+    auto _cs1 = tree_min_max(*(d_a2));
+    const unsigned int &rmin = _cs1.first;
+    const unsigned int &rmax = _cs1.second;
+    return std::make_pair(
+        min3((lmin == 0u ? d_a1 : lmin), (rmin == 0u ? d_a1 : rmin), d_a1),
+        max3(lmax, rmax, d_a1));
   }
-  return _result;
 }
 
 /// all_paths_sum t sums all root-to-leaf path sums.
-__attribute__((pure)) unsigned int LoopifyTrees::all_paths_sum(
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
-  std::function<unsigned int(unsigned int,
-                             std::shared_ptr<LoopifyTrees::tree<unsigned int>>)>
+unsigned int
+LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
+  std::function<unsigned int(unsigned int, LoopifyTrees::tree<unsigned int>)>
       sum_with_acc;
   sum_with_acc = [&](unsigned int acc,
-                     std::shared_ptr<LoopifyTrees::tree<unsigned int>> tree0)
-      -> unsigned int {
+                     LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
     struct _Enter {
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> tree0;
+      LoopifyTrees::tree<unsigned int> tree0;
       unsigned int acc;
     };
-    struct _Call1 {
-      std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
-      unsigned int _s1;
+    /// Intermediate: saves [_s0, new_acc], dispatches next recursive call.
+    struct _After2 {
+      LoopifyTrees::tree<unsigned int> _s0;
+      unsigned int new_acc;
     };
-    struct _Call2 {
-      unsigned int _s0;
+    /// Combiner: receives first result, combines with second recursive call.
+    struct _Combine1 {
+      unsigned int _result;
     };
-    using _Frame = std::variant<_Enter, _Call1, _Call2>;
+    using _Frame = std::variant<_Enter, _After2, _Combine1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{tree0, acc});
+    /// Frame dispatch: _Enter, _After2, _Combine1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        std::shared_ptr<LoopifyTrees::tree<unsigned int>> tree0 = _f.tree0;
+        auto _f = std::move(std::get<_Enter>(_frame));
+        LoopifyTrees::tree<unsigned int> tree0 = std::move(_f.tree0);
         unsigned int acc = _f.acc;
         if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(tree0->v())) {
+                typename LoopifyTrees::tree<unsigned int>::Leaf>(tree0.v())) {
           _result = acc;
         } else {
           const auto &[d_a0, d_a1, d_a2] =
               std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
-                  tree0->v());
+                  tree0.v());
           unsigned int new_acc = (acc + d_a1);
-          _stack.emplace_back(_Call1{d_a0, new_acc});
-          _stack.emplace_back(_Enter{d_a2, new_acc});
+          _stack.emplace_back(_After2{*(d_a0), new_acc});
+          _stack.emplace_back(_Enter{*(d_a2), new_acc});
         }
-      } else if (std::holds_alternative<_Call1>(_frame)) {
-        const auto &_f = std::get<_Call1>(_frame);
-        _stack.emplace_back(_Call2{_result});
-        _stack.emplace_back(_Enter{_f._s0, _f._s1});
+      } else if (std::holds_alternative<_After2>(_frame)) {
+        auto _f = std::move(std::get<_After2>(_frame));
+        _stack.emplace_back(_Combine1{_result});
+        _stack.emplace_back(_Enter{std::move(_f._s0), _f.new_acc});
       } else {
-        const auto &_f = std::get<_Call2>(_frame);
-        _result = (_result + _f._s0);
+        auto _f = std::move(std::get<_Combine1>(_frame));
+        _result = (_result + _f._result);
       }
     }
     return _result;
@@ -1242,52 +1052,54 @@ __attribute__((pure)) unsigned int LoopifyTrees::all_paths_sum(
 }
 
 /// tree_contains x t checks if value exists in tree.
-__attribute__((pure)) bool LoopifyTrees::tree_contains(
-    const unsigned int x,
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> &t) {
+bool LoopifyTrees::tree_contains(const unsigned int x,
+                                 const LoopifyTrees::tree<unsigned int> &t) {
   struct _Enter {
-    const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t;
+    const LoopifyTrees::tree<unsigned int> *t;
   };
 
-  struct _Call1 {
-    std::shared_ptr<LoopifyTrees::tree<unsigned int>> _s0;
+  /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
+  struct _After2 {
+    const LoopifyTrees::tree<unsigned int> *_s0;
     decltype(std::declval<const unsigned int &>() ==
              std::declval<unsigned int &>()) _s1;
   };
 
-  struct _Call2 {
-    bool _s0;
+  /// Combiner: receives first result, combines with second recursive call.
+  struct _Combine1 {
+    bool _result;
     decltype(std::declval<const unsigned int &>() ==
              std::declval<unsigned int &>()) _s1;
   };
 
-  using _Frame = std::variant<_Enter, _Call1, _Call2>;
+  using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{&t});
+  /// Frame dispatch: _Enter, _After2, _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<LoopifyTrees::tree<unsigned int>> t = _f.t;
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyTrees::tree<unsigned int> &t = *(_f.t);
       if (std::holds_alternative<
-              typename LoopifyTrees::tree<unsigned int>::Leaf>(t->v())) {
+              typename LoopifyTrees::tree<unsigned int>::Leaf>(t.v())) {
         _result = false;
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t->v());
-        _stack.emplace_back(_Call1{d_a0, x == d_a1});
-        _stack.emplace_back(_Enter{d_a2});
+            std::get<typename LoopifyTrees::tree<unsigned int>::Node>(t.v());
+        _stack.emplace_back(_After2{d_a0.get(), x == d_a1});
+        _stack.emplace_back(_Enter{d_a2.get()});
       }
-    } else if (std::holds_alternative<_Call1>(_frame)) {
-      const auto &_f = std::get<_Call1>(_frame);
-      _stack.emplace_back(_Call2{_result, _f._s1});
+    } else if (std::holds_alternative<_After2>(_frame)) {
+      auto _f = std::move(std::get<_After2>(_frame));
+      _stack.emplace_back(_Combine1{_result, _f._s1});
       _stack.emplace_back(_Enter{_f._s0});
     } else {
-      const auto &_f = std::get<_Call2>(_frame);
-      _result = (_f._s1 || (_result || _f._s0));
+      auto _f = std::move(std::get<_Combine1>(_frame));
+      _result = (_f._s1 || (_result || _f._result));
     }
   }
   return _result;

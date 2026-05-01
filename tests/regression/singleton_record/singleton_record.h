@@ -3,58 +3,55 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct SingletonRecord {
   struct wrapper {
     unsigned int value;
+
+    // ACCESSORS
+    wrapper clone() const { return wrapper{(*(this)).value}; }
   };
 
-  static inline const std::shared_ptr<wrapper> wrapped_five =
-      std::make_shared<wrapper>(wrapper{5u});
-  __attribute__((pure)) static unsigned int
-  get_value(const std::shared_ptr<wrapper> &w);
-  __attribute__((pure)) static unsigned int
-  get_value2(const std::shared_ptr<wrapper> &w);
-  __attribute__((pure)) static unsigned int
-  unwrap(const std::shared_ptr<wrapper> &w);
-  static std::shared_ptr<wrapper>
-  double_wrapped(const std::shared_ptr<wrapper> &w);
+  static inline const wrapper wrapped_five = wrapper{5u};
+  static unsigned int get_value(const wrapper &w);
+  static unsigned int get_value2(const wrapper &w);
+  static unsigned int unwrap(const wrapper &w);
+  static wrapper double_wrapped(const wrapper &w);
 
   template <typename t_A> struct box {
     t_A contents;
+
+    // ACCESSORS
+    box<t_A> clone() const { return box<t_A>{(*(this)).contents}; }
   };
 
-  static inline const std::shared_ptr<box<unsigned int>> boxed_three =
-      std::make_shared<box<unsigned int>>(box<unsigned int>{3u});
+  static inline const box<unsigned int> boxed_three = box<unsigned int>{3u};
 
-  template <typename T1> static T1 unbox(const std::shared_ptr<box<T1>> &b) {
-    return b->contents;
+  template <typename T1> static T1 unbox(const box<T1> &b) {
+    return b.contents;
   }
 
-  static inline const std::shared_ptr<box<std::shared_ptr<box<unsigned int>>>>
-      nested_box = std::make_shared<box<std::shared_ptr<box<unsigned int>>>>(
-          box<std::shared_ptr<box<unsigned int>>>{boxed_three});
-  static inline const unsigned int double_unbox =
-      nested_box->contents->contents;
+  static inline const box<box<unsigned int>> nested_box =
+      box<box<unsigned int>>{boxed_three};
+  static inline const unsigned int double_unbox = nested_box.contents.contents;
 
   struct fn_wrapper {
     std::function<unsigned int(unsigned int)> fn;
+
+    // ACCESSORS
+    fn_wrapper clone() const { return fn_wrapper{(*(this)).fn}; }
   };
 
-  static inline const std::shared_ptr<fn_wrapper> my_fn_wrapper =
-      std::make_shared<fn_wrapper>(fn_wrapper{
-          [](unsigned int _x0) -> unsigned int { return (1u + _x0); }});
-  __attribute__((pure)) static unsigned int
-  apply_wrapped(const std::shared_ptr<fn_wrapper> &w, const unsigned int n);
+  static inline const fn_wrapper my_fn_wrapper =
+      fn_wrapper{[](unsigned int _x0) -> unsigned int { return (1u + _x0); }};
+  static unsigned int apply_wrapped(const fn_wrapper &w, const unsigned int n);
   static inline const unsigned int test_get = get_value(wrapped_five);
   static inline const unsigned int test_get2 = get_value2(wrapped_five);
   static inline const unsigned int test_unwrap = unwrap(wrapped_five);
   static inline const unsigned int test_double =
-      double_wrapped(wrapped_five)->value;
+      double_wrapped(wrapped_five).value;
   static inline const unsigned int test_unbox =
       unbox<unsigned int>(boxed_three);
   static inline const unsigned int test_double_unbox = double_unbox;

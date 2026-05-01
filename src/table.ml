@@ -396,6 +396,36 @@ let add_enum_inductive r = enum_inductives := Refset'.add r !enum_inductives
 
 let is_enum_inductive r = Refset'.mem r !enum_inductives
 
+(** Check if the inductive referred to by [r] has any constructor field
+    whose ip_type refers back to the same MutInd, either directly or
+    nested inside type arguments (e.g. [list (tree A)] counts for [tree]).
+    This detects self-referencing (recursive) fields that are stored
+    as [shared_ptr] in the C++ struct.  Returns [false] if the inductive
+    is not found in the extraction tables. *)
+let has_recursive_fields r =
+  match r with
+  | GlobRef.IndRef (kn, i) ->
+    let rec ty_mentions_kn ty =
+      match ty with
+      | Miniml.Tglob (GlobRef.IndRef (kn2, _), args, _) ->
+        MutInd.CanOrd.equal kn kn2
+        || List.exists ty_mentions_kn args
+      | Miniml.Tglob (_, args, _) ->
+        List.exists ty_mentions_kn args
+      | Miniml.Tarr (a, b) ->
+        ty_mentions_kn a || ty_mentions_kn b
+      | Miniml.Tmeta { contents = Some t } -> ty_mentions_kn t
+      | _ -> false
+    in
+    ( try
+        let ind = snd (Mindmap_env.find kn !inductives) in
+        let packet = ind.ind_packets.(i) in
+        Array.exists (fun tys ->
+          List.exists ty_mentions_kn tys
+        ) packet.ip_types
+      with Not_found | Invalid_argument _ -> false )
+  | _ -> false
+
 (** Check if an inductive packet qualifies as an enum: all constructors nullary,
     no kept type parameters, at least one constructor. *)
 let is_enum_inductive_packet ind i =
@@ -1608,6 +1638,58 @@ let find_custom_opt r =
     mark_custom_used r;
     Some s
   | None -> None
+
+(** True when [s] names a C++ scalar type that is trivially copyable.
+    This covers all built-in integer, floating-point, and character types,
+    their common modifiers (signed/unsigned/long/short), fixed-width aliases
+    from [<cstdint>] and [<cstddef>], and [std::nullptr_t].
+    Used to decide whether a custom-extracted inductive should be passed by
+    value rather than by const reference.
+    Whitespace-insensitive: ["unsigned"; "int"], ["unsigned  int"], etc. all match. *)
+let is_trivially_copyable_cpp_name (s : string) : bool =
+  (* Split on whitespace and filter empty strings. *)
+  let words =
+    String.split_on_char ' ' s
+    |> List.filter (fun w -> String.length w > 0)
+  in
+  match words with
+  (* Single-word types *)
+  | ["bool"] | ["char"] | ["int"] | ["float"] | ["double"]
+  | ["short"] | ["long"] | ["signed"] | ["unsigned"]
+  | ["char8_t"] | ["char16_t"] | ["char32_t"] | ["wchar_t"]
+  | ["size_t"] | ["ptrdiff_t"] | ["intptr_t"] | ["uintptr_t"]
+  | ["int8_t"] | ["uint8_t"] | ["int16_t"] | ["uint16_t"]
+  | ["int32_t"] | ["uint32_t"] | ["int64_t"] | ["uint64_t"]
+  | ["std::nullptr_t"] | ["bsl::nullptr_t"] -> true
+  (* Two-word types *)
+  | ["signed"; "char"] | ["unsigned"; "char"]
+  | ["signed"; "int"] | ["unsigned"; "int"]
+  | ["signed"; "short"] | ["unsigned"; "short"]
+  | ["signed"; "long"] | ["unsigned"; "long"]
+  | ["short"; "int"] | ["long"; "int"] | ["long"; "double"]
+  | ["long"; "long"] -> true
+  (* Three-word types *)
+  | ["signed"; "short"; "int"] | ["unsigned"; "short"; "int"]
+  | ["signed"; "long"; "int"] | ["unsigned"; "long"; "int"]
+  | ["long"; "long"; "int"] | ["signed"; "long"; "long"]
+  | ["unsigned"; "long"; "long"] -> true
+  (* Four-word types *)
+  | ["signed"; "long"; "long"; "int"] | ["unsigned"; "long"; "long"; "int"] -> true
+  | _ -> false
+
+(** True when [r] is a custom-extracted inductive whose C++ representation
+    is a trivially-copyable scalar (e.g. [nat] extracted to [unsigned int]).
+    Such types should be passed by value, not by [const T &]. *)
+let is_custom_scalar_ref (r : GlobRef.t) : bool =
+  match find_custom_opt r with
+  | Some s -> is_trivially_copyable_cpp_name s
+  | None -> false
+
+let reserved_global_cpp_names =
+  [ "std"; "crane"; "persistent_array" ]
+
+let escape_reserved_struct_name s =
+  if List.mem s reserved_global_cpp_names then s ^ "_" else s
 
 let find_type_custom r = Refmap'.find r !customs
 

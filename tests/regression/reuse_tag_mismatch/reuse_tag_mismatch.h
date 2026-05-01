@@ -2,12 +2,10 @@
 #define INCLUDED_REUSE_TAG_MISMATCH
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ReuseTagMismatch {
   /// BUG HYPOTHESIS: The reuse optimization mutates variant fields in-place
@@ -41,47 +39,76 @@ struct ReuseTagMismatch {
 
   public:
     // CREATORS
+    direction() {}
+
     explicit direction(GoUp _v) : d_v_(std::move(_v)) {}
 
     explicit direction(GoDown _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<direction> goup(unsigned int a0) {
-      return std::make_shared<direction>(GoUp{std::move(a0)});
+    direction(const direction &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    direction(direction &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    direction &operator=(const direction &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<direction> godown(unsigned int a0) {
-      return std::make_shared<direction>(GoDown{std::move(a0)});
+    direction &operator=(direction &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    direction clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<GoUp>(_sv.v())) {
+        const auto &[d_a0] = std::get<GoUp>(_sv.v());
+        return direction(GoUp{d_a0});
+      } else {
+        const auto &[d_a0] = std::get<GoDown>(_sv.v());
+        return direction(GoDown{d_a0});
+      }
+    }
+
+    // CREATORS
+    static direction goup(unsigned int a0) {
+      return direction(GoUp{std::move(a0)});
+    }
+
+    static direction godown(unsigned int a0) {
+      return direction(GoDown{std::move(a0)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 direction_rect(F0 &&f, F1 &&f0,
-                           const std::shared_ptr<direction> &d) {
-    if (std::holds_alternative<typename direction::GoUp>(d->v())) {
-      const auto &[d_a0] = std::get<typename direction::GoUp>(d->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 direction_rect(F0 &&f, F1 &&f0, const direction &d) {
+    if (std::holds_alternative<typename direction::GoUp>(d.v())) {
+      const auto &[d_a0] = std::get<typename direction::GoUp>(d.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename direction::GoDown>(d->v());
+      const auto &[d_a0] = std::get<typename direction::GoDown>(d.v());
       return f0(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 direction_rec(F0 &&f, F1 &&f0,
-                          const std::shared_ptr<direction> &d) {
-    if (std::holds_alternative<typename direction::GoUp>(d->v())) {
-      const auto &[d_a0] = std::get<typename direction::GoUp>(d->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 direction_rec(F0 &&f, F1 &&f0, const direction &d) {
+    if (std::holds_alternative<typename direction::GoUp>(d.v())) {
+      const auto &[d_a0] = std::get<typename direction::GoUp>(d.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename direction::GoDown>(d->v());
+      const auto &[d_a0] = std::get<typename direction::GoDown>(d.v());
       return f0(d_a0);
     }
   }
@@ -92,46 +119,36 @@ struct ReuseTagMismatch {
   /// - GoUp/GoDown are the same inductive (direction)
   /// - Both have arity 1
   /// But GoUp and GoDown are DIFFERENT constructors.
-  static std::shared_ptr<direction> id_or_flip(std::shared_ptr<direction> d,
-                                               const bool flip_flag);
+  static direction id_or_flip(direction d, const bool flip_flag);
   /// test1: flip GoUp 42 -> should be GoDown 42.
   /// Match on the result:
   /// - GoUp _ => 1 (wrong, reuse bug would make this match)
   /// - GoDown _ => 2 (correct)
-  static inline const unsigned int test1 = []() {
-    auto &&_sv = id_or_flip(direction::goup(42u), true);
-    if (std::holds_alternative<typename direction::GoUp>(_sv->v())) {
-      return 1u;
-    } else {
-      return 2u;
-    }
-  }();
+  static inline const unsigned int test1 =
+      (std::holds_alternative<typename direction::GoUp>(
+           id_or_flip(direction::goup(42u), true).v())
+           ? 1u
+           : 2u);
   /// test2: no flip -> should be GoUp 42 unchanged.
-  static inline const unsigned int test2 = []() {
-    auto &&_sv = id_or_flip(direction::goup(42u), false);
-    if (std::holds_alternative<typename direction::GoUp>(_sv->v())) {
-      return 1u;
-    } else {
-      return 2u;
-    }
-  }();
+  static inline const unsigned int test2 =
+      (std::holds_alternative<typename direction::GoUp>(
+           id_or_flip(direction::goup(42u), false).v())
+           ? 1u
+           : 2u);
   /// test3: flip GoDown 100 -> should be GoUp 100.
-  static inline const unsigned int test3 = []() {
-    auto &&_sv = id_or_flip(direction::godown(100u), true);
-    if (std::holds_alternative<typename direction::GoUp>(_sv->v())) {
-      return 3u;
-    } else {
-      return 4u;
-    }
-  }();
+  static inline const unsigned int test3 =
+      (std::holds_alternative<typename direction::GoUp>(
+           id_or_flip(direction::godown(100u), true).v())
+           ? 3u
+           : 4u);
   /// test4: use the flipped value's payload.
   static inline const unsigned int test4 = []() {
     auto &&_sv3 = id_or_flip(direction::goup(10u), true);
-    if (std::holds_alternative<typename direction::GoUp>(_sv3->v())) {
-      const auto &[d_a03] = std::get<typename direction::GoUp>(_sv3->v());
+    if (std::holds_alternative<typename direction::GoUp>(_sv3.v())) {
+      const auto &[d_a03] = std::get<typename direction::GoUp>(_sv3.v());
       return (d_a03 + 1000u);
     } else {
-      const auto &[d_a03] = std::get<typename direction::GoDown>(_sv3->v());
+      const auto &[d_a03] = std::get<typename direction::GoDown>(_sv3.v());
       return d_a03;
     }
   }();

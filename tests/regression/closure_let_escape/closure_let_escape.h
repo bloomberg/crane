@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct ClosureLetEscape {
   /// A local fixpoint captures a LET-BINDING (not a function parameter)
   /// and escapes through Some (std::optional).
@@ -21,8 +18,7 @@ struct ClosureLetEscape {
   /// Difference from fix_escape_capture: captures a LET-BINDING
   /// (not a function parameter). The let-binding involves a computation
   /// (n * 2), so it can't be optimized away.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_fn_fix(const unsigned int n);
   /// test1: make_fn_fix(21) => base=42, Some(add).
   /// add(3) = 42 + 3 = 45.
@@ -51,8 +47,7 @@ struct ClosureLetEscape {
   }();
   /// test3: Captures from multiple let bindings.
   /// BUG: Both a and b are captured by &, both dangle.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_fn_multi(const unsigned int n);
 
   static inline const unsigned int test3 = []() -> unsigned int {

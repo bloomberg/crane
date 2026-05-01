@@ -3,10 +3,9 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct Clock {
   static int64_t get_steady();

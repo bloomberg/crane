@@ -1,13 +1,8 @@
 #include <loopify_unit_void_repro.h>
 
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 void LoopifyUnitVoidRepro::loop(const unsigned int x, const unsigned int y,
-                                const std::shared_ptr<List<bool>> &cells) {
-  std::shared_ptr<List<bool>> _loop_cells = cells;
+                                const List<bool> &cells) {
+  const List<bool> *_loop_cells = &cells;
   unsigned int _loop_x = x;
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_cells->v())) {
@@ -24,10 +19,8 @@ void LoopifyUnitVoidRepro::loop(const unsigned int x, const unsigned int y,
           return;
         }
       }();
-      std::shared_ptr<List<bool>> _next_cells = d_a1;
-      unsigned int _next_x = (_loop_x + cell_size);
-      _loop_cells = std::move(_next_cells);
-      _loop_x = std::move(_next_x);
+      _loop_cells = d_a1.get();
+      _loop_x = (_loop_x + cell_size);
     }
   }
   return;

@@ -6,9 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -16,7 +14,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -27,43 +25,115 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  unsigned int length() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
 
 struct ListDef {
   template <typename T1>
-  static std::shared_ptr<List<T1>> repeat(const T1 x, const unsigned int n);
+  static List<T1> repeat(const T1 x, const unsigned int n);
 };
 
 struct DisassembleOps {
@@ -89,6 +159,8 @@ struct DisassembleOps {
 
   public:
     // CREATORS
+    instruction() {}
+
     explicit instruction(NOP _v) : d_v_(_v) {}
 
     explicit instruction(NOP2 _v) : d_v_(_v) {}
@@ -97,71 +169,97 @@ struct DisassembleOps {
 
     explicit instruction(LDM2 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<instruction> nop() {
-      return std::make_shared<instruction>(NOP{});
+    instruction(const instruction &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instruction(instruction &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    instruction &operator=(const instruction &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction> nop2() {
-      return std::make_shared<instruction>(NOP2{});
+    instruction &operator=(instruction &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction> ldm(unsigned int a0) {
-      return std::make_shared<instruction>(LDM{std::move(a0)});
+    // ACCESSORS
+    instruction clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<NOP>(_sv.v())) {
+        return instruction(NOP{});
+      } else if (std::holds_alternative<NOP2>(_sv.v())) {
+        return instruction(NOP2{});
+      } else if (std::holds_alternative<LDM>(_sv.v())) {
+        const auto &[d_a0] = std::get<LDM>(_sv.v());
+        return instruction(LDM{d_a0});
+      } else {
+        const auto &[d_a0] = std::get<LDM2>(_sv.v());
+        return instruction(LDM2{d_a0});
+      }
     }
 
-    static std::shared_ptr<instruction> ldm2(unsigned int a0) {
-      return std::make_shared<instruction>(LDM2{std::move(a0)});
+    // CREATORS
+    static instruction nop() { return instruction(NOP{}); }
+
+    static instruction nop2() { return instruction(NOP2{}); }
+
+    static instruction ldm(unsigned int a0) {
+      return instruction(LDM{std::move(a0)});
+    }
+
+    static instruction ldm2(unsigned int a0) {
+      return instruction(LDM2{std::move(a0)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3>
+  template <typename T1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &>
   static T1 instruction_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
-                             const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+                             const instruction &i) {
+    if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
-    } else if (std::holds_alternative<typename instruction::NOP2>(i->v())) {
+    } else if (std::holds_alternative<typename instruction::NOP2>(i.v())) {
       return f0;
-    } else if (std::holds_alternative<typename instruction::LDM>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+    } else if (std::holds_alternative<typename instruction::LDM>(i.v())) {
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i.v());
       return f1(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename instruction::LDM2>(i->v());
+      const auto &[d_a0] = std::get<typename instruction::LDM2>(i.v());
       return f2(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F2,
-            MapsTo<T1, unsigned int> F3>
+  template <typename T1, typename F2, typename F3>
+    requires std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
+             std::is_invocable_r_v<T1, F3 &, unsigned int &>
   static T1 instruction_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
-                            const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+                            const instruction &i) {
+    if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
-    } else if (std::holds_alternative<typename instruction::NOP2>(i->v())) {
+    } else if (std::holds_alternative<typename instruction::NOP2>(i.v())) {
       return f0;
-    } else if (std::holds_alternative<typename instruction::LDM>(i->v())) {
-      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+    } else if (std::holds_alternative<typename instruction::LDM>(i.v())) {
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i.v());
       return f1(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename instruction::LDM2>(i->v());
+      const auto &[d_a0] = std::get<typename instruction::LDM2>(i.v());
       return f2(d_a0);
     }
   }
 
-  static std::shared_ptr<instruction> decode1(const unsigned int b1,
-                                              const unsigned int b2);
-  static std::shared_ptr<List<unsigned int>>
-  drop_(const unsigned int n, std::shared_ptr<List<unsigned int>> l);
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble1(const std::shared_ptr<List<unsigned int>> &rom0,
-               const unsigned int addr);
+  static instruction decode1(const unsigned int b1, const unsigned int b2);
+  static List<unsigned int> drop_(const unsigned int n, List<unsigned int> l);
+  static std::optional<std::pair<instruction, unsigned int>>
+  disassemble1(const List<unsigned int> &rom0, const unsigned int addr);
   static inline const unsigned int test_disassemble_drop_window =
       []() -> unsigned int {
     auto _cs = disassemble1(
@@ -173,37 +271,33 @@ struct DisassembleOps {
                                             5u, List<unsigned int>::nil()))))),
         1u);
     if (_cs.has_value()) {
-      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
-      const std::shared_ptr<instruction> &_x = p.first;
+      const std::pair<instruction, unsigned int> &p = *_cs;
+      const instruction &_x = p.first;
       const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;
     }
   }();
-  static std::shared_ptr<instruction> decode2(const unsigned int b1,
-                                              const unsigned int b2);
+  static instruction decode2(const unsigned int b1, const unsigned int b2);
 
   template <typename T1>
-  static std::shared_ptr<List<T1>> drop(const unsigned int n,
-                                        std::shared_ptr<List<T1>> l) {
+  static List<T1> drop(const unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
       unsigned int n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-        return drop<T1>(n_, d_a1);
+        auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        return drop<T1>(n_, *(d_a1));
       }
     }
   }
 
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble2(const std::shared_ptr<List<unsigned int>> &rom0,
-               const unsigned int addr);
+  static std::optional<std::pair<instruction, unsigned int>>
+  disassemble2(const List<unsigned int> &rom0, const unsigned int addr);
   static inline const unsigned int test_disassemble_next_address =
       []() -> unsigned int {
     auto _cs = disassemble2(
@@ -214,23 +308,19 @@ struct DisassembleOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
-      const std::shared_ptr<instruction> &_x = p.first;
+      const std::pair<instruction, unsigned int> &p = *_cs;
+      const instruction &_x = p.first;
       const unsigned int &next = p.second;
       return next;
     } else {
       return 0u;
     }
   }();
-  static std::shared_ptr<instruction> decode3(const unsigned int b1,
-                                              const unsigned int b2);
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble3(const std::shared_ptr<List<unsigned int>> &rom0,
-               const unsigned int addr);
+  static instruction decode3(const unsigned int b1, const unsigned int b2);
+  static std::optional<std::pair<instruction, unsigned int>>
+  disassemble3(const List<unsigned int> &rom0, const unsigned int addr);
 
-  template <typename T1>
-  __attribute__((pure)) static bool is_none(const std::optional<T1> o) {
+  template <typename T1> static bool is_none(const std::optional<T1> &o) {
     if (o.has_value()) {
       const T1 &_x = *o;
       return false;
@@ -240,25 +330,25 @@ struct DisassembleOps {
   }
 
   static inline const bool test_disassemble_short_rom_none =
-      is_none<std::pair<std::shared_ptr<instruction>, unsigned int>>(
-          disassemble3(List<unsigned int>::cons(9u, List<unsigned int>::nil()),
-                       0u));
-  static std::shared_ptr<instruction> decode4(const unsigned int b1,
-                                              const unsigned int b2);
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble4(const std::shared_ptr<List<unsigned int>> &rom0,
-               const unsigned int addr);
+      is_none<std::pair<instruction, unsigned int>>(disassemble3(
+          List<unsigned int>::cons(9u, List<unsigned int>::nil()), 0u));
+  static instruction decode4(const unsigned int b1, const unsigned int b2);
+  static std::optional<std::pair<instruction, unsigned int>>
+  disassemble4(const List<unsigned int> &rom0, const unsigned int addr);
 
   struct state {
-    std::shared_ptr<List<unsigned int>> regs;
-    std::shared_ptr<List<unsigned int>> rom;
+    List<unsigned int> regs;
+    List<unsigned int> rom;
+
+    // ACCESSORS
+    state clone() const {
+      return state{(*(this)).regs.clone(), (*(this)).rom.clone()};
+    }
   };
 
-  static inline const std::shared_ptr<state> init_state =
-      std::make_shared<state>(
-          state{ListDef::template repeat<unsigned int>(0u, 16u),
-                ListDef::template repeat<unsigned int>(0u, 4096u)});
+  static inline const state init_state =
+      state{ListDef::template repeat<unsigned int>(0u, 16u),
+            ListDef::template repeat<unsigned int>(0u, 4096u)};
   static inline const unsigned int test_decode_disassemble_1 =
       []() -> unsigned int {
     auto _cs = disassemble4(
@@ -269,8 +359,8 @@ struct DisassembleOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
-      const std::shared_ptr<instruction> &_x = p.first;
+      const std::pair<instruction, unsigned int> &p = *_cs;
+      const instruction &_x = p.first;
       const unsigned int &next = p.second;
       return next;
     } else {
@@ -287,8 +377,8 @@ struct DisassembleOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
-      const std::shared_ptr<instruction> &_x = p.first;
+      const std::pair<instruction, unsigned int> &p = *_cs;
+      const instruction &_x = p.first;
       const unsigned int &next = p.second;
       return next;
     } else {
@@ -296,9 +386,9 @@ struct DisassembleOps {
     }
   }();
   static inline const unsigned int test_init_state_regs =
-      init_state->regs->length();
+      init_state.regs.length();
   static inline const unsigned int test_init_state_rom =
-      init_state->rom->length();
+      init_state.rom.length();
   static inline const std::pair<
       std::pair<
           std::pair<
@@ -322,7 +412,7 @@ struct DisassembleOps {
 };
 
 template <typename T1>
-std::shared_ptr<List<T1>> ListDef::repeat(const T1 x, const unsigned int n) {
+List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

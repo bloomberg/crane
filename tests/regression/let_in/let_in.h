@@ -2,12 +2,10 @@
 #define INCLUDED_LET_IN
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct LetIn {
   static inline const unsigned int simple_let = 5u;
@@ -18,7 +16,7 @@ struct LetIn {
     return (x + y);
   }();
   static inline const unsigned int shadowed_let = 3u;
-  __attribute__((pure)) static unsigned int let_in_fun(const unsigned int n);
+  static unsigned int let_in_fun(const unsigned int n);
   static inline const unsigned int let_fun = []() {
     unsigned int x = 5u;
     return (x + 1u);
@@ -39,37 +37,69 @@ struct LetIn {
 
   public:
     // CREATORS
+    pair() {}
+
     explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<pair<t_A, t_B>> pair0(t_A a0, t_B a1) {
-      return std::make_shared<pair<t_A, t_B>>(
-          Pair0{std::move(a0), std::move(a1)});
+    pair(const pair<t_A, t_B> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    pair(pair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    pair<t_A, t_B> &operator=(const pair<t_A, t_B> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    pair<t_A, t_B> clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
+      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
+    }
+
+    // CREATORS
+    template <typename _U0, typename _U1>
+    explicit pair(const pair<_U0, _U1> &_other) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
+      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+    }
+
+    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
+      return pair(Pair0{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+  static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+  static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
   static inline const unsigned int let_destruct = []() {
-    std::shared_ptr<pair<unsigned int, unsigned int>> p =
+    pair<unsigned int, unsigned int> p =
         pair<unsigned int, unsigned int>::pair0(3u, 4u);
-    const auto &[d_a0, d_a1] =
-        std::get<typename pair<unsigned int, unsigned int>::Pair0>(p->v());
+    auto &[d_a0, d_a1] =
+        std::get<typename pair<unsigned int, unsigned int>::Pair0>(p.v_mut());
     return d_a0;
   }();
   static inline const unsigned int multi_let = []() {

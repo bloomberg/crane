@@ -1,14 +1,5 @@
 #include <effect_option_string.h>
 
-#include <cstdint>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <variant>
-
 /// 1. Pure let binding with option match — Some returns variable,
 /// None returns string literal
 std::string EffectOptionString::let_option_match(const std::string name) {
@@ -33,7 +24,7 @@ std::string EffectOptionString::bind_option_match(const std::string name) {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
-  return [&]() -> std::string {
+  return [=]() mutable -> std::string {
     if (r.has_value()) {
       const std::string &v = *r;
       return v;

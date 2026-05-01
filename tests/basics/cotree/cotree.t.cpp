@@ -31,15 +31,15 @@ void aSsErT(bool condition, const char *message, int line) {
 
 // Helper: convert List to std::vector for easier comparison
 std::vector<unsigned int>
-to_vector(const std::shared_ptr<List<unsigned int>> &l) {
+to_vector(const List<unsigned int> &l) {
   std::vector<unsigned int> result;
-  auto cur = l;
+  const List<unsigned int> *cur = &l;
   while (true) {
     auto ok = std::visit(
         Overloaded{[&](const List<unsigned int>::Nil) -> bool { return false; },
-                   [&](const List<unsigned int>::Cons args) -> bool {
+                   [&](const List<unsigned int>::Cons &args) -> bool {
                      result.push_back(args.d_a0);
-                     cur = args.d_a1;
+                     cur = args.d_a1.get();
                      return true;
                    }},
         cur->v());

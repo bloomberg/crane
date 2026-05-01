@@ -2,10 +2,9 @@
 #define INCLUDED_DEPENDENT_TYPENAME
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename M>
 concept HasType = requires {
@@ -51,7 +50,7 @@ struct DependentTypename {
       return v;
     }
 
-    constexpr static typename C::template t<unsigned int>
+    static typename C::template t<unsigned int>
     use_singleton(const unsigned int _x0) {
       return C::template singleton<unsigned int>(_x0);
     }

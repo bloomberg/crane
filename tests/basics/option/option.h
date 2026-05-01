@@ -6,32 +6,26 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct Option {
   static inline const std::optional<unsigned int> some_val =
       std::make_optional<unsigned int>(5u);
   static inline const std::optional<unsigned int> none_val =
       std::optional<unsigned int>();
-  __attribute__((pure)) static unsigned int
-  get_or_default(const std::optional<unsigned int> o,
-                 const unsigned int default0);
+  static unsigned int get_or_default(const std::optional<unsigned int> &o,
+                                     const unsigned int default0);
   static inline const std::optional<std::optional<unsigned int>> nested_some =
       std::make_optional<std::optional<unsigned int>>(
           std::make_optional<unsigned int>(3u));
   static inline const std::optional<std::optional<unsigned int>> nested_none =
       std::make_optional<std::optional<unsigned int>>(
           std::optional<unsigned int>());
-  __attribute__((pure)) static std::optional<unsigned int>
-  safe_pred(const unsigned int n);
-  __attribute__((pure)) static std::optional<unsigned int>
-  chain_options(const std::optional<unsigned int> o1,
-                const std::optional<unsigned int> o2);
+  static std::optional<unsigned int> safe_pred(const unsigned int n);
+  static std::optional<unsigned int>
+  chain_options(std::optional<unsigned int> o1, std::optional<unsigned int> o2);
 
   template <typename T1, typename T2>
-  __attribute__((pure)) static std::optional<T2>
-  apply_if_some(const std::optional<std::function<T2(T1)>> f, const T1 x) {
+  static std::optional<T2>
+  apply_if_some(const std::optional<std::function<T2(T1)>> &f, const T1 x) {
     if (f.has_value()) {
       const std::function<T2(T1)> &g = *f;
       return std::make_optional<T2>(g(x));

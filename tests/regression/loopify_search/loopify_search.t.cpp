@@ -44,7 +44,6 @@ int main() {
               3u, List::cons(
                       2u, List::cons(4u, List::nil()))));
   auto lis = LoopifySearch::longest_increasing_subseq(seq);
-  ASSERT(lis != nullptr);
 
   // Test maximum_by
   auto cmp = [](unsigned int x, unsigned int y) -> unsigned int {
@@ -79,7 +78,6 @@ int main() {
                                       3u, List::cons(
                                               3u, List::nil()))))));
   auto longest = LoopifySearch::longest_run(runs);
-  ASSERT(longest != nullptr);
 
   std::cout << "All search algorithm tests passed!\n";
   return testStatus;

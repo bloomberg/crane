@@ -1,16 +1,5 @@
 #include <effect_unit_stress.h>
 
-#include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Ret tt at different nesting depths
 void EffectUnitStress::ret_tt_simple() { return; }
 
@@ -108,13 +97,13 @@ std::string EffectUnitStress::nested_if_monadic(const bool b1, const bool b2) {
 
 /// 10. Monadic function returning option
 std::optional<unsigned int>
-EffectUnitStress::safe_head(const std::shared_ptr<List<unsigned int>> &xs) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs->v())) {
+EffectUnitStress::safe_head(const List<unsigned int> &xs) {
+  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
     std::cout << "empty!"s << '\n';
     return std::optional<unsigned int>();
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(xs->v());
+        std::get<typename List<unsigned int>::Cons>(xs.v());
     return std::make_optional<unsigned int>(d_a0);
   }
 }

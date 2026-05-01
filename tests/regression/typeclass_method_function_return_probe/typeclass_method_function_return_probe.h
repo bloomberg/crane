@@ -2,11 +2,10 @@
 #define INCLUDED_TYPECLASS_METHOD_FUNCTION_RETURN_PROBE
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 template <typename I, typename t_A>
@@ -31,7 +30,7 @@ struct TypeclassMethodFunctionReturnProbe {
   };
 
   static_assert(Factory<boolFactory, Bool0>);
-  __attribute__((pure)) static Bool0 partial(const Bool0 _x0);
+  static Bool0 partial(const Bool0 _x0);
   static inline const Bool0 sample = partial(Bool0::e_FALSE0);
 };
 

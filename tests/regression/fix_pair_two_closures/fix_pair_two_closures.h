@@ -3,11 +3,9 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct FixPairTwoClosures {
   /// Two local fixpoints escape through a pair.
@@ -15,9 +13,8 @@ struct FixPairTwoClosures {
   /// BUG: Both f and g use & capture. They capture a, b,
   /// and each other's std::function variables. All captured references
   /// dangle after make_ops returns.
-  __attribute__((
-      pure)) static std::pair<std::function<unsigned int(unsigned int)>,
-                              std::function<unsigned int(unsigned int)>>
+  static std::pair<std::function<unsigned int(unsigned int)>,
+                   std::function<unsigned int(unsigned int)>>
   make_ops(const unsigned int a, const unsigned int b);
   /// test1: make_ops(10, 20). fst(3) = 10+3 = 13, snd(5) = 20+5 = 25.
   /// Total = 38.

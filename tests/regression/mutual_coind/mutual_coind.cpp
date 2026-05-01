@@ -1,23 +1,15 @@
 #include <mutual_coind.h>
 
-#include <functional>
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
-std::shared_ptr<MutualCoind::streamA<unsigned int>>
-MutualCoind::countA(const unsigned int n) {
+MutualCoind::streamA<unsigned int> MutualCoind::countA(const unsigned int n) {
   return streamA<unsigned int>::lazy_(
-      [=]() mutable -> std::shared_ptr<MutualCoind::streamA<unsigned int>> {
+      [=]() mutable -> MutualCoind::streamA<unsigned int> {
         return streamA<unsigned int>::consa(n, countB((n + 1)));
       });
 }
 
-std::shared_ptr<MutualCoind::streamB<unsigned int>>
-MutualCoind::countB(const unsigned int n) {
+MutualCoind::streamB<unsigned int> MutualCoind::countB(const unsigned int n) {
   return streamB<unsigned int>::lazy_(
-      [=]() mutable -> std::shared_ptr<MutualCoind::streamB<unsigned int>> {
+      [=]() mutable -> MutualCoind::streamB<unsigned int> {
         return streamB<unsigned int>::consb(n, countA((n + 1)));
       });
 }

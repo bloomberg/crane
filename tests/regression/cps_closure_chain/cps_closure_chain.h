@@ -3,12 +3,11 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct CpsClosureChain {
   struct tree {
@@ -16,9 +15,9 @@ struct CpsClosureChain {
     struct Leaf {};
 
     struct Node {
-      std::shared_ptr<tree> d_a0;
+      std::unique_ptr<tree> d_a0;
       unsigned int d_a1;
-      std::shared_ptr<tree> d_a2;
+      std::unique_ptr<tree> d_a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -29,57 +28,122 @@ struct CpsClosureChain {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf() {
-      return std::make_shared<tree>(Leaf{});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
-                                      unsigned int a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{a0, std::move(a1), a2});
+    tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
-                                      unsigned int a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
+    // ACCESSORS
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
+          if (_alt.d_a2) {
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static tree leaf() { return tree(Leaf{}); }
+
+    static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~tree() {
+      std::vector<std::unique_ptr<tree>> _stack{};
+      auto _drain = [&](tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back(std::move(_alt.d_a0));
+          }
+          if (_alt.d_a2) {
+            _stack.push_back(std::move(_alt.d_a2));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rect(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
+  static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
-      return f0(d_a0, tree_rect<T1>(f, f0, d_a0), d_a1, d_a2,
-                tree_rect<T1>(f, f0, d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rect<T1>(f, f0, *(d_a2)));
     }
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                std::shared_ptr<tree>, T1>
-                             F1>
-  static T1 tree_rec(const T1 f, F1 &&f0, const std::shared_ptr<tree> &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                   tree &, T1 &>
+  static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
-      return f0(d_a0, tree_rec<T1>(f, f0, d_a0), d_a1, d_a2,
-                tree_rec<T1>(f, f0, d_a2));
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
+                tree_rec<T1>(f, f0, *(d_a2)));
     }
   }
 
@@ -97,27 +161,29 @@ struct CpsClosureChain {
   /// is whether the = capture correctly copies all pattern variables,
   /// especially when the pattern match is on a shared_ptr type and the
   /// structured bindings are references.
-  __attribute__((pure)) static unsigned int
-  tree_sum_cps(const std::shared_ptr<tree> &t,
+  static unsigned int
+  tree_sum_cps(const tree &t,
                const std::function<unsigned int(unsigned int)> k) {
-    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(0u);
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
-      return tree_sum_cps(d_a0, [=](const unsigned int left_sum) mutable {
-        return tree_sum_cps(d_a2, [=](const unsigned int right_sum) mutable {
-          return k(((left_sum + d_a1) + right_sum));
-        });
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      tree d_a0_value = *(d_a0);
+      tree d_a2_value = *(d_a2);
+      return tree_sum_cps(d_a0_value, [=](const unsigned int left_sum) mutable {
+        return tree_sum_cps(d_a2_value,
+                            [=](const unsigned int right_sum) mutable {
+                              return k(((left_sum + d_a1) + right_sum));
+                            });
       });
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const std::shared_ptr<tree> &t);
+  static unsigned int tree_sum(const tree &t);
   /// Build a deep tree to stress the closure chain.
-  static std::shared_ptr<tree> build_left(const unsigned int n);
-  static std::shared_ptr<tree> build_right(const unsigned int n);
-  static std::shared_ptr<tree> build_balanced(const unsigned int n);
+  static tree build_left(const unsigned int n);
+  static tree build_right(const unsigned int n);
+  static tree build_balanced(const unsigned int n);
   /// Test: left-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
   static inline const unsigned int test_left = tree_sum(build_left(5u));
   /// Test: right-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
@@ -132,19 +198,23 @@ struct CpsClosureChain {
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
   /// AND the accumulator function.
-  template <MapsTo<unsigned int, unsigned int, unsigned int, unsigned int> F2>
-  __attribute__((pure)) static unsigned int
-  tree_fold_cps(const std::shared_ptr<tree> &t, const unsigned int base,
-                F2 &&combine,
+  template <typename F2>
+    requires std::is_invocable_r_v<unsigned int, F2 &, unsigned int &,
+                                   unsigned int &, unsigned int &>
+  static unsigned int
+  tree_fold_cps(const tree &t, const unsigned int base, F2 &&combine,
                 const std::function<unsigned int(unsigned int)> k) {
-    if (std::holds_alternative<typename tree::Leaf>(t->v())) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(base);
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      tree d_a0_value = *(d_a0);
+      tree d_a2_value = *(d_a2);
       return tree_fold_cps(
-          d_a0, base, combine, [=](const unsigned int left_result) mutable {
+          d_a0_value, base, combine,
+          [=](const unsigned int left_result) mutable {
             return tree_fold_cps(
-                d_a2, base, combine,
+                d_a2_value, base, combine,
                 [=](const unsigned int right_result) mutable {
                   return k(combine(left_result, d_a1, right_result));
                 });
@@ -164,7 +234,7 @@ struct CpsClosureChain {
   /// Store CPS result in a pair with another computation to test
   /// that the continuation chain doesn't interfere with other data.
   static inline const std::pair<unsigned int, unsigned int> test_pair = []() {
-    std::shared_ptr<tree> t = build_left(4u);
+    tree t = build_left(4u);
     unsigned int s = tree_sum(t);
     unsigned int f = tree_fold_cps(
         std::move(t), 0u,

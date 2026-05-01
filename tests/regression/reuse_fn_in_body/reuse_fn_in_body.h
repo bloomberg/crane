@@ -2,12 +2,11 @@
 #define INCLUDED_REUSE_FN_IN_BODY
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct ReuseFnInBody {
   /// mycons first so reuse picks it (variant index 0).
@@ -15,7 +14,7 @@ struct ReuseFnInBody {
     // TYPES
     struct Mycons {
       unsigned int d_a0;
-      std::shared_ptr<mylist> d_a1;
+      std::unique_ptr<mylist> d_a1;
     };
 
     struct Mynil {};
@@ -28,58 +27,117 @@ struct ReuseFnInBody {
 
   public:
     // CREATORS
+    mylist() {}
+
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
     explicit mylist(Mynil _v) : d_v_(_v) {}
 
-    static std::shared_ptr<mylist> mycons(unsigned int a0,
-                                          const std::shared_ptr<mylist> &a1) {
-      return std::make_shared<mylist>(Mycons{std::move(a0), a1});
+    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mylist &operator=(const mylist &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist> mycons(unsigned int a0,
-                                          std::shared_ptr<mylist> &&a1) {
-      return std::make_shared<mylist>(Mycons{std::move(a0), std::move(a1)});
+    mylist &operator=(mylist &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    static std::shared_ptr<mylist> mynil() {
-      return std::make_shared<mylist>(Mynil{});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    mylist clone() const {
+      mylist _out{};
+
+      struct _CloneFrame {
+        const mylist *_src;
+        mylist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist *_src = _frame._src;
+        mylist *_dst = _frame._dst;
+        if (std::holds_alternative<Mycons>(_src->v())) {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        } else {
+          _dst->d_v_ = Mynil{};
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static mylist mycons(unsigned int a0, mylist a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+    }
+
+    static mylist mynil() { return mylist(Mynil{}); }
+
+    // MANIPULATORS
+    ~mylist() {
+      std::vector<std::unique_ptr<mylist>> _stack{};
+      auto _drain = [&](mylist &_node) {
+        if (std::holds_alternative<Mycons>(_node.d_v_)) {
+          auto &_alt = std::get<Mycons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1,
-            MapsTo<T1, unsigned int, std::shared_ptr<mylist>, T1> F0>
-  static T1 mylist_rect(F0 &&f, const T1 f0, const std::shared_ptr<mylist> &m) {
-    if (std::holds_alternative<typename mylist::Mycons>(m->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m->v());
-      return f(d_a0, d_a1, mylist_rect<T1>(f, f0, d_a1));
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+  static T1 mylist_rect(F0 &&f, const T1 f0, const mylist &m) {
+    if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
+      return f(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
     } else {
       return f0;
     }
   }
 
-  template <typename T1,
-            MapsTo<T1, unsigned int, std::shared_ptr<mylist>, T1> F0>
-  static T1 mylist_rec(F0 &&f, const T1 f0, const std::shared_ptr<mylist> &m) {
-    if (std::holds_alternative<typename mylist::Mycons>(m->v())) {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m->v());
-      return f(d_a0, d_a1, mylist_rec<T1>(f, f0, d_a1));
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+  static T1 mylist_rec(F0 &&f, const T1 f0, const mylist &m) {
+    if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
+      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
+      return f(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
     } else {
       return f0;
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  length(const std::shared_ptr<mylist> &l);
-  __attribute__((pure)) static unsigned int
-  sum(const std::shared_ptr<mylist>
-          &l); /// BUG: reuse fires on the mycons branch. The body constructs
+  static unsigned int length(const mylist &l);
+  static unsigned int sum(const mylist &l);
+  /// BUG: reuse fires on the mycons branch. The body constructs
   /// mycons (sum l + h) t where l is the scrutinee.
   ///
   /// The reuse path does:
@@ -95,8 +153,7 @@ struct ReuseFnInBody {
   /// This is similar to reuse_use_after_move but the scrutinee
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
-  static std::shared_ptr<mylist> prefix_sum(std::shared_ptr<mylist> l,
-                                            const bool b);
+  static mylist prefix_sum(mylist l, const bool b);
   static inline const unsigned int test1 = sum(prefix_sum(
       mylist::mycons(1u,
                      mylist::mycons(2u, mylist::mycons(3u, mylist::mynil()))),

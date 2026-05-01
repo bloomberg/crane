@@ -2,18 +2,16 @@
 #define INCLUDED_UNIT_TYPE
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct UnitType {
   static inline const std::monostate unit_val = std::monostate{};
   static void return_unit(const unsigned int _x);
-  __attribute__((pure)) static unsigned int take_unit(const std::monostate _x);
-  __attribute__((pure)) static unsigned int match_unit(const std::monostate u);
+  static unsigned int take_unit(const std::monostate &_x);
+  static unsigned int match_unit(const std::monostate &u);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -30,39 +28,70 @@ struct UnitType {
 
   public:
     // CREATORS
+    pair() {}
+
     explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<pair<t_A, t_B>> pair0(t_A a0, t_B a1) {
-      return std::make_shared<pair<t_A, t_B>>(
-          Pair0{std::move(a0), std::move(a1)});
+    pair(const pair<t_A, t_B> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    pair(pair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    pair<t_A, t_B> &operator=(const pair<t_A, t_B> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    pair<t_A, t_B> clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
+      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
+    }
+
+    // CREATORS
+    template <typename _U0, typename _U1>
+    explicit pair(const pair<_U0, _U1> &_other) {
+      const auto &[d_a0, d_a1] =
+          std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
+      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+    }
+
+    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
+      return pair(Pair0{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 pair_rect(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+  static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, typename T2, typename T3, MapsTo<T3, T1, T2> F0>
-  static T3 pair_rec(F0 &&f, const std::shared_ptr<pair<T1, T2>> &p) {
-    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p->v());
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+  static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
+    const auto &[d_a0, d_a1] = std::get<typename pair<T1, T2>::Pair0>(p.v());
     return f(d_a0, d_a1);
   }
 
-  static inline const std::shared_ptr<pair<unsigned int, std::monostate>>
-      pair_with_unit =
-          pair<unsigned int, std::monostate>::pair0(3u, std::monostate{});
-  static inline const std::shared_ptr<pair<std::monostate, std::monostate>>
-      unit_pair = pair<std::monostate, std::monostate>::pair0(std::monostate{},
-                                                              std::monostate{});
-  static void unit_to_unit(const std::monostate u);
+  static inline const pair<unsigned int, std::monostate> pair_with_unit =
+      pair<unsigned int, std::monostate>::pair0(3u, std::monostate{});
+  static inline const pair<std::monostate, std::monostate> unit_pair =
+      pair<std::monostate, std::monostate>::pair0(std::monostate{},
+                                                  std::monostate{});
+  static void unit_to_unit(std::monostate u);
 
   template <typename T1, typename T2> static T2 seq(const T1, const T2 b) {
     return b;

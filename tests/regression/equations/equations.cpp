@@ -1,14 +1,6 @@
 #include <equations.h>
 
-#include <any>
-#include <concepts>
-#include <functional>
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
-__attribute__((pure)) bool PeanoNat::even(const unsigned int n) {
+bool PeanoNat::even(const unsigned int n) {
   if (n <= 0) {
     return true;
   } else {
@@ -22,7 +14,7 @@ __attribute__((pure)) bool PeanoNat::even(const unsigned int n) {
   }
 }
 
-__attribute__((pure)) unsigned int PeanoNat::div2(const unsigned int n) {
+unsigned int PeanoNat::div2(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -36,15 +28,14 @@ __attribute__((pure)) unsigned int PeanoNat::div2(const unsigned int n) {
   }
 }
 
-__attribute__((pure)) unsigned int
-Equations::gcd(const std::pair<unsigned int, unsigned int> x) {
+unsigned int Equations::gcd(const std::pair<unsigned int, unsigned int> &x) {
   return gcd_functional(
-      x, [](const std::pair<unsigned int, unsigned int> y) { return gcd(y); });
+      x, [](const std::pair<unsigned int, unsigned int> &y) { return gcd(y); });
 }
 
-__attribute__((pure)) unsigned int
-Equations::gcd_unfold_clause_3(const unsigned int n, const unsigned int n0,
-                               const bool refine) {
+unsigned int Equations::gcd_unfold_clause_3(const unsigned int n,
+                                            const unsigned int n0,
+                                            const bool refine) {
   if (refine) {
     return gcd(std::make_pair(
         (n + 1),
@@ -56,8 +47,8 @@ Equations::gcd_unfold_clause_3(const unsigned int n, const unsigned int n0,
   }
 }
 
-__attribute__((pure)) unsigned int
-Equations::gcd_unfold(const std::pair<unsigned int, unsigned int> p) {
+unsigned int
+Equations::gcd_unfold(const std::pair<unsigned int, unsigned int> &p) {
   const unsigned int &n = p.first;
   const unsigned int &n0 = p.second;
   if (n <= 0) {
@@ -73,8 +64,8 @@ Equations::gcd_unfold(const std::pair<unsigned int, unsigned int> p) {
   }
 }
 
-std::shared_ptr<Equations::gcd_graph>
-Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
+Equations::gcd_graph
+Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> &x) {
   const unsigned int &n = x.first;
   const unsigned int &n0 = x.second;
   if (n <= 0) {
@@ -112,15 +103,13 @@ Equations::gcd_graph_correct(const std::pair<unsigned int, unsigned int> x) {
   }
 }
 
-__attribute__((pure)) unsigned int
-Equations::collatz_steps(const unsigned int x) {
+unsigned int Equations::collatz_steps(const unsigned int x) {
   return collatz_steps_functional(
       x, [](const unsigned int y) { return collatz_steps(y); });
 }
 
-__attribute__((pure)) unsigned int
-Equations::collatz_steps_unfold_clause_3(const unsigned int n,
-                                         const bool refine) {
+unsigned int Equations::collatz_steps_unfold_clause_3(const unsigned int n,
+                                                      const bool refine) {
   if (refine) {
     return (collatz_steps(PeanoNat::div2(n)) + 1);
   } else {
@@ -128,8 +117,7 @@ Equations::collatz_steps_unfold_clause_3(const unsigned int n,
   }
 }
 
-__attribute__((pure)) unsigned int
-Equations::collatz_steps_unfold(const unsigned int n) {
+unsigned int Equations::collatz_steps_unfold(const unsigned int n) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -143,7 +131,7 @@ Equations::collatz_steps_unfold(const unsigned int n) {
   }
 }
 
-std::shared_ptr<Equations::collatz_steps_graph>
+Equations::collatz_steps_graph
 Equations::collatz_steps_graph_correct(const unsigned int x) {
   if (x <= 0) {
     return collatz_steps_graph::collatz_steps_graph_equation_1();

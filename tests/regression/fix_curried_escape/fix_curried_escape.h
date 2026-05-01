@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct FixCurriedEscape {
   /// A local fixpoint that escapes through an option wrapper,
   /// preventing Crane from uncurrying it away.
@@ -21,8 +18,7 @@ struct FixCurriedEscape {
   /// BUG: The std::function holds & references to base.
   /// After make_fn returns, base is destroyed, and calling
   /// the extracted function accesses freed memory.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_fn(const unsigned int base);
   /// test1: unwrap and call — go captures base=42.
   /// go 3 = 42 + 3 = 45.

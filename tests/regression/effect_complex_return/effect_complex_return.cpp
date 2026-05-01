@@ -1,16 +1,5 @@
 #include <effect_complex_return.h>
 
-#include <chrono>
-#include <cstdint>
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// 1. Effect returning a pair
 std::pair<std::string, std::string> EffectComplexReturn::read_pair() {
   std::string a;
@@ -77,8 +66,7 @@ int64_t EffectComplexReturn::elapsed_ms() {
 }
 
 /// 6. Effect result used to build a list
-std::shared_ptr<List<std::string>>
-EffectComplexReturn::read_n(const unsigned int n) {
+List<std::string> EffectComplexReturn::read_n(const unsigned int n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {

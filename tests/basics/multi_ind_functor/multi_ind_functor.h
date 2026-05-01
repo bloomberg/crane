@@ -3,12 +3,11 @@
 
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename M>
 concept Elem = requires {
@@ -39,41 +38,67 @@ template <Elem E> struct Container {
 
   public:
     // CREATORS
+    maybe() {}
+
     explicit maybe(Nothing _v) : d_v_(_v) {}
 
     explicit maybe(Just _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<maybe> nothing() {
-      return std::make_shared<maybe>(Nothing{});
+    maybe(const maybe &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    maybe(maybe &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    maybe &operator=(const maybe &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<maybe> just(unsigned int a0) {
-      return std::make_shared<maybe>(Just{std::move(a0)});
+    maybe &operator=(maybe &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    maybe clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Nothing>(_sv.v())) {
+        return maybe(Nothing{});
+      } else {
+        const auto &[d_a0] = std::get<Just>(_sv.v());
+        return maybe(Just{d_a0});
+      }
+    }
+
+    // CREATORS
+    static maybe nothing() { return maybe(Nothing{}); }
+
+    static maybe just(unsigned int a0) { return maybe(Just{std::move(a0)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 maybe_rect(const T1 f, F1 &&f0, const std::shared_ptr<maybe> &m) {
-    if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 maybe_rect(const T1 f, F1 &&f0, const maybe &m) {
+    if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename maybe::Just>(m->v());
+      const auto &[d_a0] = std::get<typename maybe::Just>(m.v());
       return f0(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 maybe_rec(const T1 f, F1 &&f0, const std::shared_ptr<maybe> &m) {
-    if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 maybe_rec(const T1 f, F1 &&f0, const maybe &m) {
+    if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename maybe::Just>(m->v());
+      const auto &[d_a0] = std::get<typename maybe::Just>(m.v());
       return f0(d_a0);
     }
   }
@@ -83,8 +108,8 @@ template <Elem E> struct Container {
     struct MNil {};
 
     struct MCons {
-      std::shared_ptr<maybe> d_a0;
-      std::shared_ptr<mlist> d_a1;
+      maybe d_a0;
+      std::unique_ptr<mlist> d_a1;
     };
 
     using variant_t = std::variant<MNil, MCons>;
@@ -95,61 +120,122 @@ template <Elem E> struct Container {
 
   public:
     // CREATORS
+    mlist() {}
+
     explicit mlist(MNil _v) : d_v_(_v) {}
 
     explicit mlist(MCons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mlist> mnil() {
-      return std::make_shared<mlist>(MNil{});
+    mlist(const mlist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mlist(mlist &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mlist &operator=(const mlist &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mlist> mcons(const std::shared_ptr<maybe> &a0,
-                                        const std::shared_ptr<mlist> &a1) {
-      return std::make_shared<mlist>(MCons{a0, a1});
+    mlist &operator=(mlist &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mlist> mcons(std::shared_ptr<maybe> &&a0,
-                                        std::shared_ptr<mlist> &&a1) {
-      return std::make_shared<mlist>(MCons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    mlist clone() const {
+      mlist _out{};
+
+      struct _CloneFrame {
+        const mlist *_src;
+        mlist *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mlist *_src = _frame._src;
+        mlist *_dst = _frame._dst;
+        if (std::holds_alternative<MNil>(_src->v())) {
+          _dst->d_v_ = MNil{};
+        } else {
+          const auto &_alt = std::get<MCons>(_src->v());
+          _dst->d_v_ = MCons{_alt.d_a0.clone(),
+                             _alt.d_a1 ? std::make_unique<mlist>() : nullptr};
+          auto &_dst_alt = std::get<MCons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static mlist mnil() { return mlist(MNil{}); }
+
+    static mlist mcons(maybe a0, mlist a1) {
+      return mlist(
+          MCons{std::move(a0), std::make_unique<mlist>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~mlist() {
+      std::vector<std::unique_ptr<mlist>> _stack{};
+      auto _drain = [&](mlist &_node) {
+        if (std::holds_alternative<MCons>(_node.d_v_)) {
+          auto &_alt = std::get<MCons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<maybe>, std::shared_ptr<mlist>, T1> F1>
-  static T1 mlist_rect(const T1 f, F1 &&f0, const std::shared_ptr<mlist> &m) {
-    if (std::holds_alternative<typename mlist::MNil>(m->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
+  static T1 mlist_rect(const T1 f, F1 &&f0, const mlist &m) {
+    if (std::holds_alternative<typename mlist::MNil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m->v());
-      return f0(d_a0, d_a1, mlist_rect<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m.v());
+      return f0(d_a0, *(d_a1), mlist_rect<T1>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1,
-            MapsTo<T1, std::shared_ptr<maybe>, std::shared_ptr<mlist>, T1> F1>
-  static T1 mlist_rec(const T1 f, F1 &&f0, const std::shared_ptr<mlist> &m) {
-    if (std::holds_alternative<typename mlist::MNil>(m->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
+  static T1 mlist_rec(const T1 f, F1 &&f0, const mlist &m) {
+    if (std::holds_alternative<typename mlist::MNil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m->v());
-      return f0(d_a0, d_a1, mlist_rec<T1>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m.v());
+      return f0(d_a0, *(d_a1), mlist_rec<T1>(f, f0, *(d_a1)));
     }
   }
 
   struct mtree {
     // TYPES
     struct Leaf {
-      std::shared_ptr<maybe> d_a0;
+      maybe d_a0;
     };
 
     struct Node {
-      std::shared_ptr<mlist> d_a0;
+      mlist d_a0;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -160,109 +246,125 @@ template <Elem E> struct Container {
 
   public:
     // CREATORS
+    mtree() {}
+
     explicit mtree(Leaf _v) : d_v_(std::move(_v)) {}
 
     explicit mtree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mtree> leaf(const std::shared_ptr<maybe> &a0) {
-      return std::make_shared<mtree>(Leaf{a0});
+    mtree(const mtree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mtree(mtree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mtree &operator=(const mtree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mtree> leaf(std::shared_ptr<maybe> &&a0) {
-      return std::make_shared<mtree>(Leaf{std::move(a0)});
+    mtree &operator=(mtree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    static std::shared_ptr<mtree> node(const std::shared_ptr<mlist> &a0) {
-      return std::make_shared<mtree>(Node{a0});
-    }
-
-    static std::shared_ptr<mtree> node(std::shared_ptr<mlist> &&a0) {
-      return std::make_shared<mtree>(Node{std::move(a0)});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    mtree clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Leaf>(_sv.v())) {
+        const auto &[d_a0] = std::get<Leaf>(_sv.v());
+        return mtree(Leaf{d_a0.clone()});
+      } else {
+        const auto &[d_a0] = std::get<Node>(_sv.v());
+        return mtree(Node{d_a0.clone()});
+      }
+    }
+
+    // CREATORS
+    static mtree leaf(maybe a0) { return mtree(Leaf{std::move(a0)}); }
+
+    static mtree node(mlist a0) { return mtree(Node{std::move(a0)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<maybe>> F0,
-            MapsTo<T1, std::shared_ptr<mlist>> F1>
-  static T1 mtree_rect(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
-    if (std::holds_alternative<typename mtree::Leaf>(m->v())) {
-      const auto &[d_a0] = std::get<typename mtree::Leaf>(m->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, maybe &> &&
+             std::is_invocable_r_v<T1, F1 &, mlist &>
+  static T1 mtree_rect(F0 &&f, F1 &&f0, const mtree &m) {
+    if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(m.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename mtree::Node>(m->v());
+      const auto &[d_a0] = std::get<typename mtree::Node>(m.v());
       return f0(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<maybe>> F0,
-            MapsTo<T1, std::shared_ptr<mlist>> F1>
-  static T1 mtree_rec(F0 &&f, F1 &&f0, const std::shared_ptr<mtree> &m) {
-    if (std::holds_alternative<typename mtree::Leaf>(m->v())) {
-      const auto &[d_a0] = std::get<typename mtree::Leaf>(m->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, maybe &> &&
+             std::is_invocable_r_v<T1, F1 &, mlist &>
+  static T1 mtree_rec(F0 &&f, F1 &&f0, const mtree &m) {
+    if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(m.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename mtree::Node>(m->v());
+      const auto &[d_a0] = std::get<typename mtree::Node>(m.v());
       return f0(d_a0);
     }
   }
 
-  __attribute__((pure)) static bool
-  is_nothing(const std::shared_ptr<maybe> &m) {
-    if (std::holds_alternative<typename maybe::Nothing>(m->v())) {
+  static bool is_nothing(const maybe &m) {
+    if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return true;
     } else {
       return false;
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  mlist_length(const std::shared_ptr<mlist> &l) {
-    if (std::holds_alternative<typename mlist::MNil>(l->v())) {
+  static unsigned int mlist_length(const mlist &l) {
+    if (std::holds_alternative<typename mlist::MNil>(l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(l->v());
-      return (mlist_length(d_a1) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(l.v());
+      return (mlist_length(*(d_a1)) + 1);
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_size(const std::shared_ptr<mtree> &t0) {
-    if (std::holds_alternative<typename mtree::Leaf>(t0->v())) {
-      const auto &[d_a0] = std::get<typename mtree::Leaf>(t0->v());
+  static unsigned int tree_size(const mtree &t0) {
+    if (std::holds_alternative<typename mtree::Leaf>(t0.v())) {
+      const auto &[d_a0] = std::get<typename mtree::Leaf>(t0.v());
       if (is_nothing(d_a0)) {
         return 0u;
       } else {
         return 1u;
       }
     } else {
-      const auto &[d_a0] = std::get<typename mtree::Node>(t0->v());
+      const auto &[d_a0] = std::get<typename mtree::Node>(t0.v());
       return mlist_length(d_a0);
     }
   }
 
-  static const std::shared_ptr<maybe> &empty_maybe() {
-    static const std::shared_ptr<maybe> v = maybe::nothing();
+  static const maybe &empty_maybe() {
+    static const maybe v = maybe::nothing();
     return v;
   }
 
-  static const std::shared_ptr<maybe> &some_val() {
-    static const std::shared_ptr<maybe> v = maybe::just(42u);
+  static const maybe &some_val() {
+    static const maybe v = maybe::just(42u);
     return v;
   }
 
-  static const std::shared_ptr<mlist> &sample_list() {
-    static const std::shared_ptr<mlist> v = mlist::mcons(
+  static const mlist &sample_list() {
+    static const mlist v = mlist::mcons(
         maybe::just(42u), mlist::mcons(maybe::nothing(), mlist::mnil()));
     return v;
   }
 
-  static const std::shared_ptr<mtree> &sample_tree() {
-    static const std::shared_ptr<mtree> v = mtree::node(sample_list());
+  static const mtree &sample_tree() {
+    static const mtree v = mtree::node(sample_list());
     return v;
   }
 };

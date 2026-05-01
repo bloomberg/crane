@@ -3,13 +3,11 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,7 +15,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -28,79 +26,152 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct LoopifyExtrema {
-  __attribute__((pure)) static unsigned int
-  maximum(const std::shared_ptr<List<unsigned int>> &l);
-  __attribute__((pure)) static unsigned int
-  minimum(const std::shared_ptr<List<unsigned int>> &l);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  minmax(const std::shared_ptr<List<unsigned int>> &l);
+  static unsigned int maximum(const List<unsigned int> &l);
+  static unsigned int minimum(const List<unsigned int> &l);
+  static std::pair<unsigned int, unsigned int>
+  minmax(const List<unsigned int> &l);
 
-  template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  max_by(F0 &&f, const std::shared_ptr<List<unsigned int>> &l) {
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+  static unsigned int max_by(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const std::shared_ptr<List<unsigned int>> l;
+      const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<unsigned int> &l = *(_f.l);
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &&_sv = *(d_a1);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  d_a1->v())) {
+                  _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1});
+            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
-        unsigned int d_a0 = _f._s0;
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = _f.d_a0;
+        F0 f = _f.f;
         unsigned int rest_max = _result;
         unsigned int fx = f(d_a0);
         if (rest_max < fx) {
@@ -113,46 +184,50 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  min_by(F0 &&f, const std::shared_ptr<List<unsigned int>> &l) {
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+  static unsigned int min_by(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const std::shared_ptr<List<unsigned int>> l;
+      const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<unsigned int> &l = *(_f.l);
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &&_sv = *(d_a1);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  d_a1->v())) {
+                  _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1});
+            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
-        unsigned int d_a0 = _f._s0;
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = _f.d_a0;
+        F0 f = _f.f;
         unsigned int rest_min = _result;
         unsigned int fx = f(d_a0);
         if (fx < rest_min) {
@@ -165,46 +240,50 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  argmax(F0 &&f, const std::shared_ptr<List<unsigned int>> &l) {
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+  static unsigned int argmax(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const std::shared_ptr<List<unsigned int>> l;
+      const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<unsigned int> &l = *(_f.l);
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &&_sv = *(d_a1);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  d_a1->v())) {
+                  _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1});
+            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
-        unsigned int d_a0 = _f._s0;
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = _f.d_a0;
+        F0 f = _f.f;
         unsigned int rest_best = _result;
         unsigned int fx = f(d_a0);
         unsigned int f_rest = f(rest_best);
@@ -218,46 +297,50 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int
-  argmin(F0 &&f, const std::shared_ptr<List<unsigned int>> &l) {
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+  static unsigned int argmin(F0 &&f, const List<unsigned int> &l) {
     struct _Enter {
-      const std::shared_ptr<List<unsigned int>> l;
+      const List<unsigned int> *l;
     };
 
-    struct _Call1 {
-      unsigned int _s0;
-      F0 _s1;
+    /// Continuation: saves [d_a0, f] across recursive call, then processes
+    /// rest.
+    struct _Cont1 {
+      unsigned int d_a0;
+      F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Call1>;
+    using _Frame = std::variant<_Enter, _Cont1>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{&l});
+    /// Frame dispatch: _Enter, _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
-        const auto &_f = std::get<_Enter>(_frame);
-        const std::shared_ptr<List<unsigned int>> l = _f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l->v())) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<unsigned int> &l = *(_f.l);
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l->v());
+              std::get<typename List<unsigned int>::Cons>(l.v());
+          auto &&_sv = *(d_a1);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  d_a1->v())) {
+                  _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Call1{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1});
+            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        const auto &_f = std::get<_Call1>(_frame);
-        unsigned int d_a0 = _f._s0;
-        F0 f = _f._s1;
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        unsigned int d_a0 = _f.d_a0;
+        F0 f = _f.f;
         unsigned int rest_best = _result;
         unsigned int fx = f(d_a0);
         unsigned int f_rest = f(rest_best);
@@ -271,19 +354,16 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  __attribute__((pure)) static unsigned int
-  lex_compare(const std::shared_ptr<List<unsigned int>> &l1,
-              const std::shared_ptr<List<unsigned int>> &l2);
-  __attribute__((pure)) static bool
-  all_equal(const std::shared_ptr<List<unsigned int>> &l);
-  __attribute__((pure)) static bool
-  is_sorted(const std::shared_ptr<List<unsigned int>> &l);
+  static unsigned int lex_compare(const List<unsigned int> &l1,
+                                  const List<unsigned int> &l2);
+  static bool all_equal(const List<unsigned int> &l);
+  static bool is_sorted(const List<unsigned int> &l);
 
-  template <MapsTo<bool, unsigned int, unsigned int> F0>
-  __attribute__((pure)) static bool
-  adjacent_all(F0 &&p, const std::shared_ptr<List<unsigned int>> &l) {
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
+  static bool adjacent_all(F0 &&p, const List<unsigned int> &l) {
     bool _result;
-    std::shared_ptr<List<unsigned int>> _loop_l = l;
+    const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
@@ -292,15 +372,16 @@ struct LoopifyExtrema {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+        auto &&_sv0 = *(d_a1);
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                d_a1->v())) {
+                _sv0.v())) {
           _result = true;
           break;
         } else {
           const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(d_a1->v());
+              std::get<typename List<unsigned int>::Cons>(_sv0.v());
           if (p(d_a0, d_a00)) {
-            _loop_l = d_a1;
+            _loop_l = d_a1.get();
           } else {
             _result = false;
             break;

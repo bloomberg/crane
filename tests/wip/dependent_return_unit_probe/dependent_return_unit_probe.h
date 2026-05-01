@@ -2,11 +2,10 @@
 #define INCLUDED_DEPENDENT_RETURN_UNIT_PROBE
 
 #include <any>
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 enum class Unit { e_TT };
 enum class Bool0 { e_TRUE0, e_FALSE0 };

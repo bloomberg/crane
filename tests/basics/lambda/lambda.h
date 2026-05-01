@@ -1,28 +1,25 @@
 #ifndef INCLUDED_LAMBDA
 #define INCLUDED_LAMBDA
 
+#include <memory>
+#include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct Lambda {
-  __attribute__((pure)) static unsigned int simple_lambda(const unsigned int x);
-  __attribute__((pure)) static unsigned int multi_arg(const unsigned int _x0,
-                                                      const unsigned int _x1);
-  __attribute__((pure)) static unsigned int nested_lambda(const unsigned int x,
-                                                          const unsigned int y,
-                                                          const unsigned int z);
-  __attribute__((pure)) static unsigned int make_adder(const unsigned int _x0,
-                                                       const unsigned int _x1);
+  static unsigned int simple_lambda(const unsigned int x);
+  static unsigned int multi_arg(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int nested_lambda(const unsigned int x, const unsigned int y,
+                                    const unsigned int z);
+  static unsigned int make_adder(const unsigned int _x0,
+                                 const unsigned int _x1);
   static inline const unsigned int with_let = []() {
     unsigned int x = 5u;
     return (x * 2u);
   }();
 
-  template <MapsTo<unsigned int, unsigned int> F0>
-  __attribute__((pure)) static unsigned int apply_fn(F0 &&f,
-                                                     const unsigned int _x0) {
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+  static unsigned int apply_fn(F0 &&f, const unsigned int _x0) {
     return f(_x0);
   }
 

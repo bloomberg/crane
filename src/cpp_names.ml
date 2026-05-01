@@ -513,6 +513,11 @@ let lookup_method_this_pos n =
   | Some (_, pos) -> Some pos
   | None -> None
 
+(** Check if a method's receiver is a pointer type (coinductive/shared_ptr)
+    rather than a value type.  All inductives (including coinductives)
+    are value types, so this always returns false. *)
+let method_receiver_is_ptr _n = false
+
 (** Helper module for tracking variable names *)
 (** Set of [Id.t] names for tracking variable identifiers. *)
 module IdSet = Set.Make (Names.Id)

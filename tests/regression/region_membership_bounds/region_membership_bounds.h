@@ -2,35 +2,26 @@
 #define INCLUDED_REGION_MEMBERSHIP_BOUNDS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct RegionMembershipBounds {
   struct layout {
     unsigned int base_addr;
     unsigned int code_size;
+
+    // ACCESSORS
+    layout clone() const {
+      return layout{(*(this)).base_addr, (*(this)).code_size};
+    }
   };
 
-  __attribute__((pure)) static bool
-  addr_in_regionb(const unsigned int addr, const std::shared_ptr<layout> &l);
+  static bool addr_in_regionb(const unsigned int addr, const layout &l);
   static inline const unsigned int t = []() {
     return []() {
-      std::shared_ptr<layout> l = std::make_shared<layout>(layout{100u, 20u});
-      return ([&]() -> unsigned int {
-        if (addr_in_regionb(110u, l)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }() + [&]() -> unsigned int {
-        if (addr_in_regionb(121u, l)) {
-          return 1u;
-        } else {
-          return 0u;
-        }
-      }());
+      layout l = layout{100u, 20u};
+      return ((addr_in_regionb(110u, l) ? 1u : 0u) +
+              (addr_in_regionb(121u, l) ? 1u : 0u));
     }();
   }();
 };

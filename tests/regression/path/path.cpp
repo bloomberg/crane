@@ -1,9 +1,5 @@
 #include <path.h>
 
-#include <filesystem>
-#include <string>
-#include <type_traits>
-
 std::string Path::abs_path(const std::string p) {
   return std::filesystem::absolute(std::filesystem::path(p)).string();
 }

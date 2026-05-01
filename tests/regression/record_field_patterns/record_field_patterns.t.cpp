@@ -35,8 +35,8 @@ int main() {
   ASSERT(RecordFieldPatterns::test_nonzero == 14);  // S 4 + 10
 
   // 2. Record through polymorphic identity
-  ASSERT(RecordFieldPatterns::test_id->px == 99);
-  ASSERT(RecordFieldPatterns::test_id->py == 1);
+  ASSERT(RecordFieldPatterns::test_id.px == 99);
+  ASSERT(RecordFieldPatterns::test_id.py == 1);
 
   // 3. Section-parameterized function over record
   ASSERT(RecordFieldPatterns::test_labeled == 90);  // 3 * (10 + 20)
@@ -52,8 +52,8 @@ int main() {
   ASSERT(RecordFieldPatterns::test_sum == 60);
 
   // 8. Swap
-  ASSERT(RecordFieldPatterns::test_swap->px == 7);
-  ASSERT(RecordFieldPatterns::test_swap->py == 3);
+  ASSERT(RecordFieldPatterns::test_swap.px == 7);
+  ASSERT(RecordFieldPatterns::test_swap.py == 3);
 
   // 9. Type-valued field record
   ASSERT(RecordFieldPatterns::test_container == 5);

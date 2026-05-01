@@ -30,6 +30,14 @@ val clear_local_inductives : unit -> unit
 
 val get_local_inductives : unit -> GlobRef.t list
 
+(** Set method_self_ns from local_inductives for standalone functions.
+    Returns the saved previous value for restoration via
+    {!restore_method_self_ns}. *)
+val set_method_ns_for_locals : unit -> Refset'.t
+
+(** Restore method_self_ns to a previously saved value. *)
+val restore_method_self_ns : Refset'.t -> unit
+
 (** Return the codomain of an ML type, chasing through arrows and meta
     indirections. For [A -> B -> C] this returns [C]. *)
 val ml_codomain : Miniml.ml_type -> Miniml.ml_type
@@ -162,6 +170,7 @@ val gen_ind_header :
 val gen_ind_header_v2 :
   ?is_mutual:bool ->
   ?consarg_names:Id.t option list array ->
+  ?mutual_partners:(GlobRef.t * GlobRef.t array * ml_type list array * Id.t option list array) list ->
   variable list ->
   GlobRef.t ->
   GlobRef.t array ->

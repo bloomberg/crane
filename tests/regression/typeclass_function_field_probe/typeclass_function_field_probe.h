@@ -2,16 +2,15 @@
 #define INCLUDED_TYPECLASS_FUNCTION_FIELD_PROBE
 
 #include <concepts>
+#include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
 struct Datatypes {
-  __attribute__((pure)) static Bool0 negb(const Bool0 b);
+  static Bool0 negb(const Bool0 b);
 };
 
 template <typename I, typename t_A>

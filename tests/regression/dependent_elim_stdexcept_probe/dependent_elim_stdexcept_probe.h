@@ -1,12 +1,11 @@
 #ifndef INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE
 #define INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE
 
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 enum class Unit { e_TT };
 enum class Bool0 { e_TRUE0, e_FALSE0 };

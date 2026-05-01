@@ -6,9 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -16,7 +14,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -27,54 +25,123 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  __attribute__((pure)) static unsigned int pow(const unsigned int n,
-                                                const unsigned int m);
+  static unsigned int pow(const unsigned int n, const unsigned int m);
 };
 
 struct PageOps {
   struct state {
     unsigned int pc;
+
+    // ACCESSORS
+    state clone() const { return state{(*(this)).pc}; }
   };
 
-  __attribute__((pure)) static unsigned int addr12_of_nat(const unsigned int n);
-  __attribute__((pure)) static unsigned int page_of(const unsigned int p);
-  __attribute__((pure)) static unsigned int page_base(const unsigned int p);
-  __attribute__((pure)) static unsigned int page_offset(const unsigned int p);
-  __attribute__((pure)) static unsigned int
-  pc_inc1(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int
-  pc_inc2(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int
-  base_for_next1(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int
-  base_for_next2(const std::shared_ptr<state> &s);
-  __attribute__((pure)) static unsigned int recompose(const unsigned int p);
+  static unsigned int addr12_of_nat(const unsigned int n);
+  static unsigned int page_of(const unsigned int p);
+  static unsigned int page_base(const unsigned int p);
+  static unsigned int page_offset(const unsigned int p);
+  static unsigned int pc_inc1(const state &s);
+  static unsigned int pc_inc2(const state &s);
+  static unsigned int base_for_next1(const state &s);
+  static unsigned int base_for_next2(const state &s);
+  static unsigned int recompose(const unsigned int p);
   static inline const unsigned int max_addr = ((
       (Nat::pow(2u, 12u) - 1u) > Nat::pow(2u, 12u) ? 0
                                                    : (Nat::pow(2u, 12u) - 1u)));
@@ -95,82 +162,105 @@ struct PageOps {
 
   public:
     // CREATORS
+    instruction() {}
+
     explicit instruction(NOP _v) : d_v_(_v) {}
 
     explicit instruction(LDM _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<instruction> nop() {
-      return std::make_shared<instruction>(NOP{});
+    instruction(const instruction &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    instruction(instruction &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    instruction &operator=(const instruction &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<instruction> ldm(unsigned int a0) {
-      return std::make_shared<instruction>(LDM{std::move(a0)});
+    instruction &operator=(instruction &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    instruction clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<NOP>(_sv.v())) {
+        return instruction(NOP{});
+      } else {
+        const auto &[d_a0] = std::get<LDM>(_sv.v());
+        return instruction(LDM{d_a0});
+      }
+    }
+
+    // CREATORS
+    static instruction nop() { return instruction(NOP{}); }
+
+    static instruction ldm(unsigned int a0) {
+      return instruction(LDM{std::move(a0)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 instruction_rect(const T1 f, F1 &&f0,
-                             const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 instruction_rect(const T1 f, F1 &&f0, const instruction &i) {
+    if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i.v());
       return f0(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
-  static T1 instruction_rec(const T1 f, F1 &&f0,
-                            const std::shared_ptr<instruction> &i) {
-    if (std::holds_alternative<typename instruction::NOP>(i->v())) {
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 instruction_rec(const T1 f, F1 &&f0, const instruction &i) {
+    if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename instruction::LDM>(i->v());
+      const auto &[d_a0] = std::get<typename instruction::LDM>(i.v());
       return f0(d_a0);
     }
   }
 
-  static std::shared_ptr<instruction> decode(const unsigned int b1,
-                                             const unsigned int b2);
+  static instruction decode(const unsigned int b1, const unsigned int b2);
 
   template <typename T1>
-  static std::shared_ptr<List<T1>> drop(const unsigned int n,
-                                        std::shared_ptr<List<T1>> l) {
+  static List<T1> drop(const unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
       unsigned int n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l->v())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l->v());
-        return drop<T1>(n_, d_a1);
+        auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        return drop<T1>(n_, *(d_a1));
       }
     }
   }
 
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<instruction>, unsigned int>>
-  disassemble(const std::shared_ptr<List<unsigned int>> &rom,
-              const unsigned int addr);
+  static std::optional<std::pair<instruction, unsigned int>>
+  disassemble(const List<unsigned int> &rom, const unsigned int addr);
   static inline const unsigned int test_page_base_alignment =
       (256u ? page_base(777u) % 256u : page_base(777u));
   static inline const unsigned int test_page_base_next_pc = []() {
-    std::shared_ptr<state> s = std::make_shared<state>(state{511u});
+    state s = state{511u};
     return (base_for_next1(s) + base_for_next2(s));
   }();
   static inline const unsigned int test_page_boundary_cross =
-      base_for_next1(std::make_shared<state>(state{255u}));
+      base_for_next1(state{255u});
   static inline const unsigned int test_base_for_next_page_cross_1 =
-      base_for_next1(std::make_shared<state>(state{255u}));
+      base_for_next1(state{255u});
   static inline const unsigned int test_base_for_next_page_cross_2 =
-      base_for_next2(std::make_shared<state>(state{255u}));
+      base_for_next2(state{255u});
   static inline const bool test_page_decomp_roundtrip =
       (((256u ? 1027u / 256u : 0) * 256u) + (256u ? 1027u % 256u : 1027u)) ==
       1027u;
@@ -179,11 +269,9 @@ struct PageOps {
   static inline const unsigned int test_page_recompose =
       recompose(addr12_of_nat(1027u));
   static inline const unsigned int test_pc_inc2_wraparound =
-      pc_inc2(std::make_shared<state>(state{max_addr}));
-  static inline const unsigned int test_pc_inc1_wrap =
-      pc_inc1(std::make_shared<state>(state{max_addr}));
-  static inline const unsigned int test_pc_inc2_wrap =
-      pc_inc2(std::make_shared<state>(state{max_addr}));
+      pc_inc2(state{max_addr});
+  static inline const unsigned int test_pc_inc1_wrap = pc_inc1(state{max_addr});
+  static inline const unsigned int test_pc_inc2_wrap = pc_inc2(state{max_addr});
   static inline const unsigned int test_disassemble_edge =
       []() -> unsigned int {
     auto _cs = disassemble(
@@ -194,8 +282,8 @@ struct PageOps {
                                     11u, List<unsigned int>::nil())))),
         0u);
     if (_cs.has_value()) {
-      const std::pair<std::shared_ptr<instruction>, unsigned int> &p = *_cs;
-      const std::shared_ptr<instruction> &_x = p.first;
+      const std::pair<instruction, unsigned int> &p = *_cs;
+      const instruction &_x = p.first;
       const unsigned int &next = p.second;
       return next;
     } else {

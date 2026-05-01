@@ -108,7 +108,7 @@ int main() {
       LoopifyOption::map_opt<unsigned int, unsigned int>(even_double, l5);
   // l5 = [1,2,3,4,5], evens = [2,4], doubled = [4,8]
   // mapped should be [4,8] - length check removed (length is stdlib)
-  ASSERT(std::get<List::Cons>(mapped->v()).d_a0 == 4u);
+  ASSERT(std::get<List::Cons>(mapped.v()).d_a0 == 4u);
 
   // Test find_index
   auto fi = LoopifyOption::find_index(gt3, l5);

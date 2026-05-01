@@ -6,9 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -16,7 +14,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -27,56 +25,132 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <MapsTo<bool, t_A> F0>
-  __attribute__((pure)) bool forallb(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+  bool forallb(F0 &&f) const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (f(d_a0) && d_a1->forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return (f(d_a0) && (*(d_a1)).forallb(f));
     }
   }
 
-  template <typename T1, MapsTo<T1, T1, t_A> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, const T1 a0) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
-  __attribute__((pure)) unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  unsigned int length() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return ((*(d_a1)).length() + 1);
     }
   }
 };
@@ -86,43 +160,43 @@ struct Uint {
   struct Nil {};
 
   struct D0 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D1 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D2 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D3 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D4 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D5 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D6 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D7 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D8 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   struct D9 {
-    std::shared_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> d_a0;
   };
 
   using variant_t = std::variant<Nil, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9>;
@@ -133,6 +207,8 @@ private:
 
 public:
   // CREATORS
+  Uint() {}
+
   explicit Uint(Nil _v) : d_v_(_v) {}
 
   explicit Uint(D0 _v) : d_v_(std::move(_v)) {}
@@ -155,93 +231,235 @@ public:
 
   explicit Uint(D9 _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Uint> nil() { return std::make_shared<Uint>(Nil{}); }
+  Uint(const Uint &_other) : d_v_(std::move(_other.clone().d_v_)) {}
 
-  static std::shared_ptr<Uint> d0(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D0{a0});
+  Uint(Uint &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  Uint &operator=(const Uint &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint> d0(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D0{std::move(a0)});
+  Uint &operator=(Uint &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint> d1(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D1{a0});
+  // ACCESSORS
+  Uint clone() const {
+    Uint _out{};
+
+    struct _CloneFrame {
+      const Uint *_src;
+      Uint *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint *_src = _frame._src;
+      Uint *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else if (std::holds_alternative<D0>(_src->v())) {
+        const auto &_alt = std::get<D0>(_src->v());
+        _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D0>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D1>(_src->v())) {
+        const auto &_alt = std::get<D1>(_src->v());
+        _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D1>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D2>(_src->v())) {
+        const auto &_alt = std::get<D2>(_src->v());
+        _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D2>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D3>(_src->v())) {
+        const auto &_alt = std::get<D3>(_src->v());
+        _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D3>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D4>(_src->v())) {
+        const auto &_alt = std::get<D4>(_src->v());
+        _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D4>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D5>(_src->v())) {
+        const auto &_alt = std::get<D5>(_src->v());
+        _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D5>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D6>(_src->v())) {
+        const auto &_alt = std::get<D6>(_src->v());
+        _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D6>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D7>(_src->v())) {
+        const auto &_alt = std::get<D7>(_src->v());
+        _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D7>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D8>(_src->v())) {
+        const auto &_alt = std::get<D8>(_src->v());
+        _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D8>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else {
+        const auto &_alt = std::get<D9>(_src->v());
+        _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D9>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      }
+    }
+    return _out;
   }
 
-  static std::shared_ptr<Uint> d1(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D1{std::move(a0)});
+  // CREATORS
+  static Uint nil() { return Uint(Nil{}); }
+
+  static Uint d0(Uint a0) {
+    return Uint(D0{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d2(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D2{a0});
+  static Uint d1(Uint a0) {
+    return Uint(D1{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d2(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D2{std::move(a0)});
+  static Uint d2(Uint a0) {
+    return Uint(D2{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d3(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D3{a0});
+  static Uint d3(Uint a0) {
+    return Uint(D3{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d3(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D3{std::move(a0)});
+  static Uint d4(Uint a0) {
+    return Uint(D4{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d4(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D4{a0});
+  static Uint d5(Uint a0) {
+    return Uint(D5{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d4(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D4{std::move(a0)});
+  static Uint d6(Uint a0) {
+    return Uint(D6{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d5(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D5{a0});
+  static Uint d7(Uint a0) {
+    return Uint(D7{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d5(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D5{std::move(a0)});
+  static Uint d8(Uint a0) {
+    return Uint(D8{std::make_unique<Uint>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint> d6(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D6{a0});
-  }
-
-  static std::shared_ptr<Uint> d6(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D6{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint> d7(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D7{a0});
-  }
-
-  static std::shared_ptr<Uint> d7(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D7{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint> d8(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D8{a0});
-  }
-
-  static std::shared_ptr<Uint> d8(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D8{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint> d9(const std::shared_ptr<Uint> &a0) {
-    return std::make_shared<Uint>(D9{a0});
-  }
-
-  static std::shared_ptr<Uint> d9(std::shared_ptr<Uint> &&a0) {
-    return std::make_shared<Uint>(D9{std::move(a0)});
+  static Uint d9(Uint a0) {
+    return Uint(D9{std::make_unique<Uint>(std::move(a0))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~Uint() {
+    std::vector<std::unique_ptr<Uint>> _stack{};
+    auto _drain = [&](Uint &_node) {
+      if (std::holds_alternative<D0>(_node.d_v_)) {
+        auto &_alt = std::get<D0>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D1>(_node.d_v_)) {
+        auto &_alt = std::get<D1>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D2>(_node.d_v_)) {
+        auto &_alt = std::get<D2>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D3>(_node.d_v_)) {
+        auto &_alt = std::get<D3>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D4>(_node.d_v_)) {
+        auto &_alt = std::get<D4>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D5>(_node.d_v_)) {
+        auto &_alt = std::get<D5>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D6>(_node.d_v_)) {
+        auto &_alt = std::get<D6>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D7>(_node.d_v_)) {
+        auto &_alt = std::get<D7>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D8>(_node.d_v_)) {
+        auto &_alt = std::get<D8>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D9>(_node.d_v_)) {
+        auto &_alt = std::get<D9>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Uint0 {
@@ -249,67 +467,67 @@ struct Uint0 {
   struct Nil0 {};
 
   struct D10 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D11 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D12 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D13 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D14 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D15 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D16 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D17 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D18 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct D19 {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Da {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Db {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Dc {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Dd {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct De {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   struct Df {
-    std::shared_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> d_a0;
   };
 
   using variant_t = std::variant<Nil0, D10, D11, D12, D13, D14, D15, D16, D17,
@@ -321,6 +539,8 @@ private:
 
 public:
   // CREATORS
+  Uint0() {}
+
   explicit Uint0(Nil0 _v) : d_v_(_v) {}
 
   explicit Uint0(D10 _v) : d_v_(std::move(_v)) {}
@@ -355,153 +575,347 @@ public:
 
   explicit Uint0(Df _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Uint0> nil0() {
-    return std::make_shared<Uint0>(Nil0{});
+  Uint0(const Uint0 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  Uint0(Uint0 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  Uint0 &operator=(const Uint0 &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint0> d10(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D10{a0});
+  Uint0 &operator=(Uint0 &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint0> d10(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D10{std::move(a0)});
+  // ACCESSORS
+  Uint0 clone() const {
+    Uint0 _out{};
+
+    struct _CloneFrame {
+      const Uint0 *_src;
+      Uint0 *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const Uint0 *_src = _frame._src;
+      Uint0 *_dst = _frame._dst;
+      if (std::holds_alternative<Nil0>(_src->v())) {
+        _dst->d_v_ = Nil0{};
+      } else if (std::holds_alternative<D10>(_src->v())) {
+        const auto &_alt = std::get<D10>(_src->v());
+        _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D10>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D11>(_src->v())) {
+        const auto &_alt = std::get<D11>(_src->v());
+        _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D11>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D12>(_src->v())) {
+        const auto &_alt = std::get<D12>(_src->v());
+        _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D12>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D13>(_src->v())) {
+        const auto &_alt = std::get<D13>(_src->v());
+        _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D13>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D14>(_src->v())) {
+        const auto &_alt = std::get<D14>(_src->v());
+        _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D14>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D15>(_src->v())) {
+        const auto &_alt = std::get<D15>(_src->v());
+        _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D15>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D16>(_src->v())) {
+        const auto &_alt = std::get<D16>(_src->v());
+        _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D16>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D17>(_src->v())) {
+        const auto &_alt = std::get<D17>(_src->v());
+        _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D17>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D18>(_src->v())) {
+        const auto &_alt = std::get<D18>(_src->v());
+        _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D18>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<D19>(_src->v())) {
+        const auto &_alt = std::get<D19>(_src->v());
+        _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D19>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<Da>(_src->v())) {
+        const auto &_alt = std::get<Da>(_src->v());
+        _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Da>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<Db>(_src->v())) {
+        const auto &_alt = std::get<Db>(_src->v());
+        _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Db>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<Dc>(_src->v())) {
+        const auto &_alt = std::get<Dc>(_src->v());
+        _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dc>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<Dd>(_src->v())) {
+        const auto &_alt = std::get<Dd>(_src->v());
+        _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dd>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else if (std::holds_alternative<De>(_src->v())) {
+        const auto &_alt = std::get<De>(_src->v());
+        _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<De>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      } else {
+        const auto &_alt = std::get<Df>(_src->v());
+        _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Df>(_dst->d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        }
+      }
+    }
+    return _out;
   }
 
-  static std::shared_ptr<Uint0> d11(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D11{a0});
+  // CREATORS
+  static Uint0 nil0() { return Uint0(Nil0{}); }
+
+  static Uint0 d10(Uint0 a0) {
+    return Uint0(D10{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d11(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D11{std::move(a0)});
+  static Uint0 d11(Uint0 a0) {
+    return Uint0(D11{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d12(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D12{a0});
+  static Uint0 d12(Uint0 a0) {
+    return Uint0(D12{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d12(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D12{std::move(a0)});
+  static Uint0 d13(Uint0 a0) {
+    return Uint0(D13{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d13(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D13{a0});
+  static Uint0 d14(Uint0 a0) {
+    return Uint0(D14{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d13(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D13{std::move(a0)});
+  static Uint0 d15(Uint0 a0) {
+    return Uint0(D15{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d14(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D14{a0});
+  static Uint0 d16(Uint0 a0) {
+    return Uint0(D16{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d14(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D14{std::move(a0)});
+  static Uint0 d17(Uint0 a0) {
+    return Uint0(D17{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d15(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D15{a0});
+  static Uint0 d18(Uint0 a0) {
+    return Uint0(D18{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d15(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D15{std::move(a0)});
+  static Uint0 d19(Uint0 a0) {
+    return Uint0(D19{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d16(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D16{a0});
+  static Uint0 da(Uint0 a0) {
+    return Uint0(Da{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d16(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D16{std::move(a0)});
+  static Uint0 db(Uint0 a0) {
+    return Uint0(Db{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d17(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D17{a0});
+  static Uint0 dc(Uint0 a0) {
+    return Uint0(Dc{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d17(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D17{std::move(a0)});
+  static Uint0 dd(Uint0 a0) {
+    return Uint0(Dd{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d18(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D18{a0});
+  static Uint0 de(Uint0 a0) {
+    return Uint0(De{std::make_unique<Uint0>(std::move(a0))});
   }
 
-  static std::shared_ptr<Uint0> d18(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D18{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> d19(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(D19{a0});
-  }
-
-  static std::shared_ptr<Uint0> d19(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(D19{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> da(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Da{a0});
-  }
-
-  static std::shared_ptr<Uint0> da(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Da{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> db(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Db{a0});
-  }
-
-  static std::shared_ptr<Uint0> db(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Db{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> dc(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Dc{a0});
-  }
-
-  static std::shared_ptr<Uint0> dc(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Dc{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> dd(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Dd{a0});
-  }
-
-  static std::shared_ptr<Uint0> dd(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Dd{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> de(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(De{a0});
-  }
-
-  static std::shared_ptr<Uint0> de(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(De{std::move(a0)});
-  }
-
-  static std::shared_ptr<Uint0> df(const std::shared_ptr<Uint0> &a0) {
-    return std::make_shared<Uint0>(Df{a0});
-  }
-
-  static std::shared_ptr<Uint0> df(std::shared_ptr<Uint0> &&a0) {
-    return std::make_shared<Uint0>(Df{std::move(a0)});
+  static Uint0 df(Uint0 a0) {
+    return Uint0(Df{std::make_unique<Uint0>(std::move(a0))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~Uint0() {
+    std::vector<std::unique_ptr<Uint0>> _stack{};
+    auto _drain = [&](Uint0 &_node) {
+      if (std::holds_alternative<D10>(_node.d_v_)) {
+        auto &_alt = std::get<D10>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D11>(_node.d_v_)) {
+        auto &_alt = std::get<D11>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D12>(_node.d_v_)) {
+        auto &_alt = std::get<D12>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D13>(_node.d_v_)) {
+        auto &_alt = std::get<D13>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D14>(_node.d_v_)) {
+        auto &_alt = std::get<D14>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D15>(_node.d_v_)) {
+        auto &_alt = std::get<D15>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D16>(_node.d_v_)) {
+        auto &_alt = std::get<D16>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D17>(_node.d_v_)) {
+        auto &_alt = std::get<D17>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D18>(_node.d_v_)) {
+        auto &_alt = std::get<D18>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<D19>(_node.d_v_)) {
+        auto &_alt = std::get<D19>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<Da>(_node.d_v_)) {
+        auto &_alt = std::get<Da>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<Db>(_node.d_v_)) {
+        auto &_alt = std::get<Db>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<Dc>(_node.d_v_)) {
+        auto &_alt = std::get<Dc>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<Dd>(_node.d_v_)) {
+        auto &_alt = std::get<Dd>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<De>(_node.d_v_)) {
+        auto &_alt = std::get<De>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+      if (std::holds_alternative<Df>(_node.d_v_)) {
+        auto &_alt = std::get<Df>(_node.d_v_);
+        if (_alt.d_a0) {
+          _stack.push_back(std::move(_alt.d_a0));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Uint1 {
   // TYPES
   struct UIntDecimal {
-    std::shared_ptr<Uint> d_u;
+    Uint d_u;
   };
 
   struct UIntHexadecimal {
-    std::shared_ptr<Uint0> d_u;
+    Uint0 d_u;
   };
 
   using variant_t = std::variant<UIntDecimal, UIntHexadecimal>;
@@ -512,63 +926,80 @@ private:
 
 public:
   // CREATORS
+  Uint1() {}
+
   explicit Uint1(UIntDecimal _v) : d_v_(std::move(_v)) {}
 
   explicit Uint1(UIntHexadecimal _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Uint1> uintdecimal(const std::shared_ptr<Uint> &u) {
-    return std::make_shared<Uint1>(UIntDecimal{u});
+  Uint1(const Uint1 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  Uint1(Uint1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  Uint1 &operator=(const Uint1 &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint1> uintdecimal(std::shared_ptr<Uint> &&u) {
-    return std::make_shared<Uint1>(UIntDecimal{std::move(u)});
+  Uint1 &operator=(Uint1 &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<Uint1>
-  uinthexadecimal(const std::shared_ptr<Uint0> &u) {
-    return std::make_shared<Uint1>(UIntHexadecimal{u});
+  // ACCESSORS
+  Uint1 clone() const {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
+      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
+      return Uint1(UIntDecimal{d_u.clone()});
+    } else {
+      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
+      return Uint1(UIntHexadecimal{d_u.clone()});
+    }
   }
 
-  static std::shared_ptr<Uint1> uinthexadecimal(std::shared_ptr<Uint0> &&u) {
-    return std::make_shared<Uint1>(UIntHexadecimal{std::move(u)});
+  // CREATORS
+  static Uint1 uintdecimal(Uint u) { return Uint1(UIntDecimal{std::move(u)}); }
+
+  static Uint1 uinthexadecimal(Uint0 u) {
+    return Uint1(UIntHexadecimal{std::move(u)});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct Nat {
-  __attribute__((pure)) static unsigned int tail_add(const unsigned int n,
-                                                     const unsigned int m);
-  __attribute__((pure)) static unsigned int
-  tail_addmul(const unsigned int r, const unsigned int n, const unsigned int m);
-  __attribute__((pure)) static unsigned int tail_mul(const unsigned int n,
-                                                     const unsigned int m);
-  __attribute__((pure)) static unsigned int
-  of_uint_acc(const std::shared_ptr<Uint> &d, const unsigned int acc);
-  __attribute__((pure)) static unsigned int
-  of_uint(const std::shared_ptr<Uint> &d);
-  __attribute__((pure)) static unsigned int
-  of_hex_uint_acc(const std::shared_ptr<Uint0> &d, const unsigned int acc);
-  __attribute__((pure)) static unsigned int
-  of_hex_uint(const std::shared_ptr<Uint0> &d);
-  __attribute__((pure)) static unsigned int
-  of_num_uint(const std::shared_ptr<Uint1> &d);
+  static unsigned int tail_add(const unsigned int n, const unsigned int m);
+  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
+                                  const unsigned int m);
+  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
+  static unsigned int of_uint(const Uint &d);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
+  static unsigned int of_hex_uint(const Uint0 &d);
+  static unsigned int of_num_uint(const Uint1 &d);
 };
 
 struct ValidatedPumpDeliveryTraceCase {
   struct Mg_dL {
     unsigned int mg_dL_val;
+
+    // ACCESSORS
+    Mg_dL clone() const { return Mg_dL{(*(this)).mg_dL_val}; }
   };
 
   struct Grams {
     unsigned int grams_val;
+
+    // ACCESSORS
+    Grams clone() const { return Grams{(*(this)).grams_val}; }
   };
 
-  using Carbs_g = std::shared_ptr<Grams>;
+  using Carbs_g = Grams;
   using Minutes = unsigned int;
   using DIA_minutes = unsigned int;
   using Insulin_twentieth = unsigned int;
@@ -579,10 +1010,8 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const unsigned int BG_METER_MIN = 20u;
   static inline const unsigned int BG_METER_MAX = 600u;
   static inline const unsigned int CARBS_SANITY_MAX = 200u;
-  __attribute__((pure)) static bool
-  bg_in_meter_range(const std::shared_ptr<Mg_dL> &bg);
-  __attribute__((pure)) static bool
-  carbs_reasonable(const std::shared_ptr<Grams> &carbs);
+  static bool bg_in_meter_range(const Mg_dL &bg);
+  static bool carbs_reasonable(const Grams &carbs);
 
   struct Config {
     unsigned int cfg_bg_rise_per_gram;
@@ -590,10 +1019,18 @@ struct ValidatedPumpDeliveryTraceCase {
     unsigned int cfg_suspend_threshold_mg_dl;
     unsigned int cfg_stacking_warning_threshold_min;
     unsigned int cfg_iob_high_threshold_twentieths;
+
+    // ACCESSORS
+    Config clone() const {
+      return Config{(*(this)).cfg_bg_rise_per_gram,
+                    (*(this)).cfg_conservative_cob_absorption_percent,
+                    (*(this)).cfg_suspend_threshold_mg_dl,
+                    (*(this)).cfg_stacking_warning_threshold_min,
+                    (*(this)).cfg_iob_high_threshold_twentieths};
+    }
   };
 
-  static inline const std::shared_ptr<Config> default_config =
-      std::make_shared<Config>(Config{4u, 30u, 80u, 60u, 200u});
+  static inline const Config default_config = Config{4u, 30u, 80u, 60u, 200u};
   enum class ActivityState {
     e_ACTIVITY_NORMAL,
     e_ACTIVITY_LIGHTEXERCISE,
@@ -658,10 +1095,8 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  isf_activity_modifier(const ActivityState state);
-  __attribute__((pure)) static unsigned int
-  icr_activity_modifier(const ActivityState state);
+  static unsigned int isf_activity_modifier(const ActivityState state);
+  static unsigned int icr_activity_modifier(const ActivityState state);
 
   struct FaultStatus {
     // TYPES
@@ -687,6 +1122,8 @@ struct ValidatedPumpDeliveryTraceCase {
 
   public:
     // CREATORS
+    FaultStatus() {}
+
     explicit FaultStatus(Fault_None _v) : d_v_(_v) {}
 
     explicit FaultStatus(Fault_Occlusion _v) : d_v_(_v) {}
@@ -697,84 +1134,118 @@ struct ValidatedPumpDeliveryTraceCase {
 
     explicit FaultStatus(Fault_Unknown _v) : d_v_(_v) {}
 
-    static std::shared_ptr<FaultStatus> fault_none() {
-      return std::make_shared<FaultStatus>(Fault_None{});
+    FaultStatus(const FaultStatus &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    FaultStatus(FaultStatus &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    FaultStatus &operator=(const FaultStatus &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<FaultStatus> fault_occlusion() {
-      return std::make_shared<FaultStatus>(Fault_Occlusion{});
+    FaultStatus &operator=(FaultStatus &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    static std::shared_ptr<FaultStatus> fault_lowreservoir(unsigned int a0) {
-      return std::make_shared<FaultStatus>(Fault_LowReservoir{std::move(a0)});
-    }
-
-    static std::shared_ptr<FaultStatus> fault_batterylow() {
-      return std::make_shared<FaultStatus>(Fault_BatteryLow{});
-    }
-
-    static std::shared_ptr<FaultStatus> fault_unknown() {
-      return std::make_shared<FaultStatus>(Fault_Unknown{});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    FaultStatus clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Fault_None>(_sv.v())) {
+        return FaultStatus(Fault_None{});
+      } else if (std::holds_alternative<Fault_Occlusion>(_sv.v())) {
+        return FaultStatus(Fault_Occlusion{});
+      } else if (std::holds_alternative<Fault_LowReservoir>(_sv.v())) {
+        const auto &[d_a0] = std::get<Fault_LowReservoir>(_sv.v());
+        return FaultStatus(Fault_LowReservoir{d_a0});
+      } else if (std::holds_alternative<Fault_BatteryLow>(_sv.v())) {
+        return FaultStatus(Fault_BatteryLow{});
+      } else {
+        return FaultStatus(Fault_Unknown{});
+      }
+    }
 
-    __attribute__((pure)) bool fault_blocks_bolus() const {
-      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+    // CREATORS
+    static FaultStatus fault_none() { return FaultStatus(Fault_None{}); }
+
+    static FaultStatus fault_occlusion() {
+      return FaultStatus(Fault_Occlusion{});
+    }
+
+    static FaultStatus fault_lowreservoir(unsigned int a0) {
+      return FaultStatus(Fault_LowReservoir{std::move(a0)});
+    }
+
+    static FaultStatus fault_batterylow() {
+      return FaultStatus(Fault_BatteryLow{});
+    }
+
+    static FaultStatus fault_unknown() { return FaultStatus(Fault_Unknown{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
+
+    bool fault_blocks_bolus() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(_sv.v())) {
         return false;
       } else if (std::holds_alternative<
-                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+                     typename FaultStatus::Fault_LowReservoir>(_sv.v())) {
         const auto &[d_a0] =
-            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+            std::get<typename FaultStatus::Fault_LowReservoir>(_sv.v());
         return d_a0 < 10u;
       } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
-                     this->v())) {
+                     _sv.v())) {
         return false;
       } else {
         return true;
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F2>
+    template <typename T1, typename F2>
+      requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 FaultStatus_rec(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
                        const T1 f3) const {
-      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(_sv.v())) {
         return f;
       } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
-                     this->v())) {
+                     _sv.v())) {
         return f0;
       } else if (std::holds_alternative<
-                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+                     typename FaultStatus::Fault_LowReservoir>(_sv.v())) {
         const auto &[d_a0] =
-            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+            std::get<typename FaultStatus::Fault_LowReservoir>(_sv.v());
         return f1(d_a0);
       } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
-                     this->v())) {
+                     _sv.v())) {
         return f2;
       } else {
         return f3;
       }
     }
 
-    template <typename T1, MapsTo<T1, unsigned int> F2>
+    template <typename T1, typename F2>
+      requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 FaultStatus_rect(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
                         const T1 f3) const {
-      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(_sv.v())) {
         return f;
       } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
-                     this->v())) {
+                     _sv.v())) {
         return f0;
       } else if (std::holds_alternative<
-                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+                     typename FaultStatus::Fault_LowReservoir>(_sv.v())) {
         const auto &[d_a0] =
-            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+            std::get<typename FaultStatus::Fault_LowReservoir>(_sv.v());
         return f1(d_a0);
       } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
-                     this->v())) {
+                     _sv.v())) {
         return f2;
       } else {
         return f3;
@@ -823,57 +1294,49 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  __attribute__((pure)) static Minutes peak_time(const InsulinType itype,
-                                                 const unsigned int _x);
+  static Minutes peak_time(const InsulinType itype, const unsigned int _x);
 
   struct BolusEvent {
     unsigned int be_dose_twentieths;
     Minutes be_time_minutes;
+
+    // ACCESSORS
+    BolusEvent clone() const {
+      return BolusEvent{(*(this)).be_dose_twentieths,
+                        (*(this)).be_time_minutes};
+    }
   };
 
-  __attribute__((pure)) static unsigned int div_ceil(const unsigned int a,
-                                                     const unsigned int b);
-  __attribute__((pure)) static bool
-  event_time_valid(const unsigned int now,
-                   const std::shared_ptr<BolusEvent> &event);
-  __attribute__((pure)) static bool history_times_valid(
-      const unsigned int now,
-      const std::shared_ptr<List<std::shared_ptr<BolusEvent>>> &events);
-  __attribute__((pure)) static bool history_sorted_from(
-      const unsigned int prev,
-      const std::shared_ptr<List<std::shared_ptr<BolusEvent>>> &events);
-  __attribute__((pure)) static bool history_sorted_desc(
-      const std::shared_ptr<List<std::shared_ptr<BolusEvent>>> &events);
-  __attribute__((pure)) static bool history_valid(
-      const unsigned int now,
-      const std::shared_ptr<List<std::shared_ptr<BolusEvent>>> &events);
-  __attribute__((pure)) static unsigned int
-  bilinear_iob_fraction(const unsigned int elapsed, const unsigned int dia,
-                        const InsulinType itype);
-  __attribute__((pure)) static Insulin_twentieth
-  bilinear_iob_from_bolus(const unsigned int now,
-                          const std::shared_ptr<BolusEvent> &event,
-                          const unsigned int dia, const InsulinType itype);
-  __attribute__((pure)) static Insulin_twentieth total_bilinear_iob(
-      const unsigned int now,
-      const std::shared_ptr<List<std::shared_ptr<BolusEvent>>> &events,
-      const unsigned int dia, const InsulinType itype);
-  static std::shared_ptr<Mg_dL>
-  apply_sensor_margin(std::shared_ptr<Mg_dL> bg,
-                      const std::shared_ptr<Mg_dL> &target);
-  __attribute__((pure)) static unsigned int
-  adjusted_isf_tenths(const std::shared_ptr<Mg_dL> &bg,
-                      const unsigned int base_isf_tenths);
-  __attribute__((pure)) static Insulin_twentieth
-  correction_twentieths_full(const unsigned int _x,
-                             const std::shared_ptr<Mg_dL> &current_bg,
-                             const std::shared_ptr<Mg_dL> &target_bg,
+  static unsigned int div_ceil(const unsigned int a, const unsigned int b);
+  static bool event_time_valid(const unsigned int now, const BolusEvent &event);
+  static bool history_times_valid(const unsigned int now,
+                                  const List<BolusEvent> &events);
+  static bool history_sorted_from(const unsigned int prev,
+                                  const List<BolusEvent> &events);
+  static bool history_sorted_desc(const List<BolusEvent> &events);
+  static bool history_valid(const unsigned int now,
+                            const List<BolusEvent> &events);
+  static unsigned int bilinear_iob_fraction(const unsigned int elapsed,
+                                            const unsigned int dia,
+                                            const InsulinType itype);
+  static Insulin_twentieth bilinear_iob_from_bolus(const unsigned int now,
+                                                   const BolusEvent &event,
+                                                   const unsigned int dia,
+                                                   const InsulinType itype);
+  static Insulin_twentieth total_bilinear_iob(const unsigned int now,
+                                              const List<BolusEvent> &events,
+                                              const unsigned int dia,
+                                              const InsulinType itype);
+  static Mg_dL apply_sensor_margin(Mg_dL bg, const Mg_dL &target);
+  static unsigned int adjusted_isf_tenths(const Mg_dL &bg,
+                                          const unsigned int base_isf_tenths);
+  static Insulin_twentieth
+  correction_twentieths_full(const unsigned int _x, const Mg_dL &current_bg,
+                             const Mg_dL &target_bg,
                              const unsigned int base_isf_tenths);
-  __attribute__((pure)) static Insulin_twentieth
-  apply_reverse_correction_twentieths(const unsigned int carb,
-                                      const std::shared_ptr<Mg_dL> &current_bg,
-                                      const std::shared_ptr<Mg_dL> &target_bg,
-                                      const unsigned int isf_tenths);
+  static Insulin_twentieth apply_reverse_correction_twentieths(
+      const unsigned int carb, const Mg_dL &current_bg, const Mg_dL &target_bg,
+      const unsigned int isf_tenths);
 
   struct SuspendDecision {
     // TYPES
@@ -894,124 +1357,161 @@ struct ValidatedPumpDeliveryTraceCase {
 
   public:
     // CREATORS
+    SuspendDecision() {}
+
     explicit SuspendDecision(Suspend_None _v) : d_v_(_v) {}
 
     explicit SuspendDecision(Suspend_Reduce _v) : d_v_(std::move(_v)) {}
 
     explicit SuspendDecision(Suspend_Withhold _v) : d_v_(_v) {}
 
-    static std::shared_ptr<SuspendDecision> suspend_none() {
-      return std::make_shared<SuspendDecision>(Suspend_None{});
+    SuspendDecision(const SuspendDecision &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    SuspendDecision(SuspendDecision &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    SuspendDecision &operator=(const SuspendDecision &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<SuspendDecision>
-    suspend_reduce(Insulin_twentieth a0) {
-      return std::make_shared<SuspendDecision>(Suspend_Reduce{std::move(a0)});
+    SuspendDecision &operator=(SuspendDecision &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<SuspendDecision> suspend_withhold() {
-      return std::make_shared<SuspendDecision>(Suspend_Withhold{});
+    // ACCESSORS
+    SuspendDecision clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Suspend_None>(_sv.v())) {
+        return SuspendDecision(Suspend_None{});
+      } else if (std::holds_alternative<Suspend_Reduce>(_sv.v())) {
+        const auto &[d_a0] = std::get<Suspend_Reduce>(_sv.v());
+        return SuspendDecision(Suspend_Reduce{d_a0});
+      } else {
+        return SuspendDecision(Suspend_Withhold{});
+      }
+    }
+
+    // CREATORS
+    static SuspendDecision suspend_none() {
+      return SuspendDecision(Suspend_None{});
+    }
+
+    static SuspendDecision suspend_reduce(Insulin_twentieth a0) {
+      return SuspendDecision(Suspend_Reduce{std::move(a0)});
+    }
+
+    static SuspendDecision suspend_withhold() {
+      return SuspendDecision(Suspend_Withhold{});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 SuspendDecision_rect(const T1 f, F1 &&f0, const T1 f1,
-                                 const std::shared_ptr<SuspendDecision> &s) {
-    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(
-            s->v())) {
+                                 const SuspendDecision &s) {
+    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
       return f;
     } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
-                   s->v())) {
+                   s.v())) {
       const auto &[d_a0] =
-          std::get<typename SuspendDecision::Suspend_Reduce>(s->v());
+          std::get<typename SuspendDecision::Suspend_Reduce>(s.v());
       return f0(d_a0);
     } else {
       return f1;
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int> F1>
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 SuspendDecision_rec(const T1 f, F1 &&f0, const T1 f1,
-                                const std::shared_ptr<SuspendDecision> &s) {
-    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(
-            s->v())) {
+                                const SuspendDecision &s) {
+    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
       return f;
     } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
-                   s->v())) {
+                   s.v())) {
       const auto &[d_a0] =
-          std::get<typename SuspendDecision::Suspend_Reduce>(s->v());
+          std::get<typename SuspendDecision::Suspend_Reduce>(s.v());
       return f0(d_a0);
     } else {
       return f1;
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  predict_bg_drop_tenths(const unsigned int iob_twentieths,
-                         const unsigned int isf_tenths);
-  __attribute__((pure)) static unsigned int
-  conservative_cob_rise(const std::shared_ptr<Config> &cfg,
-                        const unsigned int cob_grams);
-  __attribute__((pure)) static unsigned int
-  predicted_eventual_bg_tenths(const std::shared_ptr<Config> &cfg,
-                               const std::shared_ptr<Mg_dL> &current_bg,
+  static unsigned int predict_bg_drop_tenths(const unsigned int iob_twentieths,
+                                             const unsigned int isf_tenths);
+  static unsigned int conservative_cob_rise(const Config &cfg,
+                                            const unsigned int cob_grams);
+  static unsigned int
+  predicted_eventual_bg_tenths(const Config &cfg, const Mg_dL &current_bg,
                                const unsigned int iob_twentieths,
                                const unsigned int cob_grams,
                                const unsigned int isf_tenths);
-  static std::shared_ptr<SuspendDecision> suspend_check_tenths_with_cob(
-      const std::shared_ptr<Config> &cfg,
-      const std::shared_ptr<Mg_dL> &current_bg,
+  static SuspendDecision suspend_check_tenths_with_cob(
+      const Config &cfg, const Mg_dL &current_bg,
       const unsigned int iob_twentieths, const unsigned int cob_grams,
       const unsigned int isf_tenths, const unsigned int proposed);
-  __attribute__((pure)) static Insulin_twentieth
-  apply_suspend(const unsigned int proposed,
-                const std::shared_ptr<SuspendDecision> &decision);
-  __attribute__((pure)) static Insulin_twentieth
+  static Insulin_twentieth apply_suspend(const unsigned int proposed,
+                                         const SuspendDecision &decision);
+  static Insulin_twentieth
   pediatric_max_twentieths(const unsigned int weight_kg);
-  __attribute__((pure)) static Insulin_twentieth
-  cap_pediatric(const unsigned int bolus, const unsigned int weight_kg);
+  static Insulin_twentieth cap_pediatric(const unsigned int bolus,
+                                         const unsigned int weight_kg);
 
   struct PrecisionParams {
     unsigned int prec_icr_tenths;
     unsigned int prec_isf_tenths;
-    std::shared_ptr<Mg_dL> prec_target_bg;
+    Mg_dL prec_target_bg;
     DIA_minutes prec_dia;
     InsulinType prec_insulin_type;
+
+    // ACCESSORS
+    PrecisionParams clone() const {
+      return PrecisionParams{(*(this)).prec_icr_tenths,
+                             (*(this)).prec_isf_tenths,
+                             (*(this)).prec_target_bg.clone(),
+                             (*(this)).prec_dia, (*(this)).prec_insulin_type};
+    }
   };
 
-  __attribute__((pure)) static bool
-  prec_params_valid(const std::shared_ptr<PrecisionParams> &p);
+  static bool prec_params_valid(const PrecisionParams &p);
 
   struct PrecisionInput {
     Carbs_g pi_carbs_g;
-    std::shared_ptr<Mg_dL> pi_current_bg;
+    Mg_dL pi_current_bg;
     Minutes pi_now;
-    std::shared_ptr<List<std::shared_ptr<BolusEvent>>> pi_bolus_history;
+    List<BolusEvent> pi_bolus_history;
     ActivityState pi_activity;
     bool pi_use_sensor_margin;
-    std::shared_ptr<FaultStatus> pi_fault;
+    FaultStatus pi_fault;
     std::optional<unsigned int> pi_weight_kg;
+
+    // ACCESSORS
+    PrecisionInput clone() const {
+      return PrecisionInput{
+          (*(this)).pi_carbs_g,       (*(this)).pi_current_bg.clone(),
+          (*(this)).pi_now,           (*(this)).pi_bolus_history.clone(),
+          (*(this)).pi_activity,      (*(this)).pi_use_sensor_margin,
+          (*(this)).pi_fault.clone(), (*(this)).pi_weight_kg};
+    }
   };
 
-  __attribute__((pure)) static Insulin_twentieth
-  carb_bolus_twentieths(const unsigned int carbs_g,
-                        const unsigned int icr_tenths);
-  __attribute__((pure)) static Insulin_twentieth
-  calculate_precision_bolus(const std::shared_ptr<PrecisionInput> &input,
-                            const std::shared_ptr<PrecisionParams> &params);
-  __attribute__((pure)) static bool time_reasonable(const unsigned int now);
-  __attribute__((pure)) static bool history_extraction_safe(
-      const std::shared_ptr<List<std::shared_ptr<BolusEvent>>> &events);
-  __attribute__((pure)) static unsigned int
-  iob_high_threshold(const std::shared_ptr<Config> &cfg);
-  __attribute__((pure)) static bool
-  iob_dangerously_high(const unsigned int iob);
+  static Insulin_twentieth carb_bolus_twentieths(const unsigned int carbs_g,
+                                                 const unsigned int icr_tenths);
+  static Insulin_twentieth
+  calculate_precision_bolus(const PrecisionInput &input,
+                            const PrecisionParams &params);
+  static bool time_reasonable(const unsigned int now);
+  static bool history_extraction_safe(const List<BolusEvent> &events);
+  static unsigned int iob_high_threshold(const Config &cfg);
+  static bool iob_dangerously_high(const unsigned int iob);
 
   struct PrecisionResult {
     // TYPES
@@ -1032,73 +1532,101 @@ struct ValidatedPumpDeliveryTraceCase {
 
   public:
     // CREATORS
+    PrecisionResult() {}
+
     explicit PrecisionResult(PrecOK _v) : d_v_(std::move(_v)) {}
 
     explicit PrecisionResult(PrecError _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<PrecisionResult> precok(Insulin_twentieth a0,
-                                                   bool a1) {
-      return std::make_shared<PrecisionResult>(
-          PrecOK{std::move(a0), std::move(a1)});
+    PrecisionResult(const PrecisionResult &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    PrecisionResult(PrecisionResult &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    PrecisionResult &operator=(const PrecisionResult &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<PrecisionResult> precerror(unsigned int a0) {
-      return std::make_shared<PrecisionResult>(PrecError{std::move(a0)});
+    PrecisionResult &operator=(PrecisionResult &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    PrecisionResult clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<PrecOK>(_sv.v())) {
+        const auto &[d_a0, d_a1] = std::get<PrecOK>(_sv.v());
+        return PrecisionResult(PrecOK{d_a0, d_a1});
+      } else {
+        const auto &[d_a0] = std::get<PrecError>(_sv.v());
+        return PrecisionResult(PrecError{d_a0});
+      }
+    }
+
+    // CREATORS
+    static PrecisionResult precok(Insulin_twentieth a0, bool a1) {
+      return PrecisionResult(PrecOK{std::move(a0), std::move(a1)});
+    }
+
+    static PrecisionResult precerror(unsigned int a0) {
+      return PrecisionResult(PrecError{std::move(a0)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) bool result_modified() const {
-      if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
+    bool result_modified() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename PrecisionResult::PrecOK>(_sv.v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename PrecisionResult::PrecOK>(this->v());
+            std::get<typename PrecisionResult::PrecOK>(_sv.v());
         return d_a1;
       } else {
         return false;
       }
     }
 
-    __attribute__((pure)) unsigned int precision_result_code() const {
-      if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
+    unsigned int precision_result_code() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename PrecisionResult::PrecOK>(_sv.v())) {
         return 0u;
       } else {
         const auto &[d_a0] =
-            std::get<typename PrecisionResult::PrecError>(this->v());
+            std::get<typename PrecisionResult::PrecError>(_sv.v());
         return d_a0;
       }
     }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, bool> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 PrecisionResult_rect(F0 &&f, F1 &&f0,
-                                 const std::shared_ptr<PrecisionResult> &p) {
-    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p->v())) {
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 PrecisionResult_rect(F0 &&f, F1 &&f0, const PrecisionResult &p) {
+    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[d_a0, d_a1] =
-          std::get<typename PrecisionResult::PrecOK>(p->v());
+          std::get<typename PrecisionResult::PrecOK>(p.v());
       return f(d_a0, d_a1);
     } else {
-      const auto &[d_a0] =
-          std::get<typename PrecisionResult::PrecError>(p->v());
+      const auto &[d_a0] = std::get<typename PrecisionResult::PrecError>(p.v());
       return f0(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, bool> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 PrecisionResult_rec(F0 &&f, F1 &&f0,
-                                const std::shared_ptr<PrecisionResult> &p) {
-    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p->v())) {
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 PrecisionResult_rec(F0 &&f, F1 &&f0, const PrecisionResult &p) {
+    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[d_a0, d_a1] =
-          std::get<typename PrecisionResult::PrecOK>(p->v());
+          std::get<typename PrecisionResult::PrecOK>(p.v());
       return f(d_a0, d_a1);
     } else {
-      const auto &[d_a0] =
-          std::get<typename PrecisionResult::PrecError>(p->v());
+      const auto &[d_a0] = std::get<typename PrecisionResult::PrecError>(p.v());
       return f0(d_a0);
     }
   }
@@ -1113,35 +1641,39 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const unsigned int prec_error_tdd_exceeded = 8u;
   static inline const unsigned int prec_error_iob_high = 9u;
   static inline const unsigned int prec_error_extraction_unsafe = 10u;
-  __attribute__((pure)) static bool bolus_too_soon(
-      const unsigned int now,
-      const std::shared_ptr<List<std::shared_ptr<BolusEvent>>> &history);
-  __attribute__((pure)) static Insulin_twentieth
-  cap_twentieths(const unsigned int t);
-  static std::shared_ptr<PrecisionResult>
-  validated_precision_bolus(std::shared_ptr<PrecisionInput> input,
-                            const std::shared_ptr<PrecisionParams> &params);
-  __attribute__((pure)) static std::optional<Insulin_twentieth>
-  prec_result_twentieths(const std::shared_ptr<PrecisionResult> &r);
+  static bool bolus_too_soon(const unsigned int now,
+                             const List<BolusEvent> &history);
+  static Insulin_twentieth cap_twentieths(const unsigned int t);
+  static PrecisionResult
+  validated_precision_bolus(PrecisionInput input,
+                            const PrecisionParams &params);
+  static std::optional<Insulin_twentieth>
+  prec_result_twentieths(const PrecisionResult &r);
 
   struct MmolPrecisionInput {
     Carbs_g mpi_carbs_g;
     unsigned int mpi_current_bg_mmol_tenths;
     Minutes mpi_now;
-    std::shared_ptr<List<std::shared_ptr<BolusEvent>>> mpi_bolus_history;
+    List<BolusEvent> mpi_bolus_history;
     ActivityState mpi_activity;
     bool mpi_use_sensor_margin;
-    std::shared_ptr<FaultStatus> mpi_fault;
+    FaultStatus mpi_fault;
     std::optional<unsigned int> mpi_weight_kg;
+
+    // ACCESSORS
+    MmolPrecisionInput clone() const {
+      return MmolPrecisionInput{
+          (*(this)).mpi_carbs_g,       (*(this)).mpi_current_bg_mmol_tenths,
+          (*(this)).mpi_now,           (*(this)).mpi_bolus_history.clone(),
+          (*(this)).mpi_activity,      (*(this)).mpi_use_sensor_margin,
+          (*(this)).mpi_fault.clone(), (*(this)).mpi_weight_kg};
+    }
   };
 
-  __attribute__((pure)) static unsigned int
-  mmol_tenths_to_mg_dL(const unsigned int mmol_tenths);
-  static std::shared_ptr<PrecisionInput>
-  convert_mmol_input(const std::shared_ptr<MmolPrecisionInput> &input);
-  static std::shared_ptr<PrecisionResult>
-  validated_mmol_bolus(const std::shared_ptr<MmolPrecisionInput> &input,
-                       const std::shared_ptr<PrecisionParams> &params);
+  static unsigned int mmol_tenths_to_mg_dL(const unsigned int mmol_tenths);
+  static PrecisionInput convert_mmol_input(const MmolPrecisionInput &input);
+  static PrecisionResult validated_mmol_bolus(const MmolPrecisionInput &input,
+                                              const PrecisionParams &params);
   enum class RoundingMode {
     e_ROUNDTWENTIETH,
     e_ROUNDTENTH,
@@ -1191,13 +1723,12 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  round_down_to_increment(const unsigned int t, const unsigned int increment);
-  __attribute__((pure)) static Insulin_twentieth
-  apply_rounding(const RoundingMode mode, const unsigned int t);
-  __attribute__((pure)) static std::optional<Insulin_twentieth>
-  final_delivery(const RoundingMode mode,
-                 const std::shared_ptr<PrecisionResult> &result);
+  static unsigned int round_down_to_increment(const unsigned int t,
+                                              const unsigned int increment);
+  static Insulin_twentieth apply_rounding(const RoundingMode mode,
+                                          const unsigned int t);
+  static std::optional<Insulin_twentieth>
+  final_delivery(const RoundingMode mode, const PrecisionResult &result);
 
   struct PumpState {
     unsigned int ps_reservoir_twentieths;
@@ -1205,106 +1736,115 @@ struct ValidatedPumpDeliveryTraceCase {
     Minutes ps_last_bolus_time;
     bool ps_occlusion_detected;
     unsigned int ps_battery_percent;
+
+    // ACCESSORS
+    PumpState clone() const {
+      return PumpState{
+          (*(this)).ps_reservoir_twentieths, (*(this)).ps_basal_rate_hundredths,
+          (*(this)).ps_last_bolus_time, (*(this)).ps_occlusion_detected,
+          (*(this)).ps_battery_percent};
+    }
   };
 
-  __attribute__((pure)) static bool
-  pump_can_deliver(const std::shared_ptr<PumpState> &state,
-                   const unsigned int dose);
-  __attribute__((pure)) static unsigned int
-  reservoir_after_bolus(const std::shared_ptr<PumpState> &state,
-                        const unsigned int dose);
-  __attribute__((pure)) static unsigned int
-  option_nat_default(const std::optional<unsigned int> x, const unsigned int d);
-  __attribute__((pure)) static bool
-  pump_accepts_result(const std::shared_ptr<PumpState> &pump,
-                      const RoundingMode mode,
-                      const std::shared_ptr<PrecisionResult> &r);
-  __attribute__((pure)) static unsigned int
-  pump_reservoir_after_result(const std::shared_ptr<PumpState> &pump,
-                              const RoundingMode mode,
-                              const std::shared_ptr<PrecisionResult> &r);
-  static inline const std::shared_ptr<PrecisionParams> witness_prec_params =
-      std::make_shared<PrecisionParams>(
-          PrecisionParams{100u, 500u, std::make_shared<Mg_dL>(Mg_dL{100u}),
-                          240u, InsulinType::e_INSULIN_HUMALOG});
-  static inline const std::shared_ptr<PrecisionInput> standard_input =
-      std::make_shared<PrecisionInput>(PrecisionInput{
-          std::make_shared<Grams>(Grams{60u}),
-          std::make_shared<Mg_dL>(Mg_dL{150u}), 0u,
-          List<std::shared_ptr<BolusEvent>>::nil(),
-          ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-          std::optional<unsigned int>()});
-  static inline const std::shared_ptr<MmolPrecisionInput> mmol_input =
-      std::make_shared<MmolPrecisionInput>(MmolPrecisionInput{
-          std::make_shared<Grams>(Grams{60u}), 83u, 0u,
-          List<std::shared_ptr<BolusEvent>>::nil(),
-          ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-          std::optional<unsigned int>()});
-  static inline const std::shared_ptr<PrecisionInput> high_iob_input =
-      std::make_shared<PrecisionInput>(PrecisionInput{
-          std::make_shared<Grams>(Grams{0u}),
-          std::make_shared<Mg_dL>(Mg_dL{150u}), 100u,
-          List<std::shared_ptr<BolusEvent>>::cons(
-              std::make_shared<BolusEvent>(BolusEvent{120u, 85u}),
-              List<std::shared_ptr<BolusEvent>>::cons(
-                  std::make_shared<BolusEvent>(BolusEvent{100u, 80u}),
-                  List<std::shared_ptr<BolusEvent>>::nil())),
-          ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-          std::optional<unsigned int>()});
-  static inline const std::shared_ptr<PrecisionInput> tdd_exceeded_input =
-      std::make_shared<PrecisionInput>(PrecisionInput{
-          std::make_shared<Grams>(Grams{60u}),
-          std::make_shared<Mg_dL>(Mg_dL{150u}), 2000u,
-          List<std::shared_ptr<BolusEvent>>::cons(
-              std::make_shared<BolusEvent>(BolusEvent{500u, 1800u}),
-              List<std::shared_ptr<BolusEvent>>::cons(
-                  std::make_shared<BolusEvent>(BolusEvent{500u, 1500u}),
-                  List<std::shared_ptr<BolusEvent>>::cons(
-                      std::make_shared<BolusEvent>(BolusEvent{500u, 1000u}),
-                      List<std::shared_ptr<BolusEvent>>::nil()))),
-          ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-          std::make_optional<unsigned int>(70u)});
-  static inline const std::shared_ptr<PrecisionInput> occlusion_input =
-      std::make_shared<PrecisionInput>(PrecisionInput{
-          std::make_shared<Grams>(Grams{60u}),
-          std::make_shared<Mg_dL>(Mg_dL{150u}), 120u,
-          List<std::shared_ptr<BolusEvent>>::cons(
-              std::make_shared<BolusEvent>(BolusEvent{40u, 100u}),
-              List<std::shared_ptr<BolusEvent>>::nil()),
-          ActivityState::e_ACTIVITY_NORMAL, false,
-          FaultStatus::fault_occlusion(), std::optional<unsigned int>()});
-  static inline const std::shared_ptr<PrecisionInput> battery_low_input =
-      std::make_shared<PrecisionInput>(PrecisionInput{
-          std::make_shared<Grams>(Grams{60u}),
-          std::make_shared<Mg_dL>(Mg_dL{150u}), 120u,
-          List<std::shared_ptr<BolusEvent>>::cons(
-              std::make_shared<BolusEvent>(BolusEvent{40u, 100u}),
-              List<std::shared_ptr<BolusEvent>>::nil()),
-          ActivityState::e_ACTIVITY_NORMAL, false,
-          FaultStatus::fault_batterylow(), std::optional<unsigned int>()});
-  static inline const std::shared_ptr<PrecisionInput> pediatric_capped_input =
-      std::make_shared<PrecisionInput>(PrecisionInput{
-          std::make_shared<Grams>(Grams{200u}),
-          std::make_shared<Mg_dL>(Mg_dL{400u}), 0u,
-          List<std::shared_ptr<BolusEvent>>::nil(),
-          ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-          std::make_optional<unsigned int>(20u)});
-  static inline const std::shared_ptr<PumpState> standard_pump =
-      std::make_shared<PumpState>(PumpState{2000u, 100u, 0u, false, 80u});
-  static inline const std::shared_ptr<PumpState> low_battery_pump =
-      std::make_shared<PumpState>(PumpState{2000u, 100u, 0u, false, 4u});
-  static inline const std::shared_ptr<PrecisionResult> standard_result =
+  static bool pump_can_deliver(const PumpState &state, const unsigned int dose);
+  static unsigned int reservoir_after_bolus(const PumpState &state,
+                                            const unsigned int dose);
+  static unsigned int option_nat_default(const std::optional<unsigned int> &x,
+                                         const unsigned int d);
+  static bool pump_accepts_result(const PumpState &pump,
+                                  const RoundingMode mode,
+                                  const PrecisionResult &r);
+  static unsigned int pump_reservoir_after_result(const PumpState &pump,
+                                                  const RoundingMode mode,
+                                                  const PrecisionResult &r);
+  static inline const PrecisionParams witness_prec_params = PrecisionParams{
+      100u, 500u, Mg_dL{100u}, 240u, InsulinType::e_INSULIN_HUMALOG};
+  static inline const PrecisionInput standard_input =
+      PrecisionInput{Grams{60u},
+                     Mg_dL{150u},
+                     0u,
+                     List<BolusEvent>::nil(),
+                     ActivityState::e_ACTIVITY_NORMAL,
+                     false,
+                     FaultStatus::fault_none(),
+                     std::optional<unsigned int>()};
+  static inline const MmolPrecisionInput mmol_input =
+      MmolPrecisionInput{Grams{60u},
+                         83u,
+                         0u,
+                         List<BolusEvent>::nil(),
+                         ActivityState::e_ACTIVITY_NORMAL,
+                         false,
+                         FaultStatus::fault_none(),
+                         std::optional<unsigned int>()};
+  static inline const PrecisionInput high_iob_input = PrecisionInput{
+      Grams{0u},
+      Mg_dL{150u},
+      100u,
+      List<BolusEvent>::cons(BolusEvent{120u, 85u},
+                             List<BolusEvent>::cons(BolusEvent{100u, 80u},
+                                                    List<BolusEvent>::nil())),
+      ActivityState::e_ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_none(),
+      std::optional<unsigned int>()};
+  static inline const PrecisionInput tdd_exceeded_input =
+      PrecisionInput{Grams{60u},
+                     Mg_dL{150u},
+                     2000u,
+                     List<BolusEvent>::cons(
+                         BolusEvent{500u, 1800u},
+                         List<BolusEvent>::cons(
+                             BolusEvent{500u, 1500u},
+                             List<BolusEvent>::cons(BolusEvent{500u, 1000u},
+                                                    List<BolusEvent>::nil()))),
+                     ActivityState::e_ACTIVITY_NORMAL,
+                     false,
+                     FaultStatus::fault_none(),
+                     std::make_optional<unsigned int>(70u)};
+  static inline const PrecisionInput occlusion_input = PrecisionInput{
+      Grams{60u},
+      Mg_dL{150u},
+      120u,
+      List<BolusEvent>::cons(BolusEvent{40u, 100u}, List<BolusEvent>::nil()),
+      ActivityState::e_ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_occlusion(),
+      std::optional<unsigned int>()};
+  static inline const PrecisionInput battery_low_input = PrecisionInput{
+      Grams{60u},
+      Mg_dL{150u},
+      120u,
+      List<BolusEvent>::cons(BolusEvent{40u, 100u}, List<BolusEvent>::nil()),
+      ActivityState::e_ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_batterylow(),
+      std::optional<unsigned int>()};
+  static inline const PrecisionInput pediatric_capped_input =
+      PrecisionInput{Grams{200u},
+                     Mg_dL{400u},
+                     0u,
+                     List<BolusEvent>::nil(),
+                     ActivityState::e_ACTIVITY_NORMAL,
+                     false,
+                     FaultStatus::fault_none(),
+                     std::make_optional<unsigned int>(20u)};
+  static inline const PumpState standard_pump =
+      PumpState{2000u, 100u, 0u, false, 80u};
+  static inline const PumpState low_battery_pump =
+      PumpState{2000u, 100u, 0u, false, 4u};
+  static inline const PrecisionResult standard_result =
       validated_precision_bolus(standard_input, witness_prec_params);
-  static inline const std::shared_ptr<PrecisionResult> mmol_result =
+  static inline const PrecisionResult mmol_result =
       validated_mmol_bolus(mmol_input, witness_prec_params);
-  static inline const std::shared_ptr<PrecisionResult> battery_low_result =
+  static inline const PrecisionResult battery_low_result =
       validated_precision_bolus(battery_low_input, witness_prec_params);
-  static inline const std::shared_ptr<PrecisionResult> pediatric_result =
+  static inline const PrecisionResult pediatric_result =
       validated_precision_bolus(pediatric_capped_input, witness_prec_params);
   static inline const unsigned int standard_result_code =
-      standard_result->precision_result_code();
+      standard_result.precision_result_code();
   static inline const bool standard_modified =
-      standard_result->result_modified();
+      standard_result.result_modified();
   static inline const unsigned int standard_final_delivery_half =
       option_nat_default(
           final_delivery(RoundingMode::e_ROUNDHALF, standard_result), 0u);
@@ -1314,34 +1854,34 @@ struct ValidatedPumpDeliveryTraceCase {
       pump_reservoir_after_result(standard_pump, RoundingMode::e_ROUNDHALF,
                                   standard_result);
   static inline const unsigned int mmol_result_code =
-      mmol_result->precision_result_code();
+      mmol_result.precision_result_code();
   static inline const unsigned int mmol_final_delivery_tenth =
       option_nat_default(
           final_delivery(RoundingMode::e_ROUNDTENTH, mmol_result), 0u);
   static inline const unsigned int high_iob_error_code =
       validated_precision_bolus(high_iob_input, witness_prec_params)
-          ->precision_result_code();
+          .precision_result_code();
   static inline const unsigned int tdd_error_code =
       validated_precision_bolus(tdd_exceeded_input, witness_prec_params)
-          ->precision_result_code();
+          .precision_result_code();
   static inline const unsigned int occlusion_error_code =
       validated_precision_bolus(occlusion_input, witness_prec_params)
-          ->precision_result_code();
+          .precision_result_code();
   static inline const unsigned int battery_low_result_code =
-      battery_low_result->precision_result_code();
+      battery_low_result.precision_result_code();
   static inline const bool battery_low_pump_denied = !(pump_accepts_result(
       low_battery_pump, RoundingMode::e_ROUNDHALF, battery_low_result));
   static inline const unsigned int pediatric_result_code =
-      pediatric_result->precision_result_code();
+      pediatric_result.precision_result_code();
   static inline const bool pediatric_modified =
-      pediatric_result->result_modified();
+      pediatric_result.result_modified();
   static inline const unsigned int pediatric_final_delivery =
       option_nat_default(
           final_delivery(RoundingMode::e_ROUNDTWENTIETH, pediatric_result), 0u);
   static inline const bool low_reservoir_blocks =
-      FaultStatus::fault_lowreservoir(5u)->fault_blocks_bolus();
+      FaultStatus::fault_lowreservoir(5u).fault_blocks_bolus();
   static inline const bool unknown_fault_blocks =
-      FaultStatus::fault_unknown()->fault_blocks_bolus();
+      FaultStatus::fault_unknown().fault_blocks_bolus();
 };
 
 #endif // INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE

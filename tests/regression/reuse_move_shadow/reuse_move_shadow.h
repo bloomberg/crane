@@ -2,12 +2,11 @@
 #define INCLUDED_REUSE_MOVE_SHADOW
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct ReuseMoveShadow {
   /// Define node FIRST so it gets variant index 0 and the reuse
@@ -16,8 +15,8 @@ struct ReuseMoveShadow {
     // TYPES
     struct Node {
       unsigned int d_a0;
-      std::shared_ptr<tree> d_a1;
-      std::shared_ptr<tree> d_a2;
+      std::unique_ptr<tree> d_a1;
+      std::unique_ptr<tree> d_a2;
     };
 
     struct Leaf {};
@@ -30,62 +29,126 @@ struct ReuseMoveShadow {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
     explicit tree(Leaf _v) : d_v_(_v) {}
 
-    static std::shared_ptr<tree> node(unsigned int a0,
-                                      const std::shared_ptr<tree> &a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{std::move(a0), a1, a2});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(unsigned int a0,
-                                      std::shared_ptr<tree> &&a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
+    tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    static std::shared_ptr<tree> leaf() {
-      return std::make_shared<tree>(Leaf{});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Node>(_src->v())) {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0, _alt.d_a1 ? std::make_unique<tree>() : nullptr,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+          if (_alt.d_a2) {
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
+        } else {
+          _dst->d_v_ = Leaf{};
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static tree node(unsigned int a0, tree a1, tree a2) {
+      return tree(Node{std::move(a0), std::make_unique<tree>(std::move(a1)),
+                       std::make_unique<tree>(std::move(a2))});
+    }
+
+    static tree leaf() { return tree(Leaf{}); }
+
+    // MANIPULATORS
+    ~tree() {
+      std::vector<std::unique_ptr<tree>> _stack{};
+      auto _drain = [&](tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+          if (_alt.d_a2) {
+            _stack.push_back(std::move(_alt.d_a2));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<tree>, T1,
-                                std::shared_ptr<tree>, T1>
-                             F0>
-  static T1 tree_rect(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
-    if (std::holds_alternative<typename tree::Node>(t->v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
-      return f(d_a0, d_a1, tree_rect<T1>(f, f0, d_a1), d_a2,
-               tree_rect<T1>(f, f0, d_a2));
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
+                                   tree &, T1 &>
+  static T1 tree_rect(F0 &&f, const T1 f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Node>(t.v())) {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f(d_a0, *(d_a1), tree_rect<T1>(f, f0, *(d_a1)), *(d_a2),
+               tree_rect<T1>(f, f0, *(d_a2)));
     } else {
       return f0;
     }
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, std::shared_ptr<tree>, T1,
-                                std::shared_ptr<tree>, T1>
-                             F0>
-  static T1 tree_rec(F0 &&f, const T1 f0, const std::shared_ptr<tree> &t) {
-    if (std::holds_alternative<typename tree::Node>(t->v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t->v());
-      return f(d_a0, d_a1, tree_rec<T1>(f, f0, d_a1), d_a2,
-               tree_rec<T1>(f, f0, d_a2));
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
+                                   tree &, T1 &>
+  static T1 tree_rec(F0 &&f, const T1 f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Node>(t.v())) {
+      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
+      return f(d_a0, *(d_a1), tree_rec<T1>(f, f0, *(d_a1)), *(d_a2),
+               tree_rec<T1>(f, f0, *(d_a2)));
     } else {
       return f0;
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  tree_sum(const std::shared_ptr<tree> &t);
+  static unsigned int tree_sum(const tree &t);
   /// BUG: The reuse branch does not shift move_dead_after or
   /// move_owned_vars when pushing pattern variables.
   ///
@@ -110,7 +173,7 @@ struct ReuseMoveShadow {
   ///
   /// The returned tree has d_a2 = nullptr.  Traversing the right subtree
   /// crashes with a null-pointer dereference.
-  static std::shared_ptr<tree> dup_left(std::shared_ptr<tree> t, const bool b);
+  static tree dup_left(tree t, const bool b);
   /// test1: dup_left (node 10 (node 1 leaf leaf) (node 2 leaf leaf)) true
   /// Expected result: node 10 (node 1 leaf leaf) (node 1 leaf leaf)
   /// tree_sum = 10 + 1 + 0 + 0 + 1 + 0 + 0 = 12
@@ -134,9 +197,8 @@ struct ReuseMoveShadow {
   /// This should work correctly because the normal branch uses
   /// with_shifted_move_tracking which properly shifts the indices.
   static inline const unsigned int test3 = []() {
-    std::shared_ptr<tree> t =
-        tree::node(7u, tree::node(8u, tree::leaf(), tree::leaf()),
-                   tree::node(9u, tree::leaf(), tree::leaf()));
+    tree t = tree::node(7u, tree::node(8u, tree::leaf(), tree::leaf()),
+                        tree::node(9u, tree::leaf(), tree::leaf()));
     return (tree_sum(dup_left(t, true)) + tree_sum(t));
   }();
 };

@@ -6,13 +6,13 @@
 
 // Helper to convert List to vector for easier testing
 template<typename T>
-std::vector<T> to_vec(const std::shared_ptr<List<T>>& lst) {
+std::vector<T> to_vec(const List<T>& lst) {
     std::vector<T> result;
-    auto cur = lst;
-    while (cur && std::holds_alternative<typename List<T>::Cons>(cur->v())) {
+    const List<T> *cur = &lst;
+    while (std::holds_alternative<typename List<T>::Cons>(cur->v())) {
         auto& cons = std::get<typename List<T>::Cons>(cur->v());
         result.push_back(cons.d_a0);
-        cur = cons.d_a1;
+        cur = cons.d_a1.get();
     }
     return result;
 }
@@ -66,7 +66,7 @@ int main() {
         std::cin.rdbuf(input.rdbuf());
         auto existing = List<std::string>::cons("existing",
                         List<std::string>::nil());
-        auto lst = EffectRecursiveList::read_and_prepend(existing);
+        auto lst = EffectRecursiveList::read_and_prepend(std::move(existing));
         auto v = to_vec(lst);
         assert(v.size() == 2);
         assert(v[0] == "prepended");

@@ -28,8 +28,8 @@ int main() {
   // The bug: struct is defined as 'state' but type references use 'State'.
   // This test will fail to compile until the naming is consistent.
   auto result = LowercaseEponymousRecord::example;
-  ASSERT(result->x == 42);
-  ASSERT(result->y == 0);
+  ASSERT(result.x == 42);
+  ASSERT(result.y == 0);
 
   return testStatus;
 }

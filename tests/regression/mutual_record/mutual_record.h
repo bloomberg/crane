@@ -2,12 +2,11 @@
 #define INCLUDED_MUTUAL_RECORD
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -15,7 +14,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -26,29 +25,100 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 struct MutualRecord {
@@ -59,7 +129,7 @@ struct MutualRecord {
     // TYPES
     struct Mk_department {
       unsigned int d_a0;
-      std::shared_ptr<List<std::shared_ptr<employee>>> d_a1;
+      std::unique_ptr<List<employee>> d_a1;
     };
 
     using variant_t = std::variant<Mk_department>;
@@ -70,26 +140,46 @@ struct MutualRecord {
 
   public:
     // CREATORS
+    department() {}
+
     explicit department(Mk_department _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<department>
-    mk_department(unsigned int a0,
-                  const std::shared_ptr<List<std::shared_ptr<employee>>> &a1) {
-      return std::make_shared<department>(Mk_department{std::move(a0), a1});
+    department(const department &_other)
+        : d_v_(std::move(_other.clone().d_v_)) {}
+
+    department(department &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    department &operator=(const department &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<department>
-    mk_department(unsigned int a0,
-                  std::shared_ptr<List<std::shared_ptr<employee>>> &&a1) {
-      return std::make_shared<department>(
-          Mk_department{std::move(a0), std::move(a1)});
+    department &operator=(department &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    department clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<Mk_department>(_sv.v());
+      return department(Mk_department{
+          d_a0,
+          d_a1 ? std::make_unique<List<MutualRecord::employee>>(d_a1->clone())
+               : nullptr});
+    }
+
+    // CREATORS
+    static department mk_department(unsigned int a0, List<employee> a1) {
+      return department(Mk_department{
+          std::move(a0), std::make_unique<List<employee>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
   struct employee {
@@ -107,83 +197,89 @@ struct MutualRecord {
 
   public:
     // CREATORS
+    employee() {}
+
     explicit employee(Mk_employee _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<employee> mk_employee(unsigned int a0,
-                                                 unsigned int a1) {
-      return std::make_shared<employee>(
-          Mk_employee{std::move(a0), std::move(a1)});
+    employee(const employee &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    employee(employee &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    employee &operator=(const employee &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    employee &operator=(employee &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    employee clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0, d_a1] = std::get<Mk_employee>(_sv.v());
+      return employee(Mk_employee{d_a0, d_a1});
+    }
+
+    // CREATORS
+    static employee mk_employee(unsigned int a0, unsigned int a1) {
+      return employee(Mk_employee{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <
-      typename T1,
-      MapsTo<T1, unsigned int, std::shared_ptr<List<std::shared_ptr<employee>>>>
-          F0>
-  static T1 department_rect(F0 &&f, const std::shared_ptr<department> &d) {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
+  static T1 department_rect(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
-        std::get<typename department::Mk_department>(d->v());
-    return f(d_a0, d_a1);
+        std::get<typename department::Mk_department>(d.v());
+    return f(d_a0, *(d_a1));
   }
 
-  template <
-      typename T1,
-      MapsTo<T1, unsigned int, std::shared_ptr<List<std::shared_ptr<employee>>>>
-          F0>
-  static T1 department_rec(F0 &&f, const std::shared_ptr<department> &d) {
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
+  static T1 department_rec(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
-        std::get<typename department::Mk_department>(d->v());
+        std::get<typename department::Mk_department>(d.v());
+    return f(d_a0, *(d_a1));
+  }
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+  static T1 employee_rect(F0 &&f, const employee &e) {
+    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
-  static T1 employee_rect(F0 &&f, const std::shared_ptr<employee> &e) {
-    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+  static T1 employee_rec(F0 &&f, const employee &e) {
+    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(d_a0, d_a1);
   }
 
-  template <typename T1, MapsTo<T1, unsigned int, unsigned int> F0>
-  static T1 employee_rec(F0 &&f, const std::shared_ptr<employee> &e) {
-    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e->v());
-    return f(d_a0, d_a1);
-  }
-
-  __attribute__((pure)) static unsigned int
-  dept_id(const std::shared_ptr<department> &d);
-  static std::shared_ptr<List<std::shared_ptr<employee>>>
-  dept_employees(const std::shared_ptr<department> &d);
-  __attribute__((pure)) static unsigned int
-  emp_id(const std::shared_ptr<employee> &e);
-  __attribute__((pure)) static unsigned int
-  emp_salary(const std::shared_ptr<employee> &e);
-  __attribute__((pure)) static unsigned int
-  dept_total_salary(const std::shared_ptr<department> &d);
-  __attribute__((pure)) static unsigned int
-  emp_list_salary(const std::shared_ptr<List<std::shared_ptr<employee>>> &l);
-  __attribute__((pure)) static unsigned int
-  dept_count(const std::shared_ptr<department> &d);
-  __attribute__((pure)) static unsigned int
-  emp_list_count(const std::shared_ptr<List<std::shared_ptr<employee>>> &l);
-  static inline const std::shared_ptr<employee> emp1 =
-      employee::mk_employee(1u, 50u);
-  static inline const std::shared_ptr<employee> emp2 =
-      employee::mk_employee(2u, 60u);
-  static inline const std::shared_ptr<employee> emp3 =
-      employee::mk_employee(3u, 70u);
-  static inline const std::shared_ptr<department> test_dept =
-      department::mk_department(
-          100u,
-          List<std::shared_ptr<employee>>::cons(
-              emp1,
-              List<std::shared_ptr<employee>>::cons(
-                  emp2, List<std::shared_ptr<employee>>::cons(
-                            emp3, List<std::shared_ptr<employee>>::nil()))));
+  static unsigned int dept_id(const department &d);
+  static List<employee> dept_employees(const department &d);
+  static unsigned int emp_id(const employee &e);
+  static unsigned int emp_salary(const employee &e);
+  static unsigned int dept_total_salary(const department &d);
+  static unsigned int emp_list_salary(const List<employee> &l);
+  static unsigned int dept_count(const department &d);
+  static unsigned int emp_list_count(const List<employee> &l);
+  static inline const employee emp1 = employee::mk_employee(1u, 50u);
+  static inline const employee emp2 = employee::mk_employee(2u, 60u);
+  static inline const employee emp3 = employee::mk_employee(3u, 70u);
+  static inline const department test_dept = department::mk_department(
+      100u,
+      List<employee>::cons(
+          emp1, List<employee>::cons(
+                    emp2, List<employee>::cons(emp3, List<employee>::nil()))));
   static inline const unsigned int test_total_salary =
       dept_total_salary(test_dept);
   static inline const unsigned int test_dept_count = dept_count(test_dept);

@@ -43,7 +43,6 @@ int main() {
   auto pairs_dup = PairList::cons(std::make_pair(1u, 10u),
     PairList::cons(std::make_pair(1u, 11u), pair_nil));
   auto all_vals = LoopifyOptionMaybe::lookup_all(1u, pairs_dup);
-  ASSERT(all_vals != nullptr);
 
   // safe_head
   auto sh = LoopifyOptionMaybe::safe_head(l5);
@@ -60,7 +59,6 @@ int main() {
     OptList::cons(std::optional<unsigned int>(),
       OptList::cons(std::make_optional(3u), opt_nil)));
   auto catted = LoopifyOptionMaybe::catMaybes(opts);
-  ASSERT(catted != nullptr);
 
   // find_index_even
   auto fie = LoopifyOptionMaybe::find_index_even(l5);

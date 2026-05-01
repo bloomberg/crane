@@ -1,18 +1,5 @@
 #include <effect_workflow.h>
 
-#include <chrono>
-#include <cstdint>
-#include <cstdlib>
-#include <filesystem>
-#include <iostream>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <unistd.h>
-#include <utility>
-#include <variant>
-
 /// 1. Use 5 different effect types in one function
 std::string EffectWorkflow::full_workflow(const std::string prefix) {
   int64_t _x = static_cast<int64_t>(

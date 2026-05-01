@@ -2,12 +2,11 @@
 #define INCLUDED_RECORD_ERASED_PROOF_FIELDS
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -15,7 +14,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -26,37 +25,110 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 
-  template <typename T1, MapsTo<T1, T1, t_A> F0>
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, const T1 a0) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    auto &&_sv = *(this);
+    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return d_a1->template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 };
@@ -152,45 +224,76 @@ struct RecordErasedProofFieldsCase {
 
   public:
     // CREATORS
+    StoredTag() {}
+
     explicit StoredTag(TagPrimary _v) : d_v_(std::move(_v)) {}
 
     explicit StoredTag(TagSecondary _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<StoredTag> tagprimary(ItemKind a0) {
-      return std::make_shared<StoredTag>(TagPrimary{std::move(a0)});
+    StoredTag(const StoredTag &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    StoredTag(StoredTag &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    StoredTag &operator=(const StoredTag &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<StoredTag> tagsecondary(ItemKind a0) {
-      return std::make_shared<StoredTag>(TagSecondary{std::move(a0)});
+    StoredTag &operator=(StoredTag &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    StoredTag clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<TagPrimary>(_sv.v())) {
+        const auto &[d_a0] = std::get<TagPrimary>(_sv.v());
+        return StoredTag(TagPrimary{d_a0});
+      } else {
+        const auto &[d_a0] = std::get<TagSecondary>(_sv.v());
+        return StoredTag(TagSecondary{d_a0});
+      }
+    }
+
+    // CREATORS
+    static StoredTag tagprimary(ItemKind a0) {
+      return StoredTag(TagPrimary{std::move(a0)});
+    }
+
+    static StoredTag tagsecondary(ItemKind a0) {
+      return StoredTag(TagSecondary{std::move(a0)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, ItemKind> F0, MapsTo<T1, ItemKind> F1>
-  static T1 StoredTag_rect(F0 &&f, F1 &&f0,
-                           const std::shared_ptr<StoredTag> &s) {
-    if (std::holds_alternative<typename StoredTag::TagPrimary>(s->v())) {
-      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
+             std::is_invocable_r_v<T1, F1 &, ItemKind &>
+  static T1 StoredTag_rect(F0 &&f, F1 &&f0, const StoredTag &s) {
+    if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
+      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s->v());
+      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s.v());
       return f0(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, ItemKind> F0, MapsTo<T1, ItemKind> F1>
-  static T1 StoredTag_rec(F0 &&f, F1 &&f0,
-                          const std::shared_ptr<StoredTag> &s) {
-    if (std::holds_alternative<typename StoredTag::TagPrimary>(s->v())) {
-      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
+             std::is_invocable_r_v<T1, F1 &, ItemKind &>
+  static T1 StoredTag_rec(F0 &&f, F1 &&f0, const StoredTag &s) {
+    if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
+      const auto &[d_a0] = std::get<typename StoredTag::TagPrimary>(s.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s->v());
+      const auto &[d_a0] = std::get<typename StoredTag::TagSecondary>(s.v());
       return f0(d_a0);
     }
   }
@@ -235,39 +338,42 @@ struct RecordErasedProofFieldsCase {
   struct PrimaryRecord {
     ItemKind primary_left_kind;
     ItemKind primary_right_kind;
-    std::shared_ptr<StoredTag> primary_tag;
+    StoredTag primary_tag;
+
+    // ACCESSORS
+    PrimaryRecord clone() const {
+      return PrimaryRecord{(*(this)).primary_left_kind,
+                           (*(this)).primary_right_kind,
+                           (*(this)).primary_tag.clone()};
+    }
   };
 
   struct ErasedProofRecord {
     TraceBucket erased_bucket;
+
+    // ACCESSORS
+    ErasedProofRecord clone() const {
+      return ErasedProofRecord{(*(this)).erased_bucket};
+    }
   };
 
-  __attribute__((pure)) static unsigned int kind_code(const ItemKind k);
-  __attribute__((pure)) static unsigned int
-  tag_code(const std::shared_ptr<StoredTag> &t);
-  __attribute__((pure)) static unsigned int bucket_code(const TraceBucket b);
-  static std::shared_ptr<StoredTag> bucket_to_tag(const TraceBucket b);
-  static inline const std::shared_ptr<PrimaryRecord> sample_primary_record =
-      std::make_shared<PrimaryRecord>(
-          PrimaryRecord{ItemKind::e_KINDC, ItemKind::e_KINDE,
-                        StoredTag::tagprimary(ItemKind::e_KINDC)});
-  static inline const std::shared_ptr<ErasedProofRecord>
-      sample_erased_proof_record = std::make_shared<ErasedProofRecord>(
-          ErasedProofRecord{TraceBucket::e_BUCKETC});
-  __attribute__((pure)) static unsigned int
-  left_kind_code_of(const std::shared_ptr<PrimaryRecord> &r);
-  __attribute__((pure)) static unsigned int
-  right_kind_code_of(const std::shared_ptr<PrimaryRecord> &r);
-  __attribute__((pure)) static unsigned int
-  tag_code_of(const std::shared_ptr<PrimaryRecord> &r);
-  __attribute__((pure)) static unsigned int
-  bucket_code_of(const std::shared_ptr<ErasedProofRecord> &r);
-  static std::shared_ptr<List<unsigned int>>
-  trace_codes_of(const std::shared_ptr<PrimaryRecord> &primary,
-                 const std::shared_ptr<ErasedProofRecord> &erased);
-  __attribute__((pure)) static unsigned int
-  trace_checksum_of(const std::shared_ptr<PrimaryRecord> &primary,
-                    const std::shared_ptr<ErasedProofRecord> &erased);
+  static unsigned int kind_code(const ItemKind k);
+  static unsigned int tag_code(const StoredTag &t);
+  static unsigned int bucket_code(const TraceBucket b);
+  static StoredTag bucket_to_tag(const TraceBucket b);
+  static inline const PrimaryRecord sample_primary_record =
+      PrimaryRecord{ItemKind::e_KINDC, ItemKind::e_KINDE,
+                    StoredTag::tagprimary(ItemKind::e_KINDC)};
+  static inline const ErasedProofRecord sample_erased_proof_record =
+      ErasedProofRecord{TraceBucket::e_BUCKETC};
+  static unsigned int left_kind_code_of(const PrimaryRecord &r);
+  static unsigned int right_kind_code_of(const PrimaryRecord &r);
+  static unsigned int tag_code_of(const PrimaryRecord &r);
+  static unsigned int bucket_code_of(const ErasedProofRecord &r);
+  static List<unsigned int> trace_codes_of(const PrimaryRecord &primary,
+                                           const ErasedProofRecord &erased);
+  static unsigned int trace_checksum_of(const PrimaryRecord &primary,
+                                        const ErasedProofRecord &erased);
   static inline const unsigned int sample_left_kind_code =
       left_kind_code_of(sample_primary_record);
   static inline const unsigned int sample_right_kind_code =

@@ -59,14 +59,14 @@ void test_list_dir() {
 
   auto entries = Dir::list_dir(dir);
   // Should be non-empty (Cons variant)
-  ASSERT(std::holds_alternative<List<std::string>::Cons>(entries->v()));
+  ASSERT(std::holds_alternative<List<std::string>::Cons>(entries.v()));
 
   // Count entries
   int count = 0;
-  auto cur = entries;
+  const List<std::string> *cur = &entries;
   while (std::holds_alternative<List<std::string>::Cons>(cur->v())) {
     ++count;
-    cur = std::get<List<std::string>::Cons>(cur->v()).d_a1;
+    cur = std::get<List<std::string>::Cons>(cur->v()).d_a1.get();
   }
   ASSERT(count == 2);
 

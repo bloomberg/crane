@@ -1,27 +1,20 @@
 #include <reuse_fn_in_body.h>
 
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
-__attribute__((pure)) unsigned int
-ReuseFnInBody::length(const std::shared_ptr<ReuseFnInBody::mylist> &l) {
-  if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l->v())) {
+unsigned int ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
+  if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
     const auto &[d_a0, d_a1] =
-        std::get<typename ReuseFnInBody::mylist::Mycons>(l->v());
-    return (1u + length(d_a1));
+        std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
+    return (1u + length(*(d_a1)));
   } else {
     return 0u;
   }
 }
 
-__attribute__((pure)) unsigned int
-ReuseFnInBody::sum(const std::shared_ptr<ReuseFnInBody::mylist> &l) {
-  if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l->v())) {
+unsigned int ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
+  if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
     const auto &[d_a0, d_a1] =
-        std::get<typename ReuseFnInBody::mylist::Mycons>(l->v());
-    return (d_a0 + sum(d_a1));
+        std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
+    return (d_a0 + sum(*(d_a1)));
   } else {
     return 0u;
   }
@@ -43,15 +36,14 @@ ReuseFnInBody::sum(const std::shared_ptr<ReuseFnInBody::mylist> &l) {
 /// This is similar to reuse_use_after_move but the scrutinee
 /// is used through a DIFFERENT function (sum instead of length)
 /// AND combined with a pattern variable in an arithmetic expression.
-std::shared_ptr<ReuseFnInBody::mylist>
-ReuseFnInBody::prefix_sum(std::shared_ptr<ReuseFnInBody::mylist> l,
-                          const bool b) {
+ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l,
+                                                const bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(
-            l->v())) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ReuseFnInBody::mylist::Mycons>(l->v());
-      return mylist::mycons((sum(l) + d_a0), d_a1);
+            l.v_mut())) {
+      auto &[d_a0, d_a1] =
+          std::get<typename ReuseFnInBody::mylist::Mycons>(l.v_mut());
+      return mylist::mycons((sum(l) + d_a0), *(d_a1));
     } else {
       return mylist::mynil();
     }

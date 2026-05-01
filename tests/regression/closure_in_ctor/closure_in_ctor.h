@@ -3,12 +3,10 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ClosureInCtor {
   struct box {
@@ -27,42 +25,69 @@ struct ClosureInCtor {
 
   public:
     // CREATORS
+    box() {}
+
     explicit box(Box0 _v) : d_v_(std::move(_v)) {}
 
     explicit box(Empty _v) : d_v_(_v) {}
 
-    static std::shared_ptr<box>
-    box0(std::function<unsigned int(unsigned int)> a0) {
-      return std::make_shared<box>(Box0{std::move(a0)});
+    box(const box &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    box &operator=(const box &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<box> empty() {
-      return std::make_shared<box>(Empty{});
+    box &operator=(box &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    box clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Box0>(_sv.v())) {
+        const auto &[d_a0] = std::get<Box0>(_sv.v());
+        return box(Box0{d_a0});
+      } else {
+        return box(Empty{});
+      }
+    }
+
+    // CREATORS
+    static box box0(std::function<unsigned int(unsigned int)> a0) {
+      return box(Box0{std::move(a0)});
+    }
+
+    static box empty() { return box(Empty{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1,
-            MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
-  static T1 box_rect(F0 &&f, const T1 f0, const std::shared_ptr<box> &b) {
-    if (std::holds_alternative<typename box::Box0>(b->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &,
+                                   std::function<unsigned int(unsigned int)> &>
+  static T1 box_rect(F0 &&f, const T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);
     } else {
       return f0;
     }
   }
 
-  template <typename T1,
-            MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
-  static T1 box_rec(F0 &&f, const T1 f0, const std::shared_ptr<box> &b) {
-    if (std::holds_alternative<typename box::Box0>(b->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &,
+                                   std::function<unsigned int(unsigned int)> &>
+  static T1 box_rec(F0 &&f, const T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);
     } else {
       return f0;
@@ -80,14 +105,14 @@ struct ClosureInCtor {
   ///
   /// Difference from fix_escape_capture: escapes through a CUSTOM
   /// INDUCTIVE constructor, not a pair.
-  static std::shared_ptr<box> make_box_fix(const unsigned int n);
+  static box make_box_fix(const unsigned int n);
   /// test1: make_box_fix(5) returns Box(add) where add(x) = x + 5.
   /// Expected: add(3) = 5 + 3 = 8.
   /// Bug: & captures dangling reference to n.
   static inline const unsigned int test1 = []() {
     auto &&_sv = make_box_fix(5u);
-    if (std::holds_alternative<typename box::Box0>(_sv->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(_sv->v());
+    if (std::holds_alternative<typename box::Box0>(_sv.v())) {
+      const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());
       return d_a0(3u);
     } else {
       return 999u;
@@ -96,9 +121,9 @@ struct ClosureInCtor {
   /// test2: Interleave noise between closure creation and use.
   /// Expected: add(10) = 42 + 10 = 52.
   static inline const unsigned int test2 = []() {
-    std::shared_ptr<box> b = make_box_fix(42u);
-    if (std::holds_alternative<typename box::Box0>(b->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b->v());
+    box b = make_box_fix(42u);
+    if (std::holds_alternative<typename box::Box0>(b.v_mut())) {
+      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
       return d_a0(10u);
     } else {
       return 999u;
@@ -107,12 +132,12 @@ struct ClosureInCtor {
   /// test3: Two boxes — capture different parameters.
   /// Expected: add_10(0) + add_20(0) = 10 + 20 = 30.
   static inline const unsigned int test3 = []() {
-    std::shared_ptr<box> b1 = make_box_fix(10u);
-    std::shared_ptr<box> b2 = make_box_fix(20u);
-    if (std::holds_alternative<typename box::Box0>(b1->v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b1->v());
-      if (std::holds_alternative<typename box::Box0>(b2->v())) {
-        const auto &[d_a00] = std::get<typename box::Box0>(b2->v());
+    box b1 = make_box_fix(10u);
+    box b2 = make_box_fix(20u);
+    if (std::holds_alternative<typename box::Box0>(b1.v_mut())) {
+      auto &[d_a0] = std::get<typename box::Box0>(b1.v_mut());
+      if (std::holds_alternative<typename box::Box0>(b2.v_mut())) {
+        auto &[d_a00] = std::get<typename box::Box0>(b2.v_mut());
         return (d_a0(0u) + d_a00(0u));
       } else {
         return 999u;

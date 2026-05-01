@@ -2,10 +2,9 @@
 #define INCLUDED_BLOCK_TEMPLATE_NONLOCAL
 
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct BlockTemplateNonlocal {
   /// Block template in pure let binding — compiled to static inline initializer

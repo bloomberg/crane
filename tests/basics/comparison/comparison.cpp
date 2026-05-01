@@ -1,10 +1,6 @@
 #include <comparison.h>
 
-#include <type_traits>
-#include <utility>
-
-__attribute__((pure)) unsigned int
-Comparison::cmp_to_nat(const Comparison::Cmp c) {
+unsigned int Comparison::cmp_to_nat(const Comparison::Cmp c) {
   switch (c) {
   case Cmp::e_CMPLT: {
     return 0u;
@@ -20,8 +16,8 @@ Comparison::cmp_to_nat(const Comparison::Cmp c) {
   }
 }
 
-__attribute__((pure)) Comparison::Cmp
-Comparison::compare_nats(const unsigned int a, const unsigned int b) {
+Comparison::Cmp Comparison::compare_nats(const unsigned int a,
+                                         const unsigned int b) {
   if (a < b) {
     return Cmp::e_CMPLT;
   } else {
@@ -33,8 +29,7 @@ Comparison::compare_nats(const unsigned int a, const unsigned int b) {
   }
 }
 
-__attribute__((pure)) unsigned int Comparison::max_nat(const unsigned int a,
-                                                       const unsigned int b) {
+unsigned int Comparison::max_nat(const unsigned int a, const unsigned int b) {
   switch (compare_nats(a, b)) {
   case Cmp::e_CMPLT: {
     return b;
@@ -45,8 +40,7 @@ __attribute__((pure)) unsigned int Comparison::max_nat(const unsigned int a,
   }
 }
 
-__attribute__((pure)) unsigned int Comparison::min_nat(const unsigned int a,
-                                                       const unsigned int b) {
+unsigned int Comparison::min_nat(const unsigned int a, const unsigned int b) {
   switch (compare_nats(a, b)) {
   case Cmp::e_CMPGT: {
     return b;
@@ -57,9 +51,8 @@ __attribute__((pure)) unsigned int Comparison::min_nat(const unsigned int a,
   }
 }
 
-__attribute__((pure)) unsigned int Comparison::clamp(const unsigned int val,
-                                                     const unsigned int lo,
-                                                     const unsigned int hi) {
+unsigned int Comparison::clamp(const unsigned int val, const unsigned int lo,
+                               const unsigned int hi) {
   switch (compare_nats(val, lo)) {
   case Cmp::e_CMPLT: {
     return lo;
@@ -77,8 +70,7 @@ __attribute__((pure)) unsigned int Comparison::clamp(const unsigned int val,
   }
 }
 
-__attribute__((pure)) Comparison::Cmp
-Comparison::flip_cmp(const Comparison::Cmp c) {
+Comparison::Cmp Comparison::flip_cmp(const Comparison::Cmp c) {
   switch (c) {
   case Cmp::e_CMPLT: {
     return Cmp::e_CMPGT;

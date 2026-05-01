@@ -3,23 +3,21 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct MoveSafety {
-  struct tree : public std::enable_shared_from_this<tree> {
+  struct tree {
     // TYPES
     struct Leaf {};
 
     struct Node {
-      std::shared_ptr<tree> d_a0;
+      std::unique_ptr<tree> d_a0;
       unsigned int d_a1;
-      std::shared_ptr<tree> d_a2;
+      std::unique_ptr<tree> d_a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -30,71 +28,135 @@ struct MoveSafety {
 
   public:
     // CREATORS
+    tree() {}
+
     explicit tree(Leaf _v) : d_v_(_v) {}
 
     explicit tree(Node _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<tree> leaf() {
-      return std::make_shared<tree>(Leaf{});
+    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    tree &operator=(const tree &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(const std::shared_ptr<tree> &a0,
-                                      unsigned int a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{a0, std::move(a1), a2});
+    tree &operator=(tree &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<tree> node(std::shared_ptr<tree> &&a0,
-                                      unsigned int a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
+    // ACCESSORS
+    tree clone() const {
+      tree _out{};
+
+      struct _CloneFrame {
+        const tree *_src;
+        tree *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const tree *_src = _frame._src;
+        tree *_dst = _frame._dst;
+        if (std::holds_alternative<Leaf>(_src->v())) {
+          _dst->d_v_ = Leaf{};
+        } else {
+          const auto &_alt = std::get<Node>(_src->v());
+          _dst->d_v_ =
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          }
+          if (_alt.d_a2) {
+            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    static tree leaf() { return tree(Leaf{}); }
+
+    static tree node(tree a0, unsigned int a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~tree() {
+      std::vector<std::unique_ptr<tree>> _stack{};
+      auto _drain = [&](tree &_node) {
+        if (std::holds_alternative<Node>(_node.d_v_)) {
+          auto &_alt = std::get<Node>(_node.d_v_);
+          if (_alt.d_a0) {
+            _stack.push_back(std::move(_alt.d_a0));
+          }
+          if (_alt.d_a2) {
+            _stack.push_back(std::move(_alt.d_a2));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
     /// TEST 4: Partial application followed by identity function
     /// that takes by value (returns its argument).
-    std::shared_ptr<tree> tree_id() const {
-      return std::const_pointer_cast<tree>(this->shared_from_this());
-    }
+    tree tree_id() const { return std::move(*(this)); }
 
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
-    std::shared_ptr<tree> wrap_tree() const {
-      return tree::node(std::const_pointer_cast<tree>(this->shared_from_this()),
-                        0u, tree::leaf());
+    tree wrap_tree() const {
+      return tree::node(std::move(*(this)), 0u, tree::leaf());
     }
 
-    __attribute__((pure)) unsigned int sum_values(const unsigned int x) const {
-      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+    unsigned int sum_values(const unsigned int x) const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        if (std::holds_alternative<typename tree::Leaf>(d_a0->v())) {
+        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        auto &&_sv0 = *(d_a0);
+        if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (d_a1 + x);
         } else {
           const auto &[d_a00, d_a10, d_a20] =
-              std::get<typename tree::Node>(d_a0->v());
-          if (std::holds_alternative<typename tree::Leaf>(d_a2->v())) {
+              std::get<typename tree::Node>(_sv0.v());
+          auto &&_sv1 = *(d_a2);
+          if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (d_a10 + x);
           } else {
             const auto &[d_a01, d_a11, d_a21] =
-                std::get<typename tree::Node>(d_a2->v());
+                std::get<typename tree::Node>(_sv1.v());
             return (((d_a10 + d_a11) + d_a1) + x);
           }
         }
       }
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                  std::shared_ptr<tree>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rec(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -102,54 +164,60 @@ struct MoveSafety {
         const tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// call.
+      struct _After2 {
         tree *_s0;
-        std::shared_ptr<tree> _s1;
-        unsigned int _s2;
-        std::shared_ptr<tree> _s3;
+        tree _s1;
+        unsigned int d_a1;
+        tree _s3;
       };
 
-      struct _Call2 {
-        T1 _s0;
-        std::shared_ptr<tree> _s1;
-        unsigned int _s2;
-        std::shared_ptr<tree> _s3;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        T1 _result;
+        tree _s1;
+        unsigned int d_a1;
+        tree _s3;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
-          const auto &_f = std::get<_Enter>(_frame);
+          auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+          auto &&_sv = *(_self);
+          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_self->v());
-            _stack.emplace_back(_Call1{d_a0.get(), d_a2, d_a1, d_a0});
+                std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          const auto &_f = std::get<_Call1>(_frame);
-          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
+                                        std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          const auto &_f = std::get<_Call2>(_frame);
-          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
         }
       }
       return _result;
     }
 
-    template <typename T1, MapsTo<T1, std::shared_ptr<tree>, T1, unsigned int,
-                                  std::shared_ptr<tree>, T1>
-                               F1>
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
+                                     tree &, T1 &>
     T1 tree_rect(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -157,46 +225,52 @@ struct MoveSafety {
         const tree *_self;
       };
 
-      struct _Call1 {
+      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// call.
+      struct _After2 {
         tree *_s0;
-        std::shared_ptr<tree> _s1;
-        unsigned int _s2;
-        std::shared_ptr<tree> _s3;
+        tree _s1;
+        unsigned int d_a1;
+        tree _s3;
       };
 
-      struct _Call2 {
-        T1 _s0;
-        std::shared_ptr<tree> _s1;
-        unsigned int _s2;
-        std::shared_ptr<tree> _s3;
+      /// Combiner: receives first result, combines with second recursive call.
+      struct _Combine1 {
+        T1 _result;
+        tree _s1;
+        unsigned int d_a1;
+        tree _s3;
       };
 
-      using _Frame = std::variant<_Enter, _Call1, _Call2>;
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
+      /// Frame dispatch: _Enter, _After2, _Combine1.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
-          const auto &_f = std::get<_Enter>(_frame);
+          auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          if (std::holds_alternative<typename tree::Leaf>(_self->v())) {
+          auto &&_sv = *(_self);
+          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_self->v());
-            _stack.emplace_back(_Call1{d_a0.get(), d_a2, d_a1, d_a0});
+                std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_Call1>(_frame)) {
-          const auto &_f = std::get<_Call1>(_frame);
-          _stack.emplace_back(_Call2{_result, _f._s1, _f._s2, _f._s3});
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
+                                        std::move(_f._s3)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          const auto &_f = std::get<_Call2>(_frame);
-          _result = f0(_f._s3, _result, _f._s2, _f._s1, _f._s0);
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
         }
       }
       return _result;
@@ -218,35 +292,63 @@ struct MoveSafety {
 
   public:
     // CREATORS
+    fn_box() {}
+
     explicit fn_box(Box _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<fn_box>
-    box(std::function<unsigned int(unsigned int)> a0) {
-      return std::make_shared<fn_box>(Box{std::move(a0)});
+    fn_box(const fn_box &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    fn_box(fn_box &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    fn_box &operator=(const fn_box &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
+    }
+
+    fn_box &operator=(fn_box &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
+
+    // ACCESSORS
+    fn_box clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<Box>(_sv.v());
+      return fn_box(Box{d_a0});
+    }
+
+    // CREATORS
+    static fn_box box(std::function<unsigned int(unsigned int)> a0) {
+      return fn_box(Box{std::move(a0)});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
 
-    __attribute__((pure)) unsigned int apply_box(const unsigned int x) const {
-      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+    unsigned int apply_box(const unsigned int x) const {
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
       return d_a0(x);
     }
 
-    template <typename T1,
-              MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<
+          T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rec(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
       return f(d_a0);
     }
 
-    template <typename T1,
-              MapsTo<T1, std::function<unsigned int(unsigned int)>> F0>
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<
+          T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rect(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
+      auto &&_sv = *(this);
+      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
       return f(d_a0);
     }
   };
@@ -256,55 +358,51 @@ struct MoveSafety {
   /// Then wrap_tree takes t by value, so std::move(t) is generated.
   /// The lambda then holds a dangling reference.
   static inline const unsigned int bug_partial_then_wrap = []() {
-    std::shared_ptr<tree> t =
-        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                   tree::node(tree::leaf(), 30u, tree::leaf()));
-    return std::move(t)->sum_values(99u);
+    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    return std::move(t).sum_values(99u);
   }();
   /// TEST 2: Store partial application in a Box.
   /// If the eta-expanded lambda uses & capture,
   /// the Box will hold a dangling reference after the
   /// function returns.
-  static std::shared_ptr<fn_box> make_box(std::shared_ptr<tree> t);
+  static fn_box make_box(tree t);
   static inline const unsigned int bug_box_escape = []() {
-    std::shared_ptr<tree> t =
-        tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                   tree::node(tree::leaf(), 30u, tree::leaf()));
-    std::shared_ptr<fn_box> b = make_box(std::move(t));
-    return std::move(b)->apply_box(99u);
+    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    fn_box b = make_box(std::move(t));
+    return std::move(b).apply_box(99u);
   }();
   /// TEST 3: Two partial applications of same variable.
   /// Second one should not move t.
   static inline const unsigned int bug_double_partial = []() {
     return []() {
-      std::shared_ptr<tree> t =
-          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                     tree::node(tree::leaf(), 30u, tree::leaf()));
+      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                          tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
           [=](unsigned int _x0) mutable -> unsigned int {
-        return t->sum_values(_x0);
+        return t.sum_values(_x0);
       };
       std::function<unsigned int(unsigned int)> g =
           [&](unsigned int _x0) -> unsigned int {
-        return std::move(t)->sum_values(_x0);
+        return std::move(t).sum_values(_x0);
       };
       return (f(1u) + g(2u));
     }();
   }();
   static inline const unsigned int bug_partial_then_id = []() {
     return []() {
-      std::shared_ptr<tree> t =
-          tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                     tree::node(tree::leaf(), 30u, tree::leaf()));
+      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
+                          tree::node(tree::leaf(), 30u, tree::leaf()));
       std::function<unsigned int(unsigned int)> f =
           [=](unsigned int _x0) mutable -> unsigned int {
-        return t->sum_values(_x0);
+        return t.sum_values(_x0);
       };
-      std::shared_ptr<tree> t2 = std::move(t)->tree_id();
-      if (std::holds_alternative<typename tree::Leaf>(t2->v())) {
+      tree t2 = std::move(t).tree_id();
+      if (std::holds_alternative<typename tree::Leaf>(t2.v_mut())) {
         return f(0u);
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t2->v());
+        auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t2.v_mut());
         return f(d_a1);
       }
     }();

@@ -1,11 +1,5 @@
 #include <closure_in_ctor.h>
 
-#include <functional>
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 /// A local fixpoint captures the function parameter n and is stored
 /// in Box — a user-defined inductive (not option, not pair).
 ///
@@ -17,16 +11,17 @@
 ///
 /// Difference from fix_escape_capture: escapes through a CUSTOM
 /// INDUCTIVE constructor, not a pair.
-std::shared_ptr<ClosureInCtor::box>
-ClosureInCtor::make_box_fix(const unsigned int n) {
-  auto add = std::make_shared<std::function<unsigned int(unsigned int)>>();
-  *add = [=](unsigned int x) mutable -> unsigned int {
+ClosureInCtor::box ClosureInCtor::make_box_fix(const unsigned int n) {
+  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return n;
     } else {
       unsigned int x_ = x - 1;
-      return ((*add)(x_) + 1);
+      return (_self_add(_self_add, x_) + 1);
     }
   };
-  return box::box0(*add);
+  auto add = [=](unsigned int x) mutable -> unsigned int {
+    return add_impl(add_impl, x);
+  };
+  return box::box0(add);
 }

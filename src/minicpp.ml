@@ -142,6 +142,8 @@ and cpp_stmt =
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
     (* if-else: condition, then-branch, else-branch. Used for reuse
        optimization's use_count() check. *)
+  | Sif_then of cpp_expr * cpp_stmt list
+    (* if without else: condition and then-branch. *)
   | Sraw of string
     (* Raw C++ code, printed verbatim. Used for low-level operations in reuse
        optimization. *)
@@ -154,13 +156,17 @@ and cpp_stmt =
   | Sassign_field of cpp_expr * Id.t * cpp_expr
   (* Field assignment: obj.field = expr. Used for in-place mutation during
      memory reuse. *)
-  | Sderef_asgn of Id.t * cpp_expr
-  (* Dereference assignment: [*id = expr;].  Introduced for the
+  | Sassign_expr of cpp_expr * cpp_expr
+  (* General assignment: lhs = rhs. Used when the left-hand side is not a plain
+     local variable or direct field. *)
+  | Sderef_asgn of cpp_expr * cpp_expr
+  (* Dereference assignment: [*lhs = rhs;].  Introduced for the
      [shared_ptr<std::function>] fixpoint pattern where a fixpoint is
      allocated as [auto f = make_shared<function<...>>()] and the body is
      assigned via [*f = [=](...) mutable { ... }].  The indirection allows
      the by-value lambda to capture [f] (a [shared_ptr] copy) instead of a
-     dangling [&]-reference.  See {!Translation.gen_local_fix_shared_ptr}. *)
+     dangling [&]-reference.  Also used for [reset()] body: [*this = T()].
+     See {!Translation.gen_local_fix_shared_ptr}. *)
   | Swhile of cpp_expr * cpp_stmt list
     (* while (condition) { body } — used by loopify pass *)
   | Sblock of cpp_stmt list
@@ -212,6 +218,14 @@ and smatch_branch = {
         printer emits [auto& id = std::get<smb_ctor_type>(scrut->v_mut())]
         before the body.  The condition is typically [use_count() == 1].
         [None] for branches without reuse. *)
+  smb_is_value_type : bool;
+    (** When [true], the scrutinee is a value type (not shared_ptr).
+        Affects binding style: value types use [.v()] / [.v_mut()],
+        pointer types use [->v()] / [->v_mut()]. *)
+  smb_is_owned : bool;
+    (** When [true], the scrutinee is owned (last use or explicit move).
+        Affects binding: owned value types use [auto [...] = std::move(std::get<T>(scrut.v_mut()))],
+        borrowed value types use [const auto& [...] = std::get<T>(scrut.v())]. *)
   smb_body : cpp_stmt list;
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
@@ -265,18 +279,32 @@ and cpp_expr =
   | CPPmember of cpp_expr * Id.t (* expr.member - for accessing v_ etc *)
   | CPParrow of cpp_expr * Id.t (* expr->member - for ptr->v_ access *)
   | CPPmethod_call of cpp_expr * Id.t * cpp_expr list (* obj->method(args) *)
+  | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list (* obj.method(args) *)
   | CPPqualified of
       cpp_expr * Id.t (* expr::id - for qualified name access like Type::ctor *)
   | CPPconvertible_to of cpp_type (* std::convertible_to<T> constraint *)
   | CPPabort of string (* unreachable code / absurd case - calls std::abort() *)
   | CPPenum_val of
       GlobRef.t * Id.t (* enum class value: EnumType::Constructor *)
+  | CPPnullptr (* nullptr *)
+  | CPPbraced of cpp_expr list (* braced initializer: {a, b, ...} *)
+  | CPPstd_get of cpp_type * cpp_expr option
+    (* std::get<T> or std::get<T>(expr) *)
+  | CPPstd_holds_alternative of cpp_type
+    (* std::holds_alternative<T> *)
+  | CPPdeclval of cpp_type
+    (* std::declval<T>() *)
+  | CPPtypename_qualified of cpp_type * Id.t
+    (* typename T::Nested, usable where a dependent nested struct name is
+       required as an expression/type-name token. *)
   | CPPraw of string
     (* Raw C++ expression, printed verbatim. Used for low-level operations
        (e.g., literal "1" for use_count check). *)
   | CPPbinop of string * cpp_expr * cpp_expr
     (* Binary operator: operator string, lhs, rhs. Used for conditions in reuse
        optimization (&&, ==). *)
+  | CPPcond of cpp_expr * cpp_expr * cpp_expr
+    (* Ternary conditional: cond ? then_expr : else_expr. *)
   | CPPbool of bool (* true / false literal *)
   | CPPint of int (* integer literal *)
   | CPPbrace_init (* {} — empty brace initialization *)
@@ -306,12 +334,16 @@ and cpp_field =
       (Id.t * cpp_type) list
       * (Id.t * cpp_expr) list
       * bool (* bool = explicit *)
+  | Fdestructor of cpp_stmt list
+    (* Destructor body for the enclosing struct. *)
   (* Nested struct with its own visibility-annotated fields *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
   (* Nested using declaration *)
   | Fnested_using of Id.t * cpp_type
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
+  (* Raw C++ field declaration (e.g., converting constructors) *)
+  | Fraw of string
 
 (** Method field descriptor for struct methods. *)
 and method_field = {
@@ -322,6 +354,7 @@ and method_field = {
   mf_body : cpp_stmt list;
   mf_is_const : bool;
   mf_is_static : bool;
+  mf_is_inline : bool;
   mf_this_pos : int;
   mf_no_pure : bool;
 }
@@ -329,7 +362,9 @@ and method_field = {
 (** C++ type schema. The integer is the number of variables in the schema. *)
 type cpp_schema = int * cpp_type
 
-(** Construct a shared_ptr type wrapping an inductive type. *)
+(** Construct a shared_ptr type wrapping an inductive type (for recursive
+    self-references in constructor fields). Using shared_ptr keeps the value type
+    copyable; unique_ptr would require clone() generation. *)
 let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
 
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
@@ -412,12 +447,21 @@ let map_expr
   | CPParrow (e', id) -> CPParrow (fe e', id)
   | CPPmethod_call (obj, id, args) ->
     CPPmethod_call (fe obj, id, List.map fe args)
+  | CPPdot_method_call (obj, id, args) ->
+    CPPdot_method_call (fe obj, id, List.map fe args)
   | CPPqualified (e', id) -> CPPqualified (fe e', id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
   | CPPabort _ -> e
   | CPPenum_val _ -> e
+  | CPPnullptr -> e
+  | CPPbraced args -> CPPbraced (List.map fe args)
+  | CPPstd_get (ty, e_opt) -> CPPstd_get (ft ty, Option.map fe e_opt)
+  | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
+  | CPPdeclval ty -> CPPdeclval (ft ty)
+  | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
   | CPPraw _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
+  | CPPcond (c, t, f) -> CPPcond (fe c, fe t, fe f)
   | CPPbool _ -> e
   | CPPint _ -> e
   | CPPbrace_init -> e
@@ -458,13 +502,15 @@ let map_stmt
   | Sassert _ -> s
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
+  | Sif_then (cond, then_br) -> Sif_then (fe cond, List.map fs then_br)
   | Sraw _ -> s
   | Sstruct_def (id, fields) ->
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
   | Susing (id, ty) -> Susing (id, ft ty)
   | Sdecl_init (id, ty) -> Sdecl_init (id, ft ty)
   | Sassign_field (obj, field, e) -> Sassign_field (fe obj, field, fe e)
-  | Sderef_asgn (id, e) -> Sderef_asgn (id, fe e)
+  | Sassign_expr (lhs, e) -> Sassign_expr (fe lhs, fe e)
+  | Sderef_asgn (lhs, e) -> Sderef_asgn (fe lhs, fe e)
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
   | Scontinue -> s
@@ -484,6 +530,8 @@ let map_stmt
               smb_reuse =
                 Option.map (fun (cond, rf, stmts) ->
                   (fe cond, rf, List.map fs stmts)) br.smb_reuse;
+              smb_is_value_type = br.smb_is_value_type;
+              smb_is_owned = br.smb_is_owned;
               smb_body = List.map fs br.smb_body })
           branches,
         Option.map (List.map fs) default )
@@ -496,7 +544,8 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
-  | CPPabort _ | CPPenum_val _ | CPPraw _ | CPPbool _ | CPPint _
+  | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
+  | CPPdeclval _ | CPPtypename_qualified _ | CPPraw _ | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
   | CPPfun_call (f, args) -> on_expr f; List.iter on_expr args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
@@ -510,9 +559,13 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
     List.iter on_expr es
   | CPPparray (arr, e') -> Array.iter on_expr arr; on_expr e'
   | CPPmethod_call (obj, _, args) -> on_expr obj; List.iter on_expr args
+  | CPPdot_method_call (obj, _, args) -> on_expr obj; List.iter on_expr args
   | CPPrequires (_, constraints, _) ->
     List.iter (fun (e', _) -> on_expr e') constraints
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
+  | CPPcond (c, t, f) -> on_expr c; on_expr t; on_expr f
+  | CPPbraced args -> List.iter on_expr args
+  | CPPstd_get (_, e_opt) -> Option.iter on_expr e_opt
 
 (** Iterate over the immediate children of a [cpp_stmt], calling [on_expr]
     for child expressions and [on_stmts] for child statement lists.  Does
@@ -526,6 +579,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sasgn (_, _, e) -> on_expr e
   | Sif (cond, then_br, else_br) ->
     on_expr cond; on_stmts then_br; on_stmts else_br
+  | Sif_then (cond, then_br) -> on_expr cond; on_stmts then_br
   | Sswitch (scrut, _, branches, default) ->
     on_expr scrut;
     List.iter (fun (_, stmts) -> on_stmts stmts) branches;
@@ -534,7 +588,8 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
     on_expr scrut;
     List.iter (fun (_, _, stmts) -> on_stmts stmts) branches
   | Sassign_field (obj, _, e) -> on_expr obj; on_expr e
-  | Sderef_asgn (_, e) -> on_expr e
+  | Sassign_expr (lhs, e) -> on_expr lhs; on_expr e
+  | Sderef_asgn (lhs, e) -> on_expr lhs; on_expr e
   | Swhile (cond, body) -> on_expr cond; on_stmts body
   | Sblock stmts -> on_stmts stmts
   | Sblock_custom (_, _, _, _, args, _) -> List.iter on_expr args

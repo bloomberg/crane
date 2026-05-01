@@ -23,9 +23,9 @@ int main() {
   // BUG: use-after-move on the shared_ptr wrapping the record.
   // Expected: payload = 41
   auto r3 = RUAM::problematic;
-  std::cout << "problematic.payload = " << r3->payload << std::endl;
-  assert(r3->payload == 41u);
-  assert(r3->enabled == true);
+  std::cout << "problematic.payload = " << r3.payload << std::endl;
+  assert(r3.payload == 41u);
+  assert(r3.enabled == true);
 
   std::cout << "All record_use_after_move tests passed!" << std::endl;
   return 0;

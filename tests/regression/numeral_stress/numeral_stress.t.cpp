@@ -22,10 +22,10 @@ int main() {
     assert(NumeralStress::test_count == 50u);
 
     // 8. Record with numerals
-    assert(NumeralStress::origin->px == 0u);
-    assert(NumeralStress::origin->py == 0u);
-    assert(NumeralStress::far_point->px == 999u);
-    assert(NumeralStress::far_point->py == 888u);
+    assert(NumeralStress::origin.px == 0u);
+    assert(NumeralStress::origin.py == 0u);
+    assert(NumeralStress::far_point.px == 999u);
+    assert(NumeralStress::far_point.py == 888u);
 
     // 9. Range check
     assert(NumeralStress::test_range == true);

@@ -1,10 +1,6 @@
 #include <ctor_escape_collision.h>
 
-#include <type_traits>
-#include <utility>
-
-__attribute__((pure)) unsigned int
-CtorEscapeCollision::tag(const CtorEscapeCollision::Item x) {
+unsigned int CtorEscapeCollision::tag(const CtorEscapeCollision::Item x) {
   switch (x) {
   case Item::e_D_: {
     return 1u;

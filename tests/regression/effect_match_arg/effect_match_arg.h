@@ -10,8 +10,6 @@
 #include <variant>
 
 using namespace std::string_literals;
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct EffectMatchArg {
   /// 1. Bool match as value argument to set_env
@@ -20,7 +18,7 @@ struct EffectMatchArg {
   static void set_bool_key(const bool flag, const std::string value);
   /// 3. Option match result as argument to set_env
   static void set_option_value(const std::string key,
-                               const std::optional<std::string> r);
+                               const std::optional<std::string> &r);
   /// 4. Bool match as argument to print_endline — exercises << precedence
   static void print_conditional(const bool flag);
   /// 5. Bool match as argument to get_env

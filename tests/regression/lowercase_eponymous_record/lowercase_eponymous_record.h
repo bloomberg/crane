@@ -2,23 +2,20 @@
 #define INCLUDED_LOWERCASE_EPONYMOUS_RECORD
 
 #include <memory>
+#include <optional>
 #include <type_traits>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct LowercaseEponymousRecord {
   struct state {
     unsigned int x;
     unsigned int y;
 
-    std::shared_ptr<state> set_x(const unsigned int n) const {
-      return std::make_shared<state>(state{n, this->state::y});
+    state set_x(const unsigned int n) const {
+      return state{n, (*(this)).state::y};
     }
   };
 
-  static inline const std::shared_ptr<state> example =
-      std::make_shared<state>(state{0u, 0u})->set_x(42u);
+  static inline const state example = state{0u, 0u}.set_x(42u);
 };
 
 #endif // INCLUDED_LOWERCASE_EPONYMOUS_RECORD

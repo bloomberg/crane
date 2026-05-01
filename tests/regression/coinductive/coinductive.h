@@ -4,12 +4,10 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct Coinductive {
   struct stream {
@@ -33,52 +31,40 @@ struct Coinductive {
     explicit stream(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static std::shared_ptr<stream> cons(unsigned int a0,
-                                        const std::shared_ptr<stream> &a1) {
-      return std::make_shared<stream>(Cons{std::move(a0), a1});
+    static stream cons(unsigned int a0, const stream &a1) {
+      return stream(Cons{std::move(a0), std::make_shared<stream>(a1)});
     }
 
-    static std::shared_ptr<stream> cons(unsigned int a0,
-                                        std::shared_ptr<stream> &&a1) {
-      return std::make_shared<stream>(Cons{std::move(a0), std::move(a1)});
-    }
-
-    static std::shared_ptr<stream>
-    lazy_(std::function<std::shared_ptr<stream>()> thunk) {
-      return std::make_shared<stream>(
-          std::function<variant_t()>([=]() mutable -> variant_t {
-            std::shared_ptr<stream> _tmp = thunk();
-            return _tmp->v();
-          }));
+    static stream lazy_(std::function<stream()> thunk) {
+      return stream(std::function<variant_t()>([=]() mutable -> variant_t {
+        stream _tmp = thunk();
+        return _tmp.v();
+      }));
     }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const {
-      return d_lazyV_.force();
-    }
+    const variant_t &v() const { return d_lazyV_.force(); }
   };
 
-  static std::shared_ptr<stream> zeros();
-  static std::shared_ptr<stream> count_from(const unsigned int n);
-  __attribute__((pure)) static unsigned int
-  hd(const std::shared_ptr<stream> &s);
-  static std::shared_ptr<stream> tl(const std::shared_ptr<stream> &s);
+  static stream zeros();
+  static stream count_from(const unsigned int n);
+  static unsigned int hd(const stream s);
+  static stream tl(const stream s);
 
-  template <MapsTo<unsigned int, unsigned int> F0>
-  static std::shared_ptr<stream> smap(F0 &&f,
-                                      const std::shared_ptr<stream> &s) {
-    const auto &[d_a0, d_a1] = std::get<typename stream::Cons>(s->v());
-    return stream::lazy_([=]() mutable -> std::shared_ptr<stream> {
-      return stream::cons(f(d_a0), smap(f, d_a1));
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+  static stream smap(F0 &&f, const stream s) {
+    const auto &[d_a0, d_a1] = std::get<typename stream::Cons>(s.v());
+    return stream::lazy_([=]() mutable -> stream {
+      return stream::cons(f(d_a0), smap(f, *(d_a1)));
     });
   }
 
-  static std::shared_ptr<stream> interleave(const std::shared_ptr<stream> &s1,
-                                            const std::shared_ptr<stream> &s2);
-  static inline const std::shared_ptr<stream> get_zeros = zeros();
-  static inline const std::shared_ptr<stream> get_count = count_from(0u);
+  static stream interleave(const stream s1, const stream s2);
+  static inline const stream get_zeros = zeros();
+  static inline const stream get_count = count_from(0u);
   static inline const unsigned int test_hd = hd(get_zeros);
-  static inline const std::shared_ptr<stream> test_count = get_count;
+  static inline const stream test_count = get_count;
 
   struct tree {
     // TYPES
@@ -109,39 +95,25 @@ struct Coinductive {
     explicit tree(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static std::shared_ptr<tree> leaf(unsigned int a0) {
-      return std::make_shared<tree>(Leaf{std::move(a0)});
+    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
+
+    static tree node(unsigned int a0, const tree &a1, const tree &a2) {
+      return tree(Node{std::move(a0), std::make_shared<tree>(a1),
+                       std::make_shared<tree>(a2)});
     }
 
-    static std::shared_ptr<tree> node(unsigned int a0,
-                                      const std::shared_ptr<tree> &a1,
-                                      const std::shared_ptr<tree> &a2) {
-      return std::make_shared<tree>(Node{std::move(a0), a1, a2});
-    }
-
-    static std::shared_ptr<tree> node(unsigned int a0,
-                                      std::shared_ptr<tree> &&a1,
-                                      std::shared_ptr<tree> &&a2) {
-      return std::make_shared<tree>(
-          Node{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    static std::shared_ptr<tree>
-    lazy_(std::function<std::shared_ptr<tree>()> thunk) {
-      return std::make_shared<tree>(
-          std::function<variant_t()>([=]() mutable -> variant_t {
-            std::shared_ptr<tree> _tmp = thunk();
-            return _tmp->v();
-          }));
+    static tree lazy_(std::function<tree()> thunk) {
+      return tree(std::function<variant_t()>([=]() mutable -> variant_t {
+        tree _tmp = thunk();
+        return _tmp.v();
+      }));
     }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const {
-      return d_lazyV_.force();
-    }
+    const variant_t &v() const { return d_lazyV_.force(); }
   };
 
-  static std::shared_ptr<tree> infinite_tree(const unsigned int n);
+  static tree infinite_tree(const unsigned int n);
 };
 
 #endif // INCLUDED_COINDUCTIVE

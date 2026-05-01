@@ -3,12 +3,10 @@
 
 #include <any>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 enum class Bool0 { e_TRUE0, e_FALSE0 };
 
@@ -35,35 +33,57 @@ struct TypeIndexedInductiveProbe {
 
   public:
     // CREATORS
+    wrap() {}
+
     explicit wrap(Wrap0 _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<wrap> wrap0(std::any a) {
-      return std::make_shared<wrap>(Wrap0{std::move(a)});
+    wrap(const wrap &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    wrap(wrap &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    wrap &operator=(const wrap &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    wrap &operator=(wrap &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
+    }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    wrap clone() const {
+      auto &&_sv = *(this);
+      const auto &[d_a] = std::get<Wrap0>(_sv.v());
+      return wrap(Wrap0{d_a});
+    }
+
+    // CREATORS
+    static wrap wrap0(std::any a) { return wrap(Wrap0{std::move(a)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename F0>
-  static T1 wrap_rect(F0 &&f, const std::shared_ptr<wrap> &w0) {
-    const auto &[d_a] = std::get<typename wrap::Wrap0>(w0->v());
+  static T1 wrap_rect(F0 &&f, const wrap &w0) {
+    const auto &[d_a] = std::get<typename wrap::Wrap0>(w0.v());
     return std::any_cast<T1>(f(d_a));
   }
 
   template <typename T1, typename F0>
-  static T1 wrap_rec(F0 &&f, const std::shared_ptr<wrap> &w0) {
-    const auto &[d_a] = std::get<typename wrap::Wrap0>(w0->v());
+  static T1 wrap_rec(F0 &&f, const wrap &w0) {
+    const auto &[d_a] = std::get<typename wrap::Wrap0>(w0.v());
     return std::any_cast<T1>(f(d_a));
   }
 
-  static inline const std::shared_ptr<wrap> w = wrap::wrap0(Bool0::e_TRUE0);
+  static inline const wrap w = wrap::wrap0(Bool0::e_TRUE0);
   static inline const Bool0 sample = []() {
     auto &&_sv0 = w;
-    const auto &[d_a0] = std::get<typename wrap::Wrap0>(_sv0->v());
+    const auto &[d_a0] = std::get<typename wrap::Wrap0>(_sv0.v());
     return std::any_cast<Bool0>(d_a0);
   }();
 };

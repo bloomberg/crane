@@ -3,12 +3,11 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <memory>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <unistd.h>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct TempFile {
   static std::string make_temp_file(const std::string prefix);

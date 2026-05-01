@@ -1,42 +1,34 @@
 #include <fix_move_capture.h>
 
-#include <functional>
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
-__attribute__((pure)) unsigned int
-FixMoveCapture::length(const std::shared_ptr<FixMoveCapture::mylist> &l) {
-  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l->v())) {
+unsigned int FixMoveCapture::length(const FixMoveCapture::mylist &l) {
+  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename FixMoveCapture::mylist::Mycons>(l->v());
-    return (1u + length(d_a1));
+        std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
+    return (1u + length(*(d_a1)));
   }
 }
 
-__attribute__((pure)) unsigned int
-FixMoveCapture::sum(const std::shared_ptr<FixMoveCapture::mylist> &l) {
-  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l->v())) {
+unsigned int FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
+  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] =
-        std::get<typename FixMoveCapture::mylist::Mycons>(l->v());
-    return (d_a0 + sum(d_a1));
+        std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
+    return (d_a0 + sum(*(d_a1)));
   }
 }
 
 /// dup_head stores l in the constructor → l escapes → owned.
 /// This means the caller passes l by value (move semantics).
-std::shared_ptr<FixMoveCapture::mylist>
-FixMoveCapture::dup_head(std::shared_ptr<FixMoveCapture::mylist> l) {
-  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l->v())) {
+FixMoveCapture::mylist FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
+  if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(
+          l.v_mut())) {
     return mylist::mynil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename FixMoveCapture::mylist::Mycons>(l->v());
+    auto &[d_a0, d_a1] =
+        std::get<typename FixMoveCapture::mylist::Mycons>(l.v_mut());
     return mylist::mycons(d_a0, l);
   }
 }
@@ -48,8 +40,7 @@ FixMoveCapture::dup_head(std::shared_ptr<FixMoveCapture::mylist> l) {
 /// - Generates dup_head(std::move(l))
 /// - l is now null in caller scope
 /// - g(3) calls fixpoint, which accesses l via & → null → CRASH
-__attribute__((pure)) unsigned int
-FixMoveCapture::f(std::shared_ptr<FixMoveCapture::mylist> l) {
+unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
   std::function<unsigned int(unsigned int)> go;
   go = [&](unsigned int n) -> unsigned int {
     if (n <= 0) {
@@ -59,15 +50,14 @@ FixMoveCapture::f(std::shared_ptr<FixMoveCapture::mylist> l) {
       return (1u + go(m));
     }
   };
-  std::shared_ptr<FixMoveCapture::mylist> t = dup_head(l);
+  FixMoveCapture::mylist t = dup_head(l);
   return (go(3u) + length(std::move(t)));
 }
 
 /// Even simpler: use the fixpoint, then pass l to a consuming
 /// function. The addition's evaluation order is unspecified in C++,
 /// so we use a let-binding to force the order.
-__attribute__((pure)) unsigned int
-FixMoveCapture::f2(std::shared_ptr<FixMoveCapture::mylist> l) {
+unsigned int FixMoveCapture::f2(FixMoveCapture::mylist l) {
   std::function<unsigned int(unsigned int)> go;
   go = [&](unsigned int n) -> unsigned int {
     if (n <= 0) {
@@ -78,6 +68,6 @@ FixMoveCapture::f2(std::shared_ptr<FixMoveCapture::mylist> l) {
     }
   };
   unsigned int result_g = go(3u);
-  std::shared_ptr<FixMoveCapture::mylist> t = dup_head(l);
+  FixMoveCapture::mylist t = dup_head(l);
   return (result_g + length(std::move(t)));
 }

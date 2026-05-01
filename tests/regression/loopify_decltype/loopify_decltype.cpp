@@ -1,96 +1,78 @@
 #include <loopify_decltype.h>
 
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
 /// Minimal trigger: fold over a list with a conditional per-element
 /// contribution.
-__attribute__((pure)) unsigned int
-LoopifyDecltype::count_true(const std::shared_ptr<List<bool>> &xs) {
+unsigned int LoopifyDecltype::count_true(const List<bool> &xs) {
   struct _Enter {
-    const std::shared_ptr<List<bool>> xs;
+    const List<bool> *xs;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     unsigned int _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{xs});
+  _stack.emplace_back(_Enter{&xs});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<bool>> xs = _f.xs;
-      if (std::holds_alternative<typename List<bool>::Nil>(xs->v())) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<bool> &xs = *(_f.xs);
+      if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs->v());
-        _stack.emplace_back(_Call1{[&]() -> unsigned int {
-          if (d_a0) {
-            return 1u;
-          } else {
-            return 0u;
-          }
-        }()});
-        _stack.emplace_back(_Enter{d_a1});
+        const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
+        _stack.emplace_back(_Resume1{(d_a0 ? 1u : 0u)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }
   return _result;
 }
 
-__attribute__((pure)) unsigned int LoopifyDecltype::sum_flagged(
-    const std::shared_ptr<List<std::shared_ptr<LoopifyDecltype::item>>> &xs) {
+unsigned int
+LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
   struct _Enter {
-    const std::shared_ptr<List<std::shared_ptr<LoopifyDecltype::item>>> xs;
+    const List<LoopifyDecltype::item> *xs;
   };
 
-  struct _Call1 {
+  /// Continuation: saves [_s0] across recursive call.
+  struct _Resume1 {
     unsigned int _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Call1>;
+  using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
-  _stack.emplace_back(_Enter{xs});
+  _stack.emplace_back(_Enter{&xs});
+  /// Frame dispatch: _Enter, _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
-      const auto &_f = std::get<_Enter>(_frame);
-      const std::shared_ptr<List<std::shared_ptr<LoopifyDecltype::item>>> xs =
-          _f.xs;
-      if (std::holds_alternative<
-              typename List<std::shared_ptr<LoopifyDecltype::item>>::Nil>(
-              xs->v())) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<LoopifyDecltype::item> &xs = *(_f.xs);
+      if (std::holds_alternative<typename List<LoopifyDecltype::item>::Nil>(
+              xs.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<
-            typename List<std::shared_ptr<LoopifyDecltype::item>>::Cons>(
-            xs->v());
-        _stack.emplace_back(_Call1{[&]() -> unsigned int {
-          if (d_a0->item_flag) {
-            return d_a0->item_val;
-          } else {
-            return 0u;
-          }
-        }()});
-        _stack.emplace_back(_Enter{d_a1});
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
+        _stack.emplace_back(_Resume1{(d_a0.item_flag ? d_a0.item_val : 0u)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      const auto &_f = std::get<_Call1>(_frame);
+      auto _f = std::move(std::get<_Resume1>(_frame));
       _result = (_f._s0 + _result);
     }
   }

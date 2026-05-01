@@ -6,9 +6,6 @@
 #include <optional>
 #include <type_traits>
 
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
-
 struct FixViaSimpleLambda {
   /// Two local fixpoints both capture a let-binding base via &.
   /// They are combined in a simple lambda fun x => ... which captures
@@ -23,8 +20,7 @@ struct FixViaSimpleLambda {
   /// the fixpoints don't escape directly through a constructor —
   /// they escape INDIRECTLY by being captured in a simple lambda
   /// that is then stored in Some.
-  __attribute__((
-      pure)) static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<unsigned int(unsigned int)>>
   make_combined(const unsigned int n);
   /// test1: base=42, double_add(5) = 42+10 = 52,
   /// triple_add(5) = 42+15 = 57. Total = 109.

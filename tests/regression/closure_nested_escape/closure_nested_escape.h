@@ -3,11 +3,9 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
 
 struct ClosureNestedEscape {
   /// A function takes a nat and returns a PAIR of fixpoints, both
@@ -20,9 +18,8 @@ struct ClosureNestedEscape {
   /// Difference from fix_escape_capture: returns TWO fixpoints that both
   /// capture the SAME variable. This tests whether both closures
   /// independently read garbage from the same dangling reference.
-  __attribute__((
-      pure)) static std::pair<std::function<unsigned int(unsigned int)>,
-                              std::function<unsigned int(unsigned int)>>
+  static std::pair<std::function<unsigned int(unsigned int)>,
+                   std::function<unsigned int(unsigned int)>>
   make_pair_fix(const unsigned int n);
   /// test1: make_pair_fix(5) returns (add, mul).
   /// add(3) = 5 + 3 = 8, mul(3) = 5 * 3 = 15.

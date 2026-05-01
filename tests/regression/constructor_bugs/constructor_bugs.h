@@ -7,9 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 template <typename t_A> struct List {
   // TYPES
@@ -17,7 +15,7 @@ template <typename t_A> struct List {
 
   struct Cons {
     t_A d_a0;
-    std::shared_ptr<List<t_A>> d_a1;
+    std::unique_ptr<List<t_A>> d_a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -28,29 +26,100 @@ private:
 
 public:
   // CREATORS
+  List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
 
   explicit List(Cons _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<List<t_A>> nil() {
-    return std::make_shared<List<t_A>>(Nil{});
+  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  List<t_A> &operator=(const List<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         const std::shared_ptr<List<t_A>> &a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), a1});
+  List<t_A> &operator=(List<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
   }
 
-  static std::shared_ptr<List<t_A>> cons(t_A a0,
-                                         std::shared_ptr<List<t_A>> &&a1) {
-    return std::make_shared<List<t_A>>(Cons{std::move(a0), std::move(a1)});
+  // ACCESSORS
+  List<t_A> clone() const {
+    List<t_A> _out{};
+
+    struct _CloneFrame {
+      const List<t_A> *_src;
+      List<t_A> *_dst;
+    };
+
+    std::vector<_CloneFrame> _stack{};
+    _stack.push_back({this, &_out});
+    while (!_stack.empty()) {
+      auto _frame = _stack.back();
+      _stack.pop_back();
+      const List<t_A> *_src = _frame._src;
+      List<t_A> *_dst = _frame._dst;
+      if (std::holds_alternative<Nil>(_src->v())) {
+        _dst->d_v_ = Nil{};
+      } else {
+        const auto &_alt = std::get<Cons>(_src->v());
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        }
+      }
+    }
+    return _out;
+  }
+
+  // CREATORS
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      d_v_ = Nil{};
+    } else {
+      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      d_v_ =
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+    }
+  }
+
+  static List<t_A> nil() { return List(Nil{}); }
+
+  static List<t_A> cons(t_A a0, List<t_A> a1) {
+    return List(
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  ~List() {
+    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    auto _drain = [&](List<t_A> &_node) {
+      if (std::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = std::get<Cons>(_node.d_v_);
+        if (_alt.d_a1) {
+          _stack.push_back(std::move(_alt.d_a1));
+        }
+      }
+    };
+    _drain(*this);
+    while (!_stack.empty()) {
+      auto _node = std::move(_stack.back());
+      _stack.pop_back();
+      if (_node) {
+        _drain(*_node);
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return d_v_; }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return d_v_; }
 };
 
 template <typename t_A> struct Sig {
@@ -67,152 +136,194 @@ private:
 
 public:
   // CREATORS
+  Sig() {}
+
   explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
 
-  static std::shared_ptr<Sig<t_A>> exist(t_A x) {
-    return std::make_shared<Sig<t_A>>(Exist{std::move(x)});
+  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+  Sig<t_A> &operator=(const Sig<t_A> &_other) {
+    d_v_ = std::move(_other.clone().d_v_);
+    return *this;
   }
 
-  // MANIPULATORS
-  __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+  Sig<t_A> &operator=(Sig<t_A> &&_other) {
+    d_v_ = std::move(_other.d_v_);
+    return *this;
+  }
 
   // ACCESSORS
-  __attribute__((pure)) const variant_t &v() const { return d_v_; }
+  Sig<t_A> clone() const {
+    auto &&_sv = *(this);
+    const auto &[d_x] = std::get<Exist>(_sv.v());
+    return Sig<t_A>(Exist{d_x});
+  }
+
+  // CREATORS
+  template <typename _U> explicit Sig(const Sig<_U> &_other) {
+    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
+    d_v_ = Exist{t_A(d_x)};
+  }
+
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return d_v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return d_v_; }
 };
 
 struct ConstructorBugs {
   struct field_a {
     unsigned int a_value;
+
+    // ACCESSORS
+    field_a clone() const { return field_a{(*(this)).a_value}; }
   };
 
   struct field_b {
     unsigned int b_value;
+
+    // ACCESSORS
+    field_b clone() const { return field_b{(*(this)).b_value}; }
   };
 
   struct source_state {
-    std::shared_ptr<field_a> source_a;
-    std::shared_ptr<field_b> source_b;
+    field_a source_a;
+    field_b source_b;
     unsigned int source_flag;
+
+    // ACCESSORS
+    source_state clone() const {
+      return source_state{(*(this)).source_a.clone(),
+                          (*(this)).source_b.clone(), (*(this)).source_flag};
+    }
   };
 
   struct packed_state {
-    std::shared_ptr<source_state> packed_source;
-    std::shared_ptr<field_a> packed_a;
-    std::shared_ptr<field_b> packed_b;
+    source_state packed_source;
+    field_a packed_a;
+    field_b packed_b;
+
+    // ACCESSORS
+    packed_state clone() const {
+      return packed_state{(*(this)).packed_source.clone(),
+                          (*(this)).packed_a.clone(),
+                          (*(this)).packed_b.clone()};
+    }
   };
 
-  static std::shared_ptr<source_state> step(std::shared_ptr<source_state> s);
-  __attribute__((pure)) static std::pair<bool, std::shared_ptr<packed_state>>
-  bad_branch(const std::shared_ptr<source_state> &s1);
-  __attribute__((pure)) static std::pair<bool, std::shared_ptr<packed_state>>
-  bad_direct(const std::shared_ptr<source_state> &s1);
-  static std::shared_ptr<source_state>
-  step2(const std::shared_ptr<source_state> &s);
-  __attribute__((pure)) static std::pair<bool, std::shared_ptr<packed_state>>
-  bad_complex_step(const std::shared_ptr<source_state> &s1);
-  __attribute__((pure)) static std::pair<bool, std::shared_ptr<packed_state>>
-  bad_nested(const std::shared_ptr<source_state> &s1);
+  static source_state step(source_state s);
+  static std::pair<bool, packed_state> bad_branch(const source_state &s1);
+  static std::pair<bool, packed_state> bad_direct(const source_state &s1);
+  static source_state step2(const source_state &s);
+  static std::pair<bool, packed_state> bad_complex_step(const source_state &s1);
+  static std::pair<bool, packed_state> bad_nested(const source_state &s1);
 
   struct source_state_list {
-    std::shared_ptr<field_a> source_a_list;
-    std::shared_ptr<List<std::shared_ptr<field_b>>> source_b_list;
+    field_a source_a_list;
+    List<field_b> source_b_list;
     unsigned int source_flag_list;
+
+    // ACCESSORS
+    source_state_list clone() const {
+      return source_state_list{(*(this)).source_a_list.clone(),
+                               (*(this)).source_b_list.clone(),
+                               (*(this)).source_flag_list};
+    }
   };
 
   struct packed_state_list {
-    std::shared_ptr<source_state_list> packed_source_list;
-    std::shared_ptr<field_a> packed_a_list;
-    std::shared_ptr<List<std::shared_ptr<field_b>>> packed_b_list;
+    source_state_list packed_source_list;
+    field_a packed_a_list;
+    List<field_b> packed_b_list;
+
+    // ACCESSORS
+    packed_state_list clone() const {
+      return packed_state_list{(*(this)).packed_source_list.clone(),
+                               (*(this)).packed_a_list.clone(),
+                               (*(this)).packed_b_list.clone()};
+    }
   };
 
-  static std::shared_ptr<source_state_list>
-  step_list(std::shared_ptr<source_state_list> s);
-  __attribute__((
-      pure)) static std::pair<bool, std::shared_ptr<packed_state_list>>
-  bad_branch_list(const std::shared_ptr<source_state_list> &s1);
+  static source_state_list step_list(source_state_list s);
+  static std::pair<bool, packed_state_list>
+  bad_branch_list(const source_state_list &s1);
 
   struct state {
     unsigned int value;
-    std::shared_ptr<List<unsigned int>> data;
+    List<unsigned int> data;
+
+    // ACCESSORS
+    state clone() const {
+      return state{(*(this)).value, (*(this)).data.clone()};
+    }
   };
 
-  static std::shared_ptr<state> get_state(const unsigned int n);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<state>, std::shared_ptr<state>>, unsigned int>
+  static state get_state(const unsigned int n);
+  static std::pair<std::pair<state, state>, unsigned int>
   tuple_from_call(const unsigned int n);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<state>, unsigned int>,
-      std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>
-  nested_tuples(std::shared_ptr<state> s);
-  __attribute__((
-      pure)) static std::pair<std::pair<std::shared_ptr<state>, unsigned int>,
-                              std::shared_ptr<List<unsigned int>>>
+  static std::pair<std::pair<state, unsigned int>,
+                   std::pair<unsigned int, List<unsigned int>>>
+  nested_tuples(state s);
+  static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
   conditional_tuple(const bool b, const unsigned int n);
-  __attribute__((pure)) static unsigned int
-  extract_value(const std::shared_ptr<state> &s);
-  static std::shared_ptr<List<unsigned int>>
-  extract_data(const std::shared_ptr<state> &s);
-  __attribute__((
-      pure)) static std::pair<std::pair<std::shared_ptr<state>, unsigned int>,
-                              std::shared_ptr<List<unsigned int>>>
+  static unsigned int extract_value(const state &s);
+  static List<unsigned int> extract_data(const state &s);
+  static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
   multi_call_tuple(const unsigned int n);
-  __attribute__((pure)) static std::pair<
-      unsigned int, std::pair<std::shared_ptr<state>, unsigned int>>
+  static std::pair<unsigned int, std::pair<state, unsigned int>>
   pair_test(const unsigned int n);
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<state>, unsigned int>>
-  match_test(const std::optional<std::shared_ptr<state>> o);
-  static std::shared_ptr<List<std::shared_ptr<state>>>
-  list_test(std::shared_ptr<state> s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::pair<std::shared_ptr<state>, unsigned int>,
-                std::pair<unsigned int, std::shared_ptr<List<unsigned int>>>>,
-      std::shared_ptr<List<unsigned int>>>
-  triple_proj(std::shared_ptr<state> s);
-  __attribute__((pure)) static std::pair<std::shared_ptr<state>, unsigned int>
-  inner_pair(std::shared_ptr<state> s);
-  __attribute__((pure)) static std::pair<std::shared_ptr<state>, unsigned int>
-  outer_call(const unsigned int n);
-  __attribute__((pure)) static std::pair<
-      std::pair<
-          std::pair<std::pair<std::shared_ptr<state>, std::shared_ptr<state>>,
-                    unsigned int>,
-          unsigned int>,
-      std::shared_ptr<List<unsigned int>>>
-  extreme_reuse(std::shared_ptr<state> s);
+  static std::optional<std::pair<state, unsigned int>>
+  match_test(const std::optional<state> &o);
+  static List<state> list_test(state s);
+  static std::pair<std::pair<std::pair<state, unsigned int>,
+                             std::pair<unsigned int, List<unsigned int>>>,
+                   List<unsigned int>>
+  triple_proj(state s);
+  static std::pair<state, unsigned int> inner_pair(state s);
+  static std::pair<state, unsigned int> outer_call(const unsigned int n);
+  static std::pair<
+      std::pair<std::pair<std::pair<state, state>, unsigned int>, unsigned int>,
+      List<unsigned int>>
+  extreme_reuse(state s);
 
   struct Inner {
     unsigned int inner_val;
+
+    // ACCESSORS
+    Inner clone() const { return Inner{(*(this)).inner_val}; }
   };
 
   struct Outer {
-    std::shared_ptr<Inner> outer_inner;
+    Inner outer_inner;
     unsigned int outer_data;
+
+    // ACCESSORS
+    Outer clone() const {
+      return Outer{(*(this)).outer_inner.clone(), (*(this)).outer_data};
+    }
   };
 
-  static std::shared_ptr<Outer> nested_record(std::shared_ptr<Inner> i);
-  static std::shared_ptr<Outer>
-  self_referential(const std::shared_ptr<Outer> &o);
-  __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
-  pair_with_proj(std::shared_ptr<Inner> i);
-  __attribute__((
-      pure)) static std::pair<std::pair<std::shared_ptr<Inner>, unsigned int>,
-                              std::pair<unsigned int, unsigned int>>
-  nested_pairs(std::shared_ptr<Inner> i);
-  __attribute__((
-      pure)) static std::pair<std::shared_ptr<Inner>, std::shared_ptr<Inner>>
-  pair_duplicate(std::shared_ptr<Inner> i);
-  static std::shared_ptr<Inner> mk_inner(const unsigned int n);
-  __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
-  pair_from_func(const unsigned int n);
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<Inner>, unsigned int>>
-  match_option_record(const std::optional<std::shared_ptr<Inner>> o);
+  static Outer nested_record(Inner i);
+  static Outer self_referential(const Outer &o);
+  static std::pair<Inner, unsigned int> pair_with_proj(Inner i);
+  static std::pair<std::pair<Inner, unsigned int>,
+                   std::pair<unsigned int, unsigned int>>
+  nested_pairs(Inner i);
+  static std::pair<Inner, Inner> pair_duplicate(Inner i);
+  static Inner mk_inner(const unsigned int n);
+  static std::pair<Inner, unsigned int> pair_from_func(const unsigned int n);
+  static std::optional<std::pair<Inner, unsigned int>>
+  match_option_record(const std::optional<Inner> &o);
 
   struct MySum {
     // TYPES
     struct Left {
-      std::shared_ptr<Inner> d_a0;
+      Inner d_a0;
     };
 
     struct Right {
@@ -227,171 +338,174 @@ struct ConstructorBugs {
 
   public:
     // CREATORS
+    MySum() {}
+
     explicit MySum(Left _v) : d_v_(std::move(_v)) {}
 
     explicit MySum(Right _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<MySum> left(const std::shared_ptr<Inner> &a0) {
-      return std::make_shared<MySum>(Left{a0});
+    MySum(const MySum &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    MySum(MySum &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    MySum &operator=(const MySum &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<MySum> left(std::shared_ptr<Inner> &&a0) {
-      return std::make_shared<MySum>(Left{std::move(a0)});
+    MySum &operator=(MySum &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
-
-    static std::shared_ptr<MySum> right(unsigned int a0) {
-      return std::make_shared<MySum>(Right{std::move(a0)});
-    }
-
-    // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    MySum clone() const {
+      auto &&_sv = *(this);
+      if (std::holds_alternative<Left>(_sv.v())) {
+        const auto &[d_a0] = std::get<Left>(_sv.v());
+        return MySum(Left{d_a0.clone()});
+      } else {
+        const auto &[d_a0] = std::get<Right>(_sv.v());
+        return MySum(Right{d_a0});
+      }
+    }
+
+    // CREATORS
+    static MySum left(Inner a0) { return MySum(Left{std::move(a0)}); }
+
+    static MySum right(unsigned int a0) { return MySum(Right{std::move(a0)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return d_v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<Inner>> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 MySum_rect(F0 &&f, F1 &&f0, const std::shared_ptr<MySum> &m) {
-    if (std::holds_alternative<typename MySum::Left>(m->v())) {
-      const auto &[d_a0] = std::get<typename MySum::Left>(m->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 MySum_rect(F0 &&f, F1 &&f0, const MySum &m) {
+    if (std::holds_alternative<typename MySum::Left>(m.v())) {
+      const auto &[d_a0] = std::get<typename MySum::Left>(m.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename MySum::Right>(m->v());
+      const auto &[d_a0] = std::get<typename MySum::Right>(m.v());
       return f0(d_a0);
     }
   }
 
-  template <typename T1, MapsTo<T1, std::shared_ptr<Inner>> F0,
-            MapsTo<T1, unsigned int> F1>
-  static T1 MySum_rec(F0 &&f, F1 &&f0, const std::shared_ptr<MySum> &m) {
-    if (std::holds_alternative<typename MySum::Left>(m->v())) {
-      const auto &[d_a0] = std::get<typename MySum::Left>(m->v());
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
+             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+  static T1 MySum_rec(F0 &&f, F1 &&f0, const MySum &m) {
+    if (std::holds_alternative<typename MySum::Left>(m.v())) {
+      const auto &[d_a0] = std::get<typename MySum::Left>(m.v());
       return f(d_a0);
     } else {
-      const auto &[d_a0] = std::get<typename MySum::Right>(m->v());
+      const auto &[d_a0] = std::get<typename MySum::Right>(m.v());
       return f0(d_a0);
     }
   }
 
-  __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
-  match_sum(const std::shared_ptr<MySum> &s);
-  __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
-  with_cast(std::shared_ptr<Inner> i);
-  __attribute__((
-      pure)) static std::pair<std::pair<std::shared_ptr<Inner>, unsigned int>,
-                              std::pair<std::shared_ptr<Inner>, unsigned int>>
-  chain_lets(const std::shared_ptr<Inner> &i1);
+  static std::pair<Inner, unsigned int> match_sum(const MySum &s);
+  static std::pair<Inner, unsigned int> with_cast(Inner i);
+  static std::pair<std::pair<Inner, unsigned int>,
+                   std::pair<Inner, unsigned int>>
+  chain_lets(const Inner &i1);
 
   struct Container {
-    std::shared_ptr<Outer> cont_outer;
+    Outer cont_outer;
+
+    // ACCESSORS
+    Container clone() const { return Container{(*(this)).cont_outer.clone()}; }
   };
 
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<Outer>, std::shared_ptr<Inner>>, unsigned int>
-  deep_proj(const std::shared_ptr<Container> &c);
-  __attribute__((pure)) static std::pair<
-      std::shared_ptr<List<std::shared_ptr<Inner>>>, unsigned int>
-  list_with_proj(std::shared_ptr<Inner> i);
-  __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
-  tail_pair(std::shared_ptr<Inner> i, const bool b);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<Inner>, std::shared_ptr<Inner>>,
-      std::pair<unsigned int, unsigned int>>
-  quad_tuple(std::shared_ptr<Inner> i);
-  __attribute__((pure)) static std::pair<std::optional<std::shared_ptr<Inner>>,
-                                         unsigned int>
-  match_both_branches(const std::optional<std::shared_ptr<Inner>> o);
-  static std::shared_ptr<Sig<std::shared_ptr<Inner>>>
-  sigma_test(std::shared_ptr<Inner> i);
-  __attribute__((pure)) static unsigned int
-  extract(const std::shared_ptr<Inner> &i);
-  __attribute__((pure)) static std::pair<std::shared_ptr<Inner>, unsigned int>
-  nested_extract(std::shared_ptr<Inner> i);
-  __attribute__((pure)) static std::pair<std::shared_ptr<Outer>, unsigned int>
-  update_test(const std::shared_ptr<Outer> &o);
+  static std::pair<std::pair<Outer, Inner>, unsigned int>
+  deep_proj(const Container &c);
+  static std::pair<List<Inner>, unsigned int> list_with_proj(Inner i);
+  static std::pair<Inner, unsigned int> tail_pair(Inner i, const bool b);
+  static std::pair<std::pair<Inner, Inner>,
+                   std::pair<unsigned int, unsigned int>>
+  quad_tuple(Inner i);
+  static std::pair<std::optional<Inner>, unsigned int>
+  match_both_branches(const std::optional<Inner> &o);
+  static Sig<Inner> sigma_test(Inner i);
+  static unsigned int extract(const Inner &i);
+  static std::pair<Inner, unsigned int> nested_extract(Inner i);
+  static std::pair<Outer, unsigned int> update_test(const Outer &o);
 
   struct State {
     unsigned int value_inline;
     unsigned int data_inline;
     unsigned int flag;
+
+    // ACCESSORS
+    State clone() const {
+      return State{(*(this)).value_inline, (*(this)).data_inline,
+                   (*(this)).flag};
+    }
   };
 
-  __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
-  inline_pair(std::shared_ptr<State> s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
-  inline_triple(std::shared_ptr<State> s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
-  inline_nested(std::shared_ptr<State> s);
-  static std::shared_ptr<State> get_state_inline(const unsigned int n);
-  __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
-  inline_from_call(const unsigned int n);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
+  static std::pair<State, unsigned int> inline_pair(State s);
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  inline_triple(State s);
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  inline_nested(State s);
+  static State get_state_inline(const unsigned int n);
+  static std::pair<State, unsigned int> inline_from_call(const unsigned int n);
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
   same_call_multi_proj(const unsigned int n);
-  __attribute__((pure)) static std::optional<
-      std::pair<std::shared_ptr<State>, unsigned int>>
-  inline_match(const std::optional<std::shared_ptr<State>> o);
-  __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
-  inline_if(const bool b, std::shared_ptr<State> s);
+  static std::optional<std::pair<State, unsigned int>>
+  inline_match(const std::optional<State> &o);
+  static std::pair<State, unsigned int> inline_if(const bool b, State s);
 
   struct OuterInline {
-    std::shared_ptr<State> outer_state;
+    State outer_state;
     unsigned int outer_num;
+
+    // ACCESSORS
+    OuterInline clone() const {
+      return OuterInline{(*(this)).outer_state.clone(), (*(this)).outer_num};
+    }
   };
 
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<OuterInline>, std::shared_ptr<State>>,
-      unsigned int>
-  inline_deep(std::shared_ptr<OuterInline> o);
-  __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
-  inline_double_proj(const std::shared_ptr<OuterInline> &o);
-  __attribute__((
-      pure)) static std::pair<std::pair<std::shared_ptr<State>, unsigned int>,
-                              std::pair<unsigned int, unsigned int>>
-  inline_many(std::shared_ptr<State> s);
-  __attribute__((pure)) static std::pair<
-      std::pair<unsigned int, std::shared_ptr<State>>, unsigned int>
-  inline_pattern(std::shared_ptr<State> s);
-  static std::shared_ptr<List<std::pair<std::shared_ptr<State>, unsigned int>>>
-  inline_recursive(const unsigned int n, std::shared_ptr<State> s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>,
-      std::pair<unsigned int, std::shared_ptr<State>>>
-  inline_complex(std::shared_ptr<State> s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, std::shared_ptr<State>>,
-      std::pair<unsigned int, unsigned int>>
-  inline_quad(std::shared_ptr<State> s);
-  __attribute__((pure)) static std::pair<std::shared_ptr<State>, unsigned int>
-  inline_both_branches(const bool b, std::shared_ptr<State> s);
+  static std::pair<std::pair<OuterInline, State>, unsigned int>
+  inline_deep(OuterInline o);
+  static std::pair<State, unsigned int>
+  inline_double_proj(const OuterInline &o);
+  static std::pair<std::pair<State, unsigned int>,
+                   std::pair<unsigned int, unsigned int>>
+  inline_many(State s);
+  static std::pair<std::pair<unsigned int, State>, unsigned int>
+  inline_pattern(State s);
+  static List<std::pair<State, unsigned int>>
+  inline_recursive(const unsigned int n, State s);
+  static std::pair<std::pair<std::pair<State, unsigned int>, unsigned int>,
+                   std::pair<unsigned int, State>>
+  inline_complex(State s);
+  static std::pair<std::pair<State, State>,
+                   std::pair<unsigned int, unsigned int>>
+  inline_quad(State s);
+  static std::pair<State, unsigned int> inline_both_branches(const bool b,
+                                                             State s);
 
-  template <MapsTo<unsigned int, std::shared_ptr<State>> F0>
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
-  apply_twice(F0 &&f, std::shared_ptr<State> s) {
+  template <typename F0>
+    requires std::is_invocable_r_v<unsigned int, F0 &, State &>
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  apply_twice(F0 &&f, State s) {
     return std::make_pair(std::make_pair(s, f(s)), f(s));
   }
 
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
-  test_apply(const std::shared_ptr<State> &s);
-  __attribute__((pure)) static unsigned int
-  get_value_inline(const std::shared_ptr<State> &s);
-  __attribute__((pure)) static unsigned int
-  get_data_inline(const std::shared_ptr<State> &s);
-  __attribute__((pure)) static std::pair<
-      std::pair<std::shared_ptr<State>, unsigned int>, unsigned int>
-  inline_nested_calls(std::shared_ptr<State> s);
-  __attribute__((pure)) static std::pair<std::optional<std::shared_ptr<State>>,
-                                         std::optional<unsigned int>>
-  inline_option(std::shared_ptr<State> s);
-  __attribute__((
-      pure)) static std::pair<std::shared_ptr<List<std::shared_ptr<State>>>,
-                              std::shared_ptr<List<unsigned int>>>
-  inline_list(std::shared_ptr<State> s);
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  test_apply(const State &s);
+  static unsigned int get_value_inline(const State &s);
+  static unsigned int get_data_inline(const State &s);
+  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  inline_nested_calls(State s);
+  static std::pair<std::optional<State>, std::optional<unsigned int>>
+  inline_option(State s);
+  static std::pair<List<State>, List<unsigned int>> inline_list(State s);
 };
 
 #endif // INCLUDED_CONSTRUCTOR_BUGS

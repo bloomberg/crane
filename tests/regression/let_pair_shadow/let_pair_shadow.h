@@ -2,12 +2,11 @@
 #define INCLUDED_LET_PAIR_SHADOW
 
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-template <typename F, typename R, typename... Args>
-concept MapsTo = std::is_invocable_r_v<R, F &, Args &...>;
+#include <vector>
 
 struct LetPairShadow {
   /// BUG: Two sequential let '(a, b) := f x destructurings of COMPUTED
@@ -36,7 +35,7 @@ struct LetPairShadow {
 
     struct Mycons {
       t_A d_a0;
-      std::shared_ptr<mylist<t_A>> d_a1;
+      std::unique_ptr<mylist<t_A>> d_a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -47,74 +46,142 @@ struct LetPairShadow {
 
   public:
     // CREATORS
+    mylist() {}
+
     explicit mylist(Mynil _v) : d_v_(_v) {}
 
     explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
 
-    static std::shared_ptr<mylist<t_A>> mynil() {
-      return std::make_shared<mylist<t_A>>(Mynil{});
+    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+
+    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+
+    mylist<t_A> &operator=(const mylist<t_A> &_other) {
+      d_v_ = std::move(_other.clone().d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, const std::shared_ptr<mylist<t_A>> &a1) {
-      return std::make_shared<mylist<t_A>>(Mycons{std::move(a0), a1});
+    mylist<t_A> &operator=(mylist<t_A> &&_other) {
+      d_v_ = std::move(_other.d_v_);
+      return *this;
     }
 
-    static std::shared_ptr<mylist<t_A>>
-    mycons(t_A a0, std::shared_ptr<mylist<t_A>> &&a1) {
-      return std::make_shared<mylist<t_A>>(
-          Mycons{std::move(a0), std::move(a1)});
+    // ACCESSORS
+    mylist<t_A> clone() const {
+      mylist<t_A> _out{};
+
+      struct _CloneFrame {
+        const mylist<t_A> *_src;
+        mylist<t_A> *_dst;
+      };
+
+      std::vector<_CloneFrame> _stack{};
+      _stack.push_back({this, &_out});
+      while (!_stack.empty()) {
+        auto _frame = _stack.back();
+        _stack.pop_back();
+        const mylist<t_A> *_src = _frame._src;
+        mylist<t_A> *_dst = _frame._dst;
+        if (std::holds_alternative<Mynil>(_src->v())) {
+          _dst->d_v_ = Mynil{};
+        } else {
+          const auto &_alt = std::get<Mycons>(_src->v());
+          _dst->d_v_ = Mycons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          }
+        }
+      }
+      return _out;
+    }
+
+    // CREATORS
+    template <typename _U> explicit mylist(const mylist<_U> &_other) {
+      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
+        d_v_ = Mynil{};
+      } else {
+        const auto &[d_a0, d_a1] =
+            std::get<typename mylist<_U>::Mycons>(_other.v());
+        d_v_ = Mycons{t_A(d_a0),
+                      d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+      }
+    }
+
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+
+    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+      return mylist(
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    __attribute__((pure)) variant_t &v_mut() { return d_v_; }
+    ~mylist() {
+      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      auto _drain = [&](mylist<t_A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.d_v_)) {
+          auto &_alt = std::get<Mycons>(_node.d_v_);
+          if (_alt.d_a1) {
+            _stack.push_back(std::move(_alt.d_a1));
+          }
+        }
+      };
+      _drain(*this);
+      while (!_stack.empty()) {
+        auto _node = std::move(_stack.back());
+        _stack.pop_back();
+        if (_node) {
+          _drain(*_node);
+        }
+      }
+    }
+
+    inline variant_t &v_mut() { return d_v_; }
 
     // ACCESSORS
-    __attribute__((pure)) const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rect(const T2 f, F1 &&f0,
-                        const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
+  static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rect<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  template <typename T1, typename T2,
-            MapsTo<T2, T1, std::shared_ptr<mylist<T1>>, T2> F1>
-  static T2 mylist_rec(const T2 f, F1 &&f0,
-                       const std::shared_ptr<mylist<T1>> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m->v())) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
+  static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m->v());
-      return f0(d_a0, d_a1, mylist_rec<T1, T2>(f, f0, d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
     }
   }
 
-  __attribute__((pure)) static unsigned int
-  mylist_sum(const std::shared_ptr<mylist<unsigned int>> &l);
+  static unsigned int mylist_sum(const mylist<unsigned int> &l);
 
   /// Pattern 1: map_accum — two sequential pair destructurings of
   /// function-call results in the same match branch.
-  template <typename T1, typename T2, typename T3,
-            MapsTo<std::pair<T3, T2>, T3, T1> F0>
-  __attribute__((pure)) static std::pair<std::shared_ptr<mylist<T2>>, T3>
-  map_accum(F0 &&f, const T3 acc, const std::shared_ptr<mylist<T1>> &l) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(l->v())) {
+  template <typename T1, typename T2, typename T3, typename F0>
+    requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
+  static std::pair<mylist<T2>, T3> map_accum(F0 &&f, const T3 acc,
+                                             const mylist<T1> &l) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return std::make_pair(mylist<T2>::mynil(), acc);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l->v());
+      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       auto _cs = f(acc, d_a0);
       const T3 &new_acc = _cs.first;
       const T2 &y = _cs.second;
-      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, d_a1);
-      const std::shared_ptr<mylist<T2>> &rest = _cs1.first;
+      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, *(d_a1));
+      const mylist<T2> &rest = _cs1.first;
       const T3 &final_acc = _cs1.second;
       return std::make_pair(mylist<T2>::mycons(y, rest), final_acc);
     }
@@ -134,25 +201,26 @@ struct LetPairShadow {
             10u, mylist<unsigned int>::mycons(
                      20u, mylist<unsigned int>::mycons(
                               30u, mylist<unsigned int>::mynil()))));
-    const std::shared_ptr<mylist<unsigned int>> &l = _cs.first;
+    const mylist<unsigned int> &l = _cs.first;
     const unsigned int &acc = _cs.second;
     return (mylist_sum(l) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  add_pair(const unsigned int a, const unsigned int b);
-  __attribute__((pure)) static std::pair<unsigned int, unsigned int>
-  sub_pair(const unsigned int a, const unsigned int b);
+  static std::pair<unsigned int, unsigned int> add_pair(const unsigned int a,
+                                                        const unsigned int b);
+  static std::pair<unsigned int, unsigned int> sub_pair(const unsigned int a,
+                                                        const unsigned int b);
   /// Pattern 2: Two destructs of function-call results in top-level body.
-  __attribute__((pure)) static unsigned int
-  double_call_destruct(const unsigned int a, const unsigned int b,
-                       const unsigned int c, const unsigned int d);
+  static unsigned int double_call_destruct(const unsigned int a,
+                                           const unsigned int b,
+                                           const unsigned int c,
+                                           const unsigned int d);
   /// test2: add_pair 3 4 = (7, 12), sub_pair 10 3 = (7, 13)
   /// 7 + 12 + 7 + 13 = 39
   static inline const unsigned int test2 =
       double_call_destruct(3u, 4u, 10u, 3u);
   /// Pattern 3: Three destructs of function-call results.
-  __attribute__((pure)) static unsigned int
+  static unsigned int
   triple_call_destruct(const unsigned int a, const unsigned int b,
                        const unsigned int c, const unsigned int d,
                        const unsigned int e, const unsigned int f);

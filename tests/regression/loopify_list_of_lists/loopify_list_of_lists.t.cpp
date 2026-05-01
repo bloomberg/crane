@@ -17,7 +17,7 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 using UIntList = List<unsigned int>;
-using ListOfLists = List<std::shared_ptr<UIntList>>;
+using ListOfLists = List<List<unsigned int>>;
 
 int main() {
   auto nil = UIntList::nil();
