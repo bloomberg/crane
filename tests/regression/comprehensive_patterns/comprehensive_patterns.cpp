@@ -615,24 +615,26 @@ ComprehensivePatterns::nested_proj_calls(const ComprehensivePatterns::NC &r) {
   return (inc(r.nc_a) + inc(r.nc_b));
 }
 
-unsigned int
-ComprehensivePatterns::count_down(const unsigned int n,
-                                  const ComprehensivePatterns::NC &r) {
+unsigned int ComprehensivePatterns::count_down(
+    const unsigned int n,
+    const ComprehensivePatterns::NC
+        &r) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
     decltype(std::declval<const ComprehensivePatterns::NC &>().nc_b) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified count_down: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -643,11 +645,11 @@ ComprehensivePatterns::count_down(const unsigned int n,
         _result = r.nc_a;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume1{r.nc_b});
+        _stack.emplace_back(_Resume_m{r.nc_b});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_result + _f._s0);
     }
   }
@@ -705,24 +707,26 @@ ComprehensivePatterns::multi_positions(const ComprehensivePatterns::NC &r) {
   return (r.nc_a + (r.nc_b == 0u ? r.nc_a : r.nc_c));
 }
 
-unsigned int
-ComprehensivePatterns::sum_proj(const unsigned int n,
-                                const ComprehensivePatterns::NC &r) {
+unsigned int ComprehensivePatterns::sum_proj(
+    const unsigned int n,
+    const ComprehensivePatterns::NC
+        &r) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
     decltype(std::declval<const ComprehensivePatterns::NC &>().nc_a) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified sum_proj: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -733,11 +737,11 @@ ComprehensivePatterns::sum_proj(const unsigned int n,
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume1{r.nc_a});
+        _stack.emplace_back(_Resume_m{r.nc_a});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -957,25 +961,27 @@ bool ComprehensivePatterns::bool_with_proj(
   return !(s.stmt_value == 0u);
 }
 
-unsigned int
-ComprehensivePatterns::sum_values(const unsigned int n,
-                                  const ComprehensivePatterns::StateStmt &s) {
+unsigned int ComprehensivePatterns::sum_values(
+    const unsigned int n,
+    const ComprehensivePatterns::StateStmt
+        &s) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
     decltype(std::declval<const ComprehensivePatterns::StateStmt &>()
                  .stmt_value) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified sum_values: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -986,11 +992,11 @@ ComprehensivePatterns::sum_values(const unsigned int n,
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume1{s.stmt_value});
+        _stack.emplace_back(_Resume_m{s.stmt_value});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -1027,24 +1033,26 @@ unsigned int ComprehensivePatterns::match_with_wild(
   }
 }
 
-unsigned int
-ComprehensivePatterns::sum_with_state(const unsigned int n,
-                                      const ComprehensivePatterns::RCF &r) {
+unsigned int ComprehensivePatterns::sum_with_state(
+    const unsigned int n,
+    const ComprehensivePatterns::RCF
+        &r) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
     decltype(std::declval<const ComprehensivePatterns::RCF &>().cf_val) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified sum_with_state: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1055,11 +1063,11 @@ ComprehensivePatterns::sum_with_state(const unsigned int n,
         _result = r.cf_val;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume1{r.cf_val});
+        _stack.emplace_back(_Resume_m{r.cf_val});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -1089,23 +1097,26 @@ ComprehensivePatterns::odd_count(const unsigned int n,
 }
 
 unsigned int ComprehensivePatterns::accum_with_state(
-    const unsigned int n, const ComprehensivePatterns::StateLB &s) {
+    const unsigned int n,
+    const ComprehensivePatterns::StateLB
+        &s) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
     decltype(std::declval<const ComprehensivePatterns::StateLB &>()
                  .lb_value) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified accum_with_state: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1116,11 +1127,11 @@ unsigned int ComprehensivePatterns::accum_with_state(
         _result = s.lb_value;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume1{s.lb_value});
+        _stack.emplace_back(_Resume_m{s.lb_value});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_f._s0 + _result);
     }
   }

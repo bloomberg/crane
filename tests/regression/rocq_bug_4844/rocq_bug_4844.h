@@ -63,10 +63,10 @@ public:
   explicit Sum(const Sum<_U0, _U1> &_other) {
     if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
       const auto &[d_a0] = std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
-      d_v_ = Inl{t_A(d_a0)};
+      this->d_v_ = Inl{t_A(d_a0)};
     } else {
       const auto &[d_a0] = std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
-      d_v_ = Inr{t_B(d_a0)};
+      this->d_v_ = Inr{t_B(d_a0)};
     }
   }
 

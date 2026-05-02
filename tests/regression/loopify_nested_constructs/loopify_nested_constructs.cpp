@@ -1,21 +1,24 @@
 #include <loopify_nested_constructs.h>
 
-unsigned int LoopifyNestedConstructs::multi_let(const unsigned int n) {
+unsigned int LoopifyNestedConstructs::multi_let(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [c] across recursive call.
-  struct _Resume1 {
+  /// _Resume_n_: saves [c], resumes after recursive call with _result.
+  struct _Resume_n_ {
     unsigned int c;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified multi_let: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -28,11 +31,11 @@ unsigned int LoopifyNestedConstructs::multi_let(const unsigned int n) {
         unsigned int n_ = n - 1;
         unsigned int b = (n_ * 2u);
         unsigned int c = (b + 3u);
-        _stack.emplace_back(_Resume1{c});
+        _stack.emplace_back(_Resume_n_{c});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
       _result = (_f.c + _result);
     }
   }
@@ -81,20 +84,23 @@ unsigned int LoopifyNestedConstructs::nested_if(const unsigned int n) {
   return nested_if_fuel(n, n);
 }
 
-unsigned int LoopifyNestedConstructs::deep_nest(const unsigned int n) {
+unsigned int LoopifyNestedConstructs::deep_nest(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves across recursive call, then processes rest.
-  struct _Cont1 {};
+  /// _Cont_n_: resumes after recursive call, then processes rest.
+  struct _Cont_n_ {};
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified deep_nest: _Enter -> _Cont_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -105,11 +111,11 @@ unsigned int LoopifyNestedConstructs::deep_nest(const unsigned int n) {
         _result = 0u;
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_Cont1{});
+        _stack.emplace_back(_Cont_n_{});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_n_>(_frame));
       unsigned int inner = _result;
       unsigned int mid = (inner + 1u);
       _result = (mid * 2u);
@@ -118,22 +124,25 @@ unsigned int LoopifyNestedConstructs::deep_nest(const unsigned int n) {
   return _result;
 }
 
-unsigned int LoopifyNestedConstructs::let_nested(const unsigned int n) {
+unsigned int LoopifyNestedConstructs::let_nested(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [a] across recursive call.
-  struct _Resume1 {
+  /// _Resume_n_: saves [a], resumes after recursive call with _result.
+  struct _Resume_n_ {
     unsigned int a;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified let_nested: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -145,25 +154,28 @@ unsigned int LoopifyNestedConstructs::let_nested(const unsigned int n) {
       } else {
         unsigned int n_ = n - 1;
         unsigned int a = (n_ + 1u);
-        _stack.emplace_back(_Resume1{a});
+        _stack.emplace_back(_Resume_n_{a});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
       _result = (_f.a + _result);
     }
   }
   return _result;
 }
 
-unsigned int LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
-                                                       const unsigned int n) {
+unsigned int LoopifyNestedConstructs::mod_pattern_fuel(
+    const unsigned int fuel,
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
   };
 
-  /// Continuation: saves [n, _s1] across recursive call.
+  /// _Resume1: saves [n, _s1], resumes after recursive call with _result.
   struct _Resume1 {
     unsigned int n;
     decltype(1u) _s1;
@@ -174,7 +186,7 @@ unsigned int LoopifyNestedConstructs::mod_pattern_fuel(const unsigned int fuel,
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified mod_pattern_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -206,22 +218,25 @@ unsigned int LoopifyNestedConstructs::mod_pattern(const unsigned int n) {
 }
 
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
+LoopifyNestedConstructs::tuple_constr(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [n] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_n_: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont_n_ {
     unsigned int n;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_n_>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified tuple_constr: _Enter -> _Cont_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -232,11 +247,11 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_Cont1{n});
+        _stack.emplace_back(_Cont_n_{n});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_n_>(_frame));
       const unsigned int n = _f.n;
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &c = _result.second;
@@ -249,17 +264,20 @@ LoopifyNestedConstructs::tuple_constr(const unsigned int n) {
   return _result;
 }
 
-unsigned int LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
+unsigned int LoopifyNestedConstructs::alternating_ops(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [n] across recursive call.
+  /// _Resume1: saves [n], resumes after recursive call with _result.
   struct _Resume1 {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
+  /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
     decltype((std::declval<const unsigned int &>() * 2u)) _s0;
   };
@@ -269,7 +287,7 @@ unsigned int LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1, _Resume2.
+  /// Loopified alternating_ops: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -299,14 +317,17 @@ unsigned int LoopifyNestedConstructs::alternating_ops(const unsigned int n) {
   return _result;
 }
 
-bool LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
-                                                const unsigned int n) {
+bool LoopifyNestedConstructs::chained_comp_fuel(
+    const unsigned int fuel,
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [_s0, fuel_], dispatches next recursive call.
+  /// _After2: saves [_s0, fuel_], dispatches next recursive call.
   struct _After2 {
     decltype((((std::declval<const unsigned int &>() - 1u) >
                        std::declval<const unsigned int &>()
@@ -315,7 +336,8 @@ bool LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
     unsigned int fuel_;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
+  /// _Combine1: receives partial results, combines with _result from final
+  /// call.
   struct _Combine1 {
     bool _result;
   };
@@ -325,7 +347,7 @@ bool LoopifyNestedConstructs::chained_comp_fuel(const unsigned int fuel,
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified chained_comp_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -364,27 +386,30 @@ unsigned int LoopifyNestedConstructs::chained_comp(const unsigned int n) {
   }
 }
 
-unsigned int LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
+unsigned int LoopifyNestedConstructs::compute_with_lets(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [n__] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_n__: saves [n__], resumes after recursive call, then processes rest.
+  struct _Cont_n__ {
     unsigned int n__;
   };
 
-  /// Continuation: saves [x] across recursive call, then processes rest.
-  struct _Cont2 {
+  /// _Cont_n___1: saves [x], resumes after recursive call, then processes rest.
+  struct _Cont_n___1 {
     unsigned int x;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
+  using _Frame = std::variant<_Enter, _Cont_n__, _Cont_n___1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Cont1, _Cont2.
+  /// Loopified compute_with_lets: _Enter -> _Cont_n__ -> _Cont_n___1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -399,18 +424,18 @@ unsigned int LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
           _result = 1u;
         } else {
           unsigned int n__ = n_ - 1;
-          _stack.emplace_back(_Cont1{n__});
+          _stack.emplace_back(_Cont_n__{n__});
           _stack.emplace_back(_Enter{n_});
         }
       }
-    } else if (std::holds_alternative<_Cont1>(_frame)) {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+    } else if (std::holds_alternative<_Cont_n__>(_frame)) {
+      auto _f = std::move(std::get<_Cont_n__>(_frame));
       unsigned int n__ = _f.n__;
       unsigned int x = _result;
-      _stack.emplace_back(_Cont2{x});
+      _stack.emplace_back(_Cont_n___1{x});
       _stack.emplace_back(_Enter{n__});
     } else {
-      auto _f = std::move(std::get<_Cont2>(_frame));
+      auto _f = std::move(std::get<_Cont_n___1>(_frame));
       unsigned int x = _f.x;
       unsigned int y = _result;
       unsigned int z = (x + y);
@@ -420,22 +445,25 @@ unsigned int LoopifyNestedConstructs::compute_with_lets(const unsigned int n) {
   return _result;
 }
 
-unsigned int LoopifyNestedConstructs::nested_match(const unsigned int n) {
+unsigned int LoopifyNestedConstructs::nested_match(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [n] across recursive call.
-  struct _Resume1 {
+  /// _Resume_n__: saves [n], resumes after recursive call with _result.
+  struct _Resume_n__ {
     unsigned int n;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_n__>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified nested_match: _Enter -> _Resume_n__.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -450,12 +478,12 @@ unsigned int LoopifyNestedConstructs::nested_match(const unsigned int n) {
           _result = 1u;
         } else {
           unsigned int n__ = n_ - 1;
-          _stack.emplace_back(_Resume1{n});
+          _stack.emplace_back(_Resume_n__{n});
           _stack.emplace_back(_Enter{n__});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_n__>(_frame));
       _result = (_f.n + _result);
     }
   }

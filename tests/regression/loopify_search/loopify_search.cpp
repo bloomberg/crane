@@ -51,23 +51,26 @@ unsigned int LoopifySearch::knapsack(
 
 /// majority l finds majority element using Boyer-Moore algorithm.
 /// Returns (candidate, count).
-std::pair<unsigned int, unsigned int>
-LoopifySearch::majority(const List<unsigned int> &l) {
+std::pair<unsigned int, unsigned int> LoopifySearch::majority(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified majority: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -79,11 +82,11 @@ LoopifySearch::majority(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       const unsigned int &cand = _result.first;
       const unsigned int &count = _result.second;
@@ -356,17 +359,20 @@ List<unsigned int> LoopifySearch::longest_run(const List<unsigned int> &l) {
 }
 
 /// collatz n computes Collatz sequence length (not the list).
-unsigned int LoopifySearch::collatz_fuel(const unsigned int fuel,
-                                         const unsigned int n) {
+unsigned int LoopifySearch::collatz_fuel(
+    const unsigned int fuel,
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
   };
 
-  /// Continuation: saves across recursive call.
+  /// _Resume1: resumes after recursive call with _result.
   struct _Resume1 {};
 
-  /// Continuation: saves across recursive call.
+  /// _Resume2: resumes after recursive call with _result.
   struct _Resume2 {};
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
@@ -374,7 +380,7 @@ unsigned int LoopifySearch::collatz_fuel(const unsigned int fuel,
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
-  /// Frame dispatch: _Enter, _Resume1, _Resume2.
+  /// Loopified collatz_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -654,32 +660,36 @@ LoopifySearch::remove_duplicates(const List<unsigned int> &l) {
 }
 
 /// quicksort l sorts list using quicksort with filter-based partitioning.
-List<unsigned int> LoopifySearch::quicksort_fuel(const unsigned int fuel,
-                                                 List<unsigned int> l) {
+List<unsigned int> LoopifySearch::quicksort_fuel(
+    const unsigned int fuel,
+    List<unsigned int>
+        l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     List<unsigned int> l;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [smaller, f, d_a0], dispatches next recursive call.
-  struct _After2 {
+  /// _After_Cons: saves [smaller, f, d_a0], dispatches next recursive call.
+  struct _After_Cons {
     List<unsigned int> smaller;
     unsigned int f;
     unsigned int d_a0;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
-  struct _Combine1 {
+  /// _Combine_Cons: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_Cons {
     List<unsigned int> _result;
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified quicksort_fuel: _Enter -> _After_Cons -> _Combine_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -704,16 +714,16 @@ List<unsigned int> LoopifySearch::quicksort_fuel(const unsigned int fuel,
           List<unsigned int> greater = filter_impl(
               [=](const unsigned int y) mutable { return d_a0 <= y; },
               d_a1_value);
-          _stack.emplace_back(_After2{std::move(smaller), f, d_a0});
+          _stack.emplace_back(_After_Cons{std::move(smaller), f, d_a0});
           _stack.emplace_back(_Enter{std::move(greater), f});
         }
       }
-    } else if (std::holds_alternative<_After2>(_frame)) {
-      auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{std::move(_result), _f.d_a0});
+    } else if (std::holds_alternative<_After_Cons>(_frame)) {
+      auto _f = std::move(std::get<_After_Cons>(_frame));
+      _stack.emplace_back(_Combine_Cons{std::move(_result), _f.d_a0});
       _stack.emplace_back(_Enter{std::move(_f.smaller), _f.f});
     } else {
-      auto _f = std::move(std::get<_Combine1>(_frame));
+      auto _f = std::move(std::get<_Combine_Cons>(_frame));
       _result = _result.app(List<unsigned int>::cons(_f.d_a0, _f._result));
     }
   }
@@ -725,25 +735,27 @@ List<unsigned int> LoopifySearch::quicksort(const List<unsigned int> &l) {
 }
 
 /// Helper: split list into two roughly equal parts.
-std::pair<List<unsigned int>, List<unsigned int>>
-LoopifySearch::split_list(const List<unsigned int> &l) {
+std::pair<List<unsigned int>, List<unsigned int>> LoopifySearch::split_list(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0, d_a00] across recursive call, then processes
-  /// rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0, d_a00], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
     unsigned int d_a00;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified split_list: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -765,12 +777,12 @@ LoopifySearch::split_list(const List<unsigned int> &l) {
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
-          _stack.emplace_back(_Cont1{d_a0, d_a00});
+          _stack.emplace_back(_Cont_Cons{d_a0, d_a00});
           _stack.emplace_back(_Enter{d_a10.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int d_a00 = _f.d_a00;
       const List<unsigned int> &a = _result.first;
@@ -847,30 +859,34 @@ List<unsigned int> LoopifySearch::merge_sorted(const List<unsigned int> &l1,
 }
 
 /// merge_sort l sorts list using merge sort.
-List<unsigned int> LoopifySearch::merge_sort_fuel(const unsigned int fuel,
-                                                  List<unsigned int> l) {
+List<unsigned int> LoopifySearch::merge_sort_fuel(
+    const unsigned int fuel,
+    List<unsigned int>
+        l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     List<unsigned int> l;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [a, f], dispatches next recursive call.
-  struct _After2 {
+  /// _After_a: saves [a, f], dispatches next recursive call.
+  struct _After_a {
     List<unsigned int> a;
     unsigned int f;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
-  struct _Combine1 {
+  /// _Combine_a: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_a {
     List<unsigned int> _result;
   };
 
-  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  using _Frame = std::variant<_Enter, _After_a, _Combine_a>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified merge_sort_fuel: _Enter -> _After_a -> _Combine_a.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -896,17 +912,17 @@ List<unsigned int> LoopifySearch::merge_sort_fuel(const unsigned int fuel,
             auto _cs = split_list(l);
             const List<unsigned int> &a = _cs.first;
             const List<unsigned int> &b = _cs.second;
-            _stack.emplace_back(_After2{a, f});
+            _stack.emplace_back(_After_a{a, f});
             _stack.emplace_back(_Enter{b, f});
           }
         }
       }
-    } else if (std::holds_alternative<_After2>(_frame)) {
-      auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{std::move(_result)});
+    } else if (std::holds_alternative<_After_a>(_frame)) {
+      auto _f = std::move(std::get<_After_a>(_frame));
+      _stack.emplace_back(_Combine_a{std::move(_result)});
       _stack.emplace_back(_Enter{std::move(_f.a), _f.f});
     } else {
-      auto _f = std::move(std::get<_Combine1>(_frame));
+      auto _f = std::move(std::get<_Combine_a>(_frame));
       _result = merge_sorted(_result, _f._result);
     }
   }
@@ -983,45 +999,48 @@ LoopifySearch::map_cons(const unsigned int x,
 /// perms_choices_fuel fuel choices orig generates permutations by iterating
 /// over choices.  Single self-recursive function for full loopification.
 /// Match on remaining is hoisted out of let-binding.
-List<List<unsigned int>>
-LoopifySearch::perms_choices_fuel(const unsigned int fuel,
-                                  const List<unsigned int> &choices,
-                                  const List<unsigned int> &orig) {
+List<List<unsigned int>> LoopifySearch::perms_choices_fuel(
+    const unsigned int fuel, const List<unsigned int> &choices,
+    const List<unsigned int> &
+        orig) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     List<unsigned int> orig;
     List<unsigned int> choices;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [remaining_0, remaining_1, f, d_a0], dispatches next
+  /// _After_Cons: saves [remaining_0, remaining_1, f, d_a0], dispatches next
   /// recursive call.
-  struct _After3 {
+  struct _After_Cons {
     List<unsigned int> remaining_0;
     List<unsigned int> remaining_1;
     unsigned int f;
     unsigned int d_a0;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
-  struct _Combine2 {
+  /// _Combine_Cons: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_Cons {
     List<List<unsigned int>> _result;
     unsigned int d_a0;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Nil: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Nil {
     decltype(map_cons(
         std::declval<unsigned int &>(),
         List<List<unsigned int>>::cons(List<unsigned int>::nil(),
                                        List<List<unsigned int>>::nil()))) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
+  using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{orig, choices, fuel});
-  /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
+  /// Loopified perms_choices_fuel: _Enter -> _After_Cons -> _Combine_Cons ->
+  /// _Resume_Nil.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1043,27 +1062,27 @@ LoopifySearch::perms_choices_fuel(const unsigned int fuel,
           List<unsigned int> remaining = remove_first(d_a0, orig);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   remaining.v_mut())) {
-            _stack.emplace_back(
-                _Resume1{map_cons(d_a0, List<List<unsigned int>>::cons(
-                                            List<unsigned int>::nil(),
-                                            List<List<unsigned int>>::nil()))});
+            _stack.emplace_back(_Resume_Nil{
+                map_cons(d_a0, List<List<unsigned int>>::cons(
+                                   List<unsigned int>::nil(),
+                                   List<List<unsigned int>>::nil()))});
             _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
           } else {
-            _stack.emplace_back(_After3{remaining, remaining, f, d_a0});
+            _stack.emplace_back(_After_Cons{remaining, remaining, f, d_a0});
             _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
           }
         }
       }
-    } else if (std::holds_alternative<_After3>(_frame)) {
-      auto _f = std::move(std::get<_After3>(_frame));
-      _stack.emplace_back(_Combine2{std::move(_result), _f.d_a0});
+    } else if (std::holds_alternative<_After_Cons>(_frame)) {
+      auto _f = std::move(std::get<_After_Cons>(_frame));
+      _stack.emplace_back(_Combine_Cons{std::move(_result), _f.d_a0});
       _stack.emplace_back(
           _Enter{std::move(_f.remaining_0), std::move(_f.remaining_1), _f.f});
-    } else if (std::holds_alternative<_Combine2>(_frame)) {
-      auto _f = std::move(std::get<_Combine2>(_frame));
+    } else if (std::holds_alternative<_Combine_Cons>(_frame)) {
+      auto _f = std::move(std::get<_Combine_Cons>(_frame));
       _result = map_cons(_f.d_a0, _result).app(_f._result);
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Nil>(_frame));
       _result = _f._s0.app(_result);
     }
   }
@@ -1162,22 +1181,26 @@ List<unsigned int> LoopifySearch::all_indices(const unsigned int x,
 }
 
 /// min_element l finds minimum element in list.
-unsigned int LoopifySearch::min_element(const List<unsigned int> &l) {
+unsigned int LoopifySearch::min_element(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified min_element: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1193,12 +1216,12 @@ unsigned int LoopifySearch::min_element(const List<unsigned int> &l) {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Cont1{d_a0});
+          _stack.emplace_back(_Cont_Cons{d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int min_rest = _result;
       if (d_a0 <= min_rest) {

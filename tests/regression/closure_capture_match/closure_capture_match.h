@@ -181,33 +181,35 @@ struct ClosureCaptureMatch {
     T1 tree_rec(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const tree *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
       /// call.
-      struct _After2 {
+      struct _After_Node {
         tree *_s0;
-        tree _s1;
+        tree d_a2;
         unsigned int d_a1;
-        tree _s3;
+        tree d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
         T1 _result;
-        tree _s1;
+        tree d_a2;
         unsigned int d_a1;
-        tree _s3;
+        tree d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After2, _Combine1>;
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _Combine1.
+      /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -220,17 +222,18 @@ struct ClosureCaptureMatch {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(
+                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
-          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
-                                        std::move(_f._s3)});
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
+                                            _f.d_a1, std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
         }
       }
       return _result;
@@ -242,33 +245,35 @@ struct ClosureCaptureMatch {
     T1 tree_rect(const T1 f, F1 &&f0) const {
       const tree *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const tree *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, d_a1, _s3], dispatches next recursive
+      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
       /// call.
-      struct _After2 {
+      struct _After_Node {
         tree *_s0;
-        tree _s1;
+        tree d_a2;
         unsigned int d_a1;
-        tree _s3;
+        tree d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
         T1 _result;
-        tree _s1;
+        tree d_a2;
         unsigned int d_a1;
-        tree _s3;
+        tree d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After2, _Combine1>;
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _Combine1.
+      /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -281,17 +286,18 @@ struct ClosureCaptureMatch {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(
+                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
-          _stack.emplace_back(_Combine1{_result, std::move(_f._s1), _f.d_a1,
-                                        std::move(_f._s3)});
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
+                                            _f.d_a1, std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f0(_f._s3, _result, _f.d_a1, _f._s1, _f._result);
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
         }
       }
       return _result;

@@ -83,12 +83,14 @@ struct MatchRefAfterMove {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        d_v_ = Mynil{};
+        this->d_v_ = Mynil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        d_v_ = Mycons{t_A(d_a0),
-                      d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Mycons{
+            t_A(d_a0),
+            d_a1 ? std::make_unique<MatchRefAfterMove::mylist<t_A>>(*d_a1)
+                 : nullptr};
       }
     }
 
@@ -212,7 +214,7 @@ struct MatchRefAfterMove {
     explicit mypair(const mypair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename mypair<_U0, _U1>::Mkpair>(_other.v());
-      d_v_ = Mkpair{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Mkpair{t_A(d_a0), t_B(d_a1)};
     }
 
     static mypair<t_A, t_B> mkpair(t_A a0, t_B a1) {
@@ -386,11 +388,11 @@ struct MatchRefAfterMove {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        d_v_ = Left{t_A(d_a0)};
+        this->d_v_ = Left{t_A(d_a0)};
       } else {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        d_v_ = Right{t_B(d_a0)};
+        this->d_v_ = Right{t_B(d_a0)};
       }
     }
 

@@ -70,9 +70,8 @@ struct MutualIndexed {
           _dst->d_v_ = ELeaf{};
         } else {
           const auto &_alt = std::get<ENode>(_src->v());
-          _dst->d_v_ = ENode{
-              _alt.d_n, _alt.d_a1,
-              _alt.d_a2 ? std::make_unique<MutualIndexed::OddTree>() : nullptr};
+          _dst->d_v_ = ENode{_alt.d_n, _alt.d_a1,
+                             _alt.d_a2 ? std::make_unique<OddTree>() : nullptr};
           auto &_dst_alt = std::get<ENode>(_dst->d_v_);
           if (_alt.d_a2) {
             if (std::holds_alternative<typename MutualIndexed::OddTree::ONode>(

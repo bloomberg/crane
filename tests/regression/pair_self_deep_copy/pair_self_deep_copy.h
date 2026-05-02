@@ -72,13 +72,11 @@ struct PairSelfDeepCopy {
           const auto &_alt = std::get<Link>(_src->v());
           _dst->d_v_ = Link{
               _alt.d_a0
-                  ? std::make_unique<std::pair<
-                        std::unique_ptr<PairSelfDeepCopy::chain>, bool>>(
-                        std::make_pair(
-                            _alt.d_a0->first
-                                ? std::make_unique<PairSelfDeepCopy::chain>()
-                                : nullptr,
-                            _alt.d_a0->second))
+                  ? std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
+                        std::make_pair(_alt.d_a0->first
+                                           ? std::make_unique<chain>()
+                                           : nullptr,
+                                       _alt.d_a0->second))
                   : nullptr};
           auto &_dst_alt = std::get<Link>(_dst->d_v_);
           if (_alt.d_a0 && _alt.d_a0->first) {

@@ -84,11 +84,11 @@ struct EmptyMatch {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        d_v_ = Left{t_A(d_a0)};
+        this->d_v_ = Left{t_A(d_a0)};
       } else {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        d_v_ = Right{t_B(d_a0)};
+        this->d_v_ = Right{t_B(d_a0)};
       }
     }
 

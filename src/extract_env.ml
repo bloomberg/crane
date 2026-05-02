@@ -668,6 +668,29 @@ let header_imports_bsl =
 
 let mk_include s = str ("#include <" ^ s ^ ">")
 
+(** True when BDE (Bloomberg Development Environment) mode is active. *)
+let is_bde () = String.equal (Table.std_lib ()) "BDE"
+
+(** Compute the include guard macro name for a given filename. *)
+let include_guard_name s =
+  let base = Filename.basename s in
+  let name = Filename.remove_extension base in
+  String.uppercase_ascii ("INCLUDED_" ^ name)
+
+(** Strip trailing slash from BDE directory path. *)
+let normalize_bde_dir () =
+  let d = Table.bde_dir () in
+  let n = String.length d in
+  if n > 0 && d.[n - 1] = '/' then String.sub d 0 (n - 1) else d
+
+(** Create a temporary file for capturing compiler error output. *)
+let make_error_file prefix infile =
+  Filename.temp_file (prefix ^ Filename.basename infile ^ "_error") ".log"
+
+(** Remove an error file if it exists. *)
+let cleanup_error_file errfile =
+  if Sys.file_exists errfile then Sys.remove errfile
+
 (** Generates the [#include] block for a C++ implementation file.
     Standard and custom headers are omitted for non-BDE mode because they
     are already included transitively via the component's own header (both
@@ -682,7 +705,7 @@ let header fn () =
       mk_include hdr ++ fnl ()
     | None -> mt ()
   in
-  if Table.std_lib () = "BDE" then
+  if is_bde () then
     let imps = get_custom_imports () in
     let himports = header_imports_bsl in
     let h =
@@ -708,18 +731,11 @@ let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 let spec_header si () =
   let imps = get_custom_imports () in
   let himports =
-    if Table.std_lib () = "BDE" then header_imports_bsl
+    if is_bde () then header_imports_bsl
     else needed_std_headers ()
   in
   (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
-  let guard_name =
-    match si with
-    | Some s ->
-      let base = Filename.basename s in
-      let name = Filename.remove_extension base in
-      Some (String.uppercase_ascii ("INCLUDED_" ^ name))
-    | None -> None
-  in
+  let guard_name = Option.map include_guard_name si in
   let guard_open =
     match guard_name with
     | Some g ->
@@ -750,7 +766,7 @@ let spec_header si () =
       h
   in
   let fun_concept =
-    if Table.std_lib () = "BDE" then
+    if is_bde () then
       "template <class From, class To>\n\
        concept convertible_to = bsl::is_convertible<From, To>::value;\n\n\
        template <class T, class U>\n\
@@ -761,14 +777,14 @@ let spec_header si () =
   in
   let string_lit_directive =
     if Table.needs_string_literals () then
-      if Table.std_lib () = "BDE" then
+      if is_bde () then
         fnl () ++ str "using namespace bsl::string_literals;" ++ fnl ()
       else
         fnl () ++ str "using namespace std::string_literals;" ++ fnl ()
     else
       mt ()
   in
-  if Table.std_lib () = "BDE" then
+  if is_bde () then
     guard_open
     ++ h
     ++ fnl2 ()
@@ -789,9 +805,7 @@ let spec_header si () =
 let spec_footer si () =
   match si with
   | Some s ->
-    let base = Filename.basename s in
-    let name = Filename.remove_extension base in
-    let guard = String.uppercase_ascii ("INCLUDED_" ^ name) in
+    let guard = include_guard_name s in
     fnl () ++ str ("#endif // " ^ guard) ++ fnl ()
   | None -> mt ()
 
@@ -942,7 +956,7 @@ let format_buffer_to_string (buf : Buffer.t) : string =
     if the formatter is unavailable or style is set to ["None"]. *)
 let format_file_inplace (filename : string) : unit =
   let skip_format = Table.format_style () = "None" in
-  let use_bde = Table.format_style () = "BDE" || Table.std_lib () = "BDE" in
+  let use_bde = Table.format_style () = "BDE" || is_bde () in
   let available =
     if use_bde then
       bde_format_available ()
@@ -1397,8 +1411,7 @@ let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
   let errfile =
     match errfile with
     | Some e -> e
-    | None ->
-      Filename.temp_file ("cpp_" ^ Filename.basename infile ^ "_error") ".log"
+    | None -> make_error_file "cpp_" infile
   in
   let outfile =
     match outfile with
@@ -1407,14 +1420,8 @@ let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
       Filename.chop_suffix infile ".cpp" ^ if shouldlink then "" else ".o"
   in
   let args =
-    if Table.std_lib () = "BDE" then
-      let bde_dir =
-        let n = String.length (Table.bde_dir ()) in
-        if n > 0 && (Table.bde_dir ()).[n - 1] = '/' then
-          String.sub (Table.bde_dir ()) 0 (n - 1)
-        else
-          Table.bde_dir ()
-      in
+    if is_bde () then
+      let bde_dir = normalize_bde_dir () in
       ["clang++"]
       @ prepend_to_all "-I" includes
       @ [
@@ -1452,9 +1459,9 @@ let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
     let ic = open_in errfile in
     let errors = really_input_string ic (in_channel_length ic) in
     close_in ic;
-    if Sys.file_exists errfile then Sys.remove errfile;
+    cleanup_error_file errfile;
     raise (ClangError (res, errors)) );
-  if Sys.file_exists errfile then Sys.remove errfile
+  cleanup_error_file errfile
 
 exception NoOcamloptFound
 
@@ -1473,7 +1480,7 @@ let compile_ocaml
     match errfile with
     | Some e -> e
     | None ->
-      Filename.temp_file ("ocaml_" ^ Filename.basename infile ^ "_error") ".log"
+      make_error_file "ocaml_" infile
   in
   let outfile =
     match outfile with
@@ -1491,9 +1498,9 @@ let compile_ocaml
     let ic = open_in errfile in
     let errors = really_input_string ic (in_channel_length ic) in
     close_in ic;
-    if Sys.file_exists errfile then Sys.remove errfile;
+    cleanup_error_file errfile;
     raise (OcamloptError (res, errors)) );
-  if Sys.file_exists errfile then Sys.remove errfile
+  cleanup_error_file errfile
 
 (** Links and runs a test executable from the compiled object and its
     [.t.cpp] test driver. Returns the test's stdout. Raises [ClangError] on
@@ -1505,7 +1512,7 @@ let compile_and_test ?outfile ?errfile infile =
     match errfile with
     | Some e -> e
     | None ->
-      Filename.temp_file ("cpp_" ^ Filename.basename infile ^ "_error") ".log"
+      make_error_file "cpp_" infile
   in
   let ofile =
     match outfile with
@@ -1513,14 +1520,8 @@ let compile_and_test ?outfile ?errfile infile =
     | None -> Filename.chop_suffix infile ".cpp" ^ ".t.exe"
   in
   let args =
-    if Table.std_lib () = "BDE" then
-      let bde_dir =
-        let n = String.length (Table.bde_dir ()) in
-        if n > 0 && (Table.bde_dir ()).[n - 1] = '/' then
-          String.sub (Table.bde_dir ()) 0 (n - 1)
-        else
-          Table.bde_dir ()
-      in
+    if is_bde () then
+      let bde_dir = normalize_bde_dir () in
       [
         "clang++";
         "-O2";
@@ -1562,9 +1563,9 @@ let compile_and_test ?outfile ?errfile infile =
     let ic = open_in errfile in
     let errors = really_input_string ic (in_channel_length ic) in
     close_in ic;
-    if Sys.file_exists errfile then Sys.remove errfile;
+    cleanup_error_file errfile;
     raise (ClangError (res, errors)) );
-  if Sys.file_exists errfile then Sys.remove errfile;
+  cleanup_error_file errfile;
   let out = Filename.temp_file "test_out" ".log" in
   let test_exit_code = Sys.command (ofile ^ " >" ^ out ^ " 2>&1") in
   let ic = open_in out in

@@ -80,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -299,21 +299,22 @@ struct LoopifyGenerators {
   static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
     std::function<List<unsigned int>(unsigned int)> go;
     go = [&](unsigned int i) -> List<unsigned int> {
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         unsigned int i;
       };
-      /// Continuation: saves [_s0] across recursive call.
-      struct _Resume1 {
+      /// _Resume_j: saves [_s0], resumes after recursive call with _result.
+      struct _Resume_j {
         decltype(f((((n - std::declval<unsigned int &>()) > n
                          ? 0
                          : (n - std::declval<unsigned int &>()))))) _s0;
       };
-      using _Frame = std::variant<_Enter, _Resume1>;
+      using _Frame = std::variant<_Enter, _Resume_j>;
       List<unsigned int> _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(16);
       _stack.emplace_back(_Enter{i});
-      /// Frame dispatch: _Enter, _Resume1.
+      /// Loopified go: _Enter -> _Resume_j.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -324,11 +325,11 @@ struct LoopifyGenerators {
             _result = List<unsigned int>::nil();
           } else {
             unsigned int j = i - 1;
-            _stack.emplace_back(_Resume1{f((((n - i) > n ? 0 : (n - i))))});
+            _stack.emplace_back(_Resume_j{f((((n - i) > n ? 0 : (n - i))))});
             _stack.emplace_back(_Enter{j});
           }
         } else {
-          auto _f = std::move(std::get<_Resume1>(_frame));
+          auto _f = std::move(std::get<_Resume_j>(_frame));
           _result = List<unsigned int>::cons(_f._s0, _result);
         }
       }

@@ -879,11 +879,21 @@ let rec render_cpp_expr_simple = function
   | _ -> None
 
 (** Generate inline C++ clone code for a constructor field, converting
-    from [src_ty] to [dst_ty].  For non-copyable types ([unique_ptr],
-    [optional<unique_ptr>]) emits explicit inline clone code.  For
-    everything else — including type variables — emits a plain copy,
-    relying on the deep-copy copy constructor that every Crane-generated
-    inductive type provides. *)
+    from [src_ty] to [dst_ty].
+
+    Type conversion matrix (rows = source, columns = destination):
+    - [unique_ptr<S> -> unique_ptr<T>]: null-check, dereference, make_unique
+    - [unique_ptr<T> -> T]: dereference (converting ctor if types differ)
+    - [shared_ptr<T> -> T]: dereference (converting ctor if types differ)
+    - [T -> unique_ptr<T>]: wrap in make_unique
+    - [optional<ptr<T>> -> optional<T>]: null-check + unwrap inner ptr
+    - [optional<T> -> optional<ptr<T>>]: value-check + wrap in ptr
+    - [Tglob(g, ts1) -> Tglob(g, ts2)]: same container, different elems
+    - Everything else (including type variables): converting constructor
+
+    Uses [render_cpp_type_for_raw_template] to produce type strings for
+    [CPPraw]-based converting constructors, since [pp_cpp_type] renders
+    custom-extracted types differently (e.g. namespace qualification). *)
 let gen_clone_field_expr ~src_ty ~dst_ty expr =
   let render ty = render_cpp_type_for_raw_template (qualify_inductives ty) in
   (* Strip a single [Tnamespace] wrapper when it matches the inner [Tglob].
@@ -1076,12 +1086,8 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
 let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
-  let type_str =
-    if r_cpp = Tvoid then "void" else render_cpp_type_simple r_cpp
-  in
-  CPPfun_call (
-    CPPqualified (CPPraw ("ITree<" ^ type_str ^ ">"), Id.of_string "ret"),
-    args)
+  let itree_ty = Tid_external (Id.of_string_soft "ITree", [r_cpp]) in
+  CPPfun_call (CPPqualified_t (itree_ty, Id.of_string "ret"), args)
 
 (** Build [ITree<R>::ret(v)] or [ITree<void>::ret()] depending on whether
     the result type is void.  [r_cpp] is the C++ result type; [r_ml] is
@@ -1788,17 +1794,17 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | CPPbinop (_, l, r) -> ve l; ve r
     | CPPcond (c, t, f) -> ve c; ve t; ve f
     | CPPbraced es -> List.iter ve es
-    | CPPstd_get (_, Some e) -> ve e
+    | CPPstd_get (_, _, Some e) -> ve e
     | CPPunop (_, e) -> ve e
     | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _
     | CPPuint _ | CPPfloat _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _
-    | CPPnullptr | CPPstd_get (_, None) | CPPstd_holds_alternative _
+    | CPPnullptr | CPPstd_get (_, _, None) | CPPstd_holds_alternative _
     | CPPdeclval _ | CPPtypename_qualified _ | CPPraw _ | CPPbool _ | CPPint _
-    | CPPbrace_init | CPPthis -> ()
+    | CPPbrace_init | CPPthis | CPPconverting_ctor _ | CPPqualified_t _ -> ()
   and vs = function
     | Sreturn (Some e) | Sexpr e -> ve e
-    | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _
-    | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
+    | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
+    | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
     | Sasgn (_, _, e) | Sderef_asgn (_, e) -> ve e
     | Sassign_expr (lhs, e) -> ve lhs; ve e
     | Sif (c, t, f) -> ve c; List.iter vs t; List.iter vs f
@@ -11649,6 +11655,23 @@ let ml_self_ref_is_uniform ~ind_ref ~cname ml_ty =
     ) (List.mapi (fun j a -> (j, a)) args)
   | None -> true
 
+(** Generate the C++ struct definition for an inductive type.
+
+    Produces one of three shapes depending on the inductive:
+    - {b Value type}: a struct with an inner [std::variant] of constructor
+      structs, factory methods, [clone()], and [v()]/[v_mut()] accessors.
+    - {b Shared-ptr type}: same struct wrapped in [std::shared_ptr] at use
+      sites, with [shared_from_this] support and pointer-based destructors.
+    - {b Enum}: a simple [enum class] with no variant or constructor structs.
+
+    Major sections generated (in order): constructor structs, variant typedef,
+    factory methods, iterative destructor (for recursive types), clone method,
+    converting constructor (for mutual-inductive field-type differences),
+    [operator==], and stream insertion.
+
+    @param is_mutual     true when this type is part of a mutual block
+    @param consarg_names field names from Rocq binders, indexed by constructor
+    @param mutual_partners other types in the mutual block *)
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
@@ -11878,10 +11901,10 @@ let gen_ind_header_v2
           []
       in
 
-      (* Shared self-reference classification for iterative destructor and clone.
-         [is_direct_self_ref] checks if a ML type IS the self type directly.
-         [classify_ml_self_ref] extends this to detect self-references hidden
-         inside container types (option, pair, list). *)
+      (* Test whether ml_ty is exactly the self type T<a1,...,aN> with
+         identity type arguments (each Tvar k matching its position).
+         Resolves Tmeta indirections.  Does NOT look inside containers
+         — use classify_ml_self_ref for that. *)
       let rec is_direct_self_ref = function
         | Miniml.Tglob (r, args, _) ->
           Environ.QGlobRef.equal Environ.empty_env r name
@@ -11898,6 +11921,16 @@ let gen_ind_header_v2
         | Miniml.Tmeta {contents = Some t} -> is_direct_self_ref t
         | _ -> false
       in
+      (* Classify how a constructor field type references the inductive being
+         defined.  Returns a polymorphic variant indicating the shape:
+         - `Direct — the field IS the self type (e.g. tree in Node of tree)
+         - `Optional — option<self>
+         - `PairFst, `PairSnd, `PairBoth — self appears in a pair
+         - `List g — list<self>, with g as the list GlobRef
+         - `None — no self-reference
+
+         Used by the iterative destructor and clone to determine how to
+         traverse or deep-copy each field. *)
       let rec classify_ml_self_ref = function
         | ml_ty when is_direct_self_ref ml_ty -> `Direct
         | Miniml.Tglob (g, [arg], _)
@@ -11989,7 +12022,7 @@ let gen_ind_header_v2
                          ( alt_id,
                            Some (Tref Tauto),
                            CPPstd_get
-                             ( ctor_ty,
+                             ( ctor_ty, None,
                                Some (CPPmember (CPPvar node_id, vmn_id)) ) )
                        :: List.concat_map
                             (fun (field, cls) ->
@@ -12083,7 +12116,7 @@ let gen_ind_header_v2
                      Some
                        (Sif_then
                           ( CPPfun_call
-                              ( CPPstd_holds_alternative ctor_ty,
+                              ( CPPstd_holds_alternative (ctor_ty, None),
                                 [CPPmember (CPPvar node_id, vmn_id)] ),
                             body )))
                  tys)
@@ -12134,7 +12167,7 @@ let gen_ind_header_v2
                            ( alt_id,
                              Some (Tref Tauto),
                              CPPstd_get
-                               ( ctor_ty,
+                               ( ctor_ty, None,
                                  Some (CPPmember
                                          (CPPvar node_id, vmn_id)) ) )
                          :: List.concat_map
@@ -12242,7 +12275,7 @@ let gen_ind_header_v2
                        Some
                          (Sif_then
                             ( CPPfun_call
-                                ( CPPstd_holds_alternative ctor_ty,
+                                ( CPPstd_holds_alternative (ctor_ty, None),
                                   [CPPmember
                                      (CPPvar node_id, vmn_id)] ),
                               body )))
@@ -12743,9 +12776,6 @@ let gen_ind_header_v2
                          List.map
                            (fun (field_id, ml_ty, source_ty, target_ty) ->
                              let field_expr = CPPmember (CPPvar alt_id, field_id) in
-                             let field_s =
-                               Id.to_string alt_id ^ "." ^ Id.to_string field_id
-                             in
                              match classify_ml_self_ref ml_ty with
                              | `Direct ->
                                CPPcond
@@ -12753,57 +12783,76 @@ let gen_ind_header_v2
                                    CPPfun_call (CPPmk_unique self_ty, []),
                                    CPPnullptr )
                              | `Optional ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">((*" ^ field_s
-                                 ^ ") ? std::make_optional(std::make_unique<"
-                                 ^ self_s ^ ">()) : std::nullopt) : nullptr")
+                               let self_placeholder =
+                                 CPPfun_call (CPPmk_unique self_ty, [])
+                               in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPcond (CPPderef field_expr,
+                                     CPPfun_call (CPPraw "std::make_optional",
+                                       [self_placeholder]),
+                                     CPPraw "std::nullopt")]),
+                                 CPPnullptr)
                              | `PairFst ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">(std::make_pair(" ^ field_s
-                                 ^ "->first ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr, " ^ field_s
-                                 ^ "->second)) : nullptr")
+                               let id_first = Id.of_string "first" in
+                               let id_second = Id.of_string "second" in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPfun_call (CPPraw "std::make_pair", [
+                                     CPParrow (field_expr, id_second);
+                                     CPPcond (CPParrow (field_expr, id_first),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr)])]),
+                                 CPPnullptr)
                              | `PairSnd ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">(std::make_pair(" ^ field_s
-                                 ^ "->first, " ^ field_s
-                                 ^ "->second ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr)) : nullptr")
+                               let id_first = Id.of_string "first" in
+                               let id_second = Id.of_string "second" in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPfun_call (CPPraw "std::make_pair", [
+                                     CPPcond (CPParrow (field_expr, id_second),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr);
+                                     CPParrow (field_expr, id_first)])]),
+                                 CPPnullptr)
                              | `PairBoth ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">(std::make_pair(" ^ field_s
-                                 ^ "->first ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr, " ^ field_s
-                                 ^ "->second ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr)) : nullptr")
+                               let id_first = Id.of_string "first" in
+                               let id_second = Id.of_string "second" in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPfun_call (CPPraw "std::make_pair", [
+                                     CPPcond (CPParrow (field_expr, id_second),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr);
+                                     CPPcond (CPParrow (field_expr, id_first),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr)])]),
+                                 CPPnullptr)
                              | `List _ ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">() : nullptr")
+                               CPPcond
+                                 ( field_expr,
+                                   CPPfun_call (CPPmk_unique inner, []),
+                                   CPPnullptr )
                              | `None ->
                                (* Check for mutual partner reference.
                                   Only use placeholder+push for single-
@@ -12817,10 +12866,10 @@ let gen_ind_header_v2
                                  let partner_ty =
                                    Tglob (pname, ty_vars, [])
                                  in
-                                 let partner_s = render_q partner_ty in
-                                 CPPraw (
-                                   field_s ^ " ? std::make_unique<"
-                                   ^ partner_s ^ ">() : nullptr")
+                                 CPPcond
+                                   ( field_expr,
+                                     CPPfun_call (CPPmk_unique partner_ty, []),
+                                     CPPnullptr )
                                | _ ->
                                  gen_clone_field_expr
                                    ~src_ty:source_ty ~dst_ty:target_ty
@@ -12868,7 +12917,7 @@ let gen_ind_header_v2
                                 ( dst_alt_id,
                                   Some (Tref Tauto),
                                   CPPstd_get
-                                    ( ctor_ty,
+                                    ( ctor_ty, None,
                                       Some
                                         (CPParrow (CPPvar dst_id, vmn_id)) ) )
                            :: List.concat_map
@@ -12898,35 +12947,60 @@ let gen_ind_header_v2
                                          [ push_frame (get sf) (get df) ] )]
                                   | `Optional ->
                                     (* unique_ptr<optional<unique_ptr<Self>>>:
-                                       drill to inner unique_ptr, call .get *)
+                                       drill to inner unique_ptr, call .get.
+                                       Kept as CPPraw: the double-deref + .get()
+                                       pattern needs explicit parens that the
+                                       AST printer doesn't generate. *)
                                     [Sif_then
                                        ( CPPraw (sfs ^ " && *(" ^ sfs ^ ")"),
                                          [ push_frame
                                              (CPPraw ("(*(*(" ^ sfs ^ "))).get()"))
                                              (CPPraw ("(*(*(" ^ dfs ^ "))).get()")) ] )]
                                   | `PairFst ->
+                                    let df = CPPmember (CPPvar dst_alt_id, field_id) in
+                                    let id_first = Id.of_string "first" in
+                                    let id_get = Id.of_string "get" in
                                     [Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->first"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_first)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->first.get()"))
-                                             (CPPraw (dfs ^ "->first.get()")) ] )]
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_first), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_first), id_get, [])) ] )]
                                   | `PairSnd ->
+                                    let df = CPPmember (CPPvar dst_alt_id, field_id) in
+                                    let id_second = Id.of_string "second" in
+                                    let id_get = Id.of_string "get" in
                                     [Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->second"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_second)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->second.get()"))
-                                             (CPPraw (dfs ^ "->second.get()")) ] )]
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_second), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_second), id_get, [])) ] )]
                                   | `PairBoth ->
+                                    let df = CPPmember (CPPvar dst_alt_id, field_id) in
+                                    let id_first = Id.of_string "first" in
+                                    let id_second = Id.of_string "second" in
+                                    let id_get = Id.of_string "get" in
                                     [Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->first"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_first)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->first.get()"))
-                                             (CPPraw (dfs ^ "->first.get()")) ] );
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_first), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_first), id_get, [])) ] );
                                      Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->second"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_second)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->second.get()"))
-                                             (CPPraw (dfs ^ "->second.get()")) ] )]
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_second), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_second), id_get, [])) ] )]
                                   | `List list_g ->
                                     (* unique_ptr<List<Self>>: walk source
                                        list, build dest list spine with
@@ -13256,24 +13330,16 @@ let gen_ind_header_v2
               in
               let source_ty = Tglob (name, u_tys, []) in
               let source_type_s = render_ty source_ty in
-              let struct_local_name = "%SELF%" in
-              let template_params =
-                String.concat ", "
-                  (List.map
-                     (fun u -> "typename " ^ Id.to_string u)
-                     u_var_names)
-              in
               let n_ctors = Array.length cnames in
+              let other_id = Id.of_string "_other" in
+              let vmn_id = Id.of_string variant_member_name in
               let gen_branch i tys_list =
                 let c = cnames.(i) in
                 let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
                 let ctor_struct_name =
                   ctor_struct_name_of_ref ~fallback_idx:i c
                 in
-                let cname_s = Id.to_string cname_id in
-                let source_ctor_s =
-                  "typename " ^ source_type_s ^ "::" ^ cname_s
-                in
+                let source_ctor_ty = Tvar (0, Some cname_id) in
                 let field_info =
                   List.mapi
                     (fun j ty ->
@@ -13304,111 +13370,25 @@ let gen_ind_header_v2
                       (field_id, src_fty, dst_fty))
                     tys_list
                 in
-                let convert_field (field_id, src_fty, dst_fty) =
-                  let field_s = Id.to_string field_id in
-                  if src_fty = dst_fty then
-                    match src_fty with
-                    | Tunique_ptr inner ->
-                      (* unique_ptr<T>: null-safe clone via ->clone() *)
-                      let inner_s = render_ty inner in
-                      field_s ^ " ? std::make_unique<" ^ inner_s ^ ">("
-                      ^ field_s ^ "->clone()) : nullptr"
-                    | Tglob (g, [Tunique_ptr inner], _)
-                      when is_option_global g ->
-                      (* optional<unique_ptr<T>>: element-wise clone *)
-                      let inner_s = render_ty inner in
-                      field_s ^ ".has_value() ? std::make_optional("
-                      ^ "std::make_unique<" ^ inner_s ^ ">((*" ^ field_s
-                      ^ ")->clone())) : std::nullopt"
-                    | Tglob (g, [Tshared_ptr inner], _)
-                      when is_option_global g ->
-                      (* optional<shared_ptr<T>>: element-wise clone *)
-                      let inner_s = render_ty inner in
-                      field_s ^ ".has_value() ? std::make_optional("
-                      ^ "std::make_shared<" ^ inner_s ^ ">((*" ^ field_s
-                      ^ ")->clone())) : std::nullopt"
-                    | Tglob (GlobRef.IndRef _ as g, _, _)
-                      when not (Table.is_inline_custom g)
-                           && not (Table.is_enum_inductive g) ->
-                      (* Crane-generated inductive struct: always has clone() *)
-                      field_s ^ ".clone()"
-                    | _ ->
-                      (* Type variables, scalars, shared_ptr, type aliases, etc.:
-                         plain copy.  Copy ctor deep-copies for Crane types. *)
-                      field_s
-                  else
-                    match (src_fty, dst_fty) with
-                    | Tunique_ptr _, Tunique_ptr dst_inner ->
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ " ? std::make_unique<" ^ dst_inner_s
-                      ^ ">(*" ^ field_s ^ ") : nullptr"
-                    | Tglob (g1, [src_inner_ty], _), Tglob (g2, [dst_inner], _)
-                      when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
-                           && (match src_inner_ty with
-                               | Tunique_ptr _ | Tshared_ptr _ -> true
-                               | _ -> false)
-                           && (match dst_inner with
-                               | Tunique_ptr _ | Tshared_ptr _ -> false
-                               | _ -> true) ->
-                      (* optional<unique_ptr/shared_ptr<T>> → optional<T>:
-                         clone the pointed-to value (direct copy is deleted
-                         when T itself contains a unique_ptr field). *)
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ ".has_value() ? std::make_optional<"
-                      ^ dst_inner_s ^ ">((*" ^ field_s ^ ")->clone()) : std::nullopt"
-                    | Tglob (g1, [src_inner], _), Tglob (g2, [Tunique_ptr dst_inner], _)
-                      when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
-                           && (match src_inner with
-                               | Tunique_ptr _ | Tshared_ptr _ -> false
-                               | _ -> true) ->
-                      (* optional<T> → optional<unique_ptr<T>> *)
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ ".has_value() ? std::make_optional(std::make_unique<"
-                      ^ dst_inner_s ^ ">((*" ^ field_s ^ ").clone())) : std::nullopt"
-                    | Tglob (g1, [src_inner], _), Tglob (g2, [Tshared_ptr dst_inner], _)
-                      when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
-                           && (match src_inner with
-                               | Tunique_ptr _ | Tshared_ptr _ -> false
-                               | _ -> true) ->
-                      (* optional<T> → optional<shared_ptr<T>> *)
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ ".has_value() ? std::make_optional(std::make_shared<"
-                      ^ dst_inner_s ^ ">((*" ^ field_s ^ ").clone())) : std::nullopt"
-                    | Tglob (g1, _, _), Tglob (g2, _, _)
-                      when GlobRef.CanOrd.equal g1 g2 ->
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
-                    | (Tvar _ | Tauto), _ | _, (Tvar _ | Tauto) ->
-                      (* Type variable conversion: converting constructor *)
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
-                    | _ when contains_tvar dst_fty || contains_tvar src_fty ->
-                      (* Contains type variable: converting constructor *)
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
-                    | _ ->
-                      (* Fully concrete, different: converting constructor *)
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
+                let converted =
+                  List.map
+                    (fun (field_id, src_fty, dst_fty) ->
+                      gen_clone_field_expr ~src_ty:src_fty ~dst_ty:dst_fty
+                        (CPPvar field_id))
+                    field_info
                 in
-                ( source_ctor_s,
-                  cname_s,
-                  field_info,
-                  List.map convert_field field_info )
+                (source_ctor_ty, cname_id, field_info, converted)
               in
               let branches =
                 List.init n_ctors (fun i -> gen_branch i tys.(i))
               in
-              let buf = Buffer.create 256 in
-              Buffer.add_string buf
-                ("template <" ^ template_params ^ ">\n");
-              Buffer.add_string buf
-                ("explicit " ^ struct_local_name ^ "(const "
-                 ^ source_type_s ^ "& _other) {\n");
-              if n_ctors = 1 then begin
-                let source_ctor_s, cname_s, field_info, converted =
-                  List.hd branches
-                in
+              (* Build body statements for each branch *)
+              let make_branch_body cname_id field_info converted =
                 match field_info with
                 | [] ->
-                  Buffer.add_string buf
-                    ("  " ^ variant_member_name ^ " = " ^ cname_s ^ "{};\n")
+                  [Sassign_expr
+                     ( CPParrow (CPPthis, vmn_id),
+                       CPPstruct_id (cname_id, [], []) )]
                 | _ ->
                   let bindings =
                     String.concat ", "
@@ -13416,52 +13396,61 @@ let gen_ind_header_v2
                          (fun (id, _, _) -> Id.to_string id)
                          field_info)
                   in
-                  Buffer.add_string buf
-                    ("  const auto& [" ^ bindings
+                  let source_ctor_s =
+                    "typename " ^ source_type_s ^ "::"
+                    ^ Id.to_string cname_id
+                  in
+                  [Sraw (
+                     "const auto& [" ^ bindings
                      ^ "] = std::get<" ^ source_ctor_s
-                     ^ ">(_other.v());\n");
-                  Buffer.add_string buf
-                    ("  " ^ variant_member_name ^ " = " ^ cname_s ^ "{"
-                     ^ String.concat ", " converted ^ "};\n")
-              end
-              else begin
-                List.iteri
-                  (fun idx
-                       (source_ctor_s, cname_s, field_info, converted) ->
-                    let is_last = idx = n_ctors - 1 in
-                    if idx = 0 then
-                      Buffer.add_string buf
-                        ("  if (std::holds_alternative<" ^ source_ctor_s
-                         ^ ">(_other.v())) {\n")
-                    else if is_last then
-                      Buffer.add_string buf "  } else {\n"
-                    else
-                      Buffer.add_string buf
-                        ("  } else if (std::holds_alternative<"
-                         ^ source_ctor_s ^ ">(_other.v())) {\n");
-                    match field_info with
-                    | [] ->
-                      Buffer.add_string buf
-                        ("    " ^ variant_member_name ^ " = " ^ cname_s ^ "{};\n")
-                    | _ ->
-                      let bindings =
-                        String.concat ", "
-                          (List.map
-                             (fun (id, _, _) -> Id.to_string id)
-                             field_info)
+                     ^ ">(" ^ "_other.v()" ^ ");");
+                   Sassign_expr
+                     ( CPParrow (CPPthis, vmn_id),
+                       CPPstruct_id (cname_id, [], converted) )]
+              in
+              let body =
+                if n_ctors = 1 then
+                  let source_ctor_ty, cname_id, field_info, converted =
+                    List.hd branches
+                  in
+                  make_branch_body cname_id field_info converted
+                else
+                  (* Build if/else if/else chain *)
+                  let other_v =
+                    CPPdot_method_call (CPPvar other_id,
+                                       Id.of_string "v", [])
+                  in
+                  let rec build_if_chain = function
+                    | [] -> assert false
+                    | [(_, cname_id, field_info, converted)] ->
+                      (* Last branch: no guard *)
+                      make_branch_body cname_id field_info converted
+                    | (_source_ctor_ty, cname_id, field_info, converted)
+                      :: rest ->
+                      let guard =
+                        CPPfun_call
+                          ( CPPstd_holds_alternative
+                              (source_ty, Some cname_id),
+                            [other_v] )
                       in
-                      Buffer.add_string buf
-                        ("    const auto& [" ^ bindings
-                         ^ "] = std::get<" ^ source_ctor_s
-                         ^ ">(_other.v());\n");
-                      Buffer.add_string buf
-                        ("    " ^ variant_member_name ^ " = " ^ cname_s ^ "{"
-                         ^ String.concat ", " converted ^ "};\n"))
-                  branches;
-                Buffer.add_string buf "  }\n"
-              end;
-              Buffer.add_string buf "}";
-              [(Fraw (Buffer.contents buf), VPublic, SCreators)]
+                      let body =
+                        make_branch_body cname_id field_info converted
+                      in
+                      [Sif (guard, body, build_if_chain rest)]
+                  in
+                  build_if_chain branches
+              in
+              let tparams =
+                List.map
+                  (fun u -> (TTtypename, u))
+                  u_var_names
+              in
+              let ctor_params =
+                [(other_id,
+                  Tref (Tmod (TMconst, source_ty)))]
+              in
+              [(Ftemplate_ctor (tparams, true, ctor_params, body),
+                VPublic, SCreators)]
           in
           [copy_ctor; move_ctor; copy_assign; move_assign; clone_method]
           @ converting_ctor

@@ -147,6 +147,8 @@ and cpp_stmt =
   | Sraw of string
     (* Raw C++ code, printed verbatim. Used for low-level operations in reuse
        optimization. *)
+  | Scomment of string
+    (* Documentation comment, printed as [/// text]. *)
   | Sstruct_def of Id.t * (Id.t * cpp_type) list
     (* Local struct definition: struct Name { T1 f1; T2 f2; }; *)
   | Susing of Id.t * cpp_type
@@ -237,6 +239,9 @@ and cpp_expr =
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
   | CPPnamespace of GlobRef.t * cpp_expr
   | CPPfun_call of cpp_expr * cpp_expr list
+  | CPPconverting_ctor of cpp_type * cpp_expr list
+    (** Converting constructor call: [Type(args)]. Used in clone-field
+        conversions where the destination type differs from the source. *)
   | CPPderef of cpp_expr
   | CPPmove of cpp_expr
   | CPPforward of cpp_type * cpp_expr
@@ -282,16 +287,18 @@ and cpp_expr =
   | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list (* obj.method(args) *)
   | CPPqualified of
       cpp_expr * Id.t (* expr::id - for qualified name access like Type::ctor *)
+  | CPPqualified_t of
+      cpp_type * Id.t (* Type::id - for type-qualified member access *)
   | CPPconvertible_to of cpp_type (* std::convertible_to<T> constraint *)
   | CPPabort of string (* unreachable code / absurd case - calls std::abort() *)
   | CPPenum_val of
       GlobRef.t * Id.t (* enum class value: EnumType::Constructor *)
   | CPPnullptr (* nullptr *)
   | CPPbraced of cpp_expr list (* braced initializer: {a, b, ...} *)
-  | CPPstd_get of cpp_type * cpp_expr option
-    (* std::get<T> or std::get<T>(expr) *)
-  | CPPstd_holds_alternative of cpp_type
-    (* std::holds_alternative<T> *)
+  | CPPstd_get of cpp_type * Id.t option * cpp_expr option
+    (* std::get<T>(expr), std::get<typename T::Ctor>(expr), or bare *)
+  | CPPstd_holds_alternative of cpp_type * Id.t option
+    (* std::holds_alternative<T>(…) or std::holds_alternative<typename T::Ctor>(…) *)
   | CPPdeclval of cpp_type
     (* std::declval<T>() *)
   | CPPtypename_qualified of cpp_type * Id.t
@@ -342,6 +349,13 @@ and cpp_field =
   | Fnested_using of Id.t * cpp_type
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
+  (* Template converting constructor: template params, explicit flag,
+     constructor params, body statements *)
+  | Ftemplate_ctor of
+      (template_type * Id.t) list
+      * bool (* explicit *)
+      * (Id.t * cpp_type) list
+      * cpp_stmt list
   (* Raw C++ field declaration (e.g., converting constructors) *)
   | Fraw of string
 
@@ -411,6 +425,7 @@ let map_expr
   | CPPglob (r, tys, ci) -> CPPglob (r, List.map ft tys, ci)
   | CPPnamespace (r, e') -> CPPnamespace (r, fe e')
   | CPPfun_call (f, args) -> CPPfun_call (fe f, List.map fe args)
+  | CPPconverting_ctor (ty, args) -> CPPconverting_ctor (ft ty, List.map fe args)
   | CPPderef e' -> CPPderef (fe e')
   | CPPmove e' -> CPPmove (fe e')
   | CPPforward (ty, e') -> CPPforward (ft ty, fe e')
@@ -450,13 +465,14 @@ let map_expr
   | CPPdot_method_call (obj, id, args) ->
     CPPdot_method_call (fe obj, id, List.map fe args)
   | CPPqualified (e', id) -> CPPqualified (fe e', id)
+  | CPPqualified_t (ty, id) -> CPPqualified_t (ft ty, id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
   | CPPabort _ -> e
   | CPPenum_val _ -> e
   | CPPnullptr -> e
   | CPPbraced args -> CPPbraced (List.map fe args)
-  | CPPstd_get (ty, e_opt) -> CPPstd_get (ft ty, Option.map fe e_opt)
-  | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
+  | CPPstd_get (ty, ctor, e_opt) -> CPPstd_get (ft ty, ctor, Option.map fe e_opt)
+  | CPPstd_holds_alternative (ty, ctor) -> CPPstd_holds_alternative (ft ty, ctor)
   | CPPdeclval ty -> CPPdeclval (ft ty)
   | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
   | CPPraw _ -> e
@@ -503,7 +519,7 @@ let map_stmt
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
   | Sif_then (cond, then_br) -> Sif_then (fe cond, List.map fs then_br)
-  | Sraw _ -> s
+  | Sraw _ | Scomment _ -> s
   | Sstruct_def (id, fields) ->
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
   | Susing (id, ty) -> Susing (id, ft ty)
@@ -545,9 +561,11 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
-  | CPPdeclval _ | CPPtypename_qualified _ | CPPraw _ | CPPbool _ | CPPint _
+  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
+  | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
   | CPPfun_call (f, args) -> on_expr f; List.iter on_expr args
+  | CPPconverting_ctor (_, args) -> List.iter on_expr args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
@@ -565,7 +583,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
   | CPPcond (c, t, f) -> on_expr c; on_expr t; on_expr f
   | CPPbraced args -> List.iter on_expr args
-  | CPPstd_get (_, e_opt) -> Option.iter on_expr e_opt
+  | CPPstd_get (_, _, e_opt) -> Option.iter on_expr e_opt
 
 (** Iterate over the immediate children of a [cpp_stmt], calling [on_expr]
     for child expressions and [on_stmts] for child statement lists.  Does
@@ -574,7 +592,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
 let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   match s with
   | Sreturn (Some e) | Sexpr e -> on_expr e
-  | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _
+  | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
   | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
   | Sasgn (_, _, e) -> on_expr e
   | Sif (cond, then_br, else_br) ->
@@ -602,6 +620,74 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
       | None -> () );
       on_stmts br.smb_body) branches;
     Option.iter on_stmts default
+
+(** Fold over immediate child expressions of a [cpp_expr].  Mirrors
+    {!iter_expr_children} but threads an accumulator. *)
+let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
+  let fe acc e = f acc e in
+  match e with
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
+  | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
+  | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
+  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
+  | CPPbool _ | CPPint _
+  | CPPbrace_init | CPPthis | CPPshared_from_this _ | CPPlambda _ -> acc
+  | CPPfun_call (fn, args) -> List.fold_left fe (fe acc fn) args
+  | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
+  | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
+  | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
+  | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
+  | CPPunique_ptr_ctor (_, e') | CPPany_cast (_, e') | CPPunop (_, e') ->
+    fe acc e'
+  | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
+  | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
+    List.fold_left fe acc es
+  | CPPparray (arr, e') -> fe (Array.fold_left fe acc arr) e'
+  | CPPmethod_call (obj, _, args) -> List.fold_left fe (fe acc obj) args
+  | CPPdot_method_call (obj, _, args) -> List.fold_left fe (fe acc obj) args
+  | CPPrequires (_, constraints, _) ->
+    List.fold_left (fun a (e', _) -> fe a e') acc constraints
+  | CPPbinop (_, l, r) -> fe (fe acc l) r
+  | CPPcond (c, t, f) -> fe (fe (fe acc c) t) f
+  | CPPbraced args -> List.fold_left fe acc args
+  | CPPstd_get (_, _, e_opt) -> match e_opt with None -> acc | Some e' -> fe acc e'
+
+(** Fold over immediate children of a [cpp_stmt].  [on_expr] folds over
+    child expressions; [on_stmts] folds over child statement lists. *)
+let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
+  match s with
+  | Sreturn (Some e) | Sexpr e -> on_expr acc e
+  | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
+  | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> acc
+  | Sasgn (_, _, e) -> on_expr acc e
+  | Sif (cond, then_br, else_br) ->
+    on_stmts (on_stmts (on_expr acc cond) then_br) else_br
+  | Sif_then (cond, then_br) -> on_stmts (on_expr acc cond) then_br
+  | Sswitch (scrut, _, branches, default) ->
+    let acc = on_expr acc scrut in
+    let acc = List.fold_left (fun a (_, stmts) -> on_stmts a stmts) acc branches in
+    (match default with None -> acc | Some d -> on_stmts acc d)
+  | Scustom_case (_, scrut, _, branches, _) ->
+    let acc = on_expr acc scrut in
+    List.fold_left (fun a (_, _, stmts) -> on_stmts a stmts) acc branches
+  | Sassign_field (obj, _, e) -> on_expr (on_expr acc obj) e
+  | Sassign_expr (lhs, e) -> on_expr (on_expr acc lhs) e
+  | Sderef_asgn (lhs, e) -> on_expr (on_expr acc lhs) e
+  | Swhile (cond, body) -> on_stmts (on_expr acc cond) body
+  | Sblock stmts -> on_stmts acc stmts
+  | Sblock_custom (_, _, _, _, args, _) -> List.fold_left on_expr acc args
+  | Smatch (branches, default) ->
+    let acc =
+      List.fold_left (fun a br ->
+        let a = on_expr a br.smb_scrutinee in
+        let a = List.fold_left on_expr a br.smb_extra_conds in
+        let a = match br.smb_reuse with
+          | Some (cond, _, stmts) -> on_stmts (on_expr a cond) stmts
+          | None -> a
+        in
+        on_stmts a br.smb_body) acc branches
+    in
+    (match default with None -> acc | Some d -> on_stmts acc d)
 
 (** C++ top-level declarations. *)
 type cpp_decl =

@@ -4,34 +4,40 @@
 /// Helper: sum all elements in a list of nested structures.
 /// Handles both tree and list levels in one function for full loopification.
 unsigned int LoopifyStructures::sum_nested_list_fuel(
-    const unsigned int fuel, const List<LoopifyStructures::nested> &l) {
+    const unsigned int fuel,
+    const List<LoopifyStructures::nested>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [_s0, f], dispatches next recursive call.
-  struct _After3 {
-    const List<LoopifyStructures::nested> *_s0;
+  /// _After_NList: saves [d_a00, f], dispatches next recursive call.
+  struct _After_NList {
+    const List<LoopifyStructures::nested> *d_a00;
     unsigned int f;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
-  struct _Combine2 {
+  /// _Combine_NList: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_NList {
     unsigned int _result;
   };
 
-  /// Continuation: saves [d_a00] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Elem: saves [d_a00], resumes after recursive call with _result.
+  struct _Resume_Elem {
     unsigned int d_a00;
   };
 
-  using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
+  using _Frame =
+      std::variant<_Enter, _After_NList, _Combine_NList, _Resume_Elem>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l, fuel});
-  /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
+  /// Loopified sum_nested_list_fuel: _Enter -> _After_NList -> _Combine_NList
+  /// -> _Resume_Elem.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -53,25 +59,25 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
                   d_a0.v())) {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
-            _stack.emplace_back(_Resume1{d_a00});
+            _stack.emplace_back(_Resume_Elem{d_a00});
             _stack.emplace_back(_Enter{d_a1.get(), f});
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_After3{d_a00.get(), f});
+            _stack.emplace_back(_After_NList{d_a00.get(), f});
             _stack.emplace_back(_Enter{d_a1.get(), f});
           }
         }
       }
-    } else if (std::holds_alternative<_After3>(_frame)) {
-      auto _f = std::move(std::get<_After3>(_frame));
-      _stack.emplace_back(_Combine2{_result});
-      _stack.emplace_back(_Enter{_f._s0, _f.f});
-    } else if (std::holds_alternative<_Combine2>(_frame)) {
-      auto _f = std::move(std::get<_Combine2>(_frame));
+    } else if (std::holds_alternative<_After_NList>(_frame)) {
+      auto _f = std::move(std::get<_After_NList>(_frame));
+      _stack.emplace_back(_Combine_NList{_result});
+      _stack.emplace_back(_Enter{_f.d_a00, _f.f});
+    } else if (std::holds_alternative<_Combine_NList>(_frame)) {
+      auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = (_result + _f._result);
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Elem>(_frame));
       _result = (_f.d_a00 + _result);
     }
   }
@@ -116,34 +122,40 @@ unsigned int LoopifyStructures::depth_nested_list_fuel(
 
 /// Helper: flatten a list of nested structures to a flat list of nats.
 List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
-    const unsigned int fuel, const List<LoopifyStructures::nested> &l) {
+    const unsigned int fuel,
+    const List<LoopifyStructures::nested>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<LoopifyStructures::nested> *l;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [_s0, f], dispatches next recursive call.
-  struct _After3 {
-    const List<LoopifyStructures::nested> *_s0;
+  /// _After_NList: saves [d_a00, f], dispatches next recursive call.
+  struct _After_NList {
+    const List<LoopifyStructures::nested> *d_a00;
     unsigned int f;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
-  struct _Combine2 {
+  /// _Combine_NList: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_NList {
     List<unsigned int> _result;
   };
 
-  /// Continuation: saves [d_a00] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Elem: saves [d_a00], resumes after recursive call with _result.
+  struct _Resume_Elem {
     unsigned int d_a00;
   };
 
-  using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
+  using _Frame =
+      std::variant<_Enter, _After_NList, _Combine_NList, _Resume_Elem>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l, fuel});
-  /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
+  /// Loopified flatten_nested_list_fuel: _Enter -> _After_NList ->
+  /// _Combine_NList -> _Resume_Elem.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -165,25 +177,25 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
                   d_a0.v())) {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
-            _stack.emplace_back(_Resume1{d_a00});
+            _stack.emplace_back(_Resume_Elem{d_a00});
             _stack.emplace_back(_Enter{d_a1.get(), f});
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_After3{d_a00.get(), f});
+            _stack.emplace_back(_After_NList{d_a00.get(), f});
             _stack.emplace_back(_Enter{d_a1.get(), f});
           }
         }
       }
-    } else if (std::holds_alternative<_After3>(_frame)) {
-      auto _f = std::move(std::get<_After3>(_frame));
-      _stack.emplace_back(_Combine2{std::move(_result)});
-      _stack.emplace_back(_Enter{_f._s0, _f.f});
-    } else if (std::holds_alternative<_Combine2>(_frame)) {
-      auto _f = std::move(std::get<_Combine2>(_frame));
+    } else if (std::holds_alternative<_After_NList>(_frame)) {
+      auto _f = std::move(std::get<_After_NList>(_frame));
+      _stack.emplace_back(_Combine_NList{std::move(_result)});
+      _stack.emplace_back(_Enter{_f.d_a00, _f.f});
+    } else if (std::holds_alternative<_Combine_NList>(_frame)) {
+      auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = _result.app(_f._result);
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Elem>(_frame));
       _result = List<unsigned int>::cons(_f.d_a00, _result);
     }
   }

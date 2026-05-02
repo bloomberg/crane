@@ -53,7 +53,7 @@ struct BenchLetIn {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
     static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
@@ -138,7 +138,7 @@ struct BenchLetIn {
     explicit triple(const triple<_U0, _U1, _U2> &_other) {
       const auto &[d_a0, d_a1, d_a2] =
           std::get<typename triple<_U0, _U1, _U2>::Triple0>(_other.v());
-      d_v_ = Triple0{t_A(d_a0), t_B(d_a1), t_C(d_a2)};
+      this->d_v_ = Triple0{t_A(d_a0), t_B(d_a1), t_C(d_a2)};
     }
 
     static triple<t_A, t_B, t_C> triple0(t_A a0, t_B a1, t_C a2) {

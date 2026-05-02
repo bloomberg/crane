@@ -85,13 +85,14 @@ struct DeepMap {
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        d_v_ = Leaf{};
+        this->d_v_ = Leaf{};
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        d_v_ =
-            Node{d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
-                 d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr};
+        this->d_v_ =
+            Node{d_a0 ? std::make_unique<DeepMap::tree<t_A>>(*d_a0) : nullptr,
+                 t_A(d_a1),
+                 d_a2 ? std::make_unique<DeepMap::tree<t_A>>(*d_a2) : nullptr};
       }
     }
 

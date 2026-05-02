@@ -95,12 +95,13 @@ struct HigherKinded {
     template <typename _U> explicit Tree(const Tree<_U> &_other) {
       if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
         const auto &[d_a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
-        d_v_ = Leaf{t_A(d_a0)};
+        this->d_v_ = Leaf{t_A(d_a0)};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename Tree<_U>::Branch>(_other.v());
-        d_v_ = Branch{d_a0 ? std::make_unique<Tree<t_A>>(*d_a0) : nullptr,
-                      d_a1 ? std::make_unique<Tree<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Branch{
+            d_a0 ? std::make_unique<HigherKinded::Tree<t_A>>(*d_a0) : nullptr,
+            d_a1 ? std::make_unique<HigherKinded::Tree<t_A>>(*d_a1) : nullptr};
       }
     }
 

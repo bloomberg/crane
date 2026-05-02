@@ -178,10 +178,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -282,12 +282,13 @@ struct NestedTree {
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        d_v_ = Leaf{};
+        this->d_v_ = Leaf{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename tree<_U>::Node>(_other.v());
-        d_v_ =
-            Node{t_A(d_a0), std::shared_ptr<tree<std::pair<t_A, t_A>>>(d_a1)};
+        this->d_v_ = Node{
+            t_A(d_a0),
+            std::shared_ptr<NestedTree::tree<std::pair<t_A, t_A>>>(*(d_a1))};
       }
     }
 

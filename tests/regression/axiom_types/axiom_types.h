@@ -197,12 +197,13 @@ struct AxiomTypes {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        d_v_ = Nil{};
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        d_v_ = Cons{t_A(d_a0),
-                    d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Cons{t_A(d_a0),
+                          d_a1 ? std::make_unique<AxiomTypes::list<t_A>>(*d_a1)
+                               : nullptr};
       }
     }
 

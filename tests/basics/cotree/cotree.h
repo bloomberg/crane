@@ -81,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -294,9 +294,9 @@ struct Cotree {
         const tree<t_A> *_src = _frame._src;
         tree<t_A> *_dst = _frame._dst;
         const auto &_alt = std::get<Node>(_src->v());
-        _dst->d_v_ = Node{
-            _alt.d_a0,
-            _alt.d_a1 ? std::make_unique<List<Cotree::tree<t_A>>>() : nullptr};
+        _dst->d_v_ =
+            Node{_alt.d_a0,
+                 _alt.d_a1 ? std::make_unique<List<tree<t_A>>>() : nullptr};
         auto &_dst_alt = std::get<Node>(_dst->d_v_);
         [&] {
           if (_alt.d_a1) {
@@ -334,8 +334,9 @@ struct Cotree {
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       const auto &[d_a0, d_a1] = std::get<typename tree<_U>::Node>(_other.v());
-      d_v_ = Node{t_A(d_a0),
-                  d_a1 ? std::make_unique<List<tree<t_A>>>(*d_a1) : nullptr};
+      this->d_v_ = Node{t_A(d_a0),
+                        d_a1 ? std::make_unique<List<Cotree::tree<t_A>>>(*d_a1)
+                             : nullptr};
     }
 
     static tree<t_A> node(t_A a0, List<tree<t_A>> a1) {

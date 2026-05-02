@@ -1,21 +1,24 @@
 #include <loopify_advanced_lists.h>
 
-unsigned int LoopifyAdvancedLists::product(const List<unsigned int> &l) {
+unsigned int LoopifyAdvancedLists::product(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  struct _Resume_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified product: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -27,11 +30,11 @@ unsigned int LoopifyAdvancedLists::product(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{d_a0});
+        _stack.emplace_back(_Resume_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f.d_a0 * _result);
     }
   }
@@ -197,23 +200,25 @@ List<unsigned int> LoopifyAdvancedLists::interleave(List<unsigned int> l1,
   return std::move(*(_head));
 }
 
-List<unsigned int>
-LoopifyAdvancedLists::concat_lists(const List<List<unsigned int>> &ll) {
+List<unsigned int> LoopifyAdvancedLists::concat_lists(
+    const List<List<unsigned int>>
+        &ll) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<List<unsigned int>> *ll;
   };
 
-  /// Continuation: saves [d_a0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  struct _Resume_Cons {
     List<unsigned int> d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&ll});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified concat_lists: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -226,11 +231,11 @@ LoopifyAdvancedLists::concat_lists(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume1{d_a0});
+        _stack.emplace_back(_Resume_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = _f.d_a0.app(_result);
     }
   }

@@ -81,12 +81,14 @@ struct TailrecReorderProbe {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        d_v_ = Mynil{};
+        this->d_v_ = Mynil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        d_v_ = Mycons{t_A(d_a0),
-                      d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Mycons{
+            t_A(d_a0),
+            d_a1 ? std::make_unique<TailrecReorderProbe::mylist<t_A>>(*d_a1)
+                 : nullptr};
       }
     }
 
@@ -126,24 +128,29 @@ struct TailrecReorderProbe {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2
+  mylist_rect(const T2 f, F1 &&f0,
+              const mylist<T1> &m) { /// _Enter: captures varying parameters for
+                                     /// each recursive call.
+
     struct _Enter {
       const mylist<T1> *m;
     };
 
-    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Mycons: saves [f0, d_a1, d_a0], resumes after recursive call
+    /// with _result.
+    struct _Resume_Mycons {
       F1 f0;
-      mylist<T1> _s1;
+      mylist<T1> d_a1;
       T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&m});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -155,12 +162,12 @@ struct TailrecReorderProbe {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = _f.f0(_f.d_a0, _f._s1, _result);
+        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
       }
     }
     return _result;
@@ -168,24 +175,29 @@ struct TailrecReorderProbe {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2
+  mylist_rec(const T2 f, F1 &&f0,
+             const mylist<T1> &m) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
+
     struct _Enter {
       const mylist<T1> *m;
     };
 
-    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Mycons: saves [f0, d_a1, d_a0], resumes after recursive call
+    /// with _result.
+    struct _Resume_Mycons {
       F1 f0;
-      mylist<T1> _s1;
+      mylist<T1> d_a1;
       T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&m});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -197,12 +209,12 @@ struct TailrecReorderProbe {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = _f.f0(_f.d_a0, _f._s1, _result);
+        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
       }
     }
     return _result;
@@ -250,22 +262,26 @@ struct TailrecReorderProbe {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, T1 &>
-  static unsigned int mylist_sum(F0 &&f, const mylist<T1> &l) {
+  static unsigned int
+  mylist_sum(F0 &&f,
+             const mylist<T1> &l) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
+
     struct _Enter {
       const mylist<T1> *l;
     };
 
-    /// Continuation: saves [_s0] across recursive call.
-    struct _Resume1 {
-      unsigned int _s0;
+    /// _Resume_Mycons: saves [d_a0], resumes after recursive call with _result.
+    struct _Resume_Mycons {
+      unsigned int d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Mycons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified mylist_sum: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -277,12 +293,12 @@ struct TailrecReorderProbe {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(l.v());
-          _stack.emplace_back(_Resume1{f(d_a0)});
+          _stack.emplace_back(_Resume_Mycons{f(d_a0)});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = (_f._s0 + _result);
+        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+        _result = (_f.d_a0 + _result);
       }
     }
     return _result;

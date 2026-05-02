@@ -2,23 +2,26 @@
 
 /// Consolidated list generator functions.
 /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
-List<unsigned int> LoopifyGenerators::cycle(const unsigned int n,
-                                            const List<unsigned int> &l) {
+List<unsigned int> LoopifyGenerators::cycle(
+    const unsigned int n,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [l] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [l], resumes after recursive call with _result.
+  struct _Resume_m {
     List<unsigned int> l;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified cycle: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -29,11 +32,11 @@ List<unsigned int> LoopifyGenerators::cycle(const unsigned int n,
         _result = List<unsigned int>::nil();
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume1{l});
+        _stack.emplace_back(_Resume_m{l});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = _f.l.app(_result);
     }
   }
@@ -125,20 +128,23 @@ List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
   return std::move(*(_head));
 }
 
-unsigned int LoopifyGenerators::len_impl(const List<unsigned int> &l) {
+unsigned int LoopifyGenerators::len_impl(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves across recursive call.
-  struct _Resume1 {};
+  /// _Resume_Cons: resumes after recursive call with _result.
+  struct _Resume_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -150,11 +156,11 @@ unsigned int LoopifyGenerators::len_impl(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{});
+        _stack.emplace_back(_Resume_Cons{});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_result + 1);
     }
   }
@@ -169,24 +175,27 @@ LoopifyGenerators::zip_longest(const List<unsigned int> &l1,
 }
 
 /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
-List<unsigned int> LoopifyGenerators::build_list_fuel(const unsigned int fuel,
-                                                      const unsigned int n) {
+List<unsigned int> LoopifyGenerators::build_list_fuel(
+    const unsigned int fuel,
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
   };
 
-  /// Continuation: saves [n_] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont__x: saves [n_], resumes after recursive call, then processes rest.
+  struct _Cont__x {
     unsigned int n_;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont__x>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{n, fuel});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified build_list_fuel: _Enter -> _Cont__x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -207,13 +216,13 @@ List<unsigned int> LoopifyGenerators::build_list_fuel(const unsigned int fuel,
           } else {
             unsigned int _x = n_ - 1;
             unsigned int half = (2u ? n_ / 2u : 0);
-            _stack.emplace_back(_Cont1{n_});
+            _stack.emplace_back(_Cont__x{n_});
             _stack.emplace_back(_Enter{half, f});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont__x>(_frame));
       unsigned int n_ = _f.n_;
       List<unsigned int> half_result = _result;
       _result = half_result.app(List<unsigned int>::cons(n_, half_result));
@@ -314,25 +323,27 @@ List<unsigned int> LoopifyGenerators::replicate_single(const unsigned int x,
 
 /// replicate_each n l replicates each element n times: replicate_each 2 1,2 ->
 /// 1,1,2,2.
-List<unsigned int>
-LoopifyGenerators::replicate_each(const unsigned int n,
-                                  const List<unsigned int> &l) {
+List<unsigned int> LoopifyGenerators::replicate_each(
+    const unsigned int n,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Cons {
     decltype(replicate_single(std::declval<unsigned int &>(),
                               std::declval<const unsigned int &>())) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified replicate_each: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -344,11 +355,11 @@ LoopifyGenerators::replicate_each(const unsigned int n,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{replicate_single(d_a0, n)});
+        _stack.emplace_back(_Resume_Cons{replicate_single(d_a0, n)});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = _f._s0.app(_result);
     }
   }

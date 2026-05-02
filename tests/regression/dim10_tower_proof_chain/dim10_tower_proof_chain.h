@@ -55,7 +55,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {

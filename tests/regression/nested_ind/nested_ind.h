@@ -81,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -207,12 +207,14 @@ struct NestedInd {
     // CREATORS
     template <typename _U> explicit custom_list(const custom_list<_U> &_other) {
       if (std::holds_alternative<typename custom_list<_U>::Cnil>(_other.v())) {
-        d_v_ = Cnil{};
+        this->d_v_ = Cnil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename custom_list<_U>::Ccons>(_other.v());
-        d_v_ = Ccons{t_A(d_a0), d_a1 ? std::make_unique<custom_list<t_A>>(*d_a1)
-                                     : nullptr};
+        this->d_v_ =
+            Ccons{t_A(d_a0),
+                  d_a1 ? std::make_unique<NestedInd::custom_list<t_A>>(*d_a1)
+                       : nullptr};
       }
     }
 
@@ -335,10 +337,11 @@ struct NestedInd {
     // CREATORS
     template <typename _U> explicit rose(const rose<_U> &_other) {
       const auto &[d_a0, d_a1] = std::get<typename rose<_U>::Node>(_other.v());
-      d_v_ =
-          Node{t_A(d_a0),
-               d_a1 ? std::make_unique<NestedInd::custom_list<rose<t_A>>>(*d_a1)
-                    : nullptr};
+      this->d_v_ = Node{
+          t_A(d_a0),
+          d_a1 ? std::make_unique<NestedInd::custom_list<NestedInd::rose<t_A>>>(
+                     *d_a1)
+               : nullptr};
     }
 
     static rose<t_A> node(t_A a0, custom_list<rose<t_A>> a1) {
@@ -466,8 +469,8 @@ struct NestedInd {
           _dst->d_v_ = Lit{_alt.d_a0};
         } else if (std::holds_alternative<Add>(_src->v())) {
           const auto &_alt = std::get<Add>(_src->v());
-          _dst->d_v_ = Add{_alt.d_a0 ? std::make_unique<List<NestedInd::expr>>()
-                                     : nullptr};
+          _dst->d_v_ =
+              Add{_alt.d_a0 ? std::make_unique<List<expr>>() : nullptr};
           auto &_dst_alt = std::get<Add>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
@@ -500,8 +503,8 @@ struct NestedInd {
           }();
         } else {
           const auto &_alt = std::get<Mul>(_src->v());
-          _dst->d_v_ = Mul{_alt.d_a0 ? std::make_unique<List<NestedInd::expr>>()
-                                     : nullptr};
+          _dst->d_v_ =
+              Mul{_alt.d_a0 ? std::make_unique<List<expr>>() : nullptr};
           auto &_dst_alt = std::get<Mul>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {

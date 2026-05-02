@@ -80,12 +80,13 @@ struct RecRecord {
     // CREATORS
     template <typename _U> explicit rlist(const rlist<_U> &_other) {
       if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
-        d_v_ = Rnil{};
+        this->d_v_ = Rnil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename rlist<_U>::Rcons>(_other.v());
-        d_v_ = Rcons{t_A(d_a0),
-                     d_a1 ? std::make_unique<rlist<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Rcons{t_A(d_a0),
+                           d_a1 ? std::make_unique<RecRecord::rlist<t_A>>(*d_a1)
+                                : nullptr};
       }
     }
 

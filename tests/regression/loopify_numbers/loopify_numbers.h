@@ -79,10 +79,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -123,19 +123,20 @@ public:
   unsigned int length() const {
     const List *_self = this;
 
+    /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
       const List *_self;
     };
 
-    /// Continuation: saves across recursive call.
-    struct _Resume1 {};
+    /// _Resume_Cons: resumes after recursive call with _result.
+    struct _Resume_Cons {};
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{_self});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified length: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -148,11 +149,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Resume1{});
+          _stack.emplace_back(_Resume_Cons{});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
         _result = (_result + 1);
       }
     }
@@ -224,23 +225,26 @@ struct LoopifyNumbers {
   /// Similar to church but emphasizes nested call structure.
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int nest_apply(const unsigned int n, F1 &&f,
-                                 const unsigned int x) {
+  static unsigned int
+  nest_apply(const unsigned int n, F1 &&f,
+             const unsigned int x) { /// _Enter: captures varying parameters for
+                                     /// each recursive call.
+
     struct _Enter {
       unsigned int n;
     };
 
-    /// Continuation: saves [f] across recursive call.
-    struct _Resume1 {
+    /// _Resume__x: saves [f], resumes after recursive call with _result.
+    struct _Resume__x {
       F1 f;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume__x>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{n});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified nest_apply: _Enter -> _Resume__x.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -255,12 +259,12 @@ struct LoopifyNumbers {
             _result = f(x);
           } else {
             unsigned int _x = n_ - 1;
-            _stack.emplace_back(_Resume1{f});
+            _stack.emplace_back(_Resume__x{f});
             _stack.emplace_back(_Enter{n_});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
+        auto _f = std::move(std::get<_Resume__x>(_frame));
         _result = _f.f(_result);
       }
     }

@@ -204,8 +204,7 @@ struct RocqBug13581 {
           _dst->d_v_ = C{};
         } else {
           const auto &_alt = std::get<D>(_src->v());
-          _dst->d_v_ =
-              D{_alt.d_a0 ? std::make_unique<RocqBug13581::J<t_T>>() : nullptr};
+          _dst->d_v_ = D{_alt.d_a0 ? std::make_unique<J<t_T>>() : nullptr};
           auto &_dst_alt = std::get<D>(_dst->d_v_);
           if (_alt.d_a0) {
             if (std::holds_alternative<typename RocqBug13581::J<t_T>::E>(
@@ -228,10 +227,10 @@ struct RocqBug13581 {
     // CREATORS
     template <typename _U> explicit I(const I<_U> &_other) {
       if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
-        d_v_ = C{};
+        this->d_v_ = C{};
       } else {
         const auto &[d_a0] = std::get<typename I<_U>::D>(_other.v());
-        d_v_ =
+        this->d_v_ =
             D{d_a0 ? std::make_unique<RocqBug13581::J<t_T>>(*d_a0) : nullptr};
       }
     }
@@ -320,7 +319,8 @@ struct RocqBug13581 {
     // CREATORS
     template <typename _U> explicit J(const J<_U> &_other) {
       const auto &[d_a0] = std::get<typename J<_U>::E>(_other.v());
-      d_v_ = E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr};
+      this->d_v_ =
+          E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr};
     }
 
     static J<t_T> e(I<t_T> a0) {

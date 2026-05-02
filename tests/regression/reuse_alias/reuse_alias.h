@@ -80,12 +80,13 @@ struct ReuseAlias {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        d_v_ = Mynil{};
+        this->d_v_ = Mynil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        d_v_ = Mycons{t_A(d_a0),
-                      d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Mycons{
+            t_A(d_a0),
+            d_a1 ? std::make_unique<ReuseAlias::mylist<t_A>>(*d_a1) : nullptr};
       }
     }
 

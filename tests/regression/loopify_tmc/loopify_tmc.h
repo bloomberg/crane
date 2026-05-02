@@ -83,12 +83,13 @@ struct LoopifyTmc {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        d_v_ = Nil{};
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        d_v_ = Cons{t_A(d_a0),
-                    d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Cons{t_A(d_a0),
+                          d_a1 ? std::make_unique<LoopifyTmc::list<t_A>>(*d_a1)
+                               : nullptr};
       }
     }
 
@@ -128,24 +129,29 @@ struct LoopifyTmc {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2
+  list_rect(const T2 f, F1 &&f0,
+            const list<T1> &l) { /// _Enter: captures varying parameters for
+                                 /// each recursive call.
+
     struct _Enter {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _result.
+    struct _Resume_Cons {
       F1 f0;
-      list<T1> _s1;
+      list<T1> d_a1;
       T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -156,12 +162,12 @@ struct LoopifyTmc {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = _f.f0(_f.d_a0, _f._s1, _result);
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
       }
     }
     return _result;
@@ -169,24 +175,29 @@ struct LoopifyTmc {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2
+  list_rec(const T2 f, F1 &&f0,
+           const list<T1> &l) { /// _Enter: captures varying parameters for each
+                                /// recursive call.
+
     struct _Enter {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _result.
+    struct _Resume_Cons {
       F1 f0;
-      list<T1> _s1;
+      list<T1> d_a1;
       T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -197,12 +208,12 @@ struct LoopifyTmc {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = _f.f0(_f.d_a0, _f._s1, _result);
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
       }
     }
     return _result;

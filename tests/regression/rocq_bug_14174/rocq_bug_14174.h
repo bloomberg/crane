@@ -162,9 +162,9 @@ public:
   template <typename _U> explicit Option(const Option<_U> &_other) {
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
       const auto &[d_a0] = std::get<typename Option<_U>::Some>(_other.v());
-      d_v_ = Some{t_A(d_a0)};
+      this->d_v_ = Some{t_A(d_a0)};
     } else {
-      d_v_ = None{};
+      this->d_v_ = None{};
     }
   }
 
@@ -224,7 +224,7 @@ public:
   explicit Prod(const Prod<_U0, _U1> &_other) {
     const auto &[d_a0, d_a1] =
         std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
+    this->d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
   }
 
   static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
@@ -292,7 +292,7 @@ public:
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist0>(_other.v());
-    d_v_ = Exist0{t_A(d_x)};
+    this->d_v_ = Exist0{t_A(d_x)};
   }
 
   static Sig<t_A> exist0(t_A x) { return Sig(Exist0{std::move(x)}); }
@@ -346,7 +346,7 @@ public:
   // CREATORS
   template <typename _U> explicit Sig2(const Sig2<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig2<_U>::Exist1>(_other.v());
-    d_v_ = Exist1{t_A(d_x)};
+    this->d_v_ = Exist1{t_A(d_x)};
   }
 
   static Sig2<t_A> exist1(t_A x) { return Sig2(Exist1{std::move(x)}); }
@@ -403,7 +403,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT0>(_other.v());
-    d_v_ = ExistT0{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT0{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt0(t_A x, t_P a1) {
@@ -464,7 +464,7 @@ public:
   explicit SigT2(const SigT2<_U0, _U1, _U2> &_other) {
     const auto &[d_x, d_a1, d_a2] =
         std::get<typename SigT2<_U0, _U1, _U2>::ExistT1>(_other.v());
-    d_v_ = ExistT1{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
+    this->d_v_ = ExistT1{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
   }
 
   static SigT2<t_A, t_P, t_Q> existt1(t_A x, t_P a1, t_Q a2) {
@@ -532,9 +532,9 @@ public:
   template <typename _U> explicit Sumor(const Sumor<_U> &_other) {
     if (std::holds_alternative<typename Sumor<_U>::Inleft>(_other.v())) {
       const auto &[d_a0] = std::get<typename Sumor<_U>::Inleft>(_other.v());
-      d_v_ = Inleft{t_A(d_a0)};
+      this->d_v_ = Inleft{t_A(d_a0)};
     } else {
-      d_v_ = Inright{};
+      this->d_v_ = Inright{};
     }
   }
 
@@ -593,7 +593,7 @@ struct RocqBug14174 {
       // CREATORS
       template <typename _U> explicit sig(const sig<_U> &_other) {
         const auto &[d_x] = std::get<typename sig<_U>::Exist>(_other.v());
-        d_v_ = Exist{t_A(d_x)};
+        this->d_v_ = Exist{t_A(d_x)};
       }
 
       static sig<t_A> exist(t_A x) { return sig(Exist{std::move(x)}); }
@@ -697,7 +697,7 @@ struct RocqBug14174 {
       // CREATORS
       template <typename _U> explicit sig2(const sig2<_U> &_other) {
         const auto &[d_x] = std::get<typename sig2<_U>::Exist2>(_other.v());
-        d_v_ = Exist2{t_A(d_x)};
+        this->d_v_ = Exist2{t_A(d_x)};
       }
 
       static sig2<t_A> exist2(t_A x) { return sig2(Exist2{std::move(x)}); }
@@ -807,7 +807,7 @@ struct RocqBug14174 {
       explicit sigT(const sigT<_U0, _U1> &_other) {
         const auto &[d_x, d_a1] =
             std::get<typename sigT<_U0, _U1>::ExistT>(_other.v());
-        d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+        this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
       }
 
       static sigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -932,7 +932,7 @@ struct RocqBug14174 {
       explicit sigT2(const sigT2<_U0, _U1, _U2> &_other) {
         const auto &[d_x, d_a1, d_a2] =
             std::get<typename sigT2<_U0, _U1, _U2>::ExistT2>(_other.v());
-        d_v_ = ExistT2{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
+        this->d_v_ = ExistT2{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
       }
 
       static sigT2<t_A, t_P, t_Q> existt2(t_A x, t_P a1, t_Q a2) {
@@ -1150,9 +1150,9 @@ struct RocqBug14174 {
       template <typename _U> explicit sumor(const sumor<_U> &_other) {
         if (std::holds_alternative<typename sumor<_U>::Inleft>(_other.v())) {
           const auto &[d_a0] = std::get<typename sumor<_U>::Inleft>(_other.v());
-          d_v_ = Inleft{t_A(d_a0)};
+          this->d_v_ = Inleft{t_A(d_a0)};
         } else {
-          d_v_ = Inright{};
+          this->d_v_ = Inright{};
         }
       }
 

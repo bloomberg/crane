@@ -82,9 +82,9 @@ struct ConstrainedPoly {
     template <typename _U> explicit UOption(const UOption<_U> &_other) {
       if (std::holds_alternative<typename UOption<_U>::USome>(_other.v())) {
         const auto &[d_a0] = std::get<typename UOption<_U>::USome>(_other.v());
-        d_v_ = USome{t_A(d_a0)};
+        this->d_v_ = USome{t_A(d_a0)};
       } else {
-        d_v_ = UNone{};
+        this->d_v_ = UNone{};
       }
     }
 

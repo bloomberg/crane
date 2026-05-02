@@ -79,10 +79,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -123,19 +123,20 @@ public:
   unsigned int length() const {
     const List *_self = this;
 
+    /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
       const List *_self;
     };
 
-    /// Continuation: saves across recursive call.
-    struct _Resume1 {};
+    /// _Resume_Cons: resumes after recursive call with _result.
+    struct _Resume_Cons {};
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{_self});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified length: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -148,11 +149,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Resume1{});
+          _stack.emplace_back(_Resume_Cons{});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
         _result = (_result + 1);
       }
     }
@@ -187,24 +188,28 @@ struct LoopifyFolds {
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
                                    unsigned int &>
-  static unsigned int fold_right(F0 &&f, const List<unsigned int> &l,
-                                 const unsigned int acc) {
+  static unsigned int
+  fold_right(F0 &&f, const List<unsigned int> &l,
+             const unsigned int acc) { /// _Enter: captures varying parameters
+                                       /// for each recursive call.
+
     struct _Enter {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [f, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Cons: saves [f, d_a0], resumes after recursive call with
+    /// _result.
+    struct _Resume_Cons {
       F0 f;
       unsigned int d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified fold_right: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -216,11 +221,11 @@ struct LoopifyFolds {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{f, d_a0});
+          _stack.emplace_back(_Resume_Cons{f, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
         _result = _f.f(_f.d_a0, _result);
       }
     }
@@ -328,23 +333,28 @@ struct LoopifyFolds {
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
                                    unsigned int &>
-  static unsigned int foldr1(F0 &&f, const List<unsigned int> &l) {
+  static unsigned int
+  foldr1(F0 &&f,
+         const List<unsigned int> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
+
     struct _Enter {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [f, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Cons: saves [f, d_a0], resumes after recursive call with
+    /// _result.
+    struct _Resume_Cons {
       F0 f;
       unsigned int d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified foldr1: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -361,12 +371,12 @@ struct LoopifyFolds {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Resume1{f, d_a0});
+            _stack.emplace_back(_Resume_Cons{f, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
         _result = _f.f(_f.d_a0, _result);
       }
     }
@@ -376,24 +386,28 @@ struct LoopifyFolds {
   template <typename F0>
     requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
                                    unsigned int &, unsigned int &>
-  static std::pair<unsigned int, List<unsigned int>>
-  map_accum(F0 &&f, const unsigned int acc, const List<unsigned int> &l) {
+  static std::pair<unsigned int, List<unsigned int>> map_accum(
+      F0 &&f, const unsigned int acc,
+      const List<unsigned int>
+          &l) { /// _Enter: captures varying parameters for each recursive call.
+
     struct _Enter {
       const List<unsigned int> *l;
       unsigned int acc;
     };
 
-    /// Continuation: saves [y] across recursive call, then processes rest.
-    struct _Cont1 {
+    /// _Cont_acc_: saves [y], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_acc_ {
       unsigned int y;
     };
 
-    using _Frame = std::variant<_Enter, _Cont1>;
+    using _Frame = std::variant<_Enter, _Cont_acc_>;
     std::pair<unsigned int, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l, acc});
-    /// Frame dispatch: _Enter, _Cont1.
+    /// Loopified map_accum: _Enter -> _Cont_acc_.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -409,11 +423,11 @@ struct LoopifyFolds {
           auto _cs = f(acc, d_a0);
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
-          _stack.emplace_back(_Cont1{y});
+          _stack.emplace_back(_Cont_acc_{y});
           _stack.emplace_back(_Enter{d_a1.get(), acc_});
         }
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
+        auto _f = std::move(std::get<_Cont_acc_>(_frame));
         unsigned int y = _f.y;
         const unsigned int &final_acc = _result.first;
         const List<unsigned int> &ys = _result.second;

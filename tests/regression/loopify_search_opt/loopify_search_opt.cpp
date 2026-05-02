@@ -110,23 +110,27 @@ List<unsigned int> LoopifySearchOpt::longest_run(const List<unsigned int> &l) {
 
 unsigned int LoopifySearchOpt::knapsack_fuel(
     const unsigned int fuel, const unsigned int capacity,
-    const List<std::pair<unsigned int, unsigned int>> &items) {
+    const List<std::pair<unsigned int, unsigned int>>
+        &items) { /// _Enter: captures varying parameters for each recursive
+                  /// call.
+
   struct _Enter {
     const List<std::pair<unsigned int, unsigned int>> *items;
     unsigned int capacity;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [_s0, capacity, fuel_, value], dispatches next
-  /// recursive call.
+  /// _After2: saves [d_a1, capacity, fuel_, value], dispatches next recursive
+  /// call.
   struct _After2 {
-    const List<std::pair<unsigned int, unsigned int>> *_s0;
+    const List<std::pair<unsigned int, unsigned int>> *d_a1;
     unsigned int capacity;
     unsigned int fuel_;
     unsigned int value;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
+  /// _Combine1: receives partial results, combines with _result from final
+  /// call.
   struct _Combine1 {
     unsigned int _result;
     unsigned int value;
@@ -137,7 +141,7 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&items, capacity, fuel});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified knapsack_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -174,7 +178,7 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
       _stack.emplace_back(_Combine1{_result, _f.value});
-      _stack.emplace_back(_Enter{_f._s0, _f.capacity, _f.fuel_});
+      _stack.emplace_back(_Enter{_f.d_a1, _f.capacity, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
       _result = std::max(_result, (_f.value + _f._result));
@@ -189,23 +193,26 @@ unsigned int LoopifySearchOpt::knapsack(
   return knapsack_fuel((items.length() * capacity), capacity, items);
 }
 
-bool LoopifySearchOpt::subset_sum_fuel(const unsigned int fuel,
-                                       const unsigned int target,
-                                       const List<unsigned int> &l) {
+bool LoopifySearchOpt::subset_sum_fuel(
+    const unsigned int fuel, const unsigned int target,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
     unsigned int target;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [_s0, target, fuel_], dispatches next recursive call.
+  /// _After2: saves [d_a1, target, fuel_], dispatches next recursive call.
   struct _After2 {
-    const List<unsigned int> *_s0;
+    const List<unsigned int> *d_a1;
     unsigned int target;
     unsigned int fuel_;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
+  /// _Combine1: receives partial results, combines with _result from final
+  /// call.
   struct _Combine1 {
     bool _result;
   };
@@ -215,7 +222,7 @@ bool LoopifySearchOpt::subset_sum_fuel(const unsigned int fuel,
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l, target, fuel});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified subset_sum_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -246,7 +253,7 @@ bool LoopifySearchOpt::subset_sum_fuel(const unsigned int fuel,
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
       _stack.emplace_back(_Combine1{_result});
-      _stack.emplace_back(_Enter{_f._s0, _f.target, _f.fuel_});
+      _stack.emplace_back(_Enter{_f.d_a1, _f.target, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
       _result = (_result || _f._result);
@@ -260,23 +267,26 @@ bool LoopifySearchOpt::subset_sum(const unsigned int target,
   return subset_sum_fuel((l.length() * target), target, l);
 }
 
-std::pair<unsigned int, unsigned int>
-LoopifySearchOpt::majority(const List<unsigned int> &l) {
+std::pair<unsigned int, unsigned int> LoopifySearchOpt::majority(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified majority: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -288,11 +298,11 @@ LoopifySearchOpt::majority(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       const unsigned int &cand = _result.first;
       const unsigned int &count = _result.second;
@@ -389,20 +399,22 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
               take;
           take = [&](unsigned int n,
                      List<unsigned int> xs) -> List<unsigned int> {
+            /// _Enter: captures varying parameters for each recursive call.
             struct _Enter {
               List<unsigned int> xs;
               unsigned int n;
             };
-            /// Continuation: saves [d_a03] across recursive call.
-            struct _Resume1 {
+            /// _Resume_Cons: saves [d_a03], resumes after recursive call with
+            /// _result.
+            struct _Resume_Cons {
               unsigned int d_a03;
             };
-            using _Frame = std::variant<_Enter, _Resume1>;
+            using _Frame = std::variant<_Enter, _Resume_Cons>;
             List<unsigned int> _result{};
             std::vector<_Frame> _stack;
             _stack.reserve(16);
             _stack.emplace_back(_Enter{xs, n});
-            /// Frame dispatch: _Enter, _Resume1.
+            /// Loopified take: _Enter -> _Resume_Cons.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -420,12 +432,12 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
                   } else {
                     auto &[d_a03, d_a13] =
                         std::get<typename List<unsigned int>::Cons>(xs.v_mut());
-                    _stack.emplace_back(_Resume1{d_a03});
+                    _stack.emplace_back(_Resume_Cons{d_a03});
                     _stack.emplace_back(_Enter{std::move(*(d_a13)), n_});
                   }
                 }
               } else {
-                auto _f = std::move(std::get<_Resume1>(_frame));
+                auto _f = std::move(std::get<_Resume_Cons>(_frame));
                 _result = List<unsigned int>::cons(_f.d_a03, _result);
               }
             }

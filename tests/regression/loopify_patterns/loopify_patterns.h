@@ -82,12 +82,14 @@ struct LoopifyPatterns {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        d_v_ = Nil{};
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        d_v_ = Cons{t_A(d_a0),
-                    d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        this->d_v_ =
+            Cons{t_A(d_a0),
+                 d_a1 ? std::make_unique<LoopifyPatterns::list<t_A>>(*d_a1)
+                      : nullptr};
       }
     }
 
@@ -127,24 +129,29 @@ struct LoopifyPatterns {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2
+  list_rect(const T2 f, F1 &&f0,
+            const list<T1> &l) { /// _Enter: captures varying parameters for
+                                 /// each recursive call.
+
     struct _Enter {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _result.
+    struct _Resume_Cons {
       F1 f0;
-      list<T1> _s1;
+      list<T1> d_a1;
       T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -155,12 +162,12 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = _f.f0(_f.d_a0, _f._s1, _result);
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
       }
     }
     return _result;
@@ -168,24 +175,29 @@ struct LoopifyPatterns {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2
+  list_rec(const T2 f, F1 &&f0,
+           const list<T1> &l) { /// _Enter: captures varying parameters for each
+                                /// recursive call.
+
     struct _Enter {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _result.
+    struct _Resume_Cons {
       F1 f0;
-      list<T1> _s1;
+      list<T1> d_a1;
       T1 d_a0;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -196,12 +208,12 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = _f.f0(_f.d_a0, _f._s1, _result);
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
       }
     }
     return _result;
@@ -248,24 +260,28 @@ struct LoopifyPatterns {
   /// max_by f l recursive max with function application.
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int max_by(F0 &&f, const list<unsigned int> &l) {
+  static unsigned int
+  max_by(F0 &&f,
+         const list<unsigned int> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
+
     struct _Enter {
       const list<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0, f] across recursive call, then processes
-    /// rest.
-    struct _Cont1 {
+    /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
       unsigned int d_a0;
       F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Cont1>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Cont1.
+    /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -282,12 +298,12 @@ struct LoopifyPatterns {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Cont_Cons{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
         unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         unsigned int rest_max = _result;
@@ -315,13 +331,18 @@ struct LoopifyPatterns {
 
   /// insert_everywhere x l insert element at all possible positions.
   template <typename T1>
-  static list<list<T1>> insert_everywhere(const T1 x, const list<T1> &l) {
+  static list<list<T1>>
+  insert_everywhere(const T1 x,
+                    const list<T1> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
+
     struct _Enter {
       const list<T1> *l;
     };
 
-    /// Continuation: saves [_s0, map_cons_h] across recursive call.
-    struct _Resume1 {
+    /// _Resume_Cons: saves [_s0, map_cons_h], resumes after recursive call with
+    /// _result.
+    struct _Resume_Cons {
       decltype(list<T1>::cons(
           std::declval<const T1 &>(),
           list<T1>::cons(std::declval<T1 &>(),
@@ -329,12 +350,12 @@ struct LoopifyPatterns {
       std::function<list<list<T1>>(list<list<T1>>)> map_cons_h;
     };
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     list<list<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified insert_everywhere: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -348,19 +369,21 @@ struct LoopifyPatterns {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
           std::function<list<list<T1>>(list<list<T1>>)> map_cons_h;
           map_cons_h = [&](list<list<T1>> lsts) -> list<list<T1>> {
+            /// _Enter: captures varying parameters for each recursive call.
             struct _Enter {
               list<list<T1>> lsts;
             };
-            /// Continuation: saves [_s0] across recursive call.
-            struct _Resume1 {
+            /// _Resume_Cons: saves [_s0], resumes after recursive call with
+            /// _result.
+            struct _Resume_Cons {
               decltype(list<T1>::cons(d_a0, std::declval<list<T1> &>())) _s0;
             };
-            using _Frame = std::variant<_Enter, _Resume1>;
+            using _Frame = std::variant<_Enter, _Resume_Cons>;
             list<list<T1>> _result{};
             std::vector<_Frame> _stack;
             _stack.reserve(16);
             _stack.emplace_back(_Enter{lsts});
-            /// Frame dispatch: _Enter, _Resume1.
+            /// Loopified map_cons_h: _Enter -> _Resume_Cons.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
               _stack.pop_back();
@@ -373,23 +396,24 @@ struct LoopifyPatterns {
                 } else {
                   auto &[d_a00, d_a10] =
                       std::get<typename list<list<T1>>::Cons>(lsts.v_mut());
-                  _stack.emplace_back(_Resume1{list<T1>::cons(d_a0, d_a00)});
+                  _stack.emplace_back(
+                      _Resume_Cons{list<T1>::cons(d_a0, d_a00)});
                   _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 }
               } else {
-                auto _f = std::move(std::get<_Resume1>(_frame));
+                auto _f = std::move(std::get<_Resume_Cons>(_frame));
                 _result = list<list<T1>>::cons(_f._s0, _result);
               }
             }
             return _result;
           };
           _stack.emplace_back(
-              _Resume1{list<T1>::cons(x, list<T1>::cons(d_a0, *(d_a1))),
-                       std::move(map_cons_h)});
+              _Resume_Cons{list<T1>::cons(x, list<T1>::cons(d_a0, *(d_a1))),
+                           std::move(map_cons_h)});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
         _result = list<list<T1>>::cons(_f._s0, _f.map_cons_h(_result));
       }
     }
@@ -508,27 +532,31 @@ struct LoopifyPatterns {
              std::is_invocable_r_v<bool, F1 &, unsigned int &>
   static std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
                    list<unsigned int>>
-  partition_by(F0 &&p, F1 &&q, const list<unsigned int> &l) {
+  partition_by(
+      F0 &&p, F1 &&q,
+      const list<unsigned int>
+          &l) { /// _Enter: captures varying parameters for each recursive call.
+
     struct _Enter {
       const list<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0, p, q] across recursive call, then processes
-    /// rest.
-    struct _Cont1 {
+    /// _Cont_Cons: saves [d_a0, p, q], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
       unsigned int d_a0;
       F0 p;
       F1 q;
     };
 
-    using _Frame = std::variant<_Enter, _Cont1>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
               list<unsigned int>>
         _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(16);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Cont1.
+    /// Loopified partition_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -542,11 +570,11 @@ struct LoopifyPatterns {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont1{d_a0, p, q});
+          _stack.emplace_back(_Cont_Cons{d_a0, p, q});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
         unsigned int d_a0 = _f.d_a0;
         F0 p = _f.p;
         F1 q = _f.q;

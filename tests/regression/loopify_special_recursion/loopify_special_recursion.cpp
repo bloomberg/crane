@@ -1,31 +1,34 @@
 #include <loopify_special_recursion.h>
 
-List<unsigned int>
-LoopifySpecialRecursion::process_twice_fuel(const unsigned int fuel,
-                                            const List<unsigned int> &l) {
+List<unsigned int> LoopifySpecialRecursion::process_twice_fuel(
+    const unsigned int fuel,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     List<unsigned int> l;
     unsigned int fuel;
   };
 
-  /// Continuation: saves [d_a0, fuel_] across recursive call, then processes
-  /// rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0, fuel_], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
     unsigned int fuel_;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont2 {
+  /// _Cont_Cons_1: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons_1 {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
+  using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l, fuel});
-  /// Frame dispatch: _Enter, _Cont1, _Cont2.
+  /// Loopified process_twice_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -42,19 +45,19 @@ LoopifySpecialRecursion::process_twice_fuel(const unsigned int fuel,
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont1{d_a0, fuel_});
+          _stack.emplace_back(_Cont_Cons{d_a0, fuel_});
           _stack.emplace_back(_Enter{std::move(*(d_a1)), fuel_});
         }
       }
-    } else if (std::holds_alternative<_Cont1>(_frame)) {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+    } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int fuel_ = _f.fuel_;
       List<unsigned int> first = _result;
-      _stack.emplace_back(_Cont2{d_a0});
+      _stack.emplace_back(_Cont_Cons_1{d_a0});
       _stack.emplace_back(_Enter{std::move(first), fuel_});
     } else {
-      auto _f = std::move(std::get<_Cont2>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<unsigned int> second = _result;
       _result = List<unsigned int>::cons(d_a0, std::move(second));
@@ -68,25 +71,28 @@ LoopifySpecialRecursion::process_twice(const List<unsigned int> &l) {
   return process_twice_fuel((l.length() * l.length()), l);
 }
 
-List<unsigned int>
-LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
-                                       List<unsigned int> l2) {
+List<unsigned int> LoopifySpecialRecursion::double_append(
+    const List<unsigned int> &l1,
+    List<unsigned int>
+        l2) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     List<unsigned int> l2;
     const List<unsigned int> *l1;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{l2, &l1});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -99,11 +105,11 @@ LoopifySpecialRecursion::double_append(const List<unsigned int> &l1,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons(d_a0, rest.app(rest));
@@ -190,29 +196,32 @@ LoopifySpecialRecursion::reverse_insert(const unsigned int x,
 }
 
 List<unsigned int> LoopifySpecialRecursion::collect_sorted(
-    const LoopifySpecialRecursion::tree &t) {
+    const LoopifySpecialRecursion::tree
+        &t) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifySpecialRecursion::tree *t;
   };
 
-  /// Intermediate: saves [_s0, d_a1], dispatches next recursive call.
-  struct _After2 {
-    const LoopifySpecialRecursion::tree *_s0;
+  /// _After_Node: saves [d_a0, d_a1], dispatches next recursive call.
+  struct _After_Node {
+    const LoopifySpecialRecursion::tree *d_a0;
     unsigned int d_a1;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
-  struct _Combine1 {
+  /// _Combine_Node: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_Node {
     List<unsigned int> _result;
     unsigned int d_a1;
   };
 
-  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&t});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified collect_sorted: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -225,30 +234,32 @@ List<unsigned int> LoopifySpecialRecursion::collect_sorted(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifySpecialRecursion::tree::Node>(t.v());
-        _stack.emplace_back(_After2{d_a0.get(), d_a1});
+        _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
         _stack.emplace_back(_Enter{d_a2.get()});
       }
-    } else if (std::holds_alternative<_After2>(_frame)) {
-      auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{std::move(_result), _f.d_a1});
-      _stack.emplace_back(_Enter{_f._s0});
+    } else if (std::holds_alternative<_After_Node>(_frame)) {
+      auto _f = std::move(std::get<_After_Node>(_frame));
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.d_a1});
+      _stack.emplace_back(_Enter{_f.d_a0});
     } else {
-      auto _f = std::move(std::get<_Combine1>(_frame));
+      auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = _result.app(List<unsigned int>::cons(_f.d_a1, _f._result));
     }
   }
   return _result;
 }
 
-unsigned int
-LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
-                                             const unsigned int idx) {
+unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
+    const List<unsigned int> &l,
+    const unsigned int
+        idx) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int idx;
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call.
+  /// _Resume1: saves [d_a0], resumes after recursive call with _result.
   struct _Resume1 {
     unsigned int d_a0;
   };
@@ -258,7 +269,7 @@ LoopifySpecialRecursion::sum_odd_indices_aux(const List<unsigned int> &l,
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{idx, &l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified sum_odd_indices_aux: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -291,24 +302,26 @@ LoopifySpecialRecursion::sum_odd_indices(const List<unsigned int> &l) {
   return sum_odd_indices_aux(l, 0u);
 }
 
-unsigned int
-LoopifySpecialRecursion::categorize_by(const unsigned int k,
-                                       const List<unsigned int> &l) {
+unsigned int LoopifySpecialRecursion::categorize_by(
+    const unsigned int k,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
+  /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
     decltype(3u) _s0;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
+  /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
     decltype(2u) _s0;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
+  /// _Resume3: saves [_s0], resumes after recursive call with _result.
   struct _Resume3 {
     decltype(1u) _s0;
   };
@@ -318,7 +331,7 @@ LoopifySpecialRecursion::categorize_by(const unsigned int k,
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1, _Resume2, _Resume3.
+  /// Loopified categorize_by: _Enter -> _Resume1 -> _Resume2 -> _Resume3.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -395,23 +408,25 @@ LoopifySpecialRecursion::between(const unsigned int lo, const unsigned int hi,
   return std::move(*(_head));
 }
 
-List<unsigned int>
-LoopifySpecialRecursion::merge_levels(const List<List<unsigned int>> &ll) {
+List<unsigned int> LoopifySpecialRecursion::merge_levels(
+    const List<List<unsigned int>>
+        &ll) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<List<unsigned int>> *ll;
   };
 
-  /// Continuation: saves [d_a0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  struct _Resume_Cons {
     List<unsigned int> d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&ll});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified merge_levels: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -424,11 +439,11 @@ LoopifySpecialRecursion::merge_levels(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume1{d_a0});
+        _stack.emplace_back(_Resume_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = _f.d_a0.app(_result);
     }
   }

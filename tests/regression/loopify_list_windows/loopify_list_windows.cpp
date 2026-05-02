@@ -1,21 +1,24 @@
 #include <loopify_list_windows.h>
 
-unsigned int LoopifyListWindows::len(const List<unsigned int> &l) {
+unsigned int LoopifyListWindows::len(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Cons {
     decltype(1u) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -27,11 +30,11 @@ unsigned int LoopifyListWindows::len(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{1u});
+        _stack.emplace_back(_Resume_Cons{1u});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -93,13 +96,16 @@ List<unsigned int> LoopifyListWindows::drop(const unsigned int m,
   return _result;
 }
 
-std::pair<List<unsigned int>, List<unsigned int>>
-LoopifyListWindows::span_eq(const unsigned int first, List<unsigned int> lst) {
+std::pair<List<unsigned int>, List<unsigned int>> LoopifyListWindows::span_eq(
+    const unsigned int first,
+    List<unsigned int>
+        lst) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     List<unsigned int> lst;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
+  /// _Cont1: saves [d_a0], resumes after recursive call, then processes rest.
   struct _Cont1 {
     unsigned int d_a0;
   };
@@ -109,7 +115,7 @@ LoopifyListWindows::span_eq(const unsigned int first, List<unsigned int> lst) {
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{lst});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified span_eq: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -236,24 +242,27 @@ LoopifyListWindows::sliding_pairs(const List<unsigned int> &l) {
   return std::move(*(_head));
 }
 
-List<List<unsigned int>>
-LoopifyListWindows::inits(const List<unsigned int> &l) {
+List<List<unsigned int>> LoopifyListWindows::inits(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0, d_a0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [_s0, d_a0], resumes after recursive call with
+  /// _result.
+  struct _Resume_Cons {
     decltype(List<unsigned int>::nil()) _s0;
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified inits: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -266,11 +275,11 @@ LoopifyListWindows::inits(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{List<unsigned int>::nil(), d_a0});
+        _stack.emplace_back(_Resume_Cons{List<unsigned int>::nil(), d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = List<List<unsigned int>>::cons(
           _f._s0, map_cons_helper(_f.d_a0, _result));
     }

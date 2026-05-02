@@ -54,7 +54,7 @@ public:
   explicit Prod(const Prod<_U0, _U1> &_other) {
     const auto &[d_a0, d_a1] =
         std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
+    this->d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
   }
 
   static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
@@ -139,10 +139,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }

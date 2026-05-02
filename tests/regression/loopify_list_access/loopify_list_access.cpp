@@ -167,13 +167,16 @@ List<unsigned int> LoopifyListAccess::lookup_all(
   return std::move(*(_head));
 }
 
-unsigned int LoopifyListAccess::count(const unsigned int x,
-                                      const List<unsigned int> &l) {
+unsigned int LoopifyListAccess::count(
+    const unsigned int x,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
+  /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
     decltype(1u) _s0;
   };
@@ -183,7 +186,7 @@ unsigned int LoopifyListAccess::count(const unsigned int x,
   std::vector<_Frame> _stack;
   _stack.reserve(16);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified count: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();

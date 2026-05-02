@@ -75,9 +75,8 @@ struct MutualValueDeepCopy {
           _dst->d_v_ = AEnd{};
         } else {
           const auto &_alt = std::get<ANode>(_src->v());
-          _dst->d_v_ = ANode{
-              _alt.d_a0,
-              _alt.d_a1 ? std::make_unique<MutualValueDeepCopy::b>() : nullptr};
+          _dst->d_v_ =
+              ANode{_alt.d_a0, _alt.d_a1 ? std::make_unique<b>() : nullptr};
           auto &_dst_alt = std::get<ANode>(_dst->d_v_);
           if (_alt.d_a1) {
             if (std::holds_alternative<typename MutualValueDeepCopy::b::BNode>(

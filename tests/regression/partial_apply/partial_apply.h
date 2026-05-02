@@ -80,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -198,7 +198,7 @@ struct PartialApply {
     // CREATORS
     template <typename _U> explicit tagged(const tagged<_U> &_other) {
       const auto &[d_a0, d_a1] = std::get<typename tagged<_U>::Tag>(_other.v());
-      d_v_ = Tag{d_a0, t_A(d_a1)};
+      this->d_v_ = Tag{d_a0, t_A(d_a1)};
     }
 
     static tagged<t_A> tag(unsigned int a0, t_A a1) {

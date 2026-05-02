@@ -518,9 +518,18 @@ let print_cpp_type_var vl i =
     cleared after. *)
 let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
 
-(** Pretty-print a MiniCpp type as C++ source. [par] controls whether
-    parentheses are added around the result. [vl] is the list of type variable
-    names for de Bruijn lookup. *)
+(** Pretty-print a MiniCpp type as C++ source text.
+
+    @param par  whether to parenthesize (for precedence in function types)
+    @param vl   type variable names for de Bruijn index lookup
+
+    Convention: [Tvar(1000, Some id)] is a {e promoted type variable} — a
+    record field lifted from value-level to type-level during concept
+    generation (e.g. [m_carrier] from a [Monoid] typeclass).  Index 1000
+    is a sentinel distinguishing promoted vars from regular template params
+    ([Tvar(0..N, _)]) and loopification-internal types
+    ([Tvar(0, Some "_Frame")]).  Inside a struct body the bare [id] suffices;
+    outside, it is qualified as [StructName::id]. *)
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
@@ -1153,6 +1162,9 @@ and pp_cpp_expr env args t =
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
+  | CPPconverting_ctor (ty, ts) ->
+    let args_s = pp_list (pp_cpp_expr env args) ts in
+    pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")"
   | CPPderef e -> str "*(" ++ pp_cpp_expr env args e ++ str ")"
   | CPPmove e ->
     require_header "utility";
@@ -1445,6 +1457,7 @@ and pp_cpp_expr env args t =
     ++ pp_list (pp_cpp_expr env args) call_args
     ++ str ")"
   | CPPqualified (e, id) -> pp_cpp_expr env args e ++ str "::" ++ Id.print id
+  | CPPqualified_t (ty, id) -> pp_cpp_type false [] ty ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
     require_header "concepts";
     str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
@@ -1464,19 +1477,29 @@ and pp_cpp_expr env args t =
   | CPPnullptr -> str "nullptr"
   | CPPbraced es ->
     str "{" ++ pp_list (pp_cpp_expr env args) es ++ str "}"
-  | CPPstd_get (ty, None) ->
+  | CPPstd_get (ty, ctor, None) ->
     require_header "variant";
-    str "std::get<" ++ pp_cpp_type false [] ty ++ str ">"
-  | CPPstd_get (ty, Some e) ->
+    let targ = match ctor with
+      | None -> pp_cpp_type false [] ty
+      | Some id -> str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+    in
+    str "std::get<" ++ targ ++ str ">"
+  | CPPstd_get (ty, ctor, Some e) ->
     require_header "variant";
-    str "std::get<"
-    ++ pp_cpp_type false [] ty
-    ++ str ">("
+    let targ = match ctor with
+      | None -> pp_cpp_type false [] ty
+      | Some id -> str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+    in
+    str "std::get<" ++ targ ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
-  | CPPstd_holds_alternative ty ->
+  | CPPstd_holds_alternative (ty, ctor) ->
     require_header "variant";
-    str "std::holds_alternative<" ++ pp_cpp_type false [] ty ++ str ">"
+    let targ = match ctor with
+      | None -> pp_cpp_type false [] ty
+      | Some id -> str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+    in
+    str "std::holds_alternative<" ++ targ ++ str ">"
   | CPPdeclval ty ->
     require_header "utility";
     str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"
@@ -1639,6 +1662,8 @@ and pp_cpp_stmt env args = function
     if Common.contains_substring code "std::vector" then
       require_header "vector";
     str code
+  | Scomment text ->
+    str ("/// " ^ text)
   | Sstruct_def (name, fields) ->
     str "struct "
     ++ Id.print name
@@ -2469,6 +2494,30 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       | None -> str "UNKNOWN_STRUCT"
     in
     h (sname ++ str "() = delete;")
+  | Ftemplate_ctor (tparams, is_explicit, params, body) ->
+    let sname =
+      match struct_name with
+      | Some s -> s
+      | None -> str "UNKNOWN_STRUCT"
+    in
+    let template_s =
+      match tparams with
+      | [] -> mt ()
+      | _ ->
+        let args = pp_list pp_template_param tparams in
+        str "template <" ++ args ++ str ">" ++ fnl ()
+    in
+    let params_s =
+      pp_list
+        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        params
+    in
+    let explicit_s = if is_explicit then str "explicit " else mt () in
+    let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
+    template_s
+    ++ h (explicit_s ++ sname ++ pp_par true params_s ++ str " {")
+    ++ fnl ()
+    ++ body_s ++ str "}"
   | Fraw s ->
     if Common.contains_substring s "std::vector" then
       require_header "vector";

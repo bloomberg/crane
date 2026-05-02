@@ -82,10 +82,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
-      d_v_ = Nil0{};
+      this->d_v_ = Nil0{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons0>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons0{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -233,7 +233,7 @@ public:
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    d_v_ = Exist{t_A(d_x)};
+    this->d_v_ = Exist{t_A(d_x)};
   }
 
   static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
@@ -290,7 +290,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -357,12 +357,12 @@ public:
   // CREATORS
   template <typename _U> explicit T0(const T0<_U> &_other) {
     if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_h, d_n, d_a2] =
           std::get<typename T0<_U>::Cons>(_other.v());
-      d_v_ = Cons{t_A(d_h), d_n,
-                  d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
+      this->d_v_ = Cons{t_A(d_h), d_n,
+                        d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
     }
   }
 
@@ -739,11 +739,9 @@ struct PendantSumtreeRoundtripCase {
           _dst->d_v_ = SumLeaf{_alt.d_a0.clone()};
         } else {
           const auto &_alt = std::get<SumNode>(_src->v());
-          _dst->d_v_ = SumNode{
-              _alt.d_a0.clone(),
-              _alt.d_a1 ? std::make_unique<
-                              List<PendantSumtreeRoundtripCase::SumTree>>()
-                        : nullptr};
+          _dst->d_v_ =
+              SumNode{_alt.d_a0.clone(),
+                      _alt.d_a1 ? std::make_unique<List<SumTree>>() : nullptr};
           auto &_dst_alt = std::get<SumNode>(_dst->d_v_);
           [&] {
             if (_alt.d_a1) {

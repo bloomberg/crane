@@ -105,11 +105,11 @@ struct InductiveInModule {
         // CREATORS
         template <typename _U> explicit option(const option<_U> &_other) {
           if (std::holds_alternative<typename option<_U>::None>(_other.v())) {
-            d_v_ = None{};
+            this->d_v_ = None{};
           } else {
             const auto &[d_a0] =
                 std::get<typename option<_U>::Some>(_other.v());
-            d_v_ = Some{t_A(d_a0)};
+            this->d_v_ = Some{t_A(d_a0)};
           }
         }
 

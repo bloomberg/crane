@@ -69,9 +69,8 @@ struct EvenOdd {
           _dst->d_v_ = ENil{};
         } else {
           const auto &_alt = std::get<ECons>(_src->v());
-          _dst->d_v_ =
-              ECons{_alt.d_a0, _alt.d_a1 ? std::make_unique<EvenOdd::odd_list>()
-                                         : nullptr};
+          _dst->d_v_ = ECons{_alt.d_a0, _alt.d_a1 ? std::make_unique<odd_list>()
+                                                  : nullptr};
           auto &_dst_alt = std::get<ECons>(_dst->d_v_);
           if (_alt.d_a1) {
             if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(

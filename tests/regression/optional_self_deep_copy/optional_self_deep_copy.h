@@ -72,11 +72,9 @@ struct OptionalSelfDeepCopy {
           const auto &_alt = std::get<More>(_src->v());
           _dst->d_v_ = More{
               _alt.d_a0
-                  ? std::make_unique<std::optional<
-                        std::unique_ptr<OptionalSelfDeepCopy::chain>>>(
-                        (*_alt.d_a0)
-                            ? std::make_optional(std::make_unique<
-                                                 OptionalSelfDeepCopy::chain>())
+                  ? std::make_unique<std::optional<std::unique_ptr<chain>>>(
+                        *(_alt.d_a0)
+                            ? std::make_optional(std::make_unique<chain>())
                             : std::nullopt)
                   : nullptr};
           auto &_dst_alt = std::get<More>(_dst->d_v_);

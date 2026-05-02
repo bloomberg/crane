@@ -32,6 +32,14 @@ module Refset' = GlobRef.Set_env
 module StringMap = HMap.Make (String)
 module StringSet = StringMap.Set
 
+(* Create a ref-based membership set with init/add/mem interface. *)
+let make_refset () =
+  let tbl = ref Refset'.empty in
+  let init () = tbl := Refset'.empty in
+  let add r = tbl := Refset'.add r !tbl in
+  let mem r = Refset'.mem r !tbl in
+  (init, add, mem)
+
 (** {1 Utilities about [module_path] and [kernel_names] and [global_reference]}
 *)
 
@@ -141,8 +149,14 @@ let labels_of_ref r =
 
 (** {2 Constants tables} *)
 
-(** Generic lookup helper with body checksum validation. Returns [Some data] if
-    the key exists and the body checksum matches. *)
+(** Generic lookup with body-checksum validation.
+
+    Each cache entry stores the [constant_body] (or [mutual_inductive_body])
+    that was current when the entry was created.  This function uses physical
+    equality ([==]) to compare the stored body with the caller-provided [cb],
+    which is O(1).  A mismatch means the Rocq kernel object was replaced
+    (e.g. after [Reset] or re-evaluation), so the cached extraction data is
+    stale and [None] is returned. *)
 let lookup_with_body_check find_opt kn cb =
   match find_opt kn with
   | Some (cb0, data) when cb0 == cb -> Some data
@@ -388,13 +402,8 @@ let rec is_typeclass_type_cpp = function
 
 (** {2 Enum inductives table} *)
 
-let enum_inductives = ref Refset'.empty
-
-let init_enum_inductives () = enum_inductives := Refset'.empty
-
-let add_enum_inductive r = enum_inductives := Refset'.add r !enum_inductives
-
-let is_enum_inductive r = Refset'.mem r !enum_inductives
+let (init_enum_inductives, add_enum_inductive, is_enum_inductive) =
+  make_refset ()
 
 (** Check if the inductive referred to by [r] has any constructor field
     whose ip_type refers back to the same MutInd, either directly or
@@ -580,17 +589,11 @@ let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
    cannot resolve them statically.  Distinguished from promoted type vars
    (simple [Type]-valued fields like [Obj]) and concrete type aliases
    (standalone definitions like [Force := list Unit]). *)
-let erased_type_consts = ref Refset'.empty
-
-let init_erased_type_consts () = erased_type_consts := Refset'.empty
-
-(** Register a record field as an erased type constant (dependent type family
-    that becomes [std::any] in C++). *)
-let add_erased_type_const r =
-  erased_type_consts := Refset'.add r !erased_type_consts
-
-(** Check if a GlobRef refers to an erased type constant. *)
-let is_erased_type_const r = Refset'.mem r !erased_type_consts
+(** Erased type constants: dependent type families that become [std::any] in C++,
+    including promoted record fields (simple [Type]-valued like [Obj]) and concrete
+    type aliases (standalone definitions like [Force := list Unit]). *)
+let (init_erased_type_consts, add_erased_type_const, is_erased_type_const) =
+  make_refset ()
 
 (* Table of promoted type bindings for typeclass instances. Maps an instance
    ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
@@ -613,14 +616,9 @@ let get_instance_promoted_types r =
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
    don't need standalone C++ function definitions. *)
-let higher_order_projections = ref Refset'.empty
-
-let init_higher_order_projections () = higher_order_projections := Refset'.empty
-
-let mark_higher_order_projection r =
-  higher_order_projections := Refset'.add r !higher_order_projections
-
-let is_higher_order_projection r = Refset'.mem r !higher_order_projections
+let (init_higher_order_projections, mark_higher_order_projection,
+     is_higher_order_projection) =
+  make_refset ()
 
 (** {2 Phantom type variables table} *)
 

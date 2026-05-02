@@ -80,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -339,12 +339,13 @@ struct DepElim {
     // CREATORS
     template <typename _U> explicit vec(const vec<_U> &_other) {
       if (std::holds_alternative<typename vec<_U>::Vnil>(_other.v())) {
-        d_v_ = Vnil{};
+        this->d_v_ = Vnil{};
       } else {
         const auto &[d_n, d_a1, d_a2] =
             std::get<typename vec<_U>::Vcons>(_other.v());
-        d_v_ = Vcons{d_n, t_A(d_a1),
-                     d_a2 ? std::make_unique<vec<t_A>>(*d_a2) : nullptr};
+        this->d_v_ =
+            Vcons{d_n, t_A(d_a1),
+                  d_a2 ? std::make_unique<DepElim::vec<t_A>>(*d_a2) : nullptr};
       }
     }
 
