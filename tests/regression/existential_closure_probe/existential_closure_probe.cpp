@@ -3,7 +3,8 @@
 /// Pack a closure into a type-erased wrapper.
 ExistentialClosureProbe::wrap
 ExistentialClosureProbe::pack_fn(const unsigned int base) {
-  return wrap::wrap0([=](const unsigned int x) mutable { return (x + base); });
+  return wrap::wrap0(std::function<unsigned int(unsigned int)>(
+      [=](const unsigned int x) mutable { return (x + base); }));
 }
 
 /// Unpack and apply.

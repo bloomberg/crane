@@ -201,10 +201,10 @@ template <typename K, typename V> struct CHT {
   }
 
   std::monostate put(const K k, const V v) const {
-    CHT<K, V> _self = *(this);
+    CHT<K, V> _self_val = *(this);
     return stm::atomically([&] {
       return [=]() mutable {
-        _self.stm_put(k, v);
+        _self_val.stm_put(k, v);
         return std::monostate{};
       }();
     });

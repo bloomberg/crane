@@ -810,16 +810,14 @@ struct ComprehensivePatterns {
       /// _After_Node: saves [_s0, _s1], dispatches next recursive call.
       struct _After_Node {
         Tree *_s0;
-        decltype((std::declval<unsigned int &>() +
-                  std::declval<const StateLB &>().lb_value)) _s1;
+        unsigned int _s1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         unsigned int _result;
-        decltype((std::declval<unsigned int &>() +
-                  std::declval<const StateLB &>().lb_value)) _s1;
+        unsigned int _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;

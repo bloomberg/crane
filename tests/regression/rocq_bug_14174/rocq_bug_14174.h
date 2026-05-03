@@ -604,8 +604,9 @@ struct RocqBug14174 {
       // ACCESSORS
       const variant_t &v() const { return d_v_; }
 
-      template <typename T1> T1 eq_sig_rec_uncurried() const {
-        return this->eq_sig_rect_uncurried();
+      template <typename T1>
+      T1 eq_sig_rec_uncurried(const sig<t_A> &_x1, const T1 _x2) const {
+        return (*(this)).eq_sig_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
@@ -623,8 +624,9 @@ struct RocqBug14174 {
         return sig<t_A>::exist(u1).eq_sig_rect(*(this), f);
       }
 
-      template <typename T1> T1 eq_sig_rec() const {
-        return this->eq_sig_rect();
+      template <typename T1>
+      T1 eq_sig_rec(const sig<t_A> &_x1, const T1 _x2) const {
+        return (*(this)).eq_sig_rect(_x1, _x2);
       }
 
       template <typename T1>
@@ -708,8 +710,9 @@ struct RocqBug14174 {
       // ACCESSORS
       const variant_t &v() const { return d_v_; }
 
-      template <typename T1> T1 eq_sig2_rec_uncurried() const {
-        return this->eq_sig2_rect_uncurried();
+      template <typename T1>
+      T1 eq_sig2_rec_uncurried(const sig2<t_A> &_x1, const T1 _x2) const {
+        return (*(this)).eq_sig2_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
@@ -727,8 +730,9 @@ struct RocqBug14174 {
         return sig2<t_A>::exist2(u1).eq_sig2_rect(*(this), f);
       }
 
-      template <typename T1> T1 eq_sig2_rec() const {
-        return this->eq_sig2_rect();
+      template <typename T1>
+      T1 eq_sig2_rec(const sig2<t_A> &_x1, const T1 _x2) const {
+        return (*(this)).eq_sig2_rect(_x1, _x2);
       }
 
       template <typename T1>
@@ -737,9 +741,10 @@ struct RocqBug14174 {
       }
 
       sig<t_A> sig_of_sig2() const {
-        sig2<t_A> _self = *(this);
+        sig2<t_A> _self_val = *(this);
         return sig<t_A>::exist([=]() mutable {
-          const auto &[d_x] = std::get<typename sig2<t_A>::Exist2>(_self.v());
+          const auto &[d_x] =
+              std::get<typename sig2<t_A>::Exist2>(_self_val.v());
           return d_x;
         }());
       }
@@ -820,8 +825,9 @@ struct RocqBug14174 {
       // ACCESSORS
       const variant_t &v() const { return d_v_; }
 
-      template <typename T1> T1 eq_sigT_rec_uncurried() const {
-        return this->eq_sigT_rect_uncurried();
+      template <typename T1>
+      T1 eq_sigT_rec_uncurried(const sigT<t_A, t_P> &_x1, const T1 _x2) const {
+        return (*(this)).eq_sigT_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
@@ -839,8 +845,9 @@ struct RocqBug14174 {
         return sigT<t_A, t_P>::existt(u1, u2).eq_sigT_rect(*(this), f);
       }
 
-      template <typename T1> T1 eq_sigT_rec() const {
-        return this->eq_sigT_rect();
+      template <typename T1>
+      T1 eq_sigT_rec(const sigT<t_A, t_P> &_x1, const T1 _x2) const {
+        return (*(this)).eq_sigT_rect(_x1, _x2);
       }
 
       template <typename T1>
@@ -945,8 +952,10 @@ struct RocqBug14174 {
       // ACCESSORS
       const variant_t &v() const { return d_v_; }
 
-      template <typename T1> T1 eq_sigT2_rec_uncurried() const {
-        return this->eq_sigT2_rect_uncurried();
+      template <typename T1>
+      T1 eq_sigT2_rec_uncurried(const sigT2<t_A, t_P, t_Q> &_x1,
+                                const T1 _x2) const {
+        return (*(this)).eq_sigT2_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
@@ -969,8 +978,9 @@ struct RocqBug14174 {
             .eq_sigT2_rect(*(this), f);
       }
 
-      template <typename T1> T1 eq_sigT2_rec() const {
-        return this->eq_sigT2_rect();
+      template <typename T1>
+      T1 eq_sigT2_rec(const sigT2<t_A, t_P, t_Q> &_x1, const T1 _x2) const {
+        return (*(this)).eq_sigT2_rect(_x1, _x2);
       }
 
       template <typename T1>
@@ -986,16 +996,18 @@ struct RocqBug14174 {
       }
 
       sigT<t_A, t_P> sigT_of_sigT2() const {
-        sigT2<t_A, t_P, t_Q> _self = *(this);
+        sigT2<t_A, t_P, t_Q> _self_val = *(this);
         return sigT<t_A, t_P>::existt(
             [=]() mutable {
               const auto &[d_x, d_a1, d_a2] =
-                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(_self.v());
+                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(
+                      _self_val.v());
               return d_x;
             }(),
             [=]() mutable {
               const auto &[d_x0, d_a10, d_a20] =
-                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(_self.v());
+                  std::get<typename sigT2<t_A, t_P, t_Q>::ExistT2>(
+                      _self_val.v());
               return d_a10;
             }());
       }

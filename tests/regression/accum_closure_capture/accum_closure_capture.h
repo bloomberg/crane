@@ -271,7 +271,7 @@ struct AccumClosureCapture {
     /// destroyed. Calling the closures from apply_all dereferences dangling
     /// this.
     fn_list extract_closures() const {
-      tree _self = *(this);
+      tree _self_val = *(this);
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return fn_list::fnil();
@@ -279,13 +279,13 @@ struct AccumClosureCapture {
         auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
         return fn_list::fcons(
             [=](const unsigned int x) mutable {
-              return (x + _self.tree_sum());
+              return (x + _self_val.tree_sum());
             },
             fn_list::fcons(
                 [=](const unsigned int x) mutable { return (x + d_a1); },
                 fn_list::fcons(
                     [=](const unsigned int x) mutable {
-                      return (x + _self.tree_sum());
+                      return (x + _self_val.tree_sum());
                     },
                     fn_list::fnil())));
       }

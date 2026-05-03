@@ -182,18 +182,20 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<t_A, F0 &, t_A &>
   Sseq<t_A> smap(F0 &&f) const {
-    Sseq<t_A> _self = *(this);
+    Sseq<t_A> _self_val = *(this);
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
-      return Sseq<t_A>::scons(_self.double_head(f), _self.stail().smap(f));
+      return Sseq<t_A>::scons(_self_val.double_head(f),
+                              _self_val.stail().smap(f));
     });
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<t_A, F0 &, t_A &>
   Sseq<t_A> smap_direct(F0 &&f) const {
-    Sseq<t_A> _self = *(this);
+    Sseq<t_A> _self_val = *(this);
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
-      return Sseq<t_A>::scons(f(_self.shead()), _self.stail().smap_direct(f));
+      return Sseq<t_A>::scons(f(_self_val.shead()),
+                              _self_val.stail().smap_direct(f));
     });
   }
 

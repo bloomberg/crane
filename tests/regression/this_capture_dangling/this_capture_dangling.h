@@ -134,7 +134,7 @@ struct ThisCaptureDangling {
     ///
     /// Note: option is custom-extracted to std::optional.
     std::optional<std::function<unsigned int(unsigned int)>> get_fn() const {
-      tree _self = *(this);
+      tree _self_val = *(this);
       auto _cs = (*(this)).tree_sum();
       if (_cs <= 0) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -142,7 +142,7 @@ struct ThisCaptureDangling {
         unsigned int _x = _cs - 1;
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
             [=](const unsigned int x) mutable {
-              return (x + _self.tree_sum());
+              return (x + _self_val.tree_sum());
             });
       }
     }

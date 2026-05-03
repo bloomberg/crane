@@ -619,8 +619,7 @@ unsigned int LoopifyNumbers::sum_squares(
 
   /// _Resume_m: saves [_s0], resumes after recursive call with _result.
   struct _Resume_m {
-    decltype((std::declval<const unsigned int &>() *
-              std::declval<const unsigned int &>())) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;

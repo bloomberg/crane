@@ -2635,7 +2635,11 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
         Sasgn (cell_id, Some Tauto, build_cell_call ~vt_ret pp_expr cell))
       cell_names br.tmc_cells
   in
-  (* 2. Link consecutive cells: outer.rec_field = inner *)
+  (* 2. Link consecutive cells: outer.rec_field = inner.
+        For value-type returns, assignments use [CPPmove], so the inner cell
+        is moved into the outer.  To avoid reading a moved-from (null) pointer,
+        assignments must be performed innermost-first: link _cell1→_cell2 before
+        linking _cell→_cell1.  We build the list outer-first then reverse it. *)
   let rec link_cells cells names =
     match cells, names with
     | cell :: rest_cells, outer_name :: (inner_name :: _ as rest_names) ->
@@ -2649,7 +2653,7 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
       :: link_cells rest_cells rest_names
     | _ -> []
   in
-  let link_stmts = link_cells br.tmc_cells cell_names in
+  let link_stmts = List.rev (link_cells br.tmc_cells cell_names) in
   (* 3. Patch destination with outermost cell via write pointer *)
   let patch = patch_tmc_dest ~vt_ret pp_expr ti (CPPvar (List.hd cell_names)) in
   (* 4. Advance _write to the recursive field of the innermost cell.
@@ -2977,8 +2981,13 @@ let rec extract_fwd_ref_tvar = function
   | Tvar (_, Some id) -> Some id
   | _ -> None
 
-(** Infer the type of a saved expression from the type environment and template
-    params. Falls back to the function's return type. *)
+(** Infer the C++ type of a saved CPP expression bottom-up.
+    Returns [Tunknown] when the type cannot be determined.
+    Handles the common cases: variable lookups, smart-pointer derefs,
+    arithmetic inlined operators (detected by their format-string pattern),
+    and lambdas (return type inferred from body [Sreturn] statements).
+    Used by [compute_frame_field_types] to emit [std::function<R(Args...)>]
+    instead of [decltype(lambda)] for closures in loopification frame structs. *)
 let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     cpp_type =
   let result =
@@ -2992,7 +3001,13 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       ( match infer_saved_type tparams env inner with
       | Tshared_ptr t | Tunique_ptr t | Tptr t -> t
       | t -> t )
-    | CPPbinop (_, lhs, _) -> infer_saved_type tparams env lhs
+    | CPPbinop (_, lhs, rhs) ->
+      (* Try left operand first; fall back to right.  This handles the common
+         pattern [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda
+         param) is, and the result type matches the param type. *)
+      let tl = infer_saved_type tparams env lhs in
+      if tl <> Tunknown then tl
+      else infer_saved_type tparams env rhs
     | CPPfun_call (CPPvar f, _) ->
       ( match lookup_var_type env f with
       | Some (Tfun (_, cod)) -> cod
@@ -3010,6 +3025,37 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       | Some (Tfun (_, cod)) -> cod
       | _ -> Tunknown )
     | CPPfun_call (CPPlambda (_, Some ret_ty, _, _), _) -> ret_ty
+    | CPPfun_call (CPPglob (_, _, Some ci), args) when ci.ci_inline <> None ->
+      (* Inlined custom constant (e.g. Nat.add, Nat.mul).  Only apply the
+         "same-type-as-arg" heuristic for simple arithmetic binary operators
+         of the form "(%a0 OP %a1)".  Other inline functions (e.g. make_pair)
+         change the type and must fall through to Tunknown. *)
+      let fmt = match ci.ci_inline with Some s -> s | None -> "" in
+      let is_arithmetic_binop =
+        (* Match patterns like "(%a0 + %a1)", "(%a0 * %a1)", etc.
+           The minimal such pattern is 11 chars. *)
+        let len = String.length fmt in
+        len >= 11 && fmt.[0] = '(' && fmt.[len - 1] = ')'
+        && (let inner = String.sub fmt 1 (len - 2) in
+            let prefix = "%a0 " and suffix = " %a1" in
+            let plen = String.length prefix and slen = String.length suffix in
+            String.length inner >= plen + 1 + slen
+            && String.sub inner 0 plen = prefix
+            && String.sub inner (String.length inner - slen) slen = suffix)
+      in
+      if is_arithmetic_binop then
+        let known_types =
+          List.filter_map
+            (fun arg ->
+              let t = strip_ref_and_const_type (infer_saved_type tparams env arg) in
+              if t = Tunknown then None else Some t)
+            args
+        in
+        ( match known_types with
+        | [] -> Tunknown
+        | first :: rest when List.for_all (( = ) first) rest -> first
+        | _ -> Tunknown )
+      else Tunknown
     | CPPfun_call (CPPglob _, _) -> Tunknown
     | CPPfun_call (CPPmember (inner, id), [])
       when String.equal (Id.to_string id) "get" ->
@@ -3021,6 +3067,41 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       | Tshared_ptr t -> Tptr t  (* shared_ptr<T> → T* *)
       | Tunique_ptr t -> Tptr t  (* unique_ptr<T> → T* *)
       | _ -> Tunknown )
+    | CPPfun_call _ -> Tunknown
+    | CPPlambda (params, ret_ty_opt, body, _) ->
+      let param_types = List.map fst params in
+      let ret_ty =
+        match ret_ty_opt with
+        | Some ty when ty <> Tvoid -> ty
+        | _ ->
+          (* Infer return type from body's Sreturn statements *)
+          let lam_env =
+            List.fold_left
+              (fun acc (ty, id_opt) ->
+                match id_opt with
+                | Some id -> (id, ty) :: acc
+                | None -> acc)
+              env params
+          in
+          let rec find_return_type = function
+            | [] -> Tunknown
+            | Sreturn (Some e) :: _ -> infer_saved_type tparams lam_env e
+            | Sif (_, then_body, else_body) :: rest ->
+              let t = find_return_type then_body in
+              if t <> Tunknown then t
+              else
+                let t = find_return_type else_body in
+                if t <> Tunknown then t else find_return_type rest
+            | Sblock stmts :: rest ->
+              let t = find_return_type stmts in
+              if t <> Tunknown then t else find_return_type rest
+            | _ :: rest -> find_return_type rest
+          in
+          find_return_type body
+      in
+      if ret_ty = Tunknown then Tunknown
+      else Tfun (List.map strip_ref_and_const_type param_types,
+                 strip_ref_and_const_type ret_ty)
     | _ -> Tunknown
   in
   result
@@ -3407,7 +3488,10 @@ let clone_for_frame ty expr =
   | Tunique_ptr inner ->
     CPPfun_call (CPPmk_unique inner,
                  [CPPmethod_call (expr, id_clone, [])])
-  | Tfun _ -> CPPmove expr
+  | Tfun _ ->
+    (match expr with
+    | CPPlambda _ -> expr  (* lambdas are already rvalues, no move needed *)
+    | _ -> CPPmove expr)
   | _ -> expr
 
 (** Apply [clone_for_frame] to parallel type and expression lists. *)
@@ -5696,7 +5780,10 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
           match ty with
           | Tunknown ->
             let expr = List.nth cf.cf_saved_exprs j in
-            make_decltype_ty pp_type cf.cf_env expr
+            let inferred = infer_saved_type tparams cf.cf_env expr in
+            (match inferred with
+            | Tunknown -> make_decltype_ty pp_type cf.cf_env expr
+            | ty -> ty)
           | _ -> strip_ref_and_const_type ty)
       cf.cf_saved_types
   in

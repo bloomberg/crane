@@ -85,18 +85,6 @@
 
 
 
-(subdir existential_closure_probe
- (rule
-  (targets existential_closure_probe.t.exe)
-  (deps ExistentialClosureProbe.vo existential_closure_probe.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} existential_closure_probe.t.exe existential_closure_probe.cpp existential_closure_probe.t.cpp)))
- (rule
-  (alias runtest)
-  (deps existential_closure_probe.t.exe)
-  (action (run ./existential_closure_probe.t.exe))))
-
-
 (subdir rocq_bug_3287
  (rule
   (targets rocq_bug_3287.t.exe)
@@ -107,3 +95,16 @@
   (alias runtest)
   (deps rocq_bug_3287.t.exe)
   (action (run ./rocq_bug_3287.t.exe))))
+
+(subdir accum_closure_escape
+ (rule
+  (targets accum_closure_escape.t.exe)
+  (deps AccumClosureEscape.vo accum_closure_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} accum_closure_escape.t.exe accum_closure_escape.cpp accum_closure_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps accum_closure_escape.t.exe)
+  (action (run ./accum_closure_escape.t.exe))))
+
+

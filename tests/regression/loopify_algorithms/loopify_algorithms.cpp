@@ -615,8 +615,7 @@ unsigned int LoopifyAlgorithms::weighted_sum(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype((std::declval<const unsigned int &>() *
-              std::declval<unsigned int &>())) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

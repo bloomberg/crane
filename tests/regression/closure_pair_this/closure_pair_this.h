@@ -129,20 +129,20 @@ struct ClosurePairThis {
     std::pair<std::function<unsigned int(unsigned int)>,
               std::function<unsigned int(unsigned int)>>
     get_fn_pair(const unsigned int flag) const {
-      tree _self = *(this);
+      tree _self_val = *(this);
       if (flag <= 0) {
         return std::make_pair(
             [=](const unsigned int x) mutable {
-              return (x + _self.tree_sum());
+              return (x + _self_val.tree_sum());
             },
             [=](const unsigned int x) mutable {
-              return (_self.tree_sum() * x);
+              return (_self_val.tree_sum() * x);
             });
       } else {
         unsigned int _x = flag - 1;
         return std::make_pair(
             [=](const unsigned int x) mutable {
-              return (_self.tree_sum() + x);
+              return (_self_val.tree_sum() + x);
             },
             [](const unsigned int x) { return x; });
       }

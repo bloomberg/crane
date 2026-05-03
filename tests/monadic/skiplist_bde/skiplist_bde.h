@@ -614,7 +614,7 @@ template <typename K, typename V> struct SkipList {
       return SkipList<int, int>::e_NOT_FOUND;
     }
   }
-  unsigned int bde_removeAll() const { return this->removeAll(); }
+  unsigned int bde_removeAll() const { return (*(this)).removeAll(); }
   template <typename F0, typename F1>
     requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
              bsl::is_invocable_r_v<bool, F1 &, K &, K &>
@@ -623,8 +623,8 @@ template <typename K, typename V> struct SkipList {
     return SkipList<int, int>::template findKey_aux<K, V>(
         ltK, eqK, bsl::move(*(this)).SkipList::slHead, key0, lvl);
   }
-  bool bde_isEmpty() const { return this->isEmpty(); }
-  unsigned int bde_length() const { return this->length(); }
+  bool bde_isEmpty() const { return (*(this)).isEmpty(); }
+  unsigned int bde_length() const { return (*(this)).length(); }
   template <typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, K &, K &>
   bsl::pair<unsigned int, bsl::optional<bsl::shared_ptr<SkipNode<K, V>>>>

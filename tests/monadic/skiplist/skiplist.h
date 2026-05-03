@@ -630,7 +630,7 @@ template <typename K, typename V> struct SkipList {
     }
   }
 
-  unsigned int bde_removeAll() const { return this->removeAll(); }
+  unsigned int bde_removeAll() const { return (*(this)).removeAll(); }
 
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
@@ -641,9 +641,9 @@ template <typename K, typename V> struct SkipList {
         ltK, eqK, std::move(*(this)).SkipList::slHead, key0, lvl);
   }
 
-  bool bde_isEmpty() const { return this->isEmpty(); }
+  bool bde_isEmpty() const { return (*(this)).isEmpty(); }
 
-  unsigned int bde_length() const { return this->length(); }
+  unsigned int bde_length() const { return (*(this)).length(); }
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, K &, K &>

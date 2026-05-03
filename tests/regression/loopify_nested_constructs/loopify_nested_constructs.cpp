@@ -279,7 +279,7 @@ unsigned int LoopifyNestedConstructs::alternating_ops(
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    decltype((std::declval<const unsigned int &>() * 2u)) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;

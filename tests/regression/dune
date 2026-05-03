@@ -4680,3 +4680,334 @@
   (alias runtest)
   (deps mutual_value_deep_destruct.t.exe)
   (action (run ./mutual_value_deep_destruct.t.exe))))
+
+(subdir mem_safety_probe
+ (rule
+  (targets mem_safety_probe.t.exe)
+  (deps MemSafetyProbe.vo mem_safety_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe.t.exe mem_safety_probe.cpp mem_safety_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe.t.exe)
+  (action (run ./mem_safety_probe.t.exe))))
+
+(subdir mem_safety_probe2
+ (rule
+  (targets mem_safety_probe2.t.exe)
+  (deps MemSafetyProbe2.vo mem_safety_probe2.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe2.t.exe mem_safety_probe2.cpp mem_safety_probe2.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe2.t.exe)
+  (action (run ./mem_safety_probe2.t.exe))))
+
+(subdir mem_safety_probe3
+ (rule
+  (targets mem_safety_probe3.t.exe)
+  (deps MemSafetyProbe3.vo mem_safety_probe3.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe3.t.exe mem_safety_probe3.cpp mem_safety_probe3.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe3.t.exe)
+  (action (run ./mem_safety_probe3.t.exe))))
+
+(subdir mem_safety_probe4
+ (rule
+  (targets mem_safety_probe4.t.exe)
+  (deps MemSafetyProbe4.vo mem_safety_probe4.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe4.t.exe mem_safety_probe4.cpp mem_safety_probe4.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe4.t.exe)
+  (action (run ./mem_safety_probe4.t.exe))))
+
+(subdir mem_safety_probe5
+ (rule
+  (targets mem_safety_probe5.t.exe)
+  (deps MemSafetyProbe5.vo mem_safety_probe5.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe5.t.exe mem_safety_probe5.cpp mem_safety_probe5.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe5.t.exe)
+  (action (run ./mem_safety_probe5.t.exe))))
+
+(subdir mem_safety_probe6
+ (rule
+  (targets mem_safety_probe6.t.exe)
+  (deps MemSafetyProbe6.vo mem_safety_probe6.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe6.t.exe mem_safety_probe6.cpp mem_safety_probe6.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe6.t.exe)
+  (action (run ./mem_safety_probe6.t.exe))))
+
+(subdir mem_safety_probe7
+ (rule
+  (targets mem_safety_probe7.t.exe)
+  (deps MemSafetyProbe7.vo mem_safety_probe7.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe7.t.exe mem_safety_probe7.cpp mem_safety_probe7.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe7.t.exe)
+  (action (run ./mem_safety_probe7.t.exe))))
+
+(subdir mem_safety_probe8
+ (rule
+  (targets mem_safety_probe8.t.exe)
+  (deps MemSafetyProbe8.vo mem_safety_probe8.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe8.t.exe mem_safety_probe8.cpp mem_safety_probe8.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe8.t.exe)
+  (action (run ./mem_safety_probe8.t.exe))))
+
+(subdir mem_safety_probe9
+ (rule
+  (targets mem_safety_probe9.t.exe)
+  (deps MemSafetyProbe9.vo mem_safety_probe9.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe9.t.exe mem_safety_probe9.cpp mem_safety_probe9.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe9.t.exe)
+  (action (run ./mem_safety_probe9.t.exe))))
+
+(subdir mem_safety_probe11
+ (rule
+  (targets mem_safety_probe11.t.exe)
+  (deps MemSafetyProbe11.vo mem_safety_probe11.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe11.t.exe mem_safety_probe11.cpp mem_safety_probe11.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe11.t.exe)
+  (action (run ./mem_safety_probe11.t.exe))))
+
+(subdir mem_safety_probe12
+ (rule
+  (targets mem_safety_probe12.t.exe)
+  (deps MemSafetyProbe12.vo mem_safety_probe12.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe12.t.exe mem_safety_probe12.cpp mem_safety_probe12.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe12.t.exe)
+  (action (run ./mem_safety_probe12.t.exe))))
+
+(subdir mem_safety_probe15
+ (rule
+  (targets mem_safety_probe15.t.exe)
+  (deps MemSafetyProbe15.vo mem_safety_probe15.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe15.t.exe mem_safety_probe15.cpp mem_safety_probe15.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe15.t.exe)
+  (action (run ./mem_safety_probe15.t.exe))))
+
+(subdir mem_safety_probe16
+ (rule
+  (targets mem_safety_probe16.t.exe)
+  (deps MemSafetyProbe16.vo mem_safety_probe16.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe16.t.exe mem_safety_probe16.cpp mem_safety_probe16.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe16.t.exe)
+  (action (run ./mem_safety_probe16.t.exe))))
+
+(subdir mem_safety_probe17
+ (rule
+  (targets mem_safety_probe17.t.exe)
+  (deps MemSafetyProbe17.vo mem_safety_probe17.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe17.t.exe mem_safety_probe17.cpp mem_safety_probe17.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe17.t.exe)
+  (action (run ./mem_safety_probe17.t.exe))))
+
+(subdir mem_safety_probe18
+ (rule
+  (targets mem_safety_probe18.t.exe)
+  (deps MemSafetyProbe18.vo mem_safety_probe18.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe18.t.exe mem_safety_probe18.cpp mem_safety_probe18.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe18.t.exe)
+  (action (run ./mem_safety_probe18.t.exe))))
+
+(subdir mem_safety_probe19
+ (rule
+  (targets mem_safety_probe19.t.exe)
+  (deps MemSafetyProbe19.vo mem_safety_probe19.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe19.t.exe mem_safety_probe19.cpp mem_safety_probe19.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe19.t.exe)
+  (action (run ./mem_safety_probe19.t.exe))))
+
+(subdir mem_safety_probe20
+ (rule
+  (targets mem_safety_probe20.t.exe)
+  (deps MemSafetyProbe20.vo mem_safety_probe20.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe20.t.exe mem_safety_probe20.cpp mem_safety_probe20.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe20.t.exe)
+  (action (run ./mem_safety_probe20.t.exe))))
+
+(subdir mem_safety_probe21
+ (rule
+  (targets mem_safety_probe21.t.exe)
+  (deps MemSafetyProbe21.vo mem_safety_probe21.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe21.t.exe mem_safety_probe21.cpp mem_safety_probe21.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe21.t.exe)
+  (action (run ./mem_safety_probe21.t.exe))))
+
+(subdir mem_safety_probe22
+ (rule
+  (targets mem_safety_probe22.t.exe)
+  (deps MemSafetyProbe22.vo mem_safety_probe22.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe22.t.exe mem_safety_probe22.cpp mem_safety_probe22.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe22.t.exe)
+  (action (run ./mem_safety_probe22.t.exe))))
+
+(subdir mem_safety_probe23
+ (rule
+  (targets mem_safety_probe23.t.exe)
+  (deps MemSafetyProbe23.vo mem_safety_probe23.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe23.t.exe mem_safety_probe23.cpp mem_safety_probe23.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe23.t.exe)
+  (action (run ./mem_safety_probe23.t.exe))))
+
+(subdir mem_safety_probe24
+ (rule
+  (targets mem_safety_probe24.t.exe)
+  (deps MemSafetyProbe24.vo mem_safety_probe24.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe24.t.exe mem_safety_probe24.cpp mem_safety_probe24.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe24.t.exe)
+  (action (run ./mem_safety_probe24.t.exe))))
+
+(subdir mem_safety_probe25
+ (rule
+  (targets mem_safety_probe25.t.exe)
+  (deps MemSafetyProbe25.vo mem_safety_probe25.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe25.t.exe mem_safety_probe25.cpp mem_safety_probe25.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe25.t.exe)
+  (action (run ./mem_safety_probe25.t.exe))))
+
+(subdir mem_safety_probe26
+ (rule
+  (targets mem_safety_probe26.t.exe)
+  (deps MemSafetyProbe26.vo mem_safety_probe26.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe26.t.exe mem_safety_probe26.cpp mem_safety_probe26.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe26.t.exe)
+  (action (run ./mem_safety_probe26.t.exe))))
+
+
+(subdir mem_safety_probe27
+ (rule
+  (targets mem_safety_probe27.t.exe)
+  (deps MemSafetyProbe27.vo mem_safety_probe27.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe27.t.exe mem_safety_probe27.cpp mem_safety_probe27.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe27.t.exe)
+  (action (run ./mem_safety_probe27.t.exe))))
+
+(subdir mem_safety_probe28
+ (rule
+  (targets mem_safety_probe28.t.exe)
+  (deps MemSafetyProbe28.vo mem_safety_probe28.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe28.t.exe mem_safety_probe28.cpp mem_safety_probe28.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe28.t.exe)
+  (action (run ./mem_safety_probe28.t.exe))))
+
+(subdir mem_safety_probe29
+ (rule
+  (targets mem_safety_probe29.t.exe)
+  (deps MemSafetyProbe29.vo mem_safety_probe29.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe29.t.exe mem_safety_probe29.cpp mem_safety_probe29.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe29.t.exe)
+  (action (run ./mem_safety_probe29.t.exe))))
+
+(subdir mem_safety_probe13
+ (rule
+  (targets mem_safety_probe13.t.exe)
+  (deps MemSafetyProbe13.vo mem_safety_probe13.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe13.t.exe mem_safety_probe13.cpp mem_safety_probe13.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe13.t.exe)
+  (action (run ./mem_safety_probe13.t.exe))))
+
+(subdir mem_safety_probe14
+ (rule
+  (targets mem_safety_probe14.t.exe)
+  (deps MemSafetyProbe14.vo mem_safety_probe14.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe14.t.exe mem_safety_probe14.cpp mem_safety_probe14.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe14.t.exe)
+  (action (run ./mem_safety_probe14.t.exe))))
+
+(subdir existential_closure_probe
+ (rule
+  (targets existential_closure_probe.t.exe)
+  (deps ExistentialClosureProbe.vo existential_closure_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} existential_closure_probe.t.exe existential_closure_probe.cpp existential_closure_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps existential_closure_probe.t.exe)
+  (action (run ./existential_closure_probe.t.exe))))
+
+(subdir mem_safety_probe10
+ (rule
+  (targets mem_safety_probe10.t.exe)
+  (deps MemSafetyProbe10.vo mem_safety_probe10.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe10.t.exe mem_safety_probe10.cpp mem_safety_probe10.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe10.t.exe)
+  (action (run ./mem_safety_probe10.t.exe))))

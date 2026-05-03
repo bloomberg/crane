@@ -2007,6 +2007,77 @@ let rec get_args_and_ret acc = function
   | Tarr (t, rest) -> get_args_and_ret (t :: acc) rest
   | ret_ty -> (List.rev acc, ret_ty)
 
+(** Strip [n] non-dummy arrow levels from an ML type, resolving Tmeta
+    indirections and automatically skipping erased (Tdummy) arrows.
+    Returns the codomain after stripping, or [None] if the type has fewer
+    than [n] non-dummy arrow levels. *)
+let rec strip_tarr_n n ty =
+  if n <= 0 then Some ty
+  else match resolve_tmeta ty with
+    | Tarr (t1, rest) when Mlutil.isTdummy t1 ->
+      (* Skip erased type-param arrow without consuming a real argument *)
+      strip_tarr_n n rest
+    | Tarr (_, rest) -> strip_tarr_n (n - 1) rest
+    | _ -> None
+
+(** Strip one level of reference or const-qualification from a C++ type.
+    Normalises lambda parameter types before building [Tfun] wrappers.
+    Unlike [Loopify.strip_ref_and_const_type] this is intentionally
+    non-recursive: a double-ref [Tref (Tref t)] stays as [Tref t]. *)
+let strip_cpp_ref_const = function
+  | Tref t | Tmod (TMconst, t) -> t
+  | t -> t
+
+(** Count non-erased arguments in an ML application.
+    [MLdummy] nodes represent erased type/proof parameters that are not
+    passed to C++ functions; this returns the count of the remaining actual
+    value arguments. *)
+let count_real_ml_args args =
+  List.length (List.filter (fun a ->
+    match a with MLdummy _ -> false | _ -> true) args)
+
+(** Substitute type schema variables [Tvar i] with concrete types.
+    [ml_subst_tvars subst ty] replaces [Tvar i] with [subst.(i-1)] when
+    the index is in range. Used to instantiate the polymorphic type of a
+    global reference with its actual type arguments from [MLglob(r, tys)]. *)
+let rec ml_subst_tvars (subst : ml_type array) (ty : ml_type) : ml_type =
+  match ty with
+  | Tvar i | Tvar' i when i >= 1 && i <= Array.length subst -> subst.(i - 1)
+  | Tarr (t1, t2) -> Tarr (ml_subst_tvars subst t1, ml_subst_tvars subst t2)
+  | Tglob (g, ts, args) ->
+    Tglob (g, List.map (ml_subst_tvars subst) ts, args)
+  | Tmeta {contents = Some t} -> ml_subst_tvars subst t
+  | _ -> ty
+
+(** Infer the ML type of a body expression from its structure.
+    Returns [None] when the type cannot be determined.
+    Used to annotate CPPlambda return types so that loopify's frame type
+    inference doesn't fall back to [decltype(lambda)]. *)
+let rec infer_ml_body_type (a : ml_ast) : ml_type option =
+  match a with
+  | MLapp (MLglob (r, tys), args) ->
+    ( match find_type_opt r with
+    | Some ty ->
+      (* Instantiate type schema variables with actual type arguments *)
+      let ty = match tys with
+        | [] -> ty
+        | _ -> ml_subst_tvars (Array.of_list tys) ty
+      in
+      strip_tarr_n (count_real_ml_args args) ty
+    | None -> None )
+  | MLcons (ty, _, _) -> Some (resolve_tmeta ty)
+  | MLcase (_, _, pv) when Array.length pv > 0 ->
+    let (_, rty, _, _) = pv.(0) in
+    Some (resolve_tmeta rty)
+  | MLletin (_, _, _, body) -> infer_ml_body_type body
+  | MLlam (_, ty, body) ->
+    ( match infer_ml_body_type body with
+    | Some rty -> Some (Tarr (ty, rty))
+    | None -> None )
+  | MLglob (r, _) -> find_type_opt r
+  | MLmagic e -> infer_ml_body_type e
+  | _ -> None
+
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
 let ref_returns_typeclass r =
@@ -3110,6 +3181,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             cpp_arg_info
         in
         let body_stmts = return_captures_by_value body_stmts in
+        (* The return type annotation is left as [None]; loopify's
+           [infer_saved_type] infers it from the body when computing frame
+           struct field types.  Annotating here caused regressions for inner
+           lambdas whose bodies return further closures (the inferred type
+           became [std::function<...>] instead of the plain return type). *)
         CPPlambda (cpp_args, None, body_stmts, true) )
     in
     tctx.env_types <- saved_env_types;
@@ -3715,6 +3791,12 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          resolves to an owning pointer type (because T is in method_self_ns),
          the generated arg expression is a bare T value.  Wrap it so the
          field's stored type matches. *)
+      (* All ML type arguments from the MLcons type — used to recover the
+         actual type for fields erased to std::any when ind_nparams = 0. *)
+      let ty_ml_tparams = match resolve_tmeta ty with
+        | Tglob (_, tys_orig, _) -> tys_orig
+        | _ -> []
+      in
       let ctor_temps = match ty with
         | Tglob (n, tys_orig, _) ->
           let tys_filt = match n with
@@ -3729,7 +3811,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         | _ -> []
       in
       let field_types = match Table.get_ctor_ip_types_opt r with
-        | Some ft -> ft | None -> [] in
+        | Some ft ->
+          (* Filter out killed (Tdummy) entries — these are erased type/prop
+             parameters that make_mlargs skips during extraction, so they
+             don't appear in MLcons args.  Filtering aligns the field type
+             indices with the actual constructor arguments in ts_updated. *)
+          List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | None -> [] in
       let wrap_if_needed_for_field ft expr =
         match ft with
         | Miniml.Tvar i | Miniml.Tvar' i ->
@@ -3749,7 +3837,77 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
                 CPPfun_call (CPPmk_unique inner, [expr])
               | _ -> expr )
             | _ -> expr
-            with Failure _ | Invalid_argument _ -> expr )
+            with Failure _ | Invalid_argument _ ->
+              (* Field type index is beyond ctor_temps — this field is erased
+                 to std::any.  If the expression is a lambda, wrap it in
+                 std::function so that std::any stores the type-erased wrapper
+                 and any_cast<std::function<...>> can recover it. *)
+              match expr with
+              | CPPlambda (params, ret_ty_opt, body_stmts, _) ->
+                let param_types = List.map (fun (ty, _) ->
+                  strip_cpp_ref_const ty) params in
+                (* Build a name→type map from the lambda's parameter list. *)
+                let param_env =
+                  List.filter_map
+                    (fun (ty, id_opt) ->
+                      Option.map (fun id -> (id, strip_cpp_ref_const ty)) id_opt)
+                    params
+                in
+                (* Infer return type from the first Sreturn in the body. *)
+                let rec infer_ret_from_expr = function
+                  | CPPvar id ->
+                    List.assoc_opt id param_env
+                  | CPPbinop (_, a, b) ->
+                    ( match infer_ret_from_expr a with
+                    | Some _ as r -> r
+                    | None -> infer_ret_from_expr b )
+                  | _ -> None
+                in
+                let rec infer_ret_from_stmts = function
+                  | [] -> None
+                  | Sreturn (Some e) :: _ -> infer_ret_from_expr e
+                  | Sif (_, t, f) :: rest ->
+                    ( match infer_ret_from_stmts t with
+                    | Some _ as r -> r
+                    | None ->
+                      match infer_ret_from_stmts f with
+                      | Some _ as r -> r
+                      | None -> infer_ret_from_stmts rest )
+                  | Sblock ss :: rest ->
+                    ( match infer_ret_from_stmts ss with
+                    | Some _ as r -> r
+                    | None -> infer_ret_from_stmts rest )
+                  | _ :: rest -> infer_ret_from_stmts rest
+                in
+                let ret_ty = match ret_ty_opt with
+                  | Some ty -> strip_cpp_ref_const ty
+                  | None ->
+                    (* Try the lambda body first (works when the return expression
+                       contains a lambda parameter). *)
+                    ( match infer_ret_from_stmts body_stmts with
+                    | Some ty -> ty
+                    | None ->
+                      (* Fall back: recover the return type from the MLcons type
+                         arguments.  For [ft = Tvar i], the actual ML type is
+                         [ty_ml_tparams.(i-1)] = e.g. [nat -> nat].  Strip as many
+                         arrow levels as there are C++ params to get the codomain.
+                         This works for type-PARAMETER inductives (ind_nparams > 0);
+                         for type-INDEXED inductives the tys list may be empty. *)
+                      let actual_ml_ty =
+                        try List.nth ty_ml_tparams (i - 1)
+                        with Failure _ | Invalid_argument _ ->
+                          Tmeta {Miniml.id = -1; Miniml.contents = None}
+                      in
+                      let n_params = List.length param_types in
+                      let tvars = get_current_type_vars () in
+                      match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
+                      | Some ret_ml ->
+                        let r = convert_ml_type_to_cpp_type env Refset'.empty tvars ret_ml in
+                        strip_cpp_ref_const r
+                      | None -> Tvoid )
+                in
+                CPPconverting_ctor (Tfun (param_types, ret_ty), [expr])
+              | _ -> expr )
         | _ -> expr
       in
       let gen_and_wrap i e =
@@ -6975,21 +7133,40 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           | CPPfun_call (CPPvar id, args) when Id.equal id target ->
             CPPfun_call (mk_cppglob lifted [], free_args @ List.map sub args)
           | CPPvar id when Id.equal id target ->
-            (* Bare reference to lifted function: if there are free args, wrap
-               in a lambda *)
-            if free_args = [] then
+            (* Bare reference to lifted function: generate a properly-typed
+               wrapper lambda with one parameter per non-erased Rocq lambda
+               param. Capture by value ([=]) so that free variables don't
+               dangle when the wrapper outlives the current stack frame. *)
+            let n_actual_params =
+              List.length
+                (List.filter
+                   (fun (_, ty) ->
+                     (not (isTdummy ty)) && not (ml_type_is_void ty))
+                   params)
+            in
+            if free_args = [] && n_actual_params = 0 then
               mk_cppglob lifted []
             else
-              (* Generate a lambda that captures and forwards: [&]() { return
-                 lifted(free_args...); } *)
+              let fresh_ids =
+                List.init n_actual_params (fun i ->
+                  Id.of_string (Printf.sprintf "_xarg%d" i))
+              in
+              let wrapper_params =
+                List.map (fun id -> (Tauto, Some id)) fresh_ids
+              in
+              let wrapper_call_args =
+                free_args @ List.map (fun id -> CPPvar id) fresh_ids
+              in
               CPPlambda
-                ( [],
+                ( wrapper_params,
                   None,
                   [
                     Sreturn
-                      (Some (CPPfun_call (mk_cppglob lifted [], free_args)));
+                      (Some
+                         (CPPfun_call
+                            (mk_cppglob lifted [], wrapper_call_args)));
                   ],
-                  false )
+                  true )
           | CPPfun_call (f, args) -> CPPfun_call (sub f, List.map sub args)
           | CPPderef e' -> CPPderef (sub e')
           | CPPmove e' -> CPPmove (sub e')
@@ -11092,9 +11269,14 @@ let replace_this_in_lambdas self_type stmts =
       | Tglob (self_ref, _, _) -> not (is_enum_inductive self_ref)
       | _ -> false
     in
-    (* Substitute CPPthis and CPPshared_from_this → CPPvar "_self" inside
-       by-value lambda bodies.  For value-type _self, also collapse
-       CPPderef(CPPthis) → CPPvar "_self" to avoid dereferencing a value. *)
+    (* For value-type methods, the loopifier uses "_self" as the name for the
+       receiver pointer (const T *_self = this / _f._self).  Using the same
+       name for the value copy would cause a redefinition conflict in loopified
+       methods.  Use "_self_val" for the value copy to avoid the clash. *)
+    let self_id = if is_value_self then Id.of_string "_self_val" else self_id in
+    (* Substitute CPPthis and CPPshared_from_this → CPPvar self_id inside
+       by-value lambda bodies.  For value-type _self_val, also collapse
+       CPPderef(CPPthis) → CPPvar self_id to avoid dereferencing a value. *)
     let rec subst_expr = function
       | CPPderef (CPPthis | CPPshared_from_this _) when is_value_self ->
         CPPvar self_id
@@ -11171,9 +11353,13 @@ and stmt_has_shared_from_this = function
   | Sasgn (_, _, e) -> expr_has_shared_from_this e
   | _ -> false
 
-(** Generate a single method from a method candidate. name: the containing
-    type's GlobRef vars: type variables of the containing type (func_ref, body,
-    ty, this_pos): the method candidate *)
+(** Generate a single method for an inductive type from a method candidate.
+    @param name     [GlobRef] of the containing inductive type
+    @param vars     Template type variables of the containing inductive
+    @param func_ref Rocq reference for the Rocq function being methodified
+    @param body     ML body of the function
+    @param ty       ML type of the function
+    @param this_pos 0-based index of the [this] argument in the parameter list *)
 let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let num_ind_vars = List.length vars in
   let func_name = Id.of_string (Common.pp_global_name Term func_ref) in
@@ -11297,6 +11483,40 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      signature, causing errors like: void method(tree t) { ... t0->v() ... }
      where 't0' in the body didn't exist as a parameter. *)
   let ids_with_types, inner_body = Mlutil.collect_lams body in
+  (* Eta-expansion: if the body has fewer lambdas than the ML type's domain,
+     add missing parameters (innermost first, named _x0, _x1, ...).
+     This handles functions like [tree_to_adder : tree -> nat -> nat] where
+     the body is a match expression returning closures rather than being
+     directly lambda-wrapped.  Mirrors the same logic in gen_dfun. *)
+  let rec get_method_dom l ty =
+    match ty with
+    | Tarr (t1, t2) -> get_method_dom (t1 :: l) t2
+    | _ -> l
+  in
+  let mldom_for_eta = get_method_dom [] ty in
+  let n_type_dom_eta = List.length mldom_for_eta in
+  let n_body_dom_eta = List.length ids_with_types in
+  let n_missing_eta = max 0 (n_type_dom_eta - n_body_dom_eta) in
+  let ids_with_types, inner_body =
+    if n_missing_eta = 0 then (ids_with_types, inner_body)
+    else
+      let missing_types = safe_firstn n_missing_eta mldom_for_eta in
+      let n_miss = List.length missing_types in
+      let missing =
+        List.mapi
+          (fun i t -> (Id (eta_param_id (n_miss - 1 - i)), t))
+          missing_types
+      in
+      let lifted_b = ast_lift n_missing_eta inner_body in
+      let args =
+        List.rev
+          (List.filter_map
+             (fun (i, (_, t)) ->
+               if isTdummy t then None else Some (MLrel (i + 1)) )
+             (List.mapi (fun i x -> (i, x)) missing) )
+      in
+      (missing @ ids_with_types, MLapp (lifted_b, args))
+  in
   let ids_converted =
     List.map
       (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
