@@ -1015,7 +1015,7 @@ let mark_higher_order_projections struc =
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
 *)
-let print_structure_to_file (fn, si, mo) dry struc =
+let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
   reset_renaming_tables AllButExternal;
@@ -1080,7 +1080,15 @@ let print_structure_to_file (fn, si, mo) dry struc =
       set_phase Impl;
       pp_with ft (header fn ());
       pp_with ft (d.preamble mo comment opened unsafe_needs);
+      ( match namespace with
+      | Some ns ->
+        pp_with ft (str ("namespace " ^ ns ^ " {") ++ fnl2 ())
+      | None -> () );
       pp_with ft (d.pp_struct struc);
+      ( match namespace with
+      | Some ns ->
+        pp_with ft (fnl () ++ str ("} // namespace " ^ ns) ++ fnl ())
+      | None -> () );
       (* If a [main] function returning a monad was found, it was renamed to
          [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
          calls [_main()->run()] to execute the ITree; in sequential mode (monad
@@ -1126,7 +1134,15 @@ let print_structure_to_file (fn, si, mo) dry struc =
           set_phase Intf;
           pp_with ft (spec_header (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+          ( match namespace with
+          | Some ns ->
+            pp_with ft (str ("namespace " ^ ns ^ " {") ++ fnl2 ())
+          | None -> () );
           pp_with ft (d.pp_hstruct struc);
+          ( match namespace with
+          | Some ns ->
+            pp_with ft (fnl () ++ str ("} // namespace " ^ ns) ++ fnl ())
+          | None -> () );
           pp_with ft (spec_footer (Some si) ());
           Format.pp_print_flush ft ();
           close_out cout
@@ -1147,7 +1163,15 @@ let print_structure_to_file (fn, si, mo) dry struc =
       set_phase Intf;
       pp_with ft (spec_header None ());
       pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+      ( match namespace with
+      | Some ns ->
+        pp_with ft (str ("namespace " ^ ns ^ " {") ++ fnl2 ())
+      | None -> () );
       pp_with ft (d.pp_hstruct struc);
+      ( match namespace with
+      | Some ns ->
+        pp_with ft (fnl () ++ str ("} // namespace " ^ ns) ++ fnl ())
+      | None -> () );
       Format.pp_print_flush ft ()
     with reraise ->
       Format.pp_print_flush ft ();
@@ -1313,9 +1337,66 @@ let separate_extraction ~opaque_access lr =
       struc
   in
   warns ();
+  (* Skip modules whose declarations are all custom-extracted (they would
+     produce empty files containing only boilerplate headers). *)
+  let decl_refs = function
+    | Dind (kn, _) -> [GlobRef.IndRef (kn, 0)]
+    | Dtype (r, _, _) | Dterm (r, _, _) -> [r]
+    | Dfix (rv, _, _) -> Array.to_list rv
+  in
+  let has_real_decls sel =
+    List.exists
+      (fun (_, se) ->
+        match se with
+        | SEdecl d ->
+          List.exists (fun r -> not (is_any_custom r)) (decl_refs d)
+        | SEmodule _ | SEmodtype _ -> true )
+      sel
+  in
+  (* Pre-register qualified names for modules that share the same leaf name
+     (e.g. Bar.Foo and Baz.Foo both have leaf "Foo"). *)
+  let real_mpfiles =
+    List.filter_map
+      (function
+        | (MPfile _ as mp, sel) -> if has_real_decls sel then Some mp else None
+        | _ -> None)
+      struc
+  in
+  let leaf_of = function
+    | MPfile f ->
+      String.capitalize_ascii (Id.to_string (List.hd (DirPath.repr f)))
+    | _ -> assert false
+  in
+  let parent_of = function
+    | MPfile f -> (
+      match List.tl (DirPath.repr f) with
+      | p :: _ -> Some (String.capitalize_ascii (Id.to_string p))
+      | [] -> None )
+    | _ -> assert false
+  in
+  (* Count how many modules share each leaf name *)
+  let leaf_counts = Hashtbl.create 16 in
+  List.iter
+    (fun mp ->
+      let l = leaf_of mp in
+      let c = try Hashtbl.find leaf_counts l with Not_found -> 0 in
+      Hashtbl.replace leaf_counts l (c + 1))
+    real_mpfiles;
+  (* For colliding leaf names, pre-register ParentLeaf as the output name *)
+  List.iter
+    (fun mp ->
+      let l = leaf_of mp in
+      if Hashtbl.find leaf_counts l > 1 then
+        let qualified =
+          match parent_of mp with Some p -> p ^ l | None -> l
+        in
+        preregister_modfile mp qualified)
+    real_mpfiles;
   let print = function
-    | ((MPfile dir as mp), sel) as e ->
-      print_structure_to_file (module_filename mp) false [e]
+    | ((MPfile _dir as mp), sel) as e ->
+      if has_real_decls sel then
+        let ns = file_of_modfile mp in
+        print_structure_to_file ~namespace:(Some ns) (module_filename mp) false [e]
     | (MPdot _ | MPbound _), _ -> assert false
   in
   List.iter print struc;

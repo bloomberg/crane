@@ -455,9 +455,11 @@ let mktable_modpath autoclean =
 let add_mpfiles_content, get_mpfiles_content, clear_mpfiles_content =
   mktable_modpath false
 
-(** Retrieve module file content, raising [Failure] if not registered. *)
+(** Retrieve module file content, returning an empty map when the module
+    has not been registered yet (e.g. during the Pre phase of Separate
+    Extraction where [pop_visible] has not yet populated the table). *)
 let get_mpfiles_content mp =
-  try get_mpfiles_content mp with Not_found -> failwith "get_mpfiles_content"
+  try get_mpfiles_content mp with Not_found -> KMap.empty
 
 (** The list of external modules that will be opened initially *)
 
@@ -692,8 +694,15 @@ let rec mp_renaming_fun full_mp =
     assert (modular ());
     (* see [at_toplevel] above *)
     assert (get_phase () == Pre);
-    let current_mpfile = (List.last (get_visible ())).mp in
-    if not (ModPath.equal full_mp current_mpfile) then mpfiles_add full_mp;
+    (* During Separate Extraction, the visibility stack may be empty when
+       mp_renaming_fun is called before do_struct_with_decl_tracking has
+       pushed the top-level module.  In that case we conservatively register
+       the file as an external dependency. *)
+    (match get_visible () with
+     | [] -> mpfiles_add full_mp
+     | vis ->
+       let current_mpfile = (List.last vis).mp in
+       if not (ModPath.equal full_mp current_mpfile) then mpfiles_add full_mp);
     [string_of_modfile full_mp]
 
 (** ... and its version using a cache *)

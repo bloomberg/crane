@@ -1329,6 +1329,16 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
   init_std_names ();
+  (* In Separate Extraction mode the visibility stack is empty when we enter
+     here, but analysis helpers (mp_renaming, top_visible, etc.) expect at
+     least one entry.  Push the top-level module paths now; they will be
+     popped at the end of this function.  The inner per-module push/pop in
+     [ppl] adds a second layer which is harmless. *)
+  let initial_mps =
+    List.filter_map
+      (fun (mp, _) -> if is_modfile mp then Some mp else None) s
+  in
+  List.iter (fun mp -> push_visible mp []) initial_mps;
   Common.detect_sibling_module_inductive_collisions s;
   method_registry := Some (Method_registry.create s);
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
@@ -1738,6 +1748,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   if not (modular ()) then
     repeat (List.length wrapper_names) pop_visible ();
+  (* Pop the initial visibility entries pushed at the top of this function. *)
+  List.iter (fun _ -> pop_visible ()) initial_mps;
   v 0 (p ++ pass2_post_pp ++ deferred_lifted ++ deferred_defs) ++ fnl ()
 
 (** Simple structure renderer without wrapper module handling. Used for

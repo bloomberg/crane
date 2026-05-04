@@ -195,7 +195,7 @@ let keywords =
     character interacts badly with the Format boxing mechanism *)
 
 (** Pretty-print an open directive for a module. *)
-let pp_open mp = str ("open " ^ string_of_modfile mp) ++ fnl ()
+let pp_open mp = str ("#include <" ^ string_of_modfile mp ^ ".h>") ++ fnl ()
 
 (** Pretty-print a comment with OCaml-style delimiters. *)
 let pp_comment s = str "(* " ++ hov 0 s ++ str " *)"
@@ -213,7 +213,8 @@ let preamble _ comment used_modules _usf =
   pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
 (** Generate preamble for signature/header files. *)
-let sig_preamble _ comment _used_modules _usf = pp_header_comment comment
+let sig_preamble _ comment used_modules _usf =
+  pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
 (** {2 The pretty-printer for C++ syntax} *)
 

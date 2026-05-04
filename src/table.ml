@@ -1547,15 +1547,32 @@ let string_of_modfile mp =
     modfile_mps := MPmap.add mp s' !modfile_mps;
     s'
 
+(** Pre-register a module file path with a specific output name.
+    Call before [string_of_modfile] / [file_of_modfile] to override
+    the default leaf-name-based naming.  Used by separate extraction
+    to qualify names when two modules share the same leaf name. *)
+let preregister_modfile mp name =
+  let id = Id.of_string name in
+  modfile_ids := Id.Set.add id !modfile_ids;
+  modfile_mps := MPmap.add mp name !modfile_mps
+
 (** Compute the full output file path for a module, preserving the original
-    capitalization of the first character. *)
+    capitalization of the first character when the output name is derived from
+    the leaf name alone.  When the name was pre-registered (e.g. qualified to
+    resolve a collision), return it unchanged. *)
 let file_of_modfile mp =
-  let s0 =
+  let sm = string_of_modfile mp in
+  let leaf =
     match mp with
     | MPfile f -> Id.to_string (List.hd (DirPath.repr f))
     | _ -> assert false
   in
-  String.mapi (fun i c -> if i = 0 then s0.[0] else c) (string_of_modfile mp)
+  (* Only patch the first character when sm is a variant of the leaf name
+     (same letters, possibly different casing). *)
+  if String.length sm > 0
+     && Char.uppercase_ascii sm.[0] = Char.uppercase_ascii leaf.[0]
+  then String.mapi (fun i c -> if i = 0 then leaf.[0] else c) sm
+  else sm
 
 let add_blacklist_entries l =
   blacklist_table :=
