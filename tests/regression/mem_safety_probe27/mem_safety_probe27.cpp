@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe27::tree_sum(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -78,7 +78,7 @@ unsigned int MemSafetyProbe27::tree_depth(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_depth: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {

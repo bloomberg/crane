@@ -50,7 +50,7 @@ List<unsigned int> LoopifySorting::insertion_sort(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified insertion_sort: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -163,7 +163,7 @@ List<unsigned int> LoopifySorting::merge_sort_fuel(
   using _Frame = std::variant<_Enter, _After_l1, _Combine_l1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified merge_sort_fuel: _Enter -> _After_l1 -> _Combine_l1.
   while (!_stack.empty()) {
@@ -231,7 +231,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifySorting::partition(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified partition: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -292,7 +292,7 @@ List<unsigned int> LoopifySorting::quicksort_fuel(
   using _Frame = std::variant<_Enter, _After_lo, _Combine_lo>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified quicksort_fuel: _Enter -> _After_lo -> _Combine_lo.
   while (!_stack.empty()) {

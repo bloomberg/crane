@@ -18,7 +18,7 @@ unsigned int LoopifyExpr::sum_shapes(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_shapes: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -80,7 +80,7 @@ LoopifyExpr::count_by_shape(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_by_shape: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

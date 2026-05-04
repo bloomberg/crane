@@ -59,6 +59,7 @@ struct EvenOdd {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -101,6 +102,7 @@ struct EvenOdd {
     // MANIPULATORS
     ~even_list() {
       std::vector<std::unique_ptr<even_list>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](even_list &_node) {
         if (std::holds_alternative<ECons>(_node.d_v_)) {
           auto &_alt = std::get<ECons>(_node.d_v_);
@@ -183,6 +185,7 @@ struct EvenOdd {
     // MANIPULATORS
     ~odd_list() {
       std::vector<std::unique_ptr<odd_list>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](odd_list &_node) {
         if (std::holds_alternative<OCons>(_node.d_v_)) {
           auto &_alt = std::get<OCons>(_node.d_v_);

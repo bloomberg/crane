@@ -57,6 +57,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -99,6 +100,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -182,6 +184,7 @@ struct NestedInd {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -228,6 +231,7 @@ struct NestedInd {
     // MANIPULATORS
     ~custom_list() {
       std::vector<std::unique_ptr<custom_list<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](custom_list<t_A> &_node) {
         if (std::holds_alternative<Ccons>(_node.d_v_)) {
           auto &_alt = std::get<Ccons>(_node.d_v_);
@@ -458,6 +462,7 @@ struct NestedInd {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -554,6 +559,7 @@ struct NestedInd {
     // MANIPULATORS
     ~expr() {
       std::vector<std::unique_ptr<expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<Add>(_node.d_v_)) {
           auto &_alt = std::get<Add>(_node.d_v_);

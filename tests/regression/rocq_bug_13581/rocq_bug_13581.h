@@ -58,6 +58,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -86,6 +87,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -194,6 +196,7 @@ struct RocqBug13581 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -244,6 +247,7 @@ struct RocqBug13581 {
     // MANIPULATORS
     ~I() {
       std::vector<std::unique_ptr<I<t_T>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](I<t_T> &_node) {
         if (std::holds_alternative<D>(_node.d_v_)) {
           auto &_alt = std::get<D>(_node.d_v_);
@@ -330,6 +334,7 @@ struct RocqBug13581 {
     // MANIPULATORS
     ~J() {
       std::vector<std::unique_ptr<J<t_T>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](J<t_T> &_node) {
         if (std::holds_alternative<E>(_node.d_v_)) {
           auto &_alt = std::get<E>(_node.d_v_);

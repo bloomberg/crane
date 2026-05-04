@@ -60,6 +60,7 @@ struct MutualIndexed {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -103,6 +104,7 @@ struct MutualIndexed {
     // MANIPULATORS
     ~EvenTree() {
       std::vector<std::unique_ptr<EvenTree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](EvenTree &_node) {
         if (std::holds_alternative<ENode>(_node.d_v_)) {
           auto &_alt = std::get<ENode>(_node.d_v_);
@@ -187,6 +189,7 @@ struct MutualIndexed {
     // MANIPULATORS
     ~OddTree() {
       std::vector<std::unique_ptr<OddTree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](OddTree &_node) {
         if (std::holds_alternative<ONode>(_node.d_v_)) {
           auto &_alt = std::get<ONode>(_node.d_v_);

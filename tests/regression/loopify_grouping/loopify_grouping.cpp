@@ -42,7 +42,7 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified group_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -130,7 +130,7 @@ List<unsigned int> LoopifyGrouping::nub(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified nub: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -215,7 +215,7 @@ LoopifyGrouping::partition3(
             List<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified partition3: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -279,7 +279,7 @@ unsigned int LoopifyGrouping::count_elem(
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_elem: _Enter -> _Resume1.
   while (!_stack.empty()) {

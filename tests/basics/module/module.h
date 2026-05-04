@@ -100,6 +100,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -136,6 +137,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);

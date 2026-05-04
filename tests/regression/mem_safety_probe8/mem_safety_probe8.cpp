@@ -30,7 +30,7 @@ unsigned int MemSafetyProbe8::tree_sum_ext(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t, _x});
   /// Loopified tree_sum_ext: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -91,7 +91,7 @@ unsigned int MemSafetyProbe8::tree_weighted(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{depth, &t, _x});
   /// Loopified tree_weighted: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -191,7 +191,7 @@ unsigned int MemSafetyProbe8::tree_flatten(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t, _x});
   /// Loopified tree_flatten: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -247,7 +247,7 @@ MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{t0, _x});
     /// Loopified go: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {

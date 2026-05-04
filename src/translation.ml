@@ -12519,6 +12519,8 @@ let gen_ind_header_v2
             let body =
               [
                 Sdecl_init (stack_id, stack_ty);
+                Sexpr (CPPdot_method_call
+                  (CPPvar stack_id, Id.of_string "reserve", [CPPint 8]));
                 Sasgn
                   ( drain_id,
                     Some Tauto,
@@ -13395,6 +13397,8 @@ let gen_ind_header_v2
                           ( frame_id,
                             [(src_id, src_ptr_ty); (dst_id, dst_ptr_ty)] );
                         Sdecl_init (stack_id, stack_ty);
+                        Sexpr (CPPdot_method_call
+                          (CPPvar stack_id, Id.of_string "reserve", [CPPint 8]));
                         Sexpr
                           (CPPdot_method_call
                              ( CPPvar stack_id,

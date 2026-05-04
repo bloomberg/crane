@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -194,6 +196,7 @@ struct LoopifyExpr {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -278,6 +281,7 @@ struct LoopifyExpr {
     // MANIPULATORS
     ~expr() {
       std::vector<std::unique_ptr<expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<Succ>(_node.d_v_)) {
           auto &_alt = std::get<Succ>(_node.d_v_);
@@ -742,7 +746,7 @@ struct LoopifyExpr {
                                   _Combine_Cond, _Combine_Mul, _Resume_Succ>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified size: _Enter -> _After_Add -> _After_Cond -> _After_Cond_1
       /// -> _After_Mul -> _Combine_Add -> _Combine_Cond -> _Combine_Mul ->
@@ -862,7 +866,7 @@ struct LoopifyExpr {
                        _After_Mul, _Combine_Add, _Combine_Cond, _Combine_Mul>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified count_vals: _Enter -> _After_Add -> _After_Cond ->
       /// _After_Cond_1 -> _After_Mul -> _Combine_Add -> _Combine_Cond ->
@@ -981,7 +985,7 @@ struct LoopifyExpr {
                                   _Combine_Cond, _Combine_Mul, _Resume_Succ>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified depth: _Enter -> _After_Add -> _After_Cond -> _After_Cond_1
       /// -> _After_Mul -> _Combine_Add -> _Combine_Cond -> _Combine_Mul ->
@@ -1161,7 +1165,7 @@ struct LoopifyExpr {
                                   _Combine_Cond, _Combine_Mul, _Resume_Succ>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified expr_rec: _Enter -> _After_Add -> _After_Cond ->
       /// _After_Cond_1 -> _After_Mul -> _Combine_Add -> _Combine_Cond ->
@@ -1323,7 +1327,7 @@ struct LoopifyExpr {
                                   _Combine_Cond, _Combine_Mul, _Resume_Succ>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified expr_rect: _Enter -> _After_Add -> _After_Cond ->
       /// _After_Cond_1 -> _After_Mul -> _Combine_Add -> _Combine_Cond ->
@@ -1457,6 +1461,7 @@ struct LoopifyExpr {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1518,6 +1523,7 @@ struct LoopifyExpr {
     // MANIPULATORS
     ~simple_expr() {
       std::vector<std::unique_ptr<simple_expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](simple_expr &_node) {
         if (std::holds_alternative<Plus>(_node.d_v_)) {
           auto &_alt = std::get<Plus>(_node.d_v_);
@@ -1599,7 +1605,7 @@ struct LoopifyExpr {
                                   _After_Plus, _Combine_IfPos, _Combine_Plus>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified depth_simple: _Enter -> _After_IfPos -> _After_IfPos_1 ->
       /// _After_Plus -> _Combine_IfPos -> _Combine_Plus.
@@ -1733,7 +1739,7 @@ struct LoopifyExpr {
                                   _After_Plus, _Combine_IfPos, _Combine_Plus>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified simple_expr_rec: _Enter -> _After_IfPos -> _After_IfPos_1 ->
       /// _After_Plus -> _Combine_IfPos -> _Combine_Plus.
@@ -1852,7 +1858,7 @@ struct LoopifyExpr {
                                   _After_Plus, _Combine_IfPos, _Combine_Plus>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified simple_expr_rect: _Enter -> _After_IfPos -> _After_IfPos_1
       /// -> _After_Plus -> _Combine_IfPos -> _Combine_Plus.
@@ -2091,6 +2097,7 @@ struct LoopifyExpr {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -2152,6 +2159,7 @@ struct LoopifyExpr {
     // MANIPULATORS
     ~cond_expr() {
       std::vector<std::unique_ptr<cond_expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](cond_expr &_node) {
         if (std::holds_alternative<CPlus>(_node.d_v_)) {
           auto &_alt = std::get<CPlus>(_node.d_v_);
@@ -2233,7 +2241,7 @@ struct LoopifyExpr {
                                   _After_CPlus, _Combine_CCond, _Combine_CPlus>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified depth_cond: _Enter -> _After_CCond -> _After_CCond_1 ->
       /// _After_CPlus -> _Combine_CCond -> _Combine_CPlus.
@@ -2366,7 +2374,7 @@ struct LoopifyExpr {
                                   _After_CPlus, _Combine_CCond, _Combine_CPlus>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified cond_expr_rec: _Enter -> _After_CCond -> _After_CCond_1 ->
       /// _After_CPlus -> _Combine_CCond -> _Combine_CPlus.
@@ -2485,7 +2493,7 @@ struct LoopifyExpr {
                                   _After_CPlus, _Combine_CCond, _Combine_CPlus>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified cond_expr_rect: _Enter -> _After_CCond -> _After_CCond_1 ->
       /// _After_CPlus -> _Combine_CCond -> _Combine_CPlus.

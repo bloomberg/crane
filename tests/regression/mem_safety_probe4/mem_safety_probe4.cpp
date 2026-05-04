@@ -20,7 +20,7 @@ unsigned int MemSafetyProbe4::sum_through(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_through: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -66,7 +66,7 @@ unsigned int MemSafetyProbe4::add_through(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified add_through: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -104,7 +104,7 @@ unsigned int MemSafetyProbe4::double_partial(
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    MemSafetyProbe4::mylist<MemSafetyProbe4::tree> l;
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };
 
   /// _Resume_Mycons: saves [_s0, f], resumes after recursive call with _result.
@@ -116,15 +116,15 @@ unsigned int MemSafetyProbe4::double_partial(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
   /// Loopified double_partial: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = _f.l;
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -143,7 +143,7 @@ unsigned int MemSafetyProbe4::double_partial(
           return d_a0.sum_values(_x0);
         };
         _stack.emplace_back(_Resume_Mycons{g(0u), std::move(f)});
-        _stack.emplace_back(_Enter{d_a1_value});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -160,7 +160,7 @@ unsigned int MemSafetyProbe4::weighted_sum(
 
   struct _Enter {
     unsigned int w;
-    MemSafetyProbe4::mylist<MemSafetyProbe4::tree> l;
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };
 
   /// _Resume_Mycons: saves [w], resumes after recursive call with _result.
@@ -171,8 +171,8 @@ unsigned int MemSafetyProbe4::weighted_sum(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{w, l});
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{w, &l});
   /// Loopified weighted_sum: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -180,7 +180,7 @@ unsigned int MemSafetyProbe4::weighted_sum(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const unsigned int w = _f.w;
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = _f.l;
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -195,7 +195,7 @@ unsigned int MemSafetyProbe4::weighted_sum(
           return d_a0.sum_values(_x0);
         };
         _stack.emplace_back(_Resume_Mycons{f(w)});
-        _stack.emplace_back(_Enter{f(0u), d_a1_value});
+        _stack.emplace_back(_Enter{f(0u), d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -255,7 +255,7 @@ unsigned int MemSafetyProbe4::mysum(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified mysum: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -287,7 +287,7 @@ unsigned int MemSafetyProbe4::process_list(
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    MemSafetyProbe4::mylist<MemSafetyProbe4::tree> l;
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
   };
 
   /// _Resume_Mycons: saves [f], resumes after recursive call with _result.
@@ -298,15 +298,15 @@ unsigned int MemSafetyProbe4::process_list(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
-  _stack.emplace_back(_Enter{l});
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
   /// Loopified process_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = _f.l;
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -321,7 +321,7 @@ unsigned int MemSafetyProbe4::process_list(
           return d_a0.sum_values(_x0);
         };
         _stack.emplace_back(_Resume_Mycons{std::move(f)});
-        _stack.emplace_back(_Enter{d_a1_value});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));

@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -205,6 +207,7 @@ struct DeepPatterns {
     // MANIPULATORS
     ~outer() {
       std::vector<std::unique_ptr<outer>> _stack{};
+      _stack.reserve(8);
       auto _drain = [](outer &_node) {
         if (std::holds_alternative<OLeft>(_node.d_v_)) {
           auto &_alt = std::get<OLeft>(_node.d_v_);
@@ -472,6 +475,7 @@ struct DeepPatterns {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -516,6 +520,7 @@ struct DeepPatterns {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Cons>(_node.d_v_)) {
           auto &_alt = std::get<Cons>(_node.d_v_);

@@ -17,7 +17,7 @@ unsigned int LoopifyComparators::maximum_by(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified maximum_by: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -70,7 +70,7 @@ unsigned int LoopifyComparators::minimum_by(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified minimum_by: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -219,7 +219,7 @@ List<unsigned int> LoopifyComparators::insertion_sort(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified insertion_sort: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

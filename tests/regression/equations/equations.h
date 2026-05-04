@@ -157,6 +157,7 @@ struct Equations {
     // MANIPULATORS
     ~gcd_graph() {
       std::vector<std::unique_ptr<gcd_graph>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](gcd_graph &_node) {
         if (std::holds_alternative<Gcd_graph_refinement_3>(_node.d_v_)) {
           auto &_alt = std::get<Gcd_graph_refinement_3>(_node.d_v_);
@@ -287,6 +288,7 @@ struct Equations {
     // MANIPULATORS
     ~gcd_clause_3_graph() {
       std::vector<std::unique_ptr<gcd_clause_3_graph>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](gcd_clause_3_graph &_node) {
         if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_node.d_v_)) {
           auto &_alt = std::get<Gcd_clause_3_graph_equation_1>(_node.d_v_);
@@ -665,6 +667,7 @@ struct Equations {
     // MANIPULATORS
     ~collatz_steps_graph() {
       std::vector<std::unique_ptr<collatz_steps_graph>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](collatz_steps_graph &_node) {
         if (std::holds_alternative<Collatz_steps_graph_refinement_3>(
                 _node.d_v_)) {
@@ -807,6 +810,7 @@ struct Equations {
     // MANIPULATORS
     ~collatz_steps_clause_3_graph() {
       std::vector<std::unique_ptr<collatz_steps_clause_3_graph>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](collatz_steps_clause_3_graph &_node) {
         if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(
                 _node.d_v_)) {

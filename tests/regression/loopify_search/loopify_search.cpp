@@ -68,7 +68,7 @@ std::pair<unsigned int, unsigned int> LoopifySearch::majority(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified majority: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -378,7 +378,7 @@ unsigned int LoopifySearch::collatz_fuel(
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -687,7 +687,7 @@ List<unsigned int> LoopifySearch::quicksort_fuel(
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified quicksort_fuel: _Enter -> _After_Cons -> _Combine_Cons.
   while (!_stack.empty()) {
@@ -753,7 +753,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifySearch::split_list(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified split_list: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -884,7 +884,7 @@ List<unsigned int> LoopifySearch::merge_sort_fuel(
   using _Frame = std::variant<_Enter, _After_a, _Combine_a>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified merge_sort_fuel: _Enter -> _After_a -> _Combine_a.
   while (!_stack.empty()) {
@@ -1037,7 +1037,7 @@ List<List<unsigned int>> LoopifySearch::perms_choices_fuel(
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{orig, choices, fuel});
   /// Loopified perms_choices_fuel: _Enter -> _After_Cons -> _Combine_Cons ->
   /// _Resume_Nil.
@@ -1198,7 +1198,7 @@ unsigned int LoopifySearch::min_element(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified min_element: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

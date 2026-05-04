@@ -19,7 +19,7 @@ unsigned int LoopifyItreeReified::count_taus(
   using _Frame = std::variant<_Enter, _Resume_t_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{t, fuel});
   /// Loopified count_taus: _Enter -> _Resume_t_.
   while (!_stack.empty()) {

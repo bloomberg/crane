@@ -60,6 +60,7 @@ struct OptionalSelfDeepCopy {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -98,6 +99,7 @@ struct OptionalSelfDeepCopy {
     // MANIPULATORS
     ~chain() {
       std::vector<std::unique_ptr<chain>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<More>(_node.d_v_)) {
           auto &_alt = std::get<More>(_node.d_v_);

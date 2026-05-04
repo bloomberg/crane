@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe23::tree_sum(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -78,7 +78,7 @@ unsigned int MemSafetyProbe23::tree_size(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_size: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -248,7 +248,7 @@ unsigned int MemSafetyProbe23::flatten_tree_of_trees(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{inner, &t});
   /// Loopified flatten_tree_of_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -311,7 +311,7 @@ unsigned int MemSafetyProbe23::mixed_recurse(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, t});
   /// Loopified mixed_recurse: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {

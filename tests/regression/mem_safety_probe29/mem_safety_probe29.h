@@ -58,6 +58,7 @@ struct MemSafetyProbe29 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -94,6 +95,7 @@ struct MemSafetyProbe29 {
     // MANIPULATORS
     ~inner() {
       std::vector<std::unique_ptr<inner>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](inner &_node) {
         if (std::holds_alternative<INode>(_node.d_v_)) {
           auto &_alt = std::get<INode>(_node.d_v_);
@@ -145,7 +147,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
       inner _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified double_inner: _Enter -> _After_INode -> _Combine_INode.
       while (!_stack.empty()) {
@@ -199,7 +201,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified inner_sum: _Enter -> _After_INode -> _Combine_INode.
       while (!_stack.empty()) {
@@ -261,7 +263,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified inner_rec: _Enter -> _After_INode -> _Combine_INode.
       while (!_stack.empty()) {
@@ -325,7 +327,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified inner_rect: _Enter -> _After_INode -> _Combine_INode.
       while (!_stack.empty()) {
@@ -407,6 +409,7 @@ struct MemSafetyProbe29 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -443,6 +446,7 @@ struct MemSafetyProbe29 {
     // MANIPULATORS
     ~outer() {
       std::vector<std::unique_ptr<outer>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](outer &_node) {
         if (std::holds_alternative<ONode>(_node.d_v_)) {
           auto &_alt = std::get<ONode>(_node.d_v_);
@@ -498,7 +502,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
       outer _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified transform_outer: _Enter -> _After_ONode -> _Combine_ONode.
       while (!_stack.empty()) {
@@ -552,7 +556,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified outer_sum: _Enter -> _After_ONode -> _Combine_ONode.
       while (!_stack.empty()) {
@@ -614,7 +618,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified outer_rec: _Enter -> _After_ONode -> _Combine_ONode.
       while (!_stack.empty()) {
@@ -679,7 +683,7 @@ struct MemSafetyProbe29 {
       using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified outer_rect: _Enter -> _After_ONode -> _Combine_ONode.
       while (!_stack.empty()) {
@@ -776,6 +780,7 @@ struct MemSafetyProbe29 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -839,6 +844,7 @@ struct MemSafetyProbe29 {
     // MANIPULATORS
     ~expr() {
       std::vector<std::unique_ptr<expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<Neg>(_node.d_v_)) {
           auto &_alt = std::get<Neg>(_node.d_v_);
@@ -920,7 +926,7 @@ struct MemSafetyProbe29 {
                                   _Combine_Mul>;
       inner _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified expr_to_inner: _Enter -> _After_Add -> _After_Mul ->
       /// _Combine_Add -> _Combine_Mul.
@@ -1003,7 +1009,7 @@ struct MemSafetyProbe29 {
                                   _Combine_Mul, _Resume_Neg>;
       expr _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified double_expr: _Enter -> _After_Add -> _After_Mul ->
       /// _Combine_Add -> _Combine_Mul -> _Resume_Neg.
@@ -1086,7 +1092,7 @@ struct MemSafetyProbe29 {
                                   _Combine_Mul>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified eval_expr: _Enter -> _After_Add -> _After_Mul ->
       /// _Combine_Add -> _Combine_Mul.
@@ -1185,7 +1191,7 @@ struct MemSafetyProbe29 {
                                   _Combine_Mul, _Resume_Neg>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified expr_rec: _Enter -> _After_Add -> _After_Mul -> _Combine_Add
       /// -> _Combine_Mul -> _Resume_Neg.
@@ -1290,7 +1296,7 @@ struct MemSafetyProbe29 {
                                   _Combine_Mul, _Resume_Neg>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified expr_rect: _Enter -> _After_Add -> _After_Mul ->
       /// _Combine_Add -> _Combine_Mul -> _Resume_Neg.
@@ -1392,6 +1398,7 @@ struct MemSafetyProbe29 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1434,6 +1441,7 @@ struct MemSafetyProbe29 {
     // MANIPULATORS
     ~tree3() {
       std::vector<std::unique_ptr<tree3>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree3 &_node) {
         if (std::holds_alternative<T3Node>(_node.d_v_)) {
           auto &_alt = std::get<T3Node>(_node.d_v_);
@@ -1498,7 +1506,7 @@ struct MemSafetyProbe29 {
           std::variant<_Enter, _After_T3Node, _After_T3Node_1, _Combine_T3Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree3_sum: _Enter -> _After_T3Node -> _After_T3Node_1 ->
       /// _Combine_T3Node.
@@ -1581,7 +1589,7 @@ struct MemSafetyProbe29 {
           std::variant<_Enter, _After_T3Node, _After_T3Node_1, _Combine_T3Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree3_rec: _Enter -> _After_T3Node -> _After_T3Node_1 ->
       /// _Combine_T3Node.
@@ -1670,7 +1678,7 @@ struct MemSafetyProbe29 {
           std::variant<_Enter, _After_T3Node, _After_T3Node_1, _Combine_T3Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree3_rect: _Enter -> _After_T3Node -> _After_T3Node_1 ->
       /// _Combine_T3Node.

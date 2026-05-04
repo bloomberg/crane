@@ -57,6 +57,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -99,6 +100,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -254,6 +256,7 @@ struct FunctionVernac {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -298,6 +301,7 @@ struct FunctionVernac {
     // MANIPULATORS
     ~R_div2() {
       std::vector<std::unique_ptr<R_div2>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](R_div2 &_node) {
         if (std::holds_alternative<R_div2_2>(_node.d_v_)) {
           auto &_alt = std::get<R_div2_2>(_node.d_v_);
@@ -472,6 +476,7 @@ struct FunctionVernac {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -511,6 +516,7 @@ struct FunctionVernac {
     // MANIPULATORS
     ~R_list_sum() {
       std::vector<std::unique_ptr<R_list_sum>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](R_list_sum &_node) {
         if (std::holds_alternative<R_list_sum_1>(_node.d_v_)) {
           auto &_alt = std::get<R_list_sum_1>(_node.d_v_);

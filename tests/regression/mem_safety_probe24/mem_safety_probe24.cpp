@@ -16,7 +16,7 @@ unsigned int MemSafetyProbe24::sum_list(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -67,7 +67,7 @@ MemSafetyProbe24::mylist<unsigned int> MemSafetyProbe24::tree_to_list(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe24::mylist<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_to_list: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -154,7 +154,7 @@ MemSafetyProbe24::zip_trees(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe24::mylist<std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t2, &t1});
   /// Loopified zip_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {

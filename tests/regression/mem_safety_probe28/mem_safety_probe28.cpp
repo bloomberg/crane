@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe28::tree_sum(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -78,7 +78,7 @@ unsigned int MemSafetyProbe28::tree_depth(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_depth: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -160,7 +160,7 @@ unsigned int MemSafetyProbe28::zip_trees(
                               _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{t2, &t1});
   /// Loopified zip_trees: _Enter -> _After_Leaf -> _After_Node -> _Combine_Leaf
   /// -> _Combine_Node.
@@ -252,7 +252,7 @@ unsigned int MemSafetyProbe28::zip_depth(
                               _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{t2, &t1});
   /// Loopified zip_depth: _Enter -> _After_Leaf -> _After_Node -> _Combine_Leaf
   /// -> _Combine_Node.
@@ -353,7 +353,7 @@ unsigned int MemSafetyProbe28::zip_and_sum(
                               _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{t2, &t1});
   /// Loopified zip_and_sum: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
@@ -449,7 +449,7 @@ unsigned int MemSafetyProbe28::double_zip(
                               _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t2, &t1});
   /// Loopified double_zip: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
@@ -540,7 +540,7 @@ List<unsigned int> MemSafetyProbe28::zip_collect(
                               _Resume_Node, _Resume_Node_1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{acc, t2, &t1});
   /// Loopified zip_collect: _Enter -> _Resume_Leaf -> _Resume_Leaf_1 ->
   /// _Resume_Node -> _Resume_Node_1.
@@ -608,7 +608,7 @@ unsigned int MemSafetyProbe28::list_sum(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -676,7 +676,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
                               _Combine_Node>;
   MemSafetyProbe28::tree _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{t2, &t1});
   /// Loopified merge_trees: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
@@ -749,7 +749,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::build_balanced(
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
   MemSafetyProbe28::tree _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified build_balanced: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {

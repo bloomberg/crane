@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -221,6 +223,7 @@ struct CPS {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -257,6 +260,7 @@ struct CPS {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);

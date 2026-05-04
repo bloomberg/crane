@@ -58,6 +58,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -100,6 +101,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons0>(_node.d_v_)) {
         auto &_alt = std::get<Cons0>(_node.d_v_);
@@ -429,6 +431,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -460,6 +463,7 @@ public:
   // MANIPULATORS
   ~T() {
     std::vector<std::unique_ptr<T>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](T &_node) {
       if (std::holds_alternative<FS>(_node.d_v_)) {
         auto &_alt = std::get<FS>(_node.d_v_);
@@ -728,6 +732,7 @@ struct PendantSumtreeRoundtripCase {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -799,6 +804,7 @@ struct PendantSumtreeRoundtripCase {
     // MANIPULATORS
     ~SumTree() {
       std::vector<std::unique_ptr<SumTree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](SumTree &_node) {
         if (std::holds_alternative<SumNode>(_node.d_v_)) {
           auto &_alt = std::get<SumNode>(_node.d_v_);

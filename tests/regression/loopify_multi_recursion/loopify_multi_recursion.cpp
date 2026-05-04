@@ -36,7 +36,7 @@ unsigned int LoopifyMultiRecursion::mixed_arith_fuel(
   using _Frame = std::variant<_Enter, _After1, _After2, _Combine3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified mixed_arith_fuel: _Enter -> _After1 -> _After2 -> _Combine3.
   while (!_stack.empty()) {
@@ -120,7 +120,7 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified bool_or_chain_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -191,7 +191,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified bool_and_chain_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -275,7 +275,7 @@ unsigned int LoopifyMultiRecursion::quad_count_leaves(
                               _After_QQuad_2, _Combine_QQuad>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified quad_count_leaves: _Enter -> _After_QQuad -> _After_QQuad_1 ->
   /// _After_QQuad_2 -> _Combine_QQuad.
@@ -362,7 +362,7 @@ unsigned int LoopifyMultiRecursion::quad_depth(
                               _After_QQuad_2, _Combine_QQuad>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified quad_depth: _Enter -> _After_QQuad -> _After_QQuad_1 ->
   /// _After_QQuad_2 -> _Combine_QQuad.
@@ -449,7 +449,7 @@ unsigned int LoopifyMultiRecursion::hofstadter_q_fuel(
   using _Frame = std::variant<_Enter, _After4, _Combine3, _Cont1, _Cont2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified hofstadter_q_fuel: _Enter -> _After4 -> _Combine3 -> _Cont1 ->
   /// _Cont2.

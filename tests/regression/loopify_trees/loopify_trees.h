@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -195,6 +197,7 @@ struct LoopifyTrees {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -245,6 +248,7 @@ struct LoopifyTrees {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree<t_A> &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -298,7 +302,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       tree<T1> _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_map: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -355,7 +359,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       bool _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self, &t2});
       /// Loopified mirror_equal: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -421,7 +425,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       List<t_A> _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_to_list: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -474,7 +478,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified count_leaves: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -602,7 +606,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       tree<t_A> _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified mirror: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -654,7 +658,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_size: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -730,7 +734,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -794,7 +798,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -888,6 +892,7 @@ struct LoopifyTrees {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -930,6 +935,7 @@ struct LoopifyTrees {
     // MANIPULATORS
     ~ternary() {
       std::vector<std::unique_ptr<ternary>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](ternary &_node) {
         if (std::holds_alternative<TNode>(_node.d_v_)) {
           auto &_alt = std::get<TNode>(_node.d_v_);
@@ -1019,7 +1025,7 @@ struct LoopifyTrees {
           std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified ternary_sum: _Enter -> _After_TNode -> _After_TNode_1 ->
       /// _Combine_TNode.
@@ -1102,7 +1108,7 @@ struct LoopifyTrees {
           std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified ternary_rec: _Enter -> _After_TNode -> _After_TNode_1 ->
       /// _Combine_TNode.
@@ -1191,7 +1197,7 @@ struct LoopifyTrees {
           std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified ternary_rect: _Enter -> _After_TNode -> _After_TNode_1 ->
       /// _Combine_TNode.
@@ -1277,6 +1283,7 @@ struct LoopifyTrees {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1329,6 +1336,7 @@ struct LoopifyTrees {
     // MANIPULATORS
     ~rose() {
       std::vector<std::unique_ptr<rose>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](rose &_node) {
         if (std::holds_alternative<RNode>(_node.d_v_)) {
           auto &_alt = std::get<RNode>(_node.d_v_);
@@ -1547,6 +1555,7 @@ struct LoopifyTrees {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1595,6 +1604,7 @@ struct LoopifyTrees {
     // MANIPULATORS
     ~quadtree() {
       std::vector<std::unique_ptr<quadtree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](quadtree &_node) {
         if (std::holds_alternative<Quad>(_node.d_v_)) {
           auto &_alt = std::get<Quad>(_node.d_v_);
@@ -1671,7 +1681,7 @@ struct LoopifyTrees {
                                   _After_Quad_2, _Combine_Quad>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quad_depth: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -1758,7 +1768,7 @@ struct LoopifyTrees {
                                   _After_Quad_2, _Combine_Quad>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quad_sum: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -1864,7 +1874,7 @@ struct LoopifyTrees {
                                   _After_Quad_2, _Combine_Quad>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quadtree_rec: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -1977,7 +1987,7 @@ struct LoopifyTrees {
                                   _After_Quad_2, _Combine_Quad>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quadtree_rect: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -2082,6 +2092,7 @@ struct LoopifyTrees {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -2121,6 +2132,7 @@ struct LoopifyTrees {
     // MANIPULATORS
     ~simple_tree() {
       std::vector<std::unique_ptr<simple_tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](simple_tree &_node) {
         if (std::holds_alternative<SNode>(_node.d_v_)) {
           auto &_alt = std::get<SNode>(_node.d_v_);
@@ -2175,7 +2187,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After2, _Combine1>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self, n});
       /// Loopified count_paths_simple: _Enter -> _After2 -> _Combine1.
       while (!_stack.empty()) {
@@ -2240,7 +2252,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_SNode, _Combine_SNode>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified simple_tree_sum: _Enter -> _After_SNode -> _Combine_SNode.
       while (!_stack.empty()) {
@@ -2301,7 +2313,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_SNode, _Combine_SNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified simple_tree_rec: _Enter -> _After_SNode -> _Combine_SNode.
       while (!_stack.empty()) {
@@ -2363,7 +2375,7 @@ struct LoopifyTrees {
       using _Frame = std::variant<_Enter, _After_SNode, _Combine_SNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified simple_tree_rect: _Enter -> _After_SNode -> _Combine_SNode.
       while (!_stack.empty()) {

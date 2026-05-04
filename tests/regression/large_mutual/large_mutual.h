@@ -82,6 +82,7 @@ struct LargeMutual {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -164,6 +165,7 @@ struct LargeMutual {
     // MANIPULATORS
     ~stmt() {
       std::vector<std::unique_ptr<stmt>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](stmt &_node) {
         if (std::holds_alternative<SSeq>(_node.d_v_)) {
           auto &_alt = std::get<SSeq>(_node.d_v_);
@@ -276,6 +278,7 @@ struct LargeMutual {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -353,6 +356,7 @@ struct LargeMutual {
     // MANIPULATORS
     ~expr() {
       std::vector<std::unique_ptr<expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<EAdd>(_node.d_v_)) {
           auto &_alt = std::get<EAdd>(_node.d_v_);
@@ -476,6 +480,7 @@ struct LargeMutual {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -570,6 +575,7 @@ struct LargeMutual {
     // MANIPULATORS
     ~bexpr() {
       std::vector<std::unique_ptr<bexpr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](bexpr &_node) {
         if (std::holds_alternative<BAnd>(_node.d_v_)) {
           auto &_alt = std::get<BAnd>(_node.d_v_);

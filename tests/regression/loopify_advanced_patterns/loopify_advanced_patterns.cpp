@@ -16,7 +16,7 @@ unsigned int LoopifyAdvancedPatterns::len_impl(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -94,7 +94,7 @@ unsigned int LoopifyAdvancedPatterns::multi_guard(
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified multi_guard: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -147,7 +147,7 @@ unsigned int LoopifyAdvancedPatterns::four_elem(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified four_elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -214,7 +214,7 @@ unsigned int LoopifyAdvancedPatterns::nested_pattern(
   using _Frame = std::variant<_Enter, _Resume_a>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified nested_pattern: _Enter -> _Resume_a.
   while (!_stack.empty()) {
@@ -351,7 +351,7 @@ unsigned int LoopifyAdvancedPatterns::sum_shapes(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_shapes: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -396,7 +396,7 @@ LoopifyAdvancedPatterns::count_by_shape(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_by_shape: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

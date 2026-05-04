@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -200,6 +202,7 @@ struct Matcher {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -275,6 +278,7 @@ struct Matcher {
     // MANIPULATORS
     ~regexp() {
       std::vector<std::unique_ptr<regexp>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](regexp &_node) {
         if (std::holds_alternative<Cat>(_node.d_v_)) {
           auto &_alt = std::get<Cat>(_node.d_v_);

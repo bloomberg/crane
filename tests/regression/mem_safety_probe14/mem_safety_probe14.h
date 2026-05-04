@@ -67,6 +67,7 @@ struct MemSafetyProbe14 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -103,6 +104,7 @@ struct MemSafetyProbe14 {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -221,7 +223,7 @@ struct MemSafetyProbe14 {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -283,7 +285,7 @@ struct MemSafetyProbe14 {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -347,7 +349,7 @@ struct MemSafetyProbe14 {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -427,6 +429,7 @@ struct MemSafetyProbe14 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -472,6 +475,7 @@ struct MemSafetyProbe14 {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Mycons>(_node.d_v_)) {
           auto &_alt = std::get<Mycons>(_node.d_v_);
@@ -544,7 +548,7 @@ struct MemSafetyProbe14 {
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
       while (!_stack.empty()) {
@@ -591,7 +595,7 @@ struct MemSafetyProbe14 {
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
       while (!_stack.empty()) {

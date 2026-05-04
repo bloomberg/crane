@@ -1037,12 +1037,29 @@ let tail_shadow_arg shadow_ty arg =
     as that argument.  This guarantees the pointer shadow will always point at a
     live object.
 
+    When [binding_env] is supplied, [CPPvar x] at a call site is accepted as
+    pointer-safe if [x] is bound to [CPPderef _] in that environment — i.e., if
+    the caller wrote [x = *(sp)] and then passed [x] instead of [*(sp)] directly.
+    This handles the common case where translation.ml introduces an intermediate
+    binding to deduplicate multi-use values.
+
     @return A bool list parallel to [params]: [true] = can use [const T*] shadow *)
-let tail_pointer_safe_flags check params body =
+let tail_pointer_safe_flags check params body ?(binding_env = []) () =
   let calls = collect_stmts check ~in_visitor:false body in
   if calls = [] then
     List.map (fun _ -> false) params
   else
+    let is_safe_arg id arg =
+      match arg with
+      | CPPderef _ -> true
+      | CPPvar arg_id when Id.equal arg_id id -> true
+      | CPPvar x ->
+        (* Look through: if x = *(sp) in scope, treat as CPPderef *)
+        (match List.assoc_opt x binding_env with
+         | Some (CPPderef _) -> true
+         | _ -> false)
+      | _ -> false
+    in
     List.mapi
       (fun i (id, ty) ->
         match borrowed_value_param_pointee ty with
@@ -1051,9 +1068,8 @@ let tail_pointer_safe_flags check params body =
           List.for_all
             (fun cs ->
               match List.nth_opt cs.cs_args i with
-              | Some (CPPderef _) -> true
-              | Some (CPPvar arg_id) -> Id.equal arg_id id
-              | _ -> false)
+              | Some arg -> is_safe_arg id arg
+              | None -> false)
             calls)
       params
 
@@ -1642,7 +1658,7 @@ type shadow_setup = {
     @return {!shadow_setup} record consumed by the caller *)
 let build_shadow_setup check params body =
   let varying = find_varying_params check params body in
-  let pointer_safe = tail_pointer_safe_flags check params body in
+  let pointer_safe = tail_pointer_safe_flags check params body () in
   let varying_params = filter_by_mask varying params in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
   let shadow_params =
@@ -2938,6 +2954,25 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
         @ (match default with Some ss -> collect_type_env ss | None -> [])
       | Sblock ss -> collect_type_env ss
       | _ -> [] )
+    stmts
+
+(** Collect expression bindings: maps id to its RHS for [Sasgn(id, _, rhs)] entries.
+    Recurses into [Smatch] branches, [Sif] branches, and [Sblock] to find all
+    bindings.  Used to look through intermediate bindings in pointer-safe analysis
+    (e.g., to detect [x = *(sp)] and treat a recursive call passing [CPPvar x] as
+    equivalent to passing [CPPderef sp]). *)
+let rec collect_binding_env (stmts : cpp_stmt list) : (Id.t * cpp_expr) list =
+  List.concat_map
+    (fun s ->
+      match s with
+      | Sasgn (id, _, expr) -> [(id, expr)]
+      | Smatch (branches, default) ->
+        List.concat_map (fun br -> collect_binding_env br.smb_body) branches
+        @ (match default with Some ss -> collect_binding_env ss | None -> [])
+      | Sif (_, then_br, else_br) ->
+        collect_binding_env then_br @ collect_binding_env else_br
+      | Sblock ss -> collect_binding_env ss
+      | _ -> [])
     stmts
 
 (** Collect typed bindings from lambda params. *)
@@ -5275,11 +5310,41 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
   if not (List.exists Fun.id pointer_safe_varying) then []
   else
   let n_enter = List.length pointer_safe_varying in
-  let is_field_access field_names j = function
+  (* Build a map from local variable id to field index in [cf.cf_field_names].
+     Scans top-level [Sasgn(id, _, _f.field)] and [Sasgn(id, _, move(_f.field))]
+     statements so that [_Enter{local_var}] pushes can be traced back to the
+     frame field that [local_var] was loaded from. *)
+  let build_local_to_field_map field_names stmts =
+    let field_idx expr =
+      let base = match expr with CPPmove e -> e | e -> e in
+      match base with
+      | CPPmember (CPPvar f, field_id) when Id.to_string f = "_f" ->
+        let rec find i = function
+          | [] -> None
+          | fn :: rest -> if Id.equal fn field_id then Some i else find (i + 1) rest
+        in
+        find 0 field_names
+      | _ -> None
+    in
+    List.filter_map
+      (fun stmt ->
+        match stmt with
+        | Sasgn (id, _, expr) ->
+          (match field_idx expr with
+          | Some j -> Some (id, j)
+          | None -> None)
+        | _ -> None)
+      stmts
+  in
+  let is_field_access_or_alias local_map field_names j = function
     | CPPmember (CPPvar f, field_id) ->
       Id.to_string f = "_f"
       && j < List.length field_names
       && Id.equal field_id (List.nth field_names j)
+    | CPPvar x ->
+      (match List.assoc_opt x local_map with
+       | Some k -> k = j
+       | None -> false)
     | _ -> false
   in
   (* Find all struct pushes in handler body: returns (name, args) list *)
@@ -5307,9 +5372,10 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     | Some arr -> Some arr
     | None -> None
   in
-  (* Step 1: seed from _Enter push args *)
+  (* Step 1: seed from _Enter push args, looking through local variable bindings *)
   List.iter
     (fun cf ->
+      let local_map = build_local_to_field_map cf.cf_field_names cf.cf_handler in
       let pushes = find_struct_pushes cf.cf_handler in
       List.iter
         (fun (push_name, args) ->
@@ -5320,7 +5386,8 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                 if not arr.(j) then
                   let is_used =
                     List.exists2
-                      (fun safe arg -> safe && is_field_access cf.cf_field_names j arg)
+                      (fun safe arg ->
+                        safe && is_field_access_or_alias local_map cf.cf_field_names j arg)
                       pointer_safe_varying args
                   in
                   if is_used then arr.(j) <- true
@@ -5334,20 +5401,23 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     changed := false;
     List.iter
       (fun cf ->
+        let local_map = build_local_to_field_map cf.cf_field_names cf.cf_handler in
         let pushes = find_struct_pushes cf.cf_handler in
         List.iter
           (fun (push_name, args) ->
             match get_flags push_name with
             | Some target_arr when List.length args = Array.length target_arr ->
-              (* If target_arr[k] is true and args[k] is _f._sJ,
-                 then cf's field J must also be pointer-safe *)
+              (* If target_arr[k] is true and args[k] is _f.field_j or a local
+                 bound from _f.field_j, then cf's field j must also be pointer-safe *)
               List.iteri
                 (fun k arg ->
                   if target_arr.(k) then
                     match get_flags cf.cf_name with
                     | Some src_arr ->
                       for j = 0 to Array.length src_arr - 1 do
-                        if (not src_arr.(j)) && is_field_access cf.cf_field_names j arg then (
+                        if (not src_arr.(j))
+                           && is_field_access_or_alias local_map cf.cf_field_names j arg
+                        then (
                           src_arr.(j) <- true;
                           changed := true)
                       done
@@ -5368,8 +5438,12 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     [&x] (for variables) or [x.get()] (for dereferences) instead of
     deep-copying.  Handles both [_Enter] and [_CallN] pushes.
 
+    When [binding_env] is supplied, a [CPPvar x] at a pointer-safe position is
+    looked up: if [x = *(sp)] in the environment, emit [sp.get()] rather than
+    [&x] (which would be a dangling pointer to a local).
+
     @param frame_pointer_safe [(frame_name, bool list)] mapping *)
-let adjust_frame_push_args frame_pointer_safe stmts =
+let adjust_frame_push_args ?(binding_env = []) frame_pointer_safe stmts =
   if frame_pointer_safe = [] then stmts
   else
     let lookup name_s = List.assoc_opt name_s frame_pointer_safe in
@@ -5379,7 +5453,20 @@ let adjust_frame_push_args frame_pointer_safe stmts =
         match arg with
         | CPPderef inner ->
           CPPfun_call (CPPmember (inner, id_get), [])
-        | CPPvar _ -> CPPunop ("&", arg)
+        | CPPvar x ->
+          (* Look through binding environment to find the original pointer source. *)
+          (match List.assoc_opt x binding_env with
+           | Some (CPPderef (CPPmember (CPPvar f, _)))
+             when Id.to_string f = "_f" ->
+             (* Binding is [const T& id = *(_f.field)] from fix_handler_bindings.
+                Taking address of a reference gives the referenced pointer, which
+                is the raw const T* stored in the frame field.  Use [&id] rather
+                than [_f.field] so the variable name is stable after moves. *)
+             CPPunop ("&", arg)
+           | Some (CPPderef sp) ->
+             (* Binding is [id = *(sp)] where sp is a smart pointer — use sp.get() *)
+             CPPfun_call (CPPmember (sp, id_get), [])
+           | _ -> CPPunop ("&", arg))
         | _ -> arg
     in
     let rec on_stmt = function
@@ -5546,7 +5633,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   let stack_decl = Sdecl (stack_id, vector_ty) in
   let stack_reserve =
     Sexpr (CPPfun_call (CPPmember (CPPvar stack_id, id_reserve),
-                        [CPPint 16]))
+                        [CPPint 8]))
   in
   (* [Smatch (branches, None)] = exhaustive if/else-if chain; no wildcard needed
      since the variant can only hold the listed frame types. *)
@@ -5692,9 +5779,66 @@ let make_decltype_ty pp_type env expr =
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with frame-based stack structure *)
+
+(** Fix bindings in a continuation frame handler for fields that became
+    pointer-safe after [compute_frame_pointer_safe].
+
+    When a frame field is pointer-safe, its C++ type changes from [T] to
+    [const T*].  The handler body (generated by [make_cont_bindings] before
+    pointer-safe computation) has bindings of the form:
+      [T id = std::move(_f.field)]  — invalid: field is [const T*], not [T]
+    This function replaces those with a const-reference binding:
+      [const T& id = *(_f.field)]   — dereference the pointer (zero copy)
+
+    A reference binding is preferred over a plain pointer copy because:
+    - Lambda captures ([=]) copy the referenced value by value (semantics preserved)
+    - Method calls ([id.foo()]) work directly without an extra dereference
+    - [&id] in pointer-safe push args gives back the original raw pointer
+
+    The subsequent [adjust_frame_push_args] pass then rewrites [_Enter{id}] and
+    [_CallN{..., id, ...}] push arguments at pointer-safe positions to [&id],
+    recovering the [const T*] that those frames expect.
+
+    Only processes top-level [Sasgn] statements in the handler body, which is
+    all that [make_cont_bindings] generates.  Does not recurse into nested
+    statement structures (inner lambdas, visitor branches, etc.).
+
+    @param field_names  Field names of the frame struct (from [cf_field_names])
+    @param cf_ps        Pointer-safe flags for each field (from [frame_ps_for])
+    @param handler      The handler body to fix
+    @return Fixed handler body with pointer-safe bindings adjusted *)
+let fix_handler_bindings field_names cf_ps handler =
+  let ps_field_ids =
+    List.filter_map
+      (fun (safe, name) -> if safe then Some name else None)
+      (List.combine cf_ps field_names)
+  in
+  if ps_field_ids = [] then handler
+  else
+    let is_ps_field_access = function
+      | CPPmember (CPPvar f, field_id)
+        when Id.to_string f = "_f" ->
+        List.exists (Id.equal field_id) ps_field_ids
+      | _ -> false
+    in
+    List.map
+      (fun stmt ->
+        match stmt with
+        | Sasgn (id, Some orig_ty, CPPmove e) when is_ps_field_access e ->
+          (* Field is [const T*] — bind as [const T& id = *(_f.field)].
+             The base type is recovered by stripping [const] and ref qualifiers. *)
+          let base_ty = strip_ref_and_const_type orig_ty in
+          Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+        | Sasgn (id, Some orig_ty, e) when is_ps_field_access e ->
+          let base_ty = strip_ref_and_const_type orig_ty in
+          Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+        | s -> s)
+      handler
+
 let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams params ret_ty body =
   let varying = find_varying_params check params body in
-  let pointer_safe = tail_pointer_safe_flags check params body in
+  let binding_env = collect_binding_env body in
+  let pointer_safe = tail_pointer_safe_flags check params body ~binding_env () in
   let varying_params = filter_by_mask varying params in
   let pointer_safe_varying = filter_by_mask varying pointer_safe in
   let varying_param_types = List.map snd varying_params in
@@ -5861,16 +6005,35 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
      params are captured directly from function scope) *)
   let enter_body =
     make_param_copies ~pointer_safe:pointer_safe_varying varying_params
-    @ adjust_frame_push_args all_frame_ps rewritten_body
+    @ adjust_frame_push_args ~binding_env all_frame_ps rewritten_body
     |> optimize_frame_push_args frame_field_types
   in
   let enter_branch = make_frame_branch "_Enter" enter_body in
-  (* Call handlers *)
+  (* Call handlers — fix pointer-safe field bindings, then adjust push args *)
   let call_branches =
     List.map
       (fun cf ->
+        let cf_ps = frame_ps_for cf in
+        (* Step 1: fix [T id = std::move(_f.field)] → [const T& id = *(_f.field)]
+           for pointer-safe fields so that downstream lambda captures and method
+           calls still work on value-typed [id]. *)
+        let handler =
+          if List.exists Fun.id cf_ps then
+            fix_handler_bindings cf.cf_field_names cf_ps cf.cf_handler
+          else cf.cf_handler
+        in
+        (* Step 2: adjust push arguments at pointer-safe positions.  After
+           fix_handler_bindings, pointer-safe locals are [const T&] references;
+           [adjust_frame_push_args] converts [_Enter{id}] → [_Enter{&id}] so
+           that [const T&] is passed as [const T*] as the frame struct expects. *)
+        let handler =
+          if frame_ps_map <> [] then
+            let cf_binding_env = collect_binding_env handler in
+            adjust_frame_push_args ~binding_env:cf_binding_env all_frame_ps handler
+          else handler
+        in
         make_frame_branch cf.cf_name
-          (optimize_frame_push_args frame_field_types cf.cf_handler))
+          (optimize_frame_push_args frame_field_types handler))
       frames
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push (enter_branch :: call_branches)

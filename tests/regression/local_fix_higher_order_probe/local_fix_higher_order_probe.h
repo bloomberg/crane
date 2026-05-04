@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -83,6 +84,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);

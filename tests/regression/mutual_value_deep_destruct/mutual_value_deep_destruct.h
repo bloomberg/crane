@@ -64,6 +64,7 @@ struct MutualValueDeepDestruct {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -108,6 +109,7 @@ struct MutualValueDeepDestruct {
     // MANIPULATORS
     ~a() {
       std::vector<std::unique_ptr<a>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](a &_node) {
         if (std::holds_alternative<ANode>(_node.d_v_)) {
           auto &_alt = std::get<ANode>(_node.d_v_);
@@ -190,6 +192,7 @@ struct MutualValueDeepDestruct {
     // MANIPULATORS
     ~b() {
       std::vector<std::unique_ptr<b>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](b &_node) {
         if (std::holds_alternative<BNode>(_node.d_v_)) {
           auto &_alt = std::get<BNode>(_node.d_v_);

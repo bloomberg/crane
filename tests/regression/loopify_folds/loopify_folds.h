@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -134,7 +136,7 @@ public:
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
     /// Loopified length: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -207,7 +209,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified fold_right: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -352,7 +354,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified foldr1: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -405,7 +407,7 @@ struct LoopifyFolds {
     using _Frame = std::variant<_Enter, _Cont_acc_>;
     std::pair<unsigned int, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l, acc});
     /// Loopified map_accum: _Enter -> _Cont_acc_.
     while (!_stack.empty()) {

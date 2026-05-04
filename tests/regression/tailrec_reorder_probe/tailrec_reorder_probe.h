@@ -57,6 +57,7 @@ struct TailrecReorderProbe {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -102,6 +103,7 @@ struct TailrecReorderProbe {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Mycons>(_node.d_v_)) {
           auto &_alt = std::get<Mycons>(_node.d_v_);
@@ -148,7 +150,7 @@ struct TailrecReorderProbe {
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
@@ -195,7 +197,7 @@ struct TailrecReorderProbe {
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
@@ -279,7 +281,7 @@ struct TailrecReorderProbe {
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified mylist_sum: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {

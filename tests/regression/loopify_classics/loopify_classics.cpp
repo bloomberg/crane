@@ -16,7 +16,7 @@ unsigned int LoopifyClassics::factorial(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified factorial: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -62,7 +62,7 @@ unsigned int LoopifyClassics::fib(
   using _Frame = std::variant<_Enter, _After_n__, _Combine_n__>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified fib: _Enter -> _After_n__ -> _Combine_n__.
   while (!_stack.empty()) {
@@ -116,7 +116,7 @@ unsigned int LoopifyClassics::ack_fuel(
   using _Frame = std::variant<_Enter, _Cont1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, m, fuel});
   /// Loopified ack_fuel: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -193,7 +193,7 @@ unsigned int LoopifyClassics::binomial_fuel(
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{k, n, fuel});
   /// Loopified binomial_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -267,7 +267,7 @@ unsigned int LoopifyClassics::pascal_fuel(
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{col, row, fuel});
   /// Loopified pascal_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -358,7 +358,7 @@ unsigned int LoopifyClassics::power(
   using _Frame = std::variant<_Enter, _Resume_exp_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{exp});
   /// Loopified power: _Enter -> _Resume_exp_.
   while (!_stack.empty()) {
@@ -398,7 +398,7 @@ unsigned int LoopifyClassics::sum_to(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_to: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -438,7 +438,7 @@ unsigned int LoopifyClassics::sum_squares(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_squares: _Enter -> _Resume_n_.
   while (!_stack.empty()) {

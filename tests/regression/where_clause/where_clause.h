@@ -65,6 +65,7 @@ struct WhereClause {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -117,6 +118,7 @@ struct WhereClause {
     // MANIPULATORS
     ~Expr() {
       std::vector<std::unique_ptr<Expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](Expr &_node) {
         if (std::holds_alternative<Plus>(_node.d_v_)) {
           auto &_alt = std::get<Plus>(_node.d_v_);
@@ -284,6 +286,7 @@ struct WhereClause {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -350,6 +353,7 @@ struct WhereClause {
     // MANIPULATORS
     ~BExpr() {
       std::vector<std::unique_ptr<BExpr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](BExpr &_node) {
         if (std::holds_alternative<BAnd>(_node.d_v_)) {
           auto &_alt = std::get<BAnd>(_node.d_v_);
@@ -518,6 +522,7 @@ struct WhereClause {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -571,6 +576,7 @@ struct WhereClause {
     // MANIPULATORS
     ~AExpr() {
       std::vector<std::unique_ptr<AExpr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](AExpr &_node) {
         if (std::holds_alternative<APlus>(_node.d_v_)) {
           auto &_alt = std::get<APlus>(_node.d_v_);

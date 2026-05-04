@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -195,6 +197,7 @@ struct LoopifyStructures {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -258,6 +261,7 @@ struct LoopifyStructures {
     // MANIPULATORS
     ~nested() {
       std::vector<std::unique_ptr<nested>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](nested &_node) {
         if (std::holds_alternative<NList>(_node.d_v_)) {
           auto &_alt = std::get<NList>(_node.d_v_);
@@ -421,6 +425,7 @@ struct LoopifyStructures {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -469,6 +474,7 @@ struct LoopifyStructures {
     // MANIPULATORS
     ~quadtree() {
       std::vector<std::unique_ptr<quadtree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](quadtree &_node) {
         if (std::holds_alternative<Quad>(_node.d_v_)) {
           auto &_alt = std::get<Quad>(_node.d_v_);
@@ -547,7 +553,7 @@ struct LoopifyStructures {
                                   _After_Quad_2, _Combine_Quad>;
       quadtree _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quad_map: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -668,7 +674,7 @@ struct LoopifyStructures {
                                   _After_Quad_2, _Combine_Quad>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quad_sum: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -774,7 +780,7 @@ struct LoopifyStructures {
                                   _After_Quad_2, _Combine_Quad>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quadtree_rec: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -887,7 +893,7 @@ struct LoopifyStructures {
                                   _After_Quad_2, _Combine_Quad>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified quadtree_rect: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
@@ -1056,6 +1062,7 @@ struct LoopifyStructures {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1093,6 +1100,7 @@ struct LoopifyStructures {
     // MANIPULATORS
     ~ltree() {
       std::vector<std::unique_ptr<ltree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](ltree &_node) {
         if (std::holds_alternative<LNode>(_node.d_v_)) {
           auto &_alt = std::get<LNode>(_node.d_v_);
@@ -1147,7 +1155,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _After_LNode, _Combine_LNode>;
       ltree _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self, t2});
       /// Loopified ltree_max: _Enter -> _After_LNode -> _Combine_LNode.
       while (!_stack.empty()) {
@@ -1229,7 +1237,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _After_LNode, _Combine_LNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified ltree_rec: _Enter -> _After_LNode -> _Combine_LNode.
       while (!_stack.empty()) {
@@ -1295,7 +1303,7 @@ struct LoopifyStructures {
       using _Frame = std::variant<_Enter, _After_LNode, _Combine_LNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified ltree_rect: _Enter -> _After_LNode -> _Combine_LNode.
       while (!_stack.empty()) {

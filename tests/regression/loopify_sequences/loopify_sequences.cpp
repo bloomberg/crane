@@ -50,7 +50,7 @@ List<unsigned int> LoopifySequences::collatz_list_fuel(
   using _Frame = std::variant<_Enter>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_list_fuel: _Enter.
   while (!_stack.empty()) {
@@ -195,7 +195,7 @@ List<unsigned int> LoopifySequences::repeat_string(
   using _Frame = std::variant<_Enter, _Resume_m>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_string: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -238,7 +238,7 @@ List<unsigned int> LoopifySequences::repeat_with_sep(
   using _Frame = std::variant<_Enter, _Resume__x>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_with_sep: _Enter -> _Resume__x.
   while (!_stack.empty()) {
@@ -291,7 +291,7 @@ List<unsigned int> LoopifySequences::string_chain_fuel(
   using _Frame = std::variant<_Enter, _Resume1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified string_chain_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -447,7 +447,7 @@ List<unsigned int> LoopifySequences::cycle(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified cycle: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -614,7 +614,7 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&s});
   /// Loopified string_subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -653,7 +653,7 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
         using _Frame = std::variant<_Enter, _Resume_Cons>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
-        _stack.reserve(16);
+        _stack.reserve(8);
         _stack.emplace_back(_Enter{lsts});
         /// Loopified map_prepend_c: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
@@ -844,7 +844,7 @@ bool LoopifySequences::elem(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

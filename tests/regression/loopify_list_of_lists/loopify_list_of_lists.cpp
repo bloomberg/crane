@@ -19,7 +19,7 @@ List<unsigned int> LoopifyListOfLists::intercalate(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -210,7 +210,7 @@ unsigned int LoopifyListOfLists::list_len(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -251,7 +251,7 @@ unsigned int LoopifyListOfLists::total_length(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified total_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -298,7 +298,7 @@ List<unsigned int> LoopifyListOfLists::flatten(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified flatten: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -340,7 +340,7 @@ unsigned int LoopifyListOfLists::count_total(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified count_total: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -484,7 +484,7 @@ unsigned int LoopifyListOfLists::max_length(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified max_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

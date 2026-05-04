@@ -16,7 +16,7 @@ unsigned int MemSafetyProbe16::sum_list(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -104,7 +104,7 @@ unsigned int MemSafetyProbe16::apply_fns(
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&fns});
   /// Loopified apply_fns: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {

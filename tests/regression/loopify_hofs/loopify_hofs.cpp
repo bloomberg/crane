@@ -102,7 +102,7 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -141,7 +141,7 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
         using _Frame = std::variant<_Enter, _Resume_Cons>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
-        _stack.reserve(16);
+        _stack.reserve(8);
         _stack.emplace_back(_Enter{lsts});
         /// Loopified map_cons_x: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
@@ -224,7 +224,7 @@ List<std::pair<unsigned int, unsigned int>> LoopifyHofs::cartesian(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l1});
   /// Loopified cartesian: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -340,7 +340,7 @@ List<List<unsigned int>> LoopifyHofs::power_set(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified power_set: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -379,7 +379,7 @@ List<List<unsigned int>> LoopifyHofs::power_set(
         using _Frame = std::variant<_Enter, _Resume_Cons>;
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
-        _stack.reserve(16);
+        _stack.reserve(8);
         _stack.emplace_back(_Enter{lsts});
         /// Loopified map_cons_x: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {

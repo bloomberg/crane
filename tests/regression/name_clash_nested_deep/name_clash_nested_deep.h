@@ -58,6 +58,7 @@ struct NameClashNestedDeep {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -90,6 +91,7 @@ struct NameClashNestedDeep {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
         if (std::holds_alternative<MyCons>(_node.d_v_)) {
           auto &_alt = std::get<MyCons>(_node.d_v_);

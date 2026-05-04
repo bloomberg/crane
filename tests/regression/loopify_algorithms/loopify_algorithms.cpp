@@ -15,7 +15,7 @@ unsigned int LoopifyAlgorithms::len_impl(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -77,7 +77,7 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
           using _Frame = std::variant<_Enter, _Resume1>;
           List<unsigned int> _result{};
           std::vector<_Frame> _stack;
-          _stack.reserve(16);
+          _stack.reserve(8);
           _stack.emplace_back(_Enter{rest});
           /// Loopified filter_multiples: _Enter -> _Resume1.
           while (!_stack.empty()) {
@@ -305,7 +305,7 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
           using _Frame = std::variant<_Enter, _Resume1>;
           List<unsigned int> _result{};
           std::vector<_Frame> _stack;
-          _stack.reserve(16);
+          _stack.reserve(8);
           _stack.emplace_back(_Enter{rest});
           /// Loopified filter_out: _Enter -> _Resume1.
           while (!_stack.empty()) {
@@ -566,7 +566,7 @@ unsigned int LoopifyAlgorithms::max_prefix_sum(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified max_prefix_sum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -621,7 +621,7 @@ unsigned int LoopifyAlgorithms::weighted_sum(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, i});
   /// Loopified weighted_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -665,7 +665,7 @@ unsigned int LoopifyAlgorithms::step_sum(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -726,7 +726,7 @@ List<unsigned int> LoopifyAlgorithms::suffix_sums(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified suffix_sums: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

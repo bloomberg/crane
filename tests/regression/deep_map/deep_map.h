@@ -57,6 +57,7 @@ struct DeepMap {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -107,6 +108,7 @@ struct DeepMap {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree<t_A> &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);

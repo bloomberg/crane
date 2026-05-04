@@ -83,7 +83,7 @@ List<unsigned int> LoopifyStrings::repeat_string(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_string: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -125,7 +125,7 @@ List<unsigned int> LoopifyStrings::repeat_with_sep(
   using _Frame = std::variant<_Enter, _Resume__x>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_with_sep: _Enter -> _Resume__x.
   while (!_stack.empty()) {
@@ -177,7 +177,7 @@ List<unsigned int> LoopifyStrings::string_chain_fuel(
   using _Frame = std::variant<_Enter, _Resume1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified string_chain_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -230,7 +230,7 @@ List<unsigned int> LoopifyStrings::reverse(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified reverse: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -275,7 +275,7 @@ bool LoopifyStrings::list_eq(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l2, &l1});
   /// Loopified list_eq: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -374,7 +374,7 @@ List<unsigned int> LoopifyStrings::intercalate(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

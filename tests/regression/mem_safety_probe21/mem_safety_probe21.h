@@ -67,6 +67,7 @@ struct MemSafetyProbe21 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -103,6 +104,7 @@ struct MemSafetyProbe21 {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -191,21 +193,21 @@ struct MemSafetyProbe21 {
 
     struct _Enter {
       std::function<unsigned int(unsigned int)> k;
-      tree t;
+      const tree *t;
     };
 
     using _Frame = std::variant<_Enter>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
-    _stack.emplace_back(_Enter{k, t});
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{k, &t});
     /// Loopified cps_sum: _Enter.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
       const std::function<unsigned int(unsigned int)> &k = _f.k;
-      const tree &t = _f.t;
+      const tree &t = *(_f.t);
       if (std::holds_alternative<typename tree::Leaf>(t.v())) {
         _result = k(0u);
       } else {
@@ -218,7 +220,7 @@ struct MemSafetyProbe21 {
                 return k(((lsum + d_a1) + rsum));
               });
             },
-            d_a0_value});
+            d_a0.get()});
       }
     }
     return _result;

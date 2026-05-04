@@ -632,7 +632,7 @@ unsigned int ComprehensivePatterns::count_down(
   using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified count_down: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -724,7 +724,7 @@ unsigned int ComprehensivePatterns::sum_proj(
   using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_proj: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -979,7 +979,7 @@ unsigned int ComprehensivePatterns::sum_values(
   using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_values: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -1050,7 +1050,7 @@ unsigned int ComprehensivePatterns::sum_with_state(
   using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_with_state: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -1114,7 +1114,7 @@ unsigned int ComprehensivePatterns::accum_with_state(
   using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified accum_with_state: _Enter -> _Resume_m.
   while (!_stack.empty()) {

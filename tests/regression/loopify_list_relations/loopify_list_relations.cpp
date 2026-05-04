@@ -19,7 +19,7 @@ bool LoopifyListRelations::is_prefix_of(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l2, &l1});
   /// Loopified is_prefix_of: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -224,7 +224,7 @@ bool LoopifyListRelations::list_eq(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l2, &l1});
   /// Loopified list_eq: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -550,7 +550,7 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
               using _Frame = std::variant<_Enter, _Resume_Cons>;
               bool _result{};
               std::vector<_Frame> _stack;
-              _stack.reserve(16);
+              _stack.reserve(8);
               _stack.emplace_back(_Enter{ys});
               /// Loopified member: _Enter -> _Resume_Cons.
               while (!_stack.empty()) {
@@ -625,7 +625,7 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
               using _Frame = std::variant<_Enter, _Resume_Cons>;
               bool _result{};
               std::vector<_Frame> _stack;
-              _stack.reserve(16);
+              _stack.reserve(8);
               _stack.emplace_back(_Enter{ys});
               /// Loopified member: _Enter -> _Resume_Cons.
               while (!_stack.empty()) {

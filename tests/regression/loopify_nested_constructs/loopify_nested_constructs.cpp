@@ -16,7 +16,7 @@ unsigned int LoopifyNestedConstructs::multi_let(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified multi_let: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -98,7 +98,7 @@ unsigned int LoopifyNestedConstructs::deep_nest(
   using _Frame = std::variant<_Enter, _Cont_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified deep_nest: _Enter -> _Cont_n_.
   while (!_stack.empty()) {
@@ -140,7 +140,7 @@ unsigned int LoopifyNestedConstructs::let_nested(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified let_nested: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -184,7 +184,7 @@ unsigned int LoopifyNestedConstructs::mod_pattern_fuel(
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified mod_pattern_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -234,7 +234,7 @@ LoopifyNestedConstructs::tuple_constr(
   using _Frame = std::variant<_Enter, _Cont_n_>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified tuple_constr: _Enter -> _Cont_n_.
   while (!_stack.empty()) {
@@ -285,7 +285,7 @@ unsigned int LoopifyNestedConstructs::alternating_ops(
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified alternating_ops: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -345,7 +345,7 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified chained_comp_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -407,7 +407,7 @@ unsigned int LoopifyNestedConstructs::compute_with_lets(
   using _Frame = std::variant<_Enter, _Cont_n__, _Cont_n___1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified compute_with_lets: _Enter -> _Cont_n__ -> _Cont_n___1.
   while (!_stack.empty()) {
@@ -461,7 +461,7 @@ unsigned int LoopifyNestedConstructs::nested_match(
   using _Frame = std::variant<_Enter, _Resume_n__>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified nested_match: _Enter -> _Resume_n__.
   while (!_stack.empty()) {

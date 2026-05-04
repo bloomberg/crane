@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe21::tree_sum(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -96,7 +96,7 @@ unsigned int MemSafetyProbe21::double_grow(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, t});
   /// Loopified double_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -148,7 +148,7 @@ unsigned int MemSafetyProbe21::branch_grow(
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, t});
   /// Loopified branch_grow: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {
@@ -267,7 +267,7 @@ unsigned int MemSafetyProbe21::sum_and_grow(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, t});
   /// Loopified sum_and_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {

@@ -18,7 +18,7 @@ List<unsigned int> LoopifyListGenerators::cycle_fuel(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified cycle_fuel: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -124,7 +124,7 @@ List<unsigned int> LoopifyListGenerators::replicate_each(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified replicate_each: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

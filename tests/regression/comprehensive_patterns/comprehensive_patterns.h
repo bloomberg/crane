@@ -57,6 +57,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -99,6 +100,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -709,6 +711,7 @@ struct ComprehensivePatterns {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -746,6 +749,7 @@ struct ComprehensivePatterns {
     // MANIPULATORS
     ~Tree() {
       std::vector<std::unique_ptr<Tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](Tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -823,7 +827,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified consume_tree_with_state: _Enter -> _After_Node ->
       /// _Combine_Node.
@@ -879,7 +883,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -943,7 +947,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified Tree_rec: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -1009,7 +1013,7 @@ struct ComprehensivePatterns {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified Tree_rect: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {

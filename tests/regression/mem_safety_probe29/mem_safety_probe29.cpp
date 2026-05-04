@@ -40,7 +40,7 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
   using _Frame = std::variant<_Enter, _After_n_, _After_n__1, _Combine_n_>;
   MemSafetyProbe29::tree3 _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified build_tree3: _Enter -> _After_n_ -> _After_n__1 -> _Combine_n_.
   while (!_stack.empty()) {

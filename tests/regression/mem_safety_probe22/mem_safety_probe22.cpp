@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe22::tree_sum(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -98,7 +98,7 @@ MemSafetyProbe22::tree MemSafetyProbe22::double_tree(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe22::tree _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified double_tree: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -156,7 +156,7 @@ unsigned int MemSafetyProbe22::weighted_sum(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{w, &t});
   /// Loopified weighted_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -215,7 +215,7 @@ unsigned int MemSafetyProbe22::split_sum(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, t});
   /// Loopified split_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -278,7 +278,7 @@ MemSafetyProbe22::tree MemSafetyProbe22::mirror(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe22::tree _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified mirror: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -334,7 +334,7 @@ MemSafetyProbe22::tree MemSafetyProbe22::insert(
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   MemSafetyProbe22::tree _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified insert: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -417,7 +417,7 @@ MemSafetyProbe22::tree MemSafetyProbe22::label_depth(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe22::tree _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{d, &t});
   /// Loopified label_depth: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {

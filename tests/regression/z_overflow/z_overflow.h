@@ -109,6 +109,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -238,6 +239,7 @@ public:
   // MANIPULATORS
   ~Uint() {
     std::vector<std::unique_ptr<Uint>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Uint &_node) {
       if (std::holds_alternative<D0>(_node.d_v_)) {
         auto &_alt = std::get<D0>(_node.d_v_);
@@ -453,6 +455,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -648,6 +651,7 @@ public:
   // MANIPULATORS
   ~Uint0() {
     std::vector<std::unique_ptr<Uint0>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Uint0 &_node) {
       if (std::holds_alternative<D10>(_node.d_v_)) {
         auto &_alt = std::get<D10>(_node.d_v_);

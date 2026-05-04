@@ -18,7 +18,7 @@ unsigned int LoopifyDecltype::count_true(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&xs});
   /// Loopified count_true: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -58,7 +58,7 @@ unsigned int LoopifyDecltype::sum_flagged(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&xs});
   /// Loopified sum_flagged: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

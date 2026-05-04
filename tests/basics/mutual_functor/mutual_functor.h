@@ -88,6 +88,7 @@ template <Elem E> struct MutualTree {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -166,6 +167,7 @@ template <Elem E> struct MutualTree {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -200,6 +202,7 @@ template <Elem E> struct MutualTree {
     // MANIPULATORS
     ~forest() {
       std::vector<std::unique_ptr<forest>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](forest &_node) {
         if (std::holds_alternative<FCons>(_node.d_v_)) {
           auto &_alt = std::get<FCons>(_node.d_v_);

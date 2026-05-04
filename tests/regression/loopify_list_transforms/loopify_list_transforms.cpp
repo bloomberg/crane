@@ -420,7 +420,7 @@ unsigned int LoopifyListTransforms::step_sum(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

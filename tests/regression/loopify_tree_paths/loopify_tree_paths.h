@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -194,6 +196,7 @@ struct LoopifyTreePaths {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -230,6 +233,7 @@ struct LoopifyTreePaths {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -280,7 +284,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       List<unsigned int> _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified flatten_paths: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -334,7 +338,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified max_path_sum: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -425,7 +429,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self, acc});
       /// Loopified count_paths_sum_aux: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -488,7 +492,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       List<List<unsigned int>> _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified paths: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -553,7 +557,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -617,7 +621,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
@@ -702,6 +706,7 @@ struct LoopifyTreePaths {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -741,6 +746,7 @@ struct LoopifyTreePaths {
     // MANIPULATORS
     ~bool_tree() {
       std::vector<std::unique_ptr<bool_tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](bool_tree &_node) {
         if (std::holds_alternative<BNode>(_node.d_v_)) {
           auto &_alt = std::get<BNode>(_node.d_v_);
@@ -791,7 +797,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_BNode, _Combine_BNode>;
       bool _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified and_search: _Enter -> _After_BNode -> _Combine_BNode.
       while (!_stack.empty()) {
@@ -846,7 +852,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_BNode, _Combine_BNode>;
       bool _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified or_search: _Enter -> _After_BNode -> _Combine_BNode.
       while (!_stack.empty()) {
@@ -907,7 +913,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_BNode, _Combine_BNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified bool_tree_rec: _Enter -> _After_BNode -> _Combine_BNode.
       while (!_stack.empty()) {
@@ -969,7 +975,7 @@ struct LoopifyTreePaths {
       using _Frame = std::variant<_Enter, _After_BNode, _Combine_BNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified bool_tree_rect: _Enter -> _After_BNode -> _Combine_BNode.
       while (!_stack.empty()) {

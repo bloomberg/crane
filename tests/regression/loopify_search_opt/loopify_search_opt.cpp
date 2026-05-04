@@ -139,7 +139,7 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&items, capacity, fuel});
   /// Loopified knapsack_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -220,7 +220,7 @@ bool LoopifySearchOpt::subset_sum_fuel(
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, target, fuel});
   /// Loopified subset_sum_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -284,7 +284,7 @@ std::pair<unsigned int, unsigned int> LoopifySearchOpt::majority(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified majority: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -412,7 +412,7 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
             using _Frame = std::variant<_Enter, _Resume_Cons>;
             List<unsigned int> _result{};
             std::vector<_Frame> _stack;
-            _stack.reserve(16);
+            _stack.reserve(8);
             _stack.emplace_back(_Enter{xs, n});
             /// Loopified take: _Enter -> _Resume_Cons.
             while (!_stack.empty()) {

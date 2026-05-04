@@ -26,7 +26,7 @@ List<unsigned int> LoopifySpecialRecursion::process_twice_fuel(
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified process_twice_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
@@ -90,7 +90,7 @@ List<unsigned int> LoopifySpecialRecursion::double_append(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l2, &l1});
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -219,7 +219,7 @@ List<unsigned int> LoopifySpecialRecursion::collect_sorted(
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
   /// Loopified collect_sorted: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -267,7 +267,7 @@ unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{idx, &l});
   /// Loopified sum_odd_indices_aux: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -329,7 +329,7 @@ unsigned int LoopifySpecialRecursion::categorize_by(
   using _Frame = std::variant<_Enter, _Resume1, _Resume2, _Resume3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified categorize_by: _Enter -> _Resume1 -> _Resume2 -> _Resume3.
   while (!_stack.empty()) {
@@ -424,7 +424,7 @@ List<unsigned int> LoopifySpecialRecursion::merge_levels(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified merge_levels: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

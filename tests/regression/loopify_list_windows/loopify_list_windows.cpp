@@ -16,7 +16,7 @@ unsigned int LoopifyListWindows::len(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -113,7 +113,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListWindows::span_eq(
   using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{lst});
   /// Loopified span_eq: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -260,7 +260,7 @@ List<List<unsigned int>> LoopifyListWindows::inits(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified inits: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

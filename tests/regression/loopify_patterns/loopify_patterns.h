@@ -58,6 +58,7 @@ struct LoopifyPatterns {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -103,6 +104,7 @@ struct LoopifyPatterns {
     // MANIPULATORS
     ~list() {
       std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](list<t_A> &_node) {
         if (std::holds_alternative<Cons>(_node.d_v_)) {
           auto &_alt = std::get<Cons>(_node.d_v_);
@@ -149,7 +151,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -195,7 +197,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -279,7 +281,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -353,7 +355,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     list<list<T1>> _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified insert_everywhere: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -381,7 +383,7 @@ struct LoopifyPatterns {
             using _Frame = std::variant<_Enter, _Resume_Cons>;
             list<list<T1>> _result{};
             std::vector<_Frame> _stack;
-            _stack.reserve(16);
+            _stack.reserve(8);
             _stack.emplace_back(_Enter{lsts});
             /// Loopified map_cons_h: _Enter -> _Resume_Cons.
             while (!_stack.empty()) {
@@ -554,7 +556,7 @@ struct LoopifyPatterns {
               list<unsigned int>>
         _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
     /// Loopified partition_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {

@@ -68,6 +68,7 @@ struct MemSafetyProbe17 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -115,6 +116,7 @@ struct MemSafetyProbe17 {
     // MANIPULATORS
     ~qtree() {
       std::vector<std::unique_ptr<qtree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](qtree &_node) {
         if (std::holds_alternative<QNode>(_node.d_v_)) {
           auto &_alt = std::get<QNode>(_node.d_v_);
@@ -198,7 +200,7 @@ struct MemSafetyProbe17 {
                                   _After_QNode_2, _Combine_QNode>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified weighted_sum: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
@@ -304,7 +306,7 @@ struct MemSafetyProbe17 {
                                   _After_QNode_2, _Combine_QNode>;
       qtree _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self, t2});
       /// Loopified qtree_zip: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
@@ -408,7 +410,7 @@ struct MemSafetyProbe17 {
                                   _After_QNode_2, _Combine_QNode>;
       qtree _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_mirror: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
@@ -501,7 +503,7 @@ struct MemSafetyProbe17 {
                                   _After_QNode_2, _Combine_QNode>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_size: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
@@ -620,7 +622,7 @@ struct MemSafetyProbe17 {
                                   _After_QNode_2, _Combine_QNode>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_sum: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
@@ -731,7 +733,7 @@ struct MemSafetyProbe17 {
                                   _After_QNode_2, _Combine_QNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_rec: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
@@ -849,7 +851,7 @@ struct MemSafetyProbe17 {
                                   _After_QNode_2, _Combine_QNode>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_rect: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
@@ -982,6 +984,7 @@ struct MemSafetyProbe17 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1027,6 +1030,7 @@ struct MemSafetyProbe17 {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Mycons>(_node.d_v_)) {
           auto &_alt = std::get<Mycons>(_node.d_v_);
@@ -1096,7 +1100,7 @@ struct MemSafetyProbe17 {
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
       while (!_stack.empty()) {
@@ -1143,7 +1147,7 @@ struct MemSafetyProbe17 {
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
       /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
       while (!_stack.empty()) {

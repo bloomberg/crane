@@ -72,6 +72,7 @@ struct LoopifyMultiRecursion {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -121,6 +122,7 @@ struct LoopifyMultiRecursion {
     // MANIPULATORS
     ~quadtree() {
       std::vector<std::unique_ptr<quadtree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](quadtree &_node) {
         if (std::holds_alternative<QQuad>(_node.d_v_)) {
           auto &_alt = std::get<QQuad>(_node.d_v_);

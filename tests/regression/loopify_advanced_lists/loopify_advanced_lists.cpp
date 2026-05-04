@@ -16,7 +16,7 @@ unsigned int LoopifyAdvancedLists::product(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified product: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -216,7 +216,7 @@ List<unsigned int> LoopifyAdvancedLists::concat_lists(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
   /// Loopified concat_lists: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

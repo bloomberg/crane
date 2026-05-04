@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -174,6 +176,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -215,6 +218,7 @@ public:
   // MANIPULATORS
   ~Positive() {
     std::vector<std::unique_ptr<Positive>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
       if (std::holds_alternative<XI>(_node.d_v_)) {
         auto &_alt = std::get<XI>(_node.d_v_);

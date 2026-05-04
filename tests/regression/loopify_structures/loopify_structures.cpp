@@ -34,7 +34,7 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
       std::variant<_Enter, _After_NList, _Combine_NList, _Resume_Elem>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified sum_nested_list_fuel: _Enter -> _After_NList -> _Combine_NList
   /// -> _Resume_Elem.
@@ -152,7 +152,7 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
       std::variant<_Enter, _After_NList, _Combine_NList, _Resume_Elem>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified flatten_nested_list_fuel: _Enter -> _After_NList ->
   /// _Combine_NList -> _Resume_Elem.

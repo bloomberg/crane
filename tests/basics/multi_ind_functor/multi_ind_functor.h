@@ -150,6 +150,7 @@ template <Elem E> struct Container {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -182,6 +183,7 @@ template <Elem E> struct Container {
     // MANIPULATORS
     ~mlist() {
       std::vector<std::unique_ptr<mlist>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mlist &_node) {
         if (std::holds_alternative<MCons>(_node.d_v_)) {
           auto &_alt = std::get<MCons>(_node.d_v_);

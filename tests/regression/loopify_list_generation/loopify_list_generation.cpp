@@ -73,7 +73,7 @@ List<unsigned int> LoopifyListGeneration::cycle(
   using _Frame = std::variant<_Enter, _Resume_n_>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
   /// Loopified cycle: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -139,7 +139,7 @@ List<unsigned int> LoopifyListGeneration::replicate_list(
   using _Frame = std::variant<_Enter, _Resume_n>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified replicate_list: _Enter -> _Resume_n.
   while (!_stack.empty()) {

@@ -23,7 +23,7 @@ unsigned int LoopifyNumericSequences::collatz_length_fuel(
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_length_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -151,7 +151,7 @@ unsigned int LoopifyNumericSequences::tribonacci_fuel(
   using _Frame = std::variant<_Enter, _After1, _After2, _Combine3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified tribonacci_fuel: _Enter -> _After1 -> _After2 -> _Combine3.
   while (!_stack.empty()) {
@@ -239,7 +239,7 @@ unsigned int LoopifyNumericSequences::staircase_fuel(
   using _Frame = std::variant<_Enter, _After1, _After2, _Combine3>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified staircase_fuel: _Enter -> _After1 -> _After2 -> _Combine3.
   while (!_stack.empty()) {
@@ -305,7 +305,7 @@ unsigned int LoopifyNumericSequences::digitsum_fuel(
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified digitsum_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -358,7 +358,7 @@ unsigned int LoopifyNumericSequences::dec_to_bin_fuel(
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified dec_to_bin_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -444,7 +444,7 @@ unsigned int LoopifyNumericSequences::sum_divisors_aux(
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{d});
   /// Loopified sum_divisors_aux: _Enter -> _Resume1.
   while (!_stack.empty()) {

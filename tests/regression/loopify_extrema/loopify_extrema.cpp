@@ -17,7 +17,7 @@ unsigned int LoopifyExtrema::maximum(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified maximum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -70,7 +70,7 @@ unsigned int LoopifyExtrema::minimum(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified minimum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -123,7 +123,7 @@ std::pair<unsigned int, unsigned int> LoopifyExtrema::minmax(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified minmax: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

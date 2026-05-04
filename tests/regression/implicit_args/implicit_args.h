@@ -74,6 +74,7 @@ struct ImplicitArgs {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -118,6 +119,7 @@ struct ImplicitArgs {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Mycons>(_node.d_v_)) {
           auto &_alt = std::get<Mycons>(_node.d_v_);

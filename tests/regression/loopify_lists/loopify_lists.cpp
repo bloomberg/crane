@@ -48,7 +48,7 @@ unsigned int LoopifyLists::step_sum(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -98,7 +98,7 @@ unsigned int LoopifyLists::sum_abs(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_abs: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -148,7 +148,7 @@ unsigned int LoopifyLists::four_elem(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified four_elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -255,7 +255,7 @@ unsigned int LoopifyLists::categorize(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified categorize: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -309,7 +309,7 @@ unsigned int LoopifyLists::max_prefix_sum(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified max_prefix_sum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -400,7 +400,7 @@ unsigned int LoopifyLists::weighted_sum(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, i});
   /// Loopified weighted_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -556,7 +556,7 @@ unsigned int LoopifyLists::len_list(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_list: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -765,7 +765,7 @@ unsigned int LoopifyLists::product(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified product: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -808,7 +808,7 @@ unsigned int LoopifyLists::sum_list(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -901,7 +901,7 @@ unsigned int LoopifyLists::sum_list_lengths(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list_lengths: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -1044,7 +1044,7 @@ LoopifyLists::swizzle(
   std::pair<LoopifyLists::list<unsigned int>, LoopifyLists::list<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified swizzle: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -1278,7 +1278,7 @@ LoopifyLists::list<unsigned int> LoopifyLists::reverse_insert(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   LoopifyLists::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified reverse_insert: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -1354,7 +1354,7 @@ LoopifyLists::list<unsigned int> LoopifyLists::double_append(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   LoopifyLists::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l2, &l1});
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -1448,7 +1448,7 @@ LoopifyLists::split_at(
   std::pair<LoopifyLists::list<unsigned int>, LoopifyLists::list<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, n});
   /// Loopified split_at: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -1505,7 +1505,7 @@ LoopifyLists::unzip(
   std::pair<LoopifyLists::list<unsigned int>, LoopifyLists::list<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified unzip: _Enter -> _Cont_a.
   while (!_stack.empty()) {
@@ -1675,7 +1675,7 @@ unsigned int LoopifyLists::count(
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified count: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -1723,7 +1723,7 @@ unsigned int LoopifyLists::maximum(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified maximum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -1779,7 +1779,7 @@ std::pair<unsigned int, unsigned int> LoopifyLists::minmax(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified minmax: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -1883,7 +1883,7 @@ LoopifyLists::list<unsigned int> LoopifyLists::intercalate(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   LoopifyLists::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&lists});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -1935,7 +1935,7 @@ std::pair<unsigned int, unsigned int> LoopifyLists::majority(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified majority: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -2068,7 +2068,7 @@ std::pair<unsigned int, unsigned int> LoopifyLists::sum_and_count(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_and_count: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

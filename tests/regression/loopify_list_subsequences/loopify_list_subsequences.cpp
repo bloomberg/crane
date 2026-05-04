@@ -75,7 +75,7 @@ List<List<unsigned int>> LoopifyListSubsequences::inits_fuel(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified inits_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -244,7 +244,7 @@ LoopifyListSubsequences::split_at(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, n});
   /// Loopified split_at: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

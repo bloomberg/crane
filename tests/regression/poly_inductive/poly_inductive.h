@@ -340,6 +340,7 @@ struct PolyInductive {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -391,6 +392,7 @@ struct PolyInductive {
     // MANIPULATORS
     ~ptree() {
       std::vector<std::unique_ptr<ptree<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](ptree<t_A> &_node) {
         if (std::holds_alternative<PNode>(_node.d_v_)) {
           auto &_alt = std::get<PNode>(_node.d_v_);

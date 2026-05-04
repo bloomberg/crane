@@ -57,6 +57,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -85,6 +86,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -385,6 +387,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -417,6 +420,7 @@ public:
   // MANIPULATORS
   ~String() {
     std::vector<std::unique_ptr<String>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](String &_node) {
       if (std::holds_alternative<String0>(_node.d_v_)) {
         auto &_alt = std::get<String0>(_node.d_v_);
@@ -646,6 +650,7 @@ struct Levenshtein {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -698,6 +703,7 @@ struct Levenshtein {
     // MANIPULATORS
     ~chain() {
       std::vector<std::unique_ptr<chain>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<Skip>(_node.d_v_)) {
           auto &_alt = std::get<Skip>(_node.d_v_);
