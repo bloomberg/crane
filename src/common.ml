@@ -472,6 +472,18 @@ let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_clear =
   register_cleanup clear;
   (add, mem, list, clear)
 
+(** When [mpfiles_clear] is called (separate extraction mode), this flag is set
+    to indicate that cross-module references need full qualification.  Used by
+    the C++ printer to capitalize qualified type names correctly. *)
+let force_qualified_capitalization = ref false
+
+let set_force_qualified_capitalization () =
+  force_qualified_capitalization := true
+
+let get_force_qualified_capitalization () = !force_qualified_capitalization
+
+let () = register_cleanup (fun () -> force_qualified_capitalization := false)
+
 (** List of module parameters that we should alpha-rename *)
 
 let params_ren_add, params_ren_mem =

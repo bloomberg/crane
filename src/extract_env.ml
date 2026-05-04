@@ -1014,7 +1014,7 @@ let mark_higher_order_projections struc =
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
 *)
-let print_structure_to_file (fn, si, mo) dry struc =
+let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
   reset_renaming_tables AllButExternal;
@@ -1070,6 +1070,23 @@ let print_structure_to_file (fn, si, mo) dry struc =
     Cpp_state.require_header "optional"
   end;
   let opened = opened_libraries () in
+  (* In separate extraction, force fully qualified cross-module references
+     (e.g. Datatypes::List instead of bare List). *)
+  ( match namespace with
+  | Some _ ->
+    Common.mpfiles_clear ();
+    Common.set_force_qualified_capitalization ()
+  | None -> () );
+  let ns_open =
+    match namespace with
+    | Some ns -> str ("namespace " ^ ns ^ " {") ++ fnl2 ()
+    | None -> mt ()
+  in
+  let ns_close =
+    match namespace with
+    | Some ns -> fnl () ++ str ("} // namespace " ^ ns) ++ fnl ()
+    | None -> mt ()
+  in
   (* Print the implementation *)
   let cout = if dry then None else Option.map open_out fn in
   let ft = formatter dry cout in
@@ -1079,7 +1096,9 @@ let print_structure_to_file (fn, si, mo) dry struc =
       set_phase Impl;
       pp_with ft (header fn ());
       pp_with ft (d.preamble mo comment opened unsafe_needs);
+      pp_with ft ns_open;
       pp_with ft (d.pp_struct struc);
+      pp_with ft ns_close;
       (* If a [main] function returning a monad was found, it was renamed to
          [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
          calls [_main()->run()] to execute the ITree; in sequential mode (monad
@@ -1125,7 +1144,9 @@ let print_structure_to_file (fn, si, mo) dry struc =
           set_phase Intf;
           pp_with ft (spec_header (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+          pp_with ft ns_open;
           pp_with ft (d.pp_hstruct struc);
+          pp_with ft ns_close;
           pp_with ft (spec_footer (Some si) ());
           Format.pp_print_flush ft ();
           close_out cout
@@ -1146,7 +1167,9 @@ let print_structure_to_file (fn, si, mo) dry struc =
       set_phase Intf;
       pp_with ft (spec_header None ());
       pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+      pp_with ft ns_open;
       pp_with ft (d.pp_hstruct struc);
+      pp_with ft ns_close;
       Format.pp_print_flush ft ()
     with reraise ->
       Format.pp_print_flush ft ();
@@ -1328,10 +1351,38 @@ let separate_extraction ~opaque_access lr =
         | SEmodule _ | SEmodtype _ -> true )
       sel
   in
+  (* Check whether a namespace name collides with any top-level declaration
+     inside the module (e.g. concept OrderedType inside namespace OrderedType). *)
+  let ref_label = function
+    | GlobRef.ConstRef c -> Label.to_string (Constant.label c)
+    | GlobRef.IndRef (ind, _) -> Label.to_string (MutInd.label ind)
+    | GlobRef.ConstructRef ((ind, _), _) -> Label.to_string (MutInd.label ind)
+    | GlobRef.VarRef v -> Id.to_string v
+  in
+  let decl_names = function
+    | Dterm (r, _, _) | Dtype (r, _, _) -> [ref_label r]
+    | Dfix (rv, _, _) -> Array.to_list (Array.map ref_label rv)
+    | Dind (kn, ind) ->
+      Array.to_list (Array.map (fun ip -> Id.to_string ip.ip_typename) ind.ind_packets)
+  in
+  let ns_collides_with_decl ns sel =
+    List.exists
+      (fun (_, se) ->
+        match se with
+        | SEdecl d -> List.exists (String.equal ns) (decl_names d)
+        | _ -> false )
+      sel
+  in
   let print = function
     | ((MPfile _dir as mp), sel) as e ->
-      if has_real_decls sel then
-        print_structure_to_file (module_filename mp) false [e]
+      if has_real_decls sel then begin
+        let ns =
+          let base = file_of_modfile mp in
+          if ns_collides_with_decl base sel then base ^ "_"
+          else base
+        in
+        print_structure_to_file ~namespace:(Some ns) (module_filename mp) false [e]
+      end
     | (MPdot _ | MPbound _), _ -> assert false
   in
   List.iter print struc;

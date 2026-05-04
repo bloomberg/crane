@@ -8,7 +8,12 @@
 #include "Datatypes.h"
 #include "List.h"
 
-unsigned int sum_list(const List<unsigned int> &l);
-List<unsigned int> make_pair_list(const unsigned int n, const unsigned int m);
+namespace SepExtCrossModule {
+
+unsigned int sum_list(const Datatypes::List<unsigned int> &l);
+Datatypes::List<unsigned int> make_pair_list(const unsigned int n,
+                                             const unsigned int m);
+
+} // namespace SepExtCrossModule
 
 #endif // INCLUDED_SEPEXTCROSSMODULE

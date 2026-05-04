@@ -8,6 +8,8 @@
 #include <variant>
 #include <vector>
 
+namespace Datatypes {
+
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -122,5 +124,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 };
+
+} // namespace Datatypes
 
 #endif // INCLUDED_DATATYPES

@@ -690,9 +690,14 @@ let rec pp_cpp_type par vl t =
           ++ str (capitalize_enum_qualified type_name_str r')
           ++ templates
         else if is_qualified_name type_name_str then
-          (* Already qualified (e.g., C::t from module parameter): add typename
-             if in template *)
-          typename_prefix_for type_name_str ++ str type_name_str ++ templates
+          (* Already qualified: in separate extraction, capitalize last
+             component (e.g. "Datatypes::list" -> "Datatypes::List").
+             In monolithic mode, keep as-is. *)
+          let cap =
+            if Common.get_force_qualified_capitalization ()
+            then Common.capitalize_last_component type_name_str
+            else type_name_str in
+          typename_prefix_for cap ++ str cap ++ templates
         else if is_merged_inductive_cached r' then
           (* Merged: use capitalized name directly *)
           name ++ templates
@@ -888,11 +893,22 @@ and pp_cpp_expr env args t =
              struct). *)
           str (Common.pp_type_name_capitalized x)
         else if Hashtbl.mem promoted_inductives x then
-          (* Promoted inductive: use capitalized name directly *)
-          str (String.capitalize_ascii type_name_str)
+          (* Promoted inductive: capitalize last component in separate
+             extraction mode (where the full path may be qualified). *)
+          let cap =
+            if Common.get_force_qualified_capitalization ()
+            then Common.capitalize_last_component type_name_str
+            else String.capitalize_ascii type_name_str in
+          str cap
         else if is_qualified_name type_name_str then
-          (* Already qualified (e.g., C::t from module parameter): use as-is *)
-          str type_name_str
+          (* Already qualified: in separate extraction, capitalize last
+             component (e.g. "Datatypes::list" -> "Datatypes::List").
+             In monolithic mode, keep as-is. *)
+          let cap =
+            if Common.get_force_qualified_capitalization ()
+            then Common.capitalize_last_component type_name_str
+            else type_name_str in
+          str cap
         else if needs_ns then
           if is_merged_inductive_cached x then
             (* Merged non-local inductive: use capitalized name directly *)

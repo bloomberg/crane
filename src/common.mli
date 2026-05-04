@@ -136,6 +136,18 @@ val get_phase : unit -> phase
 (** Compute which libraries should be opened initially. *)
 val opened_libraries : unit -> ModPath.t list
 
+(** Clear the set of opened-module paths.  Used in separate extraction to
+    force fully qualified cross-module references. *)
+val mpfiles_clear : unit -> unit
+
+(** Activate "force qualified capitalization" mode: when set, qualified type
+    names like [Datatypes::list] have their last component capitalized to
+    match the C++ struct name ([Datatypes::List]).  Set after {!mpfiles_clear}
+    in separate extraction.  Cleared automatically on reset. *)
+val set_force_qualified_capitalization : unit -> unit
+
+val get_force_qualified_capitalization : unit -> bool
+
 type kind =
   | Term
   | Type

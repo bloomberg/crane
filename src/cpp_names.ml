@@ -61,7 +61,10 @@ let is_merged_inductive (r : GlobRef.t) : bool =
   Hashtbl.mem promoted_inductives r
   ||
   let base = str_global Type r in
-  let wrapper_name = String.capitalize_ascii base in
+  let wrapper_name =
+    if Common.get_force_qualified_capitalization ()
+    then Common.capitalize_last_component base
+    else String.capitalize_ascii base in
   not (Hashtbl.mem unmerged_wrappers wrapper_name)
 
 (** grammar from OCaml 4.06 manual, "Prefix and infix symbols" *)
@@ -197,9 +200,18 @@ let inductive_name_info r =
   | GlobRef.IndRef _ when is_eponymous_record_global r ->
     (str (Common.pp_type_name_capitalized r), false)
   | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
-    (str (String.capitalize_ascii (str_global Type r)), false)
+    let s = str_global Type r in
+    let cap = if Common.get_force_qualified_capitalization ()
+              then Common.capitalize_last_component s
+              else String.capitalize_ascii s in
+    (str cap, false)
   | GlobRef.IndRef _ when is_local_inductive r -> (pp_global Type r, false)
-  | GlobRef.IndRef _ -> (str (String.capitalize_ascii (str_global Type r)), true)
+  | GlobRef.IndRef _ ->
+    let s = str_global Type r in
+    let cap = if Common.get_force_qualified_capitalization ()
+              then Common.capitalize_last_component s
+              else String.capitalize_ascii s in
+    (str cap, true)
   | _ -> (pp_global Type r, false)
 
 (** Check if capitalizing an enum type name would collide with its parent
@@ -242,7 +254,11 @@ let pp_inductive_type_name r =
     | GlobRef.IndRef _ when is_eponymous_record_global r ->
       str (Common.pp_type_name_capitalized r)
     | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
-      str (String.capitalize_ascii (str_global Type r))
+      let s = str_global Type r in
+      let cap = if Common.get_force_qualified_capitalization ()
+                then Common.capitalize_last_component s
+                else String.capitalize_ascii s in
+      str cap
     | GlobRef.IndRef _ when is_record_inductive r -> pp_global Type r
     | GlobRef.IndRef _ when is_enum_inductive r ->
       let base_name = Common.pp_global_name Type r in
@@ -251,7 +267,13 @@ let pp_inductive_type_name r =
     | GlobRef.IndRef _ ->
       let base = str_global Type r in
       if is_qualified_name base then
-        str base
+        (* Qualified reference: in separate extraction with force_qualified_capitalization,
+           capitalize the last component (e.g. "Datatypes::list" -> "Datatypes::List").
+           In monolithic mode, keep as-is (e.g. "Pos::mask" stays "Pos::mask"). *)
+        if Common.get_force_qualified_capitalization () then
+          str (Common.capitalize_last_component base)
+        else
+          str base
       else if is_merged_inductive r then
         str (String.capitalize_ascii base)
       else

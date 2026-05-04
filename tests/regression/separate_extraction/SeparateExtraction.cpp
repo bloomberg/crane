@@ -1,5 +1,7 @@
 #include "SeparateExtraction.h"
 
+namespace SeparateExtraction {
+
 unsigned int sep_add(const unsigned int _x0, const unsigned int _x1) {
   return (_x0 + _x1);
 }
@@ -19,3 +21,5 @@ unsigned int color_to_nat(const Color c) {
     std::unreachable();
   }
 }
+
+} // namespace SeparateExtraction
