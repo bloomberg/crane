@@ -1,4 +1,4 @@
-#include <parallel.h>
+#include "parallel.h"
 
 unsigned int ParallelTest::ack(const std::pair<unsigned int, unsigned int> &p) {
   std::function<unsigned int(unsigned int, unsigned int)> f;

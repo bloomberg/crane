@@ -1,4 +1,4 @@
-#include <numeral_edge.h>
+#include "numeral_edge.h"
 
 /// 6. Numeral as function argument
 unsigned int NumeralEdge::take_nat(const unsigned int n) { return (n + 1u); }

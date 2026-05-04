@@ -1,4 +1,4 @@
-#include <record_erased_proof_fields.h>
+#include "record_erased_proof_fields.h"
 
 unsigned int RecordErasedProofFieldsCase::kind_code(
     const RecordErasedProofFieldsCase::ItemKind k) {

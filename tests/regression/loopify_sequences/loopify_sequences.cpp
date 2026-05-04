@@ -1,4 +1,4 @@
-#include <loopify_sequences.h>
+#include "loopify_sequences.h"
 
 /// alternate_sum sign acc l alternating sum with sign flip.
 unsigned int LoopifySequences::alternate_sum(const unsigned int sign,

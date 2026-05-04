@@ -1,4 +1,4 @@
-#include <jump_targets.h>
+#include "jump_targets.h"
 
 List<unsigned int>
 JumpTargets::collect_targets(const List<JumpTargets::instr_collection> &prog) {

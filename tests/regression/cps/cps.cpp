@@ -1,4 +1,4 @@
-#include <cps.h>
+#include "cps.h"
 
 unsigned int CPS::factorial(const unsigned int n) {
   return fact_cps(n, [](const unsigned int x) { return x; });

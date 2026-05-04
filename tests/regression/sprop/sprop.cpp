@@ -1,4 +1,4 @@
-#include <sprop.h>
+#include "sprop.h"
 
 unsigned int SPropTest::guarded_pred(const unsigned int n) {
   if (n <= 0) {

@@ -1,4 +1,4 @@
-#include <pstring.h>
+#include "pstring.h"
 
 std::string PString::nat_to_string(const Nat &n) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {

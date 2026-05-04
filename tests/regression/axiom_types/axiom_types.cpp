@@ -1,4 +1,4 @@
-#include <axiom_types.h>
+#include "axiom_types.h"
 
 AxiomTypes::MysteryType AxiomTypes::mystery_value() {
   throw std::logic_error(

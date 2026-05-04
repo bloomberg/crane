@@ -1,4 +1,4 @@
-#include <count_loop_test_target.h>
+#include "count_loop_test_target.h"
 
 CountLoopTestTarget::instruction
 CountLoopTestTarget::count_loop_test(const unsigned int loop_addr) {

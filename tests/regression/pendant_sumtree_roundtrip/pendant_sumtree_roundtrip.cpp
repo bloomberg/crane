@@ -1,4 +1,4 @@
-#include <pendant_sumtree_roundtrip.h>
+#include "pendant_sumtree_roundtrip.h"
 
 unsigned int PendantSumtreeRoundtripCase::digit_to_nat(const T &d) {
   auto &&_sv = d.to_nat(10u);

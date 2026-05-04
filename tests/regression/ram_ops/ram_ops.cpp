@@ -1,4 +1,4 @@
-#include <ram_ops.h>
+#include "ram_ops.h"
 
 RamOps::ram_bank_main RamOps::get_bank_main(const RamOps::state_main &s,
                                             const unsigned int b) {

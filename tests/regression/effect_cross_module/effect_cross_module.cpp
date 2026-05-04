@@ -1,4 +1,4 @@
-#include <effect_cross_module.h>
+#include "effect_cross_module.h"
 
 /// Inner module defines a helper that returns a value
 void EffectCrossModule::Inner::greet(const std::string name) {

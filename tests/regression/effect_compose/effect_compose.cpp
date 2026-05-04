@@ -1,4 +1,4 @@
-#include <effect_compose.h>
+#include "effect_compose.h"
 
 /// Spawn a future that doubles a number, retrieve the result.
 unsigned int EffectCompose::par_double(const unsigned int n) {

@@ -1,4 +1,4 @@
-#include <partial_apply.h>
+#include "partial_apply.h"
 
 List<unsigned int> PartialApply::inc_all(const List<unsigned int> &l) {
   return l.template map<unsigned int>(

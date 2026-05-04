@@ -1,4 +1,4 @@
-#include <mem_safety_probe3.h>
+#include "mem_safety_probe3.h"
 
 /// TEST 10: Large tree with deep recursion — stresses the
 /// loopified tree traversal and clone mechanisms.

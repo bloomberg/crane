@@ -1,4 +1,4 @@
-#include <comparison.h>
+#include "comparison.h"
 
 unsigned int Comparison::cmp_to_nat(const Comparison::Cmp c) {
   switch (c) {

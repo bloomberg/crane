@@ -1,4 +1,4 @@
-#include <opposite_property_transfer_trace.h>
+#include "opposite_property_transfer_trace.h"
 
 OppositePropertyTransferTraceCase::PreStableCategory
 OppositePropertyTransferTraceCase::opposite_prestable_category(

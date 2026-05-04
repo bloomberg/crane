@@ -1,4 +1,4 @@
-#include <todo_monadic_global_alias.h>
+#include "todo_monadic_global_alias.h"
 
 Nat TodoMonadicGlobalAlias::base() {
   return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));

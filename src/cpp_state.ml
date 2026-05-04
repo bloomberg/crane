@@ -195,7 +195,7 @@ let keywords =
     character interacts badly with the Format boxing mechanism *)
 
 (** Pretty-print an open directive for a module. *)
-let pp_open mp = str ("#include <" ^ string_of_modfile mp ^ ".h>") ++ fnl ()
+let pp_open mp = str ("#include \"" ^ string_of_modfile mp ^ ".h\"") ++ fnl ()
 
 (** Pretty-print a comment with OCaml-style delimiters. *)
 let pp_comment s = str "(* " ++ hov 0 s ++ str " *)"

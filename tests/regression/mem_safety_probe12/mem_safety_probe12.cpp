@@ -1,4 +1,4 @@
-#include <mem_safety_probe12.h>
+#include "mem_safety_probe12.h"
 
 /// TEST 3: Pack a LET-BOUND closure.
 /// let f := fun x => x + base in Wrap (nat -> nat) f

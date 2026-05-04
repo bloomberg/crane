@@ -1,4 +1,4 @@
-#include <name_clash_scope_leak.h>
+#include "name_clash_scope_leak.h"
 
 /// Match on list, return list. Both branches produce the same type.
 List<unsigned int> NameClashScopeLeak::rotate(const List<unsigned int> &l) {

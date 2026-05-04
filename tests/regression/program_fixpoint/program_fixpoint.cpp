@@ -1,4 +1,4 @@
-#include <program_fixpoint.h>
+#include "program_fixpoint.h"
 
 List<unsigned int> ProgFix::interleave_func(
     const SigT<List<unsigned int>, List<unsigned int>> &x) {

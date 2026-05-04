@@ -1,4 +1,4 @@
-#include <rec_record.h>
+#include "rec_record.h"
 
 unsigned int RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
   if (std::holds_alternative<typename RecRecord::rlist<unsigned int>::Rnil>(

@@ -1,4 +1,4 @@
-#include <fix_escape_capture.h>
+#include "fix_escape_capture.h"
 
 /// A local fixpoint that captures a function parameter and is returned
 /// in a pair. The fixpoint's & capture creates a dangling reference

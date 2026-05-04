@@ -1,4 +1,4 @@
-#include <comprehensive_patterns.h>
+#include "comprehensive_patterns.h"
 
 std::pair<std::pair<ComprehensivePatterns::S, unsigned int>, unsigned int>
 ComprehensivePatterns::syntactic_variation(ComprehensivePatterns::S s) {

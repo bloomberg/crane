@@ -1,4 +1,4 @@
-#include <mem_safety_probe5.h>
+#include "mem_safety_probe5.h"
 
 /// TEST 1: Partial app of get_left_val, applied to recursive result.
 /// The closure body accesses nested tree structure.

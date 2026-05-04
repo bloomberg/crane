@@ -1,4 +1,4 @@
-#include <record_field_patterns.h>
+#include "record_field_patterns.h"
 
 unsigned int
 RecordFieldPatterns::classify_point(const RecordFieldPatterns::Point &p) {

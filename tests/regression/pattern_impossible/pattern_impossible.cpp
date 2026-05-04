@@ -1,4 +1,4 @@
-#include <pattern_impossible.h>
+#include "pattern_impossible.h"
 
 unsigned int
 PatternImpossible::complex_match(const PatternImpossible::Three x) {

@@ -1,4 +1,4 @@
-#include <rocq_bug_4710.h>
+#include "rocq_bug_4710.h"
 
 unsigned int RocqBug4710::bla(const RocqBug4710::Foo2 &x) { return x.foo2p; }
 

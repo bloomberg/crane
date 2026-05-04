@@ -1,4 +1,4 @@
-#include <name_clash_let_match.h>
+#include "name_clash_let_match.h"
 
 /// Variable name 'a' used in both let and match binding.
 unsigned int

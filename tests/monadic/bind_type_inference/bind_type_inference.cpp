@@ -1,4 +1,4 @@
-#include <bind_type_inference.h>
+#include "bind_type_inference.h"
 
 int64_t BindTypeInference::test1() {
   return ignoreAndReturn<int64_t>(int64_t(42));

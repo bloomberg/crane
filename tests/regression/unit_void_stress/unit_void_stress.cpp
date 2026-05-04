@@ -1,4 +1,4 @@
-#include <unit_void_stress.h>
+#include "unit_void_stress.h"
 
 void UnitVoidStress::consume(const unsigned int n) {
   if (n <= 0) {

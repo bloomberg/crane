@@ -1,4 +1,4 @@
-#include <generated_lazy_field_name_clash.h>
+#include "generated_lazy_field_name_clash.h"
 
 GeneratedLazyFieldNameClash::d_lazyV_
 GeneratedLazyFieldNameClash::true_stream() {

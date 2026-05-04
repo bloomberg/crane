@@ -1,4 +1,4 @@
-#include <ping_pong.h>
+#include "ping_pong.h"
 
 /// Check if two strings are equal using PrimString.compare.
 bool PingPong::string_eq(const std::string s1, const std::string s2) {

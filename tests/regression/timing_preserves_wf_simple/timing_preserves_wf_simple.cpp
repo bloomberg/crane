@@ -1,4 +1,4 @@
-#include <timing_preserves_wf_simple.h>
+#include "timing_preserves_wf_simple.h"
 
 bool TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
   return (s.regs_len == 4u &&

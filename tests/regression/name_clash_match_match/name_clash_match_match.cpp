@@ -1,4 +1,4 @@
-#include <name_clash_match_match.h>
+#include "name_clash_match_match.h"
 
 NameClashMatchMatch::tree
 NameClashMatchMatch::choose_subtree(const NameClashMatchMatch::Dir d,

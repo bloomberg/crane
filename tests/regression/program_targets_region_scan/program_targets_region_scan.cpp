@@ -1,4 +1,4 @@
-#include <program_targets_region_scan.h>
+#include "program_targets_region_scan.h"
 
 std::optional<unsigned int> ProgramTargetsRegionScan::jump_target(
     const ProgramTargetsRegionScan::instruction &i) {

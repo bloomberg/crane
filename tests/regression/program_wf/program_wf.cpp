@@ -1,4 +1,4 @@
-#include <program_wf.h>
+#include "program_wf.h"
 
 std::optional<unsigned int>
 ProgramWf::jump_target(const ProgramWf::instruction &i) {

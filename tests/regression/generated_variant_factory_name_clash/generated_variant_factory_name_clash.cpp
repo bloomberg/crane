@@ -1,4 +1,4 @@
-#include <generated_variant_factory_name_clash.h>
+#include "generated_variant_factory_name_clash.h"
 
 bool GeneratedVariantFactoryNameClash::is_variant(
     const GeneratedVariantFactoryNameClash::token &t) {

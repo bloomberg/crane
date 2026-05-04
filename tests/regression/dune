@@ -1897,27 +1897,17 @@
   (deps separate_extraction.t.exe)
   (action (run ./separate_extraction.t.exe))))
 
-(subdir separate_extraction_clash
- (rule
-  (targets separate_extraction_clash.t.exe)
-  (deps SepClashA.vo SepClashB.vo separate_extraction_clash.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} separate_extraction_clash.t.exe SepClashA.cpp SepClashB.cpp separate_extraction_clash.t.cpp)))
- (rule
-  (alias runtest)
-  (deps separate_extraction_clash.t.exe)
-  (action (run ./separate_extraction_clash.t.exe))))
 
-(subdir sep_ext_modname_clash
+(subdir sep_ext_cross_module
  (rule
-  (targets sep_ext_modname_clash.t.exe)
-  (deps SepExtModNameClash.vo sep_ext_modname_clash.t.cpp (source_tree .))
+  (targets sep_ext_cross_module.t.exe)
+  (deps SepExtCrossModule.vo sep_ext_cross_module.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_modname_clash.t.exe BarFoo.cpp BazFoo.cpp sep_ext_modname_clash.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_module.t.exe SepExtCrossModule.cpp Datatypes.cpp List.cpp sep_ext_cross_module.t.cpp)))
  (rule
   (alias runtest)
-  (deps sep_ext_modname_clash.t.exe)
-  (action (run ./sep_ext_modname_clash.t.exe))))
+  (deps sep_ext_cross_module.t.exe)
+  (action (run ./sep_ext_cross_module.t.exe))))
 
 (subdir tuple
  (rule

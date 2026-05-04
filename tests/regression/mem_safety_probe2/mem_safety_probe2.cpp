@@ -1,4 +1,4 @@
-#include <mem_safety_probe2.h>
+#include "mem_safety_probe2.h"
 
 /// TEST 7: Closure escaping through a list, then applied.
 MemSafetyProbe2::mylist<unsigned int> MemSafetyProbe2::map_apply(

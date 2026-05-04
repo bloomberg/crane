@@ -1,4 +1,4 @@
-#include <thread.h>
+#include "thread.h"
 
 void threadtest::fun1(const unsigned int n) {
   if (n <= 0) {

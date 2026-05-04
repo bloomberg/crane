@@ -1,4 +1,4 @@
-#include <effect_poly.h>
+#include "effect_poly.h"
 
 unsigned int EffectPoly::test_map_result() {
   return map_result<unsigned int, unsigned int>(

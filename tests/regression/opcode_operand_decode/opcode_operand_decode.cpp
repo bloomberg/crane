@@ -1,4 +1,4 @@
-#include <opcode_operand_decode.h>
+#include "opcode_operand_decode.h"
 
 OpcodeOperandDecode::Instruction
 OpcodeOperandDecode::decode(const unsigned int b1, const unsigned int) {

@@ -1,4 +1,4 @@
-#include <no_mapping_event_probe.h>
+#include "no_mapping_event_probe.h"
 
 void NoMappingEventProbe::draw_hidden_tile(const unsigned int x,
                                            const unsigned int y) {

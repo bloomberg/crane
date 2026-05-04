@@ -1,4 +1,4 @@
-#include <fin_operates_on_pairs.h>
+#include "fin_operates_on_pairs.h"
 
 unsigned int FinOperatesOnPairs::get_reg(const FinOperatesOnPairs::state &s,
                                          const unsigned int r) {

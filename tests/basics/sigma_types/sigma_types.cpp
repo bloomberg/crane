@@ -1,4 +1,4 @@
-#include <sigma_types.h>
+#include "sigma_types.h"
 
 SigT<unsigned int, std::any> SigmaTypes::nat_with_double(const unsigned int n) {
   return SigT<unsigned int, std::any>::existt((n + n), std::any{});

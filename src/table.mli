@@ -111,8 +111,6 @@ val is_modfile : ModPath.t -> bool
 (** Get string representation of module file. *)
 val string_of_modfile : ModPath.t -> string
 
-(** Pre-register a module file path with a specific output name. *)
-val preregister_modfile : ModPath.t -> string -> unit
 
 (** Get file name from module file. *)
 val file_of_modfile : ModPath.t -> string

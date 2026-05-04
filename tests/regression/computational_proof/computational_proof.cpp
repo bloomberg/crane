@@ -1,4 +1,4 @@
-#include <computational_proof.h>
+#include "computational_proof.h"
 
 bool ComputationalProof::nat_eq_dec(const unsigned int n,
                                     const unsigned int x) {

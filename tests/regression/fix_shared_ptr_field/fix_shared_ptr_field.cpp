@@ -1,4 +1,4 @@
-#include <fix_shared_ptr_field.h>
+#include "fix_shared_ptr_field.h"
 
 /// Dummy use of wrapper to keep it alive for extraction.
 FixSharedPtrField::wrapper

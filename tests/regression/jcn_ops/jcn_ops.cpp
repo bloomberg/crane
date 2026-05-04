@@ -1,4 +1,4 @@
-#include <jcn_ops.h>
+#include "jcn_ops.h"
 
 bool JcnOps::jcn_condition(const JcnOps::state &s, const unsigned int cond) {
   unsigned int c1 = (8u ? cond / 8u : 0);

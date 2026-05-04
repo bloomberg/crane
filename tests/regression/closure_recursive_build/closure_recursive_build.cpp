@@ -1,4 +1,4 @@
-#include <closure_recursive_build.h>
+#include "closure_recursive_build.h"
 
 /// Recursively build a list of fixpoint closures. Each recursive call
 /// creates a local fixpoint adder that captures the current n.

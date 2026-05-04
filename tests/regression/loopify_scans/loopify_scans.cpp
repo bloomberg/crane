@@ -1,4 +1,4 @@
-#include <loopify_scans.h>
+#include "loopify_scans.h"
 
 List<unsigned int> LoopifyScans::scanl(const unsigned int acc,
                                        const List<unsigned int> &l) {

@@ -1,4 +1,4 @@
-#include <loopify_extrema.h>
+#include "loopify_extrema.h"
 
 unsigned int LoopifyExtrema::maximum(
     const List<unsigned int>

@@ -1,4 +1,4 @@
-#include <mem_safety_probe4.h>
+#include "mem_safety_probe4.h"
 
 /// TEST 1: Partial app applied to recursive result.
 /// The closure f captures tree t by &, but must survive across the

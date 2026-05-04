@@ -1,4 +1,4 @@
-#include <wrapper_decl_merge.h>
+#include "wrapper_decl_merge.h"
 
 unsigned int WrapperDeclMerge::A::Nat::fa(const unsigned int n) { return n; }
 

@@ -1,4 +1,4 @@
-#include <cps_closure_chain.h>
+#include "cps_closure_chain.h"
 
 unsigned int CpsClosureChain::tree_sum(const CpsClosureChain::tree &t) {
   return tree_sum_cps(t, [](const unsigned int x) { return x; });

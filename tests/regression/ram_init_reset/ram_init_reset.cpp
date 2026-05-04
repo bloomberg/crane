@@ -1,4 +1,4 @@
-#include <ram_init_reset.h>
+#include "ram_init_reset.h"
 
 RamInitReset::state RamInitReset::reset_state(const RamInitReset::state &s) {
   return state{

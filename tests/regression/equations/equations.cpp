@@ -1,4 +1,4 @@
-#include <equations.h>
+#include "equations.h"
 
 bool PeanoNat::even(const unsigned int n) {
   if (n <= 0) {

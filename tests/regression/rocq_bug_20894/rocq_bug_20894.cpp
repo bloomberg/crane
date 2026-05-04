@@ -1,4 +1,4 @@
-#include <rocq_bug_20894.h>
+#include "rocq_bug_20894.h"
 
 void RocqBug20894::M::fold(const List<Unit> &l) {
   if (std::holds_alternative<typename List<Unit>::Nil>(l.v())) {

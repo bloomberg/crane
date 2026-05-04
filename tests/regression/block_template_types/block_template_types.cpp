@@ -1,4 +1,4 @@
-#include <block_template_types.h>
+#include "block_template_types.h"
 
 /// %result inferred as unsigned int.
 unsigned int BlockTemplateTypes::test_read_nat() {

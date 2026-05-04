@@ -1,4 +1,4 @@
-#include <stm.h>
+#include "stm.h"
 
 unsigned int stmtest::stm_basic_counter(const std::monostate &) {
   stm::TVar<unsigned int> c = stm::newTVar(0u);

@@ -1,4 +1,4 @@
-#include <instruction_cycles.h>
+#include "instruction_cycles.h"
 
 unsigned int
 InstructionCycles::cycles_jms(const InstructionCycles::state2 &,

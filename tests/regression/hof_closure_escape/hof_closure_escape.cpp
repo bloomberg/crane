@@ -1,4 +1,4 @@
-#include <hof_closure_escape.h>
+#include "hof_closure_escape.h"
 
 unsigned int HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
                                           const unsigned int x) {

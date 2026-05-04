@@ -1,4 +1,4 @@
-#include <loopify_numeric_sequences.h>
+#include "loopify_numeric_sequences.h"
 
 unsigned int LoopifyNumericSequences::collatz_length_fuel(
     const unsigned int fuel,

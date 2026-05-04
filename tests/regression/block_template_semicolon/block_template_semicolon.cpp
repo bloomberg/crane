@@ -1,4 +1,4 @@
-#include <block_template_semicolon.h>
+#include "block_template_semicolon.h"
 
 /// String argument with semicolons in expression position (monad right
 /// identity) Tests gen_block_iife semicolon splitting

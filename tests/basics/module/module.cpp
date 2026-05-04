@@ -1,4 +1,4 @@
-#include <module.h>
+#include "module.h"
 
 Comparison NatOrdered::compare(const unsigned int _x0, const unsigned int _x1) {
   return Nat::compare(_x0, _x1);

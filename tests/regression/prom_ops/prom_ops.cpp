@@ -1,4 +1,4 @@
-#include <prom_ops.h>
+#include "prom_ops.h"
 
 bool PromOps::nat_list_eqb(const List<unsigned int> &xs,
                            const List<unsigned int> &ys) {

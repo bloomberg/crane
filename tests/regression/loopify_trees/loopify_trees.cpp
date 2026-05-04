@@ -1,4 +1,4 @@
-#include <loopify_trees.h>
+#include "loopify_trees.h"
 
 /// Consolidated UNIQUE tree algorithms - domain-specific tree operations.
 unsigned int LoopifyTrees::tree_sum(

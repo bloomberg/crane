@@ -1,4 +1,4 @@
-#include <reuse_scrutinee.h>
+#include "reuse_scrutinee.h"
 
 /// Extract the value from the left subtree.
 /// This accesses the Node's d_a0 field (left subtree).

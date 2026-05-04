@@ -1,4 +1,4 @@
-#include <kbp_multibit_default.h>
+#include "kbp_multibit_default.h"
 
 KbpMultibitDefault::state
 KbpMultibitDefault::execute_kbp(const KbpMultibitDefault::state &s) {

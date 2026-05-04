@@ -1,4 +1,4 @@
-#include <coinductive.h>
+#include "coinductive.h"
 
 Coinductive::stream Coinductive::zeros() {
   return stream::lazy_(

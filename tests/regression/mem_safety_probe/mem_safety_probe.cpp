@@ -1,4 +1,4 @@
-#include <mem_safety_probe.h>
+#include "mem_safety_probe.h"
 
 /// ---- TEST 2: Build list of closures from tree branches ----
 /// Each closure captures a tree value via partial application.

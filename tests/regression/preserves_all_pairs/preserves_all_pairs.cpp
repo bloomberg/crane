@@ -1,4 +1,4 @@
-#include <preserves_all_pairs.h>
+#include "preserves_all_pairs.h"
 
 unsigned int PreservesAllPairs::get_reg(const PreservesAllPairs::state &s,
                                         const unsigned int r) {

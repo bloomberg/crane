@@ -1,4 +1,4 @@
-#include <loopify_combinatorics.h>
+#include "loopify_combinatorics.h"
 
 /// Consolidated combinatorial algorithms.
 /// remove x l removes first occurrence of x from list.

@@ -1,4 +1,4 @@
-#include <primitive_rec_typeclass.h>
+#include "primitive_rec_typeclass.h"
 
 unsigned int
 PrimitiveRecTypeclass::rect_width(const PrimitiveRecTypeclass::rect &r) {

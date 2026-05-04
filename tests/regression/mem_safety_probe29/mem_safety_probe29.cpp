@@ -1,4 +1,4 @@
-#include <mem_safety_probe29.h>
+#include "mem_safety_probe29.h"
 
 /// TEST 2: Dup pattern — use inner tree twice in outer construction.
 MemSafetyProbe29::outer MemSafetyProbe29::dup_inner(MemSafetyProbe29::inner i) {

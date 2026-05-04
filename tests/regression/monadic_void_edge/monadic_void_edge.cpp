@@ -1,4 +1,4 @@
-#include <monadic_void_edge.h>
+#include "monadic_void_edge.h"
 
 /// 1. Bind where LHS is void and RHS returns a value
 unsigned int MonadicVoidEdge::bind_void_then_value() {

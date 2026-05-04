@@ -1,4 +1,4 @@
-#include <mem_safety_probe20.h>
+#include "mem_safety_probe20.h"
 
 /// TEST 1: Return wrapped closure from if-branch.
 /// The if becomes top-level Sif. return_captures_by_value sees

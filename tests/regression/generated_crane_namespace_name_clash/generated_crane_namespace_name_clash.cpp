@@ -1,4 +1,4 @@
-#include <generated_crane_namespace_name_clash.h>
+#include "generated_crane_namespace_name_clash.h"
 
 crane_::stream crane_::ones() {
   return stream::lazy_(

@@ -1,4 +1,4 @@
-#include <closure_chain.h>
+#include "closure_chain.h"
 
 unsigned int ClosureChain::tree_sum(const ClosureChain::tree &t) {
   if (std::holds_alternative<typename ClosureChain::tree::Leaf>(t.v())) {
