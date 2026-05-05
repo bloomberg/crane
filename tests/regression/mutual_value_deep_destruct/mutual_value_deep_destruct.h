@@ -89,7 +89,7 @@ struct MutualValueDeepDestruct {
                   std::get<typename MutualValueDeepDestruct::b::BNode>(
                       _dst_alt.d_a1->v_mut());
               if (_psrc.d_a0) {
-                _pdst.d_a0 = std::make_unique<MutualValueDeepDestruct::a>();
+                _pdst.d_a0 = std::make_unique<a>();
                 _stack.push_back({_psrc.d_a0.get(), _pdst.d_a0.get()});
               }
             }

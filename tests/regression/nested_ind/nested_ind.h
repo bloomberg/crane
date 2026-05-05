@@ -479,19 +479,17 @@ struct NestedInd {
           auto &_dst_alt = std::get<Add>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
-              const List<NestedInd::expr> *_lsrc = _alt.d_a0.get();
-              List<NestedInd::expr> *_ldst = _dst_alt.d_a0.get();
-              while (
-                  std::holds_alternative<typename List<NestedInd::expr>::Cons>(
-                      _lsrc->v())) {
+              const List<expr> *_lsrc = _alt.d_a0.get();
+              List<expr> *_ldst = _dst_alt.d_a0.get();
+              while (std::holds_alternative<typename List<expr>::Cons>(
+                  _lsrc->v())) {
                 const auto &_lsrc_c =
-                    std::get<typename List<NestedInd::expr>::Cons>(_lsrc->v());
-                _ldst->v_mut() = typename List<NestedInd::expr>::Cons{
-                    NestedInd::expr{},
-                    _lsrc_c.d_a1 ? std::make_unique<List<NestedInd::expr>>()
-                                 : nullptr};
-                auto &_ldst_c = std::get<typename List<NestedInd::expr>::Cons>(
-                    _ldst->v_mut());
+                    std::get<typename List<expr>::Cons>(_lsrc->v());
+                _ldst->v_mut() = typename List<expr>::Cons{
+                    expr{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<expr>>() : nullptr};
+                auto &_ldst_c =
+                    std::get<typename List<expr>::Cons>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
                 if (_lsrc_c.d_a1) {
                   _lsrc = _lsrc_c.d_a1.get();
@@ -500,9 +498,9 @@ struct NestedInd {
                   break;
                 }
               }
-              if (std::holds_alternative<typename List<NestedInd::expr>::Nil>(
+              if (std::holds_alternative<typename List<expr>::Nil>(
                       _lsrc->v())) {
-                _ldst->v_mut() = typename List<NestedInd::expr>::Nil{};
+                _ldst->v_mut() = typename List<expr>::Nil{};
               }
             }
           }();
@@ -513,19 +511,17 @@ struct NestedInd {
           auto &_dst_alt = std::get<Mul>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
-              const List<NestedInd::expr> *_lsrc = _alt.d_a0.get();
-              List<NestedInd::expr> *_ldst = _dst_alt.d_a0.get();
-              while (
-                  std::holds_alternative<typename List<NestedInd::expr>::Cons>(
-                      _lsrc->v())) {
+              const List<expr> *_lsrc = _alt.d_a0.get();
+              List<expr> *_ldst = _dst_alt.d_a0.get();
+              while (std::holds_alternative<typename List<expr>::Cons>(
+                  _lsrc->v())) {
                 const auto &_lsrc_c =
-                    std::get<typename List<NestedInd::expr>::Cons>(_lsrc->v());
-                _ldst->v_mut() = typename List<NestedInd::expr>::Cons{
-                    NestedInd::expr{},
-                    _lsrc_c.d_a1 ? std::make_unique<List<NestedInd::expr>>()
-                                 : nullptr};
-                auto &_ldst_c = std::get<typename List<NestedInd::expr>::Cons>(
-                    _ldst->v_mut());
+                    std::get<typename List<expr>::Cons>(_lsrc->v());
+                _ldst->v_mut() = typename List<expr>::Cons{
+                    expr{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<expr>>() : nullptr};
+                auto &_ldst_c =
+                    std::get<typename List<expr>::Cons>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
                 if (_lsrc_c.d_a1) {
                   _lsrc = _lsrc_c.d_a1.get();
@@ -534,9 +530,9 @@ struct NestedInd {
                   break;
                 }
               }
-              if (std::holds_alternative<typename List<NestedInd::expr>::Nil>(
+              if (std::holds_alternative<typename List<expr>::Nil>(
                       _lsrc->v())) {
-                _ldst->v_mut() = typename List<NestedInd::expr>::Nil{};
+                _ldst->v_mut() = typename List<expr>::Nil{};
               }
             }
           }();
@@ -565,12 +561,10 @@ struct NestedInd {
           auto &_alt = std::get<Add>(_node.d_v_);
           if (_alt.d_a0) {
             auto *_lp = _alt.d_a0.get();
-            while (std::holds_alternative<typename List<NestedInd::expr>::Cons>(
-                _lp->v())) {
-              auto &_lc =
-                  std::get<typename List<NestedInd::expr>::Cons>(_lp->v_mut());
-              _stack.push_back(
-                  std::make_unique<NestedInd::expr>(std::move(_lc.d_a0)));
+            while (
+                std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_unique<expr>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {
@@ -583,12 +577,10 @@ struct NestedInd {
           auto &_alt = std::get<Mul>(_node.d_v_);
           if (_alt.d_a0) {
             auto *_lp = _alt.d_a0.get();
-            while (std::holds_alternative<typename List<NestedInd::expr>::Cons>(
-                _lp->v())) {
-              auto &_lc =
-                  std::get<typename List<NestedInd::expr>::Cons>(_lp->v_mut());
-              _stack.push_back(
-                  std::make_unique<NestedInd::expr>(std::move(_lc.d_a0)));
+            while (
+                std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_unique<expr>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {

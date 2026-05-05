@@ -62,16 +62,16 @@ struct ExistentialClosureProbe {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename F0>
+  template <typename T1, typename T2, typename F0>
   static T1 wrap_rect(F0 &&f, const wrap &w) {
     const auto &[d_a] = std::get<typename wrap::Wrap0>(w.v());
-    return std::any_cast<T1>(f(d_a));
+    return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
   }
 
-  template <typename T1, typename F0>
+  template <typename T1, typename T2, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w) {
     const auto &[d_a] = std::get<typename wrap::Wrap0>(w.v());
-    return std::any_cast<T1>(f(d_a));
+    return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
   }
 
   template <typename T1> static T1 unwrap(const wrap &w) {

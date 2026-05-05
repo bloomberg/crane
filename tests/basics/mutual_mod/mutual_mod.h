@@ -81,7 +81,7 @@ struct EvenOdd {
               auto &_pdst = std::get<typename EvenOdd::odd_list::OCons>(
                   _dst_alt.d_a1->v_mut());
               if (_psrc.d_a1) {
-                _pdst.d_a1 = std::make_unique<EvenOdd::even_list>();
+                _pdst.d_a1 = std::make_unique<even_list>();
                 _stack.push_back({_psrc.d_a1.get(), _pdst.d_a1.get()});
               }
             }

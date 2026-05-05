@@ -729,6 +729,11 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
     else if not (get_record_fields g == []) then render t
     else
     let inner = render t in
+    let inner_base =
+      match String.index_opt inner '<' with
+      | Some i -> String.sub inner 0 i
+      | None -> inner
+    in
     let parent_ns =
       match g with
       | GlobRef.IndRef (kn, _) ->
@@ -736,15 +741,31 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
         | Names.ModPath.MPdot (_, label) ->
           let parent = Names.Label.to_string label in
           (* Strip template args before comparing: "List<t_A>" → "List" *)
-          let inner_base =
-            match String.index_opt inner '<' with
-            | Some i -> String.sub inner 0 i
-            | None -> inner
-          in
           let cap_inner = Common.capitalize_last_component inner_base in
           (* Eponymous: parent "List" = inner "List" → no qualification *)
           if String.equal parent cap_inner then ""
           else parent ^ "::"
+        | Names.ModPath.MPfile f ->
+          (* Top-level inductive in a .v file (e.g. list in Datatypes.v).
+             In separate extraction, external inductives need their parent
+             namespace as prefix (e.g. "Datatypes::").  In monolithic
+             extraction, everything is in the same file so no prefix is
+             needed — matching the old behaviour of the catch-all [_ -> ""]
+             branch. *)
+          if List.exists
+               (Environ.QGlobRef.equal Environ.empty_env g)
+               (get_local_inductives ())
+          then ""
+          else if not (Common.get_force_qualified_capitalization ())
+          then ""
+          else
+            let parent =
+              String.capitalize_ascii
+                (Id.to_string (List.hd (Names.DirPath.repr f)))
+            in
+            let cap_inner = Common.capitalize_last_component inner_base in
+            if String.equal parent cap_inner then ""
+            else parent ^ "::"
         | _ -> "" )
       | _ -> ""
     in
@@ -756,6 +777,8 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
   | Tvar (_, Some n) ->
     let s = Id.to_string n in
     ( match resolve_special_id s with Some r -> r | None -> s )
+  | Tqualified (base, id) ->
+    "typename " ^ render base ^ "::" ^ Id.to_string id
   | Tshared_ptr t -> "std::shared_ptr<" ^ render t ^ ">"
   | Tunique_ptr t -> "std::unique_ptr<" ^ render t ^ ">"
   | Tvoid -> "void"
@@ -775,7 +798,14 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
     | GlobRef.IndRef _ when skip g -> core
     | GlobRef.IndRef _ -> Tnamespace (g, core)
     | _ -> core )
-  | Tnamespace (g, t) -> Tnamespace (g, qualify_inductives ~skip t)
+  | Tnamespace (g, t) ->
+    (* qualify_inductives may add Tnamespace to a Tglob(g,...) inside t;
+       avoid double-wrapping when the inner result already carries the
+       same Tnamespace. *)
+    let inner = qualify_inductives ~skip t in
+    ( match inner with
+    | Tnamespace (g2, _) when GlobRef.CanOrd.equal g g2 -> inner
+    | _ -> Tnamespace (g, inner) )
   | Tshared_ptr t -> Tshared_ptr (qualify_inductives ~skip t)
   | Tunique_ptr t -> Tunique_ptr (qualify_inductives ~skip t)
   | Tref t -> Tref (qualify_inductives ~skip t)
@@ -787,6 +817,8 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
   | Tid (id, ts) -> Tid (id, List.map (qualify_inductives ~skip) ts)
   | Tid_external (id, ts) ->
     Tid_external (id, List.map (qualify_inductives ~skip) ts)
+  | Tqualified (base, id) ->
+    Tqualified (qualify_inductives ~skip base, id)
   | t -> t
 
 (** Render a C++ type as a string suitable for use in raw C++ template
@@ -904,6 +936,12 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
     | Tnamespace (g, (Tglob (g2, _, _) as core)) when GlobRef.CanOrd.equal g g2 -> core
     | t -> t
   in
+  (* Save the original dst_ty (with its Tnamespace wrapper, if any) before
+     stripping.  The stripped form is used for structural comparison; the
+     original is used for rendering converting constructors via
+     CPPconverting_ctor, which uses pp_cpp_type and correctly emits namespace
+     qualification and typename keywords. *)
+  let orig_dst_ty = dst_ty in
   let src_ty = strip_ns src_ty and dst_ty = strip_ns dst_ty in
   (* Inline clone for a [unique_ptr<T>] field: null-safe make_unique using
      the pointee's clone() method. *)
@@ -1019,21 +1057,24 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
         ~make_body:(fun s ->
           s ^ " ? std::make_unique<" ^ dst_inner_s ^ ">(*" ^ s ^ ") : nullptr")
     | Tunique_ptr inner, _ ->
-      (* unique_ptr<T> → T: dereference; if inner type differs from dst,
-         apply a converting constructor after dereferencing. *)
+      (* unique_ptr<T> → T: dereference.  Also strip Tnamespace from inner
+         before comparing to dst_ty: strip_ns was applied to dst_ty at the
+         top of this function but not to inner (which sits one level deeper
+         inside Tunique_ptr).  Without stripping inner, a
+         [Tnamespace(list, Tglob(list,...))] inner would wrongly appear
+         different from the stripped [Tglob(list,...)] dst_ty and generate a
+         spurious converting constructor with an unqualified type name. *)
+      let inner = strip_ns inner in
       let derefed = CPPderef expr in
       if inner = dst_ty then derefed
-      else
-        let dst_s = render dst_ty in
-        CPPfun_call (CPPraw dst_s, [derefed])
+      else CPPconverting_ctor (orig_dst_ty, [derefed])
     | Tshared_ptr inner, _ ->
-      (* shared_ptr<T> → T: dereference; if inner type differs from dst,
-         apply a converting constructor after dereferencing. *)
+      (* shared_ptr<T> → T: dereference; same Tnamespace-stripping fix as
+         the Tunique_ptr case above. *)
+      let inner = strip_ns inner in
       let derefed = CPPderef expr in
       if inner = dst_ty then derefed
-      else
-        let dst_s = render dst_ty in
-        CPPfun_call (CPPraw dst_s, [derefed])
+      else CPPconverting_ctor (orig_dst_ty, [derefed])
     | _, Tunique_ptr inner ->
       (* T → unique_ptr<T>: wrap in make_unique *)
       CPPfun_call (CPPmk_unique inner, [expr])
@@ -1074,14 +1115,12 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
       when GlobRef.CanOrd.equal g1 g2 && _src_ts <> _dst_ts
            && not (Table.is_inline_custom g1) ->
       (* Same Crane container, different element types → converting ctor *)
-      let dst_type_s = render dst_ty in
-      CPPfun_call (CPPraw dst_type_s, [expr])
+      CPPconverting_ctor (orig_dst_ty, [expr])
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never unique_ptr)
          because nested self-references are wrapped at the field level. *)
-      let dst_s = render dst_ty in
-      CPPfun_call (CPPraw dst_s, [expr])
+      CPPconverting_ctor (orig_dst_ty, [expr])
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
@@ -2489,6 +2528,21 @@ let rec convert_ml_type_to_cpp_type
     in
     let converted_ts =
       List.map (convert_ml_type_to_cpp_type env ns_for_args tvars) filtered_ts
+    in
+    let converted_ts =
+      match g with
+      | GlobRef.IndRef _ ->
+        let rec first_ktype_idx i = function
+          | [] -> max_int
+          | (Tdummy Ktype | Tmeta {contents = Some (Tdummy Ktype)}) :: _ -> i
+          | _ :: rest -> first_ktype_idx (i + 1) rest
+        in
+        let cutoff = first_ktype_idx 0 filtered_ts in
+        if cutoff < max_int then
+          List.mapi (fun i t -> if i > cutoff then Tany else t) converted_ts
+        else
+          converted_ts
+      | _ -> converted_ts
     in
     let core = Tglob (g, converted_ts, []) in
     ( match g with
@@ -5560,6 +5614,27 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let branch_needs_uptr_preextract =
     branch_has_lambda || return_type_is_coinductive
   in
+  (* A non-self-referential field in a type-indexed inductive (no template
+     params) whose def-site type contains an unnamed Tvar is stored as
+     [std::any] in the struct.  At the match site we recover the ML-known
+     type with [std::any_cast<bare_ty>].  This handles every access pattern
+     uniformly — fst, snd, or any other function — because the cast is
+     applied at the binding site, not at individual use sites. *)
+  let field_is_wholesale_erased =
+    let num_pv = Table.get_ctor_num_param_vars cname in
+    fun i ->
+      num_pv = 0
+      && not (field_is_self_or_mutual_ref_at_def i)
+      && not (field_has_nested_self_ref_at_def i)
+      && (match List.nth_opt non_erased_def_site_field_tys i with
+          | Some def_ty ->
+            let cpp_ty =
+              convert_ml_type_to_cpp_type (empty_env ())
+                (Refset'.add ind_ref Refset'.empty) [] def_ty
+            in
+            has_unnamed_tvar cpp_ty
+          | None -> false)
+  in
   (* Substitute pattern variable references with the structured-binding
      names.  For unique_ptr fields (self-references at definition site),
      the structured binding gives [const unique_ptr<T>& d_field]; we
@@ -5590,6 +5665,9 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                     && contains_shared_ptr_or_unique_ptr field_ty then
               gen_clone_field_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (CPPvar binding_name)
+            else if field_is_wholesale_erased i
+                    && not (is_erased_type bare_ty) then
+              CPPany_cast (bare_ty, CPPvar binding_name)
             else
               CPPvar binding_name
           in
@@ -5627,74 +5705,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       (List.mapi (fun i x -> (i, x)) rev_ids)
   in
   let body_stmts = uptr_value_bindings @ body_stmts in
-  (* For fields stored as [std::any] (erased type indices in type-indexed
-     inductives such as [wrap : Set -> Type]), wrap direct returns of those
-     bindings with [std::any_cast<rty>].
-
-     A struct field is [std::any] when [gen_ind_header_v2] erases its type:
-     this happens when a field's ML type is a [Tvar] that references a type
-     INDEX (not a kept PARAMETER), so it has no C++ template name and
-     [tvar_erase_type] converts it to [Tany].  The pattern variable's ML type
-     is NOT a reliable indicator — the Tmeta reconstructor resolves it to a
-     concrete type in monomorphic contexts, masking the [std::any] storage.
-
-     We only fix DIRECT [return <binding>;] statements.  When the binding is
-     passed to a higher-rank callback (e.g. the auto-generated [wrap_rect]),
-     the field is forwarded as [std::any] unchanged; the existing
-     [ml_codomain_erases_to_any] mechanism handles the cast on the call result. *)
-  let body_stmts =
-    match Table.get_ctor_ip_types_opt cname with
-    | None -> body_stmts
-    | Some ip_tys ->
-      let cast_ty_opt =
-        let t = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
-        if type_is_erased t then None else Some t
-      in
-      ( match cast_ty_opt with
-      | None -> body_stmts
-      | Some cast_ty ->
-        (* Identify which field bindings are stored as std::any in C++.
-           A field is std::any iff gen_ind_header_v2 would erase its type.
-           gen_ind_header_v2 uses only PARAMETER type vars (not index vars)
-           and applies tvar_erase_type when param_vars is empty — making
-           any Tvar that references an index (rather than a parameter)
-           collapse to Tany.  We replicate that computation here. *)
-        let num_param_vars = Table.get_ctor_num_param_vars cname in
-        let param_vars =
-          List.map Common.tparam_name
-            (List.firstn num_param_vars (Table.get_ind_ip_vars cname))
-        in
-        let ind_ref =
-          match cname with
-          | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
-          | r -> r
-        in
-        let ind_ns = Refset'.add ind_ref Refset'.empty in
-        let non_dummy_ip_tys = List.filter (fun t -> not (isTdummy t)) ip_tys in
-        let erased_names =
-          List.mapi (fun i (bn, _, _, _) ->
-              match List.nth_opt non_dummy_ip_tys i with
-              | Some ip_ty ->
-                let cpp_ty =
-                  convert_ml_type_to_cpp_type (empty_env ()) ind_ns param_vars ip_ty
-                in
-                let cpp_ty =
-                  if param_vars = [] then tvar_erase_type cpp_ty else cpp_ty
-                in
-                if is_erased_type cpp_ty then Some bn else None
-              | None -> None)
-            field_bindings
-          |> List.filter_map Fun.id
-        in
-        if erased_names = [] then body_stmts
-        else
-          List.map (function
-            | Sreturn (Some (CPPvar id))
-              when List.exists (Id.equal id) erased_names ->
-              Sreturn (Some (CPPany_cast (cast_ty, CPPvar id)))
-            | s -> s )
-            body_stmts )
-  in
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)
   let has_used_fields = List.exists Fun.id dummies in
@@ -9373,6 +9383,46 @@ let primary_tvar_indices dom cod =
     IntSet.empty
     (cod :: non_fun_dom)
 
+(** Collect tvar indices that appear in type INDEX positions of inductives
+    in the ML type.  Type indices are stripped from the C++ type by
+    {!convert_ml_type_to_cpp_type} but may be needed in function bodies
+    for [any_cast] when matching on type-indexed inductives with
+    wholesale-erased fields.
+
+    Only collects tvars from inductives where [get_ind_num_param_vars_opt]
+    succeeds and the number of type args exceeds the parameter count
+    (indicating genuine indices, not parameters). *)
+let collect_ml_type_index_tvars ml_ty =
+  let result = ref IntSet.empty in
+  let rec collect_tvars = function
+    | Miniml.Tvar i | Miniml.Tvar' i ->
+      result := IntSet.add i !result
+    | Miniml.Tarr (t1, t2) ->
+      collect_tvars t1; collect_tvars t2
+    | Miniml.Tglob (_, ts, _) ->
+      List.iter collect_tvars ts
+    | Miniml.Tmeta {contents = Some t} -> collect_tvars t
+    | _ -> ()
+  in
+  let rec walk = function
+    | Miniml.Tarr (t1, t2) -> walk t1; walk t2
+    | Miniml.Tglob (g, ts, _) ->
+      ( match g with
+      | GlobRef.IndRef (kn, _) ->
+        ( match Table.get_ind_num_param_vars_opt kn with
+        | Some num_param_vars when num_param_vars < List.length ts ->
+          List.iteri (fun i t ->
+            if i >= num_param_vars then collect_tvars t
+          ) ts
+        | _ -> () );
+        List.iter walk ts
+      | _ -> List.iter walk ts )
+    | Miniml.Tmeta {contents = Some t} -> walk t
+    | _ -> ()
+  in
+  walk ml_ty;
+  !result
+
 (** Build template parameter list with phantom detection.
 
     Type variables that appear in the codomain or non-function domain params
@@ -9383,19 +9433,35 @@ let primary_tvar_indices dom cod =
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!convert_ml_type_to_cpp_type}). *)
-let phantom_aware_temps cty tvars =
+    pipeline (see {!convert_ml_type_to_cpp_type}).
+
+    @param force_required  Set of tvar indices that must be required (plain
+      [typename T]) even if they don't appear in the C++ function type.
+      Used for type INDEX tvars that are stripped from the C++ type but needed
+      for [any_cast] in function bodies. *)
+let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
   match cty with
   | Tfun (dom, cod) ->
     let tvars_indexed = get_tvars_indexed cty in
     let primary = primary_tvar_indices dom cod in
+    let primary = IntSet.union primary force_required in
+    let extra =
+      IntSet.fold (fun i acc ->
+        if List.exists (fun (j, _) -> j = i) tvars_indexed then acc
+        else (i, tvar_id i) :: acc
+      ) force_required []
+    in
+    let all_tvars_indexed =
+      List.sort (fun (x, _) (y, _) -> Int.compare x y)
+        (tvars_indexed @ extra)
+    in
     List.map
       (fun (i, id) ->
         if IntSet.mem i primary then
           (TTtypename, id)
         else
           (TTtypename_default Tvoid, id) )
-      tvars_indexed
+      all_tvars_indexed
   | _ -> List.map (fun id -> (TTtypename, id)) tvars
 
 (** Substitute [CPPglob id] with [repl] in expressions and statements. Uses
@@ -10685,7 +10751,17 @@ let gen_decl_for_pp n b ty =
     | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
-  let temps = phantom_aware_temps cty tvars in
+  let index_tvar_set = collect_ml_type_index_tvars ty in
+  let extra_index_tvars =
+    IntSet.fold (fun i acc ->
+      let id = tvar_id i in
+      if List.exists (Id.equal id) tvars then acc
+      else id :: acc
+    ) index_tvar_set []
+    |> List.rev
+  in
+  let tvars = tvars @ extra_index_tvars in
+  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
   let result = match cty with
   | Tfun (dom, _) ->
     let f, e = gen_dfun n b cty ty temps in
@@ -10733,7 +10809,17 @@ let gen_dfun_def n b ty =
   let saved_method_ns = set_method_ns_for_locals () in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
-  let temps = phantom_aware_temps cty tvars in
+  let index_tvar_set = collect_ml_type_index_tvars ty in
+  let extra_index_tvars =
+    IntSet.fold (fun i acc ->
+      let id = tvar_id i in
+      if List.exists (Id.equal id) tvars then acc
+      else id :: acc
+    ) index_tvar_set []
+    |> List.rev
+  in
+  let tvars = tvars @ extra_index_tvars in
+  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
   (* Count typeclass-typed parameters in the ML domain — these become template
      params inside gen_dfun but aren't reflected in tvars (which comes from the
      C++ type). We need tvars to be non-empty when typeclass params exist so
@@ -12002,10 +12088,14 @@ let gen_ind_header_v2
                          else Tshared_ptr cpp_ty
                        else cpp_ty
                      in
-                     (* For indexed inductives (no template params), erase
-                        unnamed Tvars to std::any *)
                      let cpp_ty =
-                       if vars = [] then tvar_erase_type cpp_ty else cpp_ty
+                       if vars = [] then
+                         match cpp_ty with
+                         | Tunique_ptr _ | Tshared_ptr _ ->
+                           tvar_erase_type cpp_ty
+                         | _ when has_unnamed_tvar cpp_ty -> Tany
+                         | _ -> cpp_ty
+                       else cpp_ty
                      in
                      let field_name = List.nth field_ids j in
                      (Fvar (field_name, cpp_ty), VPublic, SNoTag) )
@@ -12198,12 +12288,12 @@ let gen_ind_header_v2
         if is_coinductive then []
         else
           let render_q_destr ty =
-            render_cpp_type_for_raw_template (qualify_inductives ty)
+            let skip g =
+              Environ.QGlobRef.equal Environ.empty_env g name
+            in
+            render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
           in
           let self_s_destr = render_q_destr self_ty in
-          let list_self_s_destr =
-            render_q_destr (Tid_external (Id.of_string_soft "List", [self_ty]))
-          in
           let ctor_moves =
             Array.to_list
               (Array.mapi
@@ -12292,7 +12382,9 @@ let gen_ind_header_v2
                                    make_unique and push.  Must reference
                                    stack_id via AST so lambda capture
                                    analysis detects it. *)
-                                let ls = list_self_s_destr in
+                                let ls = render_q_destr
+                                  (Tglob (list_g, [self_ty], []))
+                                in
                                 let ss = self_s_destr in
                                 let fes =
                                   Id.to_string alt_id ^ "."
@@ -12629,10 +12721,22 @@ let gen_ind_header_v2
                   ty
               in
               let storage_ty =
-                if vars = [] then tvar_erase_type storage_ty else storage_ty
+                if vars = [] then
+                  match storage_ty with
+                  | Tunique_ptr _ | Tshared_ptr _ ->
+                    tvar_erase_type storage_ty
+                  | _ when has_unnamed_tvar storage_ty -> Tany
+                  | _ -> storage_ty
+                else storage_ty
               in
               let api_ty =
-                if vars = [] then tvar_erase_type api_ty else api_ty
+                if vars = [] then
+                  match api_ty with
+                  | Tunique_ptr _ | Tshared_ptr _ ->
+                    tvar_erase_type api_ty
+                  | _ when has_unnamed_tvar api_ty -> Tany
+                  | _ -> api_ty
+                else api_ty
               in
               (j, storage_ty, api_ty) )
             tys_list
@@ -12836,7 +12940,13 @@ let gen_ind_header_v2
                            else cpp_ty
                          in
                          let cpp_ty =
-                           if vars = [] then tvar_erase_type cpp_ty else cpp_ty
+                           if vars = [] then
+                             match cpp_ty with
+                             | Tunique_ptr _ | Tshared_ptr _ ->
+                               tvar_erase_type cpp_ty
+                             | _ when has_unnamed_tvar cpp_ty -> Tany
+                             | _ -> cpp_ty
+                           else cpp_ty
                          in
                          (field_id, cpp_ty, true))
                        tys_list
@@ -12860,8 +12970,16 @@ let gen_ind_header_v2
                              else Tshared_ptr cpp_ty
                            else cpp_ty
                          in
-                         if target_tvar_ids = [] then tvar_erase_type cpp_ty
-                         else cpp_ty)
+                         let cpp_ty =
+                           if target_tvar_ids = [] then
+                             match cpp_ty with
+                             | Tunique_ptr _ | Tshared_ptr _ ->
+                               tvar_erase_type cpp_ty
+                             | _ when has_unnamed_tvar cpp_ty -> Tany
+                             | _ -> cpp_ty
+                           else cpp_ty
+                         in
+                         cpp_ty)
                        tys_list
                    in
                    let ctor_args =
@@ -12991,7 +13109,11 @@ let gen_ind_header_v2
                            tys_list
                        in
                        let render_q ty =
-                         render_cpp_type_for_raw_template (qualify_inductives ty)
+                         let skip g =
+                           Environ.QGlobRef.equal Environ.empty_env g name
+                         in
+                         render_cpp_type_for_raw_template
+                           (qualify_inductives ~skip ty)
                        in
                        let self_s = render_q self_ty in
                        let ctor_args =
@@ -13228,8 +13350,7 @@ let gen_ind_header_v2
                                        list, build dest list spine with
                                        placeholder elements, push frames *)
                                     let ls = render_q
-                                      (Tid_external
-                                         (Id.of_string_soft "List", [self_ty]))
+                                      (Tglob (list_g, [self_ty], []))
                                     in
                                     let (nil_s, cons_s) =
                                       list_ctor_struct_names list_g

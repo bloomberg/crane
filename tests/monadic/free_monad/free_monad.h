@@ -102,19 +102,20 @@ struct FreeMonad {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename F0, typename F1, typename F3>
+  template <typename T1, typename T2, typename F0, typename F1, typename F3>
     requires std::is_invocable_r_v<T1, F3 &, std::string &>
   static T1 IO_rect(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[d_a] = std::get<typename IO::Pure>(i.v());
-      return std::any_cast<T1>(f(d_a));
+      return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
       IO d_a_value = *(d_a);
       return std::any_cast<T1>(
-          f0(d_a_value, IO_rect<T1>(f, f0, f1, f2, d_a_value), auto(d_b),
-             [=](const std::any a) mutable {
-               return IO_rect<T1>(f, f0, f1, f2, auto(d_b)(a));
+          f0(d_a_value, IO_rect<T1, T2>(f, f0, f1, f2, d_a_value),
+             std::function<IO(std::any)>(d_b), [=](const std::any a) mutable {
+               return IO_rect<T1, T2>(f, f0, f1, f2,
+                                      std::function<IO(std::any)>(d_b)(a));
              }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;
@@ -124,19 +125,20 @@ struct FreeMonad {
     }
   }
 
-  template <typename T1, typename F0, typename F1, typename F3>
+  template <typename T1, typename T2, typename F0, typename F1, typename F3>
     requires std::is_invocable_r_v<T1, F3 &, std::string &>
   static T1 IO_rec(F0 &&f, F1 &&f0, const T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[d_a] = std::get<typename IO::Pure>(i.v());
-      return std::any_cast<T1>(f(d_a));
+      return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
       IO d_a_value = *(d_a);
       return std::any_cast<T1>(
-          f0(d_a_value, IO_rec<T1>(f, f0, f1, f2, d_a_value), auto(d_b),
-             [=](const std::any a) mutable {
-               return IO_rec<T1>(f, f0, f1, f2, auto(d_b)(a));
+          f0(d_a_value, IO_rec<T1, T2>(f, f0, f1, f2, d_a_value),
+             std::function<IO(std::any)>(d_b), [=](const std::any a) mutable {
+               return IO_rec<T1, T2>(f, f0, f1, f2,
+                                     std::function<IO(std::any)>(d_b)(a));
              }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;

@@ -23,7 +23,7 @@ concept OUTER = requires { requires INNER<typename M::X>; };
 
 struct TodoNestedModuleTypeFunctor {
   template <OUTER Y> struct Use {
-    using Lifted = Y::template Make<Y::X>;
+    using Lifted = Y::template Make<typename Y::X>;
 
     static const typename Lifted::t &test_value() {
       static const typename Lifted::t v = Lifted::zero;

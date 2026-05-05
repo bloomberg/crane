@@ -5089,3 +5089,235 @@
   (alias runtest)
   (deps double_typename.t.exe)
   (action (run ./double_typename.t.exe))))
+
+(subdir sep_ext_concept_include
+ (rule
+  (targets sep_ext_concept_include.t.exe)
+  (deps SepExtConceptInclude.vo sep_ext_concept_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_include.t.exe SepExtConceptInclude.cpp sep_ext_concept_include.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_concept_include.t.exe)
+  (action (run ./sep_ext_concept_include.t.exe))))
+
+(subdir sep_ext_enum_qualified
+ (rule
+  (targets sep_ext_enum_qualified.t.exe)
+  (deps SepExtEnumQualified.vo sep_ext_enum_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_enum_qualified.t.exe SepExtEnumQualified.cpp Datatypes.cpp sep_ext_enum_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_enum_qualified.t.exe)
+  (action (run ./sep_ext_enum_qualified.t.exe))))
+
+(subdir sep_ext_qualified_raw
+ (rule
+  (targets sep_ext_qualified_raw.t.exe)
+  (deps SepExtQualifiedRaw.vo sep_ext_qualified_raw.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_qualified_raw.t.exe SepExtQualifiedRaw.cpp sep_ext_qualified_raw.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_qualified_raw.t.exe)
+  (action (run ./sep_ext_qualified_raw.t.exe))))
+
+(subdir sep_ext_uptr_clone_qual
+ (rule
+  (targets sep_ext_uptr_clone_qual.t.exe)
+  (deps SepExtUptrCloneQual.vo sep_ext_uptr_clone_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_uptr_clone_qual.t.exe SepExtUptrCloneQual.cpp sep_ext_uptr_clone_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_uptr_clone_qual.t.exe)
+  (action (run ./sep_ext_uptr_clone_qual.t.exe))))
+
+(subdir sep_ext_module_abbrev
+ (rule
+  (targets sep_ext_module_abbrev.t.exe)
+  (deps SepExtModuleAbbrev.vo sep_ext_module_abbrev.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_module_abbrev.t.exe SepExtModuleAbbrev.cpp sep_ext_module_abbrev.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_module_abbrev.t.exe)
+  (action (run ./sep_ext_module_abbrev.t.exe))))
+
+(subdir sep_ext_template_alias
+ (rule
+  (targets sep_ext_template_alias.t.exe)
+  (deps SepExtTemplateAlias.vo sep_ext_template_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_template_alias.t.exe SepExtTemplateAlias.cpp sep_ext_template_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_template_alias.t.exe)
+  (action (run ./sep_ext_template_alias.t.exe))))
+
+(subdir sep_ext_clone_ctor_qual
+ (rule
+  (targets sep_ext_clone_ctor_qual.t.exe)
+  (deps SepExtCloneCtorQual.vo sep_ext_clone_ctor_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_clone_ctor_qual.t.exe SepExtCloneCtorQual.cpp sep_ext_clone_ctor_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_clone_ctor_qual.t.exe)
+  (action (run ./sep_ext_clone_ctor_qual.t.exe))))
+
+(subdir sep_ext_fun_type_qual
+ (rule
+  (targets sep_ext_fun_type_qual.t.exe)
+  (deps SepExtFunTypeQual.vo sep_ext_fun_type_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_fun_type_qual.t.exe SepExtFunTypeQual.cpp sep_ext_fun_type_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_fun_type_qual.t.exe)
+  (action (run ./sep_ext_fun_type_qual.t.exe))))
+
+(subdir sep_ext_concept_qualified
+ (rule
+  (targets sep_ext_concept_qualified.t.exe)
+  (deps SepExtConceptQualified.vo sep_ext_concept_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_qualified.t.exe SepExtConceptQualified.cpp Datatypes.cpp sep_ext_concept_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_concept_qualified.t.exe)
+  (action (run ./sep_ext_concept_qualified.t.exe))))
+
+(subdir sep_ext_template_keyword
+ (rule
+  (targets sep_ext_template_keyword.t.exe)
+  (deps SepExtTemplateKeyword.vo sep_ext_template_keyword.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_template_keyword.t.exe SepExtTemplateKeyword.cpp Datatypes.cpp sep_ext_template_keyword.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_template_keyword.t.exe)
+  (action (run ./sep_ext_template_keyword.t.exe))))
+
+(subdir sep_ext_ns_alias
+ (rule
+  (targets sep_ext_ns_alias.t.exe)
+  (deps SepExtNsAlias.vo sep_ext_ns_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_ns_alias.t.exe SepExtNsAlias.cpp sep_ext_ns_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_ns_alias.t.exe)
+  (action (run ./sep_ext_ns_alias.t.exe))))
+
+(subdir sep_ext_prop_erased_using
+ (rule
+  (targets sep_ext_prop_erased_using.t.exe)
+  (deps SepExtPropErasedUsing.vo sep_ext_prop_erased_using.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_prop_erased_using.t.exe SepExtPropErasedUsing.cpp sep_ext_prop_erased_using.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_prop_erased_using.t.exe)
+  (action (run ./sep_ext_prop_erased_using.t.exe))))
+
+
+(subdir sep_ext_this_in_free_fn
+ (rule
+  (targets sep_ext_this_in_free_fn.t.exe)
+  (deps SepExtThisInFreeFn.vo sep_ext_this_in_free_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_this_in_free_fn.t.exe SepExtThisInFreeFn.cpp sep_ext_this_in_free_fn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_this_in_free_fn.t.exe)
+  (action (run ./sep_ext_this_in_free_fn.t.exe))))
+
+(subdir sep_ext_list_clone_qual
+ (rule
+  (targets sep_ext_list_clone_qual.t.exe)
+  (deps SepExtListCloneQual.vo sep_ext_list_clone_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_list_clone_qual.t.exe SepExtListCloneQual.cpp sep_ext_list_clone_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_list_clone_qual.t.exe)
+  (action (run ./sep_ext_list_clone_qual.t.exe))))
+
+(subdir retype_error_extract
+ (rule
+  (targets retype_error_extract.t.exe)
+  (deps RetypeErrorExtract.vo retype_error_extract.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} retype_error_extract.t.exe RetypeErrorExtract.cpp retype_error_extract.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps retype_error_extract.t.exe)
+  (action (run ./retype_error_extract.t.exe))))
+
+(subdir sep_ext_sigt_any
+ (rule
+  (targets sep_ext_sigt_any.t.exe)
+  (deps SepExtSigtAny.vo sep_ext_sigt_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_sigt_any.t.exe SepExtSigtAny.cpp sep_ext_sigt_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_sigt_any.t.exe)
+  (action (run ./sep_ext_sigt_any.t.exe))))
+
+(subdir sep_ext_ns_alias_in_functor
+ (rule
+  (targets sep_ext_ns_alias_in_functor.t.exe)
+  (deps SepExtNsAliasInFunctor.vo sep_ext_ns_alias_in_functor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_ns_alias_in_functor.t.exe SepExtNsAliasInFunctor.cpp sep_ext_ns_alias_in_functor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_ns_alias_in_functor.t.exe)
+  (action (run ./sep_ext_ns_alias_in_functor.t.exe))))
+
+(subdir undecl_tvar_template
+ (rule
+  (targets undecl_tvar_template.t.exe)
+  (deps UndeclTvarTemplate.vo undecl_tvar_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} undecl_tvar_template.t.exe UndeclTvarTemplate.cpp Datatypes.cpp undecl_tvar_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps undecl_tvar_template.t.exe)
+  (action (run ./undecl_tvar_template.t.exe))))
+
+(subdir sep_ext_self_ref_inductive
+ (rule
+  (targets sep_ext_self_ref_inductive.t.exe)
+  (deps SepExtSelfRefInductive.vo sep_ext_self_ref_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_self_ref_inductive.t.exe SepExtSelfRefInductive.cpp sep_ext_self_ref_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_self_ref_inductive.t.exe)
+  (action (run ./sep_ext_self_ref_inductive.t.exe))))
+
+(subdir sep_ext_driver_no_include
+ (rule
+  (targets sep_ext_driver_no_include.t.exe)
+  (deps SepExtDriverNoInclude.vo sep_ext_driver_no_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_driver_no_include.t.exe SepExtDriverNoInclude.cpp Datatypes.cpp sep_ext_driver_no_include.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_driver_no_include.t.exe)
+  (action (run ./sep_ext_driver_no_include.t.exe))))
+
+(subdir pair_indexed_inductive_any_cast
+ (rule
+  (targets pair_indexed_inductive_any_cast.t.exe)
+  (deps PairIndexedInductiveAnyCast.vo pair_indexed_inductive_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_indexed_inductive_any_cast.t.exe PairIndexedInductiveAnyCast.cpp Datatypes.cpp pair_indexed_inductive_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_indexed_inductive_any_cast.t.exe)
+  (action (run ./pair_indexed_inductive_any_cast.t.exe))))

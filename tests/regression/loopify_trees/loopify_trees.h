@@ -1296,19 +1296,17 @@ struct LoopifyTrees {
         auto &_dst_alt = std::get<RNode>(_dst->d_v_);
         [&] {
           if (_alt.d_a1) {
-            const List<LoopifyTrees::rose> *_lsrc = _alt.d_a1.get();
-            List<LoopifyTrees::rose> *_ldst = _dst_alt.d_a1.get();
+            const List<rose> *_lsrc = _alt.d_a1.get();
+            List<rose> *_ldst = _dst_alt.d_a1.get();
             while (
-                std::holds_alternative<typename List<LoopifyTrees::rose>::Cons>(
-                    _lsrc->v())) {
+                std::holds_alternative<typename List<rose>::Cons>(_lsrc->v())) {
               const auto &_lsrc_c =
-                  std::get<typename List<LoopifyTrees::rose>::Cons>(_lsrc->v());
-              _ldst->v_mut() = typename List<LoopifyTrees::rose>::Cons{
-                  LoopifyTrees::rose{},
-                  _lsrc_c.d_a1 ? std::make_unique<List<LoopifyTrees::rose>>()
-                               : nullptr};
-              auto &_ldst_c = std::get<typename List<LoopifyTrees::rose>::Cons>(
-                  _ldst->v_mut());
+                  std::get<typename List<rose>::Cons>(_lsrc->v());
+              _ldst->v_mut() = typename List<rose>::Cons{
+                  rose{},
+                  _lsrc_c.d_a1 ? std::make_unique<List<rose>>() : nullptr};
+              auto &_ldst_c =
+                  std::get<typename List<rose>::Cons>(_ldst->v_mut());
               _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
               if (_lsrc_c.d_a1) {
                 _lsrc = _lsrc_c.d_a1.get();
@@ -1317,9 +1315,8 @@ struct LoopifyTrees {
                 break;
               }
             }
-            if (std::holds_alternative<typename List<LoopifyTrees::rose>::Nil>(
-                    _lsrc->v())) {
-              _ldst->v_mut() = typename List<LoopifyTrees::rose>::Nil{};
+            if (std::holds_alternative<typename List<rose>::Nil>(_lsrc->v())) {
+              _ldst->v_mut() = typename List<rose>::Nil{};
             }
           }
         }();
@@ -1343,12 +1340,9 @@ struct LoopifyTrees {
           if (_alt.d_a1) {
             auto *_lp = _alt.d_a1.get();
             while (
-                std::holds_alternative<typename List<LoopifyTrees::rose>::Cons>(
-                    _lp->v())) {
-              auto &_lc = std::get<typename List<LoopifyTrees::rose>::Cons>(
-                  _lp->v_mut());
-              _stack.push_back(
-                  std::make_unique<LoopifyTrees::rose>(std::move(_lc.d_a0)));
+                std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_unique<rose>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {

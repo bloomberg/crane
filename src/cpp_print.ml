@@ -697,7 +697,11 @@ let rec pp_cpp_type par vl t =
             if Common.get_force_qualified_capitalization ()
             then Common.capitalize_last_component type_name_str
             else type_name_str in
-          typename_prefix_for cap ++ str cap ++ templates
+          let cap_pp =
+            if args <> [] && render_ctx.rc_in_template then
+              insert_template_keyword (str cap) cap
+            else str cap in
+          typename_prefix_for cap ++ cap_pp ++ templates
         else if is_merged_inductive_cached r' then
           (* Merged: use capitalized name directly *)
           name ++ templates
@@ -736,7 +740,11 @@ let rec pp_cpp_type par vl t =
               if Common.get_force_qualified_capitalization ()
               then Common.capitalize_last_component type_name_str
               else type_name_str in
-            str cap ++ templates
+            let cap_pp =
+              if args <> [] && render_ctx.rc_in_template then
+                insert_template_keyword (str cap) cap
+              else str cap in
+            cap_pp ++ templates
           else
             let ns_name, needs_ns = inductive_name_info_cached r in
             if is_merged_inductive_cached r then
@@ -886,8 +894,8 @@ and pp_cpp_expr env args t =
              let epon_name = Common.pp_global_name Type epon_ref in
              let sn_str = Pp.string_of_ppcmds sn in
              String.equal (String.capitalize_ascii epon_name) sn_str
-           | None -> true )
-         | None -> true ->
+           | None -> false )
+         | None -> render_ctx.rc_struct_name <> None ->
     (* A bare reference to a method on the same struct (eta-reduced from \self.
        method self). Generate this->method() - a call to the method via this,
        not a function pointer. *)
@@ -907,8 +915,8 @@ and pp_cpp_expr env args t =
              let epon_name = Common.pp_global_name Type epon_ref in
              let sn_str = Pp.string_of_ppcmds sn in
              not (String.equal (String.capitalize_ascii epon_name) sn_str)
-           | None -> false )
-         | None -> false ->
+           | None -> true )
+         | None -> render_ctx.rc_struct_name = None ->
     let method_name = Id.of_string (Common.pp_global_name Term x) in
     let accessor = if method_receiver_is_ptr x then "->" else "." in
     str "[](const auto &_x) { return _x"
@@ -3062,6 +3070,10 @@ and pp_cpp_decl_raw env = function
     ++ fnl ()
     ++ str "};"
   | Dstruct_decl id -> str "struct " ++ pp_global Type id ++ str ";"
+  | Dusing (_, Tglob (GlobRef.VarRef dummy_id, _, _))
+    when (let n = Id.to_string dummy_id in
+          n = "dummy_prop" || n = "dummy_type" || n = "dummy_implicit") ->
+    mt () (* Skip erased type aliases *)
   | Dusing (id, ty) ->
     str "using "
     ++ pp_global Type id

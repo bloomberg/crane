@@ -215,6 +215,17 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
       | Tnamespace (r, ty) ->
         if is_member_ref r then qualify_type ty
         else pp_cpp_type false [] (Tnamespace (r, ty))
+      | Tfun (d, c) ->
+        (* Function-type argument: qualify member types inside the function
+           signature.  Without this case, (elt -> bool) would fall through to
+           pp_cpp_type and render as std::function<bool(elt)> — elt is bare.
+           We need std::function<bool(typename M::elt)>. *)
+        require_header "functional";
+        str stdlib_ns ++ str "function<"
+        ++ qualify_type c
+        ++ str "("
+        ++ prlist_with_sep (fun () -> str ", ") qualify_type d
+        ++ str ")>"
       | ty -> pp_cpp_type false [] ty
     in
     if args = [] then
@@ -281,6 +292,48 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
       ++ str ">;"
       ++ fnl ()
 
+(** Render a concept name from a module path reference.  In separate extraction,
+    concepts live inside their own namespace, so cross-file references need
+    qualification.  For a top-level module type [X] that is its own extraction
+    unit, the C++ structure is [namespace X { concept X = ...; }], requiring
+    [X::X] from outside. *)
+and pp_concept_ref kn =
+  match kn with
+  | MPdot (mp0, l') ->
+    if get_force_qualified_capitalization () then begin
+      (* Separate extraction: pp_modname produces visibility-aware names. *)
+      let name = pp_modname kn in
+      let name_str = Pp.string_of_ppcmds name in
+      (* Self-qualify when the concept is a top-level module type from a
+         different file: its namespace and concept share a name, so from
+         outside [ConceptName] refers to the namespace — we need
+         [ConceptName::ConceptName].
+
+         Compare mp0 against the file-level MPfile of the current context,
+         not top_visible_mp() — the latter may be an MPdot (e.g. inside a
+         module-type body) even when the concept is in the same file. *)
+      let rec get_file_mp = function
+        | ModPath.MPfile _ as mp -> mp
+        | ModPath.MPdot (mp, _) -> get_file_mp mp
+        | ModPath.MPbound _ -> mp0  (* functor param scope — treat as same *)
+      in
+      let current_file_mp = get_file_mp (top_visible_mp ()) in
+      if (match mp0 with MPfile _ -> true | _ -> false)
+         && not (ModPath.equal mp0 current_file_mp)
+         && not (is_qualified_name name_str) then
+        name ++ str "::" ++ str (Label.to_string l')
+      else
+        name
+    end else begin
+      (* Monolithic extraction: pp_module may over-qualify same-module
+         concepts because the visibility context shifts inside
+         pp_module_type.  Keep the short label and just trigger include
+         tracking. *)
+      ignore (Common.pp_module kn);
+      str (Label.to_string l')
+    end
+  | _ -> pp_modname kn
+
 (** Convert a module type to a C++20 concept. MTsig generates requires clauses,
     MTfunsig is handled by param tracking, MTident references an existing
     concept by name. *)
@@ -305,11 +358,7 @@ and pp_module_type params = function
       | Smodule mod_type ->
         ( match mod_type with
         | MTident kn ->
-          let concept_name =
-            match kn with
-            | MPdot (_, l') -> str (Label.to_string l')
-            | _ -> pp_modname kn
-          in
+          let concept_name = pp_concept_ref kn in
           let label_name = Label.to_string label in
           str "  requires "
           ++ concept_name
@@ -435,7 +484,7 @@ let rec pp_structure_elem ~is_header f = function
              helper, pp_module_type would inline the concept body into the
              template parameter list, producing garbled C++. *)
           let rec get_concept_name_from_mt = function
-            | MTident kn -> Some (pp_modname kn)
+            | MTident kn -> Some (pp_concept_ref kn)
             | MTwith (mt, _) -> get_concept_name_from_mt mt
             | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
             | MTsig _ -> None
@@ -488,14 +537,24 @@ let rec pp_structure_elem ~is_header f = function
                   (List.map (fun (mbid, _) -> MPbound mbid) template_params)
                   body )
           in
-          template_decl
-          ++ fnl ()
-          ++ str "struct "
-          ++ name
-          ++ str " {"
-          ++ fnl ()
-          ++ struct_body
-          ++ str "};"
+          (match body with
+          | MEapply _ ->
+            template_decl
+            ++ fnl ()
+            ++ str "struct "
+            ++ name
+            ++ str " : "
+            ++ struct_body
+            ++ str " {};"
+          | _ ->
+            template_decl
+            ++ fnl ()
+            ++ str "struct "
+            ++ name
+            ++ str " {"
+            ++ fnl ()
+            ++ struct_body
+            ++ str "};")
       | MEapply _ ->
         if not is_header then
           mt ()
@@ -513,7 +572,7 @@ let rec pp_structure_elem ~is_header f = function
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
           let rec get_concept_name = function
-            | MTident kn -> Some (pp_modname kn)
+            | MTident kn -> Some (pp_concept_ref kn)
             | MTwith (mt, _) -> get_concept_name mt
             | MTfunsig (_, mt, mt') -> get_concept_name mt'
             | MTsig _ -> None
@@ -707,11 +766,7 @@ let rec pp_structure_elem ~is_header f = function
                   let concept_pp =
                     match get_base_concept m with
                     | Some base_kn ->
-                      let base_name =
-                        match base_kn with
-                        | MPdot (_, l') -> str (Label.to_string l')
-                        | _ -> pp_modname base_kn
-                      in
+                      let base_name = pp_concept_ref base_kn in
                       str "template<typename M>"
                       ++ fnl ()
                       ++ hov
@@ -1047,7 +1102,7 @@ let rec pp_structure_elem ~is_header f = function
                 ++ str "};"
               in
               let rec get_concept_name = function
-                | MTident kn -> Some (pp_modname kn)
+                | MTident kn -> Some (pp_concept_ref kn)
                 | MTwith (mt, _) -> get_concept_name mt
                 | MTfunsig (_, mt, mt') -> get_concept_name mt'
                 | MTsig _ -> None
@@ -1089,7 +1144,87 @@ let rec pp_structure_elem ~is_header f = function
              && String.sub body_str 0 5 = "Coq__" then
             mt ()
           else
-            str "using " ++ name ++ str " = " ++ body ++ str ";"
+            (* Check whether this alias is itself a functor (i.e., the module
+               type has MTfunsig parameters).  This happens when Rocq's
+               extraction eta-reduces [Module Facts (M:WS) := WFacts M.] to
+               [MEident(WFacts)].  A bare [using Facts = WFacts;] is invalid
+               C++ when WFacts is a template struct; we need a template alias
+               [template<WS M> using Facts = WFacts<M>;] instead. *)
+            let rec collect_functor_params acc = function
+              | MTfunsig (mbid, mt, rest) ->
+                collect_functor_params ((mbid, mt) :: acc) rest
+              | _ -> List.rev acc
+            in
+            let functor_params = collect_functor_params [] m.ml_mod_type in
+            if functor_params = [] then
+              (* Non-functor alias. File-level modules are rendered as C++
+                 namespaces; a [using R = Namespace;] alias inside a struct
+                 body is invalid C++, so we drop it.  Aliases whose target is
+                 a sub-module (MPdot — rendered as a struct) are valid type
+                 aliases inside a struct body and are kept. *)
+              let target_is_namespace =
+                match m.ml_mod_expr with
+                | MEident mp -> is_modfile mp
+                | _ -> false
+              in
+              if target_is_namespace && render_ctx.rc_in_struct then
+                mt ()
+              else
+                let body_with_typename =
+                  if render_ctx.rc_in_template && is_qualified_name body_str then
+                    str "typename " ++ body
+                  else body
+                in
+                str "using " ++ name ++ str " = " ++ body_with_typename ++ str ";"
+            else begin
+              (* Functor alias: emit [template<...> using Name = Body<params>;].
+                 Re-uses the same template-param rendering as the MEfunctor case. *)
+              let rec get_concept_name_from_mt = function
+                | MTident kn -> Some (pp_concept_ref kn)
+                | MTwith (mt, _) -> get_concept_name_from_mt mt
+                | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
+                | MTsig _ -> None
+              in
+              let pp_template_param (mbid, mt) =
+                let param_name = pp_modname (MPbound mbid) in
+                match get_concept_name_from_mt mt with
+                | Some cname -> cname ++ str " " ++ param_name
+                | None ->
+                  let concept_body = pp_module_type [] mt in
+                  if Pp.ismt concept_body then
+                    str "typename " ++ param_name
+                  else
+                    let body_str' = Pp.string_of_ppcmds concept_body in
+                    if String.contains body_str' '\n'
+                       || String.length body_str' > 40 then
+                      str "typename " ++ param_name
+                    else
+                      concept_body ++ str " " ++ param_name
+              in
+              let template_decl =
+                str "template<"
+                ++ prlist_with_sep
+                     (fun () -> str ", ")
+                     pp_template_param
+                     functor_params
+                ++ str ">"
+              in
+              let param_args =
+                prlist_with_sep
+                  (fun () -> str ", ")
+                  (fun (mbid, _) -> pp_modname (MPbound mbid))
+                  functor_params
+              in
+              template_decl
+              ++ fnl ()
+              ++ str "using "
+              ++ name
+              ++ str " = "
+              ++ body
+              ++ str "<"
+              ++ param_args
+              ++ str ">;"
+            end
     in
     if Pp.ismt mod_pp then
       mt ()
@@ -1109,11 +1244,7 @@ let rec pp_structure_elem ~is_header f = function
       let concept_pp =
         match get_base_concept m with
         | Some base_kn ->
-          let base_name =
-            match base_kn with
-            | MPdot (_, l') -> str (Label.to_string l')
-            | _ -> pp_modname base_kn
-          in
+          let base_name = pp_concept_ref base_kn in
           hov 1 (str "concept " ++ name ++ str " = " ++ base_name ++ str "<M>;")
         | None ->
           let old_hoisted = !hoisted_concept_defs in
@@ -1164,8 +1295,16 @@ and pp_module_expr ~is_header f params = function
     in
     let base, args = collect_args [me'] me in
     let base_pp = pp_module_expr ~is_header f [] base in
+    let pp_module_arg arg =
+      let arg_pp = pp_module_expr ~is_header f [] arg in
+      if render_ctx.rc_in_template then
+        let s = Pp.string_of_ppcmds arg_pp in
+        if is_qualified_name s then str "typename " ++ arg_pp
+        else arg_pp
+      else arg_pp
+    in
     let args_pp =
-      prlist_with_sep (fun () -> str ", ") (pp_module_expr ~is_header f []) args
+      prlist_with_sep (fun () -> str ", ") pp_module_arg args
     in
     let base_pp =
       if render_ctx.rc_in_template then

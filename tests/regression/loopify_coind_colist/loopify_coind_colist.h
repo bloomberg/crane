@@ -208,7 +208,7 @@ struct LoopifyCoindColist {
           []() -> colist<T1> { return colist<T1>::conil(); });
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      List<T1> d_a1_value = List<T1>(*(d_a1));
+      List<T1> d_a1_value = *(d_a1);
       return colist<T1>::lazy_([=]() mutable -> colist<T1> {
         return colist<T1>::cocons(d_a0, from_list<T1>(d_a1_value));
       });

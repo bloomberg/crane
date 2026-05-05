@@ -214,22 +214,17 @@ struct LoopifyStructures {
           auto &_dst_alt = std::get<NList>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
-              const List<LoopifyStructures::nested> *_lsrc = _alt.d_a0.get();
-              List<LoopifyStructures::nested> *_ldst = _dst_alt.d_a0.get();
-              while (std::holds_alternative<
-                     typename List<LoopifyStructures::nested>::Cons>(
+              const List<nested> *_lsrc = _alt.d_a0.get();
+              List<nested> *_ldst = _dst_alt.d_a0.get();
+              while (std::holds_alternative<typename List<nested>::Cons>(
                   _lsrc->v())) {
                 const auto &_lsrc_c =
-                    std::get<typename List<LoopifyStructures::nested>::Cons>(
-                        _lsrc->v());
-                _ldst->v_mut() = typename List<LoopifyStructures::nested>::Cons{
-                    LoopifyStructures::nested{},
-                    _lsrc_c.d_a1
-                        ? std::make_unique<List<LoopifyStructures::nested>>()
-                        : nullptr};
+                    std::get<typename List<nested>::Cons>(_lsrc->v());
+                _ldst->v_mut() = typename List<nested>::Cons{
+                    nested{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<nested>>() : nullptr};
                 auto &_ldst_c =
-                    std::get<typename List<LoopifyStructures::nested>::Cons>(
-                        _ldst->v_mut());
+                    std::get<typename List<nested>::Cons>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
                 if (_lsrc_c.d_a1) {
                   _lsrc = _lsrc_c.d_a1.get();
@@ -238,11 +233,9 @@ struct LoopifyStructures {
                   break;
                 }
               }
-              if (std::holds_alternative<
-                      typename List<LoopifyStructures::nested>::Nil>(
+              if (std::holds_alternative<typename List<nested>::Nil>(
                       _lsrc->v())) {
-                _ldst->v_mut() =
-                    typename List<LoopifyStructures::nested>::Nil{};
+                _ldst->v_mut() = typename List<nested>::Nil{};
               }
             }
           }();
@@ -267,13 +260,10 @@ struct LoopifyStructures {
           auto &_alt = std::get<NList>(_node.d_v_);
           if (_alt.d_a0) {
             auto *_lp = _alt.d_a0.get();
-            while (std::holds_alternative<
-                   typename List<LoopifyStructures::nested>::Cons>(_lp->v())) {
-              auto &_lc =
-                  std::get<typename List<LoopifyStructures::nested>::Cons>(
-                      _lp->v_mut());
-              _stack.push_back(std::make_unique<LoopifyStructures::nested>(
-                  std::move(_lc.d_a0)));
+            while (
+                std::holds_alternative<typename List<nested>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<nested>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_unique<nested>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {

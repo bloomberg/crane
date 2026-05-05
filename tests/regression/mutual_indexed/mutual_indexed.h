@@ -83,7 +83,7 @@ struct MutualIndexed {
               auto &_pdst = std::get<typename MutualIndexed::OddTree::ONode>(
                   _dst_alt.d_a2->v_mut());
               if (_psrc.d_a2) {
-                _pdst.d_a2 = std::make_unique<MutualIndexed::EvenTree>();
+                _pdst.d_a2 = std::make_unique<EvenTree>();
                 _stack.push_back({_psrc.d_a2.get(), _pdst.d_a2.get()});
               }
             }

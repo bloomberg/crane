@@ -217,7 +217,7 @@ struct RocqBug13581 {
               auto &_pdst = std::get<typename RocqBug13581::J<t_T>::E>(
                   _dst_alt.d_a0->v_mut());
               if (_psrc.d_a0) {
-                _pdst.d_a0 = std::make_unique<RocqBug13581::I<t_T>>();
+                _pdst.d_a0 = std::make_unique<I<t_T>>();
                 _stack.push_back({_psrc.d_a0.get(), _pdst.d_a0.get()});
               }
             }

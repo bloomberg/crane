@@ -290,9 +290,8 @@ struct NestedTree {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->d_v_ = Node{
-            t_A(d_a0),
-            std::shared_ptr<NestedTree::tree<std::pair<t_A, t_A>>>(*(d_a1))};
+        this->d_v_ = Node{t_A(d_a0),
+                          std::shared_ptr<tree<std::pair<t_A, t_A>>>(*(d_a1))};
       }
     }
 

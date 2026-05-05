@@ -261,8 +261,16 @@ let pp_inductive_type_name r =
       str cap
     | GlobRef.IndRef _ when is_record_inductive r -> pp_global Type r
     | GlobRef.IndRef _ when is_enum_inductive r ->
-      let base_name = Common.pp_global_name Type r in
-      str (capitalize_enum_name base_name r)
+      if is_local_inductive r then
+        let base_name = Common.pp_global_name Type r in
+        str (capitalize_enum_name base_name r)
+      else
+        let base = str_global Type r in
+        if is_qualified_name base then
+          str (capitalize_enum_qualified base r)
+        else
+          let base_name = Common.pp_global_name Type r in
+          str (capitalize_enum_name base_name r)
     | GlobRef.IndRef _ when is_local_inductive r -> pp_global Type r
     | GlobRef.IndRef _ ->
       let base = str_global Type r in
@@ -400,7 +408,16 @@ let struct_qualifier_for r name_str =
         | Some i -> String.sub struct_name_dotted 0 i
         | None -> struct_name_dotted
       in
-      if
+      if full_path = struct_name_dotted then
+        (* The type IS the current struct itself (self-referential use in out-of-struct
+           context).  Adding the full struct_name:: prefix would double the last
+           component (e.g. "HashTrie::Trie::Trie<X>").  Use only the parent module
+           qualifier so the combined name is just "HashTrie::Trie". *)
+        (match String.rindex_opt struct_name_str ':' with
+         | Some i when i > 0 ->
+           str (String.sub struct_name_str 0 (i - 1)) ++ str "::"
+         | _ -> mt ())
+      else if
         Common.contains_substring full_path struct_name_dotted
         || is_qualified_name name_str
            && Common.contains_substring full_path parent_struct_dotted

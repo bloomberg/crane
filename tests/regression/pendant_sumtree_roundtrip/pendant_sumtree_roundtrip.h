@@ -750,26 +750,17 @@ struct PendantSumtreeRoundtripCase {
           auto &_dst_alt = std::get<SumNode>(_dst->d_v_);
           [&] {
             if (_alt.d_a1) {
-              const List<PendantSumtreeRoundtripCase::SumTree> *_lsrc =
-                  _alt.d_a1.get();
-              List<PendantSumtreeRoundtripCase::SumTree> *_ldst =
-                  _dst_alt.d_a1.get();
-              while (std::holds_alternative<typename List<
-                         PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+              const List<SumTree> *_lsrc = _alt.d_a1.get();
+              List<SumTree> *_ldst = _dst_alt.d_a1.get();
+              while (std::holds_alternative<typename List<SumTree>::Cons0>(
                   _lsrc->v())) {
-                const auto &_lsrc_c = std::get<
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
-                    _lsrc->v());
-                _ldst->v_mut() =
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0{
-                        PendantSumtreeRoundtripCase::SumTree{},
-                        _lsrc_c.d_a1
-                            ? std::make_unique<
-                                  List<PendantSumtreeRoundtripCase::SumTree>>()
-                            : nullptr};
-                auto &_ldst_c = std::get<
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
-                    _ldst->v_mut());
+                const auto &_lsrc_c =
+                    std::get<typename List<SumTree>::Cons0>(_lsrc->v());
+                _ldst->v_mut() = typename List<SumTree>::Cons0{
+                    SumTree{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<SumTree>>() : nullptr};
+                auto &_ldst_c =
+                    std::get<typename List<SumTree>::Cons0>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
                 if (_lsrc_c.d_a1) {
                   _lsrc = _lsrc_c.d_a1.get();
@@ -778,11 +769,9 @@ struct PendantSumtreeRoundtripCase {
                   break;
                 }
               }
-              if (std::holds_alternative<typename List<
-                      PendantSumtreeRoundtripCase::SumTree>::Nil0>(
+              if (std::holds_alternative<typename List<SumTree>::Nil0>(
                       _lsrc->v())) {
-                _ldst->v_mut() =
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Nil0{};
+                _ldst->v_mut() = typename List<SumTree>::Nil0{};
               }
             }
           }();
@@ -810,15 +799,10 @@ struct PendantSumtreeRoundtripCase {
           auto &_alt = std::get<SumNode>(_node.d_v_);
           if (_alt.d_a1) {
             auto *_lp = _alt.d_a1.get();
-            while (std::holds_alternative<
-                   typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+            while (std::holds_alternative<typename List<SumTree>::Cons0>(
                 _lp->v())) {
-              auto &_lc = std::get<
-                  typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
-                  _lp->v_mut());
-              _stack.push_back(
-                  std::make_unique<PendantSumtreeRoundtripCase::SumTree>(
-                      std::move(_lc.d_a0)));
+              auto &_lc = std::get<typename List<SumTree>::Cons0>(_lp->v_mut());
+              _stack.push_back(std::make_unique<SumTree>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {

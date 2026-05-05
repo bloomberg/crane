@@ -514,7 +514,7 @@ List<unsigned int> LoopifySearch::sieve_fuel(const unsigned int fuel,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+        List<unsigned int> d_a1_value = *(d_a1);
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
         *(_write) = std::move(_cell);
@@ -630,7 +630,7 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int fuel,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+        List<unsigned int> d_a1_value = *(d_a1);
         if (elem_impl(d_a0, d_a1_value)) {
           _loop_l = d_a1_value;
           _loop_fuel = f;
@@ -707,7 +707,7 @@ List<unsigned int> LoopifySearch::quicksort_fuel(
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v_mut());
-          List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+          List<unsigned int> d_a1_value = *(d_a1);
           List<unsigned int> smaller = filter_impl(
               [=](const unsigned int y) mutable { return y < d_a0; },
               d_a1_value);

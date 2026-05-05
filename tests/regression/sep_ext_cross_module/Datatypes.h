@@ -88,7 +88,8 @@ public:
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons{t_A(d_a0),
+               d_a1 ? std::make_unique<Datatypes::List<t_A>>(*d_a1) : nullptr};
     }
   }
 

@@ -344,7 +344,7 @@ struct CPS {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+      List<unsigned int> d_a1_value = *(d_a1);
       return sum_cps(d_a1_value, [=](const unsigned int r) mutable {
         return k((d_a0 + r));
       });
@@ -364,7 +364,7 @@ struct CPS {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+      List<unsigned int> d_a1_value = *(d_a1);
       return partition_cps(
           p, d_a1_value,
           [=](List<unsigned int> yes, List<unsigned int> no) mutable {

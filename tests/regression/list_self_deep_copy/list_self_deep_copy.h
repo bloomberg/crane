@@ -190,22 +190,17 @@ struct ListSelfDeepCopy {
           auto &_dst_alt = std::get<Link>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
-              const List<ListSelfDeepCopy::chain> *_lsrc = _alt.d_a0.get();
-              List<ListSelfDeepCopy::chain> *_ldst = _dst_alt.d_a0.get();
-              while (std::holds_alternative<
-                     typename List<ListSelfDeepCopy::chain>::Cons>(
+              const List<chain> *_lsrc = _alt.d_a0.get();
+              List<chain> *_ldst = _dst_alt.d_a0.get();
+              while (std::holds_alternative<typename List<chain>::Cons>(
                   _lsrc->v())) {
                 const auto &_lsrc_c =
-                    std::get<typename List<ListSelfDeepCopy::chain>::Cons>(
-                        _lsrc->v());
-                _ldst->v_mut() = typename List<ListSelfDeepCopy::chain>::Cons{
-                    ListSelfDeepCopy::chain{},
-                    _lsrc_c.d_a1
-                        ? std::make_unique<List<ListSelfDeepCopy::chain>>()
-                        : nullptr};
+                    std::get<typename List<chain>::Cons>(_lsrc->v());
+                _ldst->v_mut() = typename List<chain>::Cons{
+                    chain{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<chain>>() : nullptr};
                 auto &_ldst_c =
-                    std::get<typename List<ListSelfDeepCopy::chain>::Cons>(
-                        _ldst->v_mut());
+                    std::get<typename List<chain>::Cons>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
                 if (_lsrc_c.d_a1) {
                   _lsrc = _lsrc_c.d_a1.get();
@@ -214,10 +209,9 @@ struct ListSelfDeepCopy {
                   break;
                 }
               }
-              if (std::holds_alternative<
-                      typename List<ListSelfDeepCopy::chain>::Nil>(
+              if (std::holds_alternative<typename List<chain>::Nil>(
                       _lsrc->v())) {
-                _ldst->v_mut() = typename List<ListSelfDeepCopy::chain>::Nil{};
+                _ldst->v_mut() = typename List<chain>::Nil{};
               }
             }
           }();
@@ -242,13 +236,10 @@ struct ListSelfDeepCopy {
           auto &_alt = std::get<Link>(_node.d_v_);
           if (_alt.d_a0) {
             auto *_lp = _alt.d_a0.get();
-            while (std::holds_alternative<
-                   typename List<ListSelfDeepCopy::chain>::Cons>(_lp->v())) {
-              auto &_lc =
-                  std::get<typename List<ListSelfDeepCopy::chain>::Cons>(
-                      _lp->v_mut());
-              _stack.push_back(std::make_unique<ListSelfDeepCopy::chain>(
-                  std::move(_lc.d_a0)));
+            while (
+                std::holds_alternative<typename List<chain>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<chain>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_unique<chain>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {

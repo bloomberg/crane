@@ -596,7 +596,7 @@ struct FunctionVernac {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+      List<unsigned int> d_a1_value = *(d_a1);
       std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
         return f1(d_a0, d_a1_value, _pa0);
       };

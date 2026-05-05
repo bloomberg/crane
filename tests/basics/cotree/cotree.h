@@ -303,19 +303,17 @@ struct Cotree {
         auto &_dst_alt = std::get<Node>(_dst->d_v_);
         [&] {
           if (_alt.d_a1) {
-            const List<Cotree::tree<t_A>> *_lsrc = _alt.d_a1.get();
-            List<Cotree::tree<t_A>> *_ldst = _dst_alt.d_a1.get();
-            while (
-                std::holds_alternative<typename List<Cotree::tree<t_A>>::Cons>(
-                    _lsrc->v())) {
+            const List<tree<t_A>> *_lsrc = _alt.d_a1.get();
+            List<tree<t_A>> *_ldst = _dst_alt.d_a1.get();
+            while (std::holds_alternative<typename List<tree<t_A>>::Cons>(
+                _lsrc->v())) {
               const auto &_lsrc_c =
-                  std::get<typename List<Cotree::tree<t_A>>::Cons>(_lsrc->v());
-              _ldst->v_mut() = typename List<Cotree::tree<t_A>>::Cons{
-                  Cotree::tree<t_A>{},
-                  _lsrc_c.d_a1 ? std::make_unique<List<Cotree::tree<t_A>>>()
-                               : nullptr};
-              auto &_ldst_c = std::get<typename List<Cotree::tree<t_A>>::Cons>(
-                  _ldst->v_mut());
+                  std::get<typename List<tree<t_A>>::Cons>(_lsrc->v());
+              _ldst->v_mut() = typename List<tree<t_A>>::Cons{
+                  tree<t_A>{},
+                  _lsrc_c.d_a1 ? std::make_unique<List<tree<t_A>>>() : nullptr};
+              auto &_ldst_c =
+                  std::get<typename List<tree<t_A>>::Cons>(_ldst->v_mut());
               _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
               if (_lsrc_c.d_a1) {
                 _lsrc = _lsrc_c.d_a1.get();
@@ -324,9 +322,9 @@ struct Cotree {
                 break;
               }
             }
-            if (std::holds_alternative<typename List<Cotree::tree<t_A>>::Nil>(
+            if (std::holds_alternative<typename List<tree<t_A>>::Nil>(
                     _lsrc->v())) {
-              _ldst->v_mut() = typename List<Cotree::tree<t_A>>::Nil{};
+              _ldst->v_mut() = typename List<tree<t_A>>::Nil{};
             }
           }
         }();
@@ -356,13 +354,12 @@ struct Cotree {
           auto &_alt = std::get<Node>(_node.d_v_);
           if (_alt.d_a1) {
             auto *_lp = _alt.d_a1.get();
-            while (
-                std::holds_alternative<typename List<Cotree::tree<t_A>>::Cons>(
-                    _lp->v())) {
-              auto &_lc = std::get<typename List<Cotree::tree<t_A>>::Cons>(
-                  _lp->v_mut());
+            while (std::holds_alternative<typename List<tree<t_A>>::Cons>(
+                _lp->v())) {
+              auto &_lc =
+                  std::get<typename List<tree<t_A>>::Cons>(_lp->v_mut());
               _stack.push_back(
-                  std::make_unique<Cotree::tree<t_A>>(std::move(_lc.d_a0)));
+                  std::make_unique<tree<t_A>>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {
