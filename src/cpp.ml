@@ -187,7 +187,14 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
             qualify_custom_template custom_str args qualify_type
           else
             str custom_str
-        | None -> pp_cpp_type false [] (Tglob (r, args, [])) )
+        | None ->
+          ( match args with
+          | [] -> pp_cpp_type false [] (Tglob (r, [], []))
+          | _ ->
+            pp_cpp_type false [] (Tglob (r, [], []))
+            ++ str "<"
+            ++ prlist_with_sep (fun () -> str ", ") qualify_type args
+            ++ str ">" ) )
       | Tshared_ptr ty ->
         str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
       | Tunique_ptr ty ->
@@ -197,6 +204,14 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
         ++ str "variant<"
         ++ prlist_with_sep (fun () -> str ", ") qualify_type tys
         ++ str ">"
+      | Tnamespace (r, Tglob (r', args, e)) when not (is_member_ref r) ->
+        ( match args with
+        | [] -> pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+        | _ ->
+          pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+          ++ str "<"
+          ++ prlist_with_sep (fun () -> str ", ") qualify_type args
+          ++ str ">" )
       | Tnamespace (r, ty) ->
         if is_member_ref r then qualify_type ty
         else pp_cpp_type false [] (Tnamespace (r, ty))

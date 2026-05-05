@@ -712,11 +712,39 @@ let rec pp_cpp_type par vl t =
          dependent base types.  Nested Tqualified chains (e.g.,
          [Tqualified(Tqualified(Tvar I, base_category), Obj)]) are flattened
          so only a single leading [typename] is emitted — writing
-         [typename typename I::base_category::Obj] is invalid C++. *)
+         [typename typename I::base_category::Obj] is invalid C++.
+
+         The chain renderer handles [Tnamespace] and [Tglob] without
+         [typename_prefix_for] — the outer [Tqualified] provides the single
+         leading [typename].  Template arguments inside the base type (e.g.,
+         [pair<typename X::t, T1>]) are rendered normally, preserving inner
+         [typename] keywords where needed. *)
       let rec pp_qualified_chain ty =
         match ty with
         | Tqualified (inner_ty, id) ->
           pp_qualified_chain inner_ty ++ str "::" ++ Id.print id
+        | Tnamespace (r, Tglob (r', args, _))
+          when Environ.QGlobRef.equal Environ.empty_env r r' ->
+          let templates =
+            match args with
+            | [] -> mt ()
+            | args -> str "<" ++ pp_list (pp_rec false) args ++ str ">"
+          in
+          let type_name_str = str_global Type r' in
+          if is_qualified_name type_name_str then
+            let cap =
+              if Common.get_force_qualified_capitalization ()
+              then Common.capitalize_last_component type_name_str
+              else type_name_str in
+            str cap ++ templates
+          else
+            let ns_name, needs_ns = inductive_name_info_cached r in
+            if is_merged_inductive_cached r then
+              ns_name ++ templates
+            else if needs_ns then
+              ns_name ++ str "::" ++ str type_name_str ++ templates
+            else
+              str type_name_str ++ templates
         | Tglob (r, _, _) ->
           let type_name_str = str_global Type r in
           if is_qualified_name type_name_str then
@@ -767,6 +795,13 @@ and expr_contains_string e =
       ~on_stmts:(fun _ -> ())
       e;
     !found
+
+(** Render [typename <base>::<id>] with exactly one [typename] keyword.
+    Delegates to [Tqualified] rendering which handles suppression of
+    redundant [typename] prefixes on qualified base types while preserving
+    inner [typename] keywords for dependent type arguments. *)
+and pp_typename_member ty id =
+  pp_cpp_type false [] (Tqualified (ty, id))
 
 (** Pretty-print a MiniCpp expression as C++ source. [env] is the de Bruijn
     variable name environment. [args] is the list of accumulated arguments (for
@@ -1497,14 +1532,14 @@ and pp_cpp_expr env args t =
     require_header "variant";
     let targ = match ctor with
       | None -> pp_cpp_type false [] ty
-      | Some id -> str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+      | Some id -> pp_typename_member ty id
     in
     str "std::get<" ++ targ ++ str ">"
   | CPPstd_get (ty, ctor, Some e) ->
     require_header "variant";
     let targ = match ctor with
       | None -> pp_cpp_type false [] ty
-      | Some id -> str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+      | Some id -> pp_typename_member ty id
     in
     str "std::get<" ++ targ ++ str ">("
     ++ pp_cpp_expr env args e
@@ -1513,14 +1548,14 @@ and pp_cpp_expr env args t =
     require_header "variant";
     let targ = match ctor with
       | None -> pp_cpp_type false [] ty
-      | Some id -> str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+      | Some id -> pp_typename_member ty id
     in
     str "std::holds_alternative<" ++ targ ++ str ">"
   | CPPdeclval ty ->
     require_header "utility";
     str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"
   | CPPtypename_qualified (ty, id) ->
-    str "typename " ++ pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+    pp_typename_member ty id
   (* Low-level constructs for reuse optimization *)
   | CPPraw code ->
     str

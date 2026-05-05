@@ -1909,6 +1909,17 @@
   (deps sep_ext_cross_module.t.exe)
   (action (run ./sep_ext_cross_module.t.exe))))
 
+(subdir sep_ext_double_typename
+ (rule
+  (targets sep_ext_double_typename.t.exe)
+  (deps SepExtDoubleTypename.vo sep_ext_double_typename.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_double_typename.t.exe SepExtDoubleTypename.cpp Datatypes.cpp sep_ext_double_typename.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_double_typename.t.exe)
+  (action (run ./sep_ext_double_typename.t.exe))))
+
 (subdir sep_ext_name_collision
  (rule
   (targets sep_ext_name_collision.t.exe)
@@ -5056,3 +5067,25 @@
   (alias runtest)
   (deps mem_safety_probe10.t.exe)
   (action (run ./mem_safety_probe10.t.exe))))
+
+(subdir concept_qualify_args
+ (rule
+  (targets concept_qualify_args.t.exe)
+  (deps ConceptQualifyArgs.vo concept_qualify_args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_qualify_args.t.exe concept_qualify_args.cpp concept_qualify_args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_qualify_args.t.exe)
+  (action (run ./concept_qualify_args.t.exe))))
+
+(subdir double_typename
+ (rule
+  (targets double_typename.t.exe)
+  (deps DoubleTypename.vo double_typename.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_typename.t.exe double_typename.cpp double_typename.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps double_typename.t.exe)
+  (action (run ./double_typename.t.exe))))
