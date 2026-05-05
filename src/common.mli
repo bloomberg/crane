@@ -139,6 +139,8 @@ val opened_libraries : unit -> ModPath.t list
 (** Clear the set of opened-module paths.  Used in separate extraction to
     force fully qualified cross-module references. *)
 val mpfiles_clear : unit -> unit
+val mpfiles_save : unit -> Names.MPset.t
+val mpfiles_restore : Names.MPset.t -> unit
 
 (** Activate "force qualified capitalization" mode: when set, qualified type
     names like [Datatypes::list] have their last component capitalized to
@@ -170,6 +172,11 @@ val pp_type_name_capitalized : GlobRef.t -> string
 
 (** Print a module path. *)
 val pp_module : ModPath.t -> string
+
+(** Compute the C++ name for a module label without the [add_visible]
+    side-effect.  Use when the module is a transparent alias ([MEident] /
+    [MEapply]) and you only need the string for display. *)
+val module_label_name : Label.t -> string
 
 (** Pre-scan the structure for sibling module-inductive name collisions.
     When a module and an inductive type with the same C++ name are siblings

@@ -463,14 +463,17 @@ let get_mpfiles_content mp =
 
 (** The list of external modules that will be opened initially *)
 
-let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_clear =
+let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_clear,
+    mpfiles_save, mpfiles_restore =
   let m = ref MPset.empty in
   let add mp = m := MPset.add mp !m
   and mem mp = MPset.mem mp !m
   and list () = MPset.elements !m
-  and clear () = m := MPset.empty in
+  and clear () = m := MPset.empty
+  and save () = !m
+  and restore s = m := s in
   register_cleanup clear;
-  (add, mem, list, clear)
+  (add, mem, list, clear, save, restore)
 
 (** When [mpfiles_clear] is called (separate extraction mode), this flag is set
     to indicate that cross-module references need full qualification.  Used by
@@ -1061,6 +1064,13 @@ let pp_module mp =
     add_visible (Mod, s) l;
     s
   | _ -> pp_ocaml_gen Mod mp (List.rev ls) None
+
+(** Compute the C++ name for a module label without registering it in the
+    visible scope.  Use this instead of [pp_module] when the module produces a
+    [using] alias (MEident / MEapply) and the side-effect of [add_visible]
+    would incorrectly mark the name as "occupied" in the current scope,
+    triggering spurious [error_module_clash] errors. *)
+let module_label_name l = modular_rename Mod (Label.to_id l)
 
 (** Special hack for constants of type Ascii.ascii : if an
     [Extract Inductive ascii => char] has been declared, then the constants are

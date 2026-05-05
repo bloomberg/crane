@@ -48,6 +48,13 @@ let hov _ x = x
 *)
 let method_registry : Method_registry.t option ref = ref None
 
+(** In separate extraction, a pre-built method registry from the full
+    structure is used so that cross-module method calls are recognized. *)
+let global_method_registry : Method_registry.t option ref = ref None
+
+let set_global_method_registry reg = global_method_registry := Some reg
+let clear_global_method_registry () = global_method_registry := None
+
 (** Get the method registry, raising an anomaly if not initialized. *)
 let get_method_registry () =
   match !method_registry with
@@ -684,6 +691,7 @@ let reset_cpp_state () =
   method_candidates := [];
   current_structure_decls := [];
   method_registry := None;
+  global_method_registry := None;
   name_cache := None;
   Hashtbl.clear global_eponymous_record_registry;
   Hashtbl.clear wrapper_module_table;

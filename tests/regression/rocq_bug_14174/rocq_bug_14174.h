@@ -1033,6 +1033,8 @@ struct RocqBug14174 {
       }
     };
 
+    using SigTNotations = SigTNotations;
+
     template <typename T1>
     static sig<T1> sig_of_sigT(const sigT<T1, std::any> &x) {
       return sig<T1>::exist(x.projT1());

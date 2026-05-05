@@ -134,7 +134,7 @@ and ml_type_has_tvar = function
       such as [Parameter F : Type -> Type]).  The dummy [void] arguments
       serve only to check that the template exists with the correct arity;
       no semantic meaning is attached to the instantiation. *)
-and pp_spec_as_requirement modtype_refs = function
+and pp_spec_as_requirement modtype_mp modtype_refs = function
   | Sval (r, _, _) when is_inline_custom r -> mt ()
   | Stype (r, _, _) when is_inline_custom r -> mt ()
   | Sind (kn, i) ->
@@ -158,11 +158,25 @@ and pp_spec_as_requirement modtype_refs = function
     let declval = (sn ()).declval in
     let convertible_to = (sn ()).convertible_to in
     require_header "concepts";
+    let rec is_mp_under base mp =
+      ModPath.equal mp base
+      || match mp with MPdot (parent, _) -> is_mp_under base parent | _ -> false
+    in
+    let is_member_ref r =
+      let rmp = modpath_of_r r in
+      let rec get_base_mp = function
+        | MPdot (parent, _) -> get_base_mp parent
+        | mp -> mp
+      in
+      is_mp_under modtype_mp rmp
+      || (match get_base_mp rmp with MPbound _ -> true | _ -> false)
+    in
     let rec qualify_type = function
-      | Tglob (r, [], _) when not (is_custom r) ->
+      | Tglob (r, [], _) when not (is_custom r) && is_member_ref r ->
         str "typename M::" ++ pp_global Type r
-      | Tglob (r, args, _) when not (is_custom r) ->
-        pp_global Type r
+      | Tglob (r, args, _) when not (is_custom r) && is_member_ref r ->
+        str "typename M::template "
+        ++ pp_global Type r
         ++ str "<"
         ++ prlist_with_sep (fun () -> str ", ") qualify_type args
         ++ str ">"
@@ -184,11 +198,8 @@ and pp_spec_as_requirement modtype_refs = function
         ++ prlist_with_sep (fun () -> str ", ") qualify_type tys
         ++ str ">"
       | Tnamespace (r, ty) ->
-        if List.exists (Environ.QGlobRef.equal Environ.empty_env r) modtype_refs
-        then
-          qualify_type ty
-        else
-          pp_cpp_type false [] ty
+        if is_member_ref r then qualify_type ty
+        else pp_cpp_type false [] (Tnamespace (r, ty))
       | ty -> pp_cpp_type false [] ty
     in
     if args = [] then
@@ -275,7 +286,7 @@ and pp_module_type params = function
     in
     let pp_req (label, specif) =
       match specif with
-      | Spec s -> pp_spec_as_requirement modtype_refs s
+      | Spec s -> pp_spec_as_requirement mp modtype_refs s
       | Smodule mod_type ->
         ( match mod_type with
         | MTident kn ->
@@ -358,10 +369,23 @@ let rec pp_structure_elem ~is_header f = function
   | l, SEmodule m ->
     let mp = MPdot (top_visible_mp (), l) in
     let name =
-      let raw = pp_modname mp in
-      let s = Pp.string_of_ppcmds raw in
-      let escaped = Table.escape_reserved_struct_name s in
-      if String.equal s escaped then raw else str escaped
+      match m.ml_mod_expr with
+      | MEident _ | MEapply _ ->
+        (* Transparent aliases generate a [using X = Y;] alias in C++.
+           Calling [pp_modname mp] would call [add_visible (Mod, s) l], which
+           marks this short name as "in scope" and triggers a spurious
+           [error_module_clash] when two modules at different nesting depths
+           share the same short name (e.g. a top-level [Module Impl] and an
+           inner [Module Impl := ...] inside a functor body).  Since aliases
+           don't introduce new identifiers into the qualified-name namespace,
+           we compute the label name without registering it. *)
+        let s = Common.module_label_name l in
+        str (Table.escape_reserved_struct_name s)
+      | _ ->
+        let raw = pp_modname mp in
+        let s = Pp.string_of_ppcmds raw in
+        let escaped = Table.escape_reserved_struct_name s in
+        if String.equal s escaped then raw else str escaped
     in
     let mod_pp =
       match m.ml_mod_expr with
@@ -1340,7 +1364,10 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   List.iter (fun mp -> push_visible mp []) initial_mps;
   Common.detect_sibling_module_inductive_collisions s;
-  method_registry := Some (Method_registry.create s);
+  method_registry := Some
+    ( match !global_method_registry with
+    | Some reg -> reg
+    | None -> Method_registry.create s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
   Hashtbl.clear global_inductive_names;
   List.iter

@@ -6,11 +6,11 @@
 namespace SepExtCrossModule {
 
 unsigned int sum_list(const Datatypes::List<unsigned int> &l) {
-  return List::template fold_left<unsigned int, unsigned int>(
+  return l.template fold_left<unsigned int>(
       [](unsigned int _x0, unsigned int _x1) -> unsigned int {
         return (_x0 + _x1);
       },
-      l, 0u);
+      0u);
 }
 
 Datatypes::List<unsigned int> make_pair_list(const unsigned int n,

@@ -1385,7 +1385,17 @@ let separate_extraction ~opaque_access lr =
       end
     | (MPdot _ | MPbound _), _ -> assert false
   in
+  (* Pre-build the method registry from the full structure so that
+     cross-module method calls are recognized during per-module rendering.
+     The registry creation calls pp_global_name which has side effects on
+     mpfiles (include tracking), so save/restore the mpfiles state. *)
+  let saved_mpfiles = Common.mpfiles_save () in
+  set_phase Pre;
+  Cpp_state.set_global_method_registry (Method_registry.create struc);
+  set_phase Impl;
+  Common.mpfiles_restore saved_mpfiles;
   List.iter print struc;
+  Cpp_state.clear_global_method_registry ();
   reset ()
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
