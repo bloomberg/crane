@@ -201,8 +201,23 @@ let keywords =
 (** Note: do not shorten [str "foo" ++ fnl ()] into [str "foo\n"], the '\n'
     character interacts badly with the Format boxing mechanism *)
 
+(** Set of module paths that produce output files in separate extraction.
+    When non-empty, pp_open skips modules not in this set. *)
+let valid_output_modules : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
+
+let set_valid_output_modules mps =
+  Hashtbl.clear valid_output_modules;
+  List.iter (fun mp -> Hashtbl.replace valid_output_modules mp ()) mps
+
+let clear_valid_output_modules () = Hashtbl.clear valid_output_modules
+
 (** Pretty-print an open directive for a module. *)
-let pp_open mp = str ("#include \"" ^ string_of_modfile mp ^ ".h\"") ++ fnl ()
+let pp_open mp =
+  if Hashtbl.length valid_output_modules > 0
+     && not (Hashtbl.mem valid_output_modules mp) then
+    mt ()
+  else
+    str ("#include \"" ^ string_of_modfile mp ^ ".h\"") ++ fnl ()
 
 (** Pretty-print a comment with OCaml-style delimiters. *)
 let pp_comment s = str "(* " ++ hov 0 s ++ str " *)"
@@ -701,6 +716,7 @@ let reset_cpp_state () =
   Hashtbl.clear pending_wrapper_decls;
   Hashtbl.clear unmerged_wrappers;
   Hashtbl.clear global_inductive_names;
+  Hashtbl.clear valid_output_modules;
   template_static_accessors := [];
   Hashtbl.clear functor_app_sources;
   hoisted_concept_defs := [];

@@ -275,9 +275,6 @@ let pp_inductive_type_name r =
     | GlobRef.IndRef _ ->
       let base = str_global Type r in
       if is_qualified_name base then
-        (* Qualified reference: in separate extraction with force_qualified_capitalization,
-           capitalize the last component (e.g. "Datatypes::list" -> "Datatypes::List").
-           In monolithic mode, keep as-is (e.g. "Pos::mask" stays "Pos::mask"). *)
         if Common.get_force_qualified_capitalization () then
           str (Common.capitalize_last_component base)
         else

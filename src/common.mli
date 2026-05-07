@@ -289,3 +289,4 @@ val tparam_name : Id.t -> Id.t
 val enum_ctor_name : string -> string
 
 val capitalize_last_component : string -> string
+val drop_last_qualifier : string -> string

@@ -1373,6 +1373,10 @@ let separate_extraction ~opaque_access lr =
         | _ -> false )
       sel
   in
+  let valid_mps =
+    List.filter_map (fun (mp, sel) -> if has_real_decls sel then Some mp else None) struc
+  in
+  Cpp_state.set_valid_output_modules valid_mps;
   let print = function
     | ((MPfile _dir as mp), sel) as e ->
       if has_real_decls sel then begin
@@ -1396,6 +1400,7 @@ let separate_extraction ~opaque_access lr =
   Common.mpfiles_restore saved_mpfiles;
   List.iter print struc;
   Cpp_state.clear_global_method_registry ();
+  Cpp_state.clear_valid_output_modules ();
   reset ()
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is

@@ -9722,6 +9722,67 @@ let gen_dfun n b cty ty temps =
     else
       ids
   in
+  let tvar_subst_from_sig =
+    if not (has_tvar ty)
+       && List.length ids = List.length sig_types_for_ids then
+      let rec chase = function
+        | Miniml.Tmeta {contents = Some t} -> chase t
+        | t -> t
+      in
+      let rec collect body_ty sig_ty acc =
+        let body_ty = chase body_ty in
+        let sig_ty = chase sig_ty in
+        match (body_ty, sig_ty) with
+        | (Miniml.Tvar i | Miniml.Tvar' i), _
+          when not (has_tvar sig_ty) ->
+          if List.mem_assoc i acc then acc else (i, sig_ty) :: acc
+        | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
+          when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
+          List.fold_left2 (fun acc a b -> collect a b acc) acc ts1 ts2
+        | Miniml.Tarr (a1, b1), Miniml.Tarr (a2, b2) ->
+          collect a1 a2 (collect b1 b2 acc)
+        | _ -> acc
+      in
+      let direct = List.fold_left2
+        (fun acc (_, body_ty) sig_ty -> collect body_ty sig_ty acc)
+        [] ids sig_types_for_ids in
+      if direct <> [] then direct
+      else begin
+        let all_body = List.map (fun (_, ty) -> ty) ids in
+        let rec cross t1 t2 acc =
+          let t1 = chase t1 in
+          let t2 = chase t2 in
+          match (t1, t2) with
+          | (Miniml.Tvar i | Miniml.Tvar' i), _
+            when not (has_tvar t2) ->
+            if List.mem_assoc i acc then acc else (i, t2) :: acc
+          | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
+            when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
+            List.fold_left2 (fun acc a b -> cross a b acc) acc ts1 ts2
+          | Miniml.Tarr (a1, b1), Miniml.Tarr (a2, b2) ->
+            cross a1 a2 (cross b1 b2 acc)
+          | _ -> acc
+        in
+        let pairs = List.concat_map (fun t1 ->
+          List.concat_map (fun t2 ->
+            if t1 == t2 then [] else cross t1 t2 []
+          ) all_body
+        ) all_body in
+        List.fold_left (fun acc (i, t) ->
+          if List.mem_assoc i acc then acc else (i, t) :: acc
+        ) [] pairs
+      end
+    else
+      []
+  in
+  let ids, b =
+    match tvar_subst_from_sig with
+    | [] -> (ids, b)
+    | subst ->
+      let apply_subst ty = subst_tvars_type subst ty in
+      ( List.map (fun (id, ty) -> (id, apply_subst ty)) ids,
+        map_types_in_ast apply_subst b )
+  in
   (* Detect which function-typed parameters are NOT simply forwarded at
      self-recursive call sites.  These are excluded from template-parameter
      promotion below — they keep their [Tmod(TMconst, Tfun(dom, cod))] type
@@ -10739,6 +10800,7 @@ let gen_decl_for_pp n b ty =
     | _ -> carrier_refs
   in
   let b = rewrite_ml_ast_types carrier_refs b in
+  let b = resolve_body_tvars b ty in
   let saved_method_ns = set_method_ns_for_locals () in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in

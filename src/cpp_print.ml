@@ -690,20 +690,51 @@ let rec pp_cpp_type par vl t =
           ++ str (capitalize_enum_qualified type_name_str r')
           ++ templates
         else if is_qualified_name type_name_str then
-          (* Already qualified: in separate extraction, capitalize last
-             component (e.g. "Datatypes::list" -> "Datatypes::List").
-             In monolithic mode, keep as-is. *)
           let cap =
             if Common.get_force_qualified_capitalization ()
             then Common.capitalize_last_component type_name_str
             else type_name_str in
-          let cap_pp =
-            if args <> [] && render_ctx.rc_in_template then
-              insert_template_keyword (str cap) cap
-            else str cap in
-          typename_prefix_for cap ++ cap_pp ++ templates
+          if is_merged_inductive_cached r' then
+            let last = match String.rindex_opt cap ':' with
+              | Some i when i < String.length cap - 1 ->
+                String.sub cap (i + 1) (String.length cap - i - 1)
+              | _ -> cap
+            in
+            let prev_start = match String.rindex_opt cap ':' with
+              | Some i when i > 1 ->
+                (match String.rindex_from_opt cap (i - 2) ':' with
+                 | Some j -> j + 1 | None -> 0)
+              | _ -> 0
+            in
+            let parent = match String.rindex_opt cap ':' with
+              | Some i when i > 1 ->
+                String.sub cap prev_start (i - 1 - prev_start)
+              | _ -> ""
+            in
+            if String.equal parent last then
+              let prefix =
+                if prev_start > 2
+                then String.sub cap 0 (prev_start - 2) ^ "::"
+                else "" in
+              let deduped = prefix ^ last in
+              let cap_pp =
+                if args <> [] && render_ctx.rc_in_template then
+                  insert_template_keyword (str deduped) deduped
+                else str deduped in
+              typename_prefix_for deduped ++ cap_pp ++ templates
+            else
+              let cap_pp =
+                if args <> [] && render_ctx.rc_in_template then
+                  insert_template_keyword (str cap) cap
+                else str cap in
+              typename_prefix_for cap ++ cap_pp ++ templates
+          else
+            let cap_pp =
+              if args <> [] && render_ctx.rc_in_template then
+                insert_template_keyword (str cap) cap
+              else str cap in
+            typename_prefix_for cap ++ cap_pp ++ templates
         else if is_merged_inductive_cached r' then
-          (* Merged: use capitalized name directly *)
           name ++ templates
         else (* Unmerged: use Wrapper::inner<args> *)
           name ++ str "::" ++ str type_name_str ++ templates

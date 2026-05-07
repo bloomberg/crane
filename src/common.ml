@@ -1305,3 +1305,22 @@ let capitalize_last_component s =
     let suffix = String.sub s (i + 1) (String.length s - i - 1) in
     prefix ^ String.capitalize_ascii suffix
   | _ -> String.capitalize_ascii s
+
+let drop_last_qualifier s =
+  match String.rindex_opt s ':' with
+  | Some i when i > 1 && s.[i - 1] = ':' ->
+    let prefix_end = i - 1 in
+    let suffix = String.sub s (i + 1) (String.length s - i - 1) in
+    let before =
+      if prefix_end >= 2 then
+        match String.rindex_from_opt s (prefix_end - 1) ':' with
+        | Some j when j > 0 && s.[j - 1] = ':' ->
+          String.sub s 0 (j + 1)
+        | _ -> ""
+      else ""
+    in
+    if String.length before > 0 then
+      before ^ suffix
+    else
+      suffix
+  | _ -> s
