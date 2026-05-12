@@ -3983,16 +3983,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           in
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys in
-          (* For sigT (dependent pair), the second type arg is a predicate
-             (A -> Type) that extracts as a bare reference to the same
-             inductive as the first arg.  Erase it to Tany to avoid
-             mismatched template instantiations. *)
+          (* For inductives with dependent parameters (e.g. sigT where the
+             second param's type references the first), the dependent type arg
+             extracts as a bare reference to the same inductive as an earlier
+             arg.  Erase the duplicate to Tany to avoid mismatched template
+             instantiations. *)
           let temps =
-            let is_sigT =
-              let basename = Id.to_string (Table.safe_basename_of_global n) in
-              String.equal basename "sigT"
-            in
-            if is_sigT then
+            if Table.has_dependent_params n then
               match tys with
               | [fst_ty; snd_ty] ->
                 let same_base = match fst_ty, snd_ty with

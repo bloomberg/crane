@@ -461,6 +461,27 @@ let has_recursive_fields r =
       with Not_found | Invalid_argument _ -> false )
   | _ -> false
 
+(** Check whether an inductive type has dependent parameters — i.e., the type
+    of some parameter references an earlier parameter (via de Bruijn index).
+    For example, [sigT (A : Type) (P : A -> Type)] has a dependent second
+    parameter because [P]'s type mentions [A].  [prod (A B : Type)] does not.
+    Returns [true] if any parameter depends on an earlier one. *)
+let has_dependent_params r =
+  match r with
+  | GlobRef.IndRef (kn, _) ->
+    ( try
+        let mib = Global.lookup_mind kn in
+        let ctx = mib.mind_params_ctxt in
+        List.exists (fun decl ->
+          match decl with
+          | Context.Rel.Declaration.LocalAssum (_, ty) ->
+            not (Vars.closed0 ty)
+          | Context.Rel.Declaration.LocalDef (_, body, ty) ->
+            not (Vars.closed0 ty) || not (Vars.closed0 body)
+        ) ctx
+      with _ -> false )
+  | _ -> false
+
 (** {2 Sigma assertion table} *)
 
 type sigma_assertion =

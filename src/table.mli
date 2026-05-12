@@ -266,6 +266,10 @@ val is_enum_inductive : GlobRef.t -> bool
     store self-refs as [shared_ptr] internally. *)
 val has_recursive_fields : GlobRef.t -> bool
 
+(** Check whether an inductive type has dependent parameters — i.e., the type
+    of some parameter references an earlier parameter (via de Bruijn index). *)
+val has_dependent_params : GlobRef.t -> bool
+
 (** Check if an inductive packet qualifies as an enum based on its structure.
     Returns true if all constructors are nullary, no type parameters are kept,
     and at least one constructor exists. *)
