@@ -11,6 +11,8 @@ depends: [
   "conf-clang"
   "conf-clang-format"
   "coq-equations" {with-test}
+  "coq-itree"
+  "coq-paco"
 ]
 build: ["dune" "build"]
 install: ["dune" "install"]
