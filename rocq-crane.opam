@@ -6,7 +6,7 @@ license: "LGPL-2.1"
 bug-reports: "https://github.com/bloomberg/crane/issues"
 depends: [
   "ocaml"
-  "coq" {>= "9.0.0"}
+  "coq" {>= "9.0.0" & < "9.1"}
   "rocq-runtime"
   "conf-clang"
   "conf-clang-format"
