@@ -64,11 +64,11 @@ struct RecRecord {
         const rlist<t_A> *_src = _frame._src;
         rlist<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Rnil>(_src->v())) {
-          _dst->d_v_ = Rnil{};
+          _dst->d_v_ = Rnil();
         } else {
           const auto &_alt = std::get<Rcons>(_src->v());
-          _dst->d_v_ = Rcons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<rlist<t_A>>() : nullptr};
+          _dst->d_v_ = Rcons(
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<rlist<t_A>>() : nullptr);
           auto &_dst_alt = std::get<Rcons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,21 +81,20 @@ struct RecRecord {
     // CREATORS
     template <typename _U> explicit rlist(const rlist<_U> &_other) {
       if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
-        this->d_v_ = Rnil{};
+        this->d_v_ = Rnil();
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename rlist<_U>::Rcons>(_other.v());
-        this->d_v_ = Rcons{t_A(d_a0),
-                           d_a1 ? std::make_unique<RecRecord::rlist<t_A>>(*d_a1)
-                                : nullptr};
+        this->d_v_ = Rcons(t_A(d_a0), d_a1 ? std::make_unique<rlist<t_A>>(*d_a1)
+                                           : nullptr);
       }
     }
 
-    static rlist<t_A> rnil() { return rlist(Rnil{}); }
+    static rlist<t_A> rnil() { return rlist(Rnil()); }
 
     static rlist<t_A> rcons(t_A a0, rlist<t_A> a1) {
       return rlist(
-          Rcons{std::move(a0), std::make_unique<rlist<t_A>>(std::move(a1))});
+          Rcons(std::move(a0), std::make_unique<rlist<t_A>>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -154,11 +153,11 @@ struct RecRecord {
 
     // ACCESSORS
     RNode clone() const {
-      return RNode{(*(this)).rn_value,
+      return RNode((*(this)).rn_value,
                    (*this).rn_next.has_value()
                        ? std::make_optional(std::make_unique<RNode>(
                              (*(*this).rn_next)->clone()))
-                       : std::nullopt};
+                       : std::nullopt);
     }
   };
 
@@ -190,7 +189,7 @@ struct RecRecord {
 
     // ACCESSORS
     Employee clone() const {
-      return Employee{(*(this)).emp_name, (*(this)).emp_dept};
+      return Employee((*(this)).emp_name, (*(this)).emp_dept);
     }
   };
 
@@ -201,8 +200,8 @@ struct RecRecord {
 
     // ACCESSORS
     Department clone() const {
-      return Department{(*(this)).dept_id, (*(this)).dept_head.clone(),
-                        (*(this)).dept_size};
+      return Department((*(this)).dept_id, (*(this)).dept_head.clone(),
+                        (*(this)).dept_size);
     }
   };
 
@@ -225,14 +224,14 @@ struct RecRecord {
   static inline const unsigned int test_rlist_len =
       rlist_length<unsigned int>(test_rlist);
   static inline const unsigned int test_rlist_sum = rlist_sum(test_rlist);
-  static inline const RNode test_rnode = RNode{
+  static inline const RNode test_rnode = RNode(
       1u,
       [](auto &&__x)
           -> std::optional<std::unique_ptr<RNode>> {
         return __x.has_value()
                    ? std::make_optional(std::make_unique<RNode>((*__x).clone()))
                    : std::nullopt;
-      }(std::make_optional<RNode>(RNode{
+      }(std::make_optional<RNode>(RNode(
               2u,
               [](auto &&__x)
                   -> std::optional<std::unique_ptr<RNode>> {
@@ -240,17 +239,17 @@ struct RecRecord {
                            ? std::make_optional(
                                  std::make_unique<RNode>((*__x).clone()))
                            : std::nullopt;
-              }(std::make_optional<RNode>(RNode{
+              }(std::make_optional<RNode>(RNode(
                       3u,
                       [](auto &&__x) -> std::optional<std::unique_ptr<RNode>> {
                         return __x.has_value()
                                    ? std::make_optional(std::make_unique<RNode>(
                                          (*__x).clone()))
                                    : std::nullopt;
-                      }(std::optional<RNode>())}))}))};
+                      }(std::optional<RNode>()))))))));
   static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
-  static inline const Employee test_emp = Employee{42u, 7u};
-  static inline const Department test_dept = Department{7u, test_emp, 50u};
+  static inline const Employee test_emp = Employee(42u, 7u);
+  static inline const Department test_dept = Department(7u, test_emp, 50u);
   static inline const unsigned int test_dept_head_name =
       test_dept.dept_head.emp_name;
 };

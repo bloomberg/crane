@@ -51,7 +51,7 @@ List<unsigned int> LoopifySorting::insertion_sort(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified insertion_sort: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -64,8 +64,8 @@ List<unsigned int> LoopifySorting::insertion_sort(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -164,7 +164,7 @@ List<unsigned int> LoopifySorting::merge_sort_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter(l, fuel));
   /// Loopified merge_sort_fuel: _Enter -> _After_l1 -> _Combine_l1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -191,15 +191,15 @@ List<unsigned int> LoopifySorting::merge_sort_fuel(
             auto _cs = split<unsigned int>(l);
             const List<unsigned int> &l1 = _cs.first;
             const List<unsigned int> &l2 = _cs.second;
-            _stack.emplace_back(_After_l1{l1, f});
-            _stack.emplace_back(_Enter{l2, f});
+            _stack.emplace_back(_After_l1(l1, f));
+            _stack.emplace_back(_Enter(l2, f));
           }
         }
       }
     } else if (std::holds_alternative<_After_l1>(_frame)) {
       auto _f = std::move(std::get<_After_l1>(_frame));
-      _stack.emplace_back(_Combine_l1{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f.l1), _f.f});
+      _stack.emplace_back(_Combine_l1(std::move(_result)));
+      _stack.emplace_back(_Enter(std::move(_f.l1), _f.f));
     } else {
       auto _f = std::move(std::get<_Combine_l1>(_frame));
       _result = merge(_result, _f._result);
@@ -232,7 +232,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifySorting::partition(
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified partition: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -246,8 +246,8 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifySorting::partition(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0, pivot});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0, pivot));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -293,7 +293,7 @@ List<unsigned int> LoopifySorting::quicksort_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter(l, fuel));
   /// Loopified quicksort_fuel: _Enter -> _After_lo -> _Combine_lo.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -315,14 +315,14 @@ List<unsigned int> LoopifySorting::quicksort_fuel(
           auto _cs = partition(d_a0, *(d_a1));
           const List<unsigned int> &lo = _cs.first;
           const List<unsigned int> &hi = _cs.second;
-          _stack.emplace_back(_After_lo{lo, f, d_a0});
-          _stack.emplace_back(_Enter{hi, f});
+          _stack.emplace_back(_After_lo(lo, f, d_a0));
+          _stack.emplace_back(_Enter(hi, f));
         }
       }
     } else if (std::holds_alternative<_After_lo>(_frame)) {
       auto _f = std::move(std::get<_After_lo>(_frame));
-      _stack.emplace_back(_Combine_lo{std::move(_result), _f.d_a0});
-      _stack.emplace_back(_Enter{std::move(_f.lo), _f.f});
+      _stack.emplace_back(_Combine_lo(std::move(_result), _f.d_a0));
+      _stack.emplace_back(_Enter(std::move(_f.lo), _f.f));
     } else {
       auto _f = std::move(std::get<_Combine_lo>(_frame));
       _result = _result.app(List<unsigned int>::cons(_f.d_a0, _f._result));

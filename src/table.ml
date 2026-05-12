@@ -177,6 +177,11 @@ let add_typedef kn cb t = typedefs := Cmap_env.add kn (cb, t) !typedefs
 let lookup_typedef kn cb =
   lookup_with_body_check (fun kn -> Cmap_env.find_opt kn !typedefs) kn cb
 
+let lookup_typedef_unchecked kn =
+  match Cmap_env.find_opt kn !typedefs with
+  | Some (_, t) -> Some t
+  | None -> None
+
 (** Cache of constant type schemes, keyed by constant. *)
 let cst_types = ref (Cmap_env.empty : (constant_body * ml_schema) Cmap_env.t)
 
@@ -402,8 +407,29 @@ let rec is_typeclass_type_cpp = function
 
 (** {2 Enum inductives table} *)
 
-let (init_enum_inductives, add_enum_inductive, is_enum_inductive) =
+let (init_enum_inductives, add_enum_inductive, is_enum_inductive_registered) =
   make_refset ()
+
+(** Check if an inductive packet qualifies as an enum: all constructors nullary,
+    no kept type parameters, at least one constructor. *)
+let is_enum_inductive_packet ind i =
+  let p = ind.ind_packets.(i) in
+  let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
+  let param_sign = List.firstn ind.ind_nparams p.ip_sign in
+  let num_param_vars =
+    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+  in
+  all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0
+
+let is_enum_inductive r =
+  if is_enum_inductive_registered r then true
+  else match r with
+  | GlobRef.IndRef (kn, i) ->
+    ( try
+        let ind = snd (Mindmap_env.find kn !inductives) in
+        Array.length ind.ind_packets = 1 && is_enum_inductive_packet ind i
+      with Not_found | Invalid_argument _ -> false )
+  | _ -> false
 
 (** Check if the inductive referred to by [r] has any constructor field
     whose ip_type refers back to the same MutInd, either directly or
@@ -434,17 +460,6 @@ let has_recursive_fields r =
         ) packet.ip_types
       with Not_found | Invalid_argument _ -> false )
   | _ -> false
-
-(** Check if an inductive packet qualifies as an enum: all constructors nullary,
-    no kept type parameters, at least one constructor. *)
-let is_enum_inductive_packet ind i =
-  let p = ind.ind_packets.(i) in
-  let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
-  let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-  let num_param_vars =
-    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-  in
-  all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0
 
 (** {2 Sigma assertion table} *)
 
@@ -1533,6 +1548,12 @@ let modfile_ids = ref Id.Set.empty
 
 let modfile_mps = ref MPmap.empty
 
+(** Inductives that have been "promoted" into their own namespace struct
+    (e.g. [String.string] → [namespace String { struct String { ... }; }]).
+    Referenced by both [Translation] and the [Cpp_state]/[Cpp_print] pipeline
+    so it lives here to avoid a dependency cycle. *)
+let promoted_inductives : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 4
+
 let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty
@@ -1550,9 +1571,34 @@ let string_of_modfile mp =
     modfile_mps := MPmap.add mp s' !modfile_mps;
     s'
 
+let reserved_c_header_basenames =
+  [ "string"; "locale"; "signal"; "complex"; "memory"; "random";
+    "utility"; "limits"; "float"; "assert"; "errno"; "math";
+    "setjmp"; "stdarg"; "stddef"; "stdio"; "stdlib"; "time";
+    "ctype"; "wchar"; "wctype"; "fenv"; "inttypes"; "stdint";
+    "uchar" ]
+
+let escape_reserved_filename s =
+  if List.exists (fun h ->
+       String.lowercase_ascii s = h) reserved_c_header_basenames
+  then s ^ "_"
+  else s
+
 (** Compute the full output file path for a module, preserving the original
-    capitalization of the first character. *)
+    capitalization of the first character. Escapes names that would collide with
+    C standard headers on case-insensitive filesystems. *)
 let file_of_modfile mp =
+  let s0 =
+    match mp with
+    | MPfile f -> Id.to_string (List.hd (DirPath.repr f))
+    | _ -> assert false
+  in
+  let base = String.mapi (fun i c -> if i = 0 then s0.[0] else c) (string_of_modfile mp) in
+  escape_reserved_filename base
+
+(** Like {!file_of_modfile} but without filename escaping — returns the base
+    name suitable for use as a C++ namespace identifier. *)
+let ns_of_modfile mp =
   let s0 =
     match mp with
     | MPfile f -> Id.to_string (List.hd (DirPath.repr f))

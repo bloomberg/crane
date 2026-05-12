@@ -13,5 +13,5 @@ FixInRecord::fn_box FixInRecord::make_box(const unsigned int n) {
   auto add = [=](unsigned int x) mutable -> unsigned int {
     return add_impl(add_impl, x);
   };
-  return fn_box{base, add};
+  return fn_box(base, add);
 }

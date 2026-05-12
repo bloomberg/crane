@@ -71,10 +71,10 @@ struct EmptyMatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
-        return either<t_A, t_B>(Left{d_a0});
+        return either<t_A, t_B>(Left(d_a0));
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        return either<t_A, t_B>(Right{d_a0});
+        return either<t_A, t_B>(Right(d_a0));
       }
     }
 
@@ -84,18 +84,18 @@ struct EmptyMatch {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        this->d_v_ = Left{t_A(d_a0)};
+        this->d_v_ = Left(t_A(d_a0));
       } else {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        this->d_v_ = Right{t_B(d_a0)};
+        this->d_v_ = Right(t_B(d_a0));
       }
     }
 
-    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
+    static either<t_A, t_B> left(t_A a0) { return either(Left(std::move(a0))); }
 
     static either<t_A, t_B> right(t_B a0) {
-      return either(Right{std::move(a0)});
+      return either(Right(std::move(a0)));
     }
 
     // MANIPULATORS

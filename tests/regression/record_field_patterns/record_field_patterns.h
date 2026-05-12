@@ -65,11 +65,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -82,19 +82,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -165,7 +165,7 @@ struct RecordFieldPatterns {
     unsigned int py;
 
     // ACCESSORS
-    Point clone() const { return Point{(*(this)).px, (*(this)).py}; }
+    Point clone() const { return Point((*(this)).px, (*(this)).py); }
   };
 
   static unsigned int classify_point(const Point &p);
@@ -194,7 +194,7 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     ScaledPoint clone() const {
-      return ScaledPoint{(*(this)).sp_x, (*(this)).sp_y};
+      return ScaledPoint((*(this)).sp_x, (*(this)).sp_y);
     }
   };
 
@@ -204,7 +204,7 @@ struct RecordFieldPatterns {
   /// The record type itself is NOT parameterized (scale is only used in
   /// the function body), but the function signature changes.
   static inline const unsigned int test_labeled =
-      scaled_sum(3u, ScaledPoint{10u, 20u});
+      scaled_sum(3u, ScaledPoint(10u, 20u));
 
   struct PointImpl {
     using R = Point;
@@ -221,7 +221,7 @@ struct RecordFieldPatterns {
 
   using UR = UseRecord<PointImpl>;
   static inline const unsigned int test_functor =
-      UR::sum_fields(Point{100u, 200u});
+      UR::sum_fields(Point(100u, 200u));
 
   struct Segment {
     Point seg_start;
@@ -229,7 +229,7 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     Segment clone() const {
-      return Segment{(*(this)).seg_start.clone(), (*(this)).seg_end.clone()};
+      return Segment((*(this)).seg_start.clone(), (*(this)).seg_end.clone());
     }
   };
 
@@ -242,7 +242,7 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     Bounded clone() const {
-      return Bounded{(*(this)).lo, (*(this)).hi, (*(this)).mid};
+      return Bounded((*(this)).lo, (*(this)).hi, (*(this)).mid);
     }
   };
 
@@ -258,33 +258,33 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     Container clone() const {
-      return Container{(*(this)).elem, (*(this)).count};
+      return Container((*(this)).elem, (*(this)).count);
     }
   };
 
   using elem_type = std::any;
   static unsigned int get_count(const Container &c);
   static inline const unsigned int test_container =
-      get_count(Container{42u, 5u});
-  static inline const unsigned int test_origin = classify_point(Point{0u, 0u});
-  static inline const unsigned int test_y_axis = classify_point(Point{0u, 5u});
-  static inline const unsigned int test_x_axis = classify_point(Point{3u, 0u});
-  static inline const unsigned int test_general = classify_point(Point{3u, 4u});
-  static inline const unsigned int test_zero_x = zero_x(Point{0u, 42u});
-  static inline const unsigned int test_nonzero = zero_x(Point{5u, 10u});
-  static inline const Point test_id = id_point(Point{99u, 1u});
+      get_count(Container(42u, 5u));
+  static inline const unsigned int test_origin = classify_point(Point(0u, 0u));
+  static inline const unsigned int test_y_axis = classify_point(Point(0u, 5u));
+  static inline const unsigned int test_x_axis = classify_point(Point(3u, 0u));
+  static inline const unsigned int test_general = classify_point(Point(3u, 4u));
+  static inline const unsigned int test_zero_x = zero_x(Point(0u, 42u));
+  static inline const unsigned int test_nonzero = zero_x(Point(5u, 10u));
+  static inline const Point test_id = id_point(Point(99u, 1u));
   static inline const unsigned int test_seg =
-      segment_length_sq(Segment{Point{1u, 2u}, Point{4u, 6u}});
+      segment_length_sq(Segment(Point(1u, 2u), Point(4u, 6u)));
   static inline const unsigned int test_sum = sum_px(List<Point>::cons(
-      Point{10u, 0u},
+      Point(10u, 0u),
       List<Point>::cons(
-          Point{20u, 0u},
-          List<Point>::cons(Point{30u, 0u}, List<Point>::nil()))));
+          Point(20u, 0u),
+          List<Point>::cons(Point(30u, 0u), List<Point>::nil()))));
   static inline const List<unsigned int> test_map = map_py(List<Point>::cons(
-      Point{0u, 1u},
-      List<Point>::cons(Point{0u, 2u},
-                        List<Point>::cons(Point{0u, 3u}, List<Point>::nil()))));
-  static inline const Point test_swap = swap(Point{3u, 7u});
+      Point(0u, 1u),
+      List<Point>::cons(Point(0u, 2u),
+                        List<Point>::cons(Point(0u, 3u), List<Point>::nil()))));
+  static inline const Point test_swap = swap(Point(3u, 7u));
 };
 
 #endif // INCLUDED_RECORD_FIELD_PATTERNS

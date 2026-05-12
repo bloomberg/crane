@@ -17,7 +17,7 @@ unsigned int MemSafetyProbe7::sum_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -32,8 +32,8 @@ unsigned int MemSafetyProbe7::sum_list(
         const auto &[d_a0, d_a1] =
             std::get<typename MemSafetyProbe7::mylist<unsigned int>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -71,9 +71,7 @@ MemSafetyProbe7::build_len_closures(
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           typename mylist<std::function<unsigned int(std::monostate)>>::Mycons(
-              [=](const std::monostate &) mutable {
-                return d_a1_value.length();
-              },
+              [=](const std::monostate) mutable { return d_a1_value.length(); },
               nullptr));
       *(_write) = std::move(_cell);
       _write = &std::get<typename mylist<
@@ -105,7 +103,7 @@ unsigned int MemSafetyProbe7::sum_fns(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_fns: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -120,8 +118,8 @@ unsigned int MemSafetyProbe7::sum_fns(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe7::mylist<
             std::function<unsigned int(std::monostate)>>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0(std::monostate{})});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons(d_a0(std::monostate{})));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -159,7 +157,7 @@ MemSafetyProbe7::build_sum_closures(
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           typename mylist<std::function<unsigned int(std::monostate)>>::Mycons(
-              [=](const std::monostate &) mutable {
+              [=](const std::monostate) mutable {
                 return sum_list(d_a1_value);
               },
               nullptr));
@@ -238,7 +236,7 @@ unsigned int MemSafetyProbe7::apply_all(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified apply_all: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -253,8 +251,8 @@ unsigned int MemSafetyProbe7::apply_all(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe7::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons{std::move(d_a0)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons(std::move(d_a0)));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));

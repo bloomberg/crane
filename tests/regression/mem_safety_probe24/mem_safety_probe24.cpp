@@ -17,7 +17,7 @@ unsigned int MemSafetyProbe24::sum_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -32,8 +32,8 @@ unsigned int MemSafetyProbe24::sum_list(
         const auto &[d_a0, d_a1] =
             std::get<typename MemSafetyProbe24::mylist<unsigned int>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -68,7 +68,7 @@ MemSafetyProbe24::mylist<unsigned int> MemSafetyProbe24::tree_to_list(
   MemSafetyProbe24::mylist<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&t});
+  _stack.emplace_back(_Enter(&t));
   /// Loopified tree_to_list: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -82,13 +82,13 @@ MemSafetyProbe24::mylist<unsigned int> MemSafetyProbe24::tree_to_list(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe24::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-        _stack.emplace_back(_Enter{d_a2.get()});
+        _stack.emplace_back(_After_Node(d_a0.get(), d_a1));
+        _stack.emplace_back(_Enter(d_a2.get()));
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f.d_a1});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Combine_Node(std::move(_result), _f.d_a1));
+      _stack.emplace_back(_Enter(_f.d_a0));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = _result.app(mylist<unsigned int>::mycons(_f.d_a1, _f._result));
@@ -155,7 +155,7 @@ MemSafetyProbe24::zip_trees(
   MemSafetyProbe24::mylist<std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&t2, &t1});
+  _stack.emplace_back(_Enter(&t2, &t1));
   /// Loopified zip_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -176,15 +176,15 @@ MemSafetyProbe24::zip_trees(
         } else {
           const auto &[d_a00, d_a10, d_a20] =
               std::get<typename MemSafetyProbe24::tree::Node>(t2.v());
-          _stack.emplace_back(_After_Node{d_a00.get(), d_a0.get(),
-                                          std::make_pair(d_a1, d_a10)});
-          _stack.emplace_back(_Enter{d_a20.get(), d_a2.get()});
+          _stack.emplace_back(_After_Node(d_a00.get(), d_a0.get(),
+                                          std::make_pair(d_a1, d_a10)));
+          _stack.emplace_back(_Enter(d_a20.get(), d_a2.get()));
         }
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s2});
-      _stack.emplace_back(_Enter{_f.d_a00, _f.d_a0});
+      _stack.emplace_back(_Combine_Node(std::move(_result), _f._s2));
+      _stack.emplace_back(_Enter(_f.d_a00, _f.d_a0));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result =

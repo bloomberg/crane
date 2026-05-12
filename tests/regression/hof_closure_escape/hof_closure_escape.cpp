@@ -32,7 +32,7 @@ unsigned int HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
 /// the & lambda was created in hof_escape's stack frame.
 /// When hof_escape returns, captured t is destroyed.
 std::optional<std::function<unsigned int(unsigned int)>>
-HofClosureEscape::hof_escape(HofClosureEscape::tree t) {
+HofClosureEscape::hof_escape(const HofClosureEscape::tree &t) {
   return wrap_some([=](unsigned int _x0) mutable -> unsigned int {
     return sum_values(t, _x0);
   });

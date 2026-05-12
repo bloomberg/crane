@@ -120,7 +120,7 @@ RecordCaseBody::constructor_body(const RecordCaseBody::Rec &r) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
-  return Rec{(a + 1u), (b + 1u), (c + 1u)};
+  return Rec((a + 1u), (b + 1u), (c + 1u));
 }
 
 unsigned int

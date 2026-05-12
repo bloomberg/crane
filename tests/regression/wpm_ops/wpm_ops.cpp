@@ -28,7 +28,7 @@ WpmOps::state1 WpmOps::execute_wpm1(const WpmOps::state1 &s) {
   } else {
     new_rom = s.rom1;
   }
-  return state1{new_rom, s.prom_addr1, s.prom_data1, s.prom_enable1};
+  return state1(new_rom, s.prom_addr1, s.prom_data1, s.prom_enable1);
 }
 
 WpmOps::state2 WpmOps::execute_wpm2(const WpmOps::state2 &s) {
@@ -38,8 +38,8 @@ WpmOps::state2 WpmOps::execute_wpm2(const WpmOps::state2 &s) {
   } else {
     new_rom = s.rom2;
   }
-  return state2{s.ram_sys2, new_rom, s.prom_addr2, s.prom_data2,
-                s.prom_enable2};
+  return state2(s.ram_sys2, new_rom, s.prom_addr2, s.prom_data2,
+                s.prom_enable2);
 }
 
 WpmOps::state3 WpmOps::execute_wpm3(const WpmOps::state3 &s) {
@@ -49,7 +49,7 @@ WpmOps::state3 WpmOps::execute_wpm3(const WpmOps::state3 &s) {
   } else {
     new_rom = s.rom3;
   }
-  return state3{s.regs3, new_rom, s.prom_addr3, s.prom_data3, s.prom_enable3};
+  return state3(s.regs3, new_rom, s.prom_addr3, s.prom_data3, s.prom_enable3);
 }
 
 WpmOps::state4 WpmOps::execute_wpm4(const WpmOps::state4 &s) {
@@ -59,7 +59,7 @@ WpmOps::state4 WpmOps::execute_wpm4(const WpmOps::state4 &s) {
   } else {
     new_rom = s.rom4;
   }
-  return state4{new_rom, s.prom_addr4, s.prom_data4, s.prom_enable4};
+  return state4(new_rom, s.prom_addr4, s.prom_data4, s.prom_enable4);
 }
 
 WpmOps::state5 WpmOps::execute_wpm5(const WpmOps::state5 &s) {
@@ -69,7 +69,7 @@ WpmOps::state5 WpmOps::execute_wpm5(const WpmOps::state5 &s) {
   } else {
     new_rom = s.rom5;
   }
-  return state5{new_rom, s.prom_addr5, s.prom_data5, s.prom_enable5};
+  return state5(new_rom, s.prom_addr5, s.prom_data5, s.prom_enable5);
 }
 
 WpmOps::state6 WpmOps::execute_wpm6(const WpmOps::state6 &s) {
@@ -79,5 +79,5 @@ WpmOps::state6 WpmOps::execute_wpm6(const WpmOps::state6 &s) {
   } else {
     new_rom = s.rom6;
   }
-  return state6{new_rom, s.prom_addr6, s.prom_data6, s.prom_enable6};
+  return state6(new_rom, s.prom_addr6, s.prom_data6, s.prom_enable6);
 }

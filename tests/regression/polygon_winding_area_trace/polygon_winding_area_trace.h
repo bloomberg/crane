@@ -65,11 +65,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -82,19 +82,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -165,7 +165,7 @@ struct Q {
   unsigned int Qden;
 
   // ACCESSORS
-  Q clone() const { return Q{(*(this)).Qnum, (*(this)).Qden}; }
+  Q clone() const { return Q((*(this)).Qnum, (*(this)).Qden); }
 };
 
 struct Rdefinitions {
@@ -178,15 +178,15 @@ struct PolygonWindingAreaTraceCase {
     Real lambda;
 
     // ACCESSORS
-    Point clone() const { return Point{(*(this)).phi, (*(this)).lambda}; }
+    Point clone() const { return Point((*(this)).phi, (*(this)).lambda); }
   };
 
-  static inline const Real R_earth_default = Rdefinitions::Q2R(Q{
+  static inline const Real R_earth_default = Rdefinitions::Q2R(Q(
       INT64_C(3440065),
       (2u *
        (2u *
         (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
-               1u))))});
+               1u))))));
   static inline const Real R_earth = R_earth_default;
   static Real hav(const Real theta);
   static Real distance(const Point &p1, const Point &p2);
@@ -220,23 +220,23 @@ struct PolygonWindingAreaTraceCase {
                                         const Point &b);
   static bool winding_number_gt_half(const Point &p, const List<Point> &poly);
   static inline const Point test_triangle_v1 =
-      Point{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0))};
+      Point(Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0)));
   static inline const Point test_triangle_v2 =
-      Point{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0))};
+      Point(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)));
   static inline const Point test_triangle_v3 =
-      Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
-            Real::from_z(INT64_C(1))};
+      Point((Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
+            Real::from_z(INT64_C(1)));
   static inline const Polygon test_triangle = List<Point>::cons(
       test_triangle_v1,
       List<Point>::cons(
           test_triangle_v2,
           List<Point>::cons(test_triangle_v3, List<Point>::nil())));
   static inline const Point test_centroid =
-      Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
-            (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(3)))};
+      Point((Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
+            (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(3))));
   static inline const Point test_exterior =
-      Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
-            Real::from_z(INT64_C(-1))};
+      Point((Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
+            Real::from_z(INT64_C(-1)));
   static Polygon test_equatorial_square(const Real delta);
   static inline const Real sample_square_delta =
       (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(10)));

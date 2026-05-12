@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -145,7 +145,7 @@ struct EmptySystemBankCount {
 
     // ACCESSORS
     ram_reg clone() const {
-      return ram_reg{(*(this)).reg_main.clone(), (*(this)).reg_status.clone()};
+      return ram_reg((*(this)).reg_main.clone(), (*(this)).reg_status.clone());
     }
   };
 
@@ -155,7 +155,7 @@ struct EmptySystemBankCount {
 
     // ACCESSORS
     ram_chip clone() const {
-      return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
+      return ram_chip((*(this)).chip_regs.clone(), (*(this)).chip_port);
     }
   };
 
@@ -163,7 +163,7 @@ struct EmptySystemBankCount {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*(this)).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank((*(this)).bank_chips.clone()); }
   };
 
   static inline const unsigned int NBANKS = 4u;
@@ -172,12 +172,12 @@ struct EmptySystemBankCount {
   static inline const unsigned int NMAIN = 16u;
   static inline const unsigned int NSTAT = 4u;
   static inline const ram_reg empty_reg =
-      ram_reg{ListDef::template repeat<unsigned int>(0u, NMAIN),
-              ListDef::template repeat<unsigned int>(0u, NSTAT)};
+      ram_reg(ListDef::template repeat<unsigned int>(0u, NMAIN),
+              ListDef::template repeat<unsigned int>(0u, NSTAT));
   static inline const ram_chip empty_chip =
-      ram_chip{ListDef::template repeat<ram_reg>(empty_reg, NREGS), 0u};
+      ram_chip(ListDef::template repeat<ram_reg>(empty_reg, NREGS), 0u);
   static inline const ram_bank empty_bank =
-      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, NCHIPS)};
+      ram_bank(ListDef::template repeat<ram_chip>(empty_chip, NCHIPS));
   static inline const List<ram_bank> empty_sys =
       ListDef::template repeat<ram_bank>(empty_bank, NBANKS);
   static inline const unsigned int t = empty_sys.length();

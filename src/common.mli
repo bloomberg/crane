@@ -184,6 +184,9 @@ val module_label_name : Label.t -> string
     Must be called before any [pp_global] or [pp_module] calls. *)
 val detect_sibling_module_inductive_collisions : ml_structure -> unit
 
+(** Get module paths of all visible layers. *)
+val get_visible_mps : unit -> ModPath.t list
+
 (** Get the module path of the innermost visible layer. *)
 val top_visible_mp : unit -> ModPath.t
 

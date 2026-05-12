@@ -64,11 +64,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,19 +81,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -183,11 +183,11 @@ struct DepElim {
         fin *_dst = _frame._dst;
         if (std::holds_alternative<FZ>(_src->v())) {
           const auto &_alt = std::get<FZ>(_src->v());
-          _dst->d_v_ = FZ{_alt.d_n};
+          _dst->d_v_ = FZ(_alt.d_n);
         } else {
           const auto &_alt = std::get<FS>(_src->v());
           _dst->d_v_ =
-              FS{_alt.d_n, _alt.d_a1 ? std::make_unique<fin>() : nullptr};
+              FS(_alt.d_n, _alt.d_a1 ? std::make_unique<fin>() : nullptr);
           auto &_dst_alt = std::get<FS>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -198,10 +198,10 @@ struct DepElim {
     }
 
     // CREATORS
-    static fin fz(unsigned int n) { return fin(FZ{std::move(n)}); }
+    static fin fz(unsigned int n) { return fin(FZ(std::move(n))); }
 
     static fin fs(unsigned int n, fin a1) {
-      return fin(FS{std::move(n), std::make_unique<fin>(std::move(a1))});
+      return fin(FS(std::move(n), std::make_unique<fin>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -326,12 +326,12 @@ struct DepElim {
         const vec<t_A> *_src = _frame._src;
         vec<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Vnil>(_src->v())) {
-          _dst->d_v_ = Vnil{};
+          _dst->d_v_ = Vnil();
         } else {
           const auto &_alt = std::get<Vcons>(_src->v());
           _dst->d_v_ =
-              Vcons{_alt.d_n, _alt.d_a1,
-                    _alt.d_a2 ? std::make_unique<vec<t_A>>() : nullptr};
+              Vcons(_alt.d_n, _alt.d_a1,
+                    _alt.d_a2 ? std::make_unique<vec<t_A>>() : nullptr);
           auto &_dst_alt = std::get<Vcons>(_dst->d_v_);
           if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
@@ -344,21 +344,20 @@ struct DepElim {
     // CREATORS
     template <typename _U> explicit vec(const vec<_U> &_other) {
       if (std::holds_alternative<typename vec<_U>::Vnil>(_other.v())) {
-        this->d_v_ = Vnil{};
+        this->d_v_ = Vnil();
       } else {
         const auto &[d_n, d_a1, d_a2] =
             std::get<typename vec<_U>::Vcons>(_other.v());
-        this->d_v_ =
-            Vcons{d_n, t_A(d_a1),
-                  d_a2 ? std::make_unique<DepElim::vec<t_A>>(*d_a2) : nullptr};
+        this->d_v_ = Vcons(d_n, t_A(d_a1),
+                           d_a2 ? std::make_unique<vec<t_A>>(*d_a2) : nullptr);
       }
     }
 
-    static vec<t_A> vnil() { return vec(Vnil{}); }
+    static vec<t_A> vnil() { return vec(Vnil()); }
 
     static vec<t_A> vcons(unsigned int n, t_A a1, vec<t_A> a2) {
-      return vec(Vcons{std::move(n), std::move(a1),
-                       std::make_unique<vec<t_A>>(std::move(a2))});
+      return vec(Vcons(std::move(n), std::move(a1),
+                       std::make_unique<vec<t_A>>(std::move(a2))));
     }
 
     // MANIPULATORS
@@ -507,18 +506,18 @@ struct DepElim {
       auto &&_sv = *(this);
       if (std::holds_alternative<Present>(_sv.v())) {
         const auto &[d_a0] = std::get<Present>(_sv.v());
-        return avail(Present{d_a0});
+        return avail(Present(d_a0));
       } else {
-        return avail(Absent{});
+        return avail(Absent());
       }
     }
 
     // CREATORS
     static avail present(unsigned int a0) {
-      return avail(Present{std::move(a0)});
+      return avail(Present(std::move(a0)));
     }
 
-    static avail absent() { return avail(Absent{}); }
+    static avail absent() { return avail(Absent()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

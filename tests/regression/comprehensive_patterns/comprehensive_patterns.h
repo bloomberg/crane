@@ -65,11 +65,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -82,19 +82,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -161,16 +161,16 @@ public:
   Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<t_A>(Exist{d_x});
+    return Sig<t_A>(Exist(d_x));
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist{t_A(d_x)};
+    this->d_v_ = Exist(t_A(d_x));
   }
 
-  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist(std::move(x))); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -186,7 +186,7 @@ struct ComprehensivePatterns {
     unsigned int s_c;
 
     // ACCESSORS
-    S clone() const { return S{(*(this)).s_a, (*(this)).s_b, (*(this)).s_c}; }
+    S clone() const { return S((*(this)).s_a, (*(this)).s_b, (*(this)).s_c); }
   };
 
   static std::pair<std::pair<S, unsigned int>, unsigned int>
@@ -197,35 +197,35 @@ struct ComprehensivePatterns {
     S l1_s;
 
     // ACCESSORS
-    L1 clone() const { return L1{(*(this)).l1_s.clone()}; }
+    L1 clone() const { return L1((*(this)).l1_s.clone()); }
   };
 
   struct L2 {
     L1 l2_l1;
 
     // ACCESSORS
-    L2 clone() const { return L2{(*(this)).l2_l1.clone()}; }
+    L2 clone() const { return L2((*(this)).l2_l1.clone()); }
   };
 
   struct L3 {
     L2 l3_l2;
 
     // ACCESSORS
-    L3 clone() const { return L3{(*(this)).l3_l2.clone()}; }
+    L3 clone() const { return L3((*(this)).l3_l2.clone()); }
   };
 
   struct L4 {
     L3 l4_l3;
 
     // ACCESSORS
-    L4 clone() const { return L4{(*(this)).l4_l3.clone()}; }
+    L4 clone() const { return L4((*(this)).l4_l3.clone()); }
   };
 
   struct L5 {
     L4 l5_l4;
 
     // ACCESSORS
-    L5 clone() const { return L5{(*(this)).l5_l4.clone()}; }
+    L5 clone() const { return L5((*(this)).l5_l4.clone()); }
   };
 
   static std::pair<
@@ -344,18 +344,18 @@ struct ComprehensivePatterns {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left_S>(_sv.v())) {
         const auto &[d_s] = std::get<Left_S>(_sv.v());
-        return Either(Left_S{d_s.clone()});
+        return Either(Left_S(d_s.clone()));
       } else {
         const auto &[d_n] = std::get<Right_N>(_sv.v());
-        return Either(Right_N{d_n});
+        return Either(Right_N(d_n));
       }
     }
 
     // CREATORS
-    static Either left_s(S s) { return Either(Left_S{std::move(s)}); }
+    static Either left_s(S s) { return Either(Left_S(std::move(s))); }
 
     static Either right_n(unsigned int n) {
-      return Either(Right_N{std::move(n)});
+      return Either(Right_N(std::move(n)));
     }
 
     // MANIPULATORS
@@ -399,7 +399,7 @@ struct ComprehensivePatterns {
     unsigned int r1_val;
 
     // ACCESSORS
-    R1 clone() const { return R1{(*(this)).r1_val}; }
+    R1 clone() const { return R1((*(this)).r1_val); }
   };
 
   struct R2 {
@@ -408,7 +408,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     R2 clone() const {
-      return R2{(*(this)).r2_inner.clone(), (*(this)).r2_data};
+      return R2((*(this)).r2_inner.clone(), (*(this)).r2_data);
     }
   };
 
@@ -419,8 +419,8 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     R3 clone() const {
-      return R3{(*(this)).r3_r2.clone(), (*(this)).r3_r1.clone(),
-                (*(this)).r3_num};
+      return R3((*(this)).r3_r2.clone(), (*(this)).r3_r1.clone(),
+                (*(this)).r3_num);
     }
   };
 
@@ -460,7 +460,7 @@ struct ComprehensivePatterns {
     unsigned int dat;
 
     // ACCESSORS
-    R clone() const { return R{(*(this)).val, (*(this)).dat}; }
+    R clone() const { return R((*(this)).val, (*(this)).dat); }
   };
 
   static std::pair<R, unsigned int> pair_inline_proj(R r);
@@ -491,7 +491,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     NC clone() const {
-      return NC{(*(this)).nc_a, (*(this)).nc_b, (*(this)).nc_c};
+      return NC((*(this)).nc_a, (*(this)).nc_b, (*(this)).nc_c);
     }
   };
 
@@ -520,7 +520,7 @@ struct ComprehensivePatterns {
     NC outer_nc;
 
     // ACCESSORS
-    OuterNC clone() const { return OuterNC{(*(this)).outer_nc.clone()}; }
+    OuterNC clone() const { return OuterNC((*(this)).outer_nc.clone()); }
   };
 
   static unsigned int double_proj_nc(const OuterNC &o);
@@ -541,7 +541,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     State clone() const {
-      return State{(*(this)).state_value, (*(this)).state_data};
+      return State((*(this)).state_value, (*(this)).state_data);
     }
   };
 
@@ -573,7 +573,7 @@ struct ComprehensivePatterns {
     unsigned int seq_val;
 
     // ACCESSORS
-    RSeq clone() const { return RSeq{(*(this)).seq_val}; }
+    RSeq clone() const { return RSeq((*(this)).seq_val); }
   };
 
   static RSeq side_effect(RSeq r);
@@ -587,7 +587,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     StateStmt clone() const {
-      return StateStmt{(*(this)).stmt_value, (*(this)).stmt_data};
+      return StateStmt((*(this)).stmt_value, (*(this)).stmt_data);
     }
   };
 
@@ -599,7 +599,7 @@ struct ComprehensivePatterns {
     unsigned int inner_stmt_val;
 
     // ACCESSORS
-    InnerStmt clone() const { return InnerStmt{(*(this)).inner_stmt_val}; }
+    InnerStmt clone() const { return InnerStmt((*(this)).inner_stmt_val); }
   };
 
   struct OuterStmt {
@@ -608,8 +608,8 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     OuterStmt clone() const {
-      return OuterStmt{(*(this)).outer_stmt_inner.clone(),
-                       (*(this)).outer_stmt_data};
+      return OuterStmt((*(this)).outer_stmt_inner.clone(),
+                       (*(this)).outer_stmt_data);
     }
   };
 
@@ -620,7 +620,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     Level3Stmt clone() const {
-      return Level3Stmt{(*(this)).l3_outer_stmt.clone()};
+      return Level3Stmt((*(this)).l3_outer_stmt.clone());
     }
   };
 
@@ -641,7 +641,7 @@ struct ComprehensivePatterns {
     unsigned int cf_val;
 
     // ACCESSORS
-    RCF clone() const { return RCF{(*(this)).cf_val}; }
+    RCF clone() const { return RCF((*(this)).cf_val); }
   };
 
   static unsigned int branch_use(const bool b, const RCF &r);
@@ -657,7 +657,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     StateLB clone() const {
-      return StateLB{(*(this)).lb_value, (*(this)).lb_data};
+      return StateLB((*(this)).lb_value, (*(this)).lb_data);
     }
   };
 
@@ -720,12 +720,12 @@ struct ComprehensivePatterns {
         Tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
           const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->d_v_ = Leaf{_alt.d_a0};
+          _dst->d_v_ = Leaf(_alt.d_a0);
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<Tree>() : nullptr};
+              Node(_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<Tree>() : nullptr);
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -739,11 +739,11 @@ struct ComprehensivePatterns {
     }
 
     // CREATORS
-    static Tree leaf(unsigned int a0) { return Tree(Leaf{std::move(a0)}); }
+    static Tree leaf(unsigned int a0) { return Tree(Leaf(std::move(a0))); }
 
     static Tree node(Tree a0, unsigned int a1, Tree a2) {
-      return Tree(Node{std::make_unique<Tree>(std::move(a0)), std::move(a1),
-                       std::make_unique<Tree>(std::move(a2))});
+      return Tree(Node(std::make_unique<Tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<Tree>(std::move(a2))));
     }
 
     // MANIPULATORS
@@ -828,7 +828,7 @@ struct ComprehensivePatterns {
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
+      _stack.emplace_back(_Enter(_self));
       /// Loopified consume_tree_with_state: _Enter -> _After_Node ->
       /// _Combine_Node.
       while (!_stack.empty()) {
@@ -844,13 +844,13 @@ struct ComprehensivePatterns {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), (d_a1 + s.lb_value)});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            _stack.emplace_back(_After_Node(d_a0.get(), (d_a1 + s.lb_value)));
+            _stack.emplace_back(_Enter(d_a2.get()));
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, _f._s1});
-          _stack.emplace_back(_Enter{_f._s0});
+          _stack.emplace_back(_Combine_Node(_result, _f._s1));
+          _stack.emplace_back(_Enter(_f._s0));
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
           _result = ((_f._s1 + _result) + _f._result);
@@ -884,7 +884,7 @@ struct ComprehensivePatterns {
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
+      _stack.emplace_back(_Enter(_self));
       /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -899,13 +899,13 @@ struct ComprehensivePatterns {
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            _stack.emplace_back(_After_Node(d_a0.get(), d_a1));
+            _stack.emplace_back(_Enter(d_a2.get()));
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, _f.d_a1});
-          _stack.emplace_back(_Enter{_f._s0});
+          _stack.emplace_back(_Combine_Node(_result, _f.d_a1));
+          _stack.emplace_back(_Enter(_f._s0));
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
           _result = ((_f.d_a1 + _result) + _f._result);
@@ -948,7 +948,7 @@ struct ComprehensivePatterns {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
+      _stack.emplace_back(_Enter(_self));
       /// Loopified Tree_rec: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -964,14 +964,14 @@ struct ComprehensivePatterns {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
             _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
-            _stack.emplace_back(_Enter{d_a2.get()});
+                _After_Node(d_a0.get(), *(d_a2), d_a1, *(d_a0)));
+            _stack.emplace_back(_Enter(d_a2.get()));
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
-          _stack.emplace_back(_Enter{_f._s0});
+          _stack.emplace_back(_Combine_Node(_result, std::move(_f.d_a2),
+                                            _f.d_a1, std::move(_f.d_a0)));
+          _stack.emplace_back(_Enter(_f._s0));
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
           _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
@@ -1014,7 +1014,7 @@ struct ComprehensivePatterns {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
+      _stack.emplace_back(_Enter(_self));
       /// Loopified Tree_rect: _Enter -> _After_Node -> _Combine_Node.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1030,14 +1030,14 @@ struct ComprehensivePatterns {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
             _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
-            _stack.emplace_back(_Enter{d_a2.get()});
+                _After_Node(d_a0.get(), *(d_a2), d_a1, *(d_a0)));
+            _stack.emplace_back(_Enter(d_a2.get()));
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
-          _stack.emplace_back(_Enter{_f._s0});
+          _stack.emplace_back(_Combine_Node(_result, std::move(_f.d_a2),
+                                            _f.d_a1, std::move(_f.d_a0)));
+          _stack.emplace_back(_Enter(_f._s0));
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
           _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
@@ -1055,7 +1055,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     StateRO clone() const {
-      return StateRO{(*(this)).ro_value, (*(this)).ro_data};
+      return StateRO((*(this)).ro_value, (*(this)).ro_data);
     }
   };
 
@@ -1099,17 +1099,17 @@ struct ComprehensivePatterns {
     Container clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Empty>(_sv.v())) {
-        return Container(Empty{});
+        return Container(Empty());
       } else {
         const auto &[d_a0] = std::get<Full>(_sv.v());
-        return Container(Full{d_a0.clone()});
+        return Container(Full(d_a0.clone()));
       }
     }
 
     // CREATORS
-    static Container empty() { return Container(Empty{}); }
+    static Container empty() { return Container(Empty()); }
 
-    static Container full(StateRO a0) { return Container(Full{std::move(a0)}); }
+    static Container full(StateRO a0) { return Container(Full(std::move(a0))); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -1158,7 +1158,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     StateOP clone() const {
-      return StateOP{(*(this)).op_value, (*(this)).op_data};
+      return StateOP((*(this)).op_value, (*(this)).op_data);
     }
   };
 

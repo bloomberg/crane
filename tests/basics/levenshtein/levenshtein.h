@@ -65,10 +65,10 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->d_v_ = O();
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        _dst->d_v_ = S(_alt.d_a0 ? std::make_unique<Nat>() : nullptr);
         auto &_dst_alt = std::get<S>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -79,9 +79,9 @@ public:
   }
 
   // CREATORS
-  static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O()); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S(std::make_unique<Nat>(std::move(a0)))); }
 
   // MANIPULATORS
   ~Nat() {
@@ -113,11 +113,11 @@ public:
   Bool0 leb(const Nat &m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-      return Bool0::e_TRUE0;
+      return Bool0::e_TRUE;
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
       if (std::holds_alternative<typename Nat::O>(m.v())) {
-        return Bool0::e_FALSE0;
+        return Bool0::e_FALSE;
       } else {
         const auto &[d_a00] = std::get<typename Nat::S>(m.v());
         return (*(d_a0)).leb(*(d_a00));
@@ -163,7 +163,7 @@ public:
   SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
+    return SigT<t_A, t_P>(ExistT(d_x, d_a1));
   }
 
   // CREATORS
@@ -171,11 +171,11 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT(t_A(d_x), t_P(d_a1));
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
-    return SigT(ExistT{std::move(x), std::move(a1)});
+    return SigT(ExistT(std::move(x), std::move(a1)));
   }
 
   // MANIPULATORS
@@ -241,15 +241,15 @@ public:
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
         std::get<Ascii0>(_sv.v());
-    return Ascii(Ascii0{d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7});
+    return Ascii(Ascii0(d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7));
   }
 
   // CREATORS
   static Ascii ascii0(Bool0 a0, Bool0 a1, Bool0 a2, Bool0 a3, Bool0 a4,
                       Bool0 a5, Bool0 a6, Bool0 a7) {
-    return Ascii(Ascii0{std::move(a0), std::move(a1), std::move(a2),
+    return Ascii(Ascii0(std::move(a0), std::move(a1), std::move(a2),
                         std::move(a3), std::move(a4), std::move(a5),
-                        std::move(a6), std::move(a7)});
+                        std::move(a6), std::move(a7)));
   }
 
   // MANIPULATORS
@@ -395,11 +395,11 @@ public:
       const String *_src = _frame._src;
       String *_dst = _frame._dst;
       if (std::holds_alternative<EmptyString>(_src->v())) {
-        _dst->d_v_ = EmptyString{};
+        _dst->d_v_ = EmptyString();
       } else {
         const auto &_alt = std::get<String0>(_src->v());
-        _dst->d_v_ = String0{_alt.d_a0.clone(),
-                             _alt.d_a1 ? std::make_unique<String>() : nullptr};
+        _dst->d_v_ = String0(_alt.d_a0.clone(),
+                             _alt.d_a1 ? std::make_unique<String>() : nullptr);
         auto &_dst_alt = std::get<String0>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -410,11 +410,11 @@ public:
   }
 
   // CREATORS
-  static String emptystring() { return String(EmptyString{}); }
+  static String emptystring() { return String(EmptyString()); }
 
   static String string0(Ascii a0, String a1) {
     return String(
-        String0{std::move(a0), std::make_unique<String>(std::move(a1))});
+        String0(std::move(a0), std::make_unique<String>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -519,27 +519,27 @@ struct Levenshtein {
       auto &&_sv = *(this);
       if (std::holds_alternative<Insertion>(_sv.v())) {
         const auto &[d_a, d_s] = std::get<Insertion>(_sv.v());
-        return edit(Insertion{d_a.clone(), d_s.clone()});
+        return edit(Insertion(d_a.clone(), d_s.clone()));
       } else if (std::holds_alternative<Deletion>(_sv.v())) {
         const auto &[d_a, d_s] = std::get<Deletion>(_sv.v());
-        return edit(Deletion{d_a.clone(), d_s.clone()});
+        return edit(Deletion(d_a.clone(), d_s.clone()));
       } else {
         const auto &[d_a, d_a_1, d_neq] = std::get<Update>(_sv.v());
-        return edit(Update{d_a.clone(), d_a_1.clone(), d_neq.clone()});
+        return edit(Update(d_a.clone(), d_a_1.clone(), d_neq.clone()));
       }
     }
 
     // CREATORS
     static edit insertion(Ascii a, String s) {
-      return edit(Insertion{std::move(a), std::move(s)});
+      return edit(Insertion(std::move(a), std::move(s)));
     }
 
     static edit deletion(Ascii a, String s) {
-      return edit(Deletion{std::move(a), std::move(s)});
+      return edit(Deletion(std::move(a), std::move(s)));
     }
 
     static edit update(Ascii a, Ascii a_1, String neq) {
-      return edit(Update{std::move(a), std::move(a_1), std::move(neq)});
+      return edit(Update(std::move(a), std::move(a_1), std::move(neq)));
     }
 
     // MANIPULATORS
@@ -658,24 +658,22 @@ struct Levenshtein {
         const chain *_src = _frame._src;
         chain *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty{};
+          _dst->d_v_ = Empty();
         } else if (std::holds_alternative<Skip>(_src->v())) {
           const auto &_alt = std::get<Skip>(_src->v());
-          _dst->d_v_ = Skip{_alt.d_a.clone(), _alt.d_s.clone(),
+          _dst->d_v_ = Skip(_alt.d_a.clone(), _alt.d_s.clone(),
                             _alt.d_t.clone(), _alt.d_n.clone(),
-                            _alt.d_a4 ? std::make_unique<chain>() : nullptr};
+                            _alt.d_a4 ? std::make_unique<chain>() : nullptr);
           auto &_dst_alt = std::get<Skip>(_dst->d_v_);
           if (_alt.d_a4) {
             _stack.push_back({_alt.d_a4.get(), _dst_alt.d_a4.get()});
           }
         } else {
           const auto &_alt = std::get<Change>(_src->v());
-          _dst->d_v_ = Change{_alt.d_s.clone(),
-                              _alt.d_t.clone(),
-                              _alt.d_u.clone(),
-                              _alt.d_n.clone(),
-                              _alt.d_a4.clone(),
-                              _alt.d_a5 ? std::make_unique<chain>() : nullptr};
+          _dst->d_v_ =
+              Change(_alt.d_s.clone(), _alt.d_t.clone(), _alt.d_u.clone(),
+                     _alt.d_n.clone(), _alt.d_a4.clone(),
+                     _alt.d_a5 ? std::make_unique<chain>() : nullptr);
           auto &_dst_alt = std::get<Change>(_dst->d_v_);
           if (_alt.d_a5) {
             _stack.push_back({_alt.d_a5.get(), _dst_alt.d_a5.get()});
@@ -686,18 +684,18 @@ struct Levenshtein {
     }
 
     // CREATORS
-    static chain empty() { return chain(Empty{}); }
+    static chain empty() { return chain(Empty()); }
 
     static chain skip(Ascii a, String s, String t, Nat n, chain a4) {
-      return chain(Skip{std::move(a), std::move(s), std::move(t), std::move(n),
-                        std::make_unique<chain>(std::move(a4))});
+      return chain(Skip(std::move(a), std::move(s), std::move(t), std::move(n),
+                        std::make_unique<chain>(std::move(a4))));
     }
 
     static chain change(String s, String t, String u, Nat n, edit a4,
                         chain a5) {
-      return chain(Change{std::move(s), std::move(t), std::move(u),
+      return chain(Change(std::move(s), std::move(t), std::move(u),
                           std::move(n), std::move(a4),
-                          std::make_unique<chain>(std::move(a5))});
+                          std::make_unique<chain>(std::move(a5))));
     }
 
     // MANIPULATORS

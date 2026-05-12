@@ -46,12 +46,12 @@ struct NameClashCtorField {
     clash1 clone() const {
       auto &&_sv = *(this);
       const auto &[d_d_a0, d_d_a1] = std::get<C1>(_sv.v());
-      return clash1(C1{d_d_a0, d_d_a1});
+      return clash1(C1(d_d_a0, d_d_a1));
     }
 
     // CREATORS
     static clash1 c1(unsigned int d_a0, unsigned int d_a1) {
-      return clash1(C1{std::move(d_a0), std::move(d_a1)});
+      return clash1(C1(std::move(d_a0), std::move(d_a1)));
     }
 
     // MANIPULATORS
@@ -127,18 +127,18 @@ struct NameClashCtorField {
       auto &&_sv = *(this);
       if (std::holds_alternative<C2a>(_sv.v())) {
         const auto &[d_v] = std::get<C2a>(_sv.v());
-        return clash2(C2a{d_v});
+        return clash2(C2a(d_v));
       } else {
         const auto &[d_result] = std::get<C2b>(_sv.v());
-        return clash2(C2b{d_result});
+        return clash2(C2b(d_result));
       }
     }
 
     // CREATORS
-    static clash2 c2a(unsigned int v) { return clash2(C2a{std::move(v)}); }
+    static clash2 c2a(unsigned int v) { return clash2(C2a(std::move(v))); }
 
     static clash2 c2b(unsigned int result) {
-      return clash2(C2b{std::move(result)});
+      return clash2(C2b(std::move(result)));
     }
 
     // MANIPULATORS
@@ -225,12 +225,12 @@ struct NameClashCtorField {
     pair_ind clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
-      return pair_ind(MkPair{d_a0, d_a1});
+      return pair_ind(MkPair(d_a0, d_a1));
     }
 
     // CREATORS
     static pair_ind mkpair(unsigned int a0, unsigned int a1) {
-      return pair_ind(MkPair{std::move(a0), std::move(a1)});
+      return pair_ind(MkPair(std::move(a0), std::move(a1)));
     }
 
     // MANIPULATORS
@@ -304,16 +304,16 @@ struct NameClashCtorField {
       auto &&_sv = *(this);
       if (std::holds_alternative<Box0>(_sv.v())) {
         const auto &[d_a0] = std::get<Box0>(_sv.v());
-        return box(Box0{d_a0.clone()});
+        return box(Box0(d_a0.clone()));
       } else {
-        return box(EmptyBox{});
+        return box(EmptyBox());
       }
     }
 
     // CREATORS
-    static box box0(pair_ind a0) { return box(Box0{std::move(a0)}); }
+    static box box0(pair_ind a0) { return box(Box0(std::move(a0))); }
 
-    static box emptybox() { return box(EmptyBox{}); }
+    static box emptybox() { return box(EmptyBox()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

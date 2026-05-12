@@ -10,7 +10,10 @@
 namespace SepExtNsAlias {
 
 struct Foo {
-  static inline const Datatypes::Nat x = Datatypes::Nat::o();
+  static const Datatypes::Nat &x() {
+    static const Datatypes::Nat v = Datatypes::Nat::o();
+    return v;
+  }
 };
 
 using FooAlias = Foo;

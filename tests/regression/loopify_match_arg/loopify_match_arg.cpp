@@ -19,7 +19,7 @@ unsigned int LoopifyMatchArg::count_dots(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&xs});
+  _stack.emplace_back(_Enter(&xs));
   /// Loopified count_dots: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -35,11 +35,11 @@ unsigned int LoopifyMatchArg::count_dots(
             std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs.v());
         switch (d_a0) {
         case Cell::e_DOT: {
-          _stack.emplace_back(_Resume_Cons{1u});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(1u));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
         default: {
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
         }
       }
@@ -70,7 +70,7 @@ unsigned int LoopifyMatchArg::my_length(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&xs});
+  _stack.emplace_back(_Enter(&xs));
   /// Loopified my_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -84,8 +84,8 @@ unsigned int LoopifyMatchArg::my_length(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs.v());
-        _stack.emplace_back(_Resume_Cons{1u});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(1u));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

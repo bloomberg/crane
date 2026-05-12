@@ -31,7 +31,7 @@ struct CanonStruct {
   struct bool_eqType {
     using carrier = bool;
 
-    static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
+    constexpr static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
   };
 
   static_assert(EqType<bool_eqType>);

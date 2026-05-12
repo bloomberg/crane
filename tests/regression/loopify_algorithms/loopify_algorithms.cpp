@@ -16,7 +16,7 @@ unsigned int LoopifyAlgorithms::len_impl(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -29,8 +29,8 @@ unsigned int LoopifyAlgorithms::len_impl(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons());
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -78,7 +78,7 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
           List<unsigned int> _result{};
           std::vector<_Frame> _stack;
           _stack.reserve(8);
-          _stack.emplace_back(_Enter{rest});
+          _stack.emplace_back(_Enter(rest));
           /// Loopified filter_multiples: _Enter -> _Resume1.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
@@ -93,10 +93,10 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
                 auto &[d_a00, d_a10] =
                     std::get<typename List<unsigned int>::Cons>(rest.v_mut());
                 if ((p ? d_a00 % p : d_a00) == 0u) {
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
+                  _stack.emplace_back(_Enter(std::move(*(d_a10))));
                 } else {
-                  _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
+                  _stack.emplace_back(_Resume1(d_a00));
+                  _stack.emplace_back(_Enter(std::move(*(d_a10))));
                 }
               }
             } else {
@@ -306,7 +306,7 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
           List<unsigned int> _result{};
           std::vector<_Frame> _stack;
           _stack.reserve(8);
-          _stack.emplace_back(_Enter{rest});
+          _stack.emplace_back(_Enter(rest));
           /// Loopified filter_out: _Enter -> _Resume1.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
@@ -321,10 +321,10 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
                 auto &[d_a00, d_a10] =
                     std::get<typename List<unsigned int>::Cons>(rest.v_mut());
                 if (val == d_a00) {
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
+                  _stack.emplace_back(_Enter(std::move(*(d_a10))));
                 } else {
-                  _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
+                  _stack.emplace_back(_Resume1(d_a00));
+                  _stack.emplace_back(_Enter(std::move(*(d_a10))));
                 }
               }
             } else {
@@ -567,7 +567,7 @@ unsigned int LoopifyAlgorithms::max_prefix_sum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified max_prefix_sum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -580,8 +580,8 @@ unsigned int LoopifyAlgorithms::max_prefix_sum(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -622,7 +622,7 @@ unsigned int LoopifyAlgorithms::weighted_sum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l, i});
+  _stack.emplace_back(_Enter(&l, i));
   /// Loopified weighted_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -636,8 +636,8 @@ unsigned int LoopifyAlgorithms::weighted_sum(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{(i * d_a0)});
-        _stack.emplace_back(_Enter{d_a1.get(), (i + 1)});
+        _stack.emplace_back(_Resume_Cons((i * d_a0)));
+        _stack.emplace_back(_Enter(d_a1.get(), (i + 1)));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -666,7 +666,7 @@ unsigned int LoopifyAlgorithms::step_sum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -685,8 +685,8 @@ unsigned int LoopifyAlgorithms::step_sum(
         } else {
           contribution = (d_a0 * 2u);
         }
-        _stack.emplace_back(_Resume_Cons{contribution});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(contribution));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -727,7 +727,7 @@ List<unsigned int> LoopifyAlgorithms::suffix_sums(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified suffix_sums: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -740,8 +740,8 @@ List<unsigned int> LoopifyAlgorithms::suffix_sums(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));

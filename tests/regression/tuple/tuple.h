@@ -62,10 +62,10 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->d_v_ = O();
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        _dst->d_v_ = S(_alt.d_a0 ? std::make_unique<Nat>() : nullptr);
         auto &_dst_alt = std::get<S>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -76,9 +76,9 @@ public:
   }
 
   // CREATORS
-  static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O()); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S(std::make_unique<Nat>(std::move(a0)))); }
 
   // MANIPULATORS
   ~Nat() {
@@ -145,7 +145,7 @@ public:
   Prod<t_A, t_B> clone() const {
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-    return Prod<t_A, t_B>(Pair{d_a0, d_a1});
+    return Prod<t_A, t_B>(Pair(d_a0, d_a1));
   }
 
   // CREATORS
@@ -153,11 +153,11 @@ public:
   explicit Prod(const Prod<_U0, _U1> &_other) {
     const auto &[d_a0, d_a1] =
         std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    this->d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
+    this->d_v_ = Pair(t_A(d_a0), t_B(d_a1));
   }
 
   static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
-    return Prod(Pair{std::move(a0), std::move(a1)});
+    return Prod(Pair(std::move(a0), std::move(a1)));
   }
 
   // MANIPULATORS

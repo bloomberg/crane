@@ -79,11 +79,11 @@ struct FixMoveCapture {
         const mylist *_src = _frame._src;
         mylist *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->d_v_ = Mynil();
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
+          _dst->d_v_ = Mycons(_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr);
           auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -94,11 +94,11 @@ struct FixMoveCapture {
     }
 
     // CREATORS
-    static mylist mynil() { return mylist(Mynil{}); }
+    static mylist mynil() { return mylist(Mynil()); }
 
     static mylist mycons(unsigned int a0, mylist a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+          Mycons(std::move(a0), std::make_unique<mylist>(std::move(a1))));
     }
 
     // MANIPULATORS

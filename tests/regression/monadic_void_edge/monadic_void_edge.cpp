@@ -100,7 +100,7 @@ unsigned int MonadicVoidEdge::mixed_binds() {
 
 /// 13. Function that takes itree as argument and sequences
 void MonadicVoidEdge::sequence_effects(const std::monostate &e1,
-                                       std::monostate) {
+                                       const std::monostate &) {
   e1;
   return;
 }

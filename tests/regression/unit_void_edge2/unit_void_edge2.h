@@ -14,7 +14,7 @@
 using namespace std::string_literals;
 
 struct UnitVoidEdge2 {
-  static unsigned int take_unit(const std::monostate &_x);
+  static unsigned int take_unit(const std::monostate _x);
   static void opaque_unit(const unsigned int _x);
   static unsigned int let_use_as_arg(const unsigned int n);
   static void let_return_unit(const unsigned int _x0);
@@ -97,7 +97,7 @@ struct UnitVoidEdge2 {
     pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
-      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
+      return pair<t_A, t_B>(Pair0(d_a0, d_a1));
     }
 
     // CREATORS
@@ -105,11 +105,11 @@ struct UnitVoidEdge2 {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Pair0(t_A(d_a0), t_B(d_a1));
     }
 
     static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
-      return pair(Pair0{std::move(a0), std::move(a1)});
+      return pair(Pair0(std::move(a0), std::move(a1)));
     }
 
     // MANIPULATORS

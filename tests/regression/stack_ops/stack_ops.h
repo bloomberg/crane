@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -139,7 +139,7 @@ struct StackOps {
 
     // ACCESSORS
     state_basic clone() const {
-      return state_basic{(*(this)).stack_basic.clone()};
+      return state_basic((*(this)).stack_basic.clone());
     }
   };
 
@@ -149,7 +149,7 @@ struct StackOps {
 
     // ACCESSORS
     state_with_acc clone() const {
-      return state_with_acc{(*(this)).stack_with_acc.clone(), (*(this)).acc};
+      return state_with_acc((*(this)).stack_with_acc.clone(), (*(this)).acc);
     }
   };
 
@@ -158,19 +158,19 @@ struct StackOps {
   static bool is_none(const std::optional<unsigned int> &o);
   static unsigned int option_or_zero(const std::optional<unsigned int> &o);
   static inline const bool empty_is_none =
-      is_none(pop_stack(state_basic{List<unsigned int>::nil()}).first);
+      is_none(pop_stack(state_basic(List<unsigned int>::nil())).first);
   static inline const unsigned int some_addr = option_or_zero(
       pop_stack(
-          state_basic{List<unsigned int>::cons(
-              9u, List<unsigned int>::cons(8u, List<unsigned int>::nil()))})
+          state_basic(List<unsigned int>::cons(
+              9u, List<unsigned int>::cons(8u, List<unsigned int>::nil()))))
           .first);
   static std::pair<std::optional<unsigned int>, state_with_acc>
   pop_stack_acc(state_with_acc s);
   static inline const unsigned int pop_acc_test = []() -> unsigned int {
-    auto _cs = pop_stack_acc(state_with_acc{
+    auto _cs = pop_stack_acc(state_with_acc(
         List<unsigned int>::cons(
             9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
-        3u});
+        3u));
     const std::optional<unsigned int> &o = _cs.first;
     const state_with_acc &s_ = _cs.second;
     if (o.has_value()) {
@@ -183,30 +183,30 @@ struct StackOps {
   static state_basic push_stack(const state_basic &s, const unsigned int addr);
   static unsigned int top_or_zero(const state_basic &s);
   static inline const unsigned int empty_len =
-      push_stack(state_basic{List<unsigned int>::nil()}, 12u)
+      push_stack(state_basic(List<unsigned int>::nil()), 12u)
           .stack_basic.length();
   static inline const unsigned int overflow_head = top_or_zero(push_stack(
-      state_basic{List<unsigned int>::cons(
+      state_basic(List<unsigned int>::cons(
           1u,
           List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))},
+              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))),
       9u));
   static inline const unsigned int overflow_len =
-      push_stack(state_basic{List<unsigned int>::cons(
+      push_stack(state_basic(List<unsigned int>::cons(
                      1u, List<unsigned int>::cons(
                              2u, List<unsigned int>::cons(
-                                     3u, List<unsigned int>::nil())))},
+                                     3u, List<unsigned int>::nil())))),
                  9u)
           .stack_basic.length();
   static state_basic push_stack_cap(const state_basic &s,
                                     const unsigned int addr);
   static inline const unsigned int push_cap_test =
       push_stack_cap(
-          state_basic{List<unsigned int>::cons(
+          state_basic(List<unsigned int>::cons(
               10u, List<unsigned int>::cons(
                        20u, List<unsigned int>::cons(
                                 30u, List<unsigned int>::cons(
-                                         40u, List<unsigned int>::nil()))))},
+                                         40u, List<unsigned int>::nil()))))),
           7u)
           .stack_basic.length();
   static inline const std::pair<

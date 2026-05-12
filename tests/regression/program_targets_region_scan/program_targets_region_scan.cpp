@@ -36,7 +36,7 @@ bool ProgramTargetsRegionScan::target_in_layoutb(
 
 bool ProgramTargetsRegionScan::program_targets_okb(
     const List<ProgramTargetsRegionScan::instruction> &prog,
-    ProgramTargetsRegionScan::layout l) {
+    const ProgramTargetsRegionScan::layout &l) {
   return prog.forallb(
       [=](ProgramTargetsRegionScan::instruction _x0) mutable -> bool {
         return target_in_layoutb(l, _x0);

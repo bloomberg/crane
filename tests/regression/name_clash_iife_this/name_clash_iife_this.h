@@ -88,20 +88,20 @@ struct NameClashIifeThis {
       auto &&_sv = *(this);
       if (std::holds_alternative<Circle>(_sv.v())) {
         const auto &[d_a0] = std::get<Circle>(_sv.v());
-        return shape(Circle{d_a0});
+        return shape(Circle(d_a0));
       } else {
         const auto &[d_a0, d_a1] = std::get<Square>(_sv.v());
-        return shape(Square{d_a0, d_a1});
+        return shape(Square(d_a0, d_a1));
       }
     }
 
     // CREATORS
     static shape circle(unsigned int a0) {
-      return shape(Circle{std::move(a0)});
+      return shape(Circle(std::move(a0)));
     }
 
     static shape square(unsigned int a0, unsigned int a1) {
-      return shape(Square{std::move(a0), std::move(a1)});
+      return shape(Square(std::move(a0), std::move(a1)));
     }
 
     // MANIPULATORS
@@ -247,18 +247,18 @@ struct NameClashIifeThis {
       auto &&_sv = *(this);
       if (std::holds_alternative<Wrap>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<Wrap>(_sv.v());
-        return wrapper(Wrap{d_a0, d_a1.clone()});
+        return wrapper(Wrap(d_a0, d_a1.clone()));
       } else {
-        return wrapper(Empty{});
+        return wrapper(Empty());
       }
     }
 
     // CREATORS
     static wrapper wrap(Color a0, shape a1) {
-      return wrapper(Wrap{std::move(a0), std::move(a1)});
+      return wrapper(Wrap(std::move(a0), std::move(a1)));
     }
 
-    static wrapper empty() { return wrapper(Empty{}); }
+    static wrapper empty() { return wrapper(Empty()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

@@ -17,13 +17,13 @@ SrcWrrRomPortRoundtrip::get_reg_pair(const SrcWrrRomPortRoundtrip::state &s,
 SrcWrrRomPortRoundtrip::state
 SrcWrrRomPortRoundtrip::execute_src(const SrcWrrRomPortRoundtrip::state &s,
                                     const unsigned int r) {
-  return state{s.regs, s.acc, s.rom_ports,
-               (16u ? get_reg_pair(s, r) / 16u : 0)};
+  return state(s.regs, s.acc, s.rom_ports,
+               (16u ? get_reg_pair(s, r) / 16u : 0));
 }
 
 SrcWrrRomPortRoundtrip::state
 SrcWrrRomPortRoundtrip::execute_wrr(const SrcWrrRomPortRoundtrip::state &s) {
-  return state{s.regs, s.acc,
+  return state(s.regs, s.acc,
                update_nth<unsigned int>(s.sel_rom, s.acc, s.rom_ports),
-               s.sel_rom};
+               s.sel_rom);
 }

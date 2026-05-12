@@ -71,20 +71,20 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->d_v_ = XI(_alt.d_a0 ? std::make_unique<Positive>() : nullptr);
         auto &_dst_alt = std::get<XI>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->d_v_ = XO(_alt.d_a0 ? std::make_unique<Positive>() : nullptr);
         auto &_dst_alt = std::get<XO>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else {
-        _dst->d_v_ = XH{};
+        _dst->d_v_ = XH();
       }
     }
     return _out;
@@ -92,14 +92,14 @@ public:
 
   // CREATORS
   static Positive xi(Positive a0) {
-    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XI(std::make_unique<Positive>(std::move(a0))));
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XO(std::make_unique<Positive>(std::move(a0))));
   }
 
-  static Positive xh() { return Positive(XH{}); }
+  static Positive xh() { return Positive(XH()); }
 
   // MANIPULATORS
   ~Positive() {
@@ -175,17 +175,17 @@ public:
   N clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<N0>(_sv.v())) {
-      return N(N0{});
+      return N(N0());
     } else {
       const auto &[d_a0] = std::get<Npos>(_sv.v());
-      return N(Npos{d_a0.clone()});
+      return N(Npos(d_a0.clone()));
     }
   }
 
   // CREATORS
-  static N n0() { return N(N0{}); }
+  static N n0() { return N(N0()); }
 
-  static N npos(Positive a0) { return N(Npos{std::move(a0)}); }
+  static N npos(Positive a0) { return N(Npos(std::move(a0))); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -240,22 +240,22 @@ public:
   Z clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Z0>(_sv.v())) {
-      return Z(Z0{});
+      return Z(Z0());
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{d_a0.clone()});
+      return Z(Zpos(d_a0.clone()));
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{d_a0.clone()});
+      return Z(Zneg(d_a0.clone()));
     }
   }
 
   // CREATORS
-  static Z z0() { return Z(Z0{}); }
+  static Z z0() { return Z(Z0()); }
 
-  static Z zpos(Positive a0) { return Z(Zpos{std::move(a0)}); }
+  static Z zpos(Positive a0) { return Z(Zpos(std::move(a0))); }
 
-  static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
+  static Z zneg(Positive a0) { return Z(Zneg(std::move(a0))); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -315,21 +315,21 @@ struct Pos {
     mask clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<IsNul>(_sv.v())) {
-        return mask(IsNul{});
+        return mask(IsNul());
       } else if (std::holds_alternative<IsPos>(_sv.v())) {
         const auto &[d_a0] = std::get<IsPos>(_sv.v());
-        return mask(IsPos{d_a0.clone()});
+        return mask(IsPos(d_a0.clone()));
       } else {
-        return mask(IsNeg{});
+        return mask(IsNeg());
       }
     }
 
     // CREATORS
-    static mask isnul() { return mask(IsNul{}); }
+    static mask isnul() { return mask(IsNul()); }
 
-    static mask ispos(Positive a0) { return mask(IsPos{std::move(a0)}); }
+    static mask ispos(Positive a0) { return mask(IsPos(std::move(a0))); }
 
-    static mask isneg() { return mask(IsNeg{}); }
+    static mask isneg() { return mask(IsNeg()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

@@ -4,7 +4,7 @@ LoadProgram::state LoadProgram::set_prom_params(const LoadProgram::state &s,
                                                 const unsigned int addr,
                                                 const unsigned int data,
                                                 const bool enable) {
-  return state{s.rom, addr, data, enable};
+  return state(s.rom, addr, data, enable);
 }
 
 LoadProgram::state LoadProgram::execute_wpm(const LoadProgram::state &s) {
@@ -14,7 +14,7 @@ LoadProgram::state LoadProgram::execute_wpm(const LoadProgram::state &s) {
   } else {
     new_rom = s.rom;
   }
-  return state{new_rom, s.prom_addr, s.prom_data, s.prom_enable};
+  return state(new_rom, s.prom_addr, s.prom_data, s.prom_enable);
 }
 
 LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
@@ -35,8 +35,8 @@ LoadProgram::state_extended
 LoadProgram::set_prom_params_ext(const LoadProgram::state_extended &s,
                                  const unsigned int addr,
                                  const unsigned int data, const bool enable) {
-  return state_extended{s.regs_len, s.rom_ext, s.pc,  s.stack_len,
-                        addr,       data,      enable};
+  return state_extended(s.regs_len, s.rom_ext, s.pc, s.stack_len, addr, data,
+                        enable);
 }
 
 LoadProgram::state_extended
@@ -48,16 +48,15 @@ LoadProgram::execute_wpm_ext(const LoadProgram::state_extended &s) {
   } else {
     new_rom = s.rom_ext;
   }
-  return state_extended{s.regs_len,       new_rom,         s.pc,
-                        s.stack_len,      s.prom_addr_ext, s.prom_data_ext,
-                        s.prom_enable_ext};
+  return state_extended(s.regs_len, new_rom, s.pc, s.stack_len, s.prom_addr_ext,
+                        s.prom_data_ext, s.prom_enable_ext);
 }
 
 LoadProgram::state_simple
 LoadProgram::write_byte(const LoadProgram::state_simple &s,
                         const unsigned int b) {
-  return state_simple{update_nth<unsigned int>(s.ptr_, b, s.rom_),
-                      (s.ptr_ + 1)};
+  return state_simple(update_nth<unsigned int>(s.ptr_, b, s.rom_),
+                      (s.ptr_ + 1));
 }
 
 LoadProgram::state_simple

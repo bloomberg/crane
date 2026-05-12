@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -161,11 +161,11 @@ struct UnitVoidEdge {
       std::optional<std::monostate>();
   static unsigned int match_option_unit(const std::optional<std::monostate> &o);
   static std::optional<std::monostate> return_some_tt(const unsigned int n);
-  static void unit_chain(std::monostate u);
+  static void unit_chain(const std::monostate u);
   static void helper_void(const unsigned int _x);
   static unsigned int use_helper(const unsigned int n);
-  static unsigned int match_unit_nontail(const std::monostate &u);
-  static void unit_to_unit_with_work(const std::monostate &u);
+  static unsigned int match_unit_nontail(const std::monostate u);
+  static void unit_to_unit_with_work(const std::monostate u);
   static void seq_voids(const unsigned int _x);
   static void conditional_unit(const bool b);
 
@@ -177,8 +177,8 @@ struct UnitVoidEdge {
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
                                 std::monostate{}, List<std::monostate>::nil()));
-  static unsigned int double_match_unit(const std::monostate &u1,
-                                        const std::monostate &u2);
+  static unsigned int double_match_unit(const std::monostate u1,
+                                        const std::monostate u2);
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, unsigned int &>
@@ -198,7 +198,7 @@ struct UnitVoidEdge {
 
     // ACCESSORS
     tagged_nat clone() const {
-      return tagged_nat{(*(this)).tn_value, (*(this)).tn_tag};
+      return tagged_nat((*(this)).tn_value, (*(this)).tn_tag);
     }
   };
 
@@ -208,7 +208,7 @@ struct UnitVoidEdge {
     tagged_nat t = make_tagged(99u);
     return get_value(std::move(t));
   }();
-  static void make_callback(const unsigned int n, const std::monostate &_x);
+  static void make_callback(const unsigned int n, const std::monostate _x);
   static inline const std::monostate test_make_callback = []() {
     make_callback(5u, std::monostate{});
     return std::monostate{};

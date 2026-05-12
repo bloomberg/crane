@@ -68,11 +68,11 @@ public:
       const MyList<t_A> *_src = _frame._src;
       MyList<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Mynil>(_src->v())) {
-        _dst->d_v_ = Mynil{};
+        _dst->d_v_ = Mynil();
       } else {
         const auto &_alt = std::get<Mycons>(_src->v());
-        _dst->d_v_ = Mycons{
-            _alt.d_a0, _alt.d_a1 ? std::make_unique<MyList<t_A>>() : nullptr};
+        _dst->d_v_ = Mycons(
+            _alt.d_a0, _alt.d_a1 ? std::make_unique<MyList<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -85,22 +85,20 @@ public:
   // CREATORS
   template <typename _U> explicit MyList(const MyList<_U> &_other) {
     if (std::holds_alternative<typename MyList<_U>::Mynil>(_other.v())) {
-      this->d_v_ = Mynil{};
+      this->d_v_ = Mynil();
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename MyList<_U>::Mycons>(_other.v());
-      this->d_v_ = Mycons{
-          t_A(d_a0),
-          d_a1 ? std::make_unique<SepExtUptrCloneQual::MyList<t_A>>(*d_a1)
-               : nullptr};
+      this->d_v_ = Mycons(t_A(d_a0), d_a1 ? std::make_unique<MyList<t_A>>(*d_a1)
+                                          : nullptr);
     }
   }
 
-  static MyList<t_A> mynil() { return MyList(Mynil{}); }
+  static MyList<t_A> mynil() { return MyList(Mynil()); }
 
   static MyList<t_A> mycons(t_A a0, MyList<t_A> a1) {
     return MyList(
-        Mycons{std::move(a0), std::make_unique<MyList<t_A>>(std::move(a1))});
+        Mycons(std::move(a0), std::make_unique<MyList<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS

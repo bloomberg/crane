@@ -11,7 +11,9 @@ template <typename M>
 concept OrderedType = requires { typename M::t; };
 
 template <OrderedType X> struct FMapList {
-  static bool eq_key(const typename X::t, const typename X::t) { return true; }
+  constexpr static bool eq_key(const typename X::t, const typename X::t) {
+    return true;
+  }
 };
 
 } // namespace SepExtPropErasedUsing

@@ -271,7 +271,7 @@ bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
                     return sumtree_top(n, _x0);
                   });
       PendantSumtreeRoundtripCase::PendantGroup g =
-          PendantGroup{d_a0, child_tops};
+          PendantGroup(d_a0, child_tops);
       return (
           group_sums_validb(n, std::move(g)) &&
           d_a1_value.forallb(

@@ -66,11 +66,11 @@ struct LoopifyPatterns {
         const list<t_A> *_src = _frame._src;
         list<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->d_v_ = Nil{};
+          _dst->d_v_ = Nil();
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
-          _dst->d_v_ = Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
-                                                 : nullptr};
+          _dst->d_v_ = Cons(_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
+                                                 : nullptr);
           auto &_dst_alt = std::get<Cons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -83,22 +83,20 @@ struct LoopifyPatterns {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->d_v_ = Nil{};
+        this->d_v_ = Nil();
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        this->d_v_ =
-            Cons{t_A(d_a0),
-                 d_a1 ? std::make_unique<LoopifyPatterns::list<t_A>>(*d_a1)
-                      : nullptr};
+        this->d_v_ = Cons(t_A(d_a0),
+                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr);
       }
     }
 
-    static list<t_A> nil() { return list(Nil{}); }
+    static list<t_A> nil() { return list(Nil()); }
 
     static list<t_A> cons(t_A a0, list<t_A> a1) {
       return list(
-          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
+          Cons(std::move(a0), std::make_unique<list<t_A>>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -152,7 +150,7 @@ struct LoopifyPatterns {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -164,8 +162,8 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(f0, *(d_a1), d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -198,7 +196,7 @@ struct LoopifyPatterns {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -210,8 +208,8 @@ struct LoopifyPatterns {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(f0, *(d_a1), d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -282,7 +280,7 @@ struct LoopifyPatterns {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -300,8 +298,8 @@ struct LoopifyPatterns {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont_Cons(d_a0, f));
+            _stack.emplace_back(_Enter(d_a1.get()));
           }
         }
       } else {
@@ -356,7 +354,7 @@ struct LoopifyPatterns {
     list<list<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified insert_everywhere: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -384,7 +382,7 @@ struct LoopifyPatterns {
             list<list<T1>> _result{};
             std::vector<_Frame> _stack;
             _stack.reserve(8);
-            _stack.emplace_back(_Enter{lsts});
+            _stack.emplace_back(_Enter(lsts));
             /// Loopified map_cons_h: _Enter -> _Resume_Cons.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
@@ -399,8 +397,8 @@ struct LoopifyPatterns {
                   auto &[d_a00, d_a10] =
                       std::get<typename list<list<T1>>::Cons>(lsts.v_mut());
                   _stack.emplace_back(
-                      _Resume_Cons{list<T1>::cons(d_a0, d_a00)});
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
+                      _Resume_Cons(list<T1>::cons(d_a0, d_a00)));
+                  _stack.emplace_back(_Enter(std::move(*(d_a10))));
                 }
               } else {
                 auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -410,9 +408,9 @@ struct LoopifyPatterns {
             return _result;
           };
           _stack.emplace_back(
-              _Resume_Cons{list<T1>::cons(x, list<T1>::cons(d_a0, *(d_a1))),
-                           std::move(map_cons_h)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+              _Resume_Cons(list<T1>::cons(x, list<T1>::cons(d_a0, *(d_a1))),
+                           std::move(map_cons_h)));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -557,7 +555,7 @@ struct LoopifyPatterns {
         _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified partition_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -572,8 +570,8 @@ struct LoopifyPatterns {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{d_a0, p, q});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0, p, q));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));

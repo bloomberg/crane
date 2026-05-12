@@ -112,7 +112,7 @@
   (targets sep_ext_decide_equality.t.exe)
   (deps SepExtDecideEquality.vo sep_ext_decide_equality.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_decide_equality.t.exe SepExtDecideEquality.cpp Datatypes.cpp sep_ext_decide_equality.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_decide_equality.t.exe SepExtDecideEquality.cpp sep_ext_decide_equality.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_decide_equality.t.exe)
@@ -123,7 +123,7 @@
   (targets sep_ext_eponymous_module_ind.t.exe)
   (deps SepExtEponymousModuleInd.vo sep_ext_eponymous_module_ind.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_eponymous_module_ind.t.exe SepExtEponymousModuleInd.cpp Datatypes.cpp sep_ext_eponymous_module_ind.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_eponymous_module_ind.t.exe SepExtEponymousModuleInd.cpp sep_ext_eponymous_module_ind.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_eponymous_module_ind.t.exe)
@@ -134,10 +134,54 @@
   (targets sep_ext_tuple_any.t.exe)
   (deps SepExtTupleAny.vo sep_ext_tuple_any.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_tuple_any.t.exe SepExtTupleAny.cpp Datatypes.cpp sep_ext_tuple_any.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_tuple_any.t.exe SepExtTupleAny.cpp sep_ext_tuple_any.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_tuple_any.t.exe)
   (action (run ./sep_ext_tuple_any.t.exe))))
 
 
+
+(subdir lambda_capture_perf
+ (rule
+  (targets lambda_capture_perf.t.exe)
+  (deps LambdaCapturePerf.vo lambda_capture_perf.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda_capture_perf.t.exe lambda_capture_perf.cpp lambda_capture_perf.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lambda_capture_perf.t.exe)
+  (action (run ./lambda_capture_perf.t.exe))))
+
+(subdir sep_ext_cross_file_string
+ (rule
+  (targets sep_ext_cross_file_string.t.exe)
+  (deps SepExtCrossFileString.vo sep_ext_cross_file_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_file_string.t.exe SepExtCrossFileString.cpp sep_ext_cross_file_string.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_cross_file_string.t.exe)
+  (action (run ./sep_ext_cross_file_string.t.exe))))
+
+(subdir sep_ext_enum_as_value
+ (rule
+  (targets sep_ext_enum_as_value.t.exe)
+  (deps SepExtEnumAsValue.vo sep_ext_enum_as_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_enum_as_value.t.exe SepExtEnumAsValue.cpp sep_ext_enum_as_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_enum_as_value.t.exe)
+  (action (run ./sep_ext_enum_as_value.t.exe))))
+
+(subdir sep_ext_unmerged_struct_cap
+ (rule
+  (targets sep_ext_unmerged_struct_cap.t.exe)
+  (deps SepExtUnmergedStructCap.vo sep_ext_unmerged_struct_cap.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_unmerged_struct_cap.t.exe SepExtUnmergedStructCap.cpp sep_ext_unmerged_struct_cap.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_unmerged_struct_cap.t.exe)
+  (action (run ./sep_ext_unmerged_struct_cap.t.exe))))

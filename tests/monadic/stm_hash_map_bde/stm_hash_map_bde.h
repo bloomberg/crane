@@ -70,11 +70,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (bsl::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = bsl::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? bsl::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? bsl::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -86,17 +86,17 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{bsl::move(a0), bsl::make_unique<List<t_A>>(bsl::move(a1))});
+        Cons(bsl::move(a0), bsl::make_unique<List<t_A>>(bsl::move(a1))));
   }
   // MANIPULATORS
   ~List() {
@@ -130,21 +130,20 @@ template <typename K, typename V> struct CHT {
   int64_t cht_nbuckets;
   stm::TVar<List<bsl::pair<K, V>>> cht_fallback;
   stm::TVar<List<bsl::pair<K, V>>> bucket_of(const K k) const {
-    int64_t i = (*(this)).CHT::cht_hash(k) % (*(this)).CHT::cht_nbuckets;
-    return (*(this)).CHT::cht_buckets.at(i);
+    int64_t i = (*(this)).cht_hash(k) % (*(this)).cht_nbuckets;
+    return (*(this)).cht_buckets.at(i);
   }
   bsl::optional<V> stm_get(const K k) const {
     stm::TVar<List<bsl::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
-    return CHT<int, int>::template assoc_lookup<K, V>((*(this)).CHT::cht_eqb, k,
-                                                      xs);
+    return CHT<int, int>::template assoc_lookup<K, V>((*(this)).cht_eqb, k, xs);
   }
   std::monostate stm_put(const K k, const V v) const {
     stm::TVar<List<bsl::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            bsl::move(*(this)).CHT::cht_eqb, k, v, bsl::move(xs));
+            (*(this)).cht_eqb, k, v, bsl::move(xs));
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
@@ -152,8 +151,8 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<bsl::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::pair<bsl::optional<V>, List<bsl::pair<K, V>>> p =
-        CHT<int, int>::template assoc_remove<K, V>(
-            bsl::move(*(this)).CHT::cht_eqb, k, bsl::move(xs));
+        CHT<int, int>::template assoc_remove<K, V>((*(this)).cht_eqb, k,
+                                                   bsl::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
       V _x = *_cs;
@@ -168,12 +167,12 @@ template <typename K, typename V> struct CHT {
   V stm_update(const K k, F1 &&f) const {
     stm::TVar<List<bsl::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
-    bsl::optional<V> ov = CHT<int, int>::template assoc_lookup<K, V>(
-        (*(this)).CHT::cht_eqb, k, xs);
+    bsl::optional<V> ov =
+        CHT<int, int>::template assoc_lookup<K, V>((*(this)).cht_eqb, k, xs);
     V v = f(ov);
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            bsl::move(*(this)).CHT::cht_eqb, k, v, bsl::move(xs));
+            (*(this)).cht_eqb, k, v, bsl::move(xs));
     stm::writeTVar(b, xs_);
     return v;
   }
@@ -304,10 +303,10 @@ template <typename K, typename V> struct CHT {
           [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
       bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>{eqb, hash, v, 1, fb};
+      return CHT<T1, T2>(eqb, hash, v, 1, fb);
     } else {
       stm::TVar<List<bsl::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>{eqb, hash, bs, n, b};
+      return CHT<T1, T2>(eqb, hash, bs, n, b);
     }
   }
 };

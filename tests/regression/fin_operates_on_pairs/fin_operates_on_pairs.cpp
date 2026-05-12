@@ -8,7 +8,7 @@ unsigned int FinOperatesOnPairs::get_reg(const FinOperatesOnPairs::state &s,
 FinOperatesOnPairs::state
 FinOperatesOnPairs::set_reg(const FinOperatesOnPairs::state &s,
                             const unsigned int r, const unsigned int v) {
-  return state{update_nth<unsigned int>(r, (16u ? v % 16u : v), s.regs), s.rom};
+  return state(update_nth<unsigned int>(r, (16u ? v % 16u : v), s.regs), s.rom);
 }
 
 unsigned int

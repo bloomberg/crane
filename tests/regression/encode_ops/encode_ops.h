@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -217,61 +217,61 @@ struct EncodeOps {
     instruction1 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<CLB>(_sv.v())) {
-        return instruction1(CLB{});
+        return instruction1(CLB());
       } else if (std::holds_alternative<CMC>(_sv.v())) {
-        return instruction1(CMC{});
+        return instruction1(CMC());
       } else if (std::holds_alternative<DAA>(_sv.v())) {
-        return instruction1(DAA{});
+        return instruction1(DAA());
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
-        return instruction1(FIM{d_a0, d_a1});
+        return instruction1(FIM(d_a0, d_a1));
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN>(_sv.v());
-        return instruction1(JUN{d_a0});
+        return instruction1(JUN(d_a0));
       } else if (std::holds_alternative<LDM1>(_sv.v())) {
         const auto &[d_a0] = std::get<LDM1>(_sv.v());
-        return instruction1(LDM1{d_a0});
+        return instruction1(LDM1(d_a0));
       } else if (std::holds_alternative<NOP1>(_sv.v())) {
-        return instruction1(NOP1{});
+        return instruction1(NOP1());
       } else if (std::holds_alternative<RDM>(_sv.v())) {
-        return instruction1(RDM{});
+        return instruction1(RDM());
       } else if (std::holds_alternative<TCS>(_sv.v())) {
-        return instruction1(TCS{});
+        return instruction1(TCS());
       } else if (std::holds_alternative<WPM>(_sv.v())) {
-        return instruction1(WPM{});
+        return instruction1(WPM());
       } else {
-        return instruction1(WR0{});
+        return instruction1(WR0());
       }
     }
 
     // CREATORS
-    static instruction1 clb() { return instruction1(CLB{}); }
+    static instruction1 clb() { return instruction1(CLB()); }
 
-    static instruction1 cmc() { return instruction1(CMC{}); }
+    static instruction1 cmc() { return instruction1(CMC()); }
 
-    static instruction1 daa() { return instruction1(DAA{}); }
+    static instruction1 daa() { return instruction1(DAA()); }
 
     static instruction1 fim(unsigned int a0, unsigned int a1) {
-      return instruction1(FIM{std::move(a0), std::move(a1)});
+      return instruction1(FIM(std::move(a0), std::move(a1)));
     }
 
     static instruction1 jun(unsigned int a0) {
-      return instruction1(JUN{std::move(a0)});
+      return instruction1(JUN(std::move(a0)));
     }
 
     static instruction1 ldm1(unsigned int a0) {
-      return instruction1(LDM1{std::move(a0)});
+      return instruction1(LDM1(std::move(a0)));
     }
 
-    static instruction1 nop1() { return instruction1(NOP1{}); }
+    static instruction1 nop1() { return instruction1(NOP1()); }
 
-    static instruction1 rdm() { return instruction1(RDM{}); }
+    static instruction1 rdm() { return instruction1(RDM()); }
 
-    static instruction1 tcs() { return instruction1(TCS{}); }
+    static instruction1 tcs() { return instruction1(TCS()); }
 
-    static instruction1 wpm() { return instruction1(WPM{}); }
+    static instruction1 wpm() { return instruction1(WPM()); }
 
-    static instruction1 wr0() { return instruction1(WR0{}); }
+    static instruction1 wr0() { return instruction1(WR0()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -447,18 +447,18 @@ struct EncodeOps {
     instruction2 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP2>(_sv.v())) {
-        return instruction2(NOP2{});
+        return instruction2(NOP2());
       } else {
         const auto &[d_a0] = std::get<LDM2>(_sv.v());
-        return instruction2(LDM2{d_a0});
+        return instruction2(LDM2(d_a0));
       }
     }
 
     // CREATORS
-    static instruction2 nop2() { return instruction2(NOP2{}); }
+    static instruction2 nop2() { return instruction2(NOP2()); }
 
     static instruction2 ldm2(unsigned int a0) {
-      return instruction2(LDM2{std::move(a0)});
+      return instruction2(LDM2(std::move(a0)));
     }
 
     // MANIPULATORS
@@ -554,18 +554,18 @@ struct EncodeOps {
     instruction3 clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP3>(_sv.v())) {
-        return instruction3(NOP3{});
+        return instruction3(NOP3());
       } else {
         const auto &[d_a0] = std::get<LDM3>(_sv.v());
-        return instruction3(LDM3{d_a0});
+        return instruction3(LDM3(d_a0));
       }
     }
 
     // CREATORS
-    static instruction3 nop3() { return instruction3(NOP3{}); }
+    static instruction3 nop3() { return instruction3(NOP3()); }
 
     static instruction3 ldm3(unsigned int a0) {
-      return instruction3(LDM3{std::move(a0)});
+      return instruction3(LDM3(std::move(a0)));
     }
 
     // MANIPULATORS

@@ -539,6 +539,16 @@ let rec pp_structure_elem ~is_header f = function
           in
           (match body with
           | MEapply _ ->
+            let () =
+              let rec get_base_fmp = function
+                | MEapply (f, _) -> get_base_fmp f
+                | MEident fmp -> Some fmp
+                | _ -> None
+              in
+              match get_base_fmp body with
+              | Some fmp -> Hashtbl.replace functor_app_sources mp fmp
+              | None -> ()
+            in
             template_decl
             ++ fnl ()
             ++ str "struct "
@@ -1128,6 +1138,11 @@ let rec pp_structure_elem ~is_header f = function
         if not is_header then
           mt ()
         else
+          (* Register MEident module aliases in functor_app_sources so that
+             is_accessor can resolve alias chains to find registered accessors. *)
+          let () = match m.ml_mod_expr with
+          | MEident fmp -> Hashtbl.replace functor_app_sources mp fmp
+          | _ -> () in
           let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
           let body_str = Pp.string_of_ppcmds body in
           (* Skip [using] aliases whose target is a [Coq__N] duplicate
@@ -1371,6 +1386,23 @@ let rec prlist_sep_nonempty sep f = function
 
     The is_header parameter controls which definitions are generated via
     gen_dfuns_dual/gen_decl_for_pp_dual. *)
+let lifted_decl_key = function
+  | Dtemplate (_, _, Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _)) ->
+    Some (Id.to_string v)
+  | Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _) ->
+    Some (Id.to_string v)
+  | _ -> None
+
+let dedup_lifted_decls ds =
+  let seen = Hashtbl.create 16 in
+  List.filter (fun d ->
+    match lifted_decl_key d with
+    | Some k ->
+      if Hashtbl.mem seen k then false
+      else (Hashtbl.replace seen k (); true)
+    | None -> true
+  ) ds
+
 let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let is_method_candidate x =
     List.exists
@@ -1462,7 +1494,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
           | _ -> () )
         defs )
     all_results;
-  let all_lifted = List.concat_map (fun (_, _, l) -> l) all_results in
+  let all_lifted =
+    List.concat_map (fun (_, _, l) -> l) all_results
+    |> dedup_lifted_decls in
   let render_sel_specs (specs, _, _) =
     match specs with
     | [] -> mt ()
@@ -1874,7 +1908,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       mt ()
   in
   Hashtbl.clear pending_wrapper_decls;
-  let pass2_lifted = Translation.take_lifted_decls () in
+  let pass2_lifted = Translation.take_lifted_decls () |> dedup_lifted_decls in
   let pass2_pre_pp, pass2_post_pp =
     if is_header then
       let main_module_name =

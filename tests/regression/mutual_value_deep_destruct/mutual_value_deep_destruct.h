@@ -72,11 +72,11 @@ struct MutualValueDeepDestruct {
         const a *_src = _frame._src;
         a *_dst = _frame._dst;
         if (std::holds_alternative<AEnd>(_src->v())) {
-          _dst->d_v_ = AEnd{};
+          _dst->d_v_ = AEnd();
         } else {
           const auto &_alt = std::get<ANode>(_src->v());
           _dst->d_v_ =
-              ANode{_alt.d_a0, _alt.d_a1 ? std::make_unique<b>() : nullptr};
+              ANode(_alt.d_a0, _alt.d_a1 ? std::make_unique<b>() : nullptr);
           auto &_dst_alt = std::get<ANode>(_dst->d_v_);
           if (_alt.d_a1) {
             if (std::holds_alternative<
@@ -100,10 +100,10 @@ struct MutualValueDeepDestruct {
     }
 
     // CREATORS
-    static a aend() { return a(AEnd{}); }
+    static a aend() { return a(AEnd()); }
 
     static a anode(bool a0, b a1) {
-      return a(ANode{std::move(a0), std::make_unique<b>(std::move(a1))});
+      return a(ANode(std::move(a0), std::make_unique<b>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -179,14 +179,14 @@ struct MutualValueDeepDestruct {
     b clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<BNode>(_sv.v());
-      return b(BNode{
+      return b(BNode(
           d_a0 ? std::make_unique<MutualValueDeepDestruct::a>(d_a0->clone())
-               : nullptr});
+               : nullptr));
     }
 
     // CREATORS
     static b bnode(a a0) {
-      return b(BNode{std::make_unique<a>(std::move(a0))});
+      return b(BNode(std::make_unique<a>(std::move(a0))));
     }
 
     // MANIPULATORS

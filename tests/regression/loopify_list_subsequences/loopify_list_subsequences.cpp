@@ -76,7 +76,7 @@ List<List<unsigned int>> LoopifyListSubsequences::inits_fuel(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l, fuel});
+  _stack.emplace_back(_Enter(&l, fuel));
   /// Loopified inits_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -96,8 +96,8 @@ List<List<unsigned int>> LoopifyListSubsequences::inits_fuel(
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get(), fuel_});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get(), fuel_));
         }
       }
     } else {
@@ -245,7 +245,7 @@ LoopifyListSubsequences::split_at(
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, n});
+  _stack.emplace_back(_Enter(l, n));
   /// Loopified split_at: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -265,8 +265,8 @@ LoopifyListSubsequences::split_at(
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v_mut());
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{std::move(*(d_a1)), n_});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(std::move(*(d_a1)), n_));
         }
       }
     } else {

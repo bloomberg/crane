@@ -64,10 +64,10 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->d_v_ = O();
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
+        _dst->d_v_ = S(_alt.d_a0 ? std::make_unique<Nat>() : nullptr);
         auto &_dst_alt = std::get<S>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -78,9 +78,9 @@ public:
   }
 
   // CREATORS
-  static Nat o() { return Nat(O{}); }
+  static Nat o() { return Nat(O()); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S(std::make_unique<Nat>(std::move(a0)))); }
 
   // MANIPULATORS
   ~Nat() {
@@ -165,11 +165,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -182,19 +182,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -272,7 +272,7 @@ template <typename t_A> struct DirectedEdge {
 
   // ACCESSORS
   DirectedEdge<t_A> clone() const {
-    return DirectedEdge<t_A>{(*(this)).edge_from, (*(this)).edge_to};
+    return DirectedEdge<t_A>((*(this)).edge_from, (*(this)).edge_to);
   }
 };
 
@@ -288,8 +288,8 @@ template <typename t_A> struct Directed {
 
   // ACCESSORS
   Directed<t_A> clone() const {
-    return Directed<t_A>{(*(this)).directed_nodes.clone(),
-                         (*(this)).directed_edges.clone()};
+    return Directed<t_A>((*(this)).directed_nodes.clone(),
+                         (*(this)).directed_edges.clone());
   }
 };
 
@@ -297,19 +297,19 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
   using edge = DirectedEdge<T1>;
 
   static Directed<std::any> empty() {
-    return Directed<std::any>{List<std::any>::nil(),
-                              List<DirectedEdge<std::any>>::nil()};
+    return Directed<std::any>(List<std::any>::nil(),
+                              List<DirectedEdge<std::any>>::nil());
   }
 
   static Directed<std::any> add_node(Directed<std::any> g, T1 n) {
-    return Directed<std::any>{List<std::any>::cons(n, g.directed_nodes),
-                              g.directed_edges};
+    return Directed<std::any>(List<std::any>::cons(n, g.directed_nodes),
+                              g.directed_edges);
   }
 
   static Directed<std::any> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
-    return Directed<std::any>{
+    return Directed<std::any>(
         g.directed_nodes,
-        List<DirectedEdge<std::any>>::cons(e, g.directed_edges)};
+        List<DirectedEdge<std::any>>::cons(e, g.directed_edges));
   }
 
   static List<T1> nodes(Directed<std::any> g) { return g.directed_nodes; }
@@ -328,7 +328,7 @@ template <typename t_A> struct UndirectedEdge {
 
   // ACCESSORS
   UndirectedEdge<t_A> clone() const {
-    return UndirectedEdge<t_A>{(*(this)).edge_first, (*(this)).edge_second};
+    return UndirectedEdge<t_A>((*(this)).edge_first, (*(this)).edge_second);
   }
 };
 
@@ -343,8 +343,8 @@ template <typename t_A> struct Undirected {
 
   // ACCESSORS
   Undirected<t_A> clone() const {
-    return Undirected<t_A>{(*(this)).undirected_nodes.clone(),
-                           (*(this)).undirected_edges.clone()};
+    return Undirected<t_A>((*(this)).undirected_nodes.clone(),
+                           (*(this)).undirected_edges.clone());
   }
 };
 
@@ -352,20 +352,20 @@ template <typename _tcI0, typename T1> struct UndirectedGraph {
   using edge = UndirectedEdge<T1>;
 
   static Undirected<std::any> empty() {
-    return Undirected<std::any>{List<std::any>::nil(),
-                                List<UndirectedEdge<std::any>>::nil()};
+    return Undirected<std::any>(List<std::any>::nil(),
+                                List<UndirectedEdge<std::any>>::nil());
   }
 
   static Undirected<std::any> add_node(Undirected<std::any> g, T1 n) {
-    return Undirected<std::any>{List<std::any>::cons(n, g.undirected_nodes),
-                                g.undirected_edges};
+    return Undirected<std::any>(List<std::any>::cons(n, g.undirected_nodes),
+                                g.undirected_edges);
   }
 
   static Undirected<std::any> add_edge(Undirected<std::any> g,
                                        UndirectedEdge<T1> e) {
-    return Undirected<std::any>{
+    return Undirected<std::any>(
         g.undirected_nodes,
-        List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
+        List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges));
   }
 
   static List<T1> nodes(Undirected<std::any> g) { return g.undirected_nodes; }

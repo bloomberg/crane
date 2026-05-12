@@ -410,24 +410,20 @@ unsigned int CoalitionBidHonorTraceCase::unit_effective_combat_rating(
 CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::unit_to_metrics(
     const CoalitionBidHonorTraceCase::Unit &u) {
-  return ForceMetrics{1u,
-                      u.unit_tonnage,
-                      (u.unit_is_elite ? 1u : 0u),
-                      (u.unit_is_clan ? 1u : 0u),
-                      unit_battle_value(u),
-                      unit_effective_combat_rating(u)};
+  return ForceMetrics(1u, u.unit_tonnage, (u.unit_is_elite ? 1u : 0u),
+                      (u.unit_is_clan ? 1u : 0u), unit_battle_value(u),
+                      unit_effective_combat_rating(u));
 }
 
 CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::metrics_add(
     const CoalitionBidHonorTraceCase::ForceMetrics &m1,
     const CoalitionBidHonorTraceCase::ForceMetrics &m2) {
-  return ForceMetrics{(m1.fm_count + m2.fm_count),
-                      (m1.fm_tonnage + m2.fm_tonnage),
-                      (m1.fm_elite_count + m2.fm_elite_count),
-                      (m1.fm_clan_count + m2.fm_clan_count),
-                      (m1.fm_total_bv + m2.fm_total_bv),
-                      (m1.fm_total_ecr + m2.fm_total_ecr)};
+  return ForceMetrics(
+      (m1.fm_count + m2.fm_count), (m1.fm_tonnage + m2.fm_tonnage),
+      (m1.fm_elite_count + m2.fm_elite_count),
+      (m1.fm_clan_count + m2.fm_clan_count), (m1.fm_total_bv + m2.fm_total_bv),
+      (m1.fm_total_ecr + m2.fm_total_ecr));
 }
 
 CoalitionBidHonorTraceCase::ForceMetrics
@@ -489,7 +485,7 @@ CoalitionBidHonorTraceCase::update_coalition_force(
         c.v());
     if (idx <= 0) {
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
-          CoalitionMember{d_a0.cm_clan, d_a0.cm_commander, new_force}, *(d_a1));
+          CoalitionMember(d_a0.cm_clan, d_a0.cm_commander, new_force), *(d_a1));
     } else {
       unsigned int n = idx - 1;
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
@@ -528,7 +524,7 @@ CoalitionBidHonorTraceCase::coalition_to_bid(
   if (_cs.has_value()) {
     const CoalitionBidHonorTraceCase::Commander &cmd = *_cs;
     return std::make_optional<CoalitionBidHonorTraceCase::ForceBid>(
-        ForceBid{coalition_force(c), side, cmd});
+        ForceBid(coalition_force(c), side, cmd));
   } else {
     return std::optional<CoalitionBidHonorTraceCase::ForceBid>();
   }

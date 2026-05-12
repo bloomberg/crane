@@ -16,33 +16,33 @@ struct Coercions {
     unsigned int unwrap;
 
     // ACCESSORS
-    Wrapper clone() const { return Wrapper{(*(this)).unwrap}; }
+    Wrapper clone() const { return Wrapper((*(this)).unwrap); }
   };
 
   static unsigned int double_wrapped(const Wrapper &w);
   static inline const unsigned int test_double_wrapped =
-      double_wrapped(Wrapper{7u});
+      double_wrapped(Wrapper(7u));
 
   struct BoolBox {
     bool unbox;
 
     // ACCESSORS
-    BoolBox clone() const { return BoolBox{(*(this)).unbox}; }
+    BoolBox clone() const { return BoolBox((*(this)).unbox); }
   };
 
   static unsigned int add_boolbox(const unsigned int n, const BoolBox &bb);
   static inline const unsigned int test_add_boolbox =
-      add_boolbox(10u, BoolBox{true});
+      add_boolbox(10u, BoolBox(true));
 
   struct Transform {
     std::function<unsigned int(unsigned int)> apply_transform;
 
     // ACCESSORS
-    Transform clone() const { return Transform{(*(this)).apply_transform}; }
+    Transform clone() const { return Transform((*(this)).apply_transform); }
   };
 
   static inline const Transform double_transform =
-      Transform{[](const unsigned int n) { return (n + n); }};
+      Transform([](const unsigned int n) { return (n + n); });
   static inline const unsigned int test_fun_coercion =
       double_transform.apply_transform(5u);
 };

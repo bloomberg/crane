@@ -67,14 +67,14 @@ public:
       const Forest<t_A> *_src = _frame._src;
       Forest<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Leaf>(_src->v())) {
-        _dst->d_v_ = Leaf{};
+        _dst->d_v_ = Leaf();
       } else {
         const auto &_alt = std::get<Node>(_src->v());
-        _dst->d_v_ = Node{
+        _dst->d_v_ = Node(
             _alt.d_a0,
             _alt.d_a1 ? std::make_unique<
                             typename Datatypes::template List<Forest<t_A>>>()
-                      : nullptr};
+                      : nullptr);
         auto &_dst_alt = std::get<Node>(_dst->d_v_);
         [&] {
           if (_alt.d_a1) {
@@ -115,26 +115,26 @@ public:
   // CREATORS
   template <typename _U> explicit Forest(const Forest<_U> &_other) {
     if (std::holds_alternative<typename Forest<_U>::Leaf>(_other.v())) {
-      this->d_v_ = Leaf{};
+      this->d_v_ = Leaf();
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename Forest<_U>::Node>(_other.v());
-      this->d_v_ = Node{
+      this->d_v_ = Node(
           t_A(d_a0),
           d_a1 ? std::make_unique<
                      Datatypes::List<SepExtListCloneQual::Forest<t_A>>>(*d_a1)
-               : nullptr};
+               : nullptr);
     }
   }
 
-  static Forest<t_A> leaf() { return Forest(Leaf{}); }
+  static Forest<t_A> leaf() { return Forest(Leaf()); }
 
   static Forest<t_A> node(t_A a0,
                           typename Datatypes::template List<Forest<t_A>> a1) {
     return Forest(
-        Node{std::move(a0),
+        Node(std::move(a0),
              std::make_unique<typename Datatypes::template List<Forest<t_A>>>(
-                 std::move(a1))});
+                 std::move(a1))));
   }
 
   // MANIPULATORS

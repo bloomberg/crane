@@ -17,7 +17,7 @@ unsigned int MemSafetyProbe17::sum_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -32,8 +32,8 @@ unsigned int MemSafetyProbe17::sum_list(
         const auto &[d_a0, d_a1] =
             std::get<typename MemSafetyProbe17::mylist<unsigned int>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -92,7 +92,7 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
   MemSafetyProbe17::mylist<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&t});
+  _stack.emplace_back(_Enter(&t));
   /// Loopified qtree_flatten: _Enter -> _After_QNode -> _After_QNode_1 ->
   /// _After_QNode_2 -> _Combine_QNode.
   while (!_stack.empty()) {
@@ -108,25 +108,25 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
         const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
             std::get<typename MemSafetyProbe17::qtree::QNode>(t.v());
         _stack.emplace_back(
-            _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), d_a2});
-        _stack.emplace_back(_Enter{d_a4.get()});
+            _After_QNode(d_a3.get(), d_a1.get(), d_a0.get(), d_a2));
+        _stack.emplace_back(_Enter(d_a4.get()));
       }
     } else if (std::holds_alternative<_After_QNode>(_frame)) {
       auto _f = std::move(std::get<_After_QNode>(_frame));
       _stack.emplace_back(
-          _After_QNode_1{std::move(_result), _f.d_a1, _f.d_a0, _f.d_a2});
-      _stack.emplace_back(_Enter{_f.d_a3});
+          _After_QNode_1(std::move(_result), _f.d_a1, _f.d_a0, _f.d_a2));
+      _stack.emplace_back(_Enter(_f.d_a3));
     } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
       auto _f = std::move(std::get<_After_QNode_1>(_frame));
-      _stack.emplace_back(_After_QNode_2{std::move(_f._result),
-                                         std::move(_result), _f.d_a0, _f.d_a2});
-      _stack.emplace_back(_Enter{_f.d_a1});
+      _stack.emplace_back(_After_QNode_2(std::move(_f._result),
+                                         std::move(_result), _f.d_a0, _f.d_a2));
+      _stack.emplace_back(_Enter(_f.d_a1));
     } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
       auto _f = std::move(std::get<_After_QNode_2>(_frame));
-      _stack.emplace_back(_Combine_QNode{std::move(_f._result_0),
+      _stack.emplace_back(_Combine_QNode(std::move(_f._result_0),
                                          std::move(_f._result_1),
-                                         std::move(_result), _f.d_a2});
-      _stack.emplace_back(_Enter{_f.d_a0});
+                                         std::move(_result), _f.d_a2));
+      _stack.emplace_back(_Enter(_f.d_a0));
     } else {
       auto _f = std::move(std::get<_Combine_QNode>(_frame));
       _result = _result.myapp(_f._result_2.myapp(mylist<unsigned int>::mycons(
@@ -166,7 +166,7 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
   MemSafetyProbe17::qtree _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified make_qtree: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -178,14 +178,14 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
         _result = qtree::qleaf();
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_After_n_{n_, qtree::qleaf(), n, qtree::qleaf()});
-        _stack.emplace_back(_Enter{n_});
+        _stack.emplace_back(_After_n_(n_, qtree::qleaf(), n, qtree::qleaf()));
+        _stack.emplace_back(_Enter(n_));
       }
     } else if (std::holds_alternative<_After_n_>(_frame)) {
       auto _f = std::move(std::get<_After_n_>(_frame));
       _stack.emplace_back(
-          _Combine_n_{std::move(_result), _f._s1, _f.n, _f._s3});
-      _stack.emplace_back(_Enter{_f.n_});
+          _Combine_n_(std::move(_result), _f._s1, _f.n, _f._s3));
+      _stack.emplace_back(_Enter(_f.n_));
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
       _result = qtree::qnode(_result, _f._s3, _f.n, _f._result, _f._s1);

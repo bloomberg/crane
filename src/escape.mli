@@ -20,7 +20,7 @@ val nb_occur_match : int -> ml_ast -> int
 (** [escapes k t] checks if de Bruijn index [k] escapes in [t] (value outlives
     its scope). Escaping positions: constructor args, lambda captures, tail
     position, fixpoint captures, partial-application captures. *)
-val escapes : int -> ml_ast -> bool
+val escapes : ?refined:bool -> int -> ml_ast -> bool
 
 (** [partial_app_remaining head args] returns [Some remaining] when
     [MLapp(head, args)] is a partial application with [remaining] args still

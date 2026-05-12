@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_ITREE_REIFIED
 #define INCLUDED_LOOPIFY_ITREE_REIFIED
 
-#include <any>
 #include <crane_itree.h>
 #include <memory>
 #include <optional>
@@ -40,7 +39,7 @@ struct LoopifyItreeReified {
       const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
       auto e = _itf.effect;
       auto k = _itf.cont;
-      return itree_vis(e, [=](const std::any x) mutable { return rec(k(x)); });
+      return itree_vis(e, [=](const auto &x) mutable { return rec(k(x)); });
     }
   }
 

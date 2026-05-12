@@ -22,6 +22,6 @@ JinUsesPairForJump::execute_jin(const JinUsesPairForJump::state &s,
                                 const unsigned int r) {
   unsigned int next_page = page_of((s.pc + 1u));
   unsigned int pair_val = get_reg_pair(s, r);
-  return state{s.regs,
-               ((next_page * 256u) + (256u ? pair_val % 256u : pair_val))};
+  return state(s.regs,
+               ((next_page * 256u) + (256u ? pair_val % 256u : pair_val)));
 }

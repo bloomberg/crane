@@ -324,7 +324,8 @@ unsigned int ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
       epitope_dedup(typing_epitopes(donor));
   return recipient.vxm_epitope_abs.template fold_left<unsigned int>(
       [=](const unsigned int acc,
-          ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody ab) mutable {
+          const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody
+              &ab) mutable {
         if (donor_epitopes.existsb(
                 [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) mutable
                     -> bool { return epitope_eqb(ab.ab_epitope, _x0); })) {
@@ -342,7 +343,8 @@ bool ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
       epitope_dedup(typing_epitopes(donor));
   return recipient.vxm_epitope_abs.existsb(
-      [=](ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody ab) mutable {
+      [=](const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody
+              &ab) mutable {
         return (
             (ab.ab_complement_fixing && mfi_negative_threshold < ab.ab_mfi) &&
             donor_epitopes.existsb(
@@ -455,8 +457,8 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
     const unsigned int sample_time, const unsigned int current_time,
     const unsigned int authorizer, const bool is_emergency) {
   ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder order =
-      SafeTransfusionOrder{recipient_id, product_id, compat_result, xm,
-                           sample_time,  authorizer, is_emergency};
+      SafeTransfusionOrder(recipient_id, product_id, compat_result, xm,
+                           sample_time, authorizer, is_emergency);
   if (transfusion_order_authorized(order, current_time)) {
     return std::make_optional<
         ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>(

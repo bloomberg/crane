@@ -23,7 +23,7 @@ CustomInlineBug::bug_option_pair(CustomInlineBug::State s) {
 }
 
 CustomInlineBug::State CustomInlineBug::get_state(const unsigned int n) {
-  return State{n, n};
+  return State(n, n);
 }
 
 std::optional<unsigned int>
@@ -38,7 +38,7 @@ CustomInlineBug::pair_simple(CustomInlineBug::State s) {
 
 std::pair<CustomInlineBug::State, unsigned int>
 CustomInlineBug::pair_let(const unsigned int n) {
-  CustomInlineBug::State s = State{n, n};
+  CustomInlineBug::State s = State(n, n);
   return std::make_pair(s, s.value);
 }
 
@@ -76,8 +76,8 @@ CustomInlineBug::pair_multi_proj(CustomInlineBug::State s) {
 
 std::pair<CustomInlineBug::State, unsigned int>
 CustomInlineBug::pair_chain(const CustomInlineBug::State &s1) {
-  CustomInlineBug::State s2 = State{s1.value, s1.data};
-  CustomInlineBug::State s3 = State{s2.value, s2.data};
+  CustomInlineBug::State s2 = State(s1.value, s1.data);
+  CustomInlineBug::State s3 = State(s2.value, s2.data);
   return std::make_pair(s3, s3.value);
 }
 
@@ -94,7 +94,7 @@ CustomInlineBug::make_pair(CustomInlineBug::State s) {
 
 std::pair<CustomInlineBug::State, unsigned int>
 CustomInlineBug::outer_pair(const unsigned int n) {
-  return make_pair(State{n, n});
+  return make_pair(State(n, n));
 }
 
 List<std::pair<CustomInlineBug::State, unsigned int>>

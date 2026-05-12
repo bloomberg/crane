@@ -298,6 +298,11 @@ type translation_ctx = {
      inside container types (e.g. [List<tree>]) get [shared_ptr] wrapping,
      matching the struct definition.  Empty outside method bodies. *)
   mutable method_self_ns : Refset'.t;
+  (* When generating a custom constructor arg, holds the expected ML type for
+     the argument being generated (from the enclosing constructor's type params).
+     Used by gen_ctor_call to recover concrete element types for nil lists when
+     the ML type annotation has unresolved metas (Tmeta{contents=None}). *)
+  mutable expected_ml_type_for_arg : ml_type option;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -327,6 +332,7 @@ let tctx =
     eta_keep_moves = false;
     cs_counter = 0;
     method_self_ns = Refset'.empty;
+    expected_ml_type_for_arg = None;
   }
 
 (** {3 Accessor wrappers} --- thin layer over {!tctx} fields. *)
@@ -377,6 +383,20 @@ let rec resolve_tmeta = function
   | Miniml.Tmeta {contents = Some t} -> resolve_tmeta t
   | t -> t
 
+(** Check if an ML type is directly erased (non-recursive, top-level only).
+    Matches unresolved [Tmeta], [Tdummy], and [Tvar]. *)
+let is_erased_ml_type = function
+  | Miniml.Tmeta {contents = None} | Miniml.Tdummy _ | Miniml.Tvar _ -> true
+  | _ -> false
+
+(** Recursive check for erased sub-types inside an ML type.  Resolves [Tmeta]
+    chains before checking, then recurses into [Tglob] type arguments. *)
+let rec has_erased_ml_sub ty =
+  match resolve_tmeta ty with
+  | Miniml.Tmeta _ | Miniml.Tdummy _ | Miniml.Tvar _ -> true
+  | Miniml.Tglob (_, tys, _) -> List.exists has_erased_ml_sub tys
+  | _ -> false
+
 (** Return the codomain of an ML type, chasing through arrows and meta
     indirections. For [A -> B -> C] this returns [C]. *)
 let rec ml_codomain = function
@@ -392,6 +412,15 @@ let rec count_ml_value_arrows = function
   | Miniml.Tarr (_, t2) -> count_ml_value_arrows t2
   | Miniml.Tmeta {contents = Some t} -> count_ml_value_arrows t
   | _ -> 0
+
+(** Check if the codomain of an ML type (after all arrows) is a type variable.
+    When true, the type variable might hide additional arrows, so the arrow
+    count is not reliable for over-application detection. *)
+let rec ml_codomain_is_tvar = function
+  | Miniml.Tarr (_, t2) -> ml_codomain_is_tvar t2
+  | Miniml.Tmeta {contents = Some t} -> ml_codomain_is_tvar t
+  | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+  | _ -> false
 
 (** Count the total number of arrow levels in an ML type (including erased). *)
 let rec count_ml_arrows = function
@@ -472,13 +501,22 @@ let filter_value_types = List.filter (fun t -> not (isTdummy t))
 
     [n] counts the value-domain arrows to skip before inspecting the codomain;
     pass [0] to query the type's immediate codomain.  The [?has_dummy] flag
-    accumulates whether a [Tdummy] was seen; callers should omit it (defaults
-    to [false]). *)
+    accumulates whether a [Tdummy Ktype] was seen; callers should omit it
+    (defaults to [false]).  Note: [Tdummy Kprop] (erased proof) is skipped
+    without setting [has_dummy] — a proof argument does not make the codomain
+    [std::any]. *)
 let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
   | Miniml.Tarr (t, rest) ->
-    if isTdummy t then ml_codomain_erases_to_any ~has_dummy:true n rest
-    else if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
-    else false
+    ( match t with
+    | Miniml.Tdummy Miniml.Ktype ->
+      ml_codomain_erases_to_any ~has_dummy:true n rest
+    | _ when isTdummy t ->
+      (* Tdummy Kprop / Kimplicit: erased proof/implicit, skip without
+         setting has_dummy and without consuming a value-arg slot. *)
+      ml_codomain_erases_to_any ~has_dummy n rest
+    | _ ->
+      if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
+      else false )
   | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> n = 0 && has_dummy
   | Miniml.Tmeta {contents = Some t} -> ml_codomain_erases_to_any ~has_dummy n t
   | _ -> false
@@ -668,7 +706,10 @@ let resolve_indref_base ?(no_custom_inductives = Refset'.empty)
       List.exists
         (Environ.QGlobRef.equal Environ.empty_env r)
         (get_local_inductives ())
-    then Common.pp_global Type r
+    then
+      if Common.get_force_qualified_capitalization ()
+      then String.capitalize_ascii (Common.pp_global_name Type r)
+      else Common.pp_global Type r
     else cap
 
 (** Render a C++ type as a plain string.  Used in [ITree<R>] qualified
@@ -742,7 +783,12 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
           let parent = Names.Label.to_string label in
           (* Strip template args before comparing: "List<t_A>" → "List" *)
           let cap_inner = Common.capitalize_last_component inner_base in
-          (* Eponymous: parent "List" = inner "List" → no qualification *)
+          (* Eponymous shortcut: parent "List" = inner "List" → no prefix.
+             For MPdot types (inner module blocks), stripping the prefix avoids
+             the incorrect `Trie::Trie<T>` form from inside the module.  Note
+             that the MPdot branch cannot produce a fully qualified external
+             path anyway (it only sees the last label), so this shortcut is
+             the safest option for inner-module types. *)
           if String.equal parent cap_inner then ""
           else parent ^ "::"
         | Names.ModPath.MPfile f ->
@@ -763,9 +809,12 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
               String.capitalize_ascii
                 (Id.to_string (List.hd (Names.DirPath.repr f)))
             in
-            let cap_inner = Common.capitalize_last_component inner_base in
-            if String.equal parent cap_inner then ""
-            else parent ^ "::"
+            (* Always emit the file-namespace prefix, even if the inductive
+               name matches the file name (e.g. String::String).  The eponymous
+               shortcut is wrong here: `String` alone resolves to the C++
+               namespace, not to the type, so callers outside that namespace
+               always need the `String::String` qualified form. *)
+            parent ^ "::"
         | _ -> "" )
       | _ -> ""
     in
@@ -796,6 +845,7 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
     let core = Tglob (g, List.map (qualify_inductives ~skip) ts, es) in
     ( match g with
     | GlobRef.IndRef _ when skip g -> core
+    | GlobRef.IndRef _ when Table.is_inline_custom g -> core
     | GlobRef.IndRef _ -> Tnamespace (g, core)
     | _ -> core )
   | Tnamespace (g, t) ->
@@ -926,8 +976,10 @@ let rec render_cpp_expr_simple = function
     Uses [render_cpp_type_for_raw_template] to produce type strings for
     [CPPraw]-based converting constructors, since [pp_cpp_type] renders
     custom-extracted types differently (e.g. namespace qualification). *)
-let gen_clone_field_expr ~src_ty ~dst_ty expr =
-  let render ty = render_cpp_type_for_raw_template (qualify_inductives ty) in
+let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
+  let render ty =
+    render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
+  in
   (* Strip a single [Tnamespace] wrapper when it matches the inner [Tglob].
      [convert_ml_type_to_cpp_type] wraps external inductives as
      [Tnamespace(g, Tglob(g,...))] for qualified rendering, but for pattern
@@ -1227,8 +1279,8 @@ let return_captures_by_value stmts =
   and stmt = function
     | Sreturn (Some e) -> Sreturn (Some (expr e))
     | Sexpr e -> Sexpr (expr e)
-    | Sasgn (id, ty, e) -> Sasgn (id, ty, expr e)
-    | Sderef_asgn (lhs, e) -> Sderef_asgn (expr lhs, expr e)
+    | Sasgn (_, _, _) as s -> s
+    | Sderef_asgn (_, _) as s -> s
     | Sif (c, t, f) -> Sif (expr c, List.map stmt t, List.map stmt f)
     | Sswitch (scrut, ind, branches, default) ->
       Sswitch
@@ -1403,10 +1455,14 @@ let is_skipped_ml_type = function
     lambda expression. *)
 let rec has_tany_in_type = function
   | Tany -> true
+  | Tvar (_, None) -> true  (* unnamed Tvar erases to std::any via tvar_erase_type *)
   | Tfun (dom, cod) -> List.exists has_tany_in_type dom || has_tany_in_type cod
-  | Tmod (_, t) -> has_tany_in_type t
-  | Tshared_ptr t -> has_tany_in_type t
-  | Tunique_ptr t -> has_tany_in_type t
+  | Tmod (_, t) | Tnamespace (_, t) -> has_tany_in_type t
+  | Tshared_ptr t | Tunique_ptr t | Tref t | Tptr t -> has_tany_in_type t
+  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists has_tany_in_type ts
+  | Tvariant ts -> List.exists has_tany_in_type ts
+  | Tqualified (base, _) -> has_tany_in_type base
   | _ -> false
 
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
@@ -2824,7 +2880,70 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       wrap_void_call_as_value (gen_expr env e)
     | _ -> gen_expr env e
   in
-  let args = List.rev_map gen_ctor_arg ts in
+  (* Generate args with expected type hints: set expected_ml_type_for_arg to
+     the i-th type arg of the constructor's inductive type before generating
+     the i-th value arg.  This allows gen_ctor_call to recover concrete element
+     types for nil lists whose ML annotation has unresolved metas (Tmeta{None}).
+     Specifically: in pair(fr, nil), the pair type args [A, B] tell us B = list(A),
+     so the nil's element type can be recovered as A even if its annotation is Tmeta. *)
+  (* Try to get type args from the pair type annotation, falling back to the
+     outer expected_ml_type_for_arg (set by an enclosing MLletin or MLapp
+     lookahead) when the pair type itself is erased (Tmeta{None}). This
+     recovers the expected element type for nil args in pairs like
+       let sk0 : parser_frame × list(parser_frame) = (fr(...), nil)
+     where the pair MLcons has type annotation Tmeta{None}. *)
+  let ty_args_for_expected =
+    let rec deep_resolve ty =
+      match resolve_tmeta ty with
+      | Miniml.Tglob (n, tys, s) -> Miniml.Tglob (n, List.map deep_resolve tys, s)
+      | Miniml.Tarr (t1, t2) -> Miniml.Tarr (deep_resolve t1, deep_resolve t2)
+      | t -> t
+    in
+    (* Also try the expected type from the enclosing let-binding when deep_resolve
+       can't resolve sub-metas in the pair's own type annotation.
+       The expected type comes from t_effective which may have different (resolved) metas. *)
+    let fallback_from_expected tys =
+      if List.exists has_erased_ml_sub tys then
+        match tctx.expected_ml_type_for_arg with
+        | Some exp ->
+          let ctor_ind = match r with
+            | GlobRef.ConstructRef ((kn, i), _) -> Some (GlobRef.IndRef (kn, i))
+            | _ -> None
+          in
+          (match deep_resolve exp, ctor_ind with
+          | Miniml.Tglob (exp_n, exp_tys, _), Some ind
+            when GlobRef.CanOrd.equal exp_n ind
+                 && List.length exp_tys = List.length tys ->
+            List.map2 (fun local outer ->
+              if has_erased_ml_sub local then outer else local) tys exp_tys
+          | _ -> tys)
+        | None -> tys
+      else tys
+    in
+    match deep_resolve ty with
+    | Miniml.Tglob (_, tys, _) -> fallback_from_expected tys
+    | _ ->
+      (match tctx.expected_ml_type_for_arg with
+      | Some exp ->
+        let ctor_ind = match r with
+          | GlobRef.ConstructRef ((kn, i), _) -> Some (GlobRef.IndRef (kn, i))
+          | _ -> None
+        in
+        (match deep_resolve exp, ctor_ind with
+        | Miniml.Tglob (exp_n, exp_tys, _), Some ind
+          when GlobRef.CanOrd.equal exp_n ind -> exp_tys
+        | _ -> [])
+      | None -> [])
+  in
+  let args =
+    List.rev (List.mapi (fun i e ->
+      let saved_expected = tctx.expected_ml_type_for_arg in
+      let new_expected = List.nth_opt ty_args_for_expected i in
+      tctx.expected_ml_type_for_arg <- new_expected;
+      let result = gen_ctor_arg e in
+      tctx.expected_ml_type_for_arg <- saved_expected;
+      result) ts)
+  in
   (* Helper to wrap expression in function call syntax if it has arguments *)
   let app x =
     match args with
@@ -3211,6 +3330,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               let param_cpp_ty =
                 match body_subst with
                 | Some _ -> Tref (Tmod (TMconst, stored_cpp_ty))
+                | None when has_tany_in_type bare_cpp_ty ->
+                  (* The ML type contains erased positions (std::any).  Use
+                     [const auto&] so the C++ compiler deduces the concrete
+                     type at the call site — explicit std::any in the param
+                     type would block valid calls and prevent field accesses
+                     inside the body from resolving to the concrete type. *)
+                  Tref (Tmod (TMconst, Tauto))
                 | None -> wrap_param_by_ownership ~is_owned:owned bare_cpp_ty
               in
               (param_cpp_ty, Some id, body_subst) )
@@ -3235,6 +3361,71 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             cpp_arg_info
         in
         let body_stmts = return_captures_by_value body_stmts in
+        (* When the lambda body is a standalone fixpoint (MLfix with no
+           applied args), the fix represents a function value that would make
+           this lambda curried — e.g. [fun x => fix f r := ...] generates
+           [[=](x){auto f=...; return f;}] (1-arg returning fn) instead of
+           the flat [[=](x,r){auto f=...; return f(r);}] (2-arg).  Fold the
+           fix's own params into this lambda so the result is uncurried and
+           directly compatible with [std::function<R(A,B)>] contexts. *)
+        let cpp_args, body_stmts =
+          match a with
+          | MLfix (fix_x, _fix_ids, fix_funs, _) ->
+            let fix_lam_params, _ = Mlutil.collect_lams fix_funs.(fix_x) in
+            let fix_value_params =
+              List.filter
+                (fun (_, ty) -> not (isTdummy ty) && not (ml_type_is_void ty))
+                fix_lam_params
+            in
+            ( match fix_value_params with
+            | [] -> (cpp_args, body_stmts)
+            | _ ->
+              (* Only fold when body_stmts ends with a bare variable return,
+                 i.e. the non-lifted ycomb path.  Lifted (polymorphic) fixes
+                 are returned via a call expression and don't need folding. *)
+              let last_is_var_return =
+                match List.rev body_stmts with
+                | Sreturn (Some (CPPvar _)) :: _ -> true
+                | _ -> false
+              in
+              if not last_is_var_return then (cpp_args, body_stmts)
+              else
+                let extra_cpp_params =
+                  List.mapi
+                    (fun i (_, ml_ty) ->
+                      let bare =
+                        convert_ml_type_to_cpp_type
+                          env Refset'.empty tvars ml_ty
+                      in
+                      let param_ty =
+                        match bare with
+                        | Tshared_ptr _ | Tunique_ptr _ ->
+                          Tref (Tmod (TMconst, bare))
+                        | _ -> bare
+                      in
+                      (param_ty,
+                       Some (Id.of_string (Printf.sprintf "_fea%d" i))) )
+                    fix_value_params
+                in
+                let extra_args =
+                  List.map
+                    (fun (_, id_opt) -> CPPvar (Option.get id_opt))
+                    extra_cpp_params
+                in
+                let rec modify_last_return = function
+                  | [] -> []
+                  | [Sreturn (Some e)] ->
+                    [Sreturn (Some (CPPfun_call (e, List.rev extra_args)))]
+                  | stmt :: rest -> stmt :: modify_last_return rest
+                in
+                (* The printer does List.rev on params, so put extra params
+                   first (they will print last, after the outer lambda's own
+                   params).  Within extra_cpp_params, reverse so that fix param
+                   i prints at position i from the left (natural order). *)
+                ( List.rev extra_cpp_params @ cpp_args,
+                  modify_last_return body_stmts ) )
+          | _ -> (cpp_args, body_stmts)
+        in
         (* The return type annotation is left as [None]; loopify's
            [infer_saved_type] infers it from the body when computing frame
            struct field types.  Annotating here caused regressions for inner
@@ -3623,12 +3814,14 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
            is_enum_inductive (GlobRef.IndRef (kn, 0))
          | _ -> false ->
     (* Enum constructor: emit bare EnumType::Constructor value *)
-    let ctor_name =
-      Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
-    in
-    let ind_ref =
+    let ind_ref, ctor_name =
       match r with
-      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
+      | GlobRef.ConstructRef ((kn, i), _cidx) ->
+        let ind_ref = GlobRef.IndRef (kn, i) in
+        let base_name = Id.to_string (Table.safe_basename_of_global r) in
+        let sanitized = String.map (fun c -> if c = '\'' then '_' else c) base_name in
+        let name = Common.enum_ctor_name sanitized in
+        (ind_ref, Id.of_string name)
       | _ ->
         CErrors.anomaly
           (Pp.str "gen_expr: enum constructor expected ConstructRef")
@@ -3790,6 +3983,71 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           in
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys in
+          (* For sigT (dependent pair), the second type arg is a predicate
+             (A -> Type) that extracts as a bare reference to the same
+             inductive as the first arg.  Erase it to Tany to avoid
+             mismatched template instantiations. *)
+          let temps =
+            let is_sigT =
+              let basename = Id.to_string (Table.safe_basename_of_global n) in
+              String.equal basename "sigT"
+            in
+            if is_sigT then
+              match tys with
+              | [fst_ty; snd_ty] ->
+                let same_base = match fst_ty, snd_ty with
+                  | Miniml.Tglob (g1, _, _), Miniml.Tglob (g2, sub2, _) ->
+                    GlobRef.CanOrd.equal g1 g2 && sub2 = []
+                  | _ -> false
+                in
+                if same_base then
+                  match temps with
+                  | [fst; _] -> [fst; Tany]
+                  | _ -> temps
+                else temps
+              | _ -> temps
+            else temps
+          in
+          (* When all template params resolved to Tany (all type args were
+             unresolved Tmeta), try to recover the concrete element type from
+             an expected type threaded down from an enclosing constructor.
+             Example: the pair (Fr [...], []) has a concrete pair annotation
+             with second type arg list(parser_frame); when generating the nil
+             for the second slot, expected_ml_type_for_arg = list(parser_frame),
+             so we produce List<Parser_frame>::nil() instead of List<any>::nil(). *)
+          let temps =
+            (* Treat unnamed Tvars (Tvar(_, None)) as erased: they become
+               std::any after tvar_erase_type, so we should try to recover
+               the concrete type from the expected type annotation. *)
+            let is_effectively_erased t =
+              is_erased_type t || (match t with Tvar (_, None) -> true | _ -> false)
+            in
+            if List.for_all is_effectively_erased temps && temps <> [] then
+              (* Resolve any metas in the expected type before matching.
+                 The let-binding type may be Tmeta{Some Tglob(...)} so we
+                 need to unwrap the meta to get the concrete Tglob. *)
+              let expected_resolved = match tctx.expected_ml_type_for_arg with
+                | Some exp -> Some (resolve_tmeta exp)
+                | None -> None
+              in
+              (match expected_resolved with
+              | Some (Miniml.Tglob (exp_n, exp_tys, _))
+                when GlobRef.CanOrd.equal n exp_n
+                     && List.length exp_tys = List.length tys ->
+                (* Compute the recovered type with in_constructor_expr = false so
+                   that promoted type vars resolve via promoted_var_map (giving
+                   e.g. typename D::Defs::Parser_frame) rather than being erased
+                   to std::any by the constructor-expression shortcut. *)
+                let saved_ctor = tctx.in_constructor_expr in
+                tctx.in_constructor_expr <- false;
+                let recovered = build_template_params env tvars exp_tys in
+                tctx.in_constructor_expr <- saved_ctor;
+                if List.for_all (fun t -> not (is_erased_type t)) recovered
+                then recovered
+                else temps
+              | _ -> temps)
+            else temps
+          in
           (* In dependent types, if a constructor arg at position i is
              [MLdummy Ktype] (a type-valued argument — e.g. [x : A] where
              [A : Type]), any template param at a later position j > i must
@@ -5163,10 +5421,20 @@ and eta_fun env f args =
        into a primary call and a chained application of excess args. Example: [f
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
-      match f with
-      | MLrel i ->
-        (try count_ml_value_arrows (get_env_type i) with _ -> List.length args)
-      | _ -> List.length args
+      let rel_idx_f = match f with
+        | MLrel i | MLmagic (MLrel i) -> Some i
+        | _ -> None
+      in
+      match rel_idx_f with
+      | Some i ->
+        ( try
+            let ty = get_env_type i in
+            let n = count_ml_value_arrows ty in
+            if n < List.length args && ml_codomain_is_tvar ty then
+              List.length args
+            else n
+          with _ -> List.length args )
+      | None -> List.length args
     in
     let n_args = List.length args in
     if n_args = 0 then
@@ -5233,6 +5501,38 @@ and eta_fun env f args =
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call (CPPfun_call (gen_expr env f, primary), excess)
     else
+      (* When the callee is a local variable whose ML type is a bare type
+         variable (Tvar/Tvar'/Tunknown), its C++ type is std::any.  std::any
+         is not callable, so we must wrap it with std::any_cast to recover the
+         std::function type before calling.  Both arg and return types
+         default to std::any since the original types are erased.
+         The MLmagic wrapper is transparent — peel it to find the MLrel. *)
+      let callee_expr =
+        let rel_idx = match f with
+          | MLrel i | MLmagic (MLrel i) -> Some i
+          | _ -> None
+        in
+        match rel_idx with
+        | Some i ->
+          let callee_is_any =
+            try
+              let ty = get_env_type i in
+              let rec is_erased_type = function
+                | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+                | Miniml.Tmeta {contents = None} -> true
+                | Miniml.Tmeta {contents = Some t} -> is_erased_type t
+                | _ -> false
+              in
+              is_erased_type ty
+            with _ -> false
+          in
+          if callee_is_any then
+            let arg_tys = List.init n_args (fun _ -> Tany) in
+            CPPany_cast (Tfun (arg_tys, Tany), gen_expr env f)
+          else
+            gen_expr env f
+        | None -> gen_expr env f
+      in
       (* Check whether this call returns [std::any] (erased type) but the
          enclosing function expects a concrete type, requiring an
          [std::any_cast<T>] wrapper.  See [ml_codomain_erases_to_any].
@@ -5242,7 +5542,7 @@ and eta_fun env f args =
            [std::function<std::any(std::any)>]).
          - [MLrel] higher-rank callback whose env-type has a [Tvar] codomain
            guarded by [Tdummy] (e.g. [f : forall A, A -> A]). *)
-      let result = CPPfun_call (gen_expr env f, List.rev args) in
+      let result = CPPfun_call (callee_expr, List.rev args) in
       let n = n_args in
       let erased_cod =
         match f with
@@ -6176,10 +6476,34 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
   let temps =
     match typ with
-    | Tglob (r, tys, _) -> build_template_params env tvars tys
+    | Tglob (r, tys, _) ->
+      let raw = build_template_params env tvars tys in
+      (* In match binding context, a %t0 whose type contains erased positions
+         (Tany / unnamed Tvar) would generate [const std::any& prs = scrut.fst]
+         which blocks valid concrete-type calls.  Substitute Tauto so the
+         template generates [const auto& prs = ...] and C++ deduces the type. *)
+      List.map (fun ty -> if has_tany_in_type ty then Tauto else ty) raw
     | _ -> []
   in
+  let scrut_is_magic = match t with MLmagic _ -> true | _ -> false in
   let typ = convert_ml_type_to_cpp_type env Refset'.empty tvars typ in
+  let concrete_match_type =
+    if is_erased_type typ then
+      try
+        let _, _, pat0, _ = pv.(0) in
+        let ind_ref = match pat0 with
+          | Pusual (GlobRef.ConstructRef (ip, _))
+          | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip
+          | _ -> raise Not_found
+        in
+        let ids0, _, _, _ = pv.(0) in
+        let tyargs = List.rev_map (fun (_, ty) ->
+          convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+        ) ids0 in
+        Tglob (ind_ref, tyargs, [])
+      with _ -> typ
+    else typ
+  in
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
      (%scrut.has_value()) { ... *%scrut; ... }"). Each occurrence re-prints the
      scrutinee C++ expression, so any std::move in the scrutinee would fire
@@ -6205,6 +6529,11 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     tctx.move_dead_after <- Escape.IntSet.empty;
   let t = gen_expr env t in
   tctx.move_dead_after <- saved_dead;
+  let t =
+    if scrut_is_magic && not (is_erased_type concrete_match_type) then
+      CPPany_cast (concrete_match_type, t)
+    else t
+  in
   (* When the template uses %scrut more than once and the scrutinee is a
      non-trivial expression (function call, constructor, etc.), cache it in
      a temporary to avoid double evaluation. *)
@@ -7450,7 +7779,132 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let saved_eta_keep = tctx.eta_keep_moves in
       if is_single_use_partial_app then tctx.eta_keep_moves <- true;
       let afun v = Sasgn (x_renamed, None, v) in
+      (* Thread the let-binding's type annotation as expected_ml_type_for_arg
+         so that gen_ctor_call can recover the concrete element type for
+         constructors (like nil) whose ML annotation has unresolved metas or
+         erased type args.  For example: let sk = [] : list parser_frame — the
+         let-binding knows the element type even when the nil's own annotation
+         has Tdummy Ktype. *)
+      let saved_expected_letin = tctx.expected_ml_type_for_arg in
+      (* Look ahead: if t has erased type args, look at the body b to see if the
+         bound var (MLrel 1 in b) is used as the i-th arg of a constructor call
+         with a non-erased corresponding type arg. If so, use that type instead of t.
+         This recovers the correct element type for nils bound before pair constructors:
+           let empty_stack : list(Tmeta) = [] in make_pair(fr, empty_stack)
+         where the pair type says the second arg is list(parser_frame). *)
+      let t_effective =
+        let t_has_erased = has_erased_ml_sub t in
+        if not t_has_erased then t
+        else begin
+          (* Try to infer from an MLcons that immediately follows in the body.
+             The body b may be directly an MLcons, or wrapped in one more MLletin. *)
+          let try_cons_body (b_inner : Miniml.ml_ast) db_offset =
+            (* db_offset: how many let-bindings above b_inner, so MLrel (1+db_offset) = x *)
+            let target_rel = 1 + db_offset in
+            (* Resolve t to get the underlying inductive (through metas) *)
+            let t_ind_opt = match resolve_tmeta t with
+              | Miniml.Tglob (t_ind, _, _) -> Some t_ind
+              | _ -> None
+            in
+            match b_inner with
+            | Miniml.MLcons (ctor_ty, _, ts) ->
+              let result = ref None in
+              List.iteri (fun i (ti : Miniml.ml_ast) ->
+                match ti with
+                | Miniml.MLrel r when r = target_rel ->
+                  (match resolve_tmeta ctor_ty with
+                   | Miniml.Tglob (_, ctor_tys, _) ->
+                     (match List.nth_opt ctor_tys i with
+                      | Some raw_candidate ->
+                        (match resolve_tmeta raw_candidate with
+                        | Miniml.Tglob (ind, sub_tys, _) as candidate ->
+                          (* Check that candidate's inductive matches t's inductive.
+                             When t is fully erased (Tmeta{None}), accept any concrete type. *)
+                          let matches_t = match t_ind_opt with
+                            | Some t_ind -> GlobRef.CanOrd.equal ind t_ind
+                            | None -> true
+                          in
+                          if matches_t && not (List.exists is_erased_ml_type sub_tys) then
+                            result := Some candidate
+                        | _ -> ())
+                      | _ -> ())
+                   | _ -> ())
+                | _ -> ()
+              ) ts;
+              !result
+            | _ -> None
+          in
+          (* Try to infer t from an MLapp body: find the position of target_rel
+             in the application args, look up the function's ML type, and extract
+             the type of that arg.  This handles the pattern:
+               let sk0 : Tmeta = (fr, nil) in multistep(..., sk0, ...)
+             where multistep's type tells us sk0 has type parser_frame × list(parser_frame). *)
+          let try_app_body (b_inner : Miniml.ml_ast) db_offset =
+            let target_rel = 1 + db_offset in
+            match b_inner with
+            | Miniml.MLapp (Miniml.MLglob (func_ref, _), app_args)
+            | Miniml.MLapp (Miniml.MLmagic (Miniml.MLglob (func_ref, _)), app_args) ->
+              let rec find_pos args i =
+                match args with
+                | [] -> None
+                | (Miniml.MLrel r) :: _ when r = target_rel -> Some i
+                | (Miniml.MLmagic (Miniml.MLrel r)) :: _ when r = target_rel -> Some i
+                | _ :: rest -> find_pos rest (i + 1)
+              in
+              (match find_pos app_args 0 with
+              | None -> None
+              | Some idx ->
+                (match find_type_opt func_ref with
+                | None -> None
+                | Some func_ty ->
+                  let rec nth_arg ty n =
+                    match ty with
+                    | Miniml.Tarr (Miniml.Tdummy _, cod) -> nth_arg cod n
+                    | Miniml.Tarr (dom, _) when n = 0 -> Some dom
+                    | Miniml.Tarr (_, cod) -> nth_arg cod (n - 1)
+                    | Miniml.Tmeta {contents = Some t2} -> nth_arg t2 n
+                    | _ -> None
+                  in
+                  let try_unfold_typedef resolved =
+                    match resolved with
+                    | Miniml.Tglob (GlobRef.ConstRef kn, _, _) ->
+                      (match Table.lookup_typedef_unchecked kn with
+                       | Some expanded -> expanded
+                       | None -> resolved)
+                    | _ -> resolved
+                  in
+                  (match nth_arg func_ty idx with
+                  | Some arg_ty ->
+                    let resolved = resolve_tmeta arg_ty in
+                    let resolved = try_unfold_typedef resolved in
+                    (match resolve_tmeta t, resolved with
+                    | _, Miniml.Tglob (_, r_sub, _)
+                      when not (List.exists is_erased_ml_type r_sub) ->
+                      Some resolved
+                    | _ -> None)
+                  | None -> None)))
+            | _ -> None
+          in
+          let inferred = match (b : Miniml.ml_ast) with
+            | Miniml.MLcons _ -> try_cons_body b 0
+            | Miniml.MLletin (_, _, a', _) ->
+              (* In body = MLletin(sk0, pair_expr, ...), nil is at MLrel 1 in pair_expr.
+                 db_offset=0 because pair_expr is evaluated before sk0 is bound. *)
+              (match try_cons_body a' 0 with
+               | Some _ as r -> r
+               | None -> try_cons_body b 0)
+            | Miniml.MLapp _ ->
+              (* Body is a function application — look up the function type to find
+                 the type expected for the bound variable at its argument position. *)
+              try_app_body b 0
+            | _ -> None
+          in
+          match inferred with Some ty -> ty | None -> t
+        end
+      in
+      tctx.expected_ml_type_for_arg <- Some t_effective;
       let asgn = gen_stmts env afun a in
+      tctx.expected_ml_type_for_arg <- saved_expected_letin;
       tctx.eta_keep_moves <- saved_eta_keep;
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
@@ -7518,6 +7972,15 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                   List.rev_map (fun (ty, _) -> strip_tmod ty) params
                 in
                 Tfun (param_tys, ret_ty)
+              | _, CPPlambda _ -> cpp_ty
+              | _, _ when has_tany_in_type cpp_ty ->
+                (* Type contains erased positions (Tany) but the expression is
+                   not a lambda with inferable types.  Use [auto] so the C++
+                   compiler deduces the concrete type from the RHS — e.g. for
+                   pair-projection bindings like [const auto &prs = tup.first]
+                   where the erased type would be [List<pair<String, any>>] but
+                   the actual type of [tup.first] is [List<pair<String, JV>>]. *)
+                Tauto
               | _ -> cpp_ty
             in
             (* Apply const-ref binding when safe. *)
@@ -7700,13 +8163,48 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let funs_with_params =
         List.map (fun (_, params, body) -> (params, body)) funs_compiled
       in
-      let decls, defs =
-        gen_local_fix_by_ref env renamed_ids funs_with_params
-      in
       let args = List.rev_map (gen_expr env) args in
-      decls @ defs
-      @ [k (CPPfun_call
-              (CPPvar (fst (List.nth renamed_ids x)), args))]
+      let _, fix_params, _ = List.nth funs_compiled x in
+      let n_provided = List.length args in
+      let n_fix_params = List.length fix_params in
+      if n_provided < n_fix_params then begin
+        (* Partial application: the fixpoint escapes (returned as a lambda).
+           Use Y-combinator pattern so the fixpoint body doesn't capture
+           a stack-local std::function by reference. *)
+        let decls, defs, deref_subst =
+          gen_local_fix_ycomb env renamed_ids funs_with_params
+        in
+        let remaining_params =
+          let rec drop n lst =
+            if n = 0 then lst
+            else match lst with [] -> [] | _ :: t -> drop (n - 1) t
+          in
+          drop n_provided fix_params
+        in
+        let tvars = get_current_type_vars () in
+        let pa_params =
+          List.mapi
+            (fun j (_, ml_ty) ->
+              let cpp_ty =
+                convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
+              in
+              (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
+            remaining_params
+        in
+        let pa_exprs =
+          List.map (fun (_, id_opt) -> CPPvar (Option.get id_opt)) pa_params
+        in
+        let fix_id = fst (List.nth renamed_ids x) in
+        let full_call = CPPfun_call (CPPvar fix_id, List.rev (args @ pa_exprs)) in
+        decls @ defs
+        @ deref_subst [k (CPPlambda (List.rev pa_params, None, [Sreturn (Some full_call)], true))]
+      end else begin
+        let decls, defs =
+          gen_local_fix_by_ref env renamed_ids funs_with_params
+        in
+        decls @ defs
+        @ [k (CPPfun_call (CPPvar (fst (List.nth renamed_ids x)), args))]
+      end
   | MLfix (x, ids, funs, _) ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
@@ -8000,10 +8498,22 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                 wrap_api_expr ~storage_ty ~api_ty e
               | _ -> e
             in
-            Sasgn
-              ( renamed_name,
-                Some (convert_ml_type_to_cpp_type env Refset'.empty tvars ty),
-                e ) )
+            let api_ty_for_decl =
+              convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+            in
+            (* When the field type contains erased positions (Tany / unnamed
+               Tvar), use [const auto&] so that C++ deduces the concrete type
+               from the expression rather than locking in std::any.  This is
+               important when the enclosing lambda parameter is also [const auto&]
+               (from an existential): the whole chain gets the right concrete
+               type by deduction from the call site. *)
+            let decl_ty =
+              if has_tany_in_type api_ty_for_decl then
+                Tref (Tmod (TMconst, Tauto))
+              else
+                api_ty_for_decl
+            in
+            Sasgn ( renamed_name, Some decl_ty, e ) )
           (List.combine renamed_ids_fwd ids)
       in
       push_env_types
@@ -13780,7 +14290,9 @@ let gen_ind_header_v2
                 let converted =
                   List.map
                     (fun (field_id, src_fty, dst_fty) ->
-                      gen_clone_field_expr ~src_ty:src_fty ~dst_ty:dst_fty
+                      gen_clone_field_expr
+                        ~skip:(fun g -> GlobRef.CanOrd.equal g name)
+                        ~src_ty:src_fty ~dst_ty:dst_fty
                         (CPPvar field_id))
                     field_info
                 in

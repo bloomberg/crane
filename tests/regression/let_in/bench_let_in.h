@@ -45,7 +45,7 @@ struct BenchLetIn {
     pair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
-      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
+      return pair<t_A, t_B>(Pair0(d_a0, d_a1));
     }
 
     // CREATORS
@@ -53,11 +53,11 @@ struct BenchLetIn {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Pair0(t_A(d_a0), t_B(d_a1));
     }
 
     static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
-      return pair(Pair0{std::move(a0), std::move(a1)});
+      return pair(Pair0(std::move(a0), std::move(a1)));
     }
 
     // MANIPULATORS
@@ -130,7 +130,7 @@ struct BenchLetIn {
     triple<t_A, t_B, t_C> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] = std::get<Triple0>(_sv.v());
-      return triple<t_A, t_B, t_C>(Triple0{d_a0, d_a1, d_a2});
+      return triple<t_A, t_B, t_C>(Triple0(d_a0, d_a1, d_a2));
     }
 
     // CREATORS
@@ -138,11 +138,11 @@ struct BenchLetIn {
     explicit triple(const triple<_U0, _U1, _U2> &_other) {
       const auto &[d_a0, d_a1, d_a2] =
           std::get<typename triple<_U0, _U1, _U2>::Triple0>(_other.v());
-      this->d_v_ = Triple0{t_A(d_a0), t_B(d_a1), t_C(d_a2)};
+      this->d_v_ = Triple0(t_A(d_a0), t_B(d_a1), t_C(d_a2));
     }
 
     static triple<t_A, t_B, t_C> triple0(t_A a0, t_B a1, t_C a2) {
-      return triple(Triple0{std::move(a0), std::move(a1), std::move(a2)});
+      return triple(Triple0(std::move(a0), std::move(a1), std::move(a2)));
     }
 
     // MANIPULATORS

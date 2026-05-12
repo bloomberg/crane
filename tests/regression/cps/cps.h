@@ -64,11 +64,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,19 +81,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -232,11 +232,11 @@ struct CPS {
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
           const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->d_v_ = Leaf{_alt.d_a0};
+          _dst->d_v_ = Leaf(_alt.d_a0);
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ = Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<tree>() : nullptr};
+          _dst->d_v_ = Node(_alt.d_a0 ? std::make_unique<tree>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<tree>() : nullptr);
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -250,11 +250,11 @@ struct CPS {
     }
 
     // CREATORS
-    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
+    static tree leaf(unsigned int a0) { return tree(Leaf(std::move(a0))); }
 
     static tree node(tree a0, tree a1) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)),
-                       std::make_unique<tree>(std::move(a1))});
+      return tree(Node(std::make_unique<tree>(std::move(a0)),
+                       std::make_unique<tree>(std::move(a1))));
     }
 
     // MANIPULATORS

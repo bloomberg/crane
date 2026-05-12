@@ -53,17 +53,17 @@ struct GeneratedVariantFactoryNameClash {
     token clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Variant_t>(_sv.v())) {
-        return token(Variant_t{});
+        return token(Variant_t());
       } else {
         const auto &[d_a0] = std::get<Other>(_sv.v());
-        return token(Other{d_a0});
+        return token(Other(d_a0));
       }
     }
 
     // CREATORS
-    static token Variant_t_() { return token(Variant_t{}); }
+    static token Variant_t_() { return token(Variant_t()); }
 
-    static token other(bool a0) { return token(Other{std::move(a0)}); }
+    static token other(bool a0) { return token(Other(std::move(a0))); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

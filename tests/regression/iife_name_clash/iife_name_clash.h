@@ -49,16 +49,16 @@ struct IifeNameClash {
       auto &&_sv = *(this);
       if (std::holds_alternative<Wrap>(_sv.v())) {
         const auto &[d_n] = std::get<Wrap>(_sv.v());
-        return wrapper(Wrap{d_n});
+        return wrapper(Wrap(d_n));
       } else {
-        return wrapper(Empty{});
+        return wrapper(Empty());
       }
     }
 
     // CREATORS
-    static wrapper wrap(unsigned int n) { return wrapper(Wrap{std::move(n)}); }
+    static wrapper wrap(unsigned int n) { return wrapper(Wrap(std::move(n))); }
 
-    static wrapper empty() { return wrapper(Empty{}); }
+    static wrapper empty() { return wrapper(Empty()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

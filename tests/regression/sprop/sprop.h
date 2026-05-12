@@ -22,7 +22,7 @@ struct SPropTest {
     t_A box_value;
 
     // ACCESSORS
-    Box<t_A> clone() const { return Box<t_A>{(*(this)).box_value}; }
+    Box<t_A> clone() const { return Box<t_A>((*(this)).box_value); }
   };
 
   static unsigned int guarded_pred(const unsigned int n);

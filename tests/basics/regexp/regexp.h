@@ -64,11 +64,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,19 +81,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -210,16 +210,16 @@ struct Matcher {
         const regexp *_src = _frame._src;
         regexp *_dst = _frame._dst;
         if (std::holds_alternative<Any>(_src->v())) {
-          _dst->d_v_ = Any{};
+          _dst->d_v_ = Any();
         } else if (std::holds_alternative<Char>(_src->v())) {
           const auto &_alt = std::get<Char>(_src->v());
-          _dst->d_v_ = Char{_alt.d_c};
+          _dst->d_v_ = Char(_alt.d_c);
         } else if (std::holds_alternative<Eps>(_src->v())) {
-          _dst->d_v_ = Eps{};
+          _dst->d_v_ = Eps();
         } else if (std::holds_alternative<Cat>(_src->v())) {
           const auto &_alt = std::get<Cat>(_src->v());
-          _dst->d_v_ = Cat{_alt.d_r1 ? std::make_unique<regexp>() : nullptr,
-                           _alt.d_r2 ? std::make_unique<regexp>() : nullptr};
+          _dst->d_v_ = Cat(_alt.d_r1 ? std::make_unique<regexp>() : nullptr,
+                           _alt.d_r2 ? std::make_unique<regexp>() : nullptr);
           auto &_dst_alt = std::get<Cat>(_dst->d_v_);
           if (_alt.d_r1) {
             _stack.push_back({_alt.d_r1.get(), _dst_alt.d_r1.get()});
@@ -229,8 +229,8 @@ struct Matcher {
           }
         } else if (std::holds_alternative<Alt>(_src->v())) {
           const auto &_alt = std::get<Alt>(_src->v());
-          _dst->d_v_ = Alt{_alt.d_r1 ? std::make_unique<regexp>() : nullptr,
-                           _alt.d_r2 ? std::make_unique<regexp>() : nullptr};
+          _dst->d_v_ = Alt(_alt.d_r1 ? std::make_unique<regexp>() : nullptr,
+                           _alt.d_r2 ? std::make_unique<regexp>() : nullptr);
           auto &_dst_alt = std::get<Alt>(_dst->d_v_);
           if (_alt.d_r1) {
             _stack.push_back({_alt.d_r1.get(), _dst_alt.d_r1.get()});
@@ -239,10 +239,10 @@ struct Matcher {
             _stack.push_back({_alt.d_r2.get(), _dst_alt.d_r2.get()});
           }
         } else if (std::holds_alternative<Zero>(_src->v())) {
-          _dst->d_v_ = Zero{};
+          _dst->d_v_ = Zero();
         } else {
           const auto &_alt = std::get<Star>(_src->v());
-          _dst->d_v_ = Star{_alt.d_r ? std::make_unique<regexp>() : nullptr};
+          _dst->d_v_ = Star(_alt.d_r ? std::make_unique<regexp>() : nullptr);
           auto &_dst_alt = std::get<Star>(_dst->d_v_);
           if (_alt.d_r) {
             _stack.push_back({_alt.d_r.get(), _dst_alt.d_r.get()});
@@ -253,26 +253,26 @@ struct Matcher {
     }
 
     // CREATORS
-    static regexp any() { return regexp(Any{}); }
+    static regexp any() { return regexp(Any()); }
 
-    static regexp Char_(int64_t c) { return regexp(Char{std::move(c)}); }
+    static regexp Char_(int64_t c) { return regexp(Char(std::move(c))); }
 
-    static regexp eps() { return regexp(Eps{}); }
+    static regexp eps() { return regexp(Eps()); }
 
     static regexp cat(regexp r1, regexp r2) {
-      return regexp(Cat{std::make_unique<regexp>(std::move(r1)),
-                        std::make_unique<regexp>(std::move(r2))});
+      return regexp(Cat(std::make_unique<regexp>(std::move(r1)),
+                        std::make_unique<regexp>(std::move(r2))));
     }
 
     static regexp alt(regexp r1, regexp r2) {
-      return regexp(Alt{std::make_unique<regexp>(std::move(r1)),
-                        std::make_unique<regexp>(std::move(r2))});
+      return regexp(Alt(std::make_unique<regexp>(std::move(r1)),
+                        std::make_unique<regexp>(std::move(r2))));
     }
 
-    static regexp zero() { return regexp(Zero{}); }
+    static regexp zero() { return regexp(Zero()); }
 
     static regexp star(regexp r) {
-      return regexp(Star{std::make_unique<regexp>(std::move(r))});
+      return regexp(Star(std::make_unique<regexp>(std::move(r))));
     }
 
     // MANIPULATORS

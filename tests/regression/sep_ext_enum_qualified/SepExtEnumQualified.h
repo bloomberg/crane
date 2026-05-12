@@ -20,7 +20,7 @@ concept OrderedType = requires {
 };
 
 template <OrderedType X> struct Make {
-  static bool is_lt(const typename X::t a, const typename X::t b) {
+  constexpr static bool is_lt(const typename X::t a, const typename X::t b) {
     switch (X::compare(a, b)) {
     case Datatypes::Comparison::e_LT: {
       return true;
@@ -31,7 +31,7 @@ template <OrderedType X> struct Make {
     }
   }
 
-  static bool is_eq(const typename X::t a, const typename X::t b) {
+  constexpr static bool is_eq(const typename X::t a, const typename X::t b) {
     switch (X::compare(a, b)) {
     case Datatypes::Comparison::e_EQ: {
       return true;

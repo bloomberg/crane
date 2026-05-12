@@ -91,14 +91,14 @@ struct LargeMutual {
         stmt *_dst = _frame._dst;
         if (std::holds_alternative<SAssign>(_src->v())) {
           const auto &_alt = std::get<SAssign>(_src->v());
-          _dst->d_v_ = SAssign{_alt.d_a0,
+          _dst->d_v_ = SAssign(_alt.d_a0,
                                _alt.d_a1 ? std::make_unique<LargeMutual::expr>(
                                                _alt.d_a1->clone())
-                                         : nullptr};
+                                         : nullptr);
         } else if (std::holds_alternative<SSeq>(_src->v())) {
           const auto &_alt = std::get<SSeq>(_src->v());
-          _dst->d_v_ = SSeq{_alt.d_a0 ? std::make_unique<stmt>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<stmt>() : nullptr};
+          _dst->d_v_ = SSeq(_alt.d_a0 ? std::make_unique<stmt>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<stmt>() : nullptr);
           auto &_dst_alt = std::get<SSeq>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -109,11 +109,11 @@ struct LargeMutual {
         } else if (std::holds_alternative<SIf>(_src->v())) {
           const auto &_alt = std::get<SIf>(_src->v());
           _dst->d_v_ =
-              SIf{_alt.d_a0
+              SIf(_alt.d_a0
                       ? std::make_unique<LargeMutual::bexpr>(_alt.d_a0->clone())
                       : nullptr,
                   _alt.d_a1 ? std::make_unique<stmt>() : nullptr,
-                  _alt.d_a2 ? std::make_unique<stmt>() : nullptr};
+                  _alt.d_a2 ? std::make_unique<stmt>() : nullptr);
           auto &_dst_alt = std::get<SIf>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -123,16 +123,16 @@ struct LargeMutual {
           }
         } else if (std::holds_alternative<SWhile>(_src->v())) {
           const auto &_alt = std::get<SWhile>(_src->v());
-          _dst->d_v_ = SWhile{_alt.d_a0 ? std::make_unique<LargeMutual::bexpr>(
+          _dst->d_v_ = SWhile(_alt.d_a0 ? std::make_unique<LargeMutual::bexpr>(
                                               _alt.d_a0->clone())
                                         : nullptr,
-                              _alt.d_a1 ? std::make_unique<stmt>() : nullptr};
+                              _alt.d_a1 ? std::make_unique<stmt>() : nullptr);
           auto &_dst_alt = std::get<SWhile>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
           }
         } else {
-          _dst->d_v_ = SSkip{};
+          _dst->d_v_ = SSkip();
         }
       }
       return _out;
@@ -141,26 +141,26 @@ struct LargeMutual {
     // CREATORS
     static stmt sassign(unsigned int a0, expr a1) {
       return stmt(
-          SAssign{std::move(a0), std::make_unique<expr>(std::move(a1))});
+          SAssign(std::move(a0), std::make_unique<expr>(std::move(a1))));
     }
 
     static stmt sseq(stmt a0, stmt a1) {
-      return stmt(SSeq{std::make_unique<stmt>(std::move(a0)),
-                       std::make_unique<stmt>(std::move(a1))});
+      return stmt(SSeq(std::make_unique<stmt>(std::move(a0)),
+                       std::make_unique<stmt>(std::move(a1))));
     }
 
     static stmt sif(bexpr a0, stmt a1, stmt a2) {
-      return stmt(SIf{std::make_unique<bexpr>(std::move(a0)),
+      return stmt(SIf(std::make_unique<bexpr>(std::move(a0)),
                       std::make_unique<stmt>(std::move(a1)),
-                      std::make_unique<stmt>(std::move(a2))});
+                      std::make_unique<stmt>(std::move(a2))));
     }
 
     static stmt swhile(bexpr a0, stmt a1) {
-      return stmt(SWhile{std::make_unique<bexpr>(std::move(a0)),
-                         std::make_unique<stmt>(std::move(a1))});
+      return stmt(SWhile(std::make_unique<bexpr>(std::move(a0)),
+                         std::make_unique<stmt>(std::move(a1))));
     }
 
-    static stmt sskip() { return stmt(SSkip{}); }
+    static stmt sskip() { return stmt(SSkip()); }
 
     // MANIPULATORS
     ~stmt() {
@@ -287,14 +287,14 @@ struct LargeMutual {
         expr *_dst = _frame._dst;
         if (std::holds_alternative<ENum>(_src->v())) {
           const auto &_alt = std::get<ENum>(_src->v());
-          _dst->d_v_ = ENum{_alt.d_a0};
+          _dst->d_v_ = ENum(_alt.d_a0);
         } else if (std::holds_alternative<EVar>(_src->v())) {
           const auto &_alt = std::get<EVar>(_src->v());
-          _dst->d_v_ = EVar{_alt.d_a0};
+          _dst->d_v_ = EVar(_alt.d_a0);
         } else if (std::holds_alternative<EAdd>(_src->v())) {
           const auto &_alt = std::get<EAdd>(_src->v());
-          _dst->d_v_ = EAdd{_alt.d_a0 ? std::make_unique<expr>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<expr>() : nullptr};
+          _dst->d_v_ = EAdd(_alt.d_a0 ? std::make_unique<expr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<expr>() : nullptr);
           auto &_dst_alt = std::get<EAdd>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -304,8 +304,8 @@ struct LargeMutual {
           }
         } else if (std::holds_alternative<EMul>(_src->v())) {
           const auto &_alt = std::get<EMul>(_src->v());
-          _dst->d_v_ = EMul{_alt.d_a0 ? std::make_unique<expr>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<expr>() : nullptr};
+          _dst->d_v_ = EMul(_alt.d_a0 ? std::make_unique<expr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<expr>() : nullptr);
           auto &_dst_alt = std::get<EMul>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -315,11 +315,11 @@ struct LargeMutual {
           }
         } else {
           const auto &_alt = std::get<ECond>(_src->v());
-          _dst->d_v_ = ECond{_alt.d_a0 ? std::make_unique<LargeMutual::bexpr>(
+          _dst->d_v_ = ECond(_alt.d_a0 ? std::make_unique<LargeMutual::bexpr>(
                                              _alt.d_a0->clone())
                                        : nullptr,
                              _alt.d_a1 ? std::make_unique<expr>() : nullptr,
-                             _alt.d_a2 ? std::make_unique<expr>() : nullptr};
+                             _alt.d_a2 ? std::make_unique<expr>() : nullptr);
           auto &_dst_alt = std::get<ECond>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -333,24 +333,24 @@ struct LargeMutual {
     }
 
     // CREATORS
-    static expr ENum_(unsigned int a0) { return expr(ENum{std::move(a0)}); }
+    static expr ENum_(unsigned int a0) { return expr(ENum(std::move(a0))); }
 
-    static expr evar(unsigned int a0) { return expr(EVar{std::move(a0)}); }
+    static expr evar(unsigned int a0) { return expr(EVar(std::move(a0))); }
 
     static expr eadd(expr a0, expr a1) {
-      return expr(EAdd{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return expr(EAdd(std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))));
     }
 
     static expr emul(expr a0, expr a1) {
-      return expr(EMul{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return expr(EMul(std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))));
     }
 
     static expr econd(bexpr a0, expr a1, expr a2) {
-      return expr(ECond{std::make_unique<bexpr>(std::move(a0)),
+      return expr(ECond(std::make_unique<bexpr>(std::move(a0)),
                         std::make_unique<expr>(std::move(a1)),
-                        std::make_unique<expr>(std::move(a2))});
+                        std::make_unique<expr>(std::move(a2))));
     }
 
     // MANIPULATORS
@@ -488,31 +488,31 @@ struct LargeMutual {
         const bexpr *_src = _frame._src;
         bexpr *_dst = _frame._dst;
         if (std::holds_alternative<BTrue>(_src->v())) {
-          _dst->d_v_ = BTrue{};
+          _dst->d_v_ = BTrue();
         } else if (std::holds_alternative<BFalse>(_src->v())) {
-          _dst->d_v_ = BFalse{};
+          _dst->d_v_ = BFalse();
         } else if (std::holds_alternative<BEq>(_src->v())) {
           const auto &_alt = std::get<BEq>(_src->v());
           _dst->d_v_ =
-              BEq{_alt.d_a0
+              BEq(_alt.d_a0
                       ? std::make_unique<LargeMutual::expr>(_alt.d_a0->clone())
                       : nullptr,
                   _alt.d_a1
                       ? std::make_unique<LargeMutual::expr>(_alt.d_a1->clone())
-                      : nullptr};
+                      : nullptr);
         } else if (std::holds_alternative<BLt>(_src->v())) {
           const auto &_alt = std::get<BLt>(_src->v());
           _dst->d_v_ =
-              BLt{_alt.d_a0
+              BLt(_alt.d_a0
                       ? std::make_unique<LargeMutual::expr>(_alt.d_a0->clone())
                       : nullptr,
                   _alt.d_a1
                       ? std::make_unique<LargeMutual::expr>(_alt.d_a1->clone())
-                      : nullptr};
+                      : nullptr);
         } else if (std::holds_alternative<BAnd>(_src->v())) {
           const auto &_alt = std::get<BAnd>(_src->v());
-          _dst->d_v_ = BAnd{_alt.d_a0 ? std::make_unique<bexpr>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<bexpr>() : nullptr};
+          _dst->d_v_ = BAnd(_alt.d_a0 ? std::make_unique<bexpr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<bexpr>() : nullptr);
           auto &_dst_alt = std::get<BAnd>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -522,8 +522,8 @@ struct LargeMutual {
           }
         } else if (std::holds_alternative<BOr>(_src->v())) {
           const auto &_alt = std::get<BOr>(_src->v());
-          _dst->d_v_ = BOr{_alt.d_a0 ? std::make_unique<bexpr>() : nullptr,
-                           _alt.d_a1 ? std::make_unique<bexpr>() : nullptr};
+          _dst->d_v_ = BOr(_alt.d_a0 ? std::make_unique<bexpr>() : nullptr,
+                           _alt.d_a1 ? std::make_unique<bexpr>() : nullptr);
           auto &_dst_alt = std::get<BOr>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -533,7 +533,7 @@ struct LargeMutual {
           }
         } else {
           const auto &_alt = std::get<BNot>(_src->v());
-          _dst->d_v_ = BNot{_alt.d_a0 ? std::make_unique<bexpr>() : nullptr};
+          _dst->d_v_ = BNot(_alt.d_a0 ? std::make_unique<bexpr>() : nullptr);
           auto &_dst_alt = std::get<BNot>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -544,32 +544,32 @@ struct LargeMutual {
     }
 
     // CREATORS
-    static bexpr btrue() { return bexpr(BTrue{}); }
+    static bexpr btrue() { return bexpr(BTrue()); }
 
-    static bexpr bfalse() { return bexpr(BFalse{}); }
+    static bexpr bfalse() { return bexpr(BFalse()); }
 
     static bexpr beq(expr a0, expr a1) {
-      return bexpr(BEq{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return bexpr(BEq(std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))));
     }
 
     static bexpr blt(expr a0, expr a1) {
-      return bexpr(BLt{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return bexpr(BLt(std::make_unique<expr>(std::move(a0)),
+                       std::make_unique<expr>(std::move(a1))));
     }
 
     static bexpr band(bexpr a0, bexpr a1) {
-      return bexpr(BAnd{std::make_unique<bexpr>(std::move(a0)),
-                        std::make_unique<bexpr>(std::move(a1))});
+      return bexpr(BAnd(std::make_unique<bexpr>(std::move(a0)),
+                        std::make_unique<bexpr>(std::move(a1))));
     }
 
     static bexpr bor(bexpr a0, bexpr a1) {
-      return bexpr(BOr{std::make_unique<bexpr>(std::move(a0)),
-                       std::make_unique<bexpr>(std::move(a1))});
+      return bexpr(BOr(std::make_unique<bexpr>(std::move(a0)),
+                       std::make_unique<bexpr>(std::move(a1))));
     }
 
     static bexpr bnot(bexpr a0) {
-      return bexpr(BNot{std::make_unique<bexpr>(std::move(a0))});
+      return bexpr(BNot(std::make_unique<bexpr>(std::move(a0))));
     }
 
     // MANIPULATORS

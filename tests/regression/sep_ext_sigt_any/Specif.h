@@ -46,7 +46,7 @@ public:
   SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
+    return SigT<t_A, t_P>(ExistT(d_x, d_a1));
   }
 
   // CREATORS
@@ -54,11 +54,11 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT(t_A(d_x), t_P(d_a1));
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
-    return SigT(ExistT{std::move(x), std::move(a1)});
+    return SigT(ExistT(std::move(x), std::move(a1)));
   }
 
   // MANIPULATORS

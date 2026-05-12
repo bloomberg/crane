@@ -73,11 +73,11 @@ struct AccumClosureEscape {
         const mylist<t_A> *_src = _frame._src;
         mylist<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->d_v_ = Mynil();
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
+          _dst->d_v_ = Mycons(
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr);
           auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -90,22 +90,20 @@ struct AccumClosureEscape {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil{};
+        this->d_v_ = Mynil();
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons{
-            t_A(d_a0),
-            d_a1 ? std::make_unique<AccumClosureEscape::mylist<t_A>>(*d_a1)
-                 : nullptr};
+        this->d_v_ = Mycons(
+            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr);
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<t_A> mynil() { return mylist(Mynil()); }
 
     static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
+          Mycons(std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -231,12 +229,12 @@ struct AccumClosureEscape {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<TLeaf>(_src->v())) {
-          _dst->d_v_ = TLeaf{};
+          _dst->d_v_ = TLeaf();
         } else {
           const auto &_alt = std::get<TNode>(_src->v());
           _dst->d_v_ =
-              TNode{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                    _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+              TNode(_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                    _alt.d_a2 ? std::make_unique<tree>() : nullptr);
           auto &_dst_alt = std::get<TNode>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -250,11 +248,11 @@ struct AccumClosureEscape {
     }
 
     // CREATORS
-    static tree tleaf() { return tree(TLeaf{}); }
+    static tree tleaf() { return tree(TLeaf()); }
 
     static tree tnode(tree a0, unsigned int a1, tree a2) {
-      return tree(TNode{std::make_unique<tree>(std::move(a0)), std::move(a1),
-                        std::make_unique<tree>(std::move(a2))});
+      return tree(TNode(std::make_unique<tree>(std::move(a0)), std::move(a1),
+                        std::make_unique<tree>(std::move(a2))));
     }
 
     // MANIPULATORS

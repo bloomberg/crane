@@ -17,6 +17,6 @@ SrcUsesPairValue::execute_src(const SrcUsesPairValue::state &s,
                               const unsigned int r) {
   unsigned int pair_val = get_reg_pair(s, r);
   unsigned int hi = (16u ? pair_val / 16u : 0);
-  return state{s.regs, hi, (4u ? hi / 4u : 0), (4u ? hi % 4u : hi),
-               (16u ? pair_val % 16u : pair_val)};
+  return state(s.regs, hi, (4u ? hi / 4u : 0), (4u ? hi % 4u : hi),
+               (16u ? pair_val % 16u : pair_val));
 }

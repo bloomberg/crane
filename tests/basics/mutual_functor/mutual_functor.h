@@ -69,20 +69,20 @@ template <Elem E> struct MutualTree {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return tree(Leaf{d_a0});
+        return tree(Leaf(d_a0));
       } else {
         const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-        return tree(Node{
+        return tree(Node(
             d_a0, d_a1 ? std::make_unique<MutualTree::forest>(d_a1->clone())
-                       : nullptr});
+                       : nullptr));
       }
     }
 
     // CREATORS
-    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
+    static tree leaf(unsigned int a0) { return tree(Leaf(std::move(a0))); }
 
     static tree node(unsigned int a0, forest a1) {
-      return tree(Node{std::move(a0), std::make_unique<forest>(std::move(a1))});
+      return tree(Node(std::move(a0), std::make_unique<forest>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -175,13 +175,13 @@ template <Elem E> struct MutualTree {
         const forest *_src = _frame._src;
         forest *_dst = _frame._dst;
         if (std::holds_alternative<FNil>(_src->v())) {
-          _dst->d_v_ = FNil{};
+          _dst->d_v_ = FNil();
         } else {
           const auto &_alt = std::get<FCons>(_src->v());
-          _dst->d_v_ = FCons{
+          _dst->d_v_ = FCons(
               _alt.d_a0 ? std::make_unique<MutualTree::tree>(_alt.d_a0->clone())
                         : nullptr,
-              _alt.d_a1 ? std::make_unique<forest>() : nullptr};
+              _alt.d_a1 ? std::make_unique<forest>() : nullptr);
           auto &_dst_alt = std::get<FCons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -192,11 +192,11 @@ template <Elem E> struct MutualTree {
     }
 
     // CREATORS
-    static forest fnil() { return forest(FNil{}); }
+    static forest fnil() { return forest(FNil()); }
 
     static forest fcons(tree a0, forest a1) {
-      return forest(FCons{std::make_unique<tree>(std::move(a0)),
-                          std::make_unique<forest>(std::move(a1))});
+      return forest(FCons(std::make_unique<tree>(std::move(a0)),
+                          std::make_unique<forest>(std::move(a1))));
     }
 
     // MANIPULATORS

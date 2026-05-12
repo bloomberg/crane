@@ -11,11 +11,11 @@ struct PrimProj {
     unsigned int py;
 
     // ACCESSORS
-    point clone() const { return point{(*(this)).px, (*(this)).py}; }
+    point clone() const { return point((*(this)).px, (*(this)).py); }
   };
 
   static point add_points(const point &p1, const point &p2);
-  static inline const point origin = point{0u, 0u};
+  static inline const point origin = point(0u, 0u);
   static point translate(const unsigned int dx, const unsigned int dy,
                          const point &p);
 };

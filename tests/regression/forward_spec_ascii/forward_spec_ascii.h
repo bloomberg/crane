@@ -51,17 +51,17 @@ struct ForwardSpecAscii {
       auto &&_sv = *(this);
       if (std::holds_alternative<ANode>(_sv.v())) {
         const auto &[d_a0] = std::get<ANode>(_sv.v());
-        return node(ANode{d_a0});
+        return node(ANode(d_a0));
       } else {
         const auto &[d_a0] = std::get<BNode>(_sv.v());
-        return node(BNode{d_a0});
+        return node(BNode(d_a0));
       }
     }
 
     // CREATORS
-    static node anode(unsigned int a0) { return node(ANode{std::move(a0)}); }
+    static node anode(unsigned int a0) { return node(ANode(std::move(a0))); }
 
-    static node bnode(unsigned int a0) { return node(BNode{std::move(a0)}); }
+    static node bnode(unsigned int a0) { return node(BNode(std::move(a0))); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

@@ -84,12 +84,12 @@ struct MutualRecursion {
         expr *_dst = _frame._dst;
         if (std::holds_alternative<Val>(_src->v())) {
           const auto &_alt = std::get<Val>(_src->v());
-          _dst->d_v_ = Val{_alt.d_a0};
+          _dst->d_v_ = Val(_alt.d_a0);
         } else if (std::holds_alternative<BinOp>(_src->v())) {
           const auto &_alt = std::get<BinOp>(_src->v());
           _dst->d_v_ =
-              BinOp{_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr,
-                    _alt.d_a2 ? std::make_unique<expr>() : nullptr};
+              BinOp(_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr,
+                    _alt.d_a2 ? std::make_unique<expr>() : nullptr);
           auto &_dst_alt = std::get<BinOp>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -100,7 +100,7 @@ struct MutualRecursion {
         } else {
           const auto &_alt = std::get<UnOp>(_src->v());
           _dst->d_v_ =
-              UnOp{_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr};
+              UnOp(_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr);
           auto &_dst_alt = std::get<UnOp>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -111,15 +111,15 @@ struct MutualRecursion {
     }
 
     // CREATORS
-    static expr val(unsigned int a0) { return expr(Val{std::move(a0)}); }
+    static expr val(unsigned int a0) { return expr(Val(std::move(a0))); }
 
     static expr binop(unsigned int a0, expr a1, expr a2) {
-      return expr(BinOp{std::move(a0), std::make_unique<expr>(std::move(a1)),
-                        std::make_unique<expr>(std::move(a2))});
+      return expr(BinOp(std::move(a0), std::make_unique<expr>(std::move(a1)),
+                        std::make_unique<expr>(std::move(a2))));
     }
 
     static expr unop(unsigned int a0, expr a1) {
-      return expr(UnOp{std::move(a0), std::make_unique<expr>(std::move(a1))});
+      return expr(UnOp(std::move(a0), std::make_unique<expr>(std::move(a1))));
     }
 
     // MANIPULATORS

@@ -5,7 +5,7 @@ void ITreeReified::run_tree(std::shared_ptr<ITree<void>>) { return; }
 
 /// Sequence two reified itrees.
 void ITreeReified::sequence_trees(const std::shared_ptr<ITree<void>> &t1,
-                                  std::shared_ptr<ITree<void>> t2) {
+                                  const std::shared_ptr<ITree<void>> &t2) {
   {
     itree_bind(t1, [=]() mutable { return t2; });
     return;

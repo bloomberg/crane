@@ -16,18 +16,18 @@ struct ConstrainedPoly {
 
     // ACCESSORS
     UPair<t_A, t_B> clone() const {
-      return UPair<t_A, t_B>{(*(this)).ufst, (*(this)).usnd};
+      return UPair<t_A, t_B>((*(this)).ufst, (*(this)).usnd);
     }
   };
 
   template <typename T1, typename T2>
   static UPair<T2, T1> swap(const UPair<T1, T2> &p) {
-    return UPair<T2, T1>{p.usnd, p.ufst};
+    return UPair<T2, T1>(p.usnd, p.ufst);
   }
 
   template <typename T1, typename T2>
   static UPair<T1, T2> wrap_pair(const T1 a, const T2 b) {
-    return UPair<T1, T2>{a, b};
+    return UPair<T1, T2>(a, b);
   }
 
   template <typename t_A> struct UOption {
@@ -72,9 +72,9 @@ struct ConstrainedPoly {
       auto &&_sv = *(this);
       if (std::holds_alternative<USome>(_sv.v())) {
         const auto &[d_a0] = std::get<USome>(_sv.v());
-        return UOption<t_A>(USome{d_a0});
+        return UOption<t_A>(USome(d_a0));
       } else {
-        return UOption<t_A>(UNone{});
+        return UOption<t_A>(UNone());
       }
     }
 
@@ -82,15 +82,15 @@ struct ConstrainedPoly {
     template <typename _U> explicit UOption(const UOption<_U> &_other) {
       if (std::holds_alternative<typename UOption<_U>::USome>(_other.v())) {
         const auto &[d_a0] = std::get<typename UOption<_U>::USome>(_other.v());
-        this->d_v_ = USome{t_A(d_a0)};
+        this->d_v_ = USome(t_A(d_a0));
       } else {
-        this->d_v_ = UNone{};
+        this->d_v_ = UNone();
       }
     }
 
-    static UOption<t_A> usome(t_A a0) { return UOption(USome{std::move(a0)}); }
+    static UOption<t_A> usome(t_A a0) { return UOption(USome(std::move(a0))); }
 
-    static UOption<t_A> unone() { return UOption(UNone{}); }
+    static UOption<t_A> unone() { return UOption(UNone()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

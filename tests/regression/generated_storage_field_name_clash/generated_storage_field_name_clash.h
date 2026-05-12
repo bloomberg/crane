@@ -53,17 +53,17 @@ struct GeneratedStorageFieldNameClash {
     d_v_ clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Empty>(_sv.v())) {
-        return d_v_(Empty{});
+        return d_v_(Empty());
       } else {
         const auto &[d_a0] = std::get<Flag>(_sv.v());
-        return d_v_(Flag{d_a0});
+        return d_v_(Flag(d_a0));
       }
     }
 
     // CREATORS
-    static d_v_ empty() { return d_v_(Empty{}); }
+    static d_v_ empty() { return d_v_(Empty()); }
 
-    static d_v_ flag(bool a0) { return d_v_(Flag{std::move(a0)}); }
+    static d_v_ flag(bool a0) { return d_v_(Flag(std::move(a0))); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v__; }

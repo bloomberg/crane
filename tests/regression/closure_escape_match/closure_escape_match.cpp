@@ -40,7 +40,7 @@ ClosureEscapeMatch::make_pair_fn_opt(
     ClosureEscapeMatch::mylist<unsigned int> d_a1_value = *(d_a1);
     return std::make_optional<
         std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>(
-        [=](const std::monostate &) mutable {
+        [=](const std::monostate) mutable {
           return std::make_pair(d_a0, length<unsigned int>(d_a1_value));
         });
   }

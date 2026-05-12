@@ -16,11 +16,13 @@ concept WS = requires {
 };
 
 template <OrderedType X, WS M> struct OrdFacts {
-  static bool key_eq(const typename M::key, const typename M::key) {
+  constexpr static bool key_eq(const typename M::key, const typename M::key) {
     return true;
   }
 
-  static bool ord_eq(const typename X::t, const typename X::t) { return true; }
+  constexpr static bool ord_eq(const typename X::t, const typename X::t) {
+    return true;
+  }
 };
 
 template <WS M> struct KeyFacts {

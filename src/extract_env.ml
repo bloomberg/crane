@@ -1381,7 +1381,7 @@ let separate_extraction ~opaque_access lr =
     | ((MPfile _dir as mp), sel) as e ->
       if has_real_decls sel then begin
         let ns =
-          let base = file_of_modfile mp in
+          let base = ns_of_modfile mp in
           if ns_collides_with_decl base sel then base ^ "_"
           else base
         in
@@ -1396,6 +1396,46 @@ let separate_extraction ~opaque_access lr =
   let saved_mpfiles = Common.mpfiles_save () in
   set_phase Pre;
   Cpp_state.set_global_method_registry (Method_registry.create struc);
+  (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
+     and calls [visit ~in_struct elem] on each structure element. *)
+  let iter_structure visit struc =
+    let rec walk_elem ~in_struct = function
+      | SEmodule m -> walk_mexpr m.ml_mod_expr
+      | se -> visit ~in_struct se
+    and walk_mexpr = function
+      | MEstruct (_, sel) ->
+        List.iter (fun (_, se) -> walk_elem ~in_struct:true se) sel
+      | MEfunctor (_, _, me) -> walk_mexpr me
+      | MEapply (me, _) -> walk_mexpr me
+      | MEident _ -> ()
+    in
+    List.iter (fun (_, sel) ->
+      List.iter (fun (_, se) -> walk_elem ~in_struct:false se) sel
+    ) struc
+  in
+  (* Pre-register enum inductives and struct-member value accessors. *)
+  iter_structure (fun ~in_struct se ->
+    match se with
+    | SEdecl (Dind (kn, ind)) ->
+      let is_mutual = Array.length ind.ind_packets > 1 in
+      Array.iteri (fun i _p ->
+        let ind_ref = GlobRef.IndRef (kn, i) in
+        if not (Table.is_custom ind_ref) && not is_mutual then
+          if Table.is_enum_inductive_packet ind i then
+            Table.add_enum_inductive ind_ref
+      ) ind.ind_packets
+    | SEdecl (Dterm (r, _, ty)) when in_struct ->
+      if (match ty with Tarr _ -> false | _ -> true) then
+        Cpp_state.register_template_static_accessor
+          (Table.modpath_of_r r) (Table.label_of_r r)
+    | SEdecl (Dfix (refs, _, tys)) when in_struct ->
+      Array.iteri (fun i r ->
+        if (match tys.(i) with Tarr _ -> false | _ -> true) then
+          Cpp_state.register_template_static_accessor
+            (Table.modpath_of_r r) (Table.label_of_r r)
+      ) refs
+    | _ -> ()
+  ) struc;
   set_phase Impl;
   Common.mpfiles_restore saved_mpfiles;
   List.iter print struc;

@@ -18,11 +18,11 @@ struct RecordFunctionFieldStdlibProbe {
     std::function<Bool0(Bool0)> run;
 
     // ACCESSORS
-    endo clone() const { return endo{(*(this)).run}; }
+    endo clone() const { return endo((*(this)).run); }
   };
 
-  static inline const endo e = endo{Datatypes::negb};
-  static inline const Bool0 sample = e.run(Bool0::e_TRUE0);
+  static inline const endo e = endo(Datatypes::negb);
+  static inline const Bool0 sample = e.run(Bool0::e_TRUE);
 };
 
 #endif // INCLUDED_RECORD_FUNCTION_FIELD_STDLIB_PROBE

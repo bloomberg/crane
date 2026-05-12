@@ -64,11 +64,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,19 +81,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -138,7 +138,7 @@ public:
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{_self});
+    _stack.emplace_back(_Enter(_self));
     /// Loopified length: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -152,8 +152,8 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Resume_Cons{});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons());
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -344,7 +344,7 @@ struct LoopifyHofs {
     List<T2> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified flat_map: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -356,8 +356,8 @@ struct LoopifyHofs {
           _result = List<T2>::nil();
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(f(d_a0)));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -387,7 +387,7 @@ struct LoopifyHofs {
     List<std::pair<T1, T2>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l1});
+    _stack.emplace_back(_Enter(&l1));
     /// Loopified all_pairs: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -411,7 +411,7 @@ struct LoopifyHofs {
           List<std::pair<T1, T2>> _result{};
           std::vector<_Frame> _stack;
           _stack.reserve(8);
-          _stack.emplace_back(_Enter{l});
+          _stack.emplace_back(_Enter(l));
           /// Loopified pair_with: _Enter -> _Resume_Cons.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
@@ -424,8 +424,8 @@ struct LoopifyHofs {
               } else {
                 auto &[d_a0, d_a1] =
                     std::get<typename List<T2>::Cons>(l.v_mut());
-                _stack.emplace_back(_Resume_Cons{std::make_pair(x, d_a0)});
-                _stack.emplace_back(_Enter{std::move(*(d_a1))});
+                _stack.emplace_back(_Resume_Cons(std::make_pair(x, d_a0)));
+                _stack.emplace_back(_Enter(std::move(*(d_a1))));
               }
             } else {
               auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -439,8 +439,8 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<T1>::Cons>(l1.v());
-          _stack.emplace_back(_Resume_Cons{pair_with(d_a00, l2)});
-          _stack.emplace_back(_Enter{d_a10.get()});
+          _stack.emplace_back(_Resume_Cons(pair_with(d_a00, l2)));
+          _stack.emplace_back(_Enter(d_a10.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -631,7 +631,7 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified foldr1: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -649,8 +649,8 @@ struct LoopifyHofs {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Resume_Cons{f, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Resume_Cons(f, d_a0));
+            _stack.emplace_back(_Enter(d_a1.get()));
           }
         }
       } else {
@@ -690,7 +690,7 @@ struct LoopifyHofs {
     List<unsigned int> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified scanr: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -703,8 +703,8 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{acc, d_a0, f});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(acc, d_a0, f));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -742,7 +742,7 @@ struct LoopifyHofs {
     List<unsigned int> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified scanr1: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -760,8 +760,8 @@ struct LoopifyHofs {
                   _sv.v())) {
             _result = List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
           } else {
-            _stack.emplace_back(_Cont_Cons{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont_Cons(d_a0, f));
+            _stack.emplace_back(_Enter(d_a1.get()));
           }
         }
       } else {
@@ -797,7 +797,7 @@ struct LoopifyHofs {
     List<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified mapcat: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -810,8 +810,8 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(f(d_a0)));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -845,7 +845,7 @@ struct LoopifyHofs {
     List<unsigned int> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified map_maybe: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -858,8 +858,8 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{d_a0, f});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0, f));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -899,7 +899,7 @@ struct LoopifyHofs {
     bool _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified bool_all: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -912,8 +912,8 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{p(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(p(d_a0)));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -989,7 +989,7 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -1007,8 +1007,8 @@ struct LoopifyHofs {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont_Cons(d_a0, f));
+            _stack.emplace_back(_Enter(d_a1.get()));
           }
         }
       } else {
@@ -1081,7 +1081,7 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified maximum_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -1099,8 +1099,8 @@ struct LoopifyHofs {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Cont_Cons{cmp, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont_Cons(cmp, d_a0));
+            _stack.emplace_back(_Enter(d_a1.get()));
           }
         }
       } else {
@@ -1142,7 +1142,7 @@ struct LoopifyHofs {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified fold_right: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -1155,8 +1155,8 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f, d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(f, d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -1189,7 +1189,7 @@ struct LoopifyHofs {
     std::pair<List<unsigned int>, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified partition: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -1203,8 +1203,8 @@ struct LoopifyHofs {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{d_a0, p});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0, p));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -1326,7 +1326,7 @@ struct LoopifyHofs {
     std::pair<List<unsigned int>, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
+    _stack.emplace_back(_Enter(&l));
     /// Loopified span_split: _Enter -> _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -1341,8 +1341,8 @@ struct LoopifyHofs {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           if (p(d_a0)) {
-            _stack.emplace_back(_Cont1{d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont1(d_a0));
+            _stack.emplace_back(_Enter(d_a1.get()));
           } else {
             _result = std::make_pair(List<unsigned int>::nil(),
                                      List<unsigned int>::cons(d_a0, *(d_a1)));
@@ -1440,7 +1440,7 @@ struct LoopifyHofs {
     std::pair<unsigned int, List<unsigned int>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l, acc});
+    _stack.emplace_back(_Enter(&l, acc));
     /// Loopified map_accum_l: _Enter -> _Cont_acc_.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -1457,8 +1457,8 @@ struct LoopifyHofs {
           auto _cs = f(acc, d_a0);
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
-          _stack.emplace_back(_Cont_acc_{y});
-          _stack.emplace_back(_Enter{d_a1.get(), acc_});
+          _stack.emplace_back(_Cont_acc_(y));
+          _stack.emplace_back(_Enter(d_a1.get(), acc_));
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));

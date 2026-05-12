@@ -17,7 +17,7 @@ unsigned int LoopifyAdvancedLists::product(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified product: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -30,8 +30,8 @@ unsigned int LoopifyAdvancedLists::product(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -217,7 +217,7 @@ List<unsigned int> LoopifyAdvancedLists::concat_lists(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&ll});
+  _stack.emplace_back(_Enter(&ll));
   /// Loopified concat_lists: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -231,8 +231,8 @@ List<unsigned int> LoopifyAdvancedLists::concat_lists(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

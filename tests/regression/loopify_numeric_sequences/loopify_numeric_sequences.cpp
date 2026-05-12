@@ -24,7 +24,7 @@ unsigned int LoopifyNumericSequences::collatz_length_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter(n, fuel));
   /// Loopified collatz_length_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -41,11 +41,11 @@ unsigned int LoopifyNumericSequences::collatz_length_fuel(
           _result = 0u;
         } else {
           if ((2u ? n % 2u : n) == 0u) {
-            _stack.emplace_back(_Resume1{1u});
-            _stack.emplace_back(_Enter{(2u ? n / 2u : 0), fuel_});
+            _stack.emplace_back(_Resume1(1u));
+            _stack.emplace_back(_Enter((2u ? n / 2u : 0), fuel_));
           } else {
-            _stack.emplace_back(_Resume2{1u});
-            _stack.emplace_back(_Enter{((3u * n) + 1u), fuel_});
+            _stack.emplace_back(_Resume2(1u));
+            _stack.emplace_back(_Enter(((3u * n) + 1u), fuel_));
           }
         }
       }
@@ -152,7 +152,7 @@ unsigned int LoopifyNumericSequences::tribonacci_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter(n, fuel));
   /// Loopified tribonacci_fuel: _Enter -> _After1 -> _After2 -> _Combine3.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -175,22 +175,22 @@ unsigned int LoopifyNumericSequences::tribonacci_fuel(
               _result = 1u;
             } else {
               _stack.emplace_back(
-                  _After1{(((n - 2u) > n ? 0 : (n - 2u))), fuel_,
-                          (((n - 1u) > n ? 0 : (n - 1u))), fuel_});
+                  _After1((((n - 2u) > n ? 0 : (n - 2u))), fuel_,
+                          (((n - 1u) > n ? 0 : (n - 1u))), fuel_));
               _stack.emplace_back(
-                  _Enter{(((n - 3u) > n ? 0 : (n - 3u))), fuel_});
+                  _Enter((((n - 3u) > n ? 0 : (n - 3u))), fuel_));
             }
           }
         }
       }
     } else if (std::holds_alternative<_After1>(_frame)) {
       auto _f = std::move(std::get<_After1>(_frame));
-      _stack.emplace_back(_After2{_result, _f._s2, _f.fuel__1});
-      _stack.emplace_back(_Enter{_f._s0, _f.fuel__0});
+      _stack.emplace_back(_After2(_result, _f._s2, _f.fuel__1));
+      _stack.emplace_back(_Enter(_f._s0, _f.fuel__0));
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine3{_f._result, _result});
-      _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
+      _stack.emplace_back(_Combine3(_f._result, _result));
+      _stack.emplace_back(_Enter(_f._s1, _f.fuel_));
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
       _result = ((_result + _f._result_1) + _f._result_0);
@@ -240,7 +240,7 @@ unsigned int LoopifyNumericSequences::staircase_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter(n, fuel));
   /// Loopified staircase_fuel: _Enter -> _After1 -> _After2 -> _Combine3.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -259,21 +259,21 @@ unsigned int LoopifyNumericSequences::staircase_fuel(
           if (n == 1u) {
             _result = 1u;
           } else {
-            _stack.emplace_back(_After1{(((n - 2u) > n ? 0 : (n - 2u))), fuel_,
+            _stack.emplace_back(_After1((((n - 2u) > n ? 0 : (n - 2u))), fuel_,
                                         (((n - 1u) > n ? 0 : (n - 1u))),
-                                        fuel_});
-            _stack.emplace_back(_Enter{(((n - 3u) > n ? 0 : (n - 3u))), fuel_});
+                                        fuel_));
+            _stack.emplace_back(_Enter((((n - 3u) > n ? 0 : (n - 3u))), fuel_));
           }
         }
       }
     } else if (std::holds_alternative<_After1>(_frame)) {
       auto _f = std::move(std::get<_After1>(_frame));
-      _stack.emplace_back(_After2{_result, _f._s2, _f.fuel__1});
-      _stack.emplace_back(_Enter{_f._s0, _f.fuel__0});
+      _stack.emplace_back(_After2(_result, _f._s2, _f.fuel__1));
+      _stack.emplace_back(_Enter(_f._s0, _f.fuel__0));
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine3{_f._result, _result});
-      _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
+      _stack.emplace_back(_Combine3(_f._result, _result));
+      _stack.emplace_back(_Enter(_f._s1, _f.fuel_));
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
       _result = ((_result + _f._result_1) + _f._result_0);
@@ -306,7 +306,7 @@ unsigned int LoopifyNumericSequences::digitsum_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter(n, fuel));
   /// Loopified digitsum_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -322,8 +322,8 @@ unsigned int LoopifyNumericSequences::digitsum_fuel(
         if (n <= 0u) {
           _result = 0u;
         } else {
-          _stack.emplace_back(_Resume1{(10u ? n % 10u : n)});
-          _stack.emplace_back(_Enter{(10u ? n / 10u : 0), fuel_});
+          _stack.emplace_back(_Resume1((10u ? n % 10u : n)));
+          _stack.emplace_back(_Enter((10u ? n / 10u : 0), fuel_));
         }
       }
     } else {
@@ -359,7 +359,7 @@ unsigned int LoopifyNumericSequences::dec_to_bin_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter(n, fuel));
   /// Loopified dec_to_bin_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -375,8 +375,8 @@ unsigned int LoopifyNumericSequences::dec_to_bin_fuel(
         if (n <= 0u) {
           _result = 0u;
         } else {
-          _stack.emplace_back(_Resume1{(2u ? n % 2u : n), 10u});
-          _stack.emplace_back(_Enter{(2u ? n / 2u : 0), fuel_});
+          _stack.emplace_back(_Resume1((2u ? n % 2u : n), 10u));
+          _stack.emplace_back(_Enter((2u ? n / 2u : 0), fuel_));
         }
       }
     } else {
@@ -445,7 +445,7 @@ unsigned int LoopifyNumericSequences::sum_divisors_aux(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{d});
+  _stack.emplace_back(_Enter(d));
   /// Loopified sum_divisors_aux: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -458,10 +458,10 @@ unsigned int LoopifyNumericSequences::sum_divisors_aux(
       } else {
         unsigned int d_ = d - 1;
         if ((d ? n % d : n) == 0u) {
-          _stack.emplace_back(_Resume1{d});
-          _stack.emplace_back(_Enter{d_});
+          _stack.emplace_back(_Resume1(d));
+          _stack.emplace_back(_Enter(d_));
         } else {
-          _stack.emplace_back(_Enter{d_});
+          _stack.emplace_back(_Enter(d_));
         }
       }
     } else {

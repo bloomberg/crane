@@ -25,7 +25,7 @@ unsigned int MemSafetyProbe27::tree_sum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&t});
+  _stack.emplace_back(_Enter(&t));
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -39,13 +39,13 @@ unsigned int MemSafetyProbe27::tree_sum(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe27::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-        _stack.emplace_back(_Enter{d_a2.get()});
+        _stack.emplace_back(_After_Node(d_a0.get(), d_a1));
+        _stack.emplace_back(_Enter(d_a2.get()));
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.d_a1});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Combine_Node(_result, _f.d_a1));
+      _stack.emplace_back(_Enter(_f.d_a0));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = ((_result + _f.d_a1) + _f._result);
@@ -79,7 +79,7 @@ unsigned int MemSafetyProbe27::tree_depth(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&t});
+  _stack.emplace_back(_Enter(&t));
   /// Loopified tree_depth: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -93,13 +93,13 @@ unsigned int MemSafetyProbe27::tree_depth(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe27::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{d_a0.get(), 1u});
-        _stack.emplace_back(_Enter{d_a2.get()});
+        _stack.emplace_back(_After_Node(d_a0.get(), 1u));
+        _stack.emplace_back(_Enter(d_a2.get()));
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f._s1});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Combine_Node(_result, _f._s1));
+      _stack.emplace_back(_Enter(_f.d_a0));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = (_f._s1 + std::max(_result, _f._result));

@@ -6,8 +6,8 @@ unsigned int LoopBodyIteration::get_reg0(const LoopBodyIteration::state &s) {
 
 LoopBodyIteration::state
 LoopBodyIteration::count_loop_body(const LoopBodyIteration::state &s) {
-  return state{update_nth<unsigned int>(
-      0u, (16u ? (get_reg0(s) + 1u) % 16u : (get_reg0(s) + 1u)), s.regs_)};
+  return state(update_nth<unsigned int>(
+      0u, (16u ? (get_reg0(s) + 1u) % 16u : (get_reg0(s) + 1u)), s.regs_));
 }
 
 LoopBodyIteration::state

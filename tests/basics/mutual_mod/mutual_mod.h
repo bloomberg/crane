@@ -67,11 +67,11 @@ struct EvenOdd {
         const even_list *_src = _frame._src;
         even_list *_dst = _frame._dst;
         if (std::holds_alternative<ENil>(_src->v())) {
-          _dst->d_v_ = ENil{};
+          _dst->d_v_ = ENil();
         } else {
           const auto &_alt = std::get<ECons>(_src->v());
-          _dst->d_v_ = ECons{_alt.d_a0, _alt.d_a1 ? std::make_unique<odd_list>()
-                                                  : nullptr};
+          _dst->d_v_ = ECons(_alt.d_a0, _alt.d_a1 ? std::make_unique<odd_list>()
+                                                  : nullptr);
           auto &_dst_alt = std::get<ECons>(_dst->d_v_);
           if (_alt.d_a1) {
             if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
@@ -92,11 +92,11 @@ struct EvenOdd {
     }
 
     // CREATORS
-    static even_list enil() { return even_list(ENil{}); }
+    static even_list enil() { return even_list(ENil()); }
 
     static even_list econs(unsigned int a0, odd_list a1) {
       return even_list(
-          ECons{std::move(a0), std::make_unique<odd_list>(std::move(a1))});
+          ECons(std::move(a0), std::make_unique<odd_list>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -172,14 +172,14 @@ struct EvenOdd {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<OCons>(_sv.v());
       return odd_list(
-          OCons{d_a0, d_a1 ? std::make_unique<EvenOdd::even_list>(d_a1->clone())
-                           : nullptr});
+          OCons(d_a0, d_a1 ? std::make_unique<EvenOdd::even_list>(d_a1->clone())
+                           : nullptr));
     }
 
     // CREATORS
     static odd_list ocons(unsigned int a0, even_list a1) {
       return odd_list(
-          OCons{std::move(a0), std::make_unique<even_list>(std::move(a1))});
+          OCons(std::move(a0), std::make_unique<even_list>(std::move(a1))));
     }
 
     // MANIPULATORS

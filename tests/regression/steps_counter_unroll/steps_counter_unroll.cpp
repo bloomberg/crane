@@ -2,7 +2,7 @@
 
 StepsCounterUnroll::state
 StepsCounterUnroll::step(const StepsCounterUnroll::state &s) {
-  return state{(4096u ? (s.pc + 1u) % 4096u : (s.pc + 1u))};
+  return state((4096u ? (s.pc + 1u) % 4096u : (s.pc + 1u)));
 }
 
 StepsCounterUnroll::state

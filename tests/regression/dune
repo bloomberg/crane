@@ -1903,7 +1903,7 @@
   (targets sep_ext_cross_module.t.exe)
   (deps SepExtCrossModule.vo sep_ext_cross_module.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_module.t.exe SepExtCrossModule.cpp Datatypes.cpp List.cpp sep_ext_cross_module.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_module.t.exe SepExtCrossModule.cpp sep_ext_cross_module.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_cross_module.t.exe)
@@ -1914,7 +1914,7 @@
   (targets sep_ext_double_typename.t.exe)
   (deps SepExtDoubleTypename.vo sep_ext_double_typename.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_double_typename.t.exe SepExtDoubleTypename.cpp Datatypes.cpp sep_ext_double_typename.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_double_typename.t.exe SepExtDoubleTypename.cpp sep_ext_double_typename.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_double_typename.t.exe)
@@ -3471,6 +3471,17 @@
   (alias runtest)
   (deps fix_partial_app.t.exe)
   (action (run ./fix_partial_app.t.exe))))
+
+(subdir fix_partial_app_escape
+ (rule
+  (targets fix_partial_app_escape.t.exe)
+  (deps FixPartialAppEscape.vo fix_partial_app_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_partial_app_escape.t.exe fix_partial_app_escape.cpp fix_partial_app_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_partial_app_escape.t.exe)
+  (action (run ./fix_partial_app_escape.t.exe))))
 
 (subdir fold_closure_accum
  (rule
@@ -5106,7 +5117,7 @@
   (targets sep_ext_enum_qualified.t.exe)
   (deps SepExtEnumQualified.vo sep_ext_enum_qualified.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_enum_qualified.t.exe SepExtEnumQualified.cpp Datatypes.cpp sep_ext_enum_qualified.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_enum_qualified.t.exe SepExtEnumQualified.cpp sep_ext_enum_qualified.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_enum_qualified.t.exe)
@@ -5183,7 +5194,7 @@
   (targets sep_ext_concept_qualified.t.exe)
   (deps SepExtConceptQualified.vo sep_ext_concept_qualified.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_qualified.t.exe SepExtConceptQualified.cpp Datatypes.cpp sep_ext_concept_qualified.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_qualified.t.exe SepExtConceptQualified.cpp sep_ext_concept_qualified.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_concept_qualified.t.exe)
@@ -5194,7 +5205,7 @@
   (targets sep_ext_template_keyword.t.exe)
   (deps SepExtTemplateKeyword.vo sep_ext_template_keyword.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_template_keyword.t.exe SepExtTemplateKeyword.cpp Datatypes.cpp sep_ext_template_keyword.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_template_keyword.t.exe SepExtTemplateKeyword.cpp sep_ext_template_keyword.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_template_keyword.t.exe)
@@ -5267,6 +5278,28 @@
   (deps sep_ext_sigt_any.t.exe)
   (action (run ./sep_ext_sigt_any.t.exe))))
 
+(subdir sep_ext_sigt_dependent
+ (rule
+  (targets sep_ext_sigt_dependent.t.exe)
+  (deps SepExtSigtDependent.vo sep_ext_sigt_dependent.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_sigt_dependent.t.exe sep_ext_sigt_dependent.cpp sep_ext_sigt_dependent.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_sigt_dependent.t.exe)
+  (action (run ./sep_ext_sigt_dependent.t.exe))))
+
+(subdir sep_ext_projection_lambda
+ (rule
+  (targets sep_ext_projection_lambda.t.exe)
+  (deps SepExtProjectionLambda.vo sep_ext_projection_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_projection_lambda.t.exe SepExtProjectionLambda.cpp sep_ext_projection_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_projection_lambda.t.exe)
+  (action (run ./sep_ext_projection_lambda.t.exe))))
+
 (subdir sep_ext_ns_alias_in_functor
  (rule
   (targets sep_ext_ns_alias_in_functor.t.exe)
@@ -5283,7 +5316,7 @@
   (targets undecl_tvar_template.t.exe)
   (deps UndeclTvarTemplate.vo undecl_tvar_template.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} undecl_tvar_template.t.exe UndeclTvarTemplate.cpp Datatypes.cpp undecl_tvar_template.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} undecl_tvar_template.t.exe UndeclTvarTemplate.cpp undecl_tvar_template.t.cpp)))
  (rule
   (alias runtest)
   (deps undecl_tvar_template.t.exe)
@@ -5305,7 +5338,7 @@
   (targets sep_ext_driver_no_include.t.exe)
   (deps SepExtDriverNoInclude.vo sep_ext_driver_no_include.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_driver_no_include.t.exe SepExtDriverNoInclude.cpp Datatypes.cpp sep_ext_driver_no_include.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_driver_no_include.t.exe SepExtDriverNoInclude.cpp sep_ext_driver_no_include.t.cpp)))
  (rule
   (alias runtest)
   (deps sep_ext_driver_no_include.t.exe)
@@ -5316,7 +5349,7 @@
   (targets pair_indexed_inductive_any_cast.t.exe)
   (deps PairIndexedInductiveAnyCast.vo pair_indexed_inductive_any_cast.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_indexed_inductive_any_cast.t.exe PairIndexedInductiveAnyCast.cpp Datatypes.cpp pair_indexed_inductive_any_cast.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_indexed_inductive_any_cast.t.exe PairIndexedInductiveAnyCast.cpp pair_indexed_inductive_any_cast.t.cpp)))
  (rule
   (alias runtest)
   (deps pair_indexed_inductive_any_cast.t.exe)

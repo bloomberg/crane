@@ -66,11 +66,11 @@ struct ClosureRecursiveBuild {
         const fn_list *_src = _frame._src;
         fn_list *_dst = _frame._dst;
         if (std::holds_alternative<FNil>(_src->v())) {
-          _dst->d_v_ = FNil{};
+          _dst->d_v_ = FNil();
         } else {
           const auto &_alt = std::get<FCons>(_src->v());
-          _dst->d_v_ = FCons{_alt.d_a0,
-                             _alt.d_a1 ? std::make_unique<fn_list>() : nullptr};
+          _dst->d_v_ = FCons(_alt.d_a0,
+                             _alt.d_a1 ? std::make_unique<fn_list>() : nullptr);
           auto &_dst_alt = std::get<FCons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,12 +81,12 @@ struct ClosureRecursiveBuild {
     }
 
     // CREATORS
-    static fn_list fnil() { return fn_list(FNil{}); }
+    static fn_list fnil() { return fn_list(FNil()); }
 
     static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
                          fn_list a1) {
       return fn_list(
-          FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
+          FCons(std::move(a0), std::make_unique<fn_list>(std::move(a1))));
     }
 
     // MANIPULATORS

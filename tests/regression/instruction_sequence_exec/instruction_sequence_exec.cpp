@@ -9,11 +9,11 @@ InstructionSequenceExec::state InstructionSequenceExec::execute(
   } else if (std::holds_alternative<
                  typename InstructionSequenceExec::instruction::INC_PC>(
                  i.v())) {
-    return state{(s.pc_ + 1), s.acc_};
+    return state((s.pc_ + 1), s.acc_);
   } else {
     const auto &[d_a0] =
         std::get<typename InstructionSequenceExec::instruction::ADD_ACC>(i.v());
-    return state{s.pc_, (s.acc_ + d_a0)};
+    return state(s.pc_, (s.acc_ + d_a0));
   }
 }
 

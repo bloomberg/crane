@@ -48,12 +48,12 @@ struct NameClashBindingReuse {
     pair_nat clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<MkPairNat>(_sv.v());
-      return pair_nat(MkPairNat{d_a0, d_a1});
+      return pair_nat(MkPairNat(d_a0, d_a1));
     }
 
     // CREATORS
     static pair_nat mkpairnat(unsigned int a0, unsigned int a1) {
-      return pair_nat(MkPairNat{std::move(a0), std::move(a1)});
+      return pair_nat(MkPairNat(std::move(a0), std::move(a1)));
     }
 
     // MANIPULATORS
@@ -159,14 +159,14 @@ struct NameClashBindingReuse {
     triple_nat clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] = std::get<MkTripleNat>(_sv.v());
-      return triple_nat(MkTripleNat{d_a0, d_a1, d_a2});
+      return triple_nat(MkTripleNat(d_a0, d_a1, d_a2));
     }
 
     // CREATORS
     static triple_nat mktriplenat(unsigned int a0, unsigned int a1,
                                   unsigned int a2) {
       return triple_nat(
-          MkTripleNat{std::move(a0), std::move(a1), std::move(a2)});
+          MkTripleNat(std::move(a0), std::move(a1), std::move(a2)));
     }
 
     // MANIPULATORS

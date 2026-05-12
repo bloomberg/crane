@@ -71,13 +71,13 @@ template <S X> struct HashTrie {
         const Trie<t_V> *_src = _frame._src;
         Trie<t_V> *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty{};
+          _dst->d_v_ = Empty();
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->d_v_ =
-              Node{_alt.d_k, _alt.d_v,
+              Node(_alt.d_k, _alt.d_v,
                    _alt.d_left ? std::make_unique<Trie<t_V>>() : nullptr,
-                   _alt.d_right ? std::make_unique<Trie<t_V>>() : nullptr};
+                   _alt.d_right ? std::make_unique<Trie<t_V>>() : nullptr);
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_left) {
             _stack.push_back({_alt.d_left.get(), _dst_alt.d_left.get()});
@@ -93,25 +93,24 @@ template <S X> struct HashTrie {
     // CREATORS
     template <typename _U> explicit Trie(const Trie<_U> &_other) {
       if (std::holds_alternative<typename Trie<_U>::Empty>(_other.v())) {
-        this->d_v_ = Empty{};
+        this->d_v_ = Empty();
       } else {
         const auto &[d_k, d_v, d_left, d_right] =
             std::get<typename Trie<_U>::Node>(_other.v());
-        this->d_v_ = Node{
-            d_k, t_V(d_v),
-            d_left ? std::make_unique<HashTrie::Trie<t_V>>(*d_left) : nullptr,
-            d_right ? std::make_unique<HashTrie::Trie<t_V>>(*d_right)
-                    : nullptr};
+        this->d_v_ =
+            Node(d_k, t_V(d_v),
+                 d_left ? std::make_unique<Trie<t_V>>(*d_left) : nullptr,
+                 d_right ? std::make_unique<Trie<t_V>>(*d_right) : nullptr);
       }
     }
 
-    static Trie<t_V> empty() { return Trie(Empty{}); }
+    static Trie<t_V> empty() { return Trie(Empty()); }
 
     static Trie<t_V> node(typename X::t k, t_V v, Trie<t_V> left,
                           Trie<t_V> right) {
-      return Trie(Node{std::move(k), std::move(v),
+      return Trie(Node(std::move(k), std::move(v),
                        std::make_unique<Trie<t_V>>(std::move(left)),
-                       std::make_unique<Trie<t_V>>(std::move(right))});
+                       std::make_unique<Trie<t_V>>(std::move(right))));
     }
 
     // MANIPULATORS

@@ -69,11 +69,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -86,19 +86,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -137,18 +137,16 @@ template <typename K, typename V> struct CHT {
   stm::TVar<List<std::pair<K, V>>> cht_fallback;
 
   stm::TVar<List<std::pair<K, V>>> bucket_of(const K k) const {
-    int64_t i =
-        ((*(this)).CHT::cht_nbuckets == 0
-             ? 0
-             : (*(this)).CHT::cht_hash(k) % (*(this)).CHT::cht_nbuckets);
-    return (*(this)).CHT::cht_buckets.at(i);
+    int64_t i = ((*(this)).cht_nbuckets == 0
+                     ? 0
+                     : (*(this)).cht_hash(k) % (*(this)).cht_nbuckets);
+    return (*(this)).cht_buckets.at(i);
   }
 
   std::optional<V> stm_get(const K k) const {
     stm::TVar<List<std::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
-    return CHT<int, int>::template assoc_lookup<K, V>((*(this)).CHT::cht_eqb, k,
-                                                      xs);
+    return CHT<int, int>::template assoc_lookup<K, V>((*(this)).cht_eqb, k, xs);
   }
 
   std::monostate stm_put(const K k, const V v) const {
@@ -156,7 +154,7 @@ template <typename K, typename V> struct CHT {
     List<std::pair<K, V>> xs = stm::readTVar(b);
     List<std::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            std::move(*(this)).CHT::cht_eqb, k, v, std::move(xs));
+            (*(this)).cht_eqb, k, v, std::move(xs));
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
@@ -165,8 +163,8 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<std::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     std::pair<std::optional<V>, List<std::pair<K, V>>> p =
-        CHT<int, int>::template assoc_remove<K, V>(
-            std::move(*(this)).CHT::cht_eqb, k, std::move(xs));
+        CHT<int, int>::template assoc_remove<K, V>((*(this)).cht_eqb, k,
+                                                   std::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
@@ -182,12 +180,12 @@ template <typename K, typename V> struct CHT {
   V stm_update(const K k, F1 &&f) const {
     stm::TVar<List<std::pair<K, V>>> b = (*(this)).bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
-    std::optional<V> ov = CHT<int, int>::template assoc_lookup<K, V>(
-        (*(this)).CHT::cht_eqb, k, xs);
+    std::optional<V> ov =
+        CHT<int, int>::template assoc_lookup<K, V>((*(this)).cht_eqb, k, xs);
     V v = f(ov);
     List<std::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            std::move(*(this)).CHT::cht_eqb, k, v, std::move(xs));
+            (*(this)).cht_eqb, k, v, std::move(xs));
     stm::writeTVar(b, xs_);
     return v;
   }
@@ -329,10 +327,10 @@ template <typename K, typename V> struct CHT {
           [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
       std::vector<stm::TVar<List<std::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>{eqb, hash, v, 1, fb};
+      return CHT<T1, T2>(eqb, hash, v, 1, fb);
     } else {
       stm::TVar<List<std::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>{eqb, hash, bs, n, b};
+      return CHT<T1, T2>(eqb, hash, bs, n, b);
     }
   }
 };

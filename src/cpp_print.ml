@@ -518,6 +518,16 @@ let print_cpp_type_var vl i =
     cleared after. *)
 let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
 
+let rec is_any_type = function
+  | Tany -> true
+  | Tmod (_, inner) -> is_any_type inner
+  | Tref inner -> is_any_type inner
+  | Tnamespace (_, inner) -> is_any_type inner
+  | Tglob (GlobRef.ConstRef c, _, _) ->
+    (try Table.find_type (GlobRef.ConstRef c) = Miniml.Tunknown
+     with Not_found -> false)
+  | _ -> false
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -663,9 +673,10 @@ let rec pp_cpp_type par vl t =
         let type_name_str = str_global Type r' in
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_cached r' then
-          (* Eponymous record: use capitalized name directly, no namespace
-             nesting. *)
-          str (Common.pp_type_name_capitalized r') ++ templates
+          let cap_name = Common.pp_type_name_capitalized r' in
+          if Common.get_force_qualified_capitalization ()
+          then str (cap_name ^ "::" ^ cap_name) ++ templates
+          else str cap_name ++ templates
         else if is_enum_cached r' then
           (* Enum types at global scope need no struct qualification. Enums
              inside structs (e.g., Comparison::cmp) need it. *)
@@ -695,39 +706,12 @@ let rec pp_cpp_type par vl t =
             then Common.capitalize_last_component type_name_str
             else type_name_str in
           if is_merged_inductive_cached r' then
-            let last = match String.rindex_opt cap ':' with
-              | Some i when i < String.length cap - 1 ->
-                String.sub cap (i + 1) (String.length cap - i - 1)
-              | _ -> cap
-            in
-            let prev_start = match String.rindex_opt cap ':' with
-              | Some i when i > 1 ->
-                (match String.rindex_from_opt cap (i - 2) ':' with
-                 | Some j -> j + 1 | None -> 0)
-              | _ -> 0
-            in
-            let parent = match String.rindex_opt cap ':' with
-              | Some i when i > 1 ->
-                String.sub cap prev_start (i - 1 - prev_start)
-              | _ -> ""
-            in
-            if String.equal parent last then
-              let prefix =
-                if prev_start > 2
-                then String.sub cap 0 (prev_start - 2) ^ "::"
-                else "" in
-              let deduped = prefix ^ last in
-              let cap_pp =
-                if args <> [] && render_ctx.rc_in_template then
-                  insert_template_keyword (str deduped) deduped
-                else str deduped in
-              typename_prefix_for deduped ++ cap_pp ++ templates
-            else
-              let cap_pp =
-                if args <> [] && render_ctx.rc_in_template then
-                  insert_template_keyword (str cap) cap
-                else str cap in
-              typename_prefix_for cap ++ cap_pp ++ templates
+            let cap = dedup_qualified_tail cap in
+            let cap_pp =
+              if args <> [] && render_ctx.rc_in_template then
+                insert_template_keyword (str cap) cap
+              else str cap in
+            typename_prefix_for cap ++ cap_pp ++ templates
           else
             let cap_pp =
               if args <> [] && render_ctx.rc_in_template then
@@ -954,6 +938,9 @@ and pp_cpp_expr env args t =
     ++ str accessor
     ++ Id.print method_name
     ++ str "(); }"
+  | CPPglob (x, [], _) when Table.is_projection x ->
+    let field_name = label_of_r x |> Names.Label.to_string in
+    str "[](const auto &_x) { return _x." ++ str field_name ++ str "; }"
   | CPPglob (x, tys, _) ->
     (* Determine the base name for a global reference *)
     let base_name =
@@ -963,37 +950,38 @@ and pp_cpp_expr env args t =
         let type_name_str = str_global Type x in
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_cached x then
-          (* Eponymous record: use capitalized name (merged into module
-             struct). *)
           str (Common.pp_type_name_capitalized x)
         else if Hashtbl.mem promoted_inductives x then
-          (* Promoted inductive: capitalize last component in separate
-             extraction mode (where the full path may be qualified). *)
           let cap =
             if Common.get_force_qualified_capitalization ()
             then Common.capitalize_last_component type_name_str
             else String.capitalize_ascii type_name_str in
-          str cap
+          str (dedup_qualified_tail cap)
         else if is_qualified_name type_name_str then
-          (* Already qualified: in separate extraction, capitalize last
-             component (e.g. "Datatypes::list" -> "Datatypes::List").
-             In monolithic mode, keep as-is. *)
           let cap =
             if Common.get_force_qualified_capitalization ()
             then Common.capitalize_last_component type_name_str
             else type_name_str in
-          str cap
+          let merged = is_merged_inductive_cached x in
+          if merged then
+            let allow_bare =
+              let ref_base = base_mp (modpath_of_r x) in
+              List.exists (ModPath.equal ref_base) (get_visible_mps ())
+            in
+            str (dedup_qualified_tail ~allow_bare cap)
+          else str cap
         else if needs_ns then
           if is_merged_inductive_cached x then
             (* Merged non-local inductive: use capitalized name directly *)
             ns_name
           else (* Unmerged non-local inductive: Wrapper::inner *)
             ns_name ++ str "::" ++ str type_name_str
+        else if Common.get_force_qualified_capitalization () then
+          str (String.capitalize_ascii type_name_str)
         else (* Local inductive: use original name directly *)
           str type_name_str
-      | GlobRef.VarRef _ ->
-        (* Local variable reference — no prefix *)
-        pp_global Term x
+      | GlobRef.VarRef v ->
+        str (Id.to_string v)
       | _ ->
       (* Check if this function is inside an eponymous template struct. If so,
          type args go on the struct name, not the function name. *)
@@ -1008,22 +996,22 @@ and pp_cpp_expr env args t =
         let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
         let ty_args = pp_list (pp_cpp_type false []) tys in
         str (String.capitalize_ascii struct_name)
-        ++ str "<"
-        ++ str placeholder_args
-        ++ str ">::template "
-        ++ str func_name
-        ++ str "<"
-        ++ ty_args
-        ++ str ">"
+          ++ str "<"
+          ++ str placeholder_args
+          ++ str ">::template "
+          ++ str func_name
+          ++ str "<"
+          ++ ty_args
+          ++ str ">"
       | Some record_ref, [] ->
         let struct_name = Common.pp_global_name Type record_ref in
         let func_name = Common.pp_global_name Term x in
         let placeholder_args = gen_placeholder_args (num_ind_params record_ref) in
         str (String.capitalize_ascii struct_name)
-        ++ str "<"
-        ++ str placeholder_args
-        ++ str ">::"
-        ++ str func_name
+          ++ str "<"
+          ++ str placeholder_args
+          ++ str ">::"
+          ++ str func_name
       | None, _ ->
         (* Normal case: function not in eponymous struct *)
         let name = str_global Term x in
@@ -1038,15 +1026,43 @@ and pp_cpp_expr env args t =
     let is_accessor =
       let x_mp = modpath_of_r x in
       let x_lbl = label_of_r x in
-      List.exists
-        (fun (reg_mp, reg_lbl) ->
-          Label.equal x_lbl reg_lbl
-          && ( ModPath.equal x_mp reg_mp
-             ||
-             match Hashtbl.find_opt functor_app_sources x_mp with
-             | Some source_mp -> ModPath.equal source_mp reg_mp
-             | None -> false ) )
-        !template_static_accessors
+      let rec resolve_mp mp =
+        match Hashtbl.find_opt functor_app_sources mp with
+        | Some source -> resolve_mp source  (* iterate to fixpoint *)
+        | None ->
+          match mp with
+          | Names.ModPath.MPdot (parent, lbl) ->
+            let resolved_parent = resolve_mp parent in
+            if ModPath.equal resolved_parent parent then mp
+            else Names.ModPath.MPdot (resolved_parent, lbl)
+          | _ -> mp
+      in
+      let resolved_x_mp = resolve_mp x_mp in
+      let found_in_list =
+        List.exists
+          (fun (reg_mp, reg_lbl) ->
+            Label.equal x_lbl reg_lbl
+            && ( ModPath.equal x_mp reg_mp
+               || ModPath.equal resolved_x_mp reg_mp ) )
+          !template_static_accessors
+      in
+      if found_in_list then true
+      else
+        (* For references through module type parameters (MPbound in the path),
+           the modpath can't be resolved to the concrete definition. Fall back to
+           label-only matching: if the label is registered as an accessor and the
+           reference goes through a functor parameter, treat it as an accessor. *)
+        let rec has_mpbound mp =
+          match mp with
+          | Names.ModPath.MPbound _ -> true
+          | Names.ModPath.MPdot (parent, _) -> has_mpbound parent
+          | _ -> false
+        in
+        let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
+          !template_static_accessors in
+        in_lbl_list
+        && (has_mpbound x_mp || has_mpbound resolved_x_mp
+            || not (ModPath.equal x_mp resolved_x_mp))
     in
     let full_name =
       match (tys, get_containing_eponymous_struct x) with
@@ -1054,12 +1070,20 @@ and pp_cpp_expr env args t =
       | _, Some _ -> base_name
       | _ ->
         let ty_args = pp_list (pp_cpp_type false []) tys in
-        (* Check if base_name contains :: (qualified name). If so, we need to
-           insert "template " before the last component. E.g., "C::empty" +
-           <unsigned int> -> "C::template empty<unsigned int>" *)
-        let base_name_str = string_of_ppcmds base_name in
-        insert_template_keyword base_name base_name_str
-        ++ str "<" ++ ty_args ++ str ">"
+        (match x with
+         | GlobRef.IndRef _ ->
+           let base_name_str = string_of_ppcmds base_name in
+           if String.contains base_name_str ':' then
+             insert_template_keyword base_name base_name_str
+             ++ str "<" ++ ty_args ++ str ">"
+           else
+             base_name ++ str "<" ++ ty_args ++ str ">"
+         | _ ->
+           (* Function template: may need "template" keyword when accessed
+              through a qualified name, e.g. "C::template empty<T>". *)
+           let base_name_str = string_of_ppcmds base_name in
+           insert_template_keyword base_name base_name_str
+           ++ str "<" ++ ty_args ++ str ">")
     in
     let full_name = if is_accessor then full_name ++ str "()" else full_name in
     apply full_name
@@ -1249,9 +1273,18 @@ and pp_cpp_expr env args t =
       | _ -> assert false
     in
     str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
+  | CPPfun_call (CPPglob (r, [], _), [arg]) when Table.is_projection r ->
+    let field_name = label_of_r r |> Names.Label.to_string in
+    pp_cpp_expr env args arg ++ str "." ++ str field_name
   | CPPfun_call (f, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
-    pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
+    let prefix = match f with
+      | CPPglob (GlobRef.IndRef _, _, _) ->
+        let name_str = string_of_ppcmds (pp_cpp_expr env args f) in
+        typename_prefix_for name_str
+      | _ -> mt ()
+    in
+    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
   | CPPconverting_ctor (ty, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) ts in
     pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")"
@@ -1394,7 +1427,9 @@ and pp_cpp_expr env args t =
         str (Common.pp_type_name_capitalized id)
       | _ -> pp_global Type id
     in
-    struct_name ++ templates ++ str "::make(" ++ es_s ++ str ")"
+    let name_str = string_of_ppcmds struct_name in
+    typename_prefix_for name_str
+    ++ struct_name ++ templates ++ str "::make(" ++ es_s ++ str ")"
   | CPPstruct (id, tys, es) ->
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
@@ -1408,7 +1443,9 @@ and pp_cpp_expr env args t =
         str (Common.pp_type_name_capitalized id)
       | _ -> pp_global Type id
     in
-    struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
+    let name_str = string_of_ppcmds struct_name in
+    typename_prefix_for name_str
+    ++ struct_name ++ templates ++ str "(" ++ es_s ++ str ")"
   | CPPstruct_id (id, tys, es) ->
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
@@ -1416,18 +1453,18 @@ and pp_cpp_expr env args t =
       | [] -> mt ()
       | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
     in
-    Id.print id ++ templates ++ str "{" ++ es_s ++ str "}"
+    Id.print id ++ templates ++ str "(" ++ es_s ++ str ")"
   | CPPget (e, id) ->
     ( match e with
     | CPPderef _ | CPPraw _ ->
       str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
     | _ -> pp_cpp_expr env args e ++ str "." ++ Id.print id )
   | CPPget' (e, id) ->
-    (* Record field access: use "." since records are value types. *)
+    let field_name = str (Common.pp_global_name Type id) in
     ( match e with
     | CPPderef _ | CPPraw _ ->
-      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ pp_global Type id
-    | _ -> pp_cpp_expr env args e ++ str "." ++ pp_global Type id )
+      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ field_name
+    | _ -> pp_cpp_expr env args e ++ str "." ++ field_name )
   | CPPstring s -> str ("\"" ^ Pstring.to_string s ^ "\"")
   | CPPparray (elems, _) ->
     str "{" ++ pp_list (pp_cpp_expr env args) (Array.to_list elems) ++ str "}"
@@ -1546,8 +1583,10 @@ and pp_cpp_expr env args t =
     ++ str "("
     ++ pp_list (pp_cpp_expr env args) call_args
     ++ str ")"
-  | CPPqualified (e, id) -> pp_cpp_expr env args e ++ str "::" ++ Id.print id
-  | CPPqualified_t (ty, id) -> pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+  | CPPqualified (e, id) ->
+    pp_cpp_expr env args e ++ str "::" ++ Id.print id
+  | CPPqualified_t (ty, id) ->
+    pp_cpp_type false [] ty ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
     require_header "concepts";
     str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
@@ -2174,6 +2213,7 @@ and expr_is_any_returning_method = function
   | CPPfun_call (CPPglob (n, _, _), _) when lookup_method_this_pos n <> None ->
     method_returns_any n
   | CPPfun_call (CPPget' (_, n), _) -> method_returns_any n
+  | CPPfun_call (CPPany_cast _, _) -> true
   | _ -> false
 
 (** Check if an expression is a variable (possibly wrapped in [CPPmove])
@@ -2417,6 +2457,12 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     pp_doc_comment_for_name (Common.pp_global_name Type id)
     ++ h (pp_cpp_type false [] ty ++ str " " ++ pp_global Type id ++ str ";")
   | Ffundef (id, ret_ty, params, body) ->
+    let saved_any_params = !current_any_typed_params in
+    current_any_typed_params :=
+      List.fold_left
+        (fun acc (id, ty) ->
+          if is_any_type ty then Id.Set.add id acc else acc)
+        Id.Set.empty params;
     let params_s =
       pp_list
         (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
@@ -2427,6 +2473,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       fun_qualifier ~can_constexpr:true ~throws:(body_is_throw body) ~no_pure:false
         ret_ty params
     in
+    current_any_typed_params := saved_any_params;
     h
       ( qualifier
       ++ pp_cpp_type false [] ret_ty
@@ -2472,7 +2519,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     current_any_typed_params :=
       List.fold_left
         (fun acc (id, ty) ->
-          match ty with Tany -> Id.Set.add id acc | _ -> acc)
+          if is_any_type ty then Id.Set.add id acc else acc)
         Id.Set.empty mf_params;
     let body_s = pp_list_stmt (pp_cpp_stmt env []) mf_body in
     let used_ids = collect_referenced_ids mf_body in
@@ -2920,14 +2967,19 @@ and pp_cpp_decl_raw env = function
           else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
+    let pp_fundef_name n =
+      match n with
+      | GlobRef.VarRef v -> str (Id.to_string v)
+      | _ -> pp_global Type n
+    in
     let base_name =
       prlist_with_sep
         (fun () -> str "::")
         (fun (n, tys) ->
           match tys with
-          | [] -> pp_global Type n
+          | [] -> pp_fundef_name n
           | _ ->
-            pp_global Type n
+            pp_fundef_name n
             ++ str "<"
             ++ pp_list (pp_cpp_type false []) tys
             ++ str ">" )
@@ -2944,7 +2996,14 @@ and pp_cpp_decl_raw env = function
         struct_name ++ str "::" ++ base_name
       | _ -> base_name
     in
+    let saved_any_params = !current_any_typed_params in
+    current_any_typed_params :=
+      List.fold_left
+        (fun acc (id, ty) ->
+          if is_any_type ty then Id.Set.add id acc else acc)
+        Id.Set.empty params;
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
+    current_any_typed_params := saved_any_params;
     let is_qualified =
       List.length ids > 1
       ||
@@ -3045,7 +3104,11 @@ and pp_cpp_decl_raw env = function
       match id with
       | GlobRef.IndRef _ when is_eponymous_record_cached id ->
         str (Common.pp_type_name_capitalized id)
+      | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives id ->
+        str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ when is_record_cached id -> pp_global Type id
+      | GlobRef.IndRef _ when Common.get_force_qualified_capitalization () ->
+        str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ -> pp_global Type id
       | _ -> pp_global Type id
     in
@@ -3127,9 +3190,12 @@ and pp_cpp_decl_raw env = function
         ++ str "\"); })()"
       | _ -> wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty []
     in
-    if render_ctx.rc_in_template then
-      (* Inside template: use Meyers singleton to avoid static init order
-         fiasco *)
+    if render_ctx.rc_in_template
+       || (render_ctx.rc_in_struct
+           && Common.get_force_qualified_capitalization ()) then
+      (* In template context or separate-extraction struct: use Meyers
+         singleton so that module-type-parameter references via L::val()
+         work for both template and non-template implementing modules. *)
       pp_meyers_singleton env id ty expr_pp
     else
       let static_kw =

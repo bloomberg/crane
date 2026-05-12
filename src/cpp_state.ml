@@ -217,7 +217,7 @@ let pp_open mp =
      && not (Hashtbl.mem valid_output_modules mp) then
     mt ()
   else
-    str ("#include \"" ^ string_of_modfile mp ^ ".h\"") ++ fnl ()
+    str ("#include \"" ^ file_of_modfile mp ^ ".h\"") ++ fnl ()
 
 (** Pretty-print a comment with OCaml-style delimiters. *)
 let pp_comment s = str "(* " ++ hov 0 s ++ str " *)"
@@ -322,6 +322,9 @@ let with_render_ctx ~(setup : unit -> unit) (f : unit -> 'a) : 'a =
     canonical names that can't be matched by GlobRef equality. *)
 let template_static_accessors : (ModPath.t * Label.t) list ref = ref []
 
+let register_template_static_accessor mp lbl =
+  template_static_accessors := (mp, lbl) :: !template_static_accessors
+
 (** Maps applied module paths to their functor source modpaths. E.g.,
     NatWrapper's modpath -> Wrapper's modpath. Populated when processing
     MEapply. *)
@@ -341,9 +344,6 @@ let eponymous_promote_ref : GlobRef.t option ref = ref None
     promoted template struct at file scope. *)
 let eponymous_deferred : Pp.t ref = ref (Pp.mt ())
 
-(** Set of promoted inductives — overrides is_merged_inductive for name
-    resolution so that promoted types use the capitalized module name. *)
-let promoted_inductives : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 4
 
 (** Whether the promoted inductive needs enable_shared_from_this. Captured
     during flat rendering in cpp_ind.ml, consumed by the MEstruct wrapper in

@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -161,19 +161,19 @@ struct WpmOps {
 
     // ACCESSORS
     state1 clone() const {
-      return state1{(*(this)).rom1.clone(), (*(this)).prom_addr1,
-                    (*(this)).prom_data1, (*(this)).prom_enable1};
+      return state1((*(this)).rom1.clone(), (*(this)).prom_addr1,
+                    (*(this)).prom_data1, (*(this)).prom_enable1);
     }
   };
 
   static state1 execute_wpm1(const state1 &s);
   static inline const state1 sample1 =
-      state1{List<unsigned int>::cons(
+      state1(List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
                           11u, List<unsigned int>::cons(
                                    12u, List<unsigned int>::cons(
                                             13u, List<unsigned int>::nil())))),
-             2u, 99u, false};
+             2u, 99u, false);
   static inline const state1 after1 = execute_wpm1(sample1);
   static inline const bool test_wpm_disabled_is_nop =
       (ListDef::template nth<unsigned int>(0u, after1.rom1, 0u) == 10u &&
@@ -190,14 +190,14 @@ struct WpmOps {
 
     // ACCESSORS
     state2 clone() const {
-      return state2{(*(this)).ram_sys2.clone(), (*(this)).rom2.clone(),
+      return state2((*(this)).ram_sys2.clone(), (*(this)).rom2.clone(),
                     (*(this)).prom_addr2, (*(this)).prom_data2,
-                    (*(this)).prom_enable2};
+                    (*(this)).prom_enable2);
     }
   };
 
   static state2 execute_wpm2(const state2 &s);
-  static inline const state2 sample2 = state2{
+  static inline const state2 sample2 = state2(
       List<unsigned int>::cons(
           5u, List<unsigned int>::cons(
                   6u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
@@ -205,7 +205,7 @@ struct WpmOps {
           10u,
           List<unsigned int>::cons(
               11u, List<unsigned int>::cons(12u, List<unsigned int>::nil()))),
-      1u, 99u, true};
+      1u, 99u, true);
   static inline const bool test_wpm_enabled_preserves_ram =
       nat_list_eqb(execute_wpm2(sample2).ram_sys2, sample2.ram_sys2);
 
@@ -218,14 +218,14 @@ struct WpmOps {
 
     // ACCESSORS
     state3 clone() const {
-      return state3{(*(this)).regs3.clone(), (*(this)).rom3.clone(),
+      return state3((*(this)).regs3.clone(), (*(this)).rom3.clone(),
                     (*(this)).prom_addr3, (*(this)).prom_data3,
-                    (*(this)).prom_enable3};
+                    (*(this)).prom_enable3);
     }
   };
 
   static state3 execute_wpm3(const state3 &s);
-  static inline const state3 sample3 = state3{
+  static inline const state3 sample3 = state3(
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
@@ -233,7 +233,7 @@ struct WpmOps {
           10u,
           List<unsigned int>::cons(
               11u, List<unsigned int>::cons(12u, List<unsigned int>::nil()))),
-      1u, 99u, true};
+      1u, 99u, true);
   static inline const bool test_wpm_enabled_preserves_regs =
       nat_list_eqb(execute_wpm3(sample3).regs3, sample3.regs3);
 
@@ -245,18 +245,18 @@ struct WpmOps {
 
     // ACCESSORS
     state4 clone() const {
-      return state4{(*(this)).rom4.clone(), (*(this)).prom_addr4,
-                    (*(this)).prom_data4, (*(this)).prom_enable4};
+      return state4((*(this)).rom4.clone(), (*(this)).prom_addr4,
+                    (*(this)).prom_data4, (*(this)).prom_enable4);
     }
   };
 
   static state4 execute_wpm4(const state4 &s);
   static inline const unsigned int test_wpm_update_gate = []() {
-    state4 s = state4{List<unsigned int>::cons(
+    state4 s = state4(List<unsigned int>::cons(
                           10u, List<unsigned int>::cons(
                                    11u, List<unsigned int>::cons(
                                             12u, List<unsigned int>::nil()))),
-                      1u, 99u, true};
+                      1u, 99u, true);
     state4 s_ = execute_wpm4(std::move(s));
     return ListDef::template nth<unsigned int>(1u, std::move(s_).rom4, 0u);
   }();
@@ -269,19 +269,19 @@ struct WpmOps {
 
     // ACCESSORS
     state5 clone() const {
-      return state5{(*(this)).rom5.clone(), (*(this)).prom_addr5,
-                    (*(this)).prom_data5, (*(this)).prom_enable5};
+      return state5((*(this)).rom5.clone(), (*(this)).prom_addr5,
+                    (*(this)).prom_data5, (*(this)).prom_enable5);
     }
   };
 
   static state5 execute_wpm5(const state5 &s);
   static inline const state5 sample5 =
-      state5{List<unsigned int>::cons(
+      state5(List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
                           11u, List<unsigned int>::cons(
                                    12u, List<unsigned int>::cons(
                                             13u, List<unsigned int>::nil())))),
-             2u, 99u, true};
+             2u, 99u, true);
   static inline const bool test_wpm_updates_rom_at_addr =
       ListDef::template nth<unsigned int>(2u, execute_wpm5(sample5).rom5, 0u) ==
       99u;
@@ -294,19 +294,19 @@ struct WpmOps {
 
     // ACCESSORS
     state6 clone() const {
-      return state6{(*(this)).rom6.clone(), (*(this)).prom_addr6,
-                    (*(this)).prom_data6, (*(this)).prom_enable6};
+      return state6((*(this)).rom6.clone(), (*(this)).prom_addr6,
+                    (*(this)).prom_data6, (*(this)).prom_enable6);
     }
   };
 
   static state6 execute_wpm6(const state6 &s);
   static inline const state6 sample6 =
-      state6{List<unsigned int>::cons(
+      state6(List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
                           11u, List<unsigned int>::cons(
                                    12u, List<unsigned int>::cons(
                                             13u, List<unsigned int>::nil())))),
-             2u, 99u, true};
+             2u, 99u, true);
   static inline const state6 after6 = execute_wpm6(sample6);
   static inline const bool test_wpm_writes_exactly_once =
       (ListDef::template nth<unsigned int>(2u, after6.rom6, 0u) == 99u &&

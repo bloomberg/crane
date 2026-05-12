@@ -65,7 +65,7 @@ unsigned int MemSafetyProbe::apply_all(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&fns});
+  _stack.emplace_back(_Enter(&fns));
   /// Loopified apply_all: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -80,8 +80,8 @@ unsigned int MemSafetyProbe::apply_all(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0(x)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons(d_a0(x)));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));

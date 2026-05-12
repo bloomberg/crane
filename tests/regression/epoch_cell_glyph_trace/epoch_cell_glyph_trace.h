@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -185,20 +185,20 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->d_v_ = XI(_alt.d_a0 ? std::make_unique<Positive>() : nullptr);
         auto &_dst_alt = std::get<XI>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->d_v_ = XO(_alt.d_a0 ? std::make_unique<Positive>() : nullptr);
         auto &_dst_alt = std::get<XO>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else {
-        _dst->d_v_ = XH{};
+        _dst->d_v_ = XH();
       }
     }
     return _out;
@@ -206,14 +206,14 @@ public:
 
   // CREATORS
   static Positive xi(Positive a0) {
-    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XI(std::make_unique<Positive>(std::move(a0))));
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XO(std::make_unique<Positive>(std::move(a0))));
   }
 
-  static Positive xh() { return Positive(XH{}); }
+  static Positive xh() { return Positive(XH()); }
 
   // MANIPULATORS
   ~Positive() {
@@ -295,22 +295,22 @@ public:
   Z clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Z0>(_sv.v())) {
-      return Z(Z0{});
+      return Z(Z0());
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{d_a0.clone()});
+      return Z(Zpos(d_a0.clone()));
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{d_a0.clone()});
+      return Z(Zneg(d_a0.clone()));
     }
   }
 
   // CREATORS
-  static Z z0() { return Z(Z0{}); }
+  static Z z0() { return Z(Z0()); }
 
-  static Z zpos(Positive a0) { return Z(Zpos{std::move(a0)}); }
+  static Z zpos(Positive a0) { return Z(Zpos(std::move(a0))); }
 
-  static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
+  static Z zneg(Positive a0) { return Z(Zneg(std::move(a0))); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -373,7 +373,7 @@ struct Q {
   Positive Qden;
 
   // ACCESSORS
-  Q clone() const { return Q{(*(this)).Qnum.clone(), (*(this)).Qden.clone()}; }
+  Q clone() const { return Q((*(this)).Qnum.clone(), (*(this)).Qden.clone()); }
 };
 
 struct QArith_base {
@@ -559,16 +559,16 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     MechanismState clone() const {
-      return MechanismState{
+      return MechanismState(
           (*(this)).crank_position.clone(), (*(this)).metonic_dial.clone(),
-          (*(this)).saros_dial.clone(),     (*(this)).callippic_dial.clone(),
+          (*(this)).saros_dial.clone(), (*(this)).callippic_dial.clone(),
           (*(this)).exeligmos_dial.clone(), (*(this)).games_dial.clone(),
-          (*(this)).zodiac_position.clone()};
+          (*(this)).zodiac_position.clone());
     }
   };
 
-  static inline const MechanismState initial_state = MechanismState{
-      Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0()};
+  static inline const MechanismState initial_state = MechanismState(
+      Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0());
   static inline const Z metonic_modulus =
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
           Positive::xo(Positive::xi(Positive::xi(Positive::xh()))))))));
@@ -663,14 +663,11 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     HistoricalEclipse clone() const {
-      return HistoricalEclipse{(*(this)).he_year.clone(),
-                               (*(this)).he_month.clone(),
-                               (*(this)).he_day.clone(),
-                               (*(this)).he_category,
-                               (*(this)).he_saros_series.clone(),
-                               (*(this)).he_saros_member.clone(),
-                               (*(this)).he_magnitude.clone(),
-                               (*(this)).he_visible_mediterranean};
+      return HistoricalEclipse(
+          (*(this)).he_year.clone(), (*(this)).he_month.clone(),
+          (*(this)).he_day.clone(), (*(this)).he_category,
+          (*(this)).he_saros_series.clone(), (*(this)).he_saros_member.clone(),
+          (*(this)).he_magnitude.clone(), (*(this)).he_visible_mediterranean);
     }
   };
   enum class DialGlyph {
@@ -733,7 +730,7 @@ struct EpochCellGlyphTraceCase {
   static bool category_matches_glyph(const EclipseCategory cat,
                                      const DialGlyph g);
   static DialGlyph glyph_at_cell(const Z &cell);
-  static inline const HistoricalEclipse eclipse_may_205_bc = HistoricalEclipse{
+  static inline const HistoricalEclipse eclipse_may_205_bc = HistoricalEclipse(
       Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
@@ -743,12 +740,12 @@ struct EpochCellGlyphTraceCase {
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
       Z::zpos(Positive::xo(Positive::xi(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(Positive::xi(Positive::xo(Positive::xi(Positive::xo(
+      Q(Z::zpos(Positive::xi(Positive::xo(Positive::xi(Positive::xo(
             Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
-      true};
-  static inline const HistoricalEclipse eclipse_nov_205_bc = HistoricalEclipse{
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))),
+      true);
+  static inline const HistoricalEclipse eclipse_nov_205_bc = HistoricalEclipse(
       Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xh())))),
@@ -759,27 +756,26 @@ struct EpochCellGlyphTraceCase {
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))),
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xi(
+      Q(Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xi(
             Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
-      true};
-  static inline const HistoricalEclipse eclipse_may_204_bc = HistoricalEclipse{
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))),
+      true);
+  static inline const HistoricalEclipse eclipse_may_204_bc = HistoricalEclipse(
       Z::zneg(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
-      Z::zpos(Positive::xh()),
-      EclipseCategory::e_EC_PARTIALSOLAR,
+      Z::zpos(Positive::xh()), EclipseCategory::e_EC_PARTIALSOLAR,
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
       Z::zpos(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(Positive::xo(Positive::xi(
+      Q(Z::zpos(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
         Positive::xo(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
-      true};
-  static inline const HistoricalEclipse eclipse_oct_204_bc = HistoricalEclipse{
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))),
+      true);
+  static inline const HistoricalEclipse eclipse_oct_204_bc = HistoricalEclipse(
       Z::zneg(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))),
@@ -790,12 +786,12 @@ struct EpochCellGlyphTraceCase {
           Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
       Z::zpos(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
-      Q{Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(
+      Q(Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
-      true};
-  static inline const HistoricalEclipse eclipse_mar_187_bc = HistoricalEclipse{
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))),
+      true);
+  static inline const HistoricalEclipse eclipse_mar_187_bc = HistoricalEclipse(
       Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xi(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xh())),
@@ -805,12 +801,12 @@ struct EpochCellGlyphTraceCase {
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
       Z::zpos(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
+      Q(Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
             Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
-      true};
-  static inline const HistoricalEclipse eclipse_jun_178_bc = HistoricalEclipse{
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))),
+      true);
+  static inline const HistoricalEclipse eclipse_jun_178_bc = HistoricalEclipse(
       Z::zneg(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))),
       Z::zpos(Positive::xo(Positive::xi(Positive::xh()))),
@@ -821,11 +817,11 @@ struct EpochCellGlyphTraceCase {
           Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+      Q(Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
             Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
-      true};
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))),
+      true);
   static inline const List<HistoricalEclipse> eclipse_database =
       List<HistoricalEclipse>::cons(
           eclipse_may_205_bc,
@@ -859,9 +855,9 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     EpochReading clone() const {
-      return EpochReading{
+      return EpochReading(
           (*(this)).reading_state.clone(), (*(this)).reading_eclipse.clone(),
-          (*(this)).reading_cell.clone(), (*(this)).reading_glyph};
+          (*(this)).reading_cell.clone(), (*(this)).reading_glyph);
     }
   };
 
@@ -879,15 +875,15 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     ValidEpoch clone() const {
-      return ValidEpoch{(*(this)).ve_year.clone(), (*(this)).ve_month.clone(),
-                        (*(this)).ve_eclipse.clone()};
+      return ValidEpoch((*(this)).ve_year.clone(), (*(this)).ve_month.clone(),
+                        (*(this)).ve_eclipse.clone());
     }
   };
 
-  static inline const ValidEpoch epoch_205_bc_valid = ValidEpoch{
+  static inline const ValidEpoch epoch_205_bc_valid = ValidEpoch(
       Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
-      Z::zpos(Positive::xi(Positive::xo(Positive::xh()))), eclipse_may_205_bc};
+      Z::zpos(Positive::xi(Positive::xo(Positive::xh()))), eclipse_may_205_bc);
   static inline const EpochReading sample_epoch_reading = build_epoch_reading(
       epoch_205_bc_valid.ve_year, epoch_205_bc_valid.ve_month,
       epoch_205_bc_valid.ve_eclipse);
@@ -914,7 +910,7 @@ struct EpochCellGlyphTraceCase {
                   Z::zpos(Positive::xo(Positive::xo(Positive::xi(
                       Positive::xi(Positive::xo(Positive::xh())))))));
   static inline const bool sample_valid_epoch_magnitude_ge_one =
-      QArith_base::Qle_bool(Q{Z::zpos(Positive::xh()), Positive::xh()},
+      QArith_base::Qle_bool(Q(Z::zpos(Positive::xh()), Positive::xh()),
                             epoch_205_bc_valid.ve_eclipse.he_magnitude);
   static inline const bool sample_step_roundtrip_saros =
       BinInt::eqb(step_reverse(step(initial_state)).saros_dial, Z::z0());

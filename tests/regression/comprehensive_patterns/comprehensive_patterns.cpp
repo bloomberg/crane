@@ -191,8 +191,8 @@ ComprehensivePatterns::rebind(ComprehensivePatterns::S s1) {
 std::pair<std::function<unsigned int(std::monostate)>,
           std::function<unsigned int(std::monostate)>>
 ComprehensivePatterns::closure_pair(ComprehensivePatterns::S s) {
-  return std::make_pair([=](const std::monostate &) mutable { return s.s_a; },
-                        [=](const std::monostate &) mutable { return s.s_b; });
+  return std::make_pair([=](const std::monostate) mutable { return s.s_a; },
+                        [=](const std::monostate) mutable { return s.s_b; });
 }
 
 Sig<ComprehensivePatterns::S>
@@ -250,7 +250,7 @@ ComprehensivePatterns::nested_call(ComprehensivePatterns::R2 r2) {
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
           unsigned int>
 ComprehensivePatterns::multi_proj_let(const unsigned int n) {
-  ComprehensivePatterns::R2 r2 = R2{R1{n}, n};
+  ComprehensivePatterns::R2 r2 = R2(R1(n), n);
   return std::make_pair(std::make_pair(r2, r2.r2_inner), r2.r2_data);
 }
 
@@ -277,7 +277,7 @@ ComprehensivePatterns::complex_nest(ComprehensivePatterns::R3 r3) {
 }
 
 ComprehensivePatterns::R2 ComprehensivePatterns::make_r2(const unsigned int n) {
-  return R2{R1{n}, n};
+  return R2(R1(n), n);
 }
 
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
@@ -385,8 +385,8 @@ ComprehensivePatterns::let_and_proj(const ComprehensivePatterns::R2 &r2) {
 
 std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R2>
 ComprehensivePatterns::multi_construct(ComprehensivePatterns::R1 r1) {
-  ComprehensivePatterns::R2 r2a = R2{r1, 0u};
-  ComprehensivePatterns::R2 r2b = R2{r1, 1u};
+  ComprehensivePatterns::R2 r2a = R2(r1, 0u);
+  ComprehensivePatterns::R2 r2b = R2(r1, 1u);
   return std::make_pair(std::move(r2a), std::move(r2b));
 }
 
@@ -448,7 +448,7 @@ unsigned int ComprehensivePatterns::option_unwrap_proj(
 
 std::pair<ComprehensivePatterns::R, unsigned int>
 ComprehensivePatterns::fun_result_and_proj(const unsigned int n) {
-  ComprehensivePatterns::R r = R{n, n};
+  ComprehensivePatterns::R r = R(n, n);
   return std::make_pair(r, r.val);
 }
 
@@ -633,7 +633,7 @@ unsigned int ComprehensivePatterns::count_down(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified count_down: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -645,8 +645,8 @@ unsigned int ComprehensivePatterns::count_down(
         _result = r.nc_a;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m{r.nc_b});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(r.nc_b));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -725,7 +725,7 @@ unsigned int ComprehensivePatterns::sum_proj(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified sum_proj: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -737,8 +737,8 @@ unsigned int ComprehensivePatterns::sum_proj(
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m{r.nc_a});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(r.nc_a));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -980,7 +980,7 @@ unsigned int ComprehensivePatterns::sum_values(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified sum_values: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -992,8 +992,8 @@ unsigned int ComprehensivePatterns::sum_values(
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m{s.stmt_value});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(s.stmt_value));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -1051,7 +1051,7 @@ unsigned int ComprehensivePatterns::sum_with_state(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified sum_with_state: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1063,8 +1063,8 @@ unsigned int ComprehensivePatterns::sum_with_state(
         _result = r.cf_val;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m{r.cf_val});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(r.cf_val));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -1115,7 +1115,7 @@ unsigned int ComprehensivePatterns::accum_with_state(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified accum_with_state: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1127,8 +1127,8 @@ unsigned int ComprehensivePatterns::accum_with_state(
         _result = s.lb_value;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m{s.lb_value});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(s.lb_value));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));

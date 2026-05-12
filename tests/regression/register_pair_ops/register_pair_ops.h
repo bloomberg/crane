@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -168,7 +168,7 @@ struct RegisterPairOps {
     List<unsigned int> regs;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).regs.clone()}; }
+    state clone() const { return state((*(this)).regs.clone()); }
   };
 
   static unsigned int get_reg(const state &s, const unsigned int r);
@@ -178,85 +178,85 @@ struct RegisterPairOps {
   static state set_reg_pair(const state &s, const unsigned int r,
                             const unsigned int v);
   static inline const unsigned int test_get_reg_pair_even_value = get_reg_pair(
-      state{List<unsigned int>::cons(
+      state(List<unsigned int>::cons(
           0u, List<unsigned int>::cons(
                   1u, List<unsigned int>::cons(
                           10u, List<unsigned int>::cons(
-                                   11u, List<unsigned int>::nil()))))},
+                                   11u, List<unsigned int>::nil()))))),
       2u);
-  static inline const state sample_from_regs = state{List<unsigned int>::cons(
+  static inline const state sample_from_regs = state(List<unsigned int>::cons(
       0u, List<unsigned int>::cons(
               0u, List<unsigned int>::cons(
                       10u,
                       List<unsigned int>::cons(
                           11u, List<unsigned int>::cons(
                                    0u, List<unsigned int>::cons(
-                                           0u, List<unsigned int>::nil()))))))};
+                                           0u, List<unsigned int>::nil())))))));
   static inline const bool test_get_reg_pair_from_regs =
       get_reg_pair(sample_from_regs, 2u) == 171u;
   static inline const bool test_get_reg_pair_odd_normalizes =
       get_reg_pair(
-          state{List<unsigned int>::cons(
+          state(List<unsigned int>::cons(
               0u, List<unsigned int>::cons(
                       1u, List<unsigned int>::cons(
                               10u, List<unsigned int>::cons(
-                                       11u, List<unsigned int>::nil()))))},
+                                       11u, List<unsigned int>::nil()))))),
           2u) ==
       get_reg_pair(
-          state{List<unsigned int>::cons(
+          state(List<unsigned int>::cons(
               0u, List<unsigned int>::cons(
                       1u, List<unsigned int>::cons(
                               10u, List<unsigned int>::cons(
-                                       11u, List<unsigned int>::nil()))))},
+                                       11u, List<unsigned int>::nil()))))),
           3u);
-  static inline const state sample_pair_high = state{List<unsigned int>::cons(
+  static inline const state sample_pair_high = state(List<unsigned int>::cons(
       2u,
       List<unsigned int>::cons(
           9u, List<unsigned int>::cons(
                   4u, List<unsigned int>::cons(
                           7u, List<unsigned int>::cons(
                                   8u, List<unsigned int>::cons(
-                                          1u, List<unsigned int>::nil()))))))};
+                                          1u, List<unsigned int>::nil())))))));
   static inline const bool test_set_reg_affects_pair_high =
       get_reg_pair(set_reg(sample_pair_high, 2u, 13u), 2u) ==
       ((13u * 16u) + get_reg(sample_pair_high, 3u));
-  static inline const state sample_pair_low = state{List<unsigned int>::cons(
+  static inline const state sample_pair_low = state(List<unsigned int>::cons(
       2u,
       List<unsigned int>::cons(
           9u, List<unsigned int>::cons(
                   4u, List<unsigned int>::cons(
                           7u, List<unsigned int>::cons(
                                   8u, List<unsigned int>::cons(
-                                          1u, List<unsigned int>::nil()))))))};
+                                          1u, List<unsigned int>::nil())))))));
   static inline const bool test_set_reg_affects_pair_low =
       get_reg_pair(set_reg(sample_pair_low, 3u, 12u), 3u) ==
       ((get_reg(sample_pair_low, 2u) * 16u) + 12u);
-  static inline const state sample_idempotent = state{List<unsigned int>::cons(
+  static inline const state sample_idempotent = state(List<unsigned int>::cons(
       0u,
       List<unsigned int>::cons(
           0u, List<unsigned int>::cons(
                   0u, List<unsigned int>::cons(
                           0u, List<unsigned int>::cons(
                                   0u, List<unsigned int>::cons(
-                                          0u, List<unsigned int>::nil()))))))};
+                                          0u, List<unsigned int>::nil())))))));
   static inline const bool test_set_reg_pair_idempotent =
       get_reg_pair(
           set_reg_pair(set_reg_pair(sample_idempotent, 2u, 34u), 2u, 171u),
           2u) == 171u;
-  static inline const state sample_preserves = state{List<unsigned int>::cons(
+  static inline const state sample_preserves = state(List<unsigned int>::cons(
       1u,
       List<unsigned int>::cons(
           2u, List<unsigned int>::cons(
                   3u, List<unsigned int>::cons(
                           4u, List<unsigned int>::cons(
                                   5u, List<unsigned int>::cons(
-                                          6u, List<unsigned int>::nil()))))))};
+                                          6u, List<unsigned int>::nil())))))));
   static inline const bool test_set_reg_pair_preserves_other_pairs =
       get_reg_pair(set_reg_pair(sample_preserves, 0u, 171u), 2u) ==
       get_reg_pair(sample_preserves, 2u);
   static unsigned int pair_base(const unsigned int r);
   static inline const state sample_register_pair =
-      state{List<unsigned int>::cons(
+      state(List<unsigned int>::cons(
           0u,
           List<unsigned int>::cons(
               0u,
@@ -264,7 +264,7 @@ struct RegisterPairOps {
                   0u, List<unsigned int>::cons(
                           0u, List<unsigned int>::cons(
                                   0u, List<unsigned int>::cons(
-                                          0u, List<unsigned int>::nil()))))))};
+                                          0u, List<unsigned int>::nil())))))));
   static inline const bool test_even_projection = pair_base(6u) == 6u;
   static inline const bool test_odd_projection = pair_base(7u) == 6u;
   static inline const bool test_set_pair_get_high =
@@ -277,7 +277,7 @@ struct RegisterPairOps {
   static inline const bool test_register_pair_architecture =
       test_regs.forallb(pair_property);
   static inline const state sample_even_rounding =
-      state{List<unsigned int>::cons(
+      state(List<unsigned int>::cons(
           0u,
           List<unsigned int>::cons(
               1u,
@@ -285,17 +285,17 @@ struct RegisterPairOps {
                   2u, List<unsigned int>::cons(
                           3u, List<unsigned int>::cons(
                                   4u, List<unsigned int>::cons(
-                                          5u, List<unsigned int>::nil()))))))};
+                                          5u, List<unsigned int>::nil())))))));
   static inline const unsigned int test_register_pair_even_rounding =
       get_reg_pair(set_reg_pair(sample_even_rounding, 3u, 45u), 3u);
-  static inline const state sample_successor = state{List<unsigned int>::cons(
+  static inline const state sample_successor = state(List<unsigned int>::cons(
       0u, List<unsigned int>::cons(
               0u, List<unsigned int>::cons(
                       10u,
                       List<unsigned int>::cons(
                           11u, List<unsigned int>::cons(
                                    0u, List<unsigned int>::cons(
-                                           0u, List<unsigned int>::nil()))))))};
+                                           0u, List<unsigned int>::nil())))))));
   static inline const bool test_even_same_as_successor =
       get_reg_pair(sample_successor, 2u) == get_reg_pair(sample_successor, 3u);
   static inline const bool test_odd_same_as_predecessor =

@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->d_v_ = Nil();
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ = Cons(_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List(Nil()); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
   }
 
   // MANIPULATORS
@@ -150,10 +150,10 @@ struct ResetState {
 
     // ACCESSORS
     state_full clone() const {
-      return state_full{(*(this)).acc,           (*(this)).regs_full.clone(),
-                        (*(this)).carry,         (*(this)).pc_full,
+      return state_full((*(this)).acc, (*(this)).regs_full.clone(),
+                        (*(this)).carry, (*(this)).pc_full,
                         (*(this)).stack.clone(), (*(this)).ram_sys.clone(),
-                        (*(this)).rom.clone()};
+                        (*(this)).rom.clone());
     }
   };
 
@@ -166,21 +166,20 @@ struct ResetState {
 
     // ACCESSORS
     state_minimal clone() const {
-      return state_minimal{(*(this)).regs_minimal.clone(),
+      return state_minimal((*(this)).regs_minimal.clone(),
                            (*(this)).carry_minimal, (*(this)).pc_minimal,
                            (*(this)).ram_sys_minimal.clone(),
-                           (*(this)).rom_minimal.clone()};
+                           (*(this)).rom_minimal.clone());
     }
   };
 
   static state_full reset_state_full(const state_full &s);
   static inline const unsigned int memory_preserve_test = []() {
-    state_full s = state_full{
+    state_full s = state_full(
         9u,
         List<unsigned int>::cons(
             1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
-        true,
-        55u,
+        true, 55u,
         List<unsigned int>::cons(
             8u, List<unsigned int>::cons(7u, List<unsigned int>::nil())),
         List<unsigned int>::cons(
@@ -188,7 +187,7 @@ struct ResetState {
             List<unsigned int>::cons(
                 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))),
         List<unsigned int>::cons(
-            10u, List<unsigned int>::cons(11u, List<unsigned int>::nil()))};
+            10u, List<unsigned int>::cons(11u, List<unsigned int>::nil())));
     state_full s_ = reset_state_full(std::move(s));
     return (
         ((s_.acc + ListDef::template nth<unsigned int>(1u, s_.ram_sys, 0u)) +
@@ -198,13 +197,13 @@ struct ResetState {
   static state_minimal reset_state_minimal(const state_minimal &s);
   static inline const unsigned int pc_clear_test =
       reset_state_minimal(
-          state_minimal{
+          state_minimal(
               List<unsigned int>::cons(
                   1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
               true, 99u,
               List<unsigned int>::cons(3u, List<unsigned int>::nil()),
               List<unsigned int>::cons(
-                  4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))})
+                  4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))))
           .pc_minimal;
   static inline const std::pair<unsigned int, unsigned int> t =
       std::make_pair(memory_preserve_test, pc_clear_test);

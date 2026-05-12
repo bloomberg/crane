@@ -10,11 +10,11 @@ struct KbpMultibitDefault {
     unsigned int acc;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).acc}; }
+    state clone() const { return state((*(this)).acc); }
   };
 
   static state execute_kbp(const state &s);
-  static inline const state sample = state{3u};
+  static inline const state sample = state(3u);
   static inline const bool t = execute_kbp(sample).acc == 15u;
 };
 

@@ -1,6 +1,6 @@
 #include "stm.h"
 
-unsigned int stmtest::stm_basic_counter(const std::monostate &) {
+unsigned int stmtest::stm_basic_counter(const std::monostate) {
   stm::TVar<unsigned int> c = stm::newTVar(0u);
   stm::writeTVar(c, 1u);
   return stm::readTVar(c);
@@ -67,7 +67,7 @@ unsigned int stmtest::io_queue_roundtrip(const unsigned int x) {
   return stm::atomically([&] { return stm_queue_roundtrip(x); });
 }
 
-unsigned int stmtest::stm_orElse_retry_example(const std::monostate &) {
+unsigned int stmtest::stm_orElse_retry_example(const std::monostate) {
   stm::TVar<List<unsigned int>> q = stm::newTVar(List<unsigned int>::nil());
   return stm::orElse<unsigned int>(stm_dequeue(q), 42u);
 }

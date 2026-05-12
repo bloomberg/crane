@@ -19,7 +19,7 @@ unsigned int LoopifyPatterns::multi_let(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified multi_let: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -33,8 +33,8 @@ unsigned int LoopifyPatterns::multi_let(
         unsigned int m = n - 1;
         unsigned int b = (m * 2u);
         unsigned int c = (b + 3u);
-        _stack.emplace_back(_Resume_m{c});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(c));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -110,7 +110,7 @@ unsigned int LoopifyPatterns::deep_nest(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified deep_nest: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -122,8 +122,8 @@ unsigned int LoopifyPatterns::deep_nest(
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m{1u, 1u, 1u});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(1u, 1u, 1u));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -163,7 +163,7 @@ bool LoopifyPatterns::bool_chain_fuel(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter(n, fuel));
   /// Loopified bool_chain_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -185,16 +185,16 @@ bool LoopifyPatterns::bool_chain_fuel(
             if (n == 1u) {
               _result = false;
             } else {
-              _stack.emplace_back(_After2{(((n - 1u) > n ? 0 : (n - 1u))), f});
-              _stack.emplace_back(_Enter{(((n - 2u) > n ? 0 : (n - 2u))), f});
+              _stack.emplace_back(_After2((((n - 1u) > n ? 0 : (n - 1u))), f));
+              _stack.emplace_back(_Enter((((n - 2u) > n ? 0 : (n - 2u))), f));
             }
           }
         }
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
-      _stack.emplace_back(_Enter{_f._s0, _f.f});
+      _stack.emplace_back(_Combine1(_result));
+      _stack.emplace_back(_Enter(_f._s0, _f.f));
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
       _result = (_result || _f._result);
@@ -232,7 +232,7 @@ bool LoopifyPatterns::chained_comp(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified chained_comp: _Enter -> _After_m -> _Combine_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -248,14 +248,14 @@ bool LoopifyPatterns::chained_comp(
           _result = true;
         } else {
           unsigned int m = n_ - 1;
-          _stack.emplace_back(_After_m{n_});
-          _stack.emplace_back(_Enter{m});
+          _stack.emplace_back(_After_m(n_));
+          _stack.emplace_back(_Enter(m));
         }
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_Combine_m{_result});
-      _stack.emplace_back(_Enter{_f.n_});
+      _stack.emplace_back(_Combine_m(_result));
+      _stack.emplace_back(_Enter(_f.n_));
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
       _result = (_result && _f._result);
@@ -283,7 +283,7 @@ LoopifyPatterns::tuple_constr(
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified tuple_constr: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -295,8 +295,8 @@ LoopifyPatterns::tuple_constr(
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Cont_m{n});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Cont_m(n));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
@@ -475,7 +475,7 @@ unsigned int LoopifyPatterns::mod_pattern(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified mod_pattern: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -491,8 +491,8 @@ unsigned int LoopifyPatterns::mod_pattern(
           _result = 1u;
         } else {
           unsigned int m = n_ - 1;
-          _stack.emplace_back(_Resume_m{n_});
-          _stack.emplace_back(_Enter{m});
+          _stack.emplace_back(_Resume_m(n_));
+          _stack.emplace_back(_Enter(m));
         }
       }
     } else {
@@ -526,7 +526,7 @@ unsigned int LoopifyPatterns::alternating_ops(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified alternating_ops: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -539,11 +539,11 @@ unsigned int LoopifyPatterns::alternating_ops(
       } else {
         unsigned int m = n - 1;
         if ((2u ? n % 2u : n) == 0u) {
-          _stack.emplace_back(_Resume1{n});
-          _stack.emplace_back(_Enter{m});
+          _stack.emplace_back(_Resume1(n));
+          _stack.emplace_back(_Enter(m));
         } else {
-          _stack.emplace_back(_Resume2{(n * 2u)});
-          _stack.emplace_back(_Enter{m});
+          _stack.emplace_back(_Resume2((n * 2u)));
+          _stack.emplace_back(_Enter(m));
         }
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
@@ -618,7 +618,7 @@ unsigned int LoopifyPatterns::nested_pattern(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified nested_pattern: _Enter -> _Resume_a.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -641,8 +641,8 @@ unsigned int LoopifyPatterns::nested_pattern(
         const unsigned int &c = d_a0.second;
         const unsigned int &a = p0.first;
         const unsigned int &b = p0.second;
-        _stack.emplace_back(_Resume_a{a, b, c});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_a(a, b, c));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_a>(_frame));
@@ -670,7 +670,7 @@ unsigned int LoopifyPatterns::let_nested(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified let_nested: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -683,8 +683,8 @@ unsigned int LoopifyPatterns::let_nested(
       } else {
         unsigned int m = n - 1;
         unsigned int a = (m + 1);
-        _stack.emplace_back(_Resume_m{a});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(a));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -710,7 +710,7 @@ unsigned int LoopifyPatterns::list_len(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified list_len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -724,8 +724,8 @@ unsigned int LoopifyPatterns::list_len(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons());
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -763,7 +763,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter(l, fuel));
   /// Loopified process_twice_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -783,8 +783,8 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
           auto &[d_a0, d_a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Cont_Cons{d_a0, f});
-          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
+          _stack.emplace_back(_Cont_Cons(d_a0, f));
+          _stack.emplace_back(_Enter(std::move(*(d_a1)), f));
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
@@ -792,8 +792,8 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
       unsigned int d_a0 = _f.d_a0;
       unsigned int f = _f.f;
       LoopifyPatterns::list<unsigned int> first = _result;
-      _stack.emplace_back(_Cont_Cons_1{d_a0});
-      _stack.emplace_back(_Enter{std::move(first), f});
+      _stack.emplace_back(_Cont_Cons_1(d_a0));
+      _stack.emplace_back(_Enter(std::move(first), f));
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       unsigned int d_a0 = _f.d_a0;
@@ -881,7 +881,7 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified quad_sum_pattern: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -922,8 +922,8 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
               _stack.emplace_back(
-                  _Resume_Cons{(d_a0 + d_a00), (d_a01 + d_a02)});
-              _stack.emplace_back(_Enter{d_a12.get()});
+                  _Resume_Cons((d_a0 + d_a00), (d_a01 + d_a02)));
+              _stack.emplace_back(_Enter(d_a12.get()));
             }
           }
         }
@@ -955,7 +955,7 @@ unsigned int LoopifyPatterns::multi_guard(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified multi_guard: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -969,8 +969,8 @@ unsigned int LoopifyPatterns::multi_guard(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -1041,7 +1041,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::double_append(
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter(l2, &l1));
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1057,8 +1057,8 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::double_append(
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 l1.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(std::move(l2), d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -1098,7 +1098,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter(l, fuel));
   /// Loopified process_twice_alt_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1118,8 +1118,8 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
           auto &[d_a0, d_a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Cont_Cons{d_a0, f});
-          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
+          _stack.emplace_back(_Cont_Cons(d_a0, f));
+          _stack.emplace_back(_Enter(std::move(*(d_a1)), f));
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
@@ -1127,8 +1127,8 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
       unsigned int d_a0 = _f.d_a0;
       unsigned int f = _f.f;
       LoopifyPatterns::list<unsigned int> once = _result;
-      _stack.emplace_back(_Cont_Cons_1{d_a0});
-      _stack.emplace_back(_Enter{std::move(once), f});
+      _stack.emplace_back(_Cont_Cons_1(d_a0));
+      _stack.emplace_back(_Enter(std::move(once), f));
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       unsigned int d_a0 = _f.d_a0;
@@ -1163,7 +1163,7 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_if_positive_else_double: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1177,8 +1177,8 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -1266,7 +1266,7 @@ unsigned int LoopifyPatterns::four_elem(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified four_elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1306,8 +1306,8 @@ unsigned int LoopifyPatterns::four_elem(
               const auto &[d_a02, d_a12] =
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(_Resume_Cons{d_a0, d_a00, d_a01, d_a02});
-              _stack.emplace_back(_Enter{d_a12.get()});
+              _stack.emplace_back(_Resume_Cons(d_a0, d_a00, d_a01, d_a02));
+              _stack.emplace_back(_Enter(d_a12.get()));
             }
           }
         }

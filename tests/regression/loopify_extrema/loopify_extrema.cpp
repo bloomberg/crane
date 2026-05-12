@@ -18,7 +18,7 @@ unsigned int LoopifyExtrema::maximum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified maximum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -35,8 +35,8 @@ unsigned int LoopifyExtrema::maximum(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {
@@ -71,7 +71,7 @@ unsigned int LoopifyExtrema::minimum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified minimum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -88,8 +88,8 @@ unsigned int LoopifyExtrema::minimum(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {
@@ -124,7 +124,7 @@ std::pair<unsigned int, unsigned int> LoopifyExtrema::minmax(
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified minmax: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -141,8 +141,8 @@ std::pair<unsigned int, unsigned int> LoopifyExtrema::minmax(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = std::make_pair(d_a0, d_a0);
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {

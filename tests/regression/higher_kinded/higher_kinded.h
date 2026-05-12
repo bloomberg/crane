@@ -74,12 +74,12 @@ struct HigherKinded {
         Tree<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
           const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->d_v_ = Leaf{_alt.d_a0};
+          _dst->d_v_ = Leaf(_alt.d_a0);
         } else {
           const auto &_alt = std::get<Branch>(_src->v());
           _dst->d_v_ =
-              Branch{_alt.d_a0 ? std::make_unique<Tree<t_A>>() : nullptr,
-                     _alt.d_a1 ? std::make_unique<Tree<t_A>>() : nullptr};
+              Branch(_alt.d_a0 ? std::make_unique<Tree<t_A>>() : nullptr,
+                     _alt.d_a1 ? std::make_unique<Tree<t_A>>() : nullptr);
           auto &_dst_alt = std::get<Branch>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -96,21 +96,21 @@ struct HigherKinded {
     template <typename _U> explicit Tree(const Tree<_U> &_other) {
       if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
         const auto &[d_a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
-        this->d_v_ = Leaf{t_A(d_a0)};
+        this->d_v_ = Leaf(t_A(d_a0));
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename Tree<_U>::Branch>(_other.v());
-        this->d_v_ = Branch{
-            d_a0 ? std::make_unique<HigherKinded::Tree<t_A>>(*d_a0) : nullptr,
-            d_a1 ? std::make_unique<HigherKinded::Tree<t_A>>(*d_a1) : nullptr};
+        this->d_v_ =
+            Branch(d_a0 ? std::make_unique<Tree<t_A>>(*d_a0) : nullptr,
+                   d_a1 ? std::make_unique<Tree<t_A>>(*d_a1) : nullptr);
       }
     }
 
-    static Tree<t_A> leaf(t_A a0) { return Tree(Leaf{std::move(a0)}); }
+    static Tree<t_A> leaf(t_A a0) { return Tree(Leaf(std::move(a0))); }
 
     static Tree<t_A> branch(Tree<t_A> a0, Tree<t_A> a1) {
-      return Tree(Branch{std::make_unique<Tree<t_A>>(std::move(a0)),
-                         std::make_unique<Tree<t_A>>(std::move(a1))});
+      return Tree(Branch(std::make_unique<Tree<t_A>>(std::move(a0)),
+                         std::make_unique<Tree<t_A>>(std::move(a1))));
     }
 
     // MANIPULATORS

@@ -103,11 +103,11 @@ struct PatternImpossible {
         nested *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
           const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->d_v_ = Leaf{_alt.d_a0};
+          _dst->d_v_ = Leaf(_alt.d_a0);
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ = Node{_alt.d_a0 ? std::make_unique<nested>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<nested>() : nullptr};
+          _dst->d_v_ = Node(_alt.d_a0 ? std::make_unique<nested>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<nested>() : nullptr);
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -121,11 +121,11 @@ struct PatternImpossible {
     }
 
     // CREATORS
-    static nested leaf(unsigned int a0) { return nested(Leaf{std::move(a0)}); }
+    static nested leaf(unsigned int a0) { return nested(Leaf(std::move(a0))); }
 
     static nested node(nested a0, nested a1) {
-      return nested(Node{std::make_unique<nested>(std::move(a0)),
-                         std::make_unique<nested>(std::move(a1))});
+      return nested(Node(std::make_unique<nested>(std::move(a0)),
+                         std::make_unique<nested>(std::move(a1))));
     }
 
     // MANIPULATORS

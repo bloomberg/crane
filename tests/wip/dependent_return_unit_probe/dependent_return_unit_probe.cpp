@@ -6,7 +6,7 @@ std::any DependentReturnUnitProbe::dep(const Bool0 b) {
     return Unit::e_TT;
   }
   case Bool0::e_FALSE0: {
-    return Bool0::e_FALSE0;
+    return Bool0::e_FALSE;
   }
   default:
     std::unreachable();

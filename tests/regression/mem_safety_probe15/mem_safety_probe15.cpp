@@ -17,7 +17,7 @@ unsigned int MemSafetyProbe15::sum_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -32,8 +32,8 @@ unsigned int MemSafetyProbe15::sum_list(
         const auto &[d_a0, d_a1] =
             std::get<typename MemSafetyProbe15::mylist<unsigned int>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -72,7 +72,7 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::flatten(
   MemSafetyProbe15::mylist<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&t});
+  _stack.emplace_back(_Enter(&t));
   /// Loopified flatten: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -86,13 +86,13 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::flatten(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe15::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-        _stack.emplace_back(_Enter{d_a2.get()});
+        _stack.emplace_back(_After_Node(d_a0.get(), d_a1));
+        _stack.emplace_back(_Enter(d_a2.get()));
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f.d_a1});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Combine_Node(std::move(_result), _f.d_a1));
+      _stack.emplace_back(_Enter(_f.d_a0));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result =
@@ -129,7 +129,7 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::subtree_sums(
   MemSafetyProbe15::mylist<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&t});
+  _stack.emplace_back(_Enter(&t));
   /// Loopified subtree_sums: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -143,15 +143,15 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::subtree_sums(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe15::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{
+        _stack.emplace_back(_After_Node(
             d_a0.get(),
-            (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum())});
-        _stack.emplace_back(_Enter{d_a2.get()});
+            (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum())));
+        _stack.emplace_back(_Enter(d_a2.get()));
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s1});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Combine_Node(std::move(_result), _f._s1));
+      _stack.emplace_back(_Enter(_f.d_a0));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = mylist<unsigned int>::mycons(_f._s1, _result.myapp(_f._result));
@@ -210,7 +210,7 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
   MemSafetyProbe15::tree _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified make_tree: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -222,13 +222,13 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
         _result = tree::leaf();
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_After_n_{n_, n});
-        _stack.emplace_back(_Enter{n_});
+        _stack.emplace_back(_After_n_(n_, n));
+        _stack.emplace_back(_Enter(n_));
       }
     } else if (std::holds_alternative<_After_n_>(_frame)) {
       auto _f = std::move(std::get<_After_n_>(_frame));
-      _stack.emplace_back(_Combine_n_{std::move(_result), _f.n});
-      _stack.emplace_back(_Enter{_f.n_});
+      _stack.emplace_back(_Combine_n_(std::move(_result), _f.n));
+      _stack.emplace_back(_Enter(_f.n_));
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
       _result = tree::node(_result, _f.n, _f._result);

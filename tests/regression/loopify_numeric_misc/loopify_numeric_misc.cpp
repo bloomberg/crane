@@ -17,7 +17,7 @@ unsigned int LoopifyNumericMisc::sum_abs(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_abs: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -30,8 +30,8 @@ unsigned int LoopifyNumericMisc::sum_abs(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -63,7 +63,7 @@ unsigned int LoopifyNumericMisc::alternating_ops(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified alternating_ops: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -76,11 +76,11 @@ unsigned int LoopifyNumericMisc::alternating_ops(
       } else {
         unsigned int n_ = n - 1;
         if ((2u ? (n_ + 1) % 2u : (n_ + 1)) == 0u) {
-          _stack.emplace_back(_Resume1{(n_ + 1)});
-          _stack.emplace_back(_Enter{n_});
+          _stack.emplace_back(_Resume1((n_ + 1)));
+          _stack.emplace_back(_Enter(n_));
         } else {
-          _stack.emplace_back(_Resume2{((n_ + 1) * 2u)});
-          _stack.emplace_back(_Enter{n_});
+          _stack.emplace_back(_Resume2(((n_ + 1) * 2u)));
+          _stack.emplace_back(_Enter(n_));
         }
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
@@ -111,7 +111,7 @@ unsigned int LoopifyNumericMisc::count_even(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified count_even: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -125,10 +125,10 @@ unsigned int LoopifyNumericMisc::count_even(
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         if ((2u ? d_a0 % 2u : d_a0) == 0u) {
-          _stack.emplace_back(_Resume1{1u});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume1(1u));
+          _stack.emplace_back(_Enter(d_a1.get()));
         } else {
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {
@@ -156,7 +156,7 @@ unsigned int LoopifyNumericMisc::count_odd(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified count_odd: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -170,10 +170,10 @@ unsigned int LoopifyNumericMisc::count_odd(
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         if ((2u ? d_a0 % 2u : d_a0) == 1u) {
-          _stack.emplace_back(_Resume1{1u});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume1(1u));
+          _stack.emplace_back(_Enter(d_a1.get()));
         } else {
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {
@@ -201,7 +201,7 @@ unsigned int LoopifyNumericMisc::product(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified product: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -214,8 +214,8 @@ unsigned int LoopifyNumericMisc::product(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -242,7 +242,7 @@ unsigned int LoopifyNumericMisc::sum_of_squares(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified sum_of_squares: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -255,8 +255,8 @@ unsigned int LoopifyNumericMisc::sum_of_squares(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{(d_a0 * d_a0)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons((d_a0 * d_a0)));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -292,7 +292,7 @@ unsigned int LoopifyNumericMisc::list_max(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified list_max: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -309,8 +309,8 @@ unsigned int LoopifyNumericMisc::list_max(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Resume_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {
@@ -339,7 +339,7 @@ unsigned int LoopifyNumericMisc::list_min(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified list_min: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -356,8 +356,8 @@ unsigned int LoopifyNumericMisc::list_min(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {

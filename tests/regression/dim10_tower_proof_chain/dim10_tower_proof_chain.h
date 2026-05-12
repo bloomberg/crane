@@ -47,7 +47,7 @@ public:
   SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
+    return SigT<t_A, t_P>(ExistT(d_x, d_a1));
   }
 
   // CREATORS
@@ -55,11 +55,11 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT(t_A(d_x), t_P(d_a1));
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
-    return SigT(ExistT{std::move(x), std::move(a1)});
+    return SigT(ExistT(std::move(x), std::move(a1)));
   }
 
   // MANIPULATORS
@@ -81,7 +81,7 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     QPos clone() const {
-      return QPos{(*(this)).qpos_num, (*(this)).qpos_denom_pred};
+      return QPos((*(this)).qpos_num, (*(this)).qpos_denom_pred);
     }
   };
 
@@ -94,10 +94,10 @@ struct Dim10TowerProofChainCase {
     unsigned int go_dim;
 
     // ACCESSORS
-    GradedObj clone() const { return GradedObj{(*(this)).go_dim}; }
+    GradedObj clone() const { return GradedObj((*(this)).go_dim); }
   };
 
-  static inline const GradedObj go_zero = GradedObj{0u};
+  static inline const GradedObj go_zero = GradedObj(0u);
   static unsigned int nat_sub(const unsigned int n, const unsigned int m);
   static unsigned int poly_approx_dim(const unsigned int _x0,
                                       const unsigned int _x1);
@@ -118,7 +118,7 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     GradedGoodwillieTower clone() const {
-      return GradedGoodwillieTower{(*(this)).ggt_P, (*(this)).ggt_D};
+      return GradedGoodwillieTower((*(this)).ggt_P, (*(this)).ggt_D);
     }
   };
 
@@ -156,9 +156,9 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     GoodwillieProofChain clone() const {
-      return GoodwillieProofChain{(*(this)).gc_eventually_zero,
+      return GoodwillieProofChain((*(this)).gc_eventually_zero,
                                   (*(this)).gc_layers_stabilize.clone(),
-                                  (*(this)).gc_P_stabilize.clone()};
+                                  (*(this)).gc_P_stabilize.clone());
     }
   };
 
@@ -178,13 +178,13 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     Dim10Bundle clone() const {
-      return Dim10Bundle{(*(this)).dt_tower.clone(),
-                         (*(this)).dt_chain.clone()};
+      return Dim10Bundle((*(this)).dt_tower.clone(),
+                         (*(this)).dt_chain.clone());
     }
   };
 
   static inline const Dim10Bundle dim10_bundle =
-      Dim10Bundle{dim10_tower, dim10_chain};
+      Dim10Bundle(dim10_tower, dim10_chain);
   static inline const unsigned int dim10_p0_dim =
       dim10_bundle.dt_tower.ggt_P(0u).go_dim;
   static inline const unsigned int dim10_p4_dim =

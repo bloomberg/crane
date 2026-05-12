@@ -8,12 +8,12 @@ FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,
   const Real &x2 = p2.first;
   const Real &y2 = p2.second;
   if ((x1 == x2)) {
-    return Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)};
+    return Line(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1));
   } else {
     Real a = (y1 - y2);
     Real b = (x2 - x1);
     Real c = ((x1 * y2) - (x2 * y1));
-    return Line{a, b, c};
+    return Line(a, b, c);
   }
 }
 
@@ -26,18 +26,18 @@ FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> &p1,
   const Real &y2 = p2.second;
   if ((x1 == x2)) {
     if ((y1 == y2)) {
-      return Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)};
+      return Line(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1));
     } else {
       Real a = Real::from_z(INT64_C(0));
       Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
       Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
-      return Line{a, b, c};
+      return Line(a, b, c);
     }
   } else {
     Real a = (Real::from_z(INT64_C(2)) * (x2 - x1));
     Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
     Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
-    return Line{a, b, c};
+    return Line(a, b, c);
   }
 }
 
@@ -46,7 +46,7 @@ FoldSequenceStateTraceCase::Line FoldSequenceStateTraceCase::perp_through(
   const Real &x = p.first;
   const Real &y = p.second;
   Real c = ((l.A * y) - (l.B * x));
-  return Line{l.B, (-l.A), c};
+  return Line(l.B, (-l.A), c);
 }
 
 FoldSequenceStateTraceCase::Fold
@@ -72,9 +72,9 @@ FoldSequenceStateTraceCase::add_fold_to_state(
     const FoldSequenceStateTraceCase::ConstructionState &st,
     const FoldSequenceStateTraceCase::FoldStep &step) {
   FoldSequenceStateTraceCase::Line new_line = step.execute_fold_step();
-  return ConstructionState{
+  return ConstructionState(
       st.state_points,
-      List<FoldSequenceStateTraceCase::Line>::cons(new_line, st.state_lines)};
+      List<FoldSequenceStateTraceCase::Line>::cons(new_line, st.state_lines));
 }
 
 FoldSequenceStateTraceCase::ConstructionState

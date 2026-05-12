@@ -11,10 +11,10 @@ struct SingletonRecord {
     unsigned int value;
 
     // ACCESSORS
-    wrapper clone() const { return wrapper{(*(this)).value}; }
+    wrapper clone() const { return wrapper((*(this)).value); }
   };
 
-  static inline const wrapper wrapped_five = wrapper{5u};
+  static inline const wrapper wrapped_five = wrapper(5u);
   static unsigned int get_value(const wrapper &w);
   static unsigned int get_value2(const wrapper &w);
   static unsigned int unwrap(const wrapper &w);
@@ -24,28 +24,28 @@ struct SingletonRecord {
     t_A contents;
 
     // ACCESSORS
-    box<t_A> clone() const { return box<t_A>{(*(this)).contents}; }
+    box<t_A> clone() const { return box<t_A>((*(this)).contents); }
   };
 
-  static inline const box<unsigned int> boxed_three = box<unsigned int>{3u};
+  static inline const box<unsigned int> boxed_three = box<unsigned int>(3u);
 
   template <typename T1> static T1 unbox(const box<T1> &b) {
     return b.contents;
   }
 
   static inline const box<box<unsigned int>> nested_box =
-      box<box<unsigned int>>{boxed_three};
+      box<box<unsigned int>>(boxed_three);
   static inline const unsigned int double_unbox = nested_box.contents.contents;
 
   struct fn_wrapper {
     std::function<unsigned int(unsigned int)> fn;
 
     // ACCESSORS
-    fn_wrapper clone() const { return fn_wrapper{(*(this)).fn}; }
+    fn_wrapper clone() const { return fn_wrapper((*(this)).fn); }
   };
 
   static inline const fn_wrapper my_fn_wrapper =
-      fn_wrapper{[](unsigned int _x0) -> unsigned int { return (1u + _x0); }};
+      fn_wrapper([](unsigned int _x0) -> unsigned int { return (1u + _x0); });
   static unsigned int apply_wrapped(const fn_wrapper &w, const unsigned int n);
   static inline const unsigned int test_get = get_value(wrapped_five);
   static inline const unsigned int test_get2 = get_value2(wrapped_five);

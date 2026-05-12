@@ -43,7 +43,7 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter(l, fuel));
   /// Loopified group_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -70,9 +70,9 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<unsigned int>::Cons>(_sv0.v());
-            _stack.emplace_back(_Cont_Cons{d_a0, d_a00});
+            _stack.emplace_back(_Cont_Cons(d_a0, d_a00));
             _stack.emplace_back(
-                _Enter{List<unsigned int>::cons(d_a00, *(d_a10)), fuel_});
+                _Enter(List<unsigned int>::cons(d_a00, *(d_a10)), fuel_));
           }
         }
       }
@@ -131,7 +131,7 @@ List<unsigned int> LoopifyGrouping::nub(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified nub: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -144,8 +144,8 @@ List<unsigned int> LoopifyGrouping::nub(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -216,7 +216,7 @@ LoopifyGrouping::partition3(
       _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified partition3: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -231,8 +231,8 @@ LoopifyGrouping::partition3(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0, pivot});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0, pivot));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -280,7 +280,7 @@ unsigned int LoopifyGrouping::count_elem(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified count_elem: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -294,10 +294,10 @@ unsigned int LoopifyGrouping::count_elem(
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         if (x == d_a0) {
-          _stack.emplace_back(_Resume1{1u});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume1(1u));
+          _stack.emplace_back(_Enter(d_a1.get()));
         } else {
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {

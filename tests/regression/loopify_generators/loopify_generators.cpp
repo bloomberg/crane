@@ -20,7 +20,7 @@ List<unsigned int> LoopifyGenerators::cycle(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
+  _stack.emplace_back(_Enter(n));
   /// Loopified cycle: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -32,8 +32,8 @@ List<unsigned int> LoopifyGenerators::cycle(
         _result = List<unsigned int>::nil();
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m{l});
-        _stack.emplace_back(_Enter{m});
+        _stack.emplace_back(_Resume_m(l));
+        _stack.emplace_back(_Enter(m));
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -143,7 +143,7 @@ unsigned int LoopifyGenerators::len_impl(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -156,8 +156,8 @@ unsigned int LoopifyGenerators::len_impl(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons());
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -194,7 +194,7 @@ List<unsigned int> LoopifyGenerators::build_list_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
+  _stack.emplace_back(_Enter(n, fuel));
   /// Loopified build_list_fuel: _Enter -> _Cont__x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -216,8 +216,8 @@ List<unsigned int> LoopifyGenerators::build_list_fuel(
           } else {
             unsigned int _x = n_ - 1;
             unsigned int half = (2u ? n_ / 2u : 0);
-            _stack.emplace_back(_Cont__x{n_});
-            _stack.emplace_back(_Enter{half, f});
+            _stack.emplace_back(_Cont__x(n_));
+            _stack.emplace_back(_Enter(half, f));
           }
         }
       }
@@ -342,7 +342,7 @@ List<unsigned int> LoopifyGenerators::replicate_each(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified replicate_each: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -355,8 +355,8 @@ List<unsigned int> LoopifyGenerators::replicate_each(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{replicate_single(d_a0, n)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(replicate_single(d_a0, n)));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

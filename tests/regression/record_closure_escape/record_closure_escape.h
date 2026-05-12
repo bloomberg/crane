@@ -66,12 +66,12 @@ struct RecordClosureEscape {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->d_v_ = Leaf();
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
+              Node(_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<tree>() : nullptr);
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -85,11 +85,11 @@ struct RecordClosureEscape {
     }
 
     // CREATORS
-    static tree leaf() { return tree(Leaf{}); }
+    static tree leaf() { return tree(Leaf()); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
-                       std::make_unique<tree>(std::move(a2))});
+      return tree(Node(std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<tree>(std::move(a2))));
     }
 
     // MANIPULATORS
@@ -159,7 +159,7 @@ struct RecordClosureEscape {
 
     // ACCESSORS
     fn_record clone() const {
-      return fn_record{(*(this)).fn_field, (*(this)).val_field};
+      return fn_record((*(this)).fn_field, (*(this)).val_field);
     }
   };
 

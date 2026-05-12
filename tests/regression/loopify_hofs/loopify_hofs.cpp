@@ -103,7 +103,7 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -117,8 +117,8 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -142,7 +142,7 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(8);
-        _stack.emplace_back(_Enter{lsts});
+        _stack.emplace_back(_Enter(lsts));
         /// Loopified map_cons_x: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -158,8 +158,8 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
                   std::get<typename List<List<unsigned int>>::Cons>(
                       lsts.v_mut());
               _stack.emplace_back(
-                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
-              _stack.emplace_back(_Enter{std::move(*(d_a10))});
+                  _Resume_Cons(List<unsigned int>::cons(d_a0, d_a00)));
+              _stack.emplace_back(_Enter(std::move(*(d_a10))));
             }
           } else {
             auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -225,7 +225,7 @@ List<std::pair<unsigned int, unsigned int>> LoopifyHofs::cartesian(
   List<std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l1});
+  _stack.emplace_back(_Enter(&l1));
   /// Loopified cartesian: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -238,8 +238,8 @@ List<std::pair<unsigned int, unsigned int>> LoopifyHofs::cartesian(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
-        _stack.emplace_back(_Resume_Cons{pair_with_all(d_a0, l2)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(pair_with_all(d_a0, l2)));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -341,7 +341,7 @@ List<List<unsigned int>> LoopifyHofs::power_set(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified power_set: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -355,8 +355,8 @@ List<List<unsigned int>> LoopifyHofs::power_set(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -380,7 +380,7 @@ List<List<unsigned int>> LoopifyHofs::power_set(
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(8);
-        _stack.emplace_back(_Enter{lsts});
+        _stack.emplace_back(_Enter(lsts));
         /// Loopified map_cons_x: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -396,8 +396,8 @@ List<List<unsigned int>> LoopifyHofs::power_set(
                   std::get<typename List<List<unsigned int>>::Cons>(
                       lsts.v_mut());
               _stack.emplace_back(
-                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
-              _stack.emplace_back(_Enter{std::move(*(d_a10))});
+                  _Resume_Cons(List<unsigned int>::cons(d_a0, d_a00)));
+              _stack.emplace_back(_Enter(std::move(*(d_a10))));
             }
           } else {
             auto _f = std::move(std::get<_Resume_Cons>(_frame));

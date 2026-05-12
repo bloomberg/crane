@@ -13,7 +13,7 @@ struct RecordMatch {
 
     // ACCESSORS
     MyRec clone() const {
-      return MyRec{(*(this)).f1, (*(this)).f2, (*(this)).f3};
+      return MyRec((*(this)).f1, (*(this)).f2, (*(this)).f3);
     }
   };
 

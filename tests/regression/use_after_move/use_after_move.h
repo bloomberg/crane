@@ -14,7 +14,7 @@ struct UseAfterMove {
 
     // ACCESSORS
     State clone() const {
-      return State{(*(this)).value, (*(this)).data, (*(this)).flag};
+      return State((*(this)).value, (*(this)).data, (*(this)).flag);
     }
   };
 

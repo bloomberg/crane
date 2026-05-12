@@ -8,14 +8,14 @@ ThisCaptureRecord::callback_rec
 ThisCaptureRecord::tree_callbacks(ThisCaptureRecord::tree t,
                                   const unsigned int flag) {
   if (flag <= 0) {
-    return callback_rec{
+    return callback_rec(
         [=](const unsigned int x) mutable { return (x + t.tree_sum()); },
-        [=](const unsigned int x) mutable { return (x * t.tree_sum()); }};
+        [=](const unsigned int x) mutable { return (x * t.tree_sum()); });
   } else {
     unsigned int _x = flag - 1;
-    return callback_rec{
+    return callback_rec(
         [=](const unsigned int x) mutable { return (t.tree_sum() + x); },
-        [=](const unsigned int) mutable { return t.tree_sum(); }};
+        [=](const unsigned int) mutable { return t.tree_sum(); });
   }
 }
 

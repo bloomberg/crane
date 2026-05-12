@@ -644,7 +644,7 @@ bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
 
 EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step(
     const EpochCellGlyphTraceCase::MechanismState &s) {
-  return MechanismState{
+  return MechanismState(
       BinInt::add(s.crank_position, Z::zpos(Positive::xh())),
       BinInt::modulo(BinInt::add(s.metonic_dial, Z::zpos(Positive::xh())),
                      metonic_modulus),
@@ -657,12 +657,12 @@ EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step(
       BinInt::modulo(BinInt::add(s.games_dial, Z::zpos(Positive::xh())),
                      games_modulus),
       BinInt::modulo(BinInt::add(s.zodiac_position, Z::zpos(Positive::xh())),
-                     zodiac_modulus)};
+                     zodiac_modulus));
 }
 
 EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step_reverse(
     const EpochCellGlyphTraceCase::MechanismState &s) {
-  return MechanismState{
+  return MechanismState(
       BinInt::sub(s.crank_position, Z::zpos(Positive::xh())),
       BinInt::modulo(
           BinInt::add(BinInt::sub(s.metonic_dial, Z::zpos(Positive::xh())),
@@ -687,7 +687,7 @@ EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step_reverse(
       BinInt::modulo(
           BinInt::add(BinInt::sub(s.zodiac_position, Z::zpos(Positive::xh())),
                       zodiac_modulus),
-          zodiac_modulus)};
+          zodiac_modulus));
 }
 
 EpochCellGlyphTraceCase::MechanismState
@@ -703,7 +703,7 @@ EpochCellGlyphTraceCase::step_n(const unsigned int n,
 
 EpochCellGlyphTraceCase::MechanismState
 EpochCellGlyphTraceCase::state_at_cell(Z cell) {
-  return MechanismState{cell, cell, cell, cell, cell, cell, cell};
+  return MechanismState(cell, cell, cell, cell, cell, cell, cell);
 }
 
 EpochCellGlyphTraceCase::LunarPhase
@@ -1041,7 +1041,7 @@ EpochCellGlyphTraceCase::build_epoch_reading(
     const Z &epoch_year, const Z &epoch_month,
     EpochCellGlyphTraceCase::HistoricalEclipse e) {
   Z cell = saros_cell(epoch_year, epoch_month, e);
-  return EpochReading{state_at_cell(cell), e, cell, glyph_at_cell(cell)};
+  return EpochReading(state_at_cell(cell), e, cell, glyph_at_cell(cell));
 }
 
 bool EpochCellGlyphTraceCase::reading_matches(

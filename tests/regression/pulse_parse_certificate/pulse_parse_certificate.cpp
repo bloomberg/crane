@@ -163,5 +163,5 @@ PulseParseCertificateCase::certify_trace(const List<bool> &xs) {
   unsigned int base = pulse_base_from_runs(runs);
   List<PulseParseCertificateCase::PulseClass> classes =
       classify_runs_with_base(base, runs);
-  return PulseCertificate{first_true(xs), last_true(xs), runs, base, classes};
+  return PulseCertificate(first_true(xs), last_true(xs), runs, base, classes);
 }

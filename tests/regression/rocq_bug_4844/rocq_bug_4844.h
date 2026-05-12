@@ -51,10 +51,10 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<Inl>(_sv.v())) {
       const auto &[d_a0] = std::get<Inl>(_sv.v());
-      return Sum<t_A, t_B>(Inl{d_a0});
+      return Sum<t_A, t_B>(Inl(d_a0));
     } else {
       const auto &[d_a0] = std::get<Inr>(_sv.v());
-      return Sum<t_A, t_B>(Inr{d_a0});
+      return Sum<t_A, t_B>(Inr(d_a0));
     }
   }
 
@@ -63,16 +63,16 @@ public:
   explicit Sum(const Sum<_U0, _U1> &_other) {
     if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
       const auto &[d_a0] = std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
-      this->d_v_ = Inl{t_A(d_a0)};
+      this->d_v_ = Inl(t_A(d_a0));
     } else {
       const auto &[d_a0] = std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
-      this->d_v_ = Inr{t_B(d_a0)};
+      this->d_v_ = Inr(t_B(d_a0));
     }
   }
 
-  static Sum<t_A, t_B> inl(t_A a0) { return Sum(Inl{std::move(a0)}); }
+  static Sum<t_A, t_B> inl(t_A a0) { return Sum(Inl(std::move(a0))); }
 
-  static Sum<t_A, t_B> inr(t_B a0) { return Sum(Inr{std::move(a0)}); }
+  static Sum<t_A, t_B> inr(t_B a0) { return Sum(Inr(std::move(a0))); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -126,11 +126,11 @@ struct RocqBug4844 {
     box clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<Box0>(_sv.v());
-      return box(Box0{d_a0.clone()});
+      return box(Box0(d_a0.clone()));
     }
 
     // CREATORS
-    static box box0(Sum<ST, ST> a0) { return box(Box0{std::move(a0)}); }
+    static box box0(Sum<ST, ST> a0) { return box(Box0(std::move(a0))); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

@@ -47,11 +47,11 @@ struct ModuleTypeNameClashProbe {
       t clone() const {
         auto &&_sv = *(this);
         const auto &[d_a0] = std::get<T0>(_sv.v());
-        return t(T0{d_a0});
+        return t(T0(d_a0));
       }
 
       // CREATORS
-      static t t0(Bool0 a0) { return t(T0{std::move(a0)}); }
+      static t t0(Bool0 a0) { return t(T0(std::move(a0))); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
@@ -111,11 +111,11 @@ struct ModuleTypeNameClashProbe {
     M clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<MkM>(_sv.v());
-      return M(MkM{d_a0});
+      return M(MkM(d_a0));
     }
 
     // CREATORS
-    static M mkm(Bool0 a0) { return M(MkM{std::move(a0)}); }
+    static M mkm(Bool0 a0) { return M(MkM(std::move(a0))); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -138,7 +138,7 @@ struct ModuleTypeNameClashProbe {
     return f(d_a0);
   }
 
-  static inline const Bool0 sample = Bool0::e_TRUE0;
+  static inline const Bool0 sample = Bool0::e_TRUE;
 };
 
 #endif // INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE

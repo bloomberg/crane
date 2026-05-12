@@ -61,10 +61,10 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (bsl::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->d_v_ = O();
       } else {
         const auto &_alt = bsl::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_n ? bsl::make_unique<Nat>() : nullptr};
+        _dst->d_v_ = S(_alt.d_n ? bsl::make_unique<Nat>() : nullptr);
         auto &_dst_alt = std::get<S>(_dst->d_v_);
         if (_alt.d_n) {
           _stack.push_back({_alt.d_n.get(), _dst_alt.d_n.get()});
@@ -74,8 +74,8 @@ public:
     return _out;
   }
   // CREATORS
-  static Nat o() { return Nat(O{}); }
-  static Nat s(Nat n) { return Nat(S{bsl::make_unique<Nat>(bsl::move(n))}); }
+  static Nat o() { return Nat(O()); }
+  static Nat s(Nat n) { return Nat(S(bsl::make_unique<Nat>(bsl::move(n)))); }
   // MANIPULATORS
   ~Nat() {
     std::vector<bsl::unique_ptr<Nat>> _stack{};

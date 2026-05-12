@@ -74,11 +74,11 @@ struct WhereClause {
         Expr *_dst = _frame._dst;
         if (std::holds_alternative<Num>(_src->v())) {
           const auto &_alt = std::get<Num>(_src->v());
-          _dst->d_v_ = Num{_alt.d_a0};
+          _dst->d_v_ = Num(_alt.d_a0);
         } else if (std::holds_alternative<Plus>(_src->v())) {
           const auto &_alt = std::get<Plus>(_src->v());
-          _dst->d_v_ = Plus{_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<Expr>() : nullptr};
+          _dst->d_v_ = Plus(_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<Expr>() : nullptr);
           auto &_dst_alt = std::get<Plus>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -88,8 +88,8 @@ struct WhereClause {
           }
         } else {
           const auto &_alt = std::get<Times>(_src->v());
-          _dst->d_v_ = Times{_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
-                             _alt.d_a1 ? std::make_unique<Expr>() : nullptr};
+          _dst->d_v_ = Times(_alt.d_a0 ? std::make_unique<Expr>() : nullptr,
+                             _alt.d_a1 ? std::make_unique<Expr>() : nullptr);
           auto &_dst_alt = std::get<Times>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -103,16 +103,16 @@ struct WhereClause {
     }
 
     // CREATORS
-    static Expr num(unsigned int a0) { return Expr(Num{std::move(a0)}); }
+    static Expr num(unsigned int a0) { return Expr(Num(std::move(a0))); }
 
     static Expr plus(Expr a0, Expr a1) {
-      return Expr(Plus{std::make_unique<Expr>(std::move(a0)),
-                       std::make_unique<Expr>(std::move(a1))});
+      return Expr(Plus(std::make_unique<Expr>(std::move(a0)),
+                       std::make_unique<Expr>(std::move(a1))));
     }
 
     static Expr times(Expr a0, Expr a1) {
-      return Expr(Times{std::make_unique<Expr>(std::move(a0)),
-                        std::make_unique<Expr>(std::move(a1))});
+      return Expr(Times(std::make_unique<Expr>(std::move(a0)),
+                        std::make_unique<Expr>(std::move(a1))));
     }
 
     // MANIPULATORS
@@ -294,13 +294,13 @@ struct WhereClause {
         const BExpr *_src = _frame._src;
         BExpr *_dst = _frame._dst;
         if (std::holds_alternative<BTrue>(_src->v())) {
-          _dst->d_v_ = BTrue{};
+          _dst->d_v_ = BTrue();
         } else if (std::holds_alternative<BFalse>(_src->v())) {
-          _dst->d_v_ = BFalse{};
+          _dst->d_v_ = BFalse();
         } else if (std::holds_alternative<BAnd>(_src->v())) {
           const auto &_alt = std::get<BAnd>(_src->v());
-          _dst->d_v_ = BAnd{_alt.d_a0 ? std::make_unique<BExpr>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<BExpr>() : nullptr};
+          _dst->d_v_ = BAnd(_alt.d_a0 ? std::make_unique<BExpr>() : nullptr,
+                            _alt.d_a1 ? std::make_unique<BExpr>() : nullptr);
           auto &_dst_alt = std::get<BAnd>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -310,8 +310,8 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<BOr>(_src->v())) {
           const auto &_alt = std::get<BOr>(_src->v());
-          _dst->d_v_ = BOr{_alt.d_a0 ? std::make_unique<BExpr>() : nullptr,
-                           _alt.d_a1 ? std::make_unique<BExpr>() : nullptr};
+          _dst->d_v_ = BOr(_alt.d_a0 ? std::make_unique<BExpr>() : nullptr,
+                           _alt.d_a1 ? std::make_unique<BExpr>() : nullptr);
           auto &_dst_alt = std::get<BOr>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -321,7 +321,7 @@ struct WhereClause {
           }
         } else {
           const auto &_alt = std::get<BNot>(_src->v());
-          _dst->d_v_ = BNot{_alt.d_a0 ? std::make_unique<BExpr>() : nullptr};
+          _dst->d_v_ = BNot(_alt.d_a0 ? std::make_unique<BExpr>() : nullptr);
           auto &_dst_alt = std::get<BNot>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -332,22 +332,22 @@ struct WhereClause {
     }
 
     // CREATORS
-    static BExpr btrue() { return BExpr(BTrue{}); }
+    static BExpr btrue() { return BExpr(BTrue()); }
 
-    static BExpr bfalse() { return BExpr(BFalse{}); }
+    static BExpr bfalse() { return BExpr(BFalse()); }
 
     static BExpr band(BExpr a0, BExpr a1) {
-      return BExpr(BAnd{std::make_unique<BExpr>(std::move(a0)),
-                        std::make_unique<BExpr>(std::move(a1))});
+      return BExpr(BAnd(std::make_unique<BExpr>(std::move(a0)),
+                        std::make_unique<BExpr>(std::move(a1))));
     }
 
     static BExpr bor(BExpr a0, BExpr a1) {
-      return BExpr(BOr{std::make_unique<BExpr>(std::move(a0)),
-                       std::make_unique<BExpr>(std::move(a1))});
+      return BExpr(BOr(std::make_unique<BExpr>(std::move(a0)),
+                       std::make_unique<BExpr>(std::move(a1))));
     }
 
     static BExpr bnot(BExpr a0) {
-      return BExpr(BNot{std::make_unique<BExpr>(std::move(a0))});
+      return BExpr(BNot(std::make_unique<BExpr>(std::move(a0))));
     }
 
     // MANIPULATORS
@@ -531,11 +531,11 @@ struct WhereClause {
         AExpr *_dst = _frame._dst;
         if (std::holds_alternative<ANum>(_src->v())) {
           const auto &_alt = std::get<ANum>(_src->v());
-          _dst->d_v_ = ANum{_alt.d_a0};
+          _dst->d_v_ = ANum(_alt.d_a0);
         } else if (std::holds_alternative<APlus>(_src->v())) {
           const auto &_alt = std::get<APlus>(_src->v());
-          _dst->d_v_ = APlus{_alt.d_a0 ? std::make_unique<AExpr>() : nullptr,
-                             _alt.d_a1 ? std::make_unique<AExpr>() : nullptr};
+          _dst->d_v_ = APlus(_alt.d_a0 ? std::make_unique<AExpr>() : nullptr,
+                             _alt.d_a1 ? std::make_unique<AExpr>() : nullptr);
           auto &_dst_alt = std::get<APlus>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -545,9 +545,9 @@ struct WhereClause {
           }
         } else {
           const auto &_alt = std::get<AIf>(_src->v());
-          _dst->d_v_ = AIf{_alt.d_a0.clone(),
+          _dst->d_v_ = AIf(_alt.d_a0.clone(),
                            _alt.d_a1 ? std::make_unique<AExpr>() : nullptr,
-                           _alt.d_a2 ? std::make_unique<AExpr>() : nullptr};
+                           _alt.d_a2 ? std::make_unique<AExpr>() : nullptr);
           auto &_dst_alt = std::get<AIf>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -561,16 +561,16 @@ struct WhereClause {
     }
 
     // CREATORS
-    static AExpr anum(unsigned int a0) { return AExpr(ANum{std::move(a0)}); }
+    static AExpr anum(unsigned int a0) { return AExpr(ANum(std::move(a0))); }
 
     static AExpr aplus(AExpr a0, AExpr a1) {
-      return AExpr(APlus{std::make_unique<AExpr>(std::move(a0)),
-                         std::make_unique<AExpr>(std::move(a1))});
+      return AExpr(APlus(std::make_unique<AExpr>(std::move(a0)),
+                         std::make_unique<AExpr>(std::move(a1))));
     }
 
     static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
-      return AExpr(AIf{std::move(a0), std::make_unique<AExpr>(std::move(a1)),
-                       std::make_unique<AExpr>(std::move(a2))});
+      return AExpr(AIf(std::move(a0), std::make_unique<AExpr>(std::move(a1)),
+                       std::make_unique<AExpr>(std::move(a2))));
     }
 
     // MANIPULATORS

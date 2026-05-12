@@ -11,7 +11,7 @@ struct QualifiedRecordShadow {
   };
 
   static Shadow bump(const Shadow &x);
-  static inline const Shadow t = bump(Shadow{1u});
+  static inline const Shadow t = bump(Shadow(1u));
 };
 
 #endif // INCLUDED_QUALIFIED_RECORD_SHADOW

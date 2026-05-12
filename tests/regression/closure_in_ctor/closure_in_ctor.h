@@ -50,18 +50,18 @@ struct ClosureInCtor {
       auto &&_sv = *(this);
       if (std::holds_alternative<Box0>(_sv.v())) {
         const auto &[d_a0] = std::get<Box0>(_sv.v());
-        return box(Box0{d_a0});
+        return box(Box0(d_a0));
       } else {
-        return box(Empty{});
+        return box(Empty());
       }
     }
 
     // CREATORS
     static box box0(std::function<unsigned int(unsigned int)> a0) {
-      return box(Box0{std::move(a0)});
+      return box(Box0(std::move(a0)));
     }
 
-    static box empty() { return box(Empty{}); }
+    static box empty() { return box(Empty()); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

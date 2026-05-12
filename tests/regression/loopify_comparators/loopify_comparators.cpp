@@ -18,7 +18,7 @@ unsigned int LoopifyComparators::maximum_by(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified maximum_by: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -35,8 +35,8 @@ unsigned int LoopifyComparators::maximum_by(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {
@@ -71,7 +71,7 @@ unsigned int LoopifyComparators::minimum_by(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified minimum_by: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -88,8 +88,8 @@ unsigned int LoopifyComparators::minimum_by(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons(d_a0));
+          _stack.emplace_back(_Enter(d_a1.get()));
         }
       }
     } else {
@@ -220,7 +220,7 @@ List<unsigned int> LoopifyComparators::insertion_sort(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
+  _stack.emplace_back(_Enter(&l));
   /// Loopified insertion_sort: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -233,8 +233,8 @@ List<unsigned int> LoopifyComparators::insertion_sort(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons(d_a0));
+        _stack.emplace_back(_Enter(d_a1.get()));
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
