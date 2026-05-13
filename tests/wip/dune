@@ -185,3 +185,25 @@
   (alias runtest)
   (deps sep_ext_unmerged_struct_cap.t.exe)
   (action (run ./sep_ext_unmerged_struct_cap.t.exe))))
+
+(subdir sep_ext_nullary_nested_access
+ (rule
+  (targets sep_ext_nullary_nested_access.t.exe)
+  (deps SepExtNullaryNestedAccess.vo sep_ext_nullary_nested_access.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_nested_access.t.exe SepExtNullaryNestedAccess.cpp sep_ext_nullary_nested_access.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nullary_nested_access.t.exe)
+  (action (run ./sep_ext_nullary_nested_access.t.exe))))
+
+(subdir sep_ext_nullary_deep_path
+ (rule
+  (targets sep_ext_nullary_deep_path.t.exe)
+  (deps SepExtNullaryDeepPath.vo sep_ext_nullary_deep_path.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_deep_path.t.exe SepExtNullaryDeepPath.cpp sep_ext_nullary_deep_path.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nullary_deep_path.t.exe)
+  (action (run ./sep_ext_nullary_deep_path.t.exe))))
