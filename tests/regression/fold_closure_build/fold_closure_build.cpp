@@ -65,7 +65,7 @@ unsigned int FoldClosureBuild::compose_with_fix(
     const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int _x0) {
   return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
       [](const std::function<unsigned int(unsigned int)> acc,
-         const unsigned int h, unsigned int _fea0) {
+         const unsigned int h) {
         auto go_impl = [=](auto &_self_go,
                            unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
@@ -78,7 +78,7 @@ unsigned int FoldClosureBuild::compose_with_fix(
         auto go = [=](unsigned int x) mutable -> unsigned int {
           return go_impl(go_impl, x);
         };
-        return go(_fea0);
+        return go;
       },
       [](const unsigned int x) { return x; }, l)(_x0);
 }

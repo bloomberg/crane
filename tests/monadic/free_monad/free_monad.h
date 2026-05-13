@@ -21,7 +21,7 @@ struct FreeMonad {
 
     struct Bind {
       std::unique_ptr<IO> d_a;
-      std::function<std::unique_ptr<IO>(std::any)> d_b;
+      std::function<IO(std::any)> d_b;
     };
 
     struct Get_line {};
@@ -85,10 +85,7 @@ struct FreeMonad {
     static IO pure(std::any a) { return IO(Pure(std::move(a))); }
 
     static IO bind(IO a, std::function<IO(std::any)> b) {
-      return IO(
-          Bind(std::make_unique<IO>(std::move(a)), [=](std::any x0) mutable {
-            return std::make_unique<IO>(b(x0));
-          }));
+      return IO(Bind(std::make_unique<IO>(std::move(a)), std::move(b)));
     }
 
     static IO get_line() { return IO(Get_line()); }
@@ -112,10 +109,9 @@ struct FreeMonad {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
       IO d_a_value = *(d_a);
       return std::any_cast<T1>(
-          f0(d_a_value, IO_rect<T1, T2>(f, f0, f1, f2, d_a_value),
-             std::function<IO(std::any)>(d_b), [=](const auto &a) mutable {
-               return IO_rect<T1, T2>(f, f0, f1, f2,
-                                      std::function<IO(std::any)>(d_b)(a));
+          f0(d_a_value, IO_rect<T1, T2>(f, f0, f1, f2, d_a_value), d_b,
+             [=](const auto &a) mutable {
+               return IO_rect<T1, T2>(f, f0, f1, f2, d_b(a));
              }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;
@@ -135,10 +131,9 @@ struct FreeMonad {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
       IO d_a_value = *(d_a);
       return std::any_cast<T1>(
-          f0(d_a_value, IO_rec<T1, T2>(f, f0, f1, f2, d_a_value),
-             std::function<IO(std::any)>(d_b), [=](const auto &a) mutable {
-               return IO_rec<T1, T2>(f, f0, f1, f2,
-                                     std::function<IO(std::any)>(d_b)(a));
+          f0(d_a_value, IO_rec<T1, T2>(f, f0, f1, f2, d_a_value), d_b,
+             [=](const auto &a) mutable {
+               return IO_rec<T1, T2>(f, f0, f1, f2, d_b(a));
              }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;

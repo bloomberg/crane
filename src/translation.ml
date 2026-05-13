@@ -2499,11 +2499,17 @@ let rec convert_ml_type_to_cpp_type
      sites become [unique_ptr]. *)
   match ml_t with
   | Tarr (t1, t2) ->
-    let t1c = convert_ml_type_to_cpp_type env ns tvars t1 in
+    (* std::function<F(A)> is already a value type and provides the heap
+       indirection needed to break recursive layout cycles.  Always pass an
+       empty [ns] for domain and codomain so that recursive self-references
+       inside function types stay as value types instead of being wrapped in
+       unique_ptr.  The outer field-position wrapping (unique_ptr for direct
+       self-ref fields) is handled at the call site, not here. *)
+    let t1c = convert_ml_type_to_cpp_type env Refset'.empty tvars t1 in
     (* Reify monadic domain types: itree E R in parameter position becomes
        shared_ptr<ITree<R>> so the tree can be passed as a value. *)
     let t1c = reify_monadic_param_type t1 t1c in
-    let t2c = convert_ml_type_to_cpp_type env ns tvars t2 in
+    let t2c = convert_ml_type_to_cpp_type env Refset'.empty tvars t2 in
     (* Skip erased params: isTdummy catches direct Tdummy, is_cpp_dummy_type
        catches Tdummy wrapped in Tmeta (e.g., Tmeta{contents=Some(Tdummy Kprop)}
        which converts to dummy_prop glob). Do NOT use is_erased_type here as it
@@ -3398,7 +3404,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
            directly compatible with [std::function<R(A,B)>] contexts. *)
         let cpp_args, body_stmts =
           match a with
-          | MLfix (fix_x, _fix_ids, fix_funs, _) ->
+          | MLfix (fix_x, _fix_ids, fix_funs, _) when filtered_args = [] ->
             let fix_lam_params, _ = Mlutil.collect_lams fix_funs.(fix_x) in
             let fix_value_params =
               List.filter
