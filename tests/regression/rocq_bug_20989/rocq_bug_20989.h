@@ -26,7 +26,7 @@ struct RocqBug20989 {
     using In = X;
 
     static const unsigned int &n() {
-      static const unsigned int v = In::n();
+      static const unsigned int v = In::n;
       return v;
     }
   };

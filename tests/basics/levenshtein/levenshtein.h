@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Nat {
   // TYPES
@@ -845,24 +845,24 @@ struct Levenshtein {
     Nat n2 = f(y);
     Nat n3 = f(z);
     switch (n1.leb(n2)) {
-    case Bool0::e_TRUE0: {
+    case Bool0::e_TRUE: {
       switch (std::move(n1).leb(std::move(n3))) {
-      case Bool0::e_TRUE0: {
+      case Bool0::e_TRUE: {
         return x;
       }
-      case Bool0::e_FALSE0: {
+      case Bool0::e_FALSE: {
         return z;
       }
       default:
         std::unreachable();
       }
     }
-    case Bool0::e_FALSE0: {
+    case Bool0::e_FALSE: {
       switch (std::move(n2).leb(std::move(n3))) {
-      case Bool0::e_TRUE0: {
+      case Bool0::e_TRUE: {
         return y;
       }
-      case Bool0::e_FALSE0: {
+      case Bool0::e_FALSE: {
         return z;
       }
       default:

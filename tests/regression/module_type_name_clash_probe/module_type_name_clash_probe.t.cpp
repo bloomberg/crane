@@ -10,7 +10,7 @@ int main() {
   //
   // If this compiles and runs, the bug is fixed.
   auto result = ModuleTypeNameClashProbe::sample;
-  assert(result == Bool0::e_TRUE0);
+  assert(result == Bool0::e_TRUE);
 
   return 0;
 }

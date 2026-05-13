@@ -9,7 +9,7 @@
 #include <vector>
 
 struct PatternImpossible {
-  enum class Three { e_ONE, e_TWO, e_THREE0 };
+  enum class Three { e_ONE, e_TWO, e_THREE };
 
   template <typename T1>
   static T1 three_rect(const T1 f, const T1 f0, const T1 f1, const Three t) {
@@ -20,7 +20,7 @@ struct PatternImpossible {
     case Three::e_TWO: {
       return f0;
     }
-    case Three::e_THREE0: {
+    case Three::e_THREE: {
       return f1;
     }
     default:
@@ -37,7 +37,7 @@ struct PatternImpossible {
     case Three::e_TWO: {
       return f0;
     }
-    case Three::e_THREE0: {
+    case Three::e_THREE: {
       return f1;
     }
     default:

@@ -487,6 +487,20 @@ let get_force_qualified_capitalization () = !force_qualified_capitalization
 
 let () = register_cleanup (fun () -> force_qualified_capitalization := false)
 
+let valid_output_module_set : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
+
+let set_non_output_modules valid_mps _all_mps =
+  Hashtbl.clear valid_output_module_set;
+  List.iter (fun mp ->
+    Hashtbl.replace valid_output_module_set mp ()
+  ) valid_mps
+
+let is_non_output_module mp =
+  Hashtbl.length valid_output_module_set > 0
+  && not (Hashtbl.mem valid_output_module_set mp)
+
+let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
+
 (** List of module parameters that we should alpha-rename *)
 
 let params_ren_add, params_ren_mem =
@@ -1012,6 +1026,8 @@ let pp_cpp_gen k mp rls olab =
     let base = base_mp mp in
     if is_mp_bound base then
       pp_ocaml_bound base rls
+    else if is_non_output_module base then
+      unquote (last rls)
     else
       pp_ocaml_extern k base rls
 
@@ -1296,6 +1312,38 @@ let db_fallback_id i = Id.of_string (db_fallback_name i)
 let tparam_name id = Id.of_string ("t_" ^ Id.to_string id)
 
 let enum_ctor_name s = "e_" ^ String.uppercase_ascii s
+
+let enum_ctor_name_of_id id =
+  let s = ascii_of_id id in
+  let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+  enum_ctor_name s
+
+let enum_ctor_names_of_packet (consnames : Id.t array) : string array =
+  let escaped =
+    Array.map
+      (fun id ->
+        let s = ascii_of_id id in
+        let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+        enum_ctor_name s)
+      consnames
+  in
+  let seen = Hashtbl.create (Array.length escaped) in
+  Array.map
+    (fun name ->
+      let base = name in
+      let final =
+        if Hashtbl.mem seen name then
+          let rec find_unique i =
+            let candidate = base ^ string_of_int i in
+            if Hashtbl.mem seen candidate then find_unique (i + 1)
+            else candidate
+          in
+          find_unique 0
+        else name
+      in
+      Hashtbl.replace seen final true;
+      final)
+    escaped
 
 (** Capitalize only the last [::]-separated component of a qualified name. *)
 let capitalize_last_component s =

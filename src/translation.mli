@@ -124,6 +124,11 @@ val decl_to_spec : cpp_decl -> cpp_decl
     lifted decls from leaking between extraction passes. *)
 val take_lifted_decls : unit -> cpp_decl list
 
+(** Reset the seen-lifted-refs deduplication set. Call at the start of each
+    new output file so that identical helpers in different files are NOT
+    suppressed. *)
+val clear_seen_lifted_refs : unit -> unit
+
 (** {2 Inductive Type Generation} *)
 
 (** Generate C++ code for an inductive type (older style with make functions).

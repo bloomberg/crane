@@ -211,6 +211,17 @@ let set_valid_output_modules mps =
 
 let clear_valid_output_modules () = Hashtbl.clear valid_output_modules
 
+let global_unmerged_wrappers : (string, unit) Hashtbl.t = Hashtbl.create 16
+
+let mark_global_unmerged name =
+  Hashtbl.replace global_unmerged_wrappers name ()
+
+let is_global_unmerged name =
+  Hashtbl.mem global_unmerged_wrappers name
+
+let clear_global_unmerged () =
+  Hashtbl.clear global_unmerged_wrappers
+
 (** Pretty-print an open directive for a module. *)
 let pp_open mp =
   if Hashtbl.length valid_output_modules > 0
@@ -259,6 +270,10 @@ type render_ctx = {
   mutable rc_struct_mp : ModPath.t option;
   (* Inside a template struct (functor)? Affects typename keyword insertion. *)
   mutable rc_in_template : bool;
+  (* Inside the initializer expression of a Meyers singleton? Suppresses
+     MPbound-based accessor detection to avoid adding () to functor-parameter
+     references that are plain values in their concrete implementations. *)
+  mutable rc_in_meyers_body : bool;
 }
 
 (** Global render context state. *)
@@ -269,6 +284,7 @@ let render_ctx =
     rc_struct_name = None;
     rc_struct_mp = None;
     rc_in_template = false;
+    rc_in_meyers_body = false;
   }
 
 (** Accumulator for nested module type concepts that must be hoisted out of
@@ -284,6 +300,7 @@ type render_ctx_snapshot = {
   rcs_struct_name : Pp.t option;
   rcs_struct_mp : ModPath.t option;
   rcs_in_template : bool;
+  rcs_in_meyers_body : bool;
 }
 
 (** Save the current render context state. *)
@@ -294,6 +311,7 @@ let save_render_ctx () =
     rcs_struct_name = render_ctx.rc_struct_name;
     rcs_struct_mp = render_ctx.rc_struct_mp;
     rcs_in_template = render_ctx.rc_in_template;
+    rcs_in_meyers_body = render_ctx.rc_in_meyers_body;
   }
 
 (** Restore render context from a snapshot. *)
@@ -302,7 +320,8 @@ let restore_render_ctx s =
   render_ctx.rc_concepts_hoisted <- s.rcs_concepts_hoisted;
   render_ctx.rc_struct_name <- s.rcs_struct_name;
   render_ctx.rc_struct_mp <- s.rcs_struct_mp;
-  render_ctx.rc_in_template <- s.rcs_in_template
+  render_ctx.rc_in_template <- s.rcs_in_template;
+  render_ctx.rc_in_meyers_body <- s.rcs_in_meyers_body
 
 (** Execute [f] with modified render context, restoring the snapshot afterward.
     This replaces the error-prone pattern of manually saving/restoring
@@ -316,11 +335,13 @@ let with_render_ctx ~(setup : unit -> unit) (f : unit -> 'a) : 'a =
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores
-    (functor_modpath, label) pairs. At call sites, we match by label and check
-    if the caller's modpath corresponds to an application of the functor. This
-    is needed because functor application creates new constants with distinct
-    canonical names that can't be matched by GlobRef equality. *)
+    both (modpath, label) pairs for direct matching and canonical KerNames for
+    cross-functor matching. [non_accessor_labels] tracks labels that are
+    also used by NON-Meyers-singleton definitions, to prevent false positives
+    when doing label-only fallback matching. *)
 let template_static_accessors : (ModPath.t * Label.t) list ref = ref []
+let template_static_accessor_kns : (KerName.t, unit) Hashtbl.t = Hashtbl.create 16
+let non_accessor_labels : (Label.t, unit) Hashtbl.t = Hashtbl.create 16
 
 let register_template_static_accessor mp lbl =
   template_static_accessors := (mp, lbl) :: !template_static_accessors
@@ -717,7 +738,10 @@ let reset_cpp_state () =
   Hashtbl.clear unmerged_wrappers;
   Hashtbl.clear global_inductive_names;
   Hashtbl.clear valid_output_modules;
+  Hashtbl.clear global_unmerged_wrappers;
   template_static_accessors := [];
+  Hashtbl.clear template_static_accessor_kns;
+  Hashtbl.clear non_accessor_labels;
   Hashtbl.clear functor_app_sources;
   hoisted_concept_defs := [];
   Common.reset_ctor_field_names ();

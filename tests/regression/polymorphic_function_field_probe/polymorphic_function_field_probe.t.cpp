@@ -15,8 +15,8 @@ int main() {
   // If this compiles and runs, the bug is fixed.
   auto r = PolymorphicFunctionFieldProbe::sample_bool;
   // apply is the identity, so apply p bool true = true
-  std::cout << "sample_bool = " << (r == Bool0::e_TRUE0 ? "true" : "false") << std::endl;
-  assert(r == Bool0::e_TRUE0);
+  std::cout << "sample_bool = " << (r == Bool0::e_TRUE ? "true" : "false") << std::endl;
+  assert(r == Bool0::e_TRUE);
 
   return 0;
 }

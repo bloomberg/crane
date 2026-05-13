@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 template <typename I, typename t_A>
 concept Factory = requires(t_A a0, t_A a1) {
   { I::make(a0, a1) } -> std::convertible_to<t_A>;
@@ -17,10 +17,10 @@ struct TypeclassMethodFunctionReturnProbe {
   struct boolFactory {
     constexpr static Bool0 make(Bool0 x, Bool0 y) {
       switch (x) {
-      case Bool0::e_TRUE0: {
+      case Bool0::e_TRUE: {
         return y;
       }
-      case Bool0::e_FALSE0: {
+      case Bool0::e_FALSE: {
         return x;
       }
       default:

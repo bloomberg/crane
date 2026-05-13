@@ -482,6 +482,56 @@ let has_dependent_params r =
       with _ -> false )
   | _ -> false
 
+let is_enum_inductive_kn kn =
+  is_enum_inductive (GlobRef.IndRef (kn, 0))
+  || (try is_enum_inductive_packet (unsafe_lookup_ind kn) 0
+      with Not_found -> false)
+
+let enum_ctor_name_of_ref kn i j =
+  let ascii_of_id id =
+    let s = Id.to_string id in
+    let b = Bytes.create (String.length s) in
+    for i = 0 to String.length s - 1 do
+      let c = Char.code s.[i] in
+      Bytes.set b i (if c < 128 then s.[i] else '_')
+    done;
+    Bytes.to_string b
+  in
+  let ctor_name s = "e_" ^ String.uppercase_ascii s in
+  try
+    let ind = unsafe_lookup_ind kn in
+    let packet = ind.ind_packets.(i) in
+    let consnames = packet.ip_consnames in
+    let escaped =
+      Array.map
+        (fun id ->
+          let s = ascii_of_id id in
+          let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+          ctor_name s)
+        consnames
+    in
+    let seen = Hashtbl.create (Array.length escaped) in
+    let result =
+      Array.map
+        (fun name ->
+          let final =
+            if Hashtbl.mem seen name then
+              let rec find_unique k =
+                let candidate = name ^ string_of_int k in
+                if Hashtbl.mem seen candidate then find_unique (k + 1)
+                else candidate
+              in
+              find_unique 0
+            else name
+          in
+          Hashtbl.replace seen final true;
+          final)
+        escaped
+    in
+    result.(j - 1)
+  with Not_found | Invalid_argument _ ->
+    ctor_name ("ctor" ^ string_of_int j)
+
 (** {2 Sigma assertion table} *)
 
 type sigma_assertion =

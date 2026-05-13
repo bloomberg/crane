@@ -150,6 +150,12 @@ val set_force_qualified_capitalization : unit -> unit
 
 val get_force_qualified_capitalization : unit -> bool
 
+val set_non_output_modules : Names.ModPath.t list -> Names.ModPath.t list -> unit
+
+val is_non_output_module : Names.ModPath.t -> bool
+
+val clear_non_output_modules : unit -> unit
+
 type kind =
   | Term
   | Type
@@ -290,6 +296,13 @@ val db_fallback_id : int -> Id.t
 val tparam_name : Id.t -> Id.t
 
 val enum_ctor_name : string -> string
+
+val enum_ctor_name_of_id : Id.t -> string
+
+(** Compute C++ enum constructor names for all constructors of an inductive
+    type packet. Handles prime escaping and intra-enum collision avoidance.
+    Deterministic: same packet always produces the same names. *)
+val enum_ctor_names_of_packet : Id.t array -> string array
 
 val capitalize_last_component : string -> string
 val drop_last_qualifier : string -> string

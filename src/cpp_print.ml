@@ -1058,9 +1058,16 @@ and pp_cpp_expr env args t =
           | Names.ModPath.MPdot (parent, _) -> has_mpbound parent
           | _ -> false
         in
+        let rec root_is_mpbound mp =
+          match mp with
+          | Names.ModPath.MPbound _ -> true
+          | Names.ModPath.MPdot (parent, _) -> root_is_mpbound parent
+          | _ -> false
+        in
         let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
           !template_static_accessors in
         in_lbl_list
+        && not (root_is_mpbound resolved_x_mp)
         && (has_mpbound x_mp || has_mpbound resolved_x_mp
             || not (ModPath.equal x_mp resolved_x_mp))
     in
@@ -1612,14 +1619,14 @@ and pp_cpp_expr env args t =
       | None -> pp_cpp_type false [] ty
       | Some id -> pp_typename_member ty id
     in
-    str "std::get<" ++ targ ++ str ">"
+    str ((sn ()).get ^ "<") ++ targ ++ str ">"
   | CPPstd_get (ty, ctor, Some e) ->
     require_header "variant";
     let targ = match ctor with
       | None -> pp_cpp_type false [] ty
       | Some id -> pp_typename_member ty id
     in
-    str "std::get<" ++ targ ++ str ">("
+    str ((sn ()).get ^ "<") ++ targ ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPstd_holds_alternative (ty, ctor) ->
@@ -1628,7 +1635,7 @@ and pp_cpp_expr env args t =
       | None -> pp_cpp_type false [] ty
       | Some id -> pp_typename_member ty id
     in
-    str "std::holds_alternative<" ++ targ ++ str ">"
+    str ((sn ()).holds_alternative ^ "<") ++ targ ++ str ">"
   | CPPdeclval ty ->
     require_header "utility";
     str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"

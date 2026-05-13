@@ -1540,6 +1540,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     proper C++ declaration order. *)
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
+  Translation.clear_seen_lifted_refs ();
   init_std_names ();
   (* In Separate Extraction mode the visibility stack is empty when we enter
      here, but analysis helpers (mp_renaming, top_visible, etc.) expect at

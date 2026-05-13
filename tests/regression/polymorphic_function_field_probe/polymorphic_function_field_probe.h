@@ -7,7 +7,7 @@
 #include <optional>
 #include <type_traits>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct PolymorphicFunctionFieldProbe {
   struct poly {

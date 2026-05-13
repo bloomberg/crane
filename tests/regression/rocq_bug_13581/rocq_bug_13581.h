@@ -10,7 +10,7 @@
 #include <vector>
 
 enum class Unit { e_TT };
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Nat {
   // TYPES

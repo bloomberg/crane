@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Datatypes {
   static Bool0 negb(const Bool0 b);

@@ -303,6 +303,11 @@ type translation_ctx = {
      Used by gen_ctor_call to recover concrete element types for nil lists when
      the ML type annotation has unresolved metas (Tmeta{contents=None}). *)
   mutable expected_ml_type_for_arg : ml_type option;
+  (* Track which lifted function refs have already been added so that the same
+     helper (e.g. _index_eq_dec_F) is emitted only once per file even when
+     multiple functions in the same module all use it. Reset per-file via
+     clear_seen_lifted_refs. *)
+  mutable seen_lifted_refs : GlobRef.t list;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -333,6 +338,7 @@ let tctx =
     cs_counter = 0;
     method_self_ns = Refset'.empty;
     expected_ml_type_for_arg = None;
+    seen_lifted_refs = [];
   }
 
 (** {3 Accessor wrappers} --- thin layer over {!tctx} fields. *)
@@ -358,15 +364,39 @@ let get_param_type_by_index (idx : int) : ml_type option =
 (** Reset the current parameter types to the empty list. *)
 let clear_current_param_types () = tctx.current_param_types <- []
 
-(** Enqueue a declaration to be lifted to the enclosing scope. *)
+let lifted_decl_ref = function
+  | Dtemplate (_, _, Dfundef ((r, _) :: _, _, _, _, _)) -> Some r
+  | Dfundef ((r, _) :: _, _, _, _, _) -> Some r
+  | _ -> None
+
+(** Enqueue a declaration to be lifted to the enclosing scope.
+    Skips duplicate declarations (same GlobRef) so identical helpers like
+    _index_eq_dec_F are only emitted once per file even when multiple
+    functions use them. *)
 let add_lifted_decl (d : cpp_decl) =
-  tctx.pending_lifted_decls <- d :: tctx.pending_lifted_decls
+  let is_dup =
+    match lifted_decl_ref d with
+    | None -> false
+    | Some r ->
+      List.exists (Environ.QGlobRef.equal Environ.empty_env r) tctx.seen_lifted_refs
+  in
+  if not is_dup then begin
+    ( match lifted_decl_ref d with
+    | Some r -> tctx.seen_lifted_refs <- r :: tctx.seen_lifted_refs
+    | None -> () );
+    tctx.pending_lifted_decls <- d :: tctx.pending_lifted_decls
+  end
 
 (** Drain and return the pending lifted declarations in definition order. *)
 let take_lifted_decls () =
   let ds = List.rev tctx.pending_lifted_decls in
   tctx.pending_lifted_decls <- [];
   ds
+
+(** Reset the seen-lifted-refs deduplication set. Call at the start of each
+    new output file so that identical helpers in different files are not
+    suppressed. *)
+let clear_seen_lifted_refs () = tctx.seen_lifted_refs <- []
 
 (** Prepend bindings to the de Bruijn environment type stack. *)
 let push_env_types (ids : (Id.t * ml_type) list) =
@@ -565,15 +595,13 @@ let mk_tt_expr () =
   | Some tt_ref when Table.is_custom tt_ref ->
     mk_cppglob tt_ref []
   | Some tt_ref ->
-    let ind_ref =
+    let ind_ref, ctor_name =
       match tt_ref with
-      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
+      | GlobRef.ConstructRef ((kn, i), cidx) ->
+        ( GlobRef.IndRef (kn, i),
+          Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) )
       | _ ->
         CErrors.anomaly (Pp.str "mk_tt_expr: tt is not a ConstructRef")
-    in
-    let ctor_name =
-      Id.of_string
-        (Common.enum_ctor_name (Common.pp_global_name Type tt_ref))
     in
     CPPenum_val (ind_ref, ctor_name)
   | None ->
@@ -3733,15 +3761,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           | _ -> t )
         tys
     in
-    (* If any type arg is Tany or a dummy type glob (from erased type/prop
-       params), drop ALL explicit type args via filter_erased_type_args and let
-       the compiler deduce everything. See filter_erased_type_args for why we
-       must drop all args rather than just the erased ones. *)
     let cglob = mk_cppglob x (filter_erased_type_args tys_cpp) in
-    (* Monadic non-function definitions (e.g. [base : IO nat]) are generated as
-       zero-arg thunks. A bare [MLglob] reference to such a definition must call
-       the thunk to obtain its value. CoFixpoint definitions are also zero-arg
-       functions and must be called. *)
     let needs_call =
       match find_type_opt x with
       | Some ml_ty when is_monadic_ml_type ml_ty -> true
@@ -3813,15 +3833,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          | GlobRef.ConstructRef ((kn, _), _) ->
            is_enum_inductive (GlobRef.IndRef (kn, 0))
          | _ -> false ->
-    (* Enum constructor: emit bare EnumType::Constructor value *)
     let ind_ref, ctor_name =
       match r with
-      | GlobRef.ConstructRef ((kn, i), _cidx) ->
-        let ind_ref = GlobRef.IndRef (kn, i) in
-        let base_name = Id.to_string (Table.safe_basename_of_global r) in
-        let sanitized = String.map (fun c -> if c = '\'' then '_' else c) base_name in
-        let name = Common.enum_ctor_name sanitized in
-        (ind_ref, Id.of_string name)
+      | GlobRef.ConstructRef ((kn, i), cidx) ->
+        ( GlobRef.IndRef (kn, i),
+          Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) )
       | _ ->
         CErrors.anomaly
           (Pp.str "gen_expr: enum constructor expected ConstructRef")
@@ -6116,7 +6132,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
             env
         in
         let ctor_name =
-          Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
+          match r with
+          | GlobRef.ConstructRef ((kn, i), cidx) ->
+            Id.of_string (Table.enum_ctor_name_of_ref kn i cidx)
+          | _ -> Id.of_string (Common.enum_ctor_name_of_id
+                   (Table.safe_basename_of_global r))
         in
         let body_stmts = gen_stmts env' (fun x -> Sreturn (Some x)) body in
         (ctor_name, body_stmts) :: gen_enum_branches cs
@@ -12588,9 +12608,8 @@ let gen_ind_header_v2
           (Array.map
              (fun c ->
                match c with
-               | GlobRef.ConstructRef _ ->
-                 Id.of_string
-                   (Common.enum_ctor_name (Common.pp_global_name Type c))
+               | GlobRef.ConstructRef ((kn, i), cidx) ->
+                 Id.of_string (Table.enum_ctor_name_of_ref kn i cidx)
                | _ -> ctor_fallback_id 0 )
              cnames )
       in

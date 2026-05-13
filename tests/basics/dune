@@ -11,6 +11,104 @@
 
 ; Test rules - compile C++ and run tests
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 (subdir ack
  (rule
   (targets ack.t.exe)
@@ -33,6 +131,28 @@
   (deps binomial_heap.t.exe)
   (action (run ./binomial_heap.t.exe))))
 
+(subdir bool_ops
+ (rule
+  (targets bool_ops.t.exe)
+  (deps BoolOps.vo bool_ops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_ops.t.exe bool_ops.cpp bool_ops.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bool_ops.t.exe)
+  (action (run ./bool_ops.t.exe))))
+
+(subdir closures_in_data
+ (rule
+  (targets closures_in_data.t.exe)
+  (deps ClosuresInData.vo closures_in_data.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} closures_in_data.t.exe closures_in_data.cpp closures_in_data.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps closures_in_data.t.exe)
+  (action (run ./closures_in_data.t.exe))))
+
 (subdir colist
  (rule
   (targets colist.t.exe)
@@ -43,6 +163,50 @@
   (alias runtest)
   (deps colist.t.exe)
   (action (run ./colist.t.exe))))
+
+(subdir comparison
+ (rule
+  (targets comparison.t.exe)
+  (deps Comparison.vo comparison.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} comparison.t.exe comparison.cpp comparison.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps comparison.t.exe)
+  (action (run ./comparison.t.exe))))
+
+(subdir cotree
+ (rule
+  (targets cotree.t.exe)
+  (deps Cotree.vo cotree.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cotree.t.exe cotree.cpp cotree.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cotree.t.exe)
+  (action (run ./cotree.t.exe))))
+
+(subdir currying
+ (rule
+  (targets currying.t.exe)
+  (deps Currying.vo currying.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} currying.t.exe currying.cpp currying.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps currying.t.exe)
+  (action (run ./currying.t.exe))))
+
+(subdir doc_comments
+ (rule
+  (targets doc_comments.t.exe)
+  (deps DocComments.vo doc_comments.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} doc_comments.t.exe doc_comments.cpp doc_comments.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps doc_comments.t.exe)
+  (action (run ./doc_comments.t.exe))))
 
 (subdir eq_ord_show
  (rule
@@ -55,6 +219,61 @@
   (deps eq_ord_show.t.exe)
   (action (run ./eq_ord_show.t.exe))))
 
+(subdir graph
+ (rule
+  (targets graph.t.exe)
+  (deps Graph.vo graph.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} graph.t.exe graph.cpp graph.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps graph.t.exe)
+  (action (run ./graph.t.exe))))
+
+(subdir higher_order
+ (rule
+  (targets higher_order.t.exe)
+  (deps HigherOrder.vo higher_order.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_order.t.exe higher_order.cpp higher_order.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps higher_order.t.exe)
+  (action (run ./higher_order.t.exe))))
+
+(subdir int63_arith
+ (rule
+  (targets int63_arith.t.exe)
+  (deps Int63Arith.vo int63_arith.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_arith.t.exe int63_arith.cpp int63_arith.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps int63_arith.t.exe)
+  (action (run ./int63_arith.t.exe))))
+
+(subdir lambda
+ (rule
+  (targets lambda.t.exe)
+  (deps Lambda.vo lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda.t.exe lambda.cpp lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lambda.t.exe)
+  (action (run ./lambda.t.exe))))
+
+(subdir levenshtein
+ (rule
+  (targets levenshtein.t.exe)
+  (deps Levenshtein.vo levenshtein.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} levenshtein.t.exe levenshtein.cpp levenshtein.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps levenshtein.t.exe)
+  (action (run ./levenshtein.t.exe))))
+
 (subdir list
  (rule
   (targets list.t.exe)
@@ -65,17 +284,6 @@
   (alias runtest)
   (deps list.t.exe)
   (action (run ./list.t.exe))))
-
-(subdir tail_rec_map
- (rule
-  (targets tail_rec_map.t.exe)
-  (deps TailRecMap.vo tail_rec_map.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_map.t.exe tail_rec_map.cpp tail_rec_map.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tail_rec_map.t.exe)
-  (action (run ./tail_rec_map.t.exe))))
 
 (subdir module
  (rule
@@ -121,294 +329,6 @@
   (deps mutual_mod.t.exe)
   (action (run ./mutual_mod.t.exe))))
 
-(subdir nat
- (rule
-  (targets nat.t.exe)
-  (deps Nat.vo nat.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nat.t.exe nat.cpp nat.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nat.t.exe)
-  (action (run ./nat.t.exe))))
-
-(subdir nat_bde
- (rule
-  (targets nat_bde.t.exe)
-  (deps Nat.vo nat_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} nat_bde.t.exe nat_bde.cpp nat_bde.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nat_bde.t.exe)
-  (action (run ./nat_bde.t.exe))))
-
-(subdir nat_gmp
- (rule
-  (targets nat_gmp.t.exe)
-  (deps NatGMPTest.vo nat_gmp.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-gmp.sh %{project_root} nat_gmp.t.exe nat_gmp.cpp nat_gmp.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nat_gmp.t.exe)
-  (action (run ./nat_gmp.t.exe))))
-
-(subdir record_match
- (rule
-  (targets record_match.t.exe)
-  (deps RecordMatch.vo record_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} record_match.t.exe record_match.cpp record_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps record_match.t.exe)
-  (action (run ./record_match.t.exe))))
-
-(subdir tokenizer
- (rule
-  (targets tokenizer.t.exe)
-  (deps Tokenizer.vo tokenizer.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tokenizer.t.exe tokenizer.cpp tokenizer.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tokenizer.t.exe)
-  (action (run ./tokenizer.t.exe))))
-
-(subdir topological_sort
- (rule
-  (targets topological_sort.t.exe)
-  (deps TopologicalSort.vo topological_sort.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} topological_sort.t.exe topological_sort.cpp topological_sort.t.cpp)))
- (rule
-  (alias runtest)
-  (deps topological_sort.t.exe)
-  (action (run ./topological_sort.t.exe))))
-
-(subdir topological_sort_bde
- (rule
-  (targets topological_sort_bde.t.exe)
-  (deps TopologicalSort.vo topological_sort_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} topological_sort_bde.t.exe topological_sort_bde.cpp topological_sort_bde.t.cpp)))
- (rule
-  (alias runtest)
-  (deps topological_sort_bde.t.exe)
-  (action (run ./topological_sort_bde.t.exe))))
-
-(subdir tree
- (rule
-  (targets tree.t.exe)
-  (deps Tree.vo tree.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tree.t.exe tree.cpp tree.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tree.t.exe)
-  (action (run ./tree.t.exe))))
-
-
-(subdir tail_rec_rev
- (rule
-  (targets tail_rec_rev.t.exe)
-  (deps TailRecRev.vo tail_rec_rev.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_rev.t.exe tail_rec_rev.cpp tail_rec_rev.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tail_rec_rev.t.exe)
-  (action (run ./tail_rec_rev.t.exe))))
-
-(subdir tail_rec_zip
- (rule
-  (targets tail_rec_zip.t.exe)
-  (deps TailRecZip.vo tail_rec_zip.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_zip.t.exe tail_rec_zip.cpp tail_rec_zip.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tail_rec_zip.t.exe)
-  (action (run ./tail_rec_zip.t.exe))))
-
-(subdir typed_expr
- (rule
-  (targets typed_expr.t.exe)
-  (deps TypedExpr.vo typed_expr.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_expr.t.exe typed_expr.cpp typed_expr.t.cpp)))
- (rule
-  (alias runtest)
-  (deps typed_expr.t.exe)
-  (action (run ./typed_expr.t.exe))))
-
-(subdir regexp
- (rule
-  (targets regexp.t.exe)
-  (deps Regexp.vo regexp.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} regexp.t.exe regexp.cpp regexp.t.cpp)))
- (rule
-  (alias runtest)
-  (deps regexp.t.exe)
-  (action (run ./regexp.t.exe))))
-
-(subdir stream
- (rule
-  (targets stream.t.exe)
-  (deps Stream.vo stream.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} stream.t.exe stream.cpp stream.t.cpp)))
- (rule
-  (alias runtest)
-  (deps stream.t.exe)
-  (action (run ./stream.t.exe))))
-
-
-(subdir prim_array
- (rule
-  (targets prim_array.t.exe)
-  (deps PrimArray.vo prim_array.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_array.t.exe prim_array.cpp prim_array.t.cpp)))
- (rule
-  (alias runtest)
-  (deps prim_array.t.exe)
-  (action (run ./prim_array.t.exe))))
-
-(subdir prim_float
- (rule
-  (targets prim_float.t.exe)
-  (deps PrimFloat.vo prim_float.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_float.t.exe prim_float.cpp prim_float.t.cpp)))
- (rule
-  (alias runtest)
-  (deps prim_float.t.exe)
-  (action (run ./prim_float.t.exe))))
-
-(subdir levenshtein
- (rule
-  (targets levenshtein.t.exe)
-  (deps Levenshtein.vo levenshtein.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} levenshtein.t.exe levenshtein.cpp levenshtein.t.cpp)))
- (rule
-  (alias runtest)
-  (deps levenshtein.t.exe)
-  (action (run ./levenshtein.t.exe))))
-
-(subdir sigma_types
- (rule
-  (targets sigma_types.t.exe)
-  (deps SigmaTypes.vo sigma_types.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigma_types.t.exe sigma_types.cpp sigma_types.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigma_types.t.exe)
-  (action (run ./sigma_types.t.exe))))
-
-(subdir graph
- (rule
-  (targets graph.t.exe)
-  (deps Graph.vo graph.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} graph.t.exe graph.cpp graph.t.cpp)))
- (rule
-  (alias runtest)
-  (deps graph.t.exe)
-  (action (run ./graph.t.exe))))
-
-(subdir sort
- (rule
-  (targets sort.t.exe)
-  (deps Sort.vo sort.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sort.t.exe sort.cpp sort.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sort.t.exe)
-  (action (run ./sort.t.exe))))
-
-(subdir bool_ops
- (rule
-  (targets bool_ops.t.exe)
-  (deps BoolOps.vo bool_ops.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_ops.t.exe bool_ops.cpp bool_ops.t.cpp)))
- (rule
-  (alias runtest)
-  (deps bool_ops.t.exe)
-  (action (run ./bool_ops.t.exe))))
-
-(subdir closures_in_data
- (rule
-  (targets closures_in_data.t.exe)
-  (deps ClosuresInData.vo closures_in_data.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} closures_in_data.t.exe closures_in_data.cpp closures_in_data.t.cpp)))
- (rule
-  (alias runtest)
-  (deps closures_in_data.t.exe)
-  (action (run ./closures_in_data.t.exe))))
-
-(subdir comparison
- (rule
-  (targets comparison.t.exe)
-  (deps Comparison.vo comparison.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} comparison.t.exe comparison.cpp comparison.t.cpp)))
- (rule
-  (alias runtest)
-  (deps comparison.t.exe)
-  (action (run ./comparison.t.exe))))
-
-(subdir currying
- (rule
-  (targets currying.t.exe)
-  (deps Currying.vo currying.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} currying.t.exe currying.cpp currying.t.cpp)))
- (rule
-  (alias runtest)
-  (deps currying.t.exe)
-  (action (run ./currying.t.exe))))
-
-(subdir higher_order
- (rule
-  (targets higher_order.t.exe)
-  (deps HigherOrder.vo higher_order.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} higher_order.t.exe higher_order.cpp higher_order.t.cpp)))
- (rule
-  (alias runtest)
-  (deps higher_order.t.exe)
-  (action (run ./higher_order.t.exe))))
-
-(subdir int63_arith
- (rule
-  (targets int63_arith.t.exe)
-  (deps Int63Arith.vo int63_arith.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_arith.t.exe int63_arith.cpp int63_arith.t.cpp)))
- (rule
-  (alias runtest)
-  (deps int63_arith.t.exe)
-  (action (run ./int63_arith.t.exe))))
-
-(subdir lambda
- (rule
-  (targets lambda.t.exe)
-  (deps Lambda.vo lambda.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda.t.exe lambda.cpp lambda.t.cpp)))
- (rule
-  (alias runtest)
-  (deps lambda.t.exe)
-  (action (run ./lambda.t.exe))))
-
 (subdir mutual_recursion
  (rule
   (targets mutual_recursion.t.exe)
@@ -419,61 +339,6 @@
   (alias runtest)
   (deps mutual_recursion.t.exe)
   (action (run ./mutual_recursion.t.exe))))
-
-(subdir option
- (rule
-  (targets option.t.exe)
-  (deps Option.vo option.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} option.t.exe option.cpp option.t.cpp)))
- (rule
-  (alias runtest)
-  (deps option.t.exe)
-  (action (run ./option.t.exe))))
-
-(subdir sections
- (rule
-  (targets sections.t.exe)
-  (deps Sections.vo sections.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sections.t.exe sections.cpp sections.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sections.t.exe)
-  (action (run ./sections.t.exe))))
-
-(subdir string_match
- (rule
-  (targets string_match.t.exe)
-  (deps StringMatch.vo string_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} string_match.t.exe string_match.cpp string_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps string_match.t.exe)
-  (action (run ./string_match.t.exe))))
-
-(subdir sum
- (rule
-  (targets sum.t.exe)
-  (deps Sum.vo sum.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sum.t.exe sum.cpp sum.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sum.t.exe)
-  (action (run ./sum.t.exe))))
-
-(subdir typeclasses
- (rule
-  (targets typeclasses.t.exe)
-  (deps Typeclasses.vo typeclasses.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclasses.t.exe typeclasses.cpp typeclasses.t.cpp)))
- (rule
-  (alias runtest)
-  (deps typeclasses.t.exe)
-  (action (run ./typeclasses.t.exe))))
 
 (subdir n_gmp
  (rule
@@ -497,6 +362,259 @@
   (deps n_int.t.exe)
   (action (run ./n_int.t.exe))))
 
+(subdir nat_bde
+ (rule
+  (targets nat_bde.t.exe)
+  (deps Nat.vo nat_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} nat_bde.t.exe nat_bde.cpp nat_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_bde.t.exe)
+  (action (run ./nat_bde.t.exe))))
+
+(subdir nat_gmp
+ (rule
+  (targets nat_gmp.t.exe)
+  (deps NatGMPTest.vo nat_gmp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-gmp.sh %{project_root} nat_gmp.t.exe nat_gmp.cpp nat_gmp.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_gmp.t.exe)
+  (action (run ./nat_gmp.t.exe))))
+
+(subdir nat
+ (rule
+  (targets nat.t.exe)
+  (deps Nat.vo nat.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat.t.exe nat.cpp nat.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat.t.exe)
+  (action (run ./nat.t.exe))))
+
+(subdir option
+ (rule
+  (targets option.t.exe)
+  (deps Option.vo option.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option.t.exe option.cpp option.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option.t.exe)
+  (action (run ./option.t.exe))))
+
+(subdir prim_array
+ (rule
+  (targets prim_array.t.exe)
+  (deps PrimArray.vo prim_array.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_array.t.exe prim_array.cpp prim_array.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_array.t.exe)
+  (action (run ./prim_array.t.exe))))
+
+(subdir prim_float
+ (rule
+  (targets prim_float.t.exe)
+  (deps PrimFloat.vo prim_float.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prim_float.t.exe prim_float.cpp prim_float.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prim_float.t.exe)
+  (action (run ./prim_float.t.exe))))
+
+(subdir record_match
+ (rule
+  (targets record_match.t.exe)
+  (deps RecordMatch.vo record_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_match.t.exe record_match.cpp record_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_match.t.exe)
+  (action (run ./record_match.t.exe))))
+
+(subdir regexp
+ (rule
+  (targets regexp.t.exe)
+  (deps Regexp.vo regexp.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} regexp.t.exe regexp.cpp regexp.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps regexp.t.exe)
+  (action (run ./regexp.t.exe))))
+
+(subdir sections
+ (rule
+  (targets sections.t.exe)
+  (deps Sections.vo sections.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sections.t.exe sections.cpp sections.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sections.t.exe)
+  (action (run ./sections.t.exe))))
+
+(subdir sigma_types
+ (rule
+  (targets sigma_types.t.exe)
+  (deps SigmaTypes.vo sigma_types.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigma_types.t.exe sigma_types.cpp sigma_types.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigma_types.t.exe)
+  (action (run ./sigma_types.t.exe))))
+
+(subdir sort
+ (rule
+  (targets sort.t.exe)
+  (deps Sort.vo sort.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sort.t.exe sort.cpp sort.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sort.t.exe)
+  (action (run ./sort.t.exe))))
+
+(subdir stream
+ (rule
+  (targets stream.t.exe)
+  (deps Stream.vo stream.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stream.t.exe stream.cpp stream.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stream.t.exe)
+  (action (run ./stream.t.exe))))
+
+(subdir string_match
+ (rule
+  (targets string_match.t.exe)
+  (deps StringMatch.vo string_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_match.t.exe string_match.cpp string_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_match.t.exe)
+  (action (run ./string_match.t.exe))))
+
+(subdir sum
+ (rule
+  (targets sum.t.exe)
+  (deps Sum.vo sum.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum.t.exe sum.cpp sum.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum.t.exe)
+  (action (run ./sum.t.exe))))
+
+(subdir tail_rec_map
+ (rule
+  (targets tail_rec_map.t.exe)
+  (deps TailRecMap.vo tail_rec_map.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_map.t.exe tail_rec_map.cpp tail_rec_map.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tail_rec_map.t.exe)
+  (action (run ./tail_rec_map.t.exe))))
+
+(subdir tail_rec_rev
+ (rule
+  (targets tail_rec_rev.t.exe)
+  (deps TailRecRev.vo tail_rec_rev.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_rev.t.exe tail_rec_rev.cpp tail_rec_rev.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tail_rec_rev.t.exe)
+  (action (run ./tail_rec_rev.t.exe))))
+
+(subdir tail_rec_zip
+ (rule
+  (targets tail_rec_zip.t.exe)
+  (deps TailRecZip.vo tail_rec_zip.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_rec_zip.t.exe tail_rec_zip.cpp tail_rec_zip.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tail_rec_zip.t.exe)
+  (action (run ./tail_rec_zip.t.exe))))
+
+(subdir tokenizer
+ (rule
+  (targets tokenizer.t.exe)
+  (deps Tokenizer.vo tokenizer.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tokenizer.t.exe tokenizer.cpp tokenizer.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tokenizer.t.exe)
+  (action (run ./tokenizer.t.exe))))
+
+(subdir topological_sort_bde
+ (rule
+  (targets topological_sort_bde.t.exe)
+  (deps TopologicalSort.vo topological_sort_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} topological_sort_bde.t.exe topological_sort_bde.cpp topological_sort_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps topological_sort_bde.t.exe)
+  (action (run ./topological_sort_bde.t.exe))))
+
+(subdir topological_sort
+ (rule
+  (targets topological_sort.t.exe)
+  (deps TopologicalSort.vo topological_sort.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} topological_sort.t.exe topological_sort.cpp topological_sort.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps topological_sort.t.exe)
+  (action (run ./topological_sort.t.exe))))
+
+(subdir tree
+ (rule
+  (targets tree.t.exe)
+  (deps Tree.vo tree.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tree.t.exe tree.cpp tree.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tree.t.exe)
+  (action (run ./tree.t.exe))))
+
+(subdir typeclasses
+ (rule
+  (targets typeclasses.t.exe)
+  (deps Typeclasses.vo typeclasses.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclasses.t.exe typeclasses.cpp typeclasses.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps typeclasses.t.exe)
+  (action (run ./typeclasses.t.exe))))
+
+(subdir typed_expr
+ (rule
+  (targets typed_expr.t.exe)
+  (deps TypedExpr.vo typed_expr.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_expr.t.exe typed_expr.cpp typed_expr.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_expr.t.exe)
+  (action (run ./typed_expr.t.exe))))
+
 (subdir z_gmp
  (rule
   (targets z_gmp.t.exe)
@@ -518,25 +636,3 @@
   (alias runtest)
   (deps z_int.t.exe)
   (action (run ./z_int.t.exe))))
-
-(subdir doc_comments
- (rule
-  (targets doc_comments.t.exe)
-  (deps DocComments.vo doc_comments.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} doc_comments.t.exe doc_comments.cpp doc_comments.t.cpp)))
- (rule
-  (alias runtest)
-  (deps doc_comments.t.exe)
-  (action (run ./doc_comments.t.exe))))
-
-(subdir cotree
- (rule
-  (targets cotree.t.exe)
-  (deps Cotree.vo cotree.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} cotree.t.exe cotree.cpp cotree.t.cpp)))
- (rule
-  (alias runtest)
-  (deps cotree.t.exe)
-  (action (run ./cotree.t.exe))))

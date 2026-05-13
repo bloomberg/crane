@@ -11,7 +11,7 @@
 #include <variant>
 #include <vector>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Nat {
   // TYPES
@@ -481,7 +481,7 @@ public:
 };
 
 struct SigTNotations {};
-enum class Sumbool { e_LEFT0, e_RIGHT0 };
+enum class Sumbool { e_LEFT, e_RIGHT };
 
 template <typename t_A> struct Sumor {
   // TYPES

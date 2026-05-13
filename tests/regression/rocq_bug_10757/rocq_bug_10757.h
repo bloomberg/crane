@@ -9,7 +9,7 @@
 #include <utility>
 #include <variant>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 template <typename t_A> struct Sig {
   // TYPES
@@ -88,10 +88,10 @@ struct RocqBug10757 {
     T1 x_ = f(x0);
     Bool0 filtered_var = beq(x0, x_);
     switch (filtered_var) {
-    case Bool0::e_TRUE0: {
+    case Bool0::e_TRUE: {
       return Sig<T1>::exist(x0);
     }
-    case Bool0::e_FALSE0: {
+    case Bool0::e_FALSE: {
       return iterate0(x_);
     }
     default:

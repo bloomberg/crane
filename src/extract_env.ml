@@ -1377,6 +1377,129 @@ let separate_extraction ~opaque_access lr =
     List.filter_map (fun (mp, sel) -> if has_real_decls sel then Some mp else None) struc
   in
   Cpp_state.set_valid_output_modules valid_mps;
+  let all_mps = List.map fst struc in
+  Common.set_non_output_modules valid_mps all_mps;
+  let rec pre_scan_unmerged sel =
+    let refs_unmerged_functor (me : ml_module_expr) =
+      let rec get_base : ml_module_expr -> bool = function
+        | MEapply (me2, _) -> get_base me2
+        | MEident mp ->
+          let lbl = match mp with
+            | ModPath.MPdot (_, l) -> Some (String.capitalize_ascii (Label.to_string l))
+            | _ -> None
+          in
+          (match lbl with Some n -> Cpp_state.is_global_unmerged n | None -> false)
+        | MEfunctor (_, _, me2) -> get_base me2
+        | MEstruct _ -> false
+      in get_base me
+    in
+    List.iter (fun (l, se) ->
+      match se with
+      | SEmodule { ml_mod_expr = MEident _; _ } -> ()
+      | SEmodule m ->
+        let subs = match m.ml_mod_expr with
+          | MEstruct (_, s) -> s
+          | MEapply (me, _) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEapply (me2, _) -> get_subs me2
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+          | MEident _ -> []
+          | MEfunctor (_, _, me) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEapply (me2, _) ->
+                let rec get2 = function
+                  | MEstruct (_, s) -> s | MEapply (m2, _) -> get2 m2
+                  | MEfunctor (_, _, m2) -> get2 m2 | MEident _ -> []
+                in get2 me2
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+        in
+        let has_funcs = List.exists (fun (_, se') ->
+          match se' with
+          | SEdecl (Dterm _ | Dfix _) -> true
+          | _ -> false
+        ) subs in
+        let is_unmerged_apply = refs_unmerged_functor m.ml_mod_expr in
+        if has_funcs || is_unmerged_apply then begin
+          let name = String.capitalize_ascii (Label.to_string l) in
+          Cpp_state.mark_global_unmerged name
+        end;
+        pre_scan_unmerged subs
+      | _ -> ()
+    ) sel
+  in
+  List.iter (fun (_, sel) -> pre_scan_unmerged sel) struc;
+  let rec pre_scan_meyers_singletons ~in_template sel =
+    List.iter (fun (_l, se) ->
+      match se with
+      | SEdecl (Dterm (r, _body, ty)) ->
+        let is_function = match ty with Tarr _ -> true | _ -> false in
+        if in_template && not is_function then begin
+          let mp = Table.modpath_of_r r in
+          let lbl = Table.label_of_r r in
+          Cpp_state.template_static_accessors :=
+            (mp, lbl) :: !Cpp_state.template_static_accessors;
+          (match r with
+           | GlobRef.ConstRef c ->
+             Hashtbl.replace Cpp_state.template_static_accessor_kns
+               (Constant.canonical c) ()
+           | _ -> ())
+        end else if not in_template && not is_function then begin
+          let lbl = Table.label_of_r r in
+          Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
+        end
+      | SEdecl (Dfix (refs, _bodies, tys)) ->
+        Array.iteri (fun i r ->
+          let is_function = match tys.(i) with Tarr _ -> true | _ -> false in
+          if in_template && not is_function then begin
+            let mp = Table.modpath_of_r r in
+            let lbl = Table.label_of_r r in
+            Cpp_state.template_static_accessors :=
+              (mp, lbl) :: !Cpp_state.template_static_accessors;
+            (match r with
+             | GlobRef.ConstRef c ->
+               Hashtbl.replace Cpp_state.template_static_accessor_kns
+                 (Constant.canonical c) ()
+             | _ -> ())
+          end else if not in_template && not is_function then begin
+            let lbl = Table.label_of_r r in
+            Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
+          end
+        ) refs
+      | SEmodule m ->
+        let has_params = match m.ml_mod_expr with
+          | MEfunctor _ -> true
+          | _ -> false
+        in
+        let sub_in_template = in_template || has_params in
+        let subs = match m.ml_mod_expr with
+          | MEstruct (_, s) -> s
+          | MEfunctor (_, _, me) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEapply (me2, _) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+          | MEapply (me, _) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEapply (me2, _) -> get_subs me2
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+          | MEident _ -> []
+        in
+        pre_scan_meyers_singletons ~in_template:sub_in_template subs
+      | _ -> ()
+    ) sel
+  in
+  List.iter (fun (_, sel) -> pre_scan_meyers_singletons ~in_template:false sel) struc;
   let print = function
     | ((MPfile _dir as mp), sel) as e ->
       if has_real_decls sel then begin
@@ -1441,6 +1564,8 @@ let separate_extraction ~opaque_access lr =
   List.iter print struc;
   Cpp_state.clear_global_method_registry ();
   Cpp_state.clear_valid_output_modules ();
+  Cpp_state.clear_global_unmerged ();
+  Common.clear_non_output_modules ();
   reset ()
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is

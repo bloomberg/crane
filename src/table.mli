@@ -275,6 +275,13 @@ val has_dependent_params : GlobRef.t -> bool
     and at least one constructor exists. *)
 val is_enum_inductive_packet : Miniml.ml_ind -> int -> bool
 
+val is_enum_inductive_kn : MutInd.t -> bool
+
+(** Compute the C++ enum constructor name for constructor [j] of inductive
+    [(kn, i)] by looking up the extraction packet. Deterministic regardless
+    of the KerName used (canonical or functor-applied). *)
+val enum_ctor_name_of_ref : MutInd.t -> int -> int -> string
+
 (** Sigma type assertion. *)
 type sigma_assertion =
   | AssertExpr of string

@@ -845,7 +845,7 @@ struct RamOps {
 
   static unsigned int score(const Item x);
   static inline const unsigned int test_accessor_namespace =
-      (score(Item::e_S_) + score(Item::e_S_));
+      (score(Item::e_S_) + score(Item::e_S_0));
   static inline const std::pair<
       std::pair<
           std::pair<

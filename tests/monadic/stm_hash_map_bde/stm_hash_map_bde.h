@@ -75,7 +75,7 @@ public:
         const auto &_alt = bsl::get<Cons>(_src->v());
         _dst->d_v_ = Cons(_alt.d_a0,
                           _alt.d_a1 ? bsl::make_unique<List<t_A>>() : nullptr);
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
+        auto &_dst_alt = bsl::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
         }
@@ -85,7 +85,7 @@ public:
   }
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
-    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+    if (bsl::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->d_v_ = Nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
@@ -103,8 +103,8 @@ public:
     std::vector<bsl::unique_ptr<List<t_A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
+      if (bsl::holds_alternative<Cons>(_node.d_v_)) {
+        auto &_alt = bsl::get<Cons>(_node.d_v_);
         if (_alt.d_a1) {
           _stack.push_back(bsl::move(_alt.d_a1));
         }

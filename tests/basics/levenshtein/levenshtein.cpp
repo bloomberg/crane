@@ -132,24 +132,24 @@ Nat Levenshtein::levenshtein(const String &_x0, const String &_x1) {
 
 Sumbool Bool::bool_dec(const Bool0 b1, const Bool0 b2) {
   switch (b1) {
-  case Bool0::e_TRUE0: {
+  case Bool0::e_TRUE: {
     switch (b2) {
-    case Bool0::e_TRUE0: {
+    case Bool0::e_TRUE: {
       return Sumbool::e_LEFT;
     }
-    case Bool0::e_FALSE0: {
+    case Bool0::e_FALSE: {
       return Sumbool::e_RIGHT;
     }
     default:
       std::unreachable();
     }
   }
-  case Bool0::e_FALSE0: {
+  case Bool0::e_FALSE: {
     switch (b2) {
-    case Bool0::e_TRUE0: {
+    case Bool0::e_TRUE: {
       return Sumbool::e_RIGHT;
     }
-    case Bool0::e_FALSE0: {
+    case Bool0::e_FALSE: {
       return Sumbool::e_LEFT;
     }
     default:
