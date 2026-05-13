@@ -150,7 +150,7 @@ val set_force_qualified_capitalization : unit -> unit
 
 val get_force_qualified_capitalization : unit -> bool
 
-val set_non_output_modules : Names.ModPath.t list -> Names.ModPath.t list -> unit
+val set_non_output_modules : Names.ModPath.t list -> unit
 
 val is_non_output_module : Names.ModPath.t -> bool
 
@@ -305,4 +305,3 @@ val enum_ctor_name_of_id : Id.t -> string
 val enum_ctor_names_of_packet : Id.t array -> string array
 
 val capitalize_last_component : string -> string
-val drop_last_qualifier : string -> string

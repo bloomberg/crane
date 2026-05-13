@@ -177,6 +177,7 @@ let add_typedef kn cb t = typedefs := Cmap_env.add kn (cb, t) !typedefs
 let lookup_typedef kn cb =
   lookup_with_body_check (fun kn -> Cmap_env.find_opt kn !typedefs) kn cb
 
+(** Like {!lookup_typedef} but without the constant-body checksum validation. *)
 let lookup_typedef_unchecked kn =
   match Cmap_env.find_opt kn !typedefs with
   | Some (_, t) -> Some t
@@ -482,11 +483,10 @@ let has_dependent_params r =
       with _ -> false )
   | _ -> false
 
-let is_enum_inductive_kn kn =
-  is_enum_inductive (GlobRef.IndRef (kn, 0))
-  || (try is_enum_inductive_packet (unsafe_lookup_ind kn) 0
-      with Not_found -> false)
-
+(** Compute the C++ enum constructor name for constructor [j] (1-based) of
+    inductive [(kn, i)].  Handles non-ASCII escaping, prime-to-underscore
+    conversion, and intra-enum collision avoidance identically to
+    {!Common.enum_ctor_names_of_packet}. *)
 let enum_ctor_name_of_ref kn i j =
   let ascii_of_id id =
     let s = Id.to_string id in

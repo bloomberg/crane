@@ -518,6 +518,8 @@ let print_cpp_type_var vl i =
     cleared after. *)
 let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
 
+(** [true] iff the C++ type ultimately resolves to [std::any], including through
+    type modifiers ([Tmod], [Tref], [Tnamespace]) and [Tunknown] aliases. *)
 let rec is_any_type = function
   | Tany -> true
   | Tmod (_, inner) -> is_any_type inner
@@ -1054,17 +1056,11 @@ and pp_cpp_expr env args t =
           | Names.ModPath.MPdot (parent, _) -> has_mpbound parent
           | _ -> false
         in
-        let rec root_is_mpbound mp =
-          match mp with
-          | Names.ModPath.MPbound _ -> true
-          | Names.ModPath.MPdot (parent, _) -> root_is_mpbound parent
-          | _ -> false
-        in
           let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
             !template_static_accessors in
           in_lbl_list
-          && ( root_is_mpbound x_mp
-             || (not (root_is_mpbound resolved_x_mp)
+          && ( has_mpbound x_mp
+             || (not (has_mpbound resolved_x_mp)
                  && (has_mpbound x_mp || has_mpbound resolved_x_mp
                      || not (ModPath.equal x_mp resolved_x_mp))) )
     in

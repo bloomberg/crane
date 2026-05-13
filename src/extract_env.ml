@@ -1377,8 +1377,7 @@ let separate_extraction ~opaque_access lr =
     List.filter_map (fun (mp, sel) -> if has_real_decls sel then Some mp else None) struc
   in
   Cpp_state.set_valid_output_modules valid_mps;
-  let all_mps = List.map fst struc in
-  Common.set_non_output_modules valid_mps all_mps;
+  Common.set_non_output_modules valid_mps;
   let rec pre_scan_unmerged sel =
     let refs_unmerged_functor (me : ml_module_expr) =
       let rec get_base : ml_module_expr -> bool = function

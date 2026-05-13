@@ -487,14 +487,20 @@ let get_force_qualified_capitalization () = !force_qualified_capitalization
 
 let () = register_cleanup (fun () -> force_qualified_capitalization := false)
 
+(** Set of module paths that are included in the current extraction output.
+    When non-empty, references to modules outside this set are rendered without
+    their qualifier (as if the module is an external dependency). *)
 let valid_output_module_set : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
 
-let set_non_output_modules valid_mps _all_mps =
+(** Record which module paths belong to the current extraction output.
+    [valid_mps] are the modules being written; references to any other module
+    path will be treated as external by {!is_non_output_module}. *)
+let set_non_output_modules valid_mps =
   Hashtbl.clear valid_output_module_set;
-  List.iter (fun mp ->
-    Hashtbl.replace valid_output_module_set mp ()
-  ) valid_mps
+  List.iter (fun mp -> Hashtbl.replace valid_output_module_set mp ()) valid_mps
 
+(** [true] iff [mp] is known but not part of the current extraction output —
+    i.e., its definition will live in a different generated file. *)
 let is_non_output_module mp =
   Hashtbl.length valid_output_module_set > 0
   && not (Hashtbl.mem valid_output_module_set mp)
@@ -1313,6 +1319,10 @@ let tparam_name id = Id.of_string ("t_" ^ Id.to_string id)
 
 let enum_ctor_name s = "e_" ^ String.uppercase_ascii s
 
+(** Compute the C++ enum constructor name for a single constructor [Id.t],
+    applying prime-to-underscore escaping.  Does not perform collision
+    avoidance; use {!enum_ctor_names_of_packet} when the full sibling set is
+    available, or {!Table.enum_ctor_name_of_ref} when looking up by position. *)
 let enum_ctor_name_of_id id =
   let s = ascii_of_id id in
   let s = String.map (fun c -> if c = '\'' then '_' else c) s in
@@ -1354,21 +1364,3 @@ let capitalize_last_component s =
     prefix ^ String.capitalize_ascii suffix
   | _ -> String.capitalize_ascii s
 
-let drop_last_qualifier s =
-  match String.rindex_opt s ':' with
-  | Some i when i > 1 && s.[i - 1] = ':' ->
-    let prefix_end = i - 1 in
-    let suffix = String.sub s (i + 1) (String.length s - i - 1) in
-    let before =
-      if prefix_end >= 2 then
-        match String.rindex_from_opt s (prefix_end - 1) ':' with
-        | Some j when j > 0 && s.[j - 1] = ':' ->
-          String.sub s 0 (j + 1)
-        | _ -> ""
-      else ""
-    in
-    if String.length before > 0 then
-      before ^ suffix
-    else
-      suffix
-  | _ -> s
