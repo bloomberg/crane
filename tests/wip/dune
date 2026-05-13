@@ -207,3 +207,14 @@
   (alias runtest)
   (deps sep_ext_nullary_deep_path.t.exe)
   (action (run ./sep_ext_nullary_deep_path.t.exe))))
+
+(subdir sep_ext_nullary_module_alias
+ (rule
+  (targets sep_ext_nullary_module_alias.t.exe)
+  (deps SepExtNullaryModuleAlias.vo sep_ext_nullary_module_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_module_alias.t.exe SepExtNullaryModuleAlias.cpp sep_ext_nullary_module_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nullary_module_alias.t.exe)
+  (action (run ./sep_ext_nullary_module_alias.t.exe))))

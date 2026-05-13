@@ -32,17 +32,17 @@ concept Root = requires { requires Mid<typename M::M>; };
 
 template <Root R> struct Worker {
   static const unsigned int &deep_val() {
-    static const unsigned int v = R::M::L::val;
+    static const unsigned int v = R::M::L::val();
     return v;
   }
 
   static const unsigned int &deep_extra() {
-    static const unsigned int v = R::M::L::extra;
+    static const unsigned int v = R::M::L::extra();
     return v;
   }
 
   static const unsigned int &deep_sum() {
-    static const unsigned int v = (R::M::L::val + R::M::L::extra);
+    static const unsigned int v = (R::M::L::val() + R::M::L::extra());
     return v;
   }
 };

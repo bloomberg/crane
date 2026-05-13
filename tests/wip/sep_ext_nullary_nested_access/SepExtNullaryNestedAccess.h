@@ -32,7 +32,7 @@ concept Outer = requires {
 
 template <Outer O> struct Worker {
   static const unsigned int &get_inner_val() {
-    static const unsigned int v = O::I::val;
+    static const unsigned int v = O::I::val();
     return v;
   }
 
@@ -42,7 +42,7 @@ template <Outer O> struct Worker {
   }
 
   static const unsigned int &sum() {
-    static const unsigned int v = (O::I::val + O::name());
+    static const unsigned int v = (O::I::val() + O::name());
     return v;
   }
 };

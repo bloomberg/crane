@@ -1493,9 +1493,9 @@ let separate_extraction ~opaque_access lr =
           | _ -> false
         in
         let sub_in_template = in_template || has_params in
-        let rec register_modtype_accessors modtype_table = function
+        let rec register_modtype_accessors modtype_table ?param_mp = function
           | MTsig (_, sig_items) ->
-            List.iter (fun (_l, specif) ->
+            List.iter (fun (l, specif) ->
               match specif with
               | Spec (Sval (r, _, ty)) ->
                 let is_function = match ty with Tarr _ -> true | _ -> false in
@@ -1503,20 +1503,32 @@ let separate_extraction ~opaque_access lr =
                   let mp = Table.modpath_of_r r in
                   let lbl = Table.label_of_r r in
                   Cpp_state.template_static_accessors :=
-                    (mp, lbl) :: !Cpp_state.template_static_accessors
+                    (mp, lbl) :: !Cpp_state.template_static_accessors;
+                  (match param_mp with
+                   | Some pmp ->
+                     Cpp_state.template_static_accessors :=
+                       (pmp, lbl) :: !Cpp_state.template_static_accessors
+                   | None -> ())
                 end
+              | Smodule mt ->
+                let sub_param_mp = match param_mp with
+                  | Some pmp -> Some (Names.ModPath.MPdot (pmp, l))
+                  | None -> None
+                in
+                register_modtype_accessors modtype_table ?param_mp:sub_param_mp mt
               | _ -> ()
             ) sig_items
-          | MTfunsig (_, _, mt') -> register_modtype_accessors modtype_table mt'
-          | MTwith (mt', _) -> register_modtype_accessors modtype_table mt'
+          | MTfunsig (_, _, mt') -> register_modtype_accessors modtype_table ?param_mp mt'
+          | MTwith (mt', _) -> register_modtype_accessors modtype_table ?param_mp mt'
           | MTident mp ->
             (match Hashtbl.find_opt modtype_table mp with
-             | Some resolved_mt -> register_modtype_accessors modtype_table resolved_mt
+             | Some resolved_mt -> register_modtype_accessors modtype_table ?param_mp resolved_mt
              | None -> ())
         in
         let rec scan_functor_type_params modtype_table = function
-          | MTfunsig (_, param_mt, body_mt) ->
-            register_modtype_accessors modtype_table param_mt;
+          | MTfunsig (mbid, param_mt, body_mt) ->
+            let param_mp = Names.ModPath.MPbound mbid in
+            register_modtype_accessors modtype_table ~param_mp param_mt;
             scan_functor_type_params modtype_table body_mt
           | _ -> ()
         in
