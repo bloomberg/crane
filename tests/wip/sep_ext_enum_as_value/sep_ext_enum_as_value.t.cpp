@@ -6,7 +6,7 @@
 
 struct MyParam {
   using Color = SepExtEnumAsValue::Color;
-  static constexpr Color default_ = Color::e_RED;
+  static constexpr Color default_() { return Color::e_RED; }
 };
 
 int main() {

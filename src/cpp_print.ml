@@ -1048,10 +1048,6 @@ and pp_cpp_expr env args t =
       in
       if found_in_list then true
       else
-        (* For references through module type parameters (MPbound in the path),
-           the modpath can't be resolved to the concrete definition. Fall back to
-           label-only matching: if the label is registered as an accessor and the
-           reference goes through a functor parameter, treat it as an accessor. *)
         let rec has_mpbound mp =
           match mp with
           | Names.ModPath.MPbound _ -> true
@@ -1064,12 +1060,13 @@ and pp_cpp_expr env args t =
           | Names.ModPath.MPdot (parent, _) -> root_is_mpbound parent
           | _ -> false
         in
-        let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
-          !template_static_accessors in
-        in_lbl_list
-        && not (root_is_mpbound resolved_x_mp)
-        && (has_mpbound x_mp || has_mpbound resolved_x_mp
-            || not (ModPath.equal x_mp resolved_x_mp))
+          let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
+            !template_static_accessors in
+          in_lbl_list
+          && ( root_is_mpbound x_mp
+             || (not (root_is_mpbound resolved_x_mp)
+                 && (has_mpbound x_mp || has_mpbound resolved_x_mp
+                     || not (ModPath.equal x_mp resolved_x_mp))) )
     in
     let full_name =
       match (tys, get_containing_eponymous_struct x) with

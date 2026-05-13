@@ -5354,3 +5354,25 @@
   (alias runtest)
   (deps pair_indexed_inductive_any_cast.t.exe)
   (action (run ./pair_indexed_inductive_any_cast.t.exe))))
+
+(subdir sep_ext_nullary_call
+ (rule
+  (targets sep_ext_nullary_call.t.exe)
+  (deps SepExtNullaryCall.vo sep_ext_nullary_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_call.t.exe SepExtNullaryCall.cpp sep_ext_nullary_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nullary_call.t.exe)
+  (action (run ./sep_ext_nullary_call.t.exe))))
+
+(subdir sep_ext_nullary_modparam
+ (rule
+  (targets sep_ext_nullary_modparam.t.exe)
+  (deps SepExtNullaryModparam.vo sep_ext_nullary_modparam.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_modparam.t.exe SepExtNullaryModparam.cpp sep_ext_nullary_modparam.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nullary_modparam.t.exe)
+  (action (run ./sep_ext_nullary_modparam.t.exe))))

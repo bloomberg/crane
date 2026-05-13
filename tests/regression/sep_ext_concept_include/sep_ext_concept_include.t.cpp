@@ -4,7 +4,7 @@
 
 struct MyBase {
   using t = int;
-  static constexpr int default_ = 42;
+  static constexpr int default_() { return 42; }
 };
 static_assert(SepExtConceptInclude::BaseType<MyBase>);
 static_assert(SepExtConceptInclude::DerivedType<MyBase>);

@@ -25,7 +25,7 @@ concept ColorParam = requires {
 
 template <ColorParam P> struct UseColor {
   static const Color &my_default() {
-    static const Color v = P::default_;
+    static const Color v = P::default_();
     return v;
   }
 

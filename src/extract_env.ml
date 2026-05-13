@@ -1434,6 +1434,22 @@ let separate_extraction ~opaque_access lr =
     ) sel
   in
   List.iter (fun (_, sel) -> pre_scan_unmerged sel) struc;
+  let modtype_table : (ModPath.t, ml_module_type) Hashtbl.t = Hashtbl.create 16 in
+  let rec collect_modtypes mp_prefix sel =
+    List.iter (fun (l, se) ->
+      match se with
+      | SEmodtype mt ->
+        let mt_mp = Names.ModPath.MPdot (mp_prefix, l) in
+        Hashtbl.replace modtype_table mt_mp mt
+      | SEmodule m ->
+        let sub_mp = Names.ModPath.MPdot (mp_prefix, l) in
+        (match m.ml_mod_expr with
+         | MEstruct (_, subs) -> collect_modtypes sub_mp subs
+         | _ -> ())
+      | _ -> ()
+    ) sel
+  in
+  List.iter (fun (mp, sel) -> collect_modtypes mp sel) struc;
   let rec pre_scan_meyers_singletons ~in_template sel =
     List.iter (fun (_l, se) ->
       match se with
@@ -1477,6 +1493,34 @@ let separate_extraction ~opaque_access lr =
           | _ -> false
         in
         let sub_in_template = in_template || has_params in
+        let rec register_modtype_accessors modtype_table = function
+          | MTsig (_, sig_items) ->
+            List.iter (fun (_l, specif) ->
+              match specif with
+              | Spec (Sval (r, _, ty)) ->
+                let is_function = match ty with Tarr _ -> true | _ -> false in
+                if not is_function then begin
+                  let mp = Table.modpath_of_r r in
+                  let lbl = Table.label_of_r r in
+                  Cpp_state.template_static_accessors :=
+                    (mp, lbl) :: !Cpp_state.template_static_accessors
+                end
+              | _ -> ()
+            ) sig_items
+          | MTfunsig (_, _, mt') -> register_modtype_accessors modtype_table mt'
+          | MTwith (mt', _) -> register_modtype_accessors modtype_table mt'
+          | MTident mp ->
+            (match Hashtbl.find_opt modtype_table mp with
+             | Some resolved_mt -> register_modtype_accessors modtype_table resolved_mt
+             | None -> ())
+        in
+        let rec scan_functor_type_params modtype_table = function
+          | MTfunsig (_, param_mt, body_mt) ->
+            register_modtype_accessors modtype_table param_mt;
+            scan_functor_type_params modtype_table body_mt
+          | _ -> ()
+        in
+        scan_functor_type_params modtype_table m.ml_mod_type;
         let subs = match m.ml_mod_expr with
           | MEstruct (_, s) -> s
           | MEfunctor (_, _, me) ->
