@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -183,25 +183,25 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_coll>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_coll>(_sv.v());
-        return instr_collection(JUN_coll(d_a0));
+        return instr_collection(JUN_coll{d_a0});
       } else if (std::holds_alternative<JMS_coll>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_coll>(_sv.v());
-        return instr_collection(JMS_coll(d_a0));
+        return instr_collection(JMS_coll{d_a0});
       } else {
-        return instr_collection(NOP_coll());
+        return instr_collection(NOP_coll{});
       }
     }
 
     // CREATORS
     static instr_collection jun_coll(unsigned int a0) {
-      return instr_collection(JUN_coll(std::move(a0)));
+      return instr_collection(JUN_coll{std::move(a0)});
     }
 
     static instr_collection jms_coll(unsigned int a0) {
-      return instr_collection(JMS_coll(std::move(a0)));
+      return instr_collection(JMS_coll{std::move(a0)});
     }
 
-    static instr_collection nop_coll() { return instr_collection(NOP_coll()); }
+    static instr_collection nop_coll() { return instr_collection(NOP_coll{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -328,25 +328,25 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_reg>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_reg>(_sv.v());
-        return instr_region(JUN_reg(d_a0));
+        return instr_region(JUN_reg{d_a0});
       } else if (std::holds_alternative<JMS_reg>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_reg>(_sv.v());
-        return instr_region(JMS_reg(d_a0));
+        return instr_region(JMS_reg{d_a0});
       } else {
-        return instr_region(NOP_reg());
+        return instr_region(NOP_reg{});
       }
     }
 
     // CREATORS
     static instr_region jun_reg(unsigned int a0) {
-      return instr_region(JUN_reg(std::move(a0)));
+      return instr_region(JUN_reg{std::move(a0)});
     }
 
     static instr_region jms_reg(unsigned int a0) {
-      return instr_region(JMS_reg(std::move(a0)));
+      return instr_region(JMS_reg{std::move(a0)});
     }
 
-    static instr_region nop_reg() { return instr_region(NOP_reg()); }
+    static instr_region nop_reg() { return instr_region(NOP_reg{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -408,13 +408,13 @@ struct JumpTargets {
     unsigned int code_;
 
     // ACCESSORS
-    layout clone() const { return layout((*(this)).base_, (*(this)).code_); }
+    layout clone() const { return layout{(*(this)).base_, (*(this)).code_}; }
   };
 
   static bool addr_in_region(const unsigned int addr, const layout &l);
   static bool in_layout(const layout &l, const instr_region &i);
   static inline const bool test_region_check =
-      in_layout(layout(16u, 32u), instr_region::jun_reg(40u));
+      in_layout(layout{16u, 32u}, instr_region::jun_reg(40u));
 
   struct instr_jms {
     // TYPES
@@ -463,25 +463,25 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_jms>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_jms>(_sv.v());
-        return instr_jms(JUN_jms(d_a0));
+        return instr_jms(JUN_jms{d_a0});
       } else if (std::holds_alternative<JMS_jms>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_jms>(_sv.v());
-        return instr_jms(JMS_jms(d_a0));
+        return instr_jms(JMS_jms{d_a0});
       } else {
-        return instr_jms(NOP_jms());
+        return instr_jms(NOP_jms{});
       }
     }
 
     // CREATORS
     static instr_jms jun_jms(unsigned int a0) {
-      return instr_jms(JUN_jms(std::move(a0)));
+      return instr_jms(JUN_jms{std::move(a0)});
     }
 
     static instr_jms jms_jms(unsigned int a0) {
-      return instr_jms(JMS_jms(std::move(a0)));
+      return instr_jms(JMS_jms{std::move(a0)});
     }
 
-    static instr_jms nop_jms() { return instr_jms(NOP_jms()); }
+    static instr_jms nop_jms() { return instr_jms(NOP_jms{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -586,25 +586,25 @@ struct JumpTargets {
       auto &&_sv = *(this);
       if (std::holds_alternative<JUN_jun>(_sv.v())) {
         const auto &[d_a0] = std::get<JUN_jun>(_sv.v());
-        return instr_jun(JUN_jun(d_a0));
+        return instr_jun(JUN_jun{d_a0});
       } else if (std::holds_alternative<JMS_jun>(_sv.v())) {
         const auto &[d_a0] = std::get<JMS_jun>(_sv.v());
-        return instr_jun(JMS_jun(d_a0));
+        return instr_jun(JMS_jun{d_a0});
       } else {
-        return instr_jun(NOP_jun());
+        return instr_jun(NOP_jun{});
       }
     }
 
     // CREATORS
     static instr_jun jun_jun(unsigned int a0) {
-      return instr_jun(JUN_jun(std::move(a0)));
+      return instr_jun(JUN_jun{std::move(a0)});
     }
 
     static instr_jun jms_jun(unsigned int a0) {
-      return instr_jun(JMS_jun(std::move(a0)));
+      return instr_jun(JMS_jun{std::move(a0)});
     }
 
-    static instr_jun nop_jun() { return instr_jun(NOP_jun()); }
+    static instr_jun nop_jun() { return instr_jun(NOP_jun{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

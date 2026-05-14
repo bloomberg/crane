@@ -24,7 +24,7 @@ struct FixInRecord {
     std::function<unsigned int(unsigned int)> fn;
 
     // ACCESSORS
-    fn_box clone() const { return fn_box((*(this)).label, (*(this)).fn); }
+    fn_box clone() const { return fn_box{(*(this)).label, (*(this)).fn}; }
   };
 
   static fn_box make_box(const unsigned int n);

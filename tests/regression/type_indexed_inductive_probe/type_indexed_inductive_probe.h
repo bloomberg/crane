@@ -55,11 +55,11 @@ struct TypeIndexedInductiveProbe {
     wrap clone() const {
       auto &&_sv = *(this);
       const auto &[d_a] = std::get<Wrap0>(_sv.v());
-      return wrap(Wrap0(d_a));
+      return wrap(Wrap0{d_a});
     }
 
     // CREATORS
-    static wrap wrap0(std::any a) { return wrap(Wrap0(std::move(a))); }
+    static wrap wrap0(std::any a) { return wrap(Wrap0{std::move(a)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

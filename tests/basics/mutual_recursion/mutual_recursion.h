@@ -57,12 +57,12 @@ struct MutualRecursion {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return tree<t_A>(Leaf(d_a0));
+        return tree<t_A>(Leaf{d_a0});
       } else {
         const auto &[d_a0] = std::get<Node>(_sv.v());
-        return tree<t_A>(Node(
+        return tree<t_A>(Node{
             d_a0 ? std::make_unique<MutualRecursion::forest<t_A>>(d_a0->clone())
-                 : nullptr));
+                 : nullptr});
       }
     }
 
@@ -70,19 +70,19 @@ struct MutualRecursion {
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
         const auto &[d_a0] = std::get<typename tree<_U>::Leaf>(_other.v());
-        this->d_v_ = Leaf(t_A(d_a0));
+        this->d_v_ = Leaf{t_A(d_a0)};
       } else {
         const auto &[d_a0] = std::get<typename tree<_U>::Node>(_other.v());
         this->d_v_ =
-            Node(d_a0 ? std::make_unique<MutualRecursion::forest<t_A>>(*d_a0)
-                      : nullptr);
+            Node{d_a0 ? std::make_unique<MutualRecursion::forest<t_A>>(*d_a0)
+                      : nullptr};
       }
     }
 
-    static tree<t_A> leaf(t_A a0) { return tree(Leaf(std::move(a0))); }
+    static tree<t_A> leaf(t_A a0) { return tree(Leaf{std::move(a0)}); }
 
     static tree<t_A> node(forest<t_A> a0) {
-      return tree(Node(std::make_unique<forest<t_A>>(std::move(a0))));
+      return tree(Node{std::make_unique<forest<t_A>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -177,14 +177,14 @@ struct MutualRecursion {
         const forest<t_A> *_src = _frame._src;
         forest<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty();
+          _dst->d_v_ = Empty{};
         } else {
           const auto &_alt = std::get<Trees>(_src->v());
           _dst->d_v_ =
-              Trees(_alt.d_a0 ? std::make_unique<MutualRecursion::tree<t_A>>(
+              Trees{_alt.d_a0 ? std::make_unique<MutualRecursion::tree<t_A>>(
                                     _alt.d_a0->clone())
                               : nullptr,
-                    _alt.d_a1 ? std::make_unique<forest<t_A>>() : nullptr);
+                    _alt.d_a1 ? std::make_unique<forest<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Trees>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -197,22 +197,22 @@ struct MutualRecursion {
     // CREATORS
     template <typename _U> explicit forest(const forest<_U> &_other) {
       if (std::holds_alternative<typename forest<_U>::Empty>(_other.v())) {
-        this->d_v_ = Empty();
+        this->d_v_ = Empty{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename forest<_U>::Trees>(_other.v());
         this->d_v_ =
-            Trees(d_a0 ? std::make_unique<MutualRecursion::tree<t_A>>(*d_a0)
+            Trees{d_a0 ? std::make_unique<MutualRecursion::tree<t_A>>(*d_a0)
                        : nullptr,
-                  d_a1 ? std::make_unique<forest<t_A>>(*d_a1) : nullptr);
+                  d_a1 ? std::make_unique<forest<t_A>>(*d_a1) : nullptr};
       }
     }
 
-    static forest<t_A> empty() { return forest(Empty()); }
+    static forest<t_A> empty() { return forest(Empty{}); }
 
     static forest<t_A> trees(tree<t_A> a0, forest<t_A> a1) {
-      return forest(Trees(std::make_unique<tree<t_A>>(std::move(a0)),
-                          std::make_unique<forest<t_A>>(std::move(a1))));
+      return forest(Trees{std::make_unique<tree<t_A>>(std::move(a0)),
+                          std::make_unique<forest<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

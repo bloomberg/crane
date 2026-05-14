@@ -81,14 +81,14 @@ struct LoopifyMultiRecursion {
         quadtree *_dst = _frame._dst;
         if (std::holds_alternative<QLeaf>(_src->v())) {
           const auto &_alt = std::get<QLeaf>(_src->v());
-          _dst->d_v_ = QLeaf(_alt.d_a0);
+          _dst->d_v_ = QLeaf{_alt.d_a0};
         } else {
           const auto &_alt = std::get<QQuad>(_src->v());
           _dst->d_v_ =
-              QQuad(_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
+              QQuad{_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
                     _alt.d_a1 ? std::make_unique<quadtree>() : nullptr,
                     _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
-                    _alt.d_a3 ? std::make_unique<quadtree>() : nullptr);
+                    _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
           auto &_dst_alt = std::get<QQuad>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -109,14 +109,14 @@ struct LoopifyMultiRecursion {
 
     // CREATORS
     static quadtree qleaf(unsigned int a0) {
-      return quadtree(QLeaf(std::move(a0)));
+      return quadtree(QLeaf{std::move(a0)});
     }
 
     static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(QQuad(std::make_unique<quadtree>(std::move(a0)),
+      return quadtree(QQuad{std::make_unique<quadtree>(std::move(a0)),
                             std::make_unique<quadtree>(std::move(a1)),
                             std::make_unique<quadtree>(std::move(a2)),
-                            std::make_unique<quadtree>(std::move(a3))));
+                            std::make_unique<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS

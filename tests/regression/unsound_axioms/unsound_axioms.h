@@ -25,7 +25,7 @@ struct UnsoundAxioms {
     unsigned int f2;
 
     // ACCESSORS
-    Rec clone() const { return Rec((*(this)).f1, (*(this)).f2); }
+    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2}; }
   };
 
   static unsigned int cast_confusion(const Rec &r);
@@ -37,7 +37,7 @@ struct UnsoundAxioms {
 
     // ACCESSORS
     ProofRec clone() const {
-      return ProofRec((*(this)).pf_val, (*(this)).pf_val2);
+      return ProofRec{(*(this)).pf_val, (*(this)).pf_val2};
     }
   };
 

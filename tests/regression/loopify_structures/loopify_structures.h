@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -206,11 +206,11 @@ struct LoopifyStructures {
         nested *_dst = _frame._dst;
         if (std::holds_alternative<Elem>(_src->v())) {
           const auto &_alt = std::get<Elem>(_src->v());
-          _dst->d_v_ = Elem(_alt.d_a0);
+          _dst->d_v_ = Elem{_alt.d_a0};
         } else {
           const auto &_alt = std::get<NList>(_src->v());
           _dst->d_v_ =
-              NList(_alt.d_a0 ? std::make_unique<List<nested>>() : nullptr);
+              NList{_alt.d_a0 ? std::make_unique<List<nested>>() : nullptr};
           auto &_dst_alt = std::get<NList>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
@@ -245,10 +245,10 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static nested elem(unsigned int a0) { return nested(Elem(std::move(a0))); }
+    static nested elem(unsigned int a0) { return nested(Elem{std::move(a0)}); }
 
     static nested nlist(List<nested> a0) {
-      return nested(NList(std::make_unique<List<nested>>(std::move(a0))));
+      return nested(NList{std::make_unique<List<nested>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -424,13 +424,13 @@ struct LoopifyStructures {
         quadtree *_dst = _frame._dst;
         if (std::holds_alternative<QLeaf>(_src->v())) {
           const auto &_alt = std::get<QLeaf>(_src->v());
-          _dst->d_v_ = QLeaf(_alt.d_a0);
+          _dst->d_v_ = QLeaf{_alt.d_a0};
         } else {
           const auto &_alt = std::get<Quad>(_src->v());
-          _dst->d_v_ = Quad(_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
+          _dst->d_v_ = Quad{_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
                             _alt.d_a1 ? std::make_unique<quadtree>() : nullptr,
                             _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
-                            _alt.d_a3 ? std::make_unique<quadtree>() : nullptr);
+                            _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
           auto &_dst_alt = std::get<Quad>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -451,14 +451,14 @@ struct LoopifyStructures {
 
     // CREATORS
     static quadtree qleaf(unsigned int a0) {
-      return quadtree(QLeaf(std::move(a0)));
+      return quadtree(QLeaf{std::move(a0)});
     }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad(std::make_unique<quadtree>(std::move(a0)),
+      return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
                            std::make_unique<quadtree>(std::move(a1)),
                            std::make_unique<quadtree>(std::move(a2)),
-                           std::make_unique<quadtree>(std::move(a3))));
+                           std::make_unique<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -544,7 +544,7 @@ struct LoopifyStructures {
       quadtree _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified quad_map: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
       while (!_stack.empty()) {
@@ -561,25 +561,25 @@ struct LoopifyStructures {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
             _stack.emplace_back(
-                _After_Quad(d_a2.get(), d_a1.get(), d_a0.get()));
-            _stack.emplace_back(_Enter(d_a3.get()));
+                _After_Quad{d_a2.get(), d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
           auto _f = std::move(std::get<_After_Quad>(_frame));
           _stack.emplace_back(
-              _After_Quad_1(std::move(_result), _f._s1, _f._s2));
-          _stack.emplace_back(_Enter(_f._s0));
+              _After_Quad_1{std::move(_result), _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_1>(_frame));
           _stack.emplace_back(
-              _After_Quad_2(std::move(_f._result), std::move(_result), _f._s2));
-          _stack.emplace_back(_Enter(_f._s1));
+              _After_Quad_2{std::move(_f._result), std::move(_result), _f._s2});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_2>(_frame));
-          _stack.emplace_back(_Combine_Quad(std::move(_f._result_0),
+          _stack.emplace_back(_Combine_Quad{std::move(_f._result_0),
                                             std::move(_f._result_1),
-                                            std::move(_result)));
-          _stack.emplace_back(_Enter(_f._s2));
+                                            std::move(_result)});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_Quad>(_frame));
           _result =
@@ -665,7 +665,7 @@ struct LoopifyStructures {
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified quad_sum: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
       while (!_stack.empty()) {
@@ -682,22 +682,22 @@ struct LoopifyStructures {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
             _stack.emplace_back(
-                _After_Quad(d_a2.get(), d_a1.get(), d_a0.get()));
-            _stack.emplace_back(_Enter(d_a3.get()));
+                _After_Quad{d_a2.get(), d_a1.get(), d_a0.get()});
+            _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
           auto _f = std::move(std::get<_After_Quad>(_frame));
-          _stack.emplace_back(_After_Quad_1(_result, _f._s1, _f._s2));
-          _stack.emplace_back(_Enter(_f._s0));
+          _stack.emplace_back(_After_Quad_1{_result, _f._s1, _f._s2});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_1>(_frame));
-          _stack.emplace_back(_After_Quad_2(_f._result, _result, _f._s2));
-          _stack.emplace_back(_Enter(_f._s1));
+          _stack.emplace_back(_After_Quad_2{_f._result, _result, _f._s2});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_2>(_frame));
           _stack.emplace_back(
-              _Combine_Quad(_f._result_0, _f._result_1, _result));
-          _stack.emplace_back(_Enter(_f._s2));
+              _Combine_Quad{_f._result_0, _f._result_1, _result});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_Quad>(_frame));
           _result = (_result + (_f._result_2 + (_f._result_1 + _f._result_0)));
@@ -771,7 +771,7 @@ struct LoopifyStructures {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified quadtree_rec: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
       while (!_stack.empty()) {
@@ -787,29 +787,29 @@ struct LoopifyStructures {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
-            _stack.emplace_back(_After_Quad(d_a2.get(), d_a1.get(), d_a0.get(),
+            _stack.emplace_back(_After_Quad{d_a2.get(), d_a1.get(), d_a0.get(),
                                             *(d_a3), *(d_a2), *(d_a1),
-                                            *(d_a0)));
-            _stack.emplace_back(_Enter(d_a3.get()));
+                                            *(d_a0)});
+            _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
           auto _f = std::move(std::get<_After_Quad>(_frame));
-          _stack.emplace_back(_After_Quad_1(
+          _stack.emplace_back(_After_Quad_1{
               _result, _f._s1, _f._s2, std::move(_f.d_a3), std::move(_f.d_a2),
-              std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s0));
+              std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_1>(_frame));
-          _stack.emplace_back(_After_Quad_2(
+          _stack.emplace_back(_After_Quad_2{
               _f._result, _result, _f._s2, std::move(_f.d_a3),
-              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s1));
+              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_2>(_frame));
-          _stack.emplace_back(_Combine_Quad(
+          _stack.emplace_back(_Combine_Quad{
               _f._result_0, _f._result_1, _result, std::move(_f.d_a3),
-              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s2));
+              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_Quad>(_frame));
           _result = f0(_f.d_a0, _result, _f.d_a1, _f._result_2, _f.d_a2,
@@ -884,7 +884,7 @@ struct LoopifyStructures {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified quadtree_rect: _Enter -> _After_Quad -> _After_Quad_1 ->
       /// _After_Quad_2 -> _Combine_Quad.
       while (!_stack.empty()) {
@@ -900,29 +900,29 @@ struct LoopifyStructures {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
-            _stack.emplace_back(_After_Quad(d_a2.get(), d_a1.get(), d_a0.get(),
+            _stack.emplace_back(_After_Quad{d_a2.get(), d_a1.get(), d_a0.get(),
                                             *(d_a3), *(d_a2), *(d_a1),
-                                            *(d_a0)));
-            _stack.emplace_back(_Enter(d_a3.get()));
+                                            *(d_a0)});
+            _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
           auto _f = std::move(std::get<_After_Quad>(_frame));
-          _stack.emplace_back(_After_Quad_1(
+          _stack.emplace_back(_After_Quad_1{
               _result, _f._s1, _f._s2, std::move(_f.d_a3), std::move(_f.d_a2),
-              std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s0));
+              std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_1>(_frame));
-          _stack.emplace_back(_After_Quad_2(
+          _stack.emplace_back(_After_Quad_2{
               _f._result, _result, _f._s2, std::move(_f.d_a3),
-              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s1));
+              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_2>(_frame));
-          _stack.emplace_back(_Combine_Quad(
+          _stack.emplace_back(_Combine_Quad{
               _f._result_0, _f._result_1, _result, std::move(_f.d_a3),
-              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s2));
+              std::move(_f.d_a2), std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_Quad>(_frame));
           _result = f0(_f.d_a0, _result, _f.d_a1, _f._result_2, _f.d_a2,
@@ -1061,12 +1061,12 @@ struct LoopifyStructures {
         ltree *_dst = _frame._dst;
         if (std::holds_alternative<LLeaf>(_src->v())) {
           const auto &_alt = std::get<LLeaf>(_src->v());
-          _dst->d_v_ = LLeaf(_alt.d_a0);
+          _dst->d_v_ = LLeaf{_alt.d_a0};
         } else {
           const auto &_alt = std::get<LNode>(_src->v());
           _dst->d_v_ =
-              LNode(_alt.d_a0, _alt.d_a1 ? std::make_unique<ltree>() : nullptr,
-                    _alt.d_a2 ? std::make_unique<ltree>() : nullptr);
+              LNode{_alt.d_a0, _alt.d_a1 ? std::make_unique<ltree>() : nullptr,
+                    _alt.d_a2 ? std::make_unique<ltree>() : nullptr};
           auto &_dst_alt = std::get<LNode>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -1080,11 +1080,11 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static ltree lleaf(unsigned int a0) { return ltree(LLeaf(std::move(a0))); }
+    static ltree lleaf(unsigned int a0) { return ltree(LLeaf{std::move(a0)}); }
 
     static ltree lnode(unsigned int a0, ltree a1, ltree a2) {
-      return ltree(LNode(std::move(a0), std::make_unique<ltree>(std::move(a1)),
-                         std::make_unique<ltree>(std::move(a2))));
+      return ltree(LNode{std::move(a0), std::make_unique<ltree>(std::move(a1)),
+                         std::make_unique<ltree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -1146,7 +1146,7 @@ struct LoopifyStructures {
       ltree _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self, t2));
+      _stack.emplace_back(_Enter{_self, t2});
       /// Loopified ltree_max: _Enter -> _After_LNode -> _Combine_LNode.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1178,14 +1178,14 @@ struct LoopifyStructures {
               } else {
                 max_val = d_a0;
               }
-              _stack.emplace_back(_After_LNode(d_a1.get(), *(d_a10), max_val));
-              _stack.emplace_back(_Enter(d_a2.get(), std::move(*(d_a20))));
+              _stack.emplace_back(_After_LNode{d_a1.get(), *(d_a10), max_val});
+              _stack.emplace_back(_Enter{d_a2.get(), std::move(*(d_a20))});
             }
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {
           auto _f = std::move(std::get<_After_LNode>(_frame));
-          _stack.emplace_back(_Combine_LNode(std::move(_result), _f.max_val));
-          _stack.emplace_back(_Enter(_f._s0, std::move(_f.d_a10)));
+          _stack.emplace_back(_Combine_LNode{std::move(_result), _f.max_val});
+          _stack.emplace_back(_Enter{_f._s0, std::move(_f.d_a10)});
         } else {
           auto _f = std::move(std::get<_Combine_LNode>(_frame));
           _result = ltree::lnode(_f.max_val, _result, _f._result);
@@ -1228,7 +1228,7 @@ struct LoopifyStructures {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified ltree_rec: _Enter -> _After_LNode -> _Combine_LNode.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1244,14 +1244,14 @@ struct LoopifyStructures {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename ltree::LNode>(_sv.v());
             _stack.emplace_back(
-                _After_LNode(d_a1.get(), *(d_a2), *(d_a1), d_a0));
-            _stack.emplace_back(_Enter(d_a2.get()));
+                _After_LNode{d_a1.get(), *(d_a2), *(d_a1), d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {
           auto _f = std::move(std::get<_After_LNode>(_frame));
-          _stack.emplace_back(_Combine_LNode(_result, std::move(_f.d_a2),
-                                             std::move(_f.d_a1), _f.d_a0));
-          _stack.emplace_back(_Enter(_f._s0));
+          _stack.emplace_back(_Combine_LNode{_result, std::move(_f.d_a2),
+                                             std::move(_f.d_a1), _f.d_a0});
+          _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_LNode>(_frame));
           _result = f0(_f.d_a0, _f.d_a1, _result, _f.d_a2, _f._result);
@@ -1294,7 +1294,7 @@ struct LoopifyStructures {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified ltree_rect: _Enter -> _After_LNode -> _Combine_LNode.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1310,14 +1310,14 @@ struct LoopifyStructures {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename ltree::LNode>(_sv.v());
             _stack.emplace_back(
-                _After_LNode(d_a1.get(), *(d_a2), *(d_a1), d_a0));
-            _stack.emplace_back(_Enter(d_a2.get()));
+                _After_LNode{d_a1.get(), *(d_a2), *(d_a1), d_a0});
+            _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {
           auto _f = std::move(std::get<_After_LNode>(_frame));
-          _stack.emplace_back(_Combine_LNode(_result, std::move(_f.d_a2),
-                                             std::move(_f.d_a1), _f.d_a0));
-          _stack.emplace_back(_Enter(_f._s0));
+          _stack.emplace_back(_Combine_LNode{_result, std::move(_f.d_a2),
+                                             std::move(_f.d_a1), _f.d_a0});
+          _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_LNode>(_frame));
           _result = f0(_f.d_a0, _f.d_a1, _result, _f.d_a2, _f._result);

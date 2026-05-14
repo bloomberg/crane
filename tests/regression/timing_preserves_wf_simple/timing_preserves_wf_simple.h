@@ -63,15 +63,15 @@ struct TimingPreservesWfSimple {
 
     // ACCESSORS
     state clone() const {
-      return state((*(this)).regs_len, (*(this)).rom_len, (*(this)).pc,
-                   (*(this)).stack_len);
+      return state{(*(this)).regs_len, (*(this)).rom_len, (*(this)).pc,
+                   (*(this)).stack_len};
     }
   };
 
   static bool wf(const state &s);
   static unsigned int cycles(const Instr i);
   static state execute(const state &s, const Instr i);
-  static inline const state sample = state(4u, 4u, 100u, 2u);
+  static inline const state sample = state{4u, 4u, 100u, 2u};
   static inline const bool t =
       (wf(sample) &&
        (cycles(Instr::e_JMS) == 24u && (wf(execute(sample, Instr::e_NOP)) &&

@@ -185,7 +185,7 @@ unsigned int LoopifyListAccess::count(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified count: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -199,10 +199,10 @@ unsigned int LoopifyListAccess::count(
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         if (x == d_a0) {
-          _stack.emplace_back(_Resume1(1u));
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Resume1{1u});
+          _stack.emplace_back(_Enter{d_a1.get()});
         } else {
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {

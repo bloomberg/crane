@@ -14,7 +14,7 @@ unsigned int SingletonRecord::unwrap(const SingletonRecord::wrapper &w) {
 
 SingletonRecord::wrapper
 SingletonRecord::double_wrapped(const SingletonRecord::wrapper &w) {
-  return wrapper((2u * w.value));
+  return wrapper{(2u * w.value)};
 }
 
 unsigned int

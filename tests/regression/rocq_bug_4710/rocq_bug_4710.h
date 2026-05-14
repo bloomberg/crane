@@ -10,7 +10,7 @@ struct RocqBug4710 {
     unsigned int foo;
 
     // ACCESSORS
-    Foo_ clone() const { return Foo_((*(this)).foo); }
+    Foo_ clone() const { return Foo_{(*(this)).foo}; }
   };
 
   struct Foo2 {
@@ -18,13 +18,13 @@ struct RocqBug4710 {
     bool foo2b;
 
     // ACCESSORS
-    Foo2 clone() const { return Foo2((*(this)).foo2p, (*(this)).foo2b); }
+    Foo2 clone() const { return Foo2{(*(this)).foo2p, (*(this)).foo2b}; }
   };
 
   static unsigned int bla(const Foo2 &x);
   static bool bla_(const unsigned int _x, const Foo2 &x);
-  static inline const Foo_ test_foo = Foo_(5u);
-  static inline const Foo2 test_foo2 = Foo2(10u, true);
+  static inline const Foo_ test_foo = Foo_{5u};
+  static inline const Foo2 test_foo2 = Foo2{10u, true};
   static inline const unsigned int test_bla = bla(test_foo2);
   static inline const bool test_bla_ = bla_(0u, test_foo2);
 };

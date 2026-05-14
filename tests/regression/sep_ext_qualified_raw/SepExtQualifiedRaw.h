@@ -70,12 +70,12 @@ template <OrderedType X> struct Make {
         const Fmap<t_A> *_src = _frame._src;
         Fmap<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty();
+          _dst->d_v_ = Empty{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->d_v_ =
-              Node(_alt.d_a0, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<Fmap<t_A>>() : nullptr);
+              Node{_alt.d_a0, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<Fmap<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a2) {
             _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
@@ -88,20 +88,20 @@ template <OrderedType X> struct Make {
     // CREATORS
     template <typename _U> explicit Fmap(const Fmap<_U> &_other) {
       if (std::holds_alternative<typename Fmap<_U>::Empty>(_other.v())) {
-        this->d_v_ = Empty();
+        this->d_v_ = Empty{};
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename Fmap<_U>::Node>(_other.v());
-        this->d_v_ = Node(d_a0, t_A(d_a1),
-                          d_a2 ? std::make_unique<Fmap<t_A>>(*d_a2) : nullptr);
+        this->d_v_ = Node{d_a0, t_A(d_a1),
+                          d_a2 ? std::make_unique<Fmap<t_A>>(*d_a2) : nullptr};
       }
     }
 
-    static Fmap<t_A> empty() { return Fmap(Empty()); }
+    static Fmap<t_A> empty() { return Fmap(Empty{}); }
 
     static Fmap<t_A> node(typename X::t a0, t_A a1, Fmap<t_A> a2) {
-      return Fmap(Node(std::move(a0), std::move(a1),
-                       std::make_unique<Fmap<t_A>>(std::move(a2))));
+      return Fmap(Node{std::move(a0), std::move(a1),
+                       std::make_unique<Fmap<t_A>>(std::move(a2))});
     }
 
     // MANIPULATORS

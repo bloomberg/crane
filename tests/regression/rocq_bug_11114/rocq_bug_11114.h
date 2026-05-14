@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -160,11 +160,11 @@ struct RocqBug11114 {
     t clone() const {
       auto &&_sv = *(this);
       const auto &[d_k] = std::get<T0>(_sv.v());
-      return t(T0(d_k));
+      return t(T0{d_k});
     }
 
     // CREATORS
-    static t t0(unsigned int k) { return t(T0(std::move(k))); }
+    static t t0(unsigned int k) { return t(T0{std::move(k)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -193,22 +193,22 @@ struct RocqBug11114 {
 
     // ACCESSORS
     pkg clone() const {
-      return pkg((*(this))._sig.clone(), (*(this))._t.clone());
+      return pkg{(*(this))._sig.clone(), (*(this))._t.clone()};
     }
   };
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static pkg map(F0 &&f, const pkg &p) {
-    return pkg(p._sig, [=]() mutable {
-      auto &&_sv = p._t;
-      const auto &[d_k] = std::get<typename t::T0>(_sv.v());
-      return t::t0(f(d_k));
-    }());
+    return pkg{p._sig, [=]() mutable {
+                 auto &&_sv = p._t;
+                 const auto &[d_k] = std::get<typename t::T0>(_sv.v());
+                 return t::t0(f(d_k));
+               }()};
   }
 
   static inline const pkg test_pkg =
-      pkg(List<unsigned int>::cons(1u, List<unsigned int>::nil()), t::t0(2u));
+      pkg{List<unsigned int>::cons(1u, List<unsigned int>::nil()), t::t0(2u)};
   static inline const pkg test_map =
       map([](const unsigned int x) { return (x + 1u); }, test_pkg);
 };

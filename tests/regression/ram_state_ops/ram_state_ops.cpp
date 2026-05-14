@@ -1,8 +1,9 @@
 #include "ram_state_ops.h"
 
 RamStateOps::state RamStateOps::reset_state(const RamStateOps::state &s) {
-  return state(s.state_regs, 0u, false, 0u, List<unsigned int>::nil(),
-               s.state_ram, default_sel, s.state_rom);
+  return state{
+      s.state_regs, 0u,          false,      0u, List<unsigned int>::nil(),
+      s.state_ram,  default_sel, s.state_rom};
 }
 
 unsigned int RamStateOps::get_main(const RamStateOps::ram_reg &rg,
@@ -18,15 +19,15 @@ unsigned int RamStateOps::get_stat(const RamStateOps::ram_reg &rg,
 RamStateOps::ram_reg
 RamStateOps::upd_main_in_reg(const RamStateOps::ram_reg &rg,
                              const unsigned int i, const unsigned int v) {
-  return ram_reg(update_nth<unsigned int>(i, (16u ? v % 16u : v), rg.reg_main),
-                 rg.reg_status);
+  return ram_reg{update_nth<unsigned int>(i, (16u ? v % 16u : v), rg.reg_main),
+                 rg.reg_status};
 }
 
 RamStateOps::ram_reg
 RamStateOps::upd_stat_in_reg(const RamStateOps::ram_reg &rg,
                              const unsigned int i, const unsigned int v) {
-  return ram_reg(rg.reg_main, update_nth<unsigned int>(i, (16u ? v % 16u : v),
-                                                       rg.reg_status));
+  return ram_reg{rg.reg_main, update_nth<unsigned int>(i, (16u ? v % 16u : v),
+                                                       rg.reg_status)};
 }
 
 RamStateOps::ram_reg RamStateOps::get_regRAM(const RamStateOps::ram_chip &ch,
@@ -39,14 +40,14 @@ RamStateOps::ram_chip
 RamStateOps::upd_reg_in_chip(const RamStateOps::ram_chip &ch,
                              const unsigned int r,
                              const RamStateOps::ram_reg &rg) {
-  return ram_chip(update_nth<RamStateOps::ram_reg>(r, rg, ch.chip_regs),
-                  ch.chip_port);
+  return ram_chip{update_nth<RamStateOps::ram_reg>(r, rg, ch.chip_regs),
+                  ch.chip_port};
 }
 
 RamStateOps::ram_chip
 RamStateOps::upd_port_in_chip(const RamStateOps::ram_chip &ch,
                               const unsigned int v) {
-  return ram_chip(ch.chip_regs, (16u ? v % 16u : v));
+  return ram_chip{ch.chip_regs, (16u ? v % 16u : v)};
 }
 
 RamStateOps::ram_chip RamStateOps::get_chip(const RamStateOps::ram_bank &bk,
@@ -59,7 +60,7 @@ RamStateOps::ram_bank
 RamStateOps::upd_chip_in_bank(const RamStateOps::ram_bank &bk,
                               const unsigned int c,
                               const RamStateOps::ram_chip &ch) {
-  return ram_bank(update_nth<RamStateOps::ram_chip>(c, ch, bk.bank_chips));
+  return ram_bank{update_nth<RamStateOps::ram_chip>(c, ch, bk.bank_chips)};
 }
 
 RamStateOps::ram_bank
@@ -127,8 +128,8 @@ RamStateOps::pop_stack(RamStateOps::state s) {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<unsigned int>(d_a0),
-                          state(s.state_regs, s.state_acc, s.state_carry,
+                          state{s.state_regs, s.state_acc, s.state_carry,
                                 s.state_pc, *(d_a1), s.state_ram, s.state_sel,
-                                s.state_rom));
+                                s.state_rom});
   }
 }

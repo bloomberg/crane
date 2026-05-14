@@ -19,7 +19,7 @@ unsigned int MemSafetyProbe5::sum_left_vals(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_left_vals: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -35,8 +35,8 @@ unsigned int MemSafetyProbe5::sum_left_vals(
         const auto &[d_a0, d_a1] = std::get<
             typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
             l.v());
-        _stack.emplace_back(_Resume_Mycons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -108,7 +108,7 @@ unsigned int MemSafetyProbe5::apply_all(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified apply_all: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -123,8 +123,8 @@ unsigned int MemSafetyProbe5::apply_all(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe5::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons(std::move(d_a0)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{std::move(d_a0)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -155,7 +155,7 @@ MemSafetyProbe5::collect_left_vals(
   MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(acc, t));
+  _stack.emplace_back(_Enter{acc, t});
   /// Loopified collect_left_vals: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -173,18 +173,18 @@ MemSafetyProbe5::collect_left_vals(
             std::get<typename MemSafetyProbe5::tree::Node>(t.v_mut());
         MemSafetyProbe5::tree d_a0_value = *(d_a0);
         MemSafetyProbe5::tree d_a2_value = *(d_a2);
-        _stack.emplace_back(_Resume_Node(d_a0_value));
+        _stack.emplace_back(_Resume_Node{d_a0_value});
         _stack.emplace_back(
-            _Enter(mylist<std::function<unsigned int(unsigned int)>>::mycons(
+            _Enter{mylist<std::function<unsigned int(unsigned int)>>::mycons(
                        [=](unsigned int _x0) mutable -> unsigned int {
                          return t.get_left_val(_x0);
                        },
                        std::move(acc)),
-                   d_a2_value));
+                   d_a2_value});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _stack.emplace_back(_Enter(std::move(_result), std::move(_f.d_a0_value)));
+      _stack.emplace_back(_Enter{std::move(_result), std::move(_f.d_a0_value)});
     }
   }
   return _result;
@@ -240,7 +240,7 @@ unsigned int MemSafetyProbe5::sum_getters(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_getters: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -255,8 +255,8 @@ unsigned int MemSafetyProbe5::sum_getters(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe5::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons(d_a0(x)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{d_a0(x)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));

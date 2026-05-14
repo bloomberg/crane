@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -129,7 +129,7 @@ struct SuperfluousMoves {
     unsigned int px;
 
     // ACCESSORS
-    position clone() const { return position((*(this)).px); }
+    position clone() const { return position{(*(this)).px}; }
   };
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { e_CHASE, e_FRIGHTENED };
@@ -168,8 +168,8 @@ struct SuperfluousMoves {
 
     // ACCESSORS
     game_state clone() const {
-      return game_state((*(this)).pacpos.clone(), (*(this)).ghosts.clone(),
-                        (*(this)).lives);
+      return game_state{(*(this)).pacpos.clone(), (*(this)).ghosts.clone(),
+                        (*(this)).lives};
     }
   };
 
@@ -181,9 +181,9 @@ struct SuperfluousMoves {
 
     // ACCESSORS
     loop_state clone() const {
-      return loop_state((*(this)).ls_game.clone(),
+      return loop_state{(*(this)).ls_game.clone(),
                         (*(this)).ls_prev_pac.clone(),
-                        (*(this)).ls_prev_ghosts.clone());
+                        (*(this)).ls_prev_ghosts.clone()};
     }
   };
 
@@ -196,14 +196,14 @@ struct SuperfluousMoves {
   static inline const Mode forced_mode = Mode::e_CHASE;
   /// Concrete state that makes the game-over branch fire after lose_one_life.
   static inline const game_state sample_state =
-      game_state(position(7u),
+      game_state{position{7u},
                  List<position>::cons(
-                     position(1u),
-                     List<position>::cons(position(2u), List<position>::nil())),
-                 1u);
+                     position{1u},
+                     List<position>::cons(position{2u}, List<position>::nil())),
+                 1u};
   /// Concrete loop state used by the standalone entrypoint.
   static inline const loop_state sample_loop =
-      loop_state(sample_state, sample_state.pacpos, sample_state.ghosts);
+      loop_state{sample_state, sample_state.pacpos, sample_state.ghosts};
   /// Reduced branch reproducer without the outer option * nat wrapper.
   static std::pair<bool, loop_state> bad_branch(loop_state ls);
 };

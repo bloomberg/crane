@@ -97,28 +97,28 @@ struct NestedMod {
           auto &&_sv = *(this);
           if (std::holds_alternative<Circle>(_sv.v())) {
             const auto &[d_a0] = std::get<Circle>(_sv.v());
-            return shape(Circle(d_a0));
+            return shape(Circle{d_a0});
           } else if (std::holds_alternative<Square>(_sv.v())) {
             const auto &[d_a0] = std::get<Square>(_sv.v());
-            return shape(Square(d_a0));
+            return shape(Square{d_a0});
           } else {
             const auto &[d_a0, d_a1, d_a2] = std::get<Triangle>(_sv.v());
-            return shape(Triangle(d_a0, d_a1, d_a2));
+            return shape(Triangle{d_a0, d_a1, d_a2});
           }
         }
 
         // CREATORS
         static shape circle(unsigned int a0) {
-          return shape(Circle(std::move(a0)));
+          return shape(Circle{std::move(a0)});
         }
 
         static shape square(unsigned int a0) {
-          return shape(Square(std::move(a0)));
+          return shape(Square{std::move(a0)});
         }
 
         static shape triangle(unsigned int a0, unsigned int a1,
                               unsigned int a2) {
-          return shape(Triangle(std::move(a0), std::move(a1), std::move(a2)));
+          return shape(Triangle{std::move(a0), std::move(a1), std::move(a2)});
         }
 
         // MANIPULATORS

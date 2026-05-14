@@ -11,7 +11,7 @@ struct RecordProj {
     unsigned int y;
 
     // ACCESSORS
-    Point clone() const { return Point((*(this)).x, (*(this)).y); }
+    Point clone() const { return Point{(*(this)).x, (*(this)).y}; }
   };
 
   struct ComplexRecord {
@@ -21,8 +21,8 @@ struct RecordProj {
 
     // ACCESSORS
     ComplexRecord clone() const {
-      return ComplexRecord((*(this)).field1, (*(this)).field2,
-                           (*(this)).field3);
+      return ComplexRecord{(*(this)).field1, (*(this)).field2,
+                           (*(this)).field3};
     }
   };
 
@@ -38,9 +38,9 @@ struct RecordProj {
     return (f(a) + f(b));
   }
 
-  static inline const unsigned int test1 = weird_access(Point(10u, 20u));
+  static inline const unsigned int test1 = weird_access(Point{10u, 20u});
   static inline const unsigned int test2 =
-      complex_access(ComplexRecord(5u, 10u, 15u));
+      complex_access(ComplexRecord{5u, 10u, 15u});
 };
 
 #endif // INCLUDED_RECORD_PROJ

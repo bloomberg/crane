@@ -68,12 +68,12 @@ public:
       const Trie<t_A> *_src = _frame._src;
       Trie<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Leaf>(_src->v())) {
-        _dst->d_v_ = Leaf();
+        _dst->d_v_ = Leaf{};
       } else {
         const auto &_alt = std::get<Branch>(_src->v());
-        _dst->d_v_ = Branch(
+        _dst->d_v_ = Branch{
             _alt.d_t, _alt.d_t0 ? std::make_unique<Trie<t_A>>() : nullptr,
-            _alt.d_t1 ? std::make_unique<Trie<t_A>>() : nullptr);
+            _alt.d_t1 ? std::make_unique<Trie<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Branch>(_dst->d_v_);
         if (_alt.d_t0) {
           _stack.push_back({_alt.d_t0.get(), _dst_alt.d_t0.get()});
@@ -89,21 +89,21 @@ public:
   // CREATORS
   template <typename _U> explicit Trie(const Trie<_U> &_other) {
     if (std::holds_alternative<typename Trie<_U>::Leaf>(_other.v())) {
-      this->d_v_ = Leaf();
+      this->d_v_ = Leaf{};
     } else {
       const auto &[d_t, d_t0, d_t1] =
           std::get<typename Trie<_U>::Branch>(_other.v());
-      this->d_v_ = Branch(std::optional<t_A>(d_t),
+      this->d_v_ = Branch{std::optional<t_A>(d_t),
                           d_t0 ? std::make_unique<Trie<t_A>>(*d_t0) : nullptr,
-                          d_t1 ? std::make_unique<Trie<t_A>>(*d_t1) : nullptr);
+                          d_t1 ? std::make_unique<Trie<t_A>>(*d_t1) : nullptr};
     }
   }
 
-  static Trie<t_A> leaf() { return Trie(Leaf()); }
+  static Trie<t_A> leaf() { return Trie(Leaf{}); }
 
   static Trie<t_A> branch(std::optional<t_A> t, Trie<t_A> t0, Trie<t_A> t1) {
-    return Trie(Branch(std::move(t), std::make_unique<Trie<t_A>>(std::move(t0)),
-                       std::make_unique<Trie<t_A>>(std::move(t1))));
+    return Trie(Branch{std::move(t), std::make_unique<Trie<t_A>>(std::move(t0)),
+                       std::make_unique<Trie<t_A>>(std::move(t1))});
   }
 
   // MANIPULATORS

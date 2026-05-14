@@ -9,30 +9,30 @@ std::pair<bool, ConstructorBugs::packed_state>
 ConstructorBugs::bad_branch(const ConstructorBugs::source_state &s1) {
   ConstructorBugs::source_state s2 = step(s1);
   if (s2.source_flag == 0u) {
-    return std::make_pair(false, packed_state(s2, s2.source_a, s2.source_b));
+    return std::make_pair(false, packed_state{s2, s2.source_a, s2.source_b});
   } else {
-    return std::make_pair(false, packed_state(s2, s2.source_a, s2.source_b));
+    return std::make_pair(false, packed_state{s2, s2.source_a, s2.source_b});
   }
 }
 
 std::pair<bool, ConstructorBugs::packed_state>
 ConstructorBugs::bad_direct(const ConstructorBugs::source_state &s1) {
   ConstructorBugs::source_state s2 = step(s1);
-  return std::make_pair(false, packed_state(s2, s2.source_a, s2.source_b));
+  return std::make_pair(false, packed_state{s2, s2.source_a, s2.source_b});
 }
 
 ConstructorBugs::source_state
 ConstructorBugs::step2(const ConstructorBugs::source_state &s) {
-  return source_state(s.source_a, s.source_b, (s.source_flag + 1u));
+  return source_state{s.source_a, s.source_b, (s.source_flag + 1u)};
 }
 
 std::pair<bool, ConstructorBugs::packed_state>
 ConstructorBugs::bad_complex_step(const ConstructorBugs::source_state &s1) {
   ConstructorBugs::source_state s2 = step2(s1);
   if (s2.source_flag == 0u) {
-    return std::make_pair(false, packed_state(s2, s2.source_a, s2.source_b));
+    return std::make_pair(false, packed_state{s2, s2.source_a, s2.source_b});
   } else {
-    return std::make_pair(false, packed_state(s2, s2.source_a, s2.source_b));
+    return std::make_pair(false, packed_state{s2, s2.source_a, s2.source_b});
   }
 }
 
@@ -40,7 +40,7 @@ std::pair<bool, ConstructorBugs::packed_state>
 ConstructorBugs::bad_nested(const ConstructorBugs::source_state &s1) {
   ConstructorBugs::source_state s2 = step(s1);
   ConstructorBugs::source_state s3 = step(std::move(s2));
-  return std::make_pair(false, packed_state(s3, s3.source_a, s3.source_b));
+  return std::make_pair(false, packed_state{s3, s3.source_a, s3.source_b});
 }
 
 ConstructorBugs::source_state_list
@@ -53,19 +53,19 @@ ConstructorBugs::bad_branch_list(const ConstructorBugs::source_state_list &s1) {
   ConstructorBugs::source_state_list s2 = step_list(s1);
   if (s2.source_flag_list == 0u) {
     return std::make_pair(
-        false, packed_state_list(s2, s2.source_a_list, s2.source_b_list));
+        false, packed_state_list{s2, s2.source_a_list, s2.source_b_list});
   } else {
     return std::make_pair(
-        false, packed_state_list(s2, s2.source_a_list, s2.source_b_list));
+        false, packed_state_list{s2, s2.source_a_list, s2.source_b_list});
   }
 }
 
 ConstructorBugs::state ConstructorBugs::get_state(const unsigned int n) {
-  return state(n,
+  return state{n,
                List<unsigned int>::cons(
                    n, List<unsigned int>::cons(
                           (n + 1u), List<unsigned int>::cons(
-                                        (n + 2u), List<unsigned int>::nil()))));
+                                        (n + 2u), List<unsigned int>::nil())))};
 }
 
 std::pair<std::pair<ConstructorBugs::state, ConstructorBugs::state>,
@@ -165,12 +165,12 @@ ConstructorBugs::extreme_reuse(ConstructorBugs::state s) {
 
 ConstructorBugs::Outer
 ConstructorBugs::nested_record(ConstructorBugs::Inner i) {
-  return Outer(i, i.inner_val);
+  return Outer{i, i.inner_val};
 }
 
 ConstructorBugs::Outer
 ConstructorBugs::self_referential(const ConstructorBugs::Outer &o) {
-  return Outer(o.outer_inner, o.outer_inner.inner_val);
+  return Outer{o.outer_inner, o.outer_inner.inner_val};
 }
 
 std::pair<ConstructorBugs::Inner, unsigned int>
@@ -191,7 +191,7 @@ ConstructorBugs::pair_duplicate(ConstructorBugs::Inner i) {
 }
 
 ConstructorBugs::Inner ConstructorBugs::mk_inner(const unsigned int n) {
-  return Inner(n);
+  return Inner{n};
 }
 
 std::pair<ConstructorBugs::Inner, unsigned int>
@@ -220,7 +220,7 @@ ConstructorBugs::match_sum(const ConstructorBugs::MySum &s) {
   } else {
     const auto &[d_a0] =
         std::get<typename ConstructorBugs::MySum::Right>(s.v());
-    return std::make_pair(Inner(d_a0), d_a0);
+    return std::make_pair(Inner{d_a0}, d_a0);
   }
 }
 
@@ -232,8 +232,8 @@ ConstructorBugs::with_cast(ConstructorBugs::Inner i) {
 std::pair<std::pair<ConstructorBugs::Inner, unsigned int>,
           std::pair<ConstructorBugs::Inner, unsigned int>>
 ConstructorBugs::chain_lets(const ConstructorBugs::Inner &i1) {
-  ConstructorBugs::Inner i2 = Inner(i1.inner_val);
-  ConstructorBugs::Inner i3 = Inner(i2.inner_val);
+  ConstructorBugs::Inner i2 = Inner{i1.inner_val};
+  ConstructorBugs::Inner i3 = Inner{i2.inner_val};
   return std::make_pair(std::make_pair(i2, i2.inner_val),
                         std::make_pair(i3, i3.inner_val));
 }
@@ -300,7 +300,7 @@ ConstructorBugs::nested_extract(ConstructorBugs::Inner i) {
 
 std::pair<ConstructorBugs::Outer, unsigned int>
 ConstructorBugs::update_test(const ConstructorBugs::Outer &o) {
-  return std::make_pair(Outer(o.outer_inner, (o.outer_data + 1u)),
+  return std::make_pair(Outer{o.outer_inner, (o.outer_data + 1u)},
                         o.outer_inner.inner_val);
 }
 
@@ -320,7 +320,7 @@ ConstructorBugs::inline_nested(ConstructorBugs::State s) {
 }
 
 ConstructorBugs::State ConstructorBugs::get_state_inline(const unsigned int n) {
-  return State(n, n, n);
+  return State{n, n, n};
 }
 
 std::pair<ConstructorBugs::State, unsigned int>

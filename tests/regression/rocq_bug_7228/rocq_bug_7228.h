@@ -63,10 +63,10 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O();
+        _dst->d_v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S(_alt.d_a0 ? std::make_unique<Nat>() : nullptr);
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -77,9 +77,9 @@ public:
   }
 
   // CREATORS
-  static Nat o() { return Nat(O()); }
+  static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S(std::make_unique<Nat>(std::move(a0)))); }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -146,11 +146,11 @@ struct RocqBug7228 {
     data clone() const {
       auto &&_sv = *(this);
       const auto &[d_t] = std::get<Data0>(_sv.v());
-      return data(Data0(d_t));
+      return data(Data0{d_t});
     }
 
     // CREATORS
-    static data data0(std::any t) { return data(Data0(std::move(t))); }
+    static data data0(std::any t) { return data(Data0{std::move(t)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

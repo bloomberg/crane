@@ -9,8 +9,8 @@ SuperfluousMoves::tick(SuperfluousMoves::game_state gs) {
 /// Life loss used to create the branch-local gs3 value.
 SuperfluousMoves::game_state
 SuperfluousMoves::lose_one_life(const SuperfluousMoves::game_state &gs) {
-  return game_state(position(9u), gs.ghosts,
-                    (gs.lives ? gs.lives - 1 : gs.lives));
+  return game_state{position{9u}, gs.ghosts,
+                    (gs.lives ? gs.lives - 1 : gs.lives)};
 }
 
 /// Reduced branch reproducer without the outer option * nat wrapper.
@@ -28,9 +28,9 @@ SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
   case Mode::e_CHASE: {
     SuperfluousMoves::game_state gs3 = lose_one_life(std::move(gs2));
     if (gs3.lives == 0u) {
-      return std::make_pair(false, loop_state(gs3, gs3.pacpos, gs3.ghosts));
+      return std::make_pair(false, loop_state{gs3, gs3.pacpos, gs3.ghosts});
     } else {
-      return std::make_pair(false, loop_state(gs3, gs3.pacpos, gs3.ghosts));
+      return std::make_pair(false, loop_state{gs3, gs3.pacpos, gs3.ghosts});
     }
   }
   case Mode::e_FRIGHTENED: {

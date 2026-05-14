@@ -108,7 +108,7 @@ List<List<unsigned int>> LoopifyCombinatorics::perms_choices_fuel(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(orig, choices, fuel));
+  _stack.emplace_back(_Enter{orig, choices, fuel});
   /// Loopified perms_choices_fuel: _Enter -> _After_Cons -> _Combine_Cons ->
   /// _Resume_Nil.
   while (!_stack.empty()) {
@@ -132,22 +132,22 @@ List<List<unsigned int>> LoopifyCombinatorics::perms_choices_fuel(
           List<unsigned int> remaining = remove(d_a0, orig);
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   remaining.v_mut())) {
-            _stack.emplace_back(_Resume_Nil(
+            _stack.emplace_back(_Resume_Nil{
                 map_cons(d_a0, List<List<unsigned int>>::cons(
                                    List<unsigned int>::nil(),
-                                   List<List<unsigned int>>::nil()))));
-            _stack.emplace_back(_Enter(orig, std::move(*(d_a1)), f));
+                                   List<List<unsigned int>>::nil()))});
+            _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
           } else {
-            _stack.emplace_back(_After_Cons(remaining, remaining, f, d_a0));
-            _stack.emplace_back(_Enter(orig, std::move(*(d_a1)), f));
+            _stack.emplace_back(_After_Cons{remaining, remaining, f, d_a0});
+            _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
           }
         }
       }
     } else if (std::holds_alternative<_After_Cons>(_frame)) {
       auto _f = std::move(std::get<_After_Cons>(_frame));
-      _stack.emplace_back(_Combine_Cons(std::move(_result), _f.d_a0));
+      _stack.emplace_back(_Combine_Cons{std::move(_result), _f.d_a0});
       _stack.emplace_back(
-          _Enter(std::move(_f.remaining_0), std::move(_f.remaining_1), _f.f));
+          _Enter{std::move(_f.remaining_0), std::move(_f.remaining_1), _f.f});
     } else if (std::holds_alternative<_Combine_Cons>(_frame)) {
       auto _f = std::move(std::get<_Combine_Cons>(_frame));
       _result = map_cons(_f.d_a0, _result).app(_f._result);
@@ -186,7 +186,7 @@ unsigned int LoopifyCombinatorics::len_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified len_list: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -199,8 +199,8 @@ unsigned int LoopifyCombinatorics::len_list(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons());
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -227,7 +227,7 @@ unsigned int LoopifyCombinatorics::factorial_impl(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified factorial_impl: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -239,8 +239,8 @@ unsigned int LoopifyCombinatorics::factorial_impl(
         _result = 1u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m(n));
-        _stack.emplace_back(_Enter(m));
+        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -274,7 +274,7 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -288,8 +288,8 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_Cons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -313,7 +313,7 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(8);
-        _stack.emplace_back(_Enter(lst));
+        _stack.emplace_back(_Enter{lst});
         /// Loopified map_prepend: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -329,8 +329,8 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
                   std::get<typename List<List<unsigned int>>::Cons>(
                       lst.v_mut());
               _stack.emplace_back(
-                  _Resume_Cons(List<unsigned int>::cons(d_a0, d_a00)));
-              _stack.emplace_back(_Enter(std::move(*(d_a10))));
+                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{std::move(*(d_a10))});
             }
           } else {
             auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -397,7 +397,7 @@ List<std::pair<unsigned int, unsigned int>> LoopifyCombinatorics::cartesian(
   List<std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l2));
+  _stack.emplace_back(_Enter{&l2});
   /// Loopified cartesian: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -410,8 +410,8 @@ List<std::pair<unsigned int, unsigned int>> LoopifyCombinatorics::cartesian(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l2.v());
-        _stack.emplace_back(_Resume_Cons(map_pairs(d_a0, l1)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{map_pairs(d_a0, l1)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -440,7 +440,7 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified power_set: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -454,8 +454,8 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_Cons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -479,7 +479,7 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(8);
-        _stack.emplace_back(_Enter(lst));
+        _stack.emplace_back(_Enter{lst});
         /// Loopified map_add_x: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -495,8 +495,8 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
                   std::get<typename List<List<unsigned int>>::Cons>(
                       lst.v_mut());
               _stack.emplace_back(
-                  _Resume_Cons(List<unsigned int>::cons(d_a0, d_a00)));
-              _stack.emplace_back(_Enter(std::move(*(d_a10))));
+                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{std::move(*(d_a10))});
             }
           } else {
             auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -533,7 +533,7 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(l));
+  _stack.emplace_back(_Enter{l});
   /// Loopified insert_everywhere: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -548,8 +548,8 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v_mut());
-        _stack.emplace_back(_Cont_Cons(d_a0, l, x));
-        _stack.emplace_back(_Enter(std::move(*(d_a1))));
+        _stack.emplace_back(_Cont_Cons{d_a0, l, x});
+        _stack.emplace_back(_Enter{std::move(*(d_a1))});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -575,7 +575,7 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(8);
-        _stack.emplace_back(_Enter(lsts));
+        _stack.emplace_back(_Enter{lsts});
         /// Loopified prepend_y: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -591,8 +591,8 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
                   std::get<typename List<List<unsigned int>>::Cons>(
                       lsts.v_mut());
               _stack.emplace_back(
-                  _Resume_Cons(List<unsigned int>::cons(d_a0, d_a00)));
-              _stack.emplace_back(_Enter(std::move(*(d_a10))));
+                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{std::move(*(d_a10))});
             }
           } else {
             auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -628,7 +628,7 @@ bool LoopifyCombinatorics::elem(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -641,8 +641,8 @@ bool LoopifyCombinatorics::elem(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons(x == d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{x == d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -668,7 +668,7 @@ unsigned int LoopifyCombinatorics::len_impl(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -681,8 +681,8 @@ unsigned int LoopifyCombinatorics::len_impl(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons());
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -713,7 +713,7 @@ List<unsigned int> LoopifyCombinatorics::dedup_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l, fuel));
+  _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified dedup_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -731,8 +731,8 @@ List<unsigned int> LoopifyCombinatorics::dedup_fuel(
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons(d_a0));
-          _stack.emplace_back(_Enter(d_a1.get(), f));
+          _stack.emplace_back(_Cont_Cons{d_a0});
+          _stack.emplace_back(_Enter{d_a1.get(), f});
         }
       }
     } else {

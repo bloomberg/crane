@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -189,29 +189,29 @@ struct DisassembleOps {
     instruction clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP>(_sv.v())) {
-        return instruction(NOP());
+        return instruction(NOP{});
       } else if (std::holds_alternative<NOP2>(_sv.v())) {
-        return instruction(NOP2());
+        return instruction(NOP2{});
       } else if (std::holds_alternative<LDM>(_sv.v())) {
         const auto &[d_a0] = std::get<LDM>(_sv.v());
-        return instruction(LDM(d_a0));
+        return instruction(LDM{d_a0});
       } else {
         const auto &[d_a0] = std::get<LDM2>(_sv.v());
-        return instruction(LDM2(d_a0));
+        return instruction(LDM2{d_a0});
       }
     }
 
     // CREATORS
-    static instruction nop() { return instruction(NOP()); }
+    static instruction nop() { return instruction(NOP{}); }
 
-    static instruction nop2() { return instruction(NOP2()); }
+    static instruction nop2() { return instruction(NOP2{}); }
 
     static instruction ldm(unsigned int a0) {
-      return instruction(LDM(std::move(a0)));
+      return instruction(LDM{std::move(a0)});
     }
 
     static instruction ldm2(unsigned int a0) {
-      return instruction(LDM2(std::move(a0)));
+      return instruction(LDM2{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -343,13 +343,13 @@ struct DisassembleOps {
 
     // ACCESSORS
     state clone() const {
-      return state((*(this)).regs.clone(), (*(this)).rom.clone());
+      return state{(*(this)).regs.clone(), (*(this)).rom.clone()};
     }
   };
 
   static inline const state init_state =
-      state(ListDef::template repeat<unsigned int>(0u, 16u),
-            ListDef::template repeat<unsigned int>(0u, 4096u));
+      state{ListDef::template repeat<unsigned int>(0u, 16u),
+            ListDef::template repeat<unsigned int>(0u, 4096u)};
   static inline const unsigned int test_decode_disassemble_1 =
       []() -> unsigned int {
     auto _cs = disassemble4(

@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -134,7 +134,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_reg_main clone() const {
-      return ram_reg_main((*(this)).reg_main.clone());
+      return ram_reg_main{(*(this)).reg_main.clone()};
     }
   };
 
@@ -143,7 +143,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_chip_main clone() const {
-      return ram_chip_main((*(this)).chip_regs_main.clone());
+      return ram_chip_main{(*(this)).chip_regs_main.clone()};
     }
   };
 
@@ -152,7 +152,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_bank_main clone() const {
-      return ram_bank_main((*(this)).bank_chips_main.clone());
+      return ram_bank_main{(*(this)).bank_chips_main.clone()};
     }
   };
 
@@ -165,9 +165,9 @@ struct RamOps {
 
     // ACCESSORS
     state_main clone() const {
-      return state_main((*(this)).ram_sys_main.clone(), (*(this)).cur_bank_main,
+      return state_main{(*(this)).ram_sys_main.clone(), (*(this)).cur_bank_main,
                         (*(this)).sel_chip_main, (*(this)).sel_reg_main,
-                        (*(this)).sel_char_main);
+                        (*(this)).sel_char_main};
     }
   };
 
@@ -212,25 +212,25 @@ struct RamOps {
   static List<ram_bank_main> ram_write_main_sys(const state_main &s,
                                                 const unsigned int v);
   static inline const unsigned int test_main_write_chain = []() {
-    ram_reg_main rg0 = ram_reg_main(List<unsigned int>::cons(
+    ram_reg_main rg0 = ram_reg_main{List<unsigned int>::cons(
         0u, List<unsigned int>::cons(
-                0u, List<unsigned int>::cons(0u, List<unsigned int>::nil()))));
+                0u, List<unsigned int>::cons(0u, List<unsigned int>::nil())))};
     ram_chip_main ch0 =
-        ram_chip_main(List<ram_reg_main>::cons(rg0, List<ram_reg_main>::nil()));
-    ram_bank_main bk0 = ram_bank_main(
-        List<ram_chip_main>::cons(ch0, List<ram_chip_main>::nil()));
+        ram_chip_main{List<ram_reg_main>::cons(rg0, List<ram_reg_main>::nil())};
+    ram_bank_main bk0 = ram_bank_main{
+        List<ram_chip_main>::cons(ch0, List<ram_chip_main>::nil())};
     state_main s =
-        state_main(List<ram_bank_main>::cons(bk0, List<ram_bank_main>::nil()),
-                   0u, 0u, 0u, 1u);
+        state_main{List<ram_bank_main>::cons(bk0, List<ram_bank_main>::nil()),
+                   0u, 0u, 0u, 1u};
     List<ram_bank_main> sys_ = ram_write_main_sys(std::move(s), 19u);
     ram_bank_main bk_ = ListDef::template nth<ram_bank_main>(
-        0u, std::move(sys_), ram_bank_main(List<ram_chip_main>::nil()));
+        0u, std::move(sys_), ram_bank_main{List<ram_chip_main>::nil()});
     ram_chip_main ch_ = ListDef::template nth<ram_chip_main>(
         0u, std::move(bk_).bank_chips_main,
-        ram_chip_main(List<ram_reg_main>::nil()));
+        ram_chip_main{List<ram_reg_main>::nil()});
     ram_reg_main rg_ = ListDef::template nth<ram_reg_main>(
         0u, std::move(ch_).chip_regs_main,
-        ram_reg_main(List<unsigned int>::nil()));
+        ram_reg_main{List<unsigned int>::nil()});
     return ListDef::template nth<unsigned int>(1u, std::move(rg_).reg_main, 0u);
   }();
 
@@ -238,7 +238,7 @@ struct RamOps {
     unsigned int chip_port_val;
 
     // ACCESSORS
-    chip_port clone() const { return chip_port((*(this)).chip_port_val); }
+    chip_port clone() const { return chip_port{(*(this)).chip_port_val}; }
   };
 
   struct bank_port {
@@ -246,7 +246,7 @@ struct RamOps {
 
     // ACCESSORS
     bank_port clone() const {
-      return bank_port((*(this)).bank_chips_port.clone());
+      return bank_port{(*(this)).bank_chips_port.clone()};
     }
   };
 
@@ -257,8 +257,8 @@ struct RamOps {
 
     // ACCESSORS
     state_port clone() const {
-      return state_port((*(this)).ram_sys_port.clone(), (*(this)).cur_bank_port,
-                        (*(this)).sel_chip_port);
+      return state_port{(*(this)).ram_sys_port.clone(), (*(this)).cur_bank_port,
+                        (*(this)).sel_chip_port};
     }
   };
 
@@ -295,16 +295,16 @@ struct RamOps {
   static List<bank_port> ram_write_port_sys(const state_port &s,
                                             const unsigned int v);
   static inline const unsigned int test_port_write_chain = []() {
-    chip_port ch0 = chip_port(0u);
+    chip_port ch0 = chip_port{0u};
     bank_port bk0 =
-        bank_port(List<chip_port>::cons(ch0, List<chip_port>::nil()));
+        bank_port{List<chip_port>::cons(ch0, List<chip_port>::nil())};
     state_port s =
-        state_port(List<bank_port>::cons(bk0, List<bank_port>::nil()), 0u, 0u);
+        state_port{List<bank_port>::cons(bk0, List<bank_port>::nil()), 0u, 0u};
     List<bank_port> sys_ = ram_write_port_sys(std::move(s), 17u);
     bank_port bk_ = ListDef::template nth<bank_port>(
-        0u, std::move(sys_), bank_port(List<chip_port>::nil()));
+        0u, std::move(sys_), bank_port{List<chip_port>::nil()});
     chip_port ch_ = ListDef::template nth<chip_port>(
-        0u, std::move(bk_).bank_chips_port, chip_port(0u));
+        0u, std::move(bk_).bank_chips_port, chip_port{0u});
     return std::move(ch_).chip_port_val;
   }();
 
@@ -313,7 +313,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_reg_status clone() const {
-      return ram_reg_status((*(this)).reg_status.clone());
+      return ram_reg_status{(*(this)).reg_status.clone()};
     }
   };
 
@@ -322,7 +322,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_chip_status clone() const {
-      return ram_chip_status((*(this)).chip_regs_status.clone());
+      return ram_chip_status{(*(this)).chip_regs_status.clone()};
     }
   };
 
@@ -331,7 +331,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_bank_status clone() const {
-      return ram_bank_status((*(this)).bank_chips_status.clone());
+      return ram_bank_status{(*(this)).bank_chips_status.clone()};
     }
   };
 
@@ -343,9 +343,9 @@ struct RamOps {
 
     // ACCESSORS
     state_status clone() const {
-      return state_status((*(this)).ram_sys_status.clone(),
+      return state_status{(*(this)).ram_sys_status.clone(),
                           (*(this)).cur_bank_status, (*(this)).sel_chip_status,
-                          (*(this)).sel_reg_status);
+                          (*(this)).sel_reg_status};
     }
   };
 
@@ -392,27 +392,27 @@ struct RamOps {
                                                     const unsigned int idx,
                                                     const unsigned int v);
   static inline const unsigned int test_status_write_chain = []() {
-    ram_reg_status rg0 = ram_reg_status(List<unsigned int>::cons(
+    ram_reg_status rg0 = ram_reg_status{List<unsigned int>::cons(
         0u, List<unsigned int>::cons(
                 0u, List<unsigned int>::cons(
                         0u, List<unsigned int>::cons(
-                                0u, List<unsigned int>::nil())))));
-    ram_chip_status ch0 = ram_chip_status(
-        List<ram_reg_status>::cons(rg0, List<ram_reg_status>::nil()));
-    ram_bank_status bk0 = ram_bank_status(
-        List<ram_chip_status>::cons(ch0, List<ram_chip_status>::nil()));
-    state_status s = state_status(
+                                0u, List<unsigned int>::nil()))))};
+    ram_chip_status ch0 = ram_chip_status{
+        List<ram_reg_status>::cons(rg0, List<ram_reg_status>::nil())};
+    ram_bank_status bk0 = ram_bank_status{
+        List<ram_chip_status>::cons(ch0, List<ram_chip_status>::nil())};
+    state_status s = state_status{
         List<ram_bank_status>::cons(bk0, List<ram_bank_status>::nil()), 0u, 0u,
-        0u);
+        0u};
     List<ram_bank_status> sys_ = ram_write_status_sys(std::move(s), 2u, 25u);
     ram_bank_status bk_ = ListDef::template nth<ram_bank_status>(
-        0u, std::move(sys_), ram_bank_status(List<ram_chip_status>::nil()));
+        0u, std::move(sys_), ram_bank_status{List<ram_chip_status>::nil()});
     ram_chip_status ch_ = ListDef::template nth<ram_chip_status>(
         0u, std::move(bk_).bank_chips_status,
-        ram_chip_status(List<ram_reg_status>::nil()));
+        ram_chip_status{List<ram_reg_status>::nil()});
     ram_reg_status rg_ = ListDef::template nth<ram_reg_status>(
         0u, std::move(ch_).chip_regs_status,
-        ram_reg_status(List<unsigned int>::nil()));
+        ram_reg_status{List<unsigned int>::nil()});
     return ListDef::template nth<unsigned int>(2u, std::move(rg_).reg_status,
                                                0u);
   }();
@@ -423,8 +423,8 @@ struct RamOps {
 
     // ACCESSORS
     ram_reg_sel clone() const {
-      return ram_reg_sel((*(this)).reg_main_sel.clone(),
-                         (*(this)).reg_status_sel.clone());
+      return ram_reg_sel{(*(this)).reg_main_sel.clone(),
+                         (*(this)).reg_status_sel.clone()};
     }
   };
 
@@ -434,8 +434,8 @@ struct RamOps {
 
     // ACCESSORS
     ram_chip_sel clone() const {
-      return ram_chip_sel((*(this)).chip_regs_sel.clone(),
-                          (*(this)).chip_port_sel);
+      return ram_chip_sel{(*(this)).chip_regs_sel.clone(),
+                          (*(this)).chip_port_sel};
     }
   };
 
@@ -444,7 +444,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_bank_sel clone() const {
-      return ram_bank_sel((*(this)).bank_chips_sel.clone());
+      return ram_bank_sel{(*(this)).bank_chips_sel.clone()};
     }
   };
 
@@ -455,7 +455,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_sel clone() const {
-      return ram_sel((*(this)).sel_chip, (*(this)).sel_reg, (*(this)).sel_char);
+      return ram_sel{(*(this)).sel_chip, (*(this)).sel_reg, (*(this)).sel_char};
     }
   };
 
@@ -466,24 +466,24 @@ struct RamOps {
 
     // ACCESSORS
     state_sel clone() const {
-      return state_sel((*(this)).ram_sys_sel.clone(), (*(this)).cur_bank_sel,
-                       (*(this)).sel_ram.clone());
+      return state_sel{(*(this)).ram_sys_sel.clone(), (*(this)).cur_bank_sel,
+                       (*(this)).sel_ram.clone()};
     }
   };
 
   static inline const ram_reg_sel empty_reg_sel =
-      ram_reg_sel(List<unsigned int>::nil(), List<unsigned int>::nil());
+      ram_reg_sel{List<unsigned int>::nil(), List<unsigned int>::nil()};
   static inline const ram_chip_sel empty_chip_sel =
-      ram_chip_sel(List<ram_reg_sel>::nil(), 0u);
+      ram_chip_sel{List<ram_reg_sel>::nil(), 0u};
   static inline const ram_bank_sel empty_bank_sel =
-      ram_bank_sel(List<ram_chip_sel>::nil());
+      ram_bank_sel{List<ram_chip_sel>::nil()};
   static ram_bank_sel get_bank_sel(const state_sel &s, const unsigned int b);
   static ram_chip_sel get_chip_sel(const ram_bank_sel &bk,
                                    const unsigned int c);
   static ram_reg_sel get_regRAM(const ram_chip_sel &ch, const unsigned int r);
   static unsigned int get_main_sel(const ram_reg_sel &rg, const unsigned int i);
   static unsigned int ram_read_main(const state_sel &s);
-  static inline const ram_reg_sel sample_reg_sel = ram_reg_sel(
+  static inline const ram_reg_sel sample_reg_sel = ram_reg_sel{
       List<unsigned int>::cons(
           5u, List<unsigned int>::cons(
                   6u, List<unsigned int>::cons(
@@ -493,15 +493,15 @@ struct RamOps {
           0u, List<unsigned int>::cons(
                   0u, List<unsigned int>::cons(
                           0u, List<unsigned int>::cons(
-                                  0u, List<unsigned int>::nil())))));
-  static inline const ram_chip_sel sample_chip_sel = ram_chip_sel(
-      List<ram_reg_sel>::cons(sample_reg_sel, List<ram_reg_sel>::nil()), 3u);
-  static inline const ram_bank_sel sample_bank_sel = ram_bank_sel(
-      List<ram_chip_sel>::cons(sample_chip_sel, List<ram_chip_sel>::nil()));
-  static inline const ram_sel sample_sel = ram_sel(0u, 0u, 2u);
-  static inline const state_sel sample_state_sel = state_sel(
+                                  0u, List<unsigned int>::nil()))))};
+  static inline const ram_chip_sel sample_chip_sel = ram_chip_sel{
+      List<ram_reg_sel>::cons(sample_reg_sel, List<ram_reg_sel>::nil()), 3u};
+  static inline const ram_bank_sel sample_bank_sel = ram_bank_sel{
+      List<ram_chip_sel>::cons(sample_chip_sel, List<ram_chip_sel>::nil())};
+  static inline const ram_sel sample_sel = ram_sel{0u, 0u, 2u};
+  static inline const state_sel sample_state_sel = state_sel{
       List<ram_bank_sel>::cons(sample_bank_sel, List<ram_bank_sel>::nil()), 0u,
-      sample_sel);
+      sample_sel};
   static inline const unsigned int test_read_main_selector =
       ram_read_main(sample_state_sel);
 
@@ -511,8 +511,8 @@ struct RamOps {
 
     // ACCESSORS
     ram_reg_nested clone() const {
-      return ram_reg_nested((*(this)).reg_main_nested.clone(),
-                            (*(this)).reg_status_nested.clone());
+      return ram_reg_nested{(*(this)).reg_main_nested.clone(),
+                            (*(this)).reg_status_nested.clone()};
     }
   };
 
@@ -522,8 +522,8 @@ struct RamOps {
 
     // ACCESSORS
     ram_chip_nested clone() const {
-      return ram_chip_nested((*(this)).chip_regs_nested.clone(),
-                             (*(this)).chip_port_nested);
+      return ram_chip_nested{(*(this)).chip_regs_nested.clone(),
+                             (*(this)).chip_port_nested};
     }
   };
 
@@ -532,7 +532,7 @@ struct RamOps {
 
     // ACCESSORS
     ram_bank_nested clone() const {
-      return ram_bank_nested((*(this)).bank_chips_nested.clone());
+      return ram_bank_nested{(*(this)).bank_chips_nested.clone()};
     }
   };
 
@@ -543,8 +543,8 @@ struct RamOps {
 
     // ACCESSORS
     ram_sel_nested clone() const {
-      return ram_sel_nested((*(this)).sel_chip_nested, (*(this)).sel_reg_nested,
-                            (*(this)).sel_char_nested);
+      return ram_sel_nested{(*(this)).sel_chip_nested, (*(this)).sel_reg_nested,
+                            (*(this)).sel_char_nested};
     }
   };
 
@@ -555,18 +555,18 @@ struct RamOps {
 
     // ACCESSORS
     state_nested clone() const {
-      return state_nested((*(this)).ram_sys_nested.clone(),
+      return state_nested{(*(this)).ram_sys_nested.clone(),
                           (*(this)).cur_bank_nested,
-                          (*(this)).sel_ram_nested.clone());
+                          (*(this)).sel_ram_nested.clone()};
     }
   };
 
   static inline const ram_reg_nested empty_reg_nested =
-      ram_reg_nested(List<unsigned int>::nil(), List<unsigned int>::nil());
+      ram_reg_nested{List<unsigned int>::nil(), List<unsigned int>::nil()};
   static inline const ram_chip_nested empty_chip_nested =
-      ram_chip_nested(List<ram_reg_nested>::nil(), 0u);
+      ram_chip_nested{List<ram_reg_nested>::nil(), 0u};
   static inline const ram_bank_nested empty_bank_nested =
-      ram_bank_nested(List<ram_chip_nested>::nil());
+      ram_bank_nested{List<ram_chip_nested>::nil()};
   static ram_bank_nested get_bank_nested(const state_nested &s,
                                          const unsigned int b);
   static ram_chip_nested get_chip_nested(const ram_bank_nested &bk,
@@ -576,7 +576,7 @@ struct RamOps {
   static unsigned int get_main_nested(const ram_reg_nested &rg,
                                       const unsigned int i);
   static unsigned int ram_read_main_nested(const state_nested &s);
-  static inline const ram_reg_nested sample_reg_nested = ram_reg_nested(
+  static inline const ram_reg_nested sample_reg_nested = ram_reg_nested{
       List<unsigned int>::cons(
           5u, List<unsigned int>::cons(
                   6u, List<unsigned int>::cons(
@@ -586,20 +586,20 @@ struct RamOps {
           0u, List<unsigned int>::cons(
                   0u, List<unsigned int>::cons(
                           0u, List<unsigned int>::cons(
-                                  0u, List<unsigned int>::nil())))));
+                                  0u, List<unsigned int>::nil()))))};
   static inline const ram_chip_nested sample_chip_nested =
-      ram_chip_nested(List<ram_reg_nested>::cons(sample_reg_nested,
+      ram_chip_nested{List<ram_reg_nested>::cons(sample_reg_nested,
                                                  List<ram_reg_nested>::nil()),
-                      3u);
+                      3u};
   static inline const ram_bank_nested sample_bank_nested =
-      ram_bank_nested(List<ram_chip_nested>::cons(
-          sample_chip_nested, List<ram_chip_nested>::nil()));
+      ram_bank_nested{List<ram_chip_nested>::cons(
+          sample_chip_nested, List<ram_chip_nested>::nil())};
   static inline const ram_sel_nested sample_sel_nested =
-      ram_sel_nested(0u, 0u, 2u);
+      ram_sel_nested{0u, 0u, 2u};
   static inline const state_nested sample_state_nested =
-      state_nested(List<ram_bank_nested>::cons(sample_bank_nested,
+      state_nested{List<ram_bank_nested>::cons(sample_bank_nested,
                                                List<ram_bank_nested>::nil()),
-                   0u, sample_sel_nested);
+                   0u, sample_sel_nested};
   static inline const unsigned int test_read_nested =
       ram_read_main_nested(sample_state_nested);
 
@@ -710,8 +710,8 @@ struct RamOps {
 
     // ACCESSORS
     state_preserve clone() const {
-      return state_preserve((*(this)).ram_sys_preserve.clone(),
-                            (*(this)).cur_bank_preserve);
+      return state_preserve{(*(this)).ram_sys_preserve.clone(),
+                            (*(this)).cur_bank_preserve};
     }
   };
 
@@ -719,13 +719,13 @@ struct RamOps {
                                                         const unsigned int v);
   static state_preserve execute_write(const state_preserve &s,
                                       const unsigned int v);
-  static inline const state_preserve sample_preserve = state_preserve(
+  static inline const state_preserve sample_preserve = state_preserve{
       List<unsigned int>::cons(
           10u, List<unsigned int>::cons(
                    20u, List<unsigned int>::cons(
                             30u, List<unsigned int>::cons(
                                      40u, List<unsigned int>::nil())))),
-      1u);
+      1u};
   static inline const bool test_write_main_preserves_other_bank =
       ListDef::template nth<unsigned int>(
           3u, execute_write(sample_preserve, 99u).ram_sys_preserve, 0u) == 40u;
@@ -742,7 +742,7 @@ struct RamOps {
 
     // ACCESSORS
     reg_nested_bank clone() const {
-      return reg_nested_bank((*(this)).status_.clone());
+      return reg_nested_bank{(*(this)).status_.clone()};
     }
   };
 
@@ -751,7 +751,7 @@ struct RamOps {
 
     // ACCESSORS
     chip_nested_bank clone() const {
-      return chip_nested_bank((*(this)).regs_.clone());
+      return chip_nested_bank{(*(this)).regs_.clone()};
     }
   };
 
@@ -760,7 +760,7 @@ struct RamOps {
 
     // ACCESSORS
     bank_nested_bank clone() const {
-      return bank_nested_bank((*(this)).chips_.clone());
+      return bank_nested_bank{(*(this)).chips_.clone()};
     }
   };
 
@@ -769,7 +769,7 @@ struct RamOps {
 
     // ACCESSORS
     state_nested_bank clone() const {
-      return state_nested_bank((*(this)).banks_.clone());
+      return state_nested_bank{(*(this)).banks_.clone()};
     }
   };
 
@@ -802,15 +802,15 @@ struct RamOps {
                                          const unsigned int v);
   static unsigned int read_status0(const state_nested_bank &s);
   static inline const state_nested_bank sample_nested_bank =
-      state_nested_bank(List<bank_nested_bank>::cons(
-          bank_nested_bank(List<chip_nested_bank>::cons(
-              chip_nested_bank(List<reg_nested_bank>::cons(
-                  reg_nested_bank(List<unsigned int>::cons(
+      state_nested_bank{List<bank_nested_bank>::cons(
+          bank_nested_bank{List<chip_nested_bank>::cons(
+              chip_nested_bank{List<reg_nested_bank>::cons(
+                  reg_nested_bank{List<unsigned int>::cons(
                       3u,
-                      List<unsigned int>::cons(4u, List<unsigned int>::nil()))),
-                  List<reg_nested_bank>::nil())),
-              List<chip_nested_bank>::nil())),
-          List<bank_nested_bank>::nil()));
+                      List<unsigned int>::cons(4u, List<unsigned int>::nil()))},
+                  List<reg_nested_bank>::nil())},
+              List<chip_nested_bank>::nil())},
+          List<bank_nested_bank>::nil())};
   static inline const unsigned int test_nested_bank_status_write =
       read_status0(write_status0(sample_nested_bank, 7u));
   enum class Item { e_S_, e_S_0 };

@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -252,20 +252,20 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->d_v_ = XI(_alt.d_a0 ? std::make_unique<Positive>() : nullptr);
+        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
         auto &_dst_alt = std::get<XI>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->d_v_ = XO(_alt.d_a0 ? std::make_unique<Positive>() : nullptr);
+        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
         auto &_dst_alt = std::get<XO>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else {
-        _dst->d_v_ = XH();
+        _dst->d_v_ = XH{};
       }
     }
     return _out;
@@ -273,14 +273,14 @@ public:
 
   // CREATORS
   static Positive xi(Positive a0) {
-    return Positive(XI(std::make_unique<Positive>(std::move(a0))));
+    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO(std::make_unique<Positive>(std::move(a0))));
+    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
   }
 
-  static Positive xh() { return Positive(XH()); }
+  static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
   ~Positive() {
@@ -362,22 +362,22 @@ public:
   Z clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Z0>(_sv.v())) {
-      return Z(Z0());
+      return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(_sv.v())) {
       const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos(d_a0.clone()));
+      return Z(Zpos{d_a0.clone()});
     } else {
       const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg(d_a0.clone()));
+      return Z(Zneg{d_a0.clone()});
     }
   }
 
   // CREATORS
-  static Z z0() { return Z(Z0()); }
+  static Z z0() { return Z(Z0{}); }
 
-  static Z zpos(Positive a0) { return Z(Zpos(std::move(a0))); }
+  static Z zpos(Positive a0) { return Z(Zpos{std::move(a0)}); }
 
-  static Z zneg(Positive a0) { return Z(Zneg(std::move(a0))); }
+  static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -490,8 +490,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     Commander clone() const {
-      return Commander((*(this)).cmd_id, (*(this)).cmd_clan, (*(this)).cmd_rank,
-                       (*(this)).cmd_bloodnamed);
+      return Commander{(*(this)).cmd_id, (*(this)).cmd_clan, (*(this)).cmd_rank,
+                       (*(this)).cmd_bloodnamed};
     }
   };
 
@@ -582,10 +582,10 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     Unit clone() const {
-      return Unit((*(this)).unit_id, (*(this)).unit_class,
-                  (*(this)).unit_weight, (*(this)).unit_tonnage,
-                  (*(this)).unit_gunnery, (*(this)).unit_piloting,
-                  (*(this)).unit_is_elite, (*(this)).unit_is_clan);
+      return Unit{(*(this)).unit_id,       (*(this)).unit_class,
+                  (*(this)).unit_weight,   (*(this)).unit_tonnage,
+                  (*(this)).unit_gunnery,  (*(this)).unit_piloting,
+                  (*(this)).unit_is_elite, (*(this)).unit_is_clan};
     }
   };
 
@@ -607,14 +607,14 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     ForceMetrics clone() const {
-      return ForceMetrics((*(this)).fm_count, (*(this)).fm_tonnage,
+      return ForceMetrics{(*(this)).fm_count,       (*(this)).fm_tonnage,
                           (*(this)).fm_elite_count, (*(this)).fm_clan_count,
-                          (*(this)).fm_total_bv, (*(this)).fm_total_ecr);
+                          (*(this)).fm_total_bv,    (*(this)).fm_total_ecr};
     }
   };
 
   static inline const ForceMetrics empty_metrics =
-      ForceMetrics(0u, 0u, 0u, 0u, 0u, 0u);
+      ForceMetrics{0u, 0u, 0u, 0u, 0u, 0u};
   static ForceMetrics unit_to_metrics(const Unit &u);
   static ForceMetrics metrics_add(const ForceMetrics &m1,
                                   const ForceMetrics &m2);
@@ -655,8 +655,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     CoalitionMember clone() const {
-      return CoalitionMember((*(this)).cm_clan, (*(this)).cm_commander.clone(),
-                             (*(this)).cm_force);
+      return CoalitionMember{(*(this)).cm_clan, (*(this)).cm_commander.clone(),
+                             (*(this)).cm_force};
     }
   };
 
@@ -674,8 +674,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     CoalitionMemberBid clone() const {
-      return CoalitionMemberBid((*(this)).cmb_member_index,
-                                (*(this)).cmb_new_force, (*(this)).cmb_side);
+      return CoalitionMemberBid{(*(this)).cmb_member_index,
+                                (*(this)).cmb_new_force, (*(this)).cmb_side};
     }
   };
 
@@ -690,8 +690,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     ForceBid clone() const {
-      return ForceBid((*(this)).bid_force, (*(this)).bid_side,
-                      (*(this)).bid_commander.clone());
+      return ForceBid{(*(this)).bid_force, (*(this)).bid_side,
+                      (*(this)).bid_commander.clone()};
     }
   };
 
@@ -774,18 +774,18 @@ struct CoalitionBidHonorTraceCase {
     Prize clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<PrizeHonor>(_sv.v())) {
-        return Prize(PrizeHonor());
+        return Prize(PrizeHonor{});
       } else {
         const auto &[d_enclave_id] = std::get<PrizeEnclave>(_sv.v());
-        return Prize(PrizeEnclave(d_enclave_id));
+        return Prize(PrizeEnclave{d_enclave_id});
       }
     }
 
     // CREATORS
-    static Prize prizehonor() { return Prize(PrizeHonor()); }
+    static Prize prizehonor() { return Prize(PrizeHonor{}); }
 
     static Prize prizeenclave(unsigned int enclave_id) {
-      return Prize(PrizeEnclave(std::move(enclave_id)));
+      return Prize(PrizeEnclave{std::move(enclave_id)});
     }
 
     // MANIPULATORS
@@ -866,10 +866,10 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<LocPlanetSurface>(_sv.v())) {
         const auto &[d_world_id, d_region_id] =
             std::get<LocPlanetSurface>(_sv.v());
-        return Location(LocPlanetSurface(d_world_id, d_region_id));
+        return Location(LocPlanetSurface{d_world_id, d_region_id});
       } else {
         const auto &[d_enclave_id] = std::get<LocEnclave>(_sv.v());
-        return Location(LocEnclave(d_enclave_id));
+        return Location(LocEnclave{d_enclave_id});
       }
     }
 
@@ -877,11 +877,11 @@ struct CoalitionBidHonorTraceCase {
     static Location locplanetsurface(unsigned int world_id,
                                      unsigned int region_id) {
       return Location(
-          LocPlanetSurface(std::move(world_id), std::move(region_id)));
+          LocPlanetSurface{std::move(world_id), std::move(region_id)});
     }
 
     static Location locenclave(unsigned int enclave_id) {
-      return Location(LocEnclave(std::move(enclave_id)));
+      return Location(LocEnclave{std::move(enclave_id)});
     }
 
     // MANIPULATORS
@@ -933,13 +933,13 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     BattleContext clone() const {
-      return BattleContext((*(this)).ctx_hegira_allowed,
-                           (*(this)).ctx_circle_present);
+      return BattleContext{(*(this)).ctx_hegira_allowed,
+                           (*(this)).ctx_circle_present};
     }
   };
 
   static inline const BattleContext standard_possession_context =
-      BattleContext(true, false);
+      BattleContext{true, false};
 
   struct BatchallChallenge {
     Commander chal_challenger;
@@ -952,11 +952,11 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     BatchallChallenge clone() const {
-      return BatchallChallenge(
+      return BatchallChallenge{
           (*(this)).chal_challenger.clone(), (*(this)).chal_clan,
-          (*(this)).chal_prize.clone(), (*(this)).chal_initial_force,
-          (*(this)).chal_location.clone(), (*(this)).chal_trial_type,
-          (*(this)).chal_context.clone());
+          (*(this)).chal_prize.clone(),      (*(this)).chal_initial_force,
+          (*(this)).chal_location.clone(),   (*(this)).chal_trial_type,
+          (*(this)).chal_context.clone()};
     }
   };
 
@@ -967,8 +967,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     BatchallResponse clone() const {
-      return BatchallResponse((*(this)).resp_defender.clone(),
-                              (*(this)).resp_clan, (*(this)).resp_force);
+      return BatchallResponse{(*(this)).resp_defender.clone(),
+                              (*(this)).resp_clan, (*(this)).resp_force};
     }
   };
 
@@ -1013,20 +1013,20 @@ struct CoalitionBidHonorTraceCase {
     RefusalReason clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<RefusalInsufficientRank>(_sv.v())) {
-        return RefusalReason(RefusalInsufficientRank());
+        return RefusalReason(RefusalInsufficientRank{});
       } else {
         const auto &[d_note] = std::get<RefusalOther>(_sv.v());
-        return RefusalReason(RefusalOther(d_note));
+        return RefusalReason(RefusalOther{d_note});
       }
     }
 
     // CREATORS
     static RefusalReason refusalinsufficientrank() {
-      return RefusalReason(RefusalInsufficientRank());
+      return RefusalReason(RefusalInsufficientRank{});
     }
 
     static RefusalReason refusalother(unsigned int note) {
-      return RefusalReason(RefusalOther(std::move(note)));
+      return RefusalReason(RefusalOther{std::move(note)});
     }
 
     // MANIPULATORS
@@ -1150,66 +1150,66 @@ struct CoalitionBidHonorTraceCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<ActChallenge>(_sv.v())) {
         const auto &[d_chal] = std::get<ActChallenge>(_sv.v());
-        return ProtocolAction(ActChallenge(d_chal.clone()));
+        return ProtocolAction(ActChallenge{d_chal.clone()});
       } else if (std::holds_alternative<ActRespond>(_sv.v())) {
         const auto &[d_resp] = std::get<ActRespond>(_sv.v());
-        return ProtocolAction(ActRespond(d_resp.clone()));
+        return ProtocolAction(ActRespond{d_resp.clone()});
       } else if (std::holds_alternative<ActRefuse>(_sv.v())) {
         const auto &[d_reason] = std::get<ActRefuse>(_sv.v());
-        return ProtocolAction(ActRefuse(d_reason.clone()));
+        return ProtocolAction(ActRefuse{d_reason.clone()});
       } else if (std::holds_alternative<ActBid>(_sv.v())) {
         const auto &[d_bid] = std::get<ActBid>(_sv.v());
-        return ProtocolAction(ActBid(d_bid.clone()));
+        return ProtocolAction(ActBid{d_bid.clone()});
       } else if (std::holds_alternative<ActCoalitionBid>(_sv.v())) {
         const auto &[d_cbid] = std::get<ActCoalitionBid>(_sv.v());
-        return ProtocolAction(ActCoalitionBid(d_cbid.clone()));
+        return ProtocolAction(ActCoalitionBid{d_cbid.clone()});
       } else if (std::holds_alternative<ActPass>(_sv.v())) {
         const auto &[d_side] = std::get<ActPass>(_sv.v());
-        return ProtocolAction(ActPass(d_side));
+        return ProtocolAction(ActPass{d_side});
       } else if (std::holds_alternative<ActClose>(_sv.v())) {
-        return ProtocolAction(ActClose());
+        return ProtocolAction(ActClose{});
       } else if (std::holds_alternative<ActWithdraw>(_sv.v())) {
         const auto &[d_side] = std::get<ActWithdraw>(_sv.v());
-        return ProtocolAction(ActWithdraw(d_side));
+        return ProtocolAction(ActWithdraw{d_side});
       } else {
         const auto &[d_side] = std::get<ActBreakBid>(_sv.v());
-        return ProtocolAction(ActBreakBid(d_side));
+        return ProtocolAction(ActBreakBid{d_side});
       }
     }
 
     // CREATORS
     static ProtocolAction actchallenge(BatchallChallenge chal) {
-      return ProtocolAction(ActChallenge(std::move(chal)));
+      return ProtocolAction(ActChallenge{std::move(chal)});
     }
 
     static ProtocolAction actrespond(BatchallResponse resp) {
-      return ProtocolAction(ActRespond(std::move(resp)));
+      return ProtocolAction(ActRespond{std::move(resp)});
     }
 
     static ProtocolAction actrefuse(RefusalReason reason) {
-      return ProtocolAction(ActRefuse(std::move(reason)));
+      return ProtocolAction(ActRefuse{std::move(reason)});
     }
 
     static ProtocolAction actbid(ForceBid bid) {
-      return ProtocolAction(ActBid(std::move(bid)));
+      return ProtocolAction(ActBid{std::move(bid)});
     }
 
     static ProtocolAction actcoalitionbid(CoalitionMemberBid cbid) {
-      return ProtocolAction(ActCoalitionBid(std::move(cbid)));
+      return ProtocolAction(ActCoalitionBid{std::move(cbid)});
     }
 
     static ProtocolAction actpass(Side side) {
-      return ProtocolAction(ActPass(std::move(side)));
+      return ProtocolAction(ActPass{std::move(side)});
     }
 
-    static ProtocolAction actclose() { return ProtocolAction(ActClose()); }
+    static ProtocolAction actclose() { return ProtocolAction(ActClose{}); }
 
     static ProtocolAction actwithdraw(Side side) {
-      return ProtocolAction(ActWithdraw(std::move(side)));
+      return ProtocolAction(ActWithdraw{std::move(side)});
     }
 
     static ProtocolAction actbreakbid(Side side) {
-      return ProtocolAction(ActBreakBid(std::move(side)));
+      return ProtocolAction(ActBreakBid{std::move(side)});
     }
 
     // MANIPULATORS
@@ -1466,50 +1466,50 @@ struct CoalitionBidHonorTraceCase {
     BatchallPhase clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<PhaseIdle>(_sv.v())) {
-        return BatchallPhase(PhaseIdle());
+        return BatchallPhase(PhaseIdle{});
       } else if (std::holds_alternative<PhaseChallenged>(_sv.v())) {
         const auto &[d_challenge] = std::get<PhaseChallenged>(_sv.v());
-        return BatchallPhase(PhaseChallenged(d_challenge.clone()));
+        return BatchallPhase(PhaseChallenged{d_challenge.clone()});
       } else if (std::holds_alternative<PhaseResponded>(_sv.v())) {
         const auto &[d_challenge, d_response] =
             std::get<PhaseResponded>(_sv.v());
         return BatchallPhase(
-            PhaseResponded(d_challenge.clone(), d_response.clone()));
+            PhaseResponded{d_challenge.clone(), d_response.clone()});
       } else if (std::holds_alternative<PhaseBidding>(_sv.v())) {
         const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
                      d_attacker_coalition, d_defender_coalition, d_bid_history,
                      d_ready] = std::get<PhaseBidding>(_sv.v());
-        return BatchallPhase(PhaseBidding(
+        return BatchallPhase(PhaseBidding{
             d_challenge.clone(), d_response.clone(), d_attacker_bid.clone(),
             d_defender_bid.clone(), d_attacker_coalition, d_defender_coalition,
-            d_bid_history.clone(), d_ready));
+            d_bid_history.clone(), d_ready});
       } else if (std::holds_alternative<PhaseAgreed>(_sv.v())) {
         const auto &[d_challenge, d_response, d_final_attacker,
                      d_final_defender] = std::get<PhaseAgreed>(_sv.v());
         return BatchallPhase(
-            PhaseAgreed(d_challenge.clone(), d_response.clone(),
-                        d_final_attacker.clone(), d_final_defender.clone()));
+            PhaseAgreed{d_challenge.clone(), d_response.clone(),
+                        d_final_attacker.clone(), d_final_defender.clone()});
       } else if (std::holds_alternative<PhaseRefused>(_sv.v())) {
         const auto &[d_challenge, d_reason] = std::get<PhaseRefused>(_sv.v());
         return BatchallPhase(
-            PhaseRefused(d_challenge.clone(), d_reason.clone()));
+            PhaseRefused{d_challenge.clone(), d_reason.clone()});
       } else {
         const auto &[d_reason] = std::get<PhaseAborted>(_sv.v());
-        return BatchallPhase(PhaseAborted(d_reason.clone()));
+        return BatchallPhase(PhaseAborted{d_reason.clone()});
       }
     }
 
     // CREATORS
-    static BatchallPhase phaseidle() { return BatchallPhase(PhaseIdle()); }
+    static BatchallPhase phaseidle() { return BatchallPhase(PhaseIdle{}); }
 
     static BatchallPhase phasechallenged(BatchallChallenge challenge) {
-      return BatchallPhase(PhaseChallenged(std::move(challenge)));
+      return BatchallPhase(PhaseChallenged{std::move(challenge)});
     }
 
     static BatchallPhase phaseresponded(BatchallChallenge challenge,
                                         BatchallResponse response) {
       return BatchallPhase(
-          PhaseResponded(std::move(challenge), std::move(response)));
+          PhaseResponded{std::move(challenge), std::move(response)});
     }
 
     static BatchallPhase
@@ -1518,11 +1518,11 @@ struct CoalitionBidHonorTraceCase {
                  CoalitionState attacker_coalition,
                  CoalitionState defender_coalition, List<ForceBid> bid_history,
                  ReadyStatus ready) {
-      return BatchallPhase(PhaseBidding(
+      return BatchallPhase(PhaseBidding{
           std::move(challenge), std::move(response), std::move(attacker_bid),
           std::move(defender_bid), std::move(attacker_coalition),
           std::move(defender_coalition), std::move(bid_history),
-          std::move(ready)));
+          std::move(ready)});
     }
 
     static BatchallPhase phaseagreed(BatchallChallenge challenge,
@@ -1530,18 +1530,18 @@ struct CoalitionBidHonorTraceCase {
                                      ForceBid final_attacker,
                                      ForceBid final_defender) {
       return BatchallPhase(
-          PhaseAgreed(std::move(challenge), std::move(response),
-                      std::move(final_attacker), std::move(final_defender)));
+          PhaseAgreed{std::move(challenge), std::move(response),
+                      std::move(final_attacker), std::move(final_defender)});
     }
 
     static BatchallPhase phaserefused(BatchallChallenge challenge,
                                       RefusalReason reason) {
       return BatchallPhase(
-          PhaseRefused(std::move(challenge), std::move(reason)));
+          PhaseRefused{std::move(challenge), std::move(reason)});
     }
 
     static BatchallPhase phaseaborted(ProtocolAction reason) {
-      return BatchallPhase(PhaseAborted(std::move(reason)));
+      return BatchallPhase(PhaseAborted{std::move(reason)});
     }
 
     // MANIPULATORS
@@ -1812,37 +1812,37 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     BatchallState clone() const {
-      return BatchallState((*(this)).bs_phase.clone(), (*(this)).bs_honor);
+      return BatchallState{(*(this)).bs_phase.clone(), (*(this)).bs_honor};
     }
   };
 
   static inline const HonorLedger empty_ledger =
       List<std::pair<unsigned int, Z>>::nil();
   static inline const BatchallState initial_state =
-      BatchallState(BatchallPhase::phaseidle(), empty_ledger);
+      BatchallState{BatchallPhase::phaseidle(), empty_ledger};
   static HonorLedger apply_action_honor(const BatchallState &state,
                                         const ProtocolAction &action);
   static inline const Commander malthus =
-      Commander(1u, Clan::e_CLANJADEFALCON, Rank::e_STARCOLONEL, true);
+      Commander{1u, Clan::e_CLANJADEFALCON, Rank::e_STARCOLONEL, true};
   static inline const Commander radick =
-      Commander(2u, Clan::e_CLANWOLF, Rank::e_STARCAPTAIN, true);
+      Commander{2u, Clan::e_CLANWOLF, Rank::e_STARCAPTAIN, true};
   static inline const Commander bear_ally =
-      Commander(3u, Clan::e_CLANGHOSTBEAR, Rank::e_STARCAPTAIN, false);
+      Commander{3u, Clan::e_CLANGHOSTBEAR, Rank::e_STARCAPTAIN, false};
   static inline const Unit timberwolf =
-      Unit(101u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 75u, 2u, 3u, true,
-           true);
-  static inline const Unit direwolf =
-      Unit(102u, UnitClass::e_OMNIMECH, WeightClass::e_ASSAULT, 100u, 2u, 3u,
-           true, true);
-  static inline const Unit summoner =
-      Unit(103u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 70u, 3u, 4u,
-           false, true);
-  static inline const Unit mad_dog =
-      Unit(104u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 60u, 3u, 4u,
-           false, true);
-  static inline const Unit elementals =
-      Unit(105u, UnitClass::e_ELEMENTAL, WeightClass::e_LIGHT, 5u, 3u, 4u,
-           false, true);
+      Unit{101u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 75u, 2u, 3u, true,
+           true};
+  static inline const Unit direwolf = Unit{
+      102u, UnitClass::e_OMNIMECH, WeightClass::e_ASSAULT, 100u, 2u, 3u, true,
+      true};
+  static inline const Unit summoner = Unit{
+      103u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 70u, 3u, 4u, false,
+      true};
+  static inline const Unit mad_dog = Unit{
+      104u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 60u, 3u, 4u, false,
+      true};
+  static inline const Unit elementals = Unit{
+      105u, UnitClass::e_ELEMENTAL, WeightClass::e_LIGHT, 5u, 3u, 4u, false,
+      true};
   static inline const Force falcon_trinary = List<Unit>::cons(
       direwolf,
       List<Unit>::cons(
@@ -1855,27 +1855,31 @@ struct CoalitionBidHonorTraceCase {
       elementals, List<Unit>::cons(elementals, List<Unit>::nil()));
   static inline const Coalition attacker_coalition =
       List<CoalitionMember>::cons(
-          CoalitionMember(Clan::e_CLANJADEFALCON, malthus, falcon_trinary),
+          CoalitionMember{Clan::e_CLANJADEFALCON, malthus, falcon_trinary},
           List<CoalitionMember>::cons(
-              CoalitionMember(Clan::e_CLANGHOSTBEAR, bear_ally, bear_support),
+              CoalitionMember{Clan::e_CLANGHOSTBEAR, bear_ally, bear_support},
               List<CoalitionMember>::nil()));
   static inline const Coalition defender_coalition =
       List<CoalitionMember>::cons(
-          CoalitionMember(Clan::e_CLANWOLF, radick, wolf_binary),
+          CoalitionMember{Clan::e_CLANWOLF, radick, wolf_binary},
           List<CoalitionMember>::nil());
-  static inline const BatchallChallenge sample_challenge = BatchallChallenge(
-      malthus, Clan::e_CLANJADEFALCON, Prize::prizeenclave(42u),
-      coalition_force(attacker_coalition), Location::locplanetsurface(7u, 3u),
-      TrialType::e_TRIALOFPOSSESSION, standard_possession_context);
-  static inline const BatchallResponse sample_response = BatchallResponse(
-      radick, Clan::e_CLANWOLF, coalition_force(defender_coalition));
+  static inline const BatchallChallenge sample_challenge =
+      BatchallChallenge{malthus,
+                        Clan::e_CLANJADEFALCON,
+                        Prize::prizeenclave(42u),
+                        coalition_force(attacker_coalition),
+                        Location::locplanetsurface(7u, 3u),
+                        TrialType::e_TRIALOFPOSSESSION,
+                        standard_possession_context};
+  static inline const BatchallResponse sample_response = BatchallResponse{
+      radick, Clan::e_CLANWOLF, coalition_force(defender_coalition)};
   static inline const ForceBid sample_attacker_bid = []() -> ForceBid {
     auto _cs = coalition_to_bid(attacker_coalition, Side::e_ATTACKER);
     if (_cs.has_value()) {
       const ForceBid &bid = *_cs;
       return bid;
     } else {
-      return ForceBid(List<Unit>::nil(), Side::e_ATTACKER, malthus);
+      return ForceBid{List<Unit>::nil(), Side::e_ATTACKER, malthus};
     }
   }();
   static inline const ForceBid sample_defender_bid = []() -> ForceBid {
@@ -1884,13 +1888,13 @@ struct CoalitionBidHonorTraceCase {
       const ForceBid &bid = *_cs;
       return bid;
     } else {
-      return ForceBid(List<Unit>::nil(), Side::e_DEFENDER, radick);
+      return ForceBid{List<Unit>::nil(), Side::e_DEFENDER, radick};
     }
   }();
   static inline const Force reduced_support_force =
       List<Unit>::cons(elementals, List<Unit>::nil());
   static inline const CoalitionMemberBid sample_coalition_member_bid =
-      CoalitionMemberBid(1u, reduced_support_force, Side::e_ATTACKER);
+      CoalitionMemberBid{1u, reduced_support_force, Side::e_ATTACKER};
   static inline const Coalition updated_attacker_coalition =
       apply_coalition_member_bid(attacker_coalition,
                                  sample_coalition_member_bid);
@@ -1929,7 +1933,7 @@ struct CoalitionBidHonorTraceCase {
       BatchallPhase::phaseagreed(sample_challenge, sample_response,
                                  updated_attacker_bid, sample_defender_bid);
   static inline const BatchallState state_after_initial_bid =
-      BatchallState(phase_after_initial_bid, empty_ledger);
+      BatchallState{phase_after_initial_bid, empty_ledger};
   static inline const HonorLedger sample_challenge_honor_ledger =
       apply_action_honor(initial_state,
                          ProtocolAction::actchallenge(sample_challenge));

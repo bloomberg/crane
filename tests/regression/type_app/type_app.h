@@ -95,11 +95,11 @@ struct TypeApp {
         const list<t_A> *_src = _frame._src;
         list<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->d_v_ = Nil();
+          _dst->d_v_ = Nil{};
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
-          _dst->d_v_ = Cons(_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
-                                                 : nullptr);
+          _dst->d_v_ = Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
+                                                 : nullptr};
           auto &_dst_alt = std::get<Cons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -112,20 +112,20 @@ struct TypeApp {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->d_v_ = Nil();
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        this->d_v_ = Cons(t_A(d_a0),
-                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr);
+        this->d_v_ = Cons{t_A(d_a0),
+                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
       }
     }
 
-    static list<t_A> nil() { return list(Nil()); }
+    static list<t_A> nil() { return list(Nil{}); }
 
     static list<t_A> cons(t_A a0, list<t_A> a1) {
       return list(
-          Cons(std::move(a0), std::make_unique<list<t_A>>(std::move(a1))));
+          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

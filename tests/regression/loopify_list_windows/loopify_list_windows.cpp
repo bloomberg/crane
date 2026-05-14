@@ -17,7 +17,7 @@ unsigned int LoopifyListWindows::len(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -30,8 +30,8 @@ unsigned int LoopifyListWindows::len(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons(1u));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{1u});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -114,7 +114,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListWindows::span_eq(
   std::pair<List<unsigned int>, List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(lst));
+  _stack.emplace_back(_Enter{lst});
   /// Loopified span_eq: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -130,8 +130,8 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListWindows::span_eq(
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(lst.v_mut());
         if (first == d_a0) {
-          _stack.emplace_back(_Cont1(d_a0));
-          _stack.emplace_back(_Enter(std::move(*(d_a1))));
+          _stack.emplace_back(_Cont1{d_a0});
+          _stack.emplace_back(_Enter{std::move(*(d_a1))});
         } else {
           _result = std::make_pair(List<unsigned int>::nil(), lst);
         }
@@ -261,7 +261,7 @@ List<List<unsigned int>> LoopifyListWindows::inits(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified inits: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -275,8 +275,8 @@ List<List<unsigned int>> LoopifyListWindows::inits(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons(List<unsigned int>::nil(), d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{List<unsigned int>::nil(), d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

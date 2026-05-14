@@ -25,7 +25,7 @@ unsigned int MemSafetyProbe21::tree_sum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&t));
+  _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -39,13 +39,13 @@ unsigned int MemSafetyProbe21::tree_sum(
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe21::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node(d_a0.get(), d_a1));
-        _stack.emplace_back(_Enter(d_a2.get()));
+        _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
+        _stack.emplace_back(_Enter{d_a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node(_result, _f.d_a1));
-      _stack.emplace_back(_Enter(_f.d_a0));
+      _stack.emplace_back(_Combine_Node{_result, _f.d_a1});
+      _stack.emplace_back(_Enter{_f.d_a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = ((_result + _f.d_a1) + _f._result);
@@ -97,7 +97,7 @@ unsigned int MemSafetyProbe21::double_grow(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, t));
+  _stack.emplace_back(_Enter{n, t});
   /// Loopified double_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -110,8 +110,8 @@ unsigned int MemSafetyProbe21::double_grow(
         _result = tree_sum(std::move(t));
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_Resume_n_(tree_sum(t)));
-        _stack.emplace_back(_Enter(n_, tree::node(t, 0u, tree::leaf())));
+        _stack.emplace_back(_Resume_n_{tree_sum(t)});
+        _stack.emplace_back(_Enter{n_, tree::node(t, 0u, tree::leaf())});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
@@ -149,7 +149,7 @@ unsigned int MemSafetyProbe21::branch_grow(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, t));
+  _stack.emplace_back(_Enter{n, t});
   /// Loopified branch_grow: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -162,14 +162,14 @@ unsigned int MemSafetyProbe21::branch_grow(
         _result = tree_sum(t);
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_After_n_(n_, t));
+        _stack.emplace_back(_After_n_{n_, t});
         _stack.emplace_back(
-            _Enter(n_, tree::node(tree::leaf(), n, tree::leaf())));
+            _Enter{n_, tree::node(tree::leaf(), n, tree::leaf())});
       }
     } else if (std::holds_alternative<_After_n_>(_frame)) {
       auto _f = std::move(std::get<_After_n_>(_frame));
-      _stack.emplace_back(_Combine_n_(_result));
-      _stack.emplace_back(_Enter(_f.n_, std::move(_f.t)));
+      _stack.emplace_back(_Combine_n_{_result});
+      _stack.emplace_back(_Enter{_f.n_, std::move(_f.t)});
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
       _result = (_result + _f._result);
@@ -268,7 +268,7 @@ unsigned int MemSafetyProbe21::sum_and_grow(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, t));
+  _stack.emplace_back(_Enter{n, t});
   /// Loopified sum_and_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -282,9 +282,9 @@ unsigned int MemSafetyProbe21::sum_and_grow(
       } else {
         unsigned int n_ = n - 1;
         unsigned int s = tree_sum(t);
-        _stack.emplace_back(_Resume_n_(s));
+        _stack.emplace_back(_Resume_n_{s});
         _stack.emplace_back(
-            _Enter(n_, tree::node(std::move(t), s, tree::leaf())));
+            _Enter{n_, tree::node(std::move(t), s, tree::leaf())});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));

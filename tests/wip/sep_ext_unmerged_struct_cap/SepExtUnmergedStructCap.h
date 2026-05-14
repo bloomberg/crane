@@ -70,10 +70,10 @@ struct Exprs {
         Expr *_dst = _frame._dst;
         if (std::holds_alternative<Lit>(_src->v())) {
           const auto &_alt = std::get<Lit>(_src->v());
-          _dst->d_v_ = Lit(_alt.d_a0.clone());
+          _dst->d_v_ = Lit{_alt.d_a0.clone()};
         } else {
           const auto &_alt = std::get<Neg>(_src->v());
-          _dst->d_v_ = Neg(_alt.d_a0 ? std::make_unique<Expr>() : nullptr);
+          _dst->d_v_ = Neg{_alt.d_a0 ? std::make_unique<Expr>() : nullptr};
           auto &_dst_alt = std::get<Neg>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -84,10 +84,10 @@ struct Exprs {
     }
 
     // CREATORS
-    static Expr lit(Datatypes::Nat a0) { return Expr(Lit(std::move(a0))); }
+    static Expr lit(Datatypes::Nat a0) { return Expr(Lit{std::move(a0)}); }
 
     static Expr neg(Expr a0) {
-      return Expr(Neg(std::make_unique<Expr>(std::move(a0))));
+      return Expr(Neg{std::make_unique<Expr>(std::move(a0))});
     }
 
     // MANIPULATORS

@@ -67,11 +67,11 @@ public:
       const String *_src = _frame._src;
       String *_dst = _frame._dst;
       if (std::holds_alternative<EmptyString>(_src->v())) {
-        _dst->d_v_ = EmptyString();
+        _dst->d_v_ = EmptyString{};
       } else {
         const auto &_alt = std::get<String0>(_src->v());
-        _dst->d_v_ = String0(_alt.d_a0.clone(),
-                             _alt.d_a1 ? std::make_unique<String>() : nullptr);
+        _dst->d_v_ = String0{_alt.d_a0.clone(),
+                             _alt.d_a1 ? std::make_unique<String>() : nullptr};
         auto &_dst_alt = std::get<String0>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -82,11 +82,11 @@ public:
   }
 
   // CREATORS
-  static String emptystring() { return String(EmptyString()); }
+  static String emptystring() { return String(EmptyString{}); }
 
   static String string0(Ascii::Ascii a0, String a1) {
     return String(
-        String0(std::move(a0), std::make_unique<String>(std::move(a1))));
+        String0{std::move(a0), std::make_unique<String>(std::move(a1))});
   }
 
   // MANIPULATORS

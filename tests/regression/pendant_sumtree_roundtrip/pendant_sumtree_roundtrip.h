@@ -66,11 +66,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil0>(_src->v())) {
-        _dst->d_v_ = Nil0();
+        _dst->d_v_ = Nil0{};
       } else {
         const auto &_alt = std::get<Cons0>(_src->v());
-        _dst->d_v_ = Cons0(_alt.d_a0,
-                           _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons0{_alt.d_a0,
+                           _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons0>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -83,19 +83,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
-      this->d_v_ = Nil0();
+      this->d_v_ = Nil0{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons0>(_other.v());
       this->d_v_ =
-          Cons0(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons0{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil0() { return List(Nil0()); }
+  static List<t_A> nil0() { return List(Nil0{}); }
 
   static List<t_A> cons0(t_A a0, List<t_A> a1) {
     return List(
-        Cons0(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons0{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -229,16 +229,16 @@ public:
   Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<t_A>(Exist(d_x));
+    return Sig<t_A>(Exist{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist(t_A(d_x));
+    this->d_v_ = Exist{t_A(d_x)};
   }
 
-  static Sig<t_A> exist(t_A x) { return Sig(Exist(std::move(x))); }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -284,7 +284,7 @@ public:
   SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<t_A, t_P>(ExistT(d_x, d_a1));
+    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
   }
 
   // CREATORS
@@ -292,11 +292,11 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->d_v_ = ExistT(t_A(d_x), t_P(d_a1));
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
-    return SigT(ExistT(std::move(x), std::move(a1)));
+    return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -348,31 +348,31 @@ public:
   T0<t_A> clone() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<Nil>(_sv.v())) {
-      return T0<t_A>(Nil());
+      return T0<t_A>(Nil{});
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
-      return T0<t_A>(Cons(
-          d_h, d_n, d_a2 ? std::make_unique<T0<t_A>>(d_a2->clone()) : nullptr));
+      return T0<t_A>(Cons{
+          d_h, d_n, d_a2 ? std::make_unique<T0<t_A>>(d_a2->clone()) : nullptr});
     }
   }
 
   // CREATORS
   template <typename _U> explicit T0(const T0<_U> &_other) {
     if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_h, d_n, d_a2] =
           std::get<typename T0<_U>::Cons>(_other.v());
-      this->d_v_ = Cons(t_A(d_h), d_n,
-                        d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr);
+      this->d_v_ = Cons{t_A(d_h), d_n,
+                        d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
     }
   }
 
-  static T0<t_A> nil() { return T0(Nil()); }
+  static T0<t_A> nil() { return T0(Nil{}); }
 
   static T0<t_A> cons(t_A h, unsigned int n, T0<t_A> a2) {
-    return T0(Cons(std::move(h), std::move(n),
-                   std::make_unique<T0<t_A>>(std::move(a2))));
+    return T0(Cons{std::move(h), std::move(n),
+                   std::make_unique<T0<t_A>>(std::move(a2))});
   }
 
   // MANIPULATORS
@@ -440,10 +440,10 @@ public:
       T *_dst = _frame._dst;
       if (std::holds_alternative<F1>(_src->v())) {
         const auto &_alt = std::get<F1>(_src->v());
-        _dst->d_v_ = F1(_alt.d_n);
+        _dst->d_v_ = F1{_alt.d_n};
       } else {
         const auto &_alt = std::get<FS>(_src->v());
-        _dst->d_v_ = FS(_alt.d_n, _alt.d_a1 ? std::make_unique<T>() : nullptr);
+        _dst->d_v_ = FS{_alt.d_n, _alt.d_a1 ? std::make_unique<T>() : nullptr};
         auto &_dst_alt = std::get<FS>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -454,10 +454,10 @@ public:
   }
 
   // CREATORS
-  static T f1(unsigned int n) { return T(F1(std::move(n))); }
+  static T f1(unsigned int n) { return T(F1{std::move(n)}); }
 
   static T fs(unsigned int n, T a1) {
-    return T(FS(std::move(n), std::make_unique<T>(std::move(a1))));
+    return T(FS{std::move(n), std::make_unique<T>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -640,8 +640,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     CordMeta clone() const {
-      return CordMeta((*(this)).cm_fiber, (*(this)).cm_color, (*(this)).cm_spin,
-                      (*(this)).cm_ply);
+      return CordMeta{(*(this)).cm_fiber, (*(this)).cm_color, (*(this)).cm_spin,
+                      (*(this)).cm_ply};
     }
   };
 
@@ -651,8 +651,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     CertifiedPendant clone() const {
-      return CertifiedPendant((*(this)).cp_meta.clone(),
-                              (*(this)).cp_digits.clone());
+      return CertifiedPendant{(*(this)).cp_meta.clone(),
+                              (*(this)).cp_digits.clone()};
     }
   };
 
@@ -670,8 +670,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     PendantGroup clone() const {
-      return PendantGroup((*(this)).pg_top.clone(),
-                          (*(this)).pg_pendants.clone());
+      return PendantGroup{(*(this)).pg_top.clone(),
+                          (*(this)).pg_pendants.clone()};
     }
   };
 
@@ -735,12 +735,12 @@ struct PendantSumtreeRoundtripCase {
         SumTree *_dst = _frame._dst;
         if (std::holds_alternative<SumLeaf>(_src->v())) {
           const auto &_alt = std::get<SumLeaf>(_src->v());
-          _dst->d_v_ = SumLeaf(_alt.d_a0.clone());
+          _dst->d_v_ = SumLeaf{_alt.d_a0.clone()};
         } else {
           const auto &_alt = std::get<SumNode>(_src->v());
           _dst->d_v_ =
-              SumNode(_alt.d_a0.clone(),
-                      _alt.d_a1 ? std::make_unique<List<SumTree>>() : nullptr);
+              SumNode{_alt.d_a0.clone(),
+                      _alt.d_a1 ? std::make_unique<List<SumTree>>() : nullptr};
           auto &_dst_alt = std::get<SumNode>(_dst->d_v_);
           [&] {
             if (_alt.d_a1) {
@@ -776,12 +776,12 @@ struct PendantSumtreeRoundtripCase {
 
     // CREATORS
     static SumTree sumleaf(CertifiedPendant a0) {
-      return SumTree(SumLeaf(std::move(a0)));
+      return SumTree(SumLeaf{std::move(a0)});
     }
 
     static SumTree sumnode(CertifiedPendant a0, List<SumTree> a1) {
-      return SumTree(SumNode(std::move(a0),
-                             std::make_unique<List<SumTree>>(std::move(a1))));
+      return SumTree(SumNode{std::move(a0),
+                             std::make_unique<List<SumTree>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -868,11 +868,11 @@ struct PendantSumtreeRoundtripCase {
   static T0<digit> digit_vec1(T a);
   static T0<digit> digit_vec3(T a, T b, T c);
   static inline const CordMeta sample_meta_a =
-      CordMeta(Fiber::e_COTTON, Color::e_BROWN, Twist::e_TS, Twist::e_TZ);
+      CordMeta{Fiber::e_COTTON, Color::e_BROWN, Twist::e_TS, Twist::e_TZ};
   static inline const CordMeta sample_meta_b =
-      CordMeta(Fiber::e_CAMELID, Color::e_RED, Twist::e_TZ, Twist::e_TS);
+      CordMeta{Fiber::e_CAMELID, Color::e_RED, Twist::e_TZ, Twist::e_TS};
   static inline const CordMeta sample_meta_c =
-      CordMeta(Fiber::e_COTTON, Color::e_BLUE, Twist::e_TS, Twist::e_TS);
+      CordMeta{Fiber::e_COTTON, Color::e_BLUE, Twist::e_TS, Twist::e_TS};
   static inline const T0<digit> digits_731 = digit_vec3(digit1, digit3, digit7);
   static inline const T0<digit> digits_462 = digit_vec3(digit2, digit6, digit4);
   static inline const T0<digit> digits_269 = digit_vec3(digit9, digit6, digit2);
@@ -880,17 +880,17 @@ struct PendantSumtreeRoundtripCase {
   static inline const T0<digit> digits_069 = digit_vec3(digit9, digit6, digit0);
   static inline const T0<digit> digits_5 = digit_vec1(digit5);
   static inline const CertifiedPendant pendant_731 =
-      CertifiedPendant(sample_meta_a, digits_731);
+      CertifiedPendant{sample_meta_a, digits_731};
   static inline const CertifiedPendant pendant_462 =
-      CertifiedPendant(sample_meta_b, digits_462);
+      CertifiedPendant{sample_meta_b, digits_462};
   static inline const CertifiedPendant pendant_269 =
-      CertifiedPendant(sample_meta_c, digits_269);
+      CertifiedPendant{sample_meta_c, digits_269};
   static inline const CertifiedPendant pendant_200 =
-      CertifiedPendant(sample_meta_b, digits_200);
+      CertifiedPendant{sample_meta_b, digits_200};
   static inline const CertifiedPendant pendant_069 =
-      CertifiedPendant(sample_meta_c, digits_069);
+      CertifiedPendant{sample_meta_c, digits_069};
   static inline const CertifiedPendant pendant_5 =
-      CertifiedPendant(sample_meta_a, digits_5);
+      CertifiedPendant{sample_meta_a, digits_5};
   static inline const List<T0<digit>> sample_multi_digits = List<T0<T>>::cons0(
       digits_731,
       List<T0<T>>::cons0(digits_462,
@@ -911,11 +911,11 @@ struct PendantSumtreeRoundtripCase {
       return false;
     }
   }();
-  static inline const PendantGroup sample_group = PendantGroup(
+  static inline const PendantGroup sample_group = PendantGroup{
       pendant_731,
       List<CertifiedPendant>::cons0(
           pendant_462, List<CertifiedPendant>::cons0(
-                           pendant_269, List<CertifiedPendant>::nil0())));
+                           pendant_269, List<CertifiedPendant>::nil0()))};
   static inline const SumTree sample_subtree = SumTree::sumnode(
       pendant_269,
       List<SumTree>::cons0(SumTree::sumleaf(pendant_200),

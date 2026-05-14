@@ -14,12 +14,12 @@ struct RecordDefaults {
 
     // ACCESSORS
     Config clone() const {
-      return Config((*(this)).cfg_width, (*(this)).cfg_height,
-                    (*(this)).cfg_depth, (*(this)).cfg_debug);
+      return Config{(*(this)).cfg_width, (*(this)).cfg_height,
+                    (*(this)).cfg_depth, (*(this)).cfg_debug};
     }
   };
 
-  static inline const Config default_config = Config(80u, 24u, 1u, false);
+  static inline const Config default_config = Config{80u, 24u, 1u, false};
   static Config set_width(const unsigned int w, const Config &c);
   static Config set_debug(const bool d, const Config &c);
 
@@ -28,7 +28,7 @@ struct RecordDefaults {
     unsigned int py;
 
     // ACCESSORS
-    Point clone() const { return Point((*(this)).px, (*(this)).py); }
+    Point clone() const { return Point{(*(this)).px, (*(this)).py}; }
   };
 
   struct Rect {
@@ -37,7 +37,7 @@ struct RecordDefaults {
 
     // ACCESSORS
     Rect clone() const {
-      return Rect((*(this)).origin.clone(), (*(this)).extent.clone());
+      return Rect{(*(this)).origin.clone(), (*(this)).extent.clone()};
     }
   };
 

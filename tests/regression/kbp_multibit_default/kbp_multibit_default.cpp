@@ -49,5 +49,5 @@ KbpMultibitDefault::execute_kbp(const KbpMultibitDefault::state &s) {
       }
     }
   }
-  return state(result);
+  return state{result};
 }

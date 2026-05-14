@@ -194,13 +194,13 @@ bool PolygonWindingAreaTraceCase::winding_number_gt_half(
 PolygonWindingAreaTraceCase::Polygon
 PolygonWindingAreaTraceCase::test_equatorial_square(const Real delta) {
   return List<PolygonWindingAreaTraceCase::Point>::cons(
-      Point(Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0))),
+      Point{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0))},
       List<PolygonWindingAreaTraceCase::Point>::cons(
-          Point(Real::from_z(INT64_C(0)), delta),
+          Point{Real::from_z(INT64_C(0)), delta},
           List<PolygonWindingAreaTraceCase::Point>::cons(
-              Point(delta, delta),
+              Point{delta, delta},
               List<PolygonWindingAreaTraceCase::Point>::cons(
-                  Point(delta, Real::from_z(INT64_C(0))),
+                  Point{delta, Real::from_z(INT64_C(0))},
                   List<PolygonWindingAreaTraceCase::Point>::nil()))));
 }
 

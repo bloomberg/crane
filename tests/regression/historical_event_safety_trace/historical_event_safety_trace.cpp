@@ -134,7 +134,7 @@ unsigned int HistoricalEventSafetyTraceCase::witness_test_peak_level_at(
 
 unsigned int HistoricalEventSafetyTraceCase::hoover_controller_sample(
     const unsigned int level) {
-  return hoover_controller(State(level, 20u, 0u), 0u);
+  return hoover_controller(State{level, 20u, 0u}, 0u);
 }
 
 unsigned int

@@ -123,35 +123,35 @@ struct Equations {
       auto &&_sv = *(this);
       if (std::holds_alternative<Gcd_graph_equation_1>(_sv.v())) {
         const auto &[d_y] = std::get<Gcd_graph_equation_1>(_sv.v());
-        return gcd_graph(Gcd_graph_equation_1(d_y));
+        return gcd_graph(Gcd_graph_equation_1{d_y});
       } else if (std::holds_alternative<Gcd_graph_equation_2>(_sv.v())) {
         const auto &[d_n] = std::get<Gcd_graph_equation_2>(_sv.v());
-        return gcd_graph(Gcd_graph_equation_2(d_n));
+        return gcd_graph(Gcd_graph_equation_2{d_n});
       } else {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_graph_refinement_3>(_sv.v());
-        return gcd_graph(Gcd_graph_refinement_3(
+        return gcd_graph(Gcd_graph_refinement_3{
             d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_clause_3_graph>(
                          d_hind->clone())
-                   : nullptr));
+                   : nullptr});
       }
     }
 
     // CREATORS
     static gcd_graph gcd_graph_equation_1(unsigned int y) {
-      return gcd_graph(Gcd_graph_equation_1(std::move(y)));
+      return gcd_graph(Gcd_graph_equation_1{std::move(y)});
     }
 
     static gcd_graph gcd_graph_equation_2(unsigned int n) {
-      return gcd_graph(Gcd_graph_equation_2(std::move(n)));
+      return gcd_graph(Gcd_graph_equation_2{std::move(n)});
     }
 
     static gcd_graph gcd_graph_refinement_3(unsigned int n, unsigned int n0,
                                             gcd_clause_3_graph hind) {
-      return gcd_graph(Gcd_graph_refinement_3(
+      return gcd_graph(Gcd_graph_refinement_3{
           std::move(n), std::move(n0),
-          std::make_unique<gcd_clause_3_graph>(std::move(hind))));
+          std::make_unique<gcd_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -254,17 +254,17 @@ struct Equations {
       if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_sv.v())) {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_clause_3_graph_equation_1>(_sv.v());
-        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1(
+        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
             d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_graph>(d_hind->clone())
-                   : nullptr));
+                   : nullptr});
       } else {
         const auto &[d_n, d_n0, d_hind] =
             std::get<Gcd_clause_3_graph_equation_2>(_sv.v());
-        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2(
+        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
             d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_graph>(d_hind->clone())
-                   : nullptr));
+                   : nullptr});
       }
     }
 
@@ -272,17 +272,17 @@ struct Equations {
     static gcd_clause_3_graph gcd_clause_3_graph_equation_1(unsigned int n,
                                                             unsigned int n0,
                                                             gcd_graph hind) {
-      return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1(
+      return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
           std::move(n), std::move(n0),
-          std::make_unique<gcd_graph>(std::move(hind))));
+          std::make_unique<gcd_graph>(std::move(hind))});
     }
 
     static gcd_clause_3_graph gcd_clause_3_graph_equation_2(unsigned int n,
                                                             unsigned int n0,
                                                             gcd_graph hind) {
-      return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2(
+      return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
           std::move(n), std::move(n0),
-          std::make_unique<gcd_graph>(std::move(hind))));
+          std::make_unique<gcd_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -632,36 +632,36 @@ struct Equations {
     collatz_steps_graph clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Collatz_steps_graph_equation_1>(_sv.v())) {
-        return collatz_steps_graph(Collatz_steps_graph_equation_1());
+        return collatz_steps_graph(Collatz_steps_graph_equation_1{});
       } else if (std::holds_alternative<Collatz_steps_graph_equation_2>(
                      _sv.v())) {
-        return collatz_steps_graph(Collatz_steps_graph_equation_2());
+        return collatz_steps_graph(Collatz_steps_graph_equation_2{});
       } else {
         const auto &[d_n, d_hind] =
             std::get<Collatz_steps_graph_refinement_3>(_sv.v());
-        return collatz_steps_graph(Collatz_steps_graph_refinement_3(
+        return collatz_steps_graph(Collatz_steps_graph_refinement_3{
             d_n,
             d_hind ? std::make_unique<Equations::collatz_steps_clause_3_graph>(
                          d_hind->clone())
-                   : nullptr));
+                   : nullptr});
       }
     }
 
     // CREATORS
     static collatz_steps_graph collatz_steps_graph_equation_1() {
-      return collatz_steps_graph(Collatz_steps_graph_equation_1());
+      return collatz_steps_graph(Collatz_steps_graph_equation_1{});
     }
 
     static collatz_steps_graph collatz_steps_graph_equation_2() {
-      return collatz_steps_graph(Collatz_steps_graph_equation_2());
+      return collatz_steps_graph(Collatz_steps_graph_equation_2{});
     }
 
     static collatz_steps_graph
     collatz_steps_graph_refinement_3(unsigned int n,
                                      collatz_steps_clause_3_graph hind) {
-      return collatz_steps_graph(Collatz_steps_graph_refinement_3(
+      return collatz_steps_graph(Collatz_steps_graph_refinement_3{
           std::move(n),
-          std::make_unique<collatz_steps_clause_3_graph>(std::move(hind))));
+          std::make_unique<collatz_steps_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -773,18 +773,18 @@ struct Equations {
         const auto &[d_n, d_hind] =
             std::get<Collatz_steps_clause_3_graph_equation_1>(_sv.v());
         return collatz_steps_clause_3_graph(
-            Collatz_steps_clause_3_graph_equation_1(
+            Collatz_steps_clause_3_graph_equation_1{
                 d_n, d_hind ? std::make_unique<Equations::collatz_steps_graph>(
                                   d_hind->clone())
-                            : nullptr));
+                            : nullptr});
       } else {
         const auto &[d_n, d_hind] =
             std::get<Collatz_steps_clause_3_graph_equation_2>(_sv.v());
         return collatz_steps_clause_3_graph(
-            Collatz_steps_clause_3_graph_equation_2(
+            Collatz_steps_clause_3_graph_equation_2{
                 d_n, d_hind ? std::make_unique<Equations::collatz_steps_graph>(
                                   d_hind->clone())
-                            : nullptr));
+                            : nullptr});
       }
     }
 
@@ -793,18 +793,18 @@ struct Equations {
     collatz_steps_clause_3_graph_equation_1(unsigned int n,
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
-          Collatz_steps_clause_3_graph_equation_1(
+          Collatz_steps_clause_3_graph_equation_1{
               std::move(n),
-              std::make_unique<collatz_steps_graph>(std::move(hind))));
+              std::make_unique<collatz_steps_graph>(std::move(hind))});
     }
 
     static collatz_steps_clause_3_graph
     collatz_steps_clause_3_graph_equation_2(unsigned int n,
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
-          Collatz_steps_clause_3_graph_equation_2(
+          Collatz_steps_clause_3_graph_equation_2{
               std::move(n),
-              std::make_unique<collatz_steps_graph>(std::move(hind))));
+              std::make_unique<collatz_steps_graph>(std::move(hind))});
     }
 
     // MANIPULATORS

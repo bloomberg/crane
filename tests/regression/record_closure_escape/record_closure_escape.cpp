@@ -33,11 +33,10 @@ unsigned int RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
 /// record constructor arguments.
 RecordClosureEscape::fn_record
 RecordClosureEscape::record_escape(RecordClosureEscape::tree t) {
-  return fn_record(
-      [=](unsigned int _x0) mutable -> unsigned int {
-        return sum_values(t, _x0);
-      },
-      42u);
+  return fn_record{[=](unsigned int _x0) mutable -> unsigned int {
+                     return sum_values(t, _x0);
+                   },
+                   42u};
 }
 
 unsigned int

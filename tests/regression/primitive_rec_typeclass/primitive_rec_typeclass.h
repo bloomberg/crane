@@ -17,7 +17,7 @@ struct PrimitiveRecTypeclass {
     unsigned int py;
 
     // ACCESSORS
-    point clone() const { return point((*(this)).px, (*(this)).py); }
+    point clone() const { return point{(*(this)).px, (*(this)).py}; }
   };
 
   struct pointNorm {
@@ -33,7 +33,7 @@ struct PrimitiveRecTypeclass {
 
     // ACCESSORS
     vec3 clone() const {
-      return vec3((*(this)).vx, (*(this)).vy, (*(this)).vz);
+      return vec3{(*(this)).vx, (*(this)).vy, (*(this)).vz};
     }
   };
 
@@ -54,23 +54,23 @@ struct PrimitiveRecTypeclass {
 
     // ACCESSORS
     rect clone() const {
-      return rect((*(this)).top_left.clone(), (*(this)).bot_right.clone());
+      return rect{(*(this)).top_left.clone(), (*(this)).bot_right.clone()};
     }
   };
 
   static unsigned int rect_width(const rect &r);
   static unsigned int rect_height(const rect &r);
   static unsigned int rect_perimeter(const rect &r);
-  static inline const point p1 = point(3u, 4u);
-  static inline const point p2 = point(10u, 20u);
+  static inline const point p1 = point{3u, 4u};
+  static inline const point p2 = point{10u, 20u};
   static inline const unsigned int test_px = p1.px;
   static inline const unsigned int test_py = p1.py;
   static inline const unsigned int test_norm_point = pointNorm::norm(p1);
   static inline const unsigned int test_double_norm =
       double_norm<pointNorm, point>(p1);
-  static inline const vec3 v1 = vec3(1u, 2u, 3u);
+  static inline const vec3 v1 = vec3{1u, 2u, 3u};
   static inline const unsigned int test_norm_vec3 = vec3Norm::norm(v1);
-  static inline const rect r1 = rect(point(2u, 3u), point(12u, 8u));
+  static inline const rect r1 = rect{point{2u, 3u}, point{12u, 8u}};
   static inline const unsigned int test_width = rect_width(r1);
   static inline const unsigned int test_height = rect_height(r1);
   static inline const unsigned int test_perimeter = rect_perimeter(r1);

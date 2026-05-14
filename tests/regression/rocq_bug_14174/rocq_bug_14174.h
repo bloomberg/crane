@@ -67,10 +67,10 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O();
+        _dst->d_v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S(_alt.d_a0 ? std::make_unique<Nat>() : nullptr);
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -81,9 +81,9 @@ public:
   }
 
   // CREATORS
-  static Nat o() { return Nat(O()); }
+  static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S(std::make_unique<Nat>(std::move(a0)))); }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -154,9 +154,9 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<Some>(_sv.v())) {
       const auto &[d_a0] = std::get<Some>(_sv.v());
-      return Option<t_A>(Some(d_a0));
+      return Option<t_A>(Some{d_a0});
     } else {
-      return Option<t_A>(None());
+      return Option<t_A>(None{});
     }
   }
 
@@ -164,15 +164,15 @@ public:
   template <typename _U> explicit Option(const Option<_U> &_other) {
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
       const auto &[d_a0] = std::get<typename Option<_U>::Some>(_other.v());
-      this->d_v_ = Some(t_A(d_a0));
+      this->d_v_ = Some{t_A(d_a0)};
     } else {
-      this->d_v_ = None();
+      this->d_v_ = None{};
     }
   }
 
-  static Option<t_A> some(t_A a0) { return Option(Some(std::move(a0))); }
+  static Option<t_A> some(t_A a0) { return Option(Some{std::move(a0)}); }
 
-  static Option<t_A> none() { return Option(None()); }
+  static Option<t_A> none() { return Option(None{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -218,7 +218,7 @@ public:
   Prod<t_A, t_B> clone() const {
     auto &&_sv = *(this);
     const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-    return Prod<t_A, t_B>(Pair(d_a0, d_a1));
+    return Prod<t_A, t_B>(Pair{d_a0, d_a1});
   }
 
   // CREATORS
@@ -226,11 +226,11 @@ public:
   explicit Prod(const Prod<_U0, _U1> &_other) {
     const auto &[d_a0, d_a1] =
         std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    this->d_v_ = Pair(t_A(d_a0), t_B(d_a1));
+    this->d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
   }
 
   static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
-    return Prod(Pair(std::move(a0), std::move(a1)));
+    return Prod(Pair{std::move(a0), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -288,16 +288,16 @@ public:
   Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist0>(_sv.v());
-    return Sig<t_A>(Exist0(d_x));
+    return Sig<t_A>(Exist0{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist0>(_other.v());
-    this->d_v_ = Exist0(t_A(d_x));
+    this->d_v_ = Exist0{t_A(d_x)};
   }
 
-  static Sig<t_A> exist0(t_A x) { return Sig(Exist0(std::move(x))); }
+  static Sig<t_A> exist0(t_A x) { return Sig(Exist0{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -342,16 +342,16 @@ public:
   Sig2<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist1>(_sv.v());
-    return Sig2<t_A>(Exist1(d_x));
+    return Sig2<t_A>(Exist1{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig2(const Sig2<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig2<_U>::Exist1>(_other.v());
-    this->d_v_ = Exist1(t_A(d_x));
+    this->d_v_ = Exist1{t_A(d_x)};
   }
 
-  static Sig2<t_A> exist1(t_A x) { return Sig2(Exist1(std::move(x))); }
+  static Sig2<t_A> exist1(t_A x) { return Sig2(Exist1{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -397,7 +397,7 @@ public:
   SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT0>(_sv.v());
-    return SigT<t_A, t_P>(ExistT0(d_x, d_a1));
+    return SigT<t_A, t_P>(ExistT0{d_x, d_a1});
   }
 
   // CREATORS
@@ -405,11 +405,11 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT0>(_other.v());
-    this->d_v_ = ExistT0(t_A(d_x), t_P(d_a1));
+    this->d_v_ = ExistT0{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt0(t_A x, t_P a1) {
-    return SigT(ExistT0(std::move(x), std::move(a1)));
+    return SigT(ExistT0{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -458,7 +458,7 @@ public:
   SigT2<t_A, t_P, t_Q> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1, d_a2] = std::get<ExistT1>(_sv.v());
-    return SigT2<t_A, t_P, t_Q>(ExistT1(d_x, d_a1, d_a2));
+    return SigT2<t_A, t_P, t_Q>(ExistT1{d_x, d_a1, d_a2});
   }
 
   // CREATORS
@@ -466,11 +466,11 @@ public:
   explicit SigT2(const SigT2<_U0, _U1, _U2> &_other) {
     const auto &[d_x, d_a1, d_a2] =
         std::get<typename SigT2<_U0, _U1, _U2>::ExistT1>(_other.v());
-    this->d_v_ = ExistT1(t_A(d_x), t_P(d_a1), t_Q(d_a2));
+    this->d_v_ = ExistT1{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
   }
 
   static SigT2<t_A, t_P, t_Q> existt1(t_A x, t_P a1, t_Q a2) {
-    return SigT2(ExistT1(std::move(x), std::move(a1), std::move(a2)));
+    return SigT2(ExistT1{std::move(x), std::move(a1), std::move(a2)});
   }
 
   // MANIPULATORS
@@ -524,9 +524,9 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<Inleft>(_sv.v())) {
       const auto &[d_a0] = std::get<Inleft>(_sv.v());
-      return Sumor<t_A>(Inleft(d_a0));
+      return Sumor<t_A>(Inleft{d_a0});
     } else {
-      return Sumor<t_A>(Inright());
+      return Sumor<t_A>(Inright{});
     }
   }
 
@@ -534,15 +534,15 @@ public:
   template <typename _U> explicit Sumor(const Sumor<_U> &_other) {
     if (std::holds_alternative<typename Sumor<_U>::Inleft>(_other.v())) {
       const auto &[d_a0] = std::get<typename Sumor<_U>::Inleft>(_other.v());
-      this->d_v_ = Inleft(t_A(d_a0));
+      this->d_v_ = Inleft{t_A(d_a0)};
     } else {
-      this->d_v_ = Inright();
+      this->d_v_ = Inright{};
     }
   }
 
-  static Sumor<t_A> inleft(t_A a0) { return Sumor(Inleft(std::move(a0))); }
+  static Sumor<t_A> inleft(t_A a0) { return Sumor(Inleft{std::move(a0)}); }
 
-  static Sumor<t_A> inright() { return Sumor(Inright()); }
+  static Sumor<t_A> inright() { return Sumor(Inright{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }
@@ -589,16 +589,16 @@ struct RocqBug14174 {
       sig<t_A> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<Exist>(_sv.v());
-        return sig<t_A>(Exist(d_x));
+        return sig<t_A>(Exist{d_x});
       }
 
       // CREATORS
       template <typename _U> explicit sig(const sig<_U> &_other) {
         const auto &[d_x] = std::get<typename sig<_U>::Exist>(_other.v());
-        this->d_v_ = Exist(t_A(d_x));
+        this->d_v_ = Exist{t_A(d_x)};
       }
 
-      static sig<t_A> exist(t_A x) { return sig(Exist(std::move(x))); }
+      static sig<t_A> exist(t_A x) { return sig(Exist{std::move(x)}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
@@ -693,16 +693,16 @@ struct RocqBug14174 {
       sig2<t_A> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x] = std::get<Exist2>(_sv.v());
-        return sig2<t_A>(Exist2(d_x));
+        return sig2<t_A>(Exist2{d_x});
       }
 
       // CREATORS
       template <typename _U> explicit sig2(const sig2<_U> &_other) {
         const auto &[d_x] = std::get<typename sig2<_U>::Exist2>(_other.v());
-        this->d_v_ = Exist2(t_A(d_x));
+        this->d_v_ = Exist2{t_A(d_x)};
       }
 
-      static sig2<t_A> exist2(t_A x) { return sig2(Exist2(std::move(x))); }
+      static sig2<t_A> exist2(t_A x) { return sig2(Exist2{std::move(x)}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
@@ -804,7 +804,7 @@ struct RocqBug14174 {
       sigT<t_A, t_P> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-        return sigT<t_A, t_P>(ExistT(d_x, d_a1));
+        return sigT<t_A, t_P>(ExistT{d_x, d_a1});
       }
 
       // CREATORS
@@ -812,11 +812,11 @@ struct RocqBug14174 {
       explicit sigT(const sigT<_U0, _U1> &_other) {
         const auto &[d_x, d_a1] =
             std::get<typename sigT<_U0, _U1>::ExistT>(_other.v());
-        this->d_v_ = ExistT(t_A(d_x), t_P(d_a1));
+        this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
       }
 
       static sigT<t_A, t_P> existt(t_A x, t_P a1) {
-        return sigT(ExistT(std::move(x), std::move(a1)));
+        return sigT(ExistT{std::move(x), std::move(a1)});
       }
 
       // MANIPULATORS
@@ -931,7 +931,7 @@ struct RocqBug14174 {
       sigT2<t_A, t_P, t_Q> clone() const {
         auto &&_sv = *(this);
         const auto &[d_x, d_a1, d_a2] = std::get<ExistT2>(_sv.v());
-        return sigT2<t_A, t_P, t_Q>(ExistT2(d_x, d_a1, d_a2));
+        return sigT2<t_A, t_P, t_Q>(ExistT2{d_x, d_a1, d_a2});
       }
 
       // CREATORS
@@ -939,11 +939,11 @@ struct RocqBug14174 {
       explicit sigT2(const sigT2<_U0, _U1, _U2> &_other) {
         const auto &[d_x, d_a1, d_a2] =
             std::get<typename sigT2<_U0, _U1, _U2>::ExistT2>(_other.v());
-        this->d_v_ = ExistT2(t_A(d_x), t_P(d_a1), t_Q(d_a2));
+        this->d_v_ = ExistT2{t_A(d_x), t_P(d_a1), t_Q(d_a2)};
       }
 
       static sigT2<t_A, t_P, t_Q> existt2(t_A x, t_P a1, t_Q a2) {
-        return sigT2(ExistT2(std::move(x), std::move(a1), std::move(a2)));
+        return sigT2(ExistT2{std::move(x), std::move(a1), std::move(a2)});
       }
 
       // MANIPULATORS
@@ -1149,9 +1149,9 @@ struct RocqBug14174 {
         auto &&_sv = *(this);
         if (std::holds_alternative<Inleft>(_sv.v())) {
           const auto &[d_a0] = std::get<Inleft>(_sv.v());
-          return sumor<t_A>(Inleft(d_a0));
+          return sumor<t_A>(Inleft{d_a0});
         } else {
-          return sumor<t_A>(Inright());
+          return sumor<t_A>(Inright{});
         }
       }
 
@@ -1159,15 +1159,15 @@ struct RocqBug14174 {
       template <typename _U> explicit sumor(const sumor<_U> &_other) {
         if (std::holds_alternative<typename sumor<_U>::Inleft>(_other.v())) {
           const auto &[d_a0] = std::get<typename sumor<_U>::Inleft>(_other.v());
-          this->d_v_ = Inleft(t_A(d_a0));
+          this->d_v_ = Inleft{t_A(d_a0)};
         } else {
-          this->d_v_ = Inright();
+          this->d_v_ = Inright{};
         }
       }
 
-      static sumor<t_A> inleft(t_A a0) { return sumor(Inleft(std::move(a0))); }
+      static sumor<t_A> inleft(t_A a0) { return sumor(Inleft{std::move(a0)}); }
 
-      static sumor<t_A> inright() { return sumor(Inright()); }
+      static sumor<t_A> inright() { return sumor(Inright{}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }

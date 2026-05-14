@@ -47,16 +47,16 @@ public:
   Sig<t_A> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<t_A>(Exist(d_x));
+    return Sig<t_A>(Exist{d_x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist(t_A(d_x));
+    this->d_v_ = Exist{t_A(d_x)};
   }
 
-  static Sig<t_A> exist(t_A x) { return Sig(Exist(std::move(x))); }
+  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return d_v_; }

@@ -65,12 +65,12 @@ struct DeepMap {
         const tree<t_A> *_src = _frame._src;
         tree<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf();
+          _dst->d_v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ = Node(
+          _dst->d_v_ = Node{
               _alt.d_a0 ? std::make_unique<tree<t_A>>() : nullptr, _alt.d_a1,
-              _alt.d_a2 ? std::make_unique<tree<t_A>>() : nullptr);
+              _alt.d_a2 ? std::make_unique<tree<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -86,22 +86,22 @@ struct DeepMap {
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        this->d_v_ = Leaf();
+        this->d_v_ = Leaf{};
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree<_U>::Node>(_other.v());
         this->d_v_ =
-            Node(d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
-                 d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr);
+            Node{d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
+                 d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr};
       }
     }
 
-    static tree<t_A> leaf() { return tree(Leaf()); }
+    static tree<t_A> leaf() { return tree(Leaf{}); }
 
     static tree<t_A> node(tree<t_A> a0, t_A a1, tree<t_A> a2) {
-      return tree(Node(std::make_unique<tree<t_A>>(std::move(a0)),
+      return tree(Node{std::make_unique<tree<t_A>>(std::move(a0)),
                        std::move(a1),
-                       std::make_unique<tree<t_A>>(std::move(a2))));
+                       std::make_unique<tree<t_A>>(std::move(a2))});
     }
 
     // MANIPULATORS

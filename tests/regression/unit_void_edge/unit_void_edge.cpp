@@ -76,7 +76,7 @@ unsigned int UnitVoidEdge::double_match_unit(const std::monostate,
 }
 
 UnitVoidEdge::tagged_nat UnitVoidEdge::make_tagged(const unsigned int n) {
-  return tagged_nat(n, std::monostate{});
+  return tagged_nat{n, std::monostate{}};
 }
 
 unsigned int UnitVoidEdge::get_value(const UnitVoidEdge::tagged_nat &t) {

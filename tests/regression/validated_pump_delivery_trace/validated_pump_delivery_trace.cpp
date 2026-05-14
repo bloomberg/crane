@@ -218,10 +218,10 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
     ValidatedPumpDeliveryTraceCase::Mg_dL bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target) {
   if (target.mg_dL_val <= bg.mg_dL_val) {
-    return Mg_dL(((
+    return Mg_dL{((
         (bg.mg_dL_val - (100u ? (bg.mg_dL_val * 15u) / 100u : 0)) > bg.mg_dL_val
             ? 0
-            : (bg.mg_dL_val - (100u ? (bg.mg_dL_val * 15u) / 100u : 0)))));
+            : (bg.mg_dL_val - (100u ? (bg.mg_dL_val * 15u) / 100u : 0))))};
   } else {
     return bg;
   }
@@ -668,11 +668,15 @@ unsigned int ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(
 ValidatedPumpDeliveryTraceCase::PrecisionInput
 ValidatedPumpDeliveryTraceCase::convert_mmol_input(
     const ValidatedPumpDeliveryTraceCase::MmolPrecisionInput &input) {
-  return PrecisionInput(
+  return PrecisionInput{
       input.mpi_carbs_g,
-      Mg_dL(mmol_tenths_to_mg_dL(input.mpi_current_bg_mmol_tenths)),
-      input.mpi_now, input.mpi_bolus_history, input.mpi_activity,
-      input.mpi_use_sensor_margin, input.mpi_fault, input.mpi_weight_kg);
+      Mg_dL{mmol_tenths_to_mg_dL(input.mpi_current_bg_mmol_tenths)},
+      input.mpi_now,
+      input.mpi_bolus_history,
+      input.mpi_activity,
+      input.mpi_use_sensor_margin,
+      input.mpi_fault,
+      input.mpi_weight_kg};
 }
 
 ValidatedPumpDeliveryTraceCase::PrecisionResult

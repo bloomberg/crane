@@ -26,7 +26,7 @@ List<unsigned int> LoadProgramHeadWrite::update_nth(const unsigned int n,
 LoadProgramHeadWrite::state LoadProgramHeadWrite::set_prom_params(
     const LoadProgramHeadWrite::state &s, const unsigned int addr,
     const unsigned int data, const bool enable) {
-  return state(s.rom, addr, data, enable);
+  return state{s.rom, addr, data, enable};
 }
 
 LoadProgramHeadWrite::state
@@ -37,7 +37,7 @@ LoadProgramHeadWrite::execute_wpm(const LoadProgramHeadWrite::state &s) {
   } else {
     new_rom = s.rom;
   }
-  return state(new_rom, s.prom_addr, s.prom_data, s.prom_enable);
+  return state{new_rom, s.prom_addr, s.prom_data, s.prom_enable};
 }
 
 LoadProgramHeadWrite::state

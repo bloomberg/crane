@@ -47,7 +47,7 @@ public:
   SigT<t_A, t_P> clone() const {
     auto &&_sv = *(this);
     const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
-    return SigT<t_A, t_P>(ExistT(d_x, d_a1));
+    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
   }
 
   // CREATORS
@@ -55,11 +55,11 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->d_v_ = ExistT(t_A(d_x), t_P(d_a1));
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
-    return SigT(ExistT(std::move(x), std::move(a1)));
+    return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
@@ -129,10 +129,10 @@ struct DoubleOppositeWitnessesCase {
     }
 
     // ACCESSORS
-    Path<t_A> clone() const { return Path<t_A>(Path_refl()); }
+    Path<t_A> clone() const { return Path<t_A>(Path_refl{}); }
 
     // CREATORS
-    static Path<t_A> path_refl() { return Path(Path_refl()); }
+    static Path<t_A> path_refl() { return Path(Path_refl{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -175,18 +175,18 @@ struct DoubleOppositeWitnessesCase {
 
     // ACCESSORS
     Functor clone() const {
-      return Functor((*(this)).object_of, (*(this)).morphism_of);
+      return Functor{(*(this)).object_of, (*(this)).morphism_of};
     }
   };
 
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
   static Functor compose_functor(Functor f, Functor g) {
-    return Functor(
+    return Functor{
         [=](const auto &x) mutable { return f.object_of(g.object_of(x)); },
         [=](const auto &x, const auto &y, const auto &f0) mutable {
           return f.morphism_of(g.object_of(x), g.object_of(y),
                                g.morphism_of(x, y, f0));
-        });
+        }};
   }
 
   template <PreStableCategory _tcI0> struct opposite_prestable_category {
@@ -224,13 +224,13 @@ struct DoubleOppositeWitnessesCase {
   static_assert(PreStableCategory<toy_prestable>);
 
   template <PreCategory _tcI0> static Functor into_double_opposite_functor() {
-    return Functor([](const auto &x) { return x; },
-                   [](const auto &, const auto &, const auto &f) { return f; });
+    return Functor{[](const auto &x) { return x; },
+                   [](const auto &, const auto &, const auto &f) { return f; }};
   }
 
   template <PreCategory _tcI0> static Functor out_of_double_opposite_functor() {
-    return Functor([](const auto &x) { return x; },
-                   [](const auto &, const auto &, const auto &f) { return f; });
+    return Functor{[](const auto &x) { return x; },
+                   [](const auto &, const auto &, const auto &f) { return f; }};
   }
 
   template <PreStableCategory _tcI0>

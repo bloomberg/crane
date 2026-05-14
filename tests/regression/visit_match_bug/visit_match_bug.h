@@ -68,12 +68,12 @@ struct VisitMatchBug {
         Tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
           const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->d_v_ = Leaf(_alt.d_a0);
+          _dst->d_v_ = Leaf{_alt.d_a0};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->d_v_ =
-              Node(_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<Tree>() : nullptr);
+              Node{_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2 ? std::make_unique<Tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -87,11 +87,11 @@ struct VisitMatchBug {
     }
 
     // CREATORS
-    static Tree leaf(unsigned int a0) { return Tree(Leaf(std::move(a0))); }
+    static Tree leaf(unsigned int a0) { return Tree(Leaf{std::move(a0)}); }
 
     static Tree node(Tree a0, unsigned int a1, Tree a2) {
-      return Tree(Node(std::make_unique<Tree>(std::move(a0)), std::move(a1),
-                       std::make_unique<Tree>(std::move(a2))));
+      return Tree(Node{std::make_unique<Tree>(std::move(a0)), std::move(a1),
+                       std::make_unique<Tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -166,7 +166,7 @@ struct VisitMatchBug {
     unsigned int data;
 
     // ACCESSORS
-    State clone() const { return State((*(this)).value, (*(this)).data); }
+    State clone() const { return State{(*(this)).value, (*(this)).data}; }
   };
 
   static unsigned int match_extract_field(const State &s);

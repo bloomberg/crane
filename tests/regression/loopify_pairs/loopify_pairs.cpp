@@ -22,7 +22,7 @@ LoopifyPairs::unzip(
       _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified unzip: _Enter -> _Cont_x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -40,8 +40,8 @@ LoopifyPairs::unzip(
             std::pair<unsigned int, unsigned int>>::Cons>(l.v());
         const unsigned int &x = d_a0.first;
         const unsigned int &y = d_a0.second;
-        _stack.emplace_back(_Cont_x(x, y));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_x{x, y});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_x>(_frame));
@@ -83,7 +83,7 @@ LoopifyPairs::partition3(
       _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified partition3: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -99,8 +99,8 @@ LoopifyPairs::partition3(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons(d_a0, pivot));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_Cons{d_a0, pivot});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -147,7 +147,7 @@ std::pair<unsigned int, unsigned int> LoopifyPairs::min_max(
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified min_max: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -166,8 +166,8 @@ std::pair<unsigned int, unsigned int> LoopifyPairs::min_max(
                 typename LoopifyPairs::list<unsigned int>::Nil>(_sv.v())) {
           _result = std::make_pair(d_a0, d_a0);
         } else {
-          _stack.emplace_back(_Cont_Cons(d_a0));
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Cont_Cons{d_a0});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
@@ -201,7 +201,7 @@ std::pair<unsigned int, unsigned int> LoopifyPairs::sum_and_count(
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_and_count: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -215,8 +215,8 @@ std::pair<unsigned int, unsigned int> LoopifyPairs::sum_and_count(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_Cons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -249,7 +249,7 @@ LoopifyPairs::sum_prod_count(
   std::pair<unsigned int, std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_prod_count: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -263,8 +263,8 @@ LoopifyPairs::sum_prod_count(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_Cons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));

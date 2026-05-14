@@ -62,17 +62,17 @@ template <Elem E> struct Container {
     maybe clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Nothing>(_sv.v())) {
-        return maybe(Nothing());
+        return maybe(Nothing{});
       } else {
         const auto &[d_a0] = std::get<Just>(_sv.v());
-        return maybe(Just(d_a0));
+        return maybe(Just{d_a0});
       }
     }
 
     // CREATORS
-    static maybe nothing() { return maybe(Nothing()); }
+    static maybe nothing() { return maybe(Nothing{}); }
 
-    static maybe just(unsigned int a0) { return maybe(Just(std::move(a0))); }
+    static maybe just(unsigned int a0) { return maybe(Just{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -158,11 +158,11 @@ template <Elem E> struct Container {
         const mlist *_src = _frame._src;
         mlist *_dst = _frame._dst;
         if (std::holds_alternative<MNil>(_src->v())) {
-          _dst->d_v_ = MNil();
+          _dst->d_v_ = MNil{};
         } else {
           const auto &_alt = std::get<MCons>(_src->v());
-          _dst->d_v_ = MCons(_alt.d_a0.clone(),
-                             _alt.d_a1 ? std::make_unique<mlist>() : nullptr);
+          _dst->d_v_ = MCons{_alt.d_a0.clone(),
+                             _alt.d_a1 ? std::make_unique<mlist>() : nullptr};
           auto &_dst_alt = std::get<MCons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -173,11 +173,11 @@ template <Elem E> struct Container {
     }
 
     // CREATORS
-    static mlist mnil() { return mlist(MNil()); }
+    static mlist mnil() { return mlist(MNil{}); }
 
     static mlist mcons(maybe a0, mlist a1) {
       return mlist(
-          MCons(std::move(a0), std::make_unique<mlist>(std::move(a1))));
+          MCons{std::move(a0), std::make_unique<mlist>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -273,17 +273,17 @@ template <Elem E> struct Container {
       auto &&_sv = *(this);
       if (std::holds_alternative<Leaf>(_sv.v())) {
         const auto &[d_a0] = std::get<Leaf>(_sv.v());
-        return mtree(Leaf(d_a0.clone()));
+        return mtree(Leaf{d_a0.clone()});
       } else {
         const auto &[d_a0] = std::get<Node>(_sv.v());
-        return mtree(Node(d_a0.clone()));
+        return mtree(Node{d_a0.clone()});
       }
     }
 
     // CREATORS
-    static mtree leaf(maybe a0) { return mtree(Leaf(std::move(a0))); }
+    static mtree leaf(maybe a0) { return mtree(Leaf{std::move(a0)}); }
 
-    static mtree node(mlist a0) { return mtree(Node(std::move(a0))); }
+    static mtree node(mlist a0) { return mtree(Node{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

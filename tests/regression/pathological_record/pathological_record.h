@@ -13,7 +13,7 @@ struct PathologicalRecord {
     unsigned int f3;
 
     // ACCESSORS
-    Rec clone() const { return Rec((*(this)).f1, (*(this)).f2, (*(this)).f3); }
+    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3}; }
   };
 
   static unsigned int hof_access(const Rec &r);
@@ -23,7 +23,7 @@ struct PathologicalRecord {
   static unsigned int double_match(const Rec &r1, const Rec &r2);
   static unsigned int closure_over_fields(const Rec &r, const unsigned int x);
   static inline const unsigned int use_closure =
-      closure_over_fields(Rec(1u, 2u, 3u), 10u);
+      closure_over_fields(Rec{1u, 2u, 3u}, 10u);
   static unsigned int guarded_pattern(const Rec &r);
 
   struct BigRec {
@@ -35,17 +35,17 @@ struct PathologicalRecord {
 
     // ACCESSORS
     BigRec clone() const {
-      return BigRec((*(this)).bf1, (*(this)).bf2, (*(this)).bf3, (*(this)).bf4,
-                    (*(this)).bf5);
+      return BigRec{(*(this)).bf1, (*(this)).bf2, (*(this)).bf3, (*(this)).bf4,
+                    (*(this)).bf5};
     }
   };
 
   static unsigned int scrambled_access(const BigRec &r);
   static unsigned int repeated_access(const BigRec &r);
-  static inline const unsigned int test1 = hof_access(Rec(1u, 2u, 3u));
-  static inline const unsigned int test2 = nested_lets(Rec(4u, 5u, 6u));
+  static inline const unsigned int test1 = hof_access(Rec{1u, 2u, 3u});
+  static inline const unsigned int test2 = nested_lets(Rec{4u, 5u, 6u});
   static inline const unsigned int test3 =
-      double_match(Rec(1u, 2u, 3u), Rec(4u, 5u, 6u));
+      double_match(Rec{1u, 2u, 3u}, Rec{4u, 5u, 6u});
 };
 
 #endif // INCLUDED_PATHOLOGICAL_RECORD

@@ -421,7 +421,7 @@ unsigned int LoopifyListTransforms::step_sum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -440,8 +440,8 @@ unsigned int LoopifyListTransforms::step_sum(
         } else {
           contribution = (d_a0 * 2u);
         }
-        _stack.emplace_back(_Resume_Cons(contribution));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{contribution});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

@@ -41,83 +41,115 @@ List<unsigned int> CpuEmulator::push_return(const CpuEmulator::state &s,
 CpuEmulator::state CpuEmulator::execute(const CpuEmulator::state &s,
                                         const CpuEmulator::instr &i) {
   if (std::holds_alternative<typename CpuEmulator::instr::NOP>(i.v())) {
-    return state(s.ex_acc, s.ex_regs, s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{s.ex_acc,   s.ex_regs,
+                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::LDM>(i.v())) {
     const auto &[d_n] = std::get<typename CpuEmulator::instr::LDM>(i.v());
-    return state((16u ? d_n % 16u : d_n), s.ex_regs, s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{(16u ? d_n % 16u : d_n),
+                 s.ex_regs,
+                 s.ex_carry,
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::LD>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::LD>(i.v());
-    return state(get_reg(s, d_r), s.ex_regs, s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{
+        get_reg(s, d_r), s.ex_regs,
+        s.ex_carry,      (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+        s.ex_stack,      s.ex_pair_bus,
+        s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::XCH>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::XCH>(i.v());
     unsigned int regv = get_reg(s, d_r);
-    return state(regv, set_reg(s, d_r, s.ex_acc), s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{regv,       set_reg(s, d_r, s.ex_acc),
+                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::INC>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::INC>(i.v());
-    return state(s.ex_acc, set_reg(s, d_r, (get_reg(s, d_r) + 1)), s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{s.ex_acc,   set_reg(s, d_r, (get_reg(s, d_r) + 1)),
+                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::ADD>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::ADD>(i.v());
     unsigned int sum = ((s.ex_acc + get_reg(s, d_r)) + (s.ex_carry ? 1u : 0u));
-    return state((16u ? sum % 16u : sum), s.ex_regs, 16u <= sum,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{(16u ? sum % 16u : sum),
+                 s.ex_regs,
+                 16u <= sum,
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::SUB>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::SUB>(i.v());
     unsigned int diff =
         ((((s.ex_acc + 16u) - get_reg(s, d_r)) > (s.ex_acc + 16u)
               ? 0
               : ((s.ex_acc + 16u) - get_reg(s, d_r))));
-    return state((16u ? diff % 16u : diff), s.ex_regs,
+    return state{(16u ? diff % 16u : diff),
+                 s.ex_regs,
                  get_reg(s, d_r) <= s.ex_acc,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::IAC>(i.v())) {
-    return state((16u ? (s.ex_acc + 1) % 16u : (s.ex_acc + 1)), s.ex_regs,
+    return state{(16u ? (s.ex_acc + 1) % 16u : (s.ex_acc + 1)),
+                 s.ex_regs,
                  16u <= (s.ex_acc + 1),
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::DAC>(i.v())) {
-    return state((16u ? (s.ex_acc + 15u) % 16u : (s.ex_acc + 15u)), s.ex_regs,
+    return state{(16u ? (s.ex_acc + 15u) % 16u : (s.ex_acc + 15u)),
+                 s.ex_regs,
                  !(s.ex_acc == 0u),
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::CLC>(i.v())) {
-    return state(s.ex_acc, s.ex_regs, false,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{s.ex_acc,   s.ex_regs,
+                 false,      (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::STC>(i.v())) {
-    return state(s.ex_acc, s.ex_regs, true,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{s.ex_acc,   s.ex_regs,
+                 true,       (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::CMC>(i.v())) {
-    return state(s.ex_acc, s.ex_regs, !(s.ex_carry),
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{
+        s.ex_acc,      s.ex_regs,
+        !(s.ex_carry), (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+        s.ex_stack,    s.ex_pair_bus,
+        s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::CMA>(i.v())) {
-    return state((((15u - s.ex_acc) > 15u ? 0 : (15u - s.ex_acc))), s.ex_regs,
-                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
-                 s.ex_stack, s.ex_pair_bus, s.ex_ports);
+    return state{(((15u - s.ex_acc) > 15u ? 0 : (15u - s.ex_acc))),
+                 s.ex_regs,
+                 s.ex_carry,
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::CLB>(i.v())) {
-    return state(0u, s.ex_regs, false,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{0u,         s.ex_regs,
+                 false,      (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::RAL>(i.v())) {
     unsigned int acc_ = (16u ? ((2u * s.ex_acc) + (s.ex_carry ? 1u : 0u)) % 16u
                              : ((2u * s.ex_acc) + (s.ex_carry ? 1u : 0u)));
     bool carry_ = 16u <= ((2u * s.ex_acc) + (s.ex_carry ? 1u : 0u));
-    return state(acc_, s.ex_regs, carry_,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{acc_,       s.ex_regs,
+                 carry_,     (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::RAR>(i.v())) {
     unsigned int carry_bit;
     if (s.ex_carry) {
@@ -125,18 +157,29 @@ CpuEmulator::state CpuEmulator::execute(const CpuEmulator::state &s,
     } else {
       carry_bit = 0u;
     }
-    return state(((2u ? s.ex_acc / 2u : 0) + carry_bit), s.ex_regs,
+    return state{((2u ? s.ex_acc / 2u : 0) + carry_bit),
+                 s.ex_regs,
                  (2u ? s.ex_acc % 2u : s.ex_acc) == 1u,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::TCC>(i.v())) {
-    return state((s.ex_carry ? 1u : 0u), s.ex_regs, false,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{(s.ex_carry ? 1u : 0u),
+                 s.ex_regs,
+                 false,
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::TCS>(i.v())) {
-    return state((s.ex_carry ? 10u : 9u), s.ex_regs, false,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{(s.ex_carry ? 10u : 9u),
+                 s.ex_regs,
+                 false,
+                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::DAA>(i.v())) {
     unsigned int acc_;
     if (10u <= (s.ex_acc + 1)) {
@@ -144,9 +187,10 @@ CpuEmulator::state CpuEmulator::execute(const CpuEmulator::state &s,
     } else {
       acc_ = s.ex_acc;
     }
-    return state(acc_, s.ex_regs, s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{acc_,       s.ex_regs,
+                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::KBP>(i.v())) {
     unsigned int a = s.ex_acc;
     unsigned int out;
@@ -171,56 +215,80 @@ CpuEmulator::state CpuEmulator::execute(const CpuEmulator::state &s,
         }
       }
     }
-    return state(out, s.ex_regs, s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{out,        s.ex_regs,
+                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::JUN>(i.v())) {
     const auto &[d_a] = std::get<typename CpuEmulator::instr::JUN>(i.v());
-    return state(s.ex_acc, s.ex_regs, s.ex_carry, (4096u ? d_a % 4096u : d_a),
-                 s.ex_stack, s.ex_pair_bus, s.ex_ports);
+    return state{
+        s.ex_acc,   s.ex_regs,     s.ex_carry, (4096u ? d_a % 4096u : d_a),
+        s.ex_stack, s.ex_pair_bus, s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::JMS>(i.v())) {
     const auto &[d_a] = std::get<typename CpuEmulator::instr::JMS>(i.v());
-    return state(s.ex_acc, s.ex_regs, s.ex_carry, (4096u ? d_a % 4096u : d_a),
-                 push_return(s, (s.ex_pc + 2u)), s.ex_pair_bus, s.ex_ports);
+    return state{s.ex_acc,
+                 s.ex_regs,
+                 s.ex_carry,
+                 (4096u ? d_a % 4096u : d_a),
+                 push_return(s, (s.ex_pc + 2u)),
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::JCN>(i.v())) {
     const auto &[d_c, d_a] = std::get<typename CpuEmulator::instr::JCN>(i.v());
     bool jump = ((2u ? d_c % 2u : d_c) == 1u && s.ex_carry);
-    return state(s.ex_acc, s.ex_regs, s.ex_carry,
+    return state{s.ex_acc,
+                 s.ex_regs,
+                 s.ex_carry,
                  (jump ? (4096u ? d_a % 4096u : d_a)
                        : (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u))),
-                 s.ex_stack, s.ex_pair_bus, s.ex_ports);
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::FIM>(i.v())) {
     const auto &[d_r, d_d] = std::get<typename CpuEmulator::instr::FIM>(i.v());
-    return state(s.ex_acc, set_pair(s, d_r, d_d), s.ex_carry,
-                 (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{s.ex_acc,   set_pair(s, d_r, d_d),
+                 s.ex_carry, (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::SRC>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::SRC>(i.v());
-    return state(s.ex_acc, s.ex_regs, s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 get_pair(s, d_r), s.ex_ports);
+    return state{s.ex_acc,   s.ex_regs,
+                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, get_pair(s, d_r),
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::FIN>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::FIN>(i.v());
-    return state(s.ex_acc, set_pair(s, d_r, s.ex_pair_bus), s.ex_carry,
-                 (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)), s.ex_stack,
-                 s.ex_pair_bus, s.ex_ports);
+    return state{s.ex_acc,   set_pair(s, d_r, s.ex_pair_bus),
+                 s.ex_carry, (4096u ? (s.ex_pc + 1u) % 4096u : (s.ex_pc + 1u)),
+                 s.ex_stack, s.ex_pair_bus,
+                 s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::JIN>(i.v())) {
     const auto &[d_r] = std::get<typename CpuEmulator::instr::JIN>(i.v());
-    return state(s.ex_acc, s.ex_regs, s.ex_carry,
-                 (4096u ? get_pair(s, d_r) % 4096u : get_pair(s, d_r)),
-                 s.ex_stack, s.ex_pair_bus, s.ex_ports);
+    return state{
+        s.ex_acc,   s.ex_regs,
+        s.ex_carry, (4096u ? get_pair(s, d_r) % 4096u : get_pair(s, d_r)),
+        s.ex_stack, s.ex_pair_bus,
+        s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::ISZ>(i.v())) {
     const auto &[d_r, d_a] = std::get<typename CpuEmulator::instr::ISZ>(i.v());
     unsigned int n =
         (16u ? (get_reg(s, d_r) + 1) % 16u : (get_reg(s, d_r) + 1));
-    return state(s.ex_acc, set_reg(s, d_r, n), s.ex_carry,
+    return state{s.ex_acc,
+                 set_reg(s, d_r, n),
+                 s.ex_carry,
                  (n == 0u ? (4096u ? d_a % 4096u : d_a)
                           : (4096u ? (s.ex_pc + 2u) % 4096u : (s.ex_pc + 2u))),
-                 s.ex_stack, s.ex_pair_bus, s.ex_ports);
+                 s.ex_stack,
+                 s.ex_pair_bus,
+                 s.ex_ports};
   } else {
     const auto &[d_d] = std::get<typename CpuEmulator::instr::BBL>(i.v());
-    return state((16u ? d_d % 16u : d_d), s.ex_regs, s.ex_carry,
+    return state{(16u ? d_d % 16u : d_d),
+                 s.ex_regs,
+                 s.ex_carry,
                  ListDef::template nth<unsigned int>(0u, s.ex_stack, 0u),
-                 s.ex_stack.skipn(1u), s.ex_pair_bus, s.ex_ports);
+                 s.ex_stack.skipn(1u),
+                 s.ex_pair_bus,
+                 s.ex_ports};
   }
 }

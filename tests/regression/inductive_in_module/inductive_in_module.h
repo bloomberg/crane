@@ -95,27 +95,27 @@ struct InductiveInModule {
         option<t_A> clone() const {
           auto &&_sv = *(this);
           if (std::holds_alternative<None>(_sv.v())) {
-            return option<t_A>(None());
+            return option<t_A>(None{});
           } else {
             const auto &[d_a0] = std::get<Some>(_sv.v());
-            return option<t_A>(Some(d_a0));
+            return option<t_A>(Some{d_a0});
           }
         }
 
         // CREATORS
         template <typename _U> explicit option(const option<_U> &_other) {
           if (std::holds_alternative<typename option<_U>::None>(_other.v())) {
-            this->d_v_ = None();
+            this->d_v_ = None{};
           } else {
             const auto &[d_a0] =
                 std::get<typename option<_U>::Some>(_other.v());
-            this->d_v_ = Some(t_A(d_a0));
+            this->d_v_ = Some{t_A(d_a0)};
           }
         }
 
-        static option<t_A> none() { return option(None()); }
+        static option<t_A> none() { return option(None{}); }
 
-        static option<t_A> some(t_A a0) { return option(Some(std::move(a0))); }
+        static option<t_A> some(t_A a0) { return option(Some{std::move(a0)}); }
 
         // MANIPULATORS
         inline variant_t &v_mut() { return d_v_; }

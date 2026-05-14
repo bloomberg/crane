@@ -17,7 +17,7 @@ unsigned int MemSafetyProbe18::sum_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -32,8 +32,8 @@ unsigned int MemSafetyProbe18::sum_list(
         const auto &[d_a0, d_a1] =
             std::get<typename MemSafetyProbe18::mylist<unsigned int>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -116,7 +116,7 @@ unsigned int MemSafetyProbe18::sum_tree_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_tree_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -132,8 +132,8 @@ unsigned int MemSafetyProbe18::sum_tree_list(
         const auto &[d_a0, d_a1] = std::get<
             typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mycons>(
             l.v());
-        _stack.emplace_back(_Resume_Mycons(d_a0.tree_sum()));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{d_a0.tree_sum()});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));

@@ -18,7 +18,7 @@ AxiomTypes::MysteryType AxiomTypes::use_axiom(const std::monostate) {
 }
 
 AxiomTypes::AxiomRecord AxiomTypes::make_axiom_record(const std::monostate) {
-  return AxiomRecord(42u, mystery_value());
+  return AxiomRecord{42u, mystery_value()};
 }
 
 AxiomTypes::MysteryType

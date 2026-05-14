@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -190,10 +190,10 @@ struct CpuEmulator {
 
     // ACCESSORS
     state clone() const {
-      return state((*(this)).ex_acc, (*(this)).ex_regs.clone(),
-                   (*(this)).ex_carry, (*(this)).ex_pc,
+      return state{(*(this)).ex_acc,           (*(this)).ex_regs.clone(),
+                   (*(this)).ex_carry,         (*(this)).ex_pc,
                    (*(this)).ex_stack.clone(), (*(this)).ex_pair_bus,
-                   (*(this)).ex_ports.clone());
+                   (*(this)).ex_ports.clone()};
     }
   };
 
@@ -388,145 +388,145 @@ struct CpuEmulator {
     instr clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<NOP>(_sv.v())) {
-        return instr(NOP());
+        return instr(NOP{});
       } else if (std::holds_alternative<LDM>(_sv.v())) {
         const auto &[d_n] = std::get<LDM>(_sv.v());
-        return instr(LDM(d_n));
+        return instr(LDM{d_n});
       } else if (std::holds_alternative<LD>(_sv.v())) {
         const auto &[d_r] = std::get<LD>(_sv.v());
-        return instr(LD(d_r));
+        return instr(LD{d_r});
       } else if (std::holds_alternative<XCH>(_sv.v())) {
         const auto &[d_r] = std::get<XCH>(_sv.v());
-        return instr(XCH(d_r));
+        return instr(XCH{d_r});
       } else if (std::holds_alternative<INC>(_sv.v())) {
         const auto &[d_r] = std::get<INC>(_sv.v());
-        return instr(INC(d_r));
+        return instr(INC{d_r});
       } else if (std::holds_alternative<ADD>(_sv.v())) {
         const auto &[d_r] = std::get<ADD>(_sv.v());
-        return instr(ADD(d_r));
+        return instr(ADD{d_r});
       } else if (std::holds_alternative<SUB>(_sv.v())) {
         const auto &[d_r] = std::get<SUB>(_sv.v());
-        return instr(SUB(d_r));
+        return instr(SUB{d_r});
       } else if (std::holds_alternative<IAC>(_sv.v())) {
-        return instr(IAC());
+        return instr(IAC{});
       } else if (std::holds_alternative<DAC>(_sv.v())) {
-        return instr(DAC());
+        return instr(DAC{});
       } else if (std::holds_alternative<CLC>(_sv.v())) {
-        return instr(CLC());
+        return instr(CLC{});
       } else if (std::holds_alternative<STC>(_sv.v())) {
-        return instr(STC());
+        return instr(STC{});
       } else if (std::holds_alternative<CMC>(_sv.v())) {
-        return instr(CMC());
+        return instr(CMC{});
       } else if (std::holds_alternative<CMA>(_sv.v())) {
-        return instr(CMA());
+        return instr(CMA{});
       } else if (std::holds_alternative<CLB>(_sv.v())) {
-        return instr(CLB());
+        return instr(CLB{});
       } else if (std::holds_alternative<RAL>(_sv.v())) {
-        return instr(RAL());
+        return instr(RAL{});
       } else if (std::holds_alternative<RAR>(_sv.v())) {
-        return instr(RAR());
+        return instr(RAR{});
       } else if (std::holds_alternative<TCC>(_sv.v())) {
-        return instr(TCC());
+        return instr(TCC{});
       } else if (std::holds_alternative<TCS>(_sv.v())) {
-        return instr(TCS());
+        return instr(TCS{});
       } else if (std::holds_alternative<DAA>(_sv.v())) {
-        return instr(DAA());
+        return instr(DAA{});
       } else if (std::holds_alternative<KBP>(_sv.v())) {
-        return instr(KBP());
+        return instr(KBP{});
       } else if (std::holds_alternative<JUN>(_sv.v())) {
         const auto &[d_a] = std::get<JUN>(_sv.v());
-        return instr(JUN(d_a));
+        return instr(JUN{d_a});
       } else if (std::holds_alternative<JMS>(_sv.v())) {
         const auto &[d_a] = std::get<JMS>(_sv.v());
-        return instr(JMS(d_a));
+        return instr(JMS{d_a});
       } else if (std::holds_alternative<JCN>(_sv.v())) {
         const auto &[d_c, d_a] = std::get<JCN>(_sv.v());
-        return instr(JCN(d_c, d_a));
+        return instr(JCN{d_c, d_a});
       } else if (std::holds_alternative<FIM>(_sv.v())) {
         const auto &[d_r, d_d] = std::get<FIM>(_sv.v());
-        return instr(FIM(d_r, d_d));
+        return instr(FIM{d_r, d_d});
       } else if (std::holds_alternative<SRC>(_sv.v())) {
         const auto &[d_r] = std::get<SRC>(_sv.v());
-        return instr(SRC(d_r));
+        return instr(SRC{d_r});
       } else if (std::holds_alternative<FIN>(_sv.v())) {
         const auto &[d_r] = std::get<FIN>(_sv.v());
-        return instr(FIN(d_r));
+        return instr(FIN{d_r});
       } else if (std::holds_alternative<JIN>(_sv.v())) {
         const auto &[d_r] = std::get<JIN>(_sv.v());
-        return instr(JIN(d_r));
+        return instr(JIN{d_r});
       } else if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_r, d_a] = std::get<ISZ>(_sv.v());
-        return instr(ISZ(d_r, d_a));
+        return instr(ISZ{d_r, d_a});
       } else {
         const auto &[d_d] = std::get<BBL>(_sv.v());
-        return instr(BBL(d_d));
+        return instr(BBL{d_d});
       }
     }
 
     // CREATORS
-    static instr nop() { return instr(NOP()); }
+    static instr nop() { return instr(NOP{}); }
 
-    static instr ldm(unsigned int n) { return instr(LDM(std::move(n))); }
+    static instr ldm(unsigned int n) { return instr(LDM{std::move(n)}); }
 
-    static instr ld(unsigned int r) { return instr(LD(std::move(r))); }
+    static instr ld(unsigned int r) { return instr(LD{std::move(r)}); }
 
-    static instr xch(unsigned int r) { return instr(XCH(std::move(r))); }
+    static instr xch(unsigned int r) { return instr(XCH{std::move(r)}); }
 
-    static instr inc(unsigned int r) { return instr(INC(std::move(r))); }
+    static instr inc(unsigned int r) { return instr(INC{std::move(r)}); }
 
-    static instr add(unsigned int r) { return instr(ADD(std::move(r))); }
+    static instr add(unsigned int r) { return instr(ADD{std::move(r)}); }
 
-    static instr sub(unsigned int r) { return instr(SUB(std::move(r))); }
+    static instr sub(unsigned int r) { return instr(SUB{std::move(r)}); }
 
-    static instr iac() { return instr(IAC()); }
+    static instr iac() { return instr(IAC{}); }
 
-    static instr dac() { return instr(DAC()); }
+    static instr dac() { return instr(DAC{}); }
 
-    static instr clc() { return instr(CLC()); }
+    static instr clc() { return instr(CLC{}); }
 
-    static instr stc() { return instr(STC()); }
+    static instr stc() { return instr(STC{}); }
 
-    static instr cmc() { return instr(CMC()); }
+    static instr cmc() { return instr(CMC{}); }
 
-    static instr cma() { return instr(CMA()); }
+    static instr cma() { return instr(CMA{}); }
 
-    static instr clb() { return instr(CLB()); }
+    static instr clb() { return instr(CLB{}); }
 
-    static instr ral() { return instr(RAL()); }
+    static instr ral() { return instr(RAL{}); }
 
-    static instr rar() { return instr(RAR()); }
+    static instr rar() { return instr(RAR{}); }
 
-    static instr tcc() { return instr(TCC()); }
+    static instr tcc() { return instr(TCC{}); }
 
-    static instr tcs() { return instr(TCS()); }
+    static instr tcs() { return instr(TCS{}); }
 
-    static instr daa() { return instr(DAA()); }
+    static instr daa() { return instr(DAA{}); }
 
-    static instr kbp() { return instr(KBP()); }
+    static instr kbp() { return instr(KBP{}); }
 
-    static instr jun(unsigned int a) { return instr(JUN(std::move(a))); }
+    static instr jun(unsigned int a) { return instr(JUN{std::move(a)}); }
 
-    static instr jms(unsigned int a) { return instr(JMS(std::move(a))); }
+    static instr jms(unsigned int a) { return instr(JMS{std::move(a)}); }
 
     static instr jcn(unsigned int c, unsigned int a) {
-      return instr(JCN(std::move(c), std::move(a)));
+      return instr(JCN{std::move(c), std::move(a)});
     }
 
     static instr fim(unsigned int r, unsigned int d) {
-      return instr(FIM(std::move(r), std::move(d)));
+      return instr(FIM{std::move(r), std::move(d)});
     }
 
-    static instr src(unsigned int r) { return instr(SRC(std::move(r))); }
+    static instr src(unsigned int r) { return instr(SRC{std::move(r)}); }
 
-    static instr fin(unsigned int r) { return instr(FIN(std::move(r))); }
+    static instr fin(unsigned int r) { return instr(FIN{std::move(r)}); }
 
-    static instr jin(unsigned int r) { return instr(JIN(std::move(r))); }
+    static instr jin(unsigned int r) { return instr(JIN{std::move(r)}); }
 
     static instr isz(unsigned int r, unsigned int a) {
-      return instr(ISZ(std::move(r), std::move(a)));
+      return instr(ISZ{std::move(r), std::move(a)});
     }
 
-    static instr bbl(unsigned int d) { return instr(BBL(std::move(d))); }
+    static instr bbl(unsigned int d) { return instr(BBL{std::move(d)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -738,7 +738,7 @@ struct CpuEmulator {
   }
 
   static state execute(const state &s, const instr &i);
-  static inline const state sample = state(
+  static inline const state sample = state{
       3u,
       List<unsigned int>::cons(
           1u,
@@ -774,7 +774,8 @@ struct CpuEmulator {
                                                                           List<
                                                                               unsigned int>::
                                                                               nil())))))))))))))))),
-      false, 10u,
+      false,
+      10u,
       List<unsigned int>::cons(
           20u, List<unsigned int>::cons(30u, List<unsigned int>::nil())),
       42u,
@@ -782,7 +783,7 @@ struct CpuEmulator {
           1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(
                           3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::nil())))));
+                                  4u, List<unsigned int>::nil()))))};
   static inline const unsigned int add_result =
       execute(sample, instr::add(4u)).ex_acc;
   static inline const unsigned int nop_acc =

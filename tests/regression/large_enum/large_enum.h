@@ -202,57 +202,57 @@ struct LargeEnum {
       auto &&_sv = *(this);
       if (std::holds_alternative<TNum>(_sv.v())) {
         const auto &[d_a0] = std::get<TNum>(_sv.v());
-        return tok(TNum(d_a0));
+        return tok(TNum{d_a0});
       } else if (std::holds_alternative<TPlus>(_sv.v())) {
-        return tok(TPlus());
+        return tok(TPlus{});
       } else if (std::holds_alternative<TMinus>(_sv.v())) {
-        return tok(TMinus());
+        return tok(TMinus{});
       } else if (std::holds_alternative<TStar>(_sv.v())) {
-        return tok(TStar());
+        return tok(TStar{});
       } else if (std::holds_alternative<TSlash>(_sv.v())) {
-        return tok(TSlash());
+        return tok(TSlash{});
       } else if (std::holds_alternative<TLParen>(_sv.v())) {
-        return tok(TLParen());
+        return tok(TLParen{});
       } else if (std::holds_alternative<TRParen>(_sv.v())) {
-        return tok(TRParen());
+        return tok(TRParen{});
       } else if (std::holds_alternative<TEq>(_sv.v())) {
-        return tok(TEq());
+        return tok(TEq{});
       } else if (std::holds_alternative<TBang>(_sv.v())) {
-        return tok(TBang());
+        return tok(TBang{});
       } else if (std::holds_alternative<TSemicolon>(_sv.v())) {
-        return tok(TSemicolon());
+        return tok(TSemicolon{});
       } else if (std::holds_alternative<TIdent>(_sv.v())) {
         const auto &[d_a0] = std::get<TIdent>(_sv.v());
-        return tok(TIdent(d_a0));
+        return tok(TIdent{d_a0});
       } else {
-        return tok(TEOF());
+        return tok(TEOF{});
       }
     }
 
     // CREATORS
-    static tok tnum(unsigned int a0) { return tok(TNum(std::move(a0))); }
+    static tok tnum(unsigned int a0) { return tok(TNum{std::move(a0)}); }
 
-    static tok tplus() { return tok(TPlus()); }
+    static tok tplus() { return tok(TPlus{}); }
 
-    static tok tminus() { return tok(TMinus()); }
+    static tok tminus() { return tok(TMinus{}); }
 
-    static tok tstar() { return tok(TStar()); }
+    static tok tstar() { return tok(TStar{}); }
 
-    static tok tslash() { return tok(TSlash()); }
+    static tok tslash() { return tok(TSlash{}); }
 
-    static tok tlparen() { return tok(TLParen()); }
+    static tok tlparen() { return tok(TLParen{}); }
 
-    static tok trparen() { return tok(TRParen()); }
+    static tok trparen() { return tok(TRParen{}); }
 
-    static tok teq() { return tok(TEq()); }
+    static tok teq() { return tok(TEq{}); }
 
-    static tok tbang() { return tok(TBang()); }
+    static tok tbang() { return tok(TBang{}); }
 
-    static tok tsemicolon() { return tok(TSemicolon()); }
+    static tok tsemicolon() { return tok(TSemicolon{}); }
 
-    static tok tident(unsigned int a0) { return tok(TIdent(std::move(a0))); }
+    static tok tident(unsigned int a0) { return tok(TIdent{std::move(a0)}); }
 
-    static tok teof() { return tok(TEOF()); }
+    static tok teof() { return tok(TEOF{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

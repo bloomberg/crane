@@ -49,18 +49,18 @@ struct MatchFallbackNat {
       auto &&_sv = *(this);
       if (std::holds_alternative<SomeNat>(_sv.v())) {
         const auto &[d_a0] = std::get<SomeNat>(_sv.v());
-        return maybe_nat(SomeNat(d_a0));
+        return maybe_nat(SomeNat{d_a0});
       } else {
-        return maybe_nat(NoneNat());
+        return maybe_nat(NoneNat{});
       }
     }
 
     // CREATORS
     static maybe_nat somenat(unsigned int a0) {
-      return maybe_nat(SomeNat(std::move(a0)));
+      return maybe_nat(SomeNat{std::move(a0)});
     }
 
-    static maybe_nat nonenat() { return maybe_nat(NoneNat()); }
+    static maybe_nat nonenat() { return maybe_nat(NoneNat{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

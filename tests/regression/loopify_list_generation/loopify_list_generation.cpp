@@ -74,7 +74,7 @@ List<unsigned int> LoopifyListGeneration::cycle(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified cycle: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -86,8 +86,8 @@ List<unsigned int> LoopifyListGeneration::cycle(
         _result = List<unsigned int>::nil();
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_Resume_n_(l));
-        _stack.emplace_back(_Enter(n_));
+        _stack.emplace_back(_Resume_n_{l});
+        _stack.emplace_back(_Enter{n_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
@@ -140,7 +140,7 @@ List<unsigned int> LoopifyListGeneration::replicate_list(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified replicate_list: _Enter -> _Resume_n.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -158,8 +158,8 @@ List<unsigned int> LoopifyListGeneration::replicate_list(
         const unsigned int &n = d_a0.first;
         const unsigned int &x = d_a0.second;
         List<unsigned int> rep = replicate(n, x);
-        _stack.emplace_back(_Resume_n(std::move(rep)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_n{std::move(rep)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n>(_frame));

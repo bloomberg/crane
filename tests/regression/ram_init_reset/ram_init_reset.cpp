@@ -1,8 +1,9 @@
 #include "ram_init_reset.h"
 
 RamInitReset::state RamInitReset::reset_state(const RamInitReset::state &s) {
-  return state(s.state_regs, 0u, false, 0u, List<unsigned int>::nil(),
-               s.state_ram, default_sel, s.state_rom);
+  return state{
+      s.state_regs, 0u,          false,      0u, List<unsigned int>::nil(),
+      s.state_ram,  default_sel, s.state_rom};
 }
 
 std::pair<std::optional<unsigned int>, RamInitReset::state>
@@ -14,8 +15,8 @@ RamInitReset::pop_stack(RamInitReset::state s) {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<unsigned int>(d_a0),
-                          state(s.state_regs, s.state_acc, s.state_carry,
+                          state{s.state_regs, s.state_acc, s.state_carry,
                                 s.state_pc, *(d_a1), s.state_ram, s.state_sel,
-                                s.state_rom));
+                                s.state_rom});
   }
 }

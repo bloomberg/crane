@@ -3,5 +3,5 @@
 NestedRecordUpdateQual::Shadow
 NestedRecordUpdateQual::bump(const NestedRecordUpdateQual::Shadow &x) {
   unsigned int n = x.value;
-  return Shadow((n + 1));
+  return Shadow{(n + 1)};
 }

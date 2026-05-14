@@ -20,7 +20,7 @@ List<unsigned int> LoopifyListOfLists::intercalate(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&ll));
+  _stack.emplace_back(_Enter{&ll});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -39,8 +39,8 @@ List<unsigned int> LoopifyListOfLists::intercalate(
                 _sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Resume_Cons(d_a0, sep));
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Resume_Cons{d_a0, sep});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
@@ -211,7 +211,7 @@ unsigned int LoopifyListOfLists::list_len(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified list_len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -224,8 +224,8 @@ unsigned int LoopifyListOfLists::list_len(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons(1u));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{1u});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -252,7 +252,7 @@ unsigned int LoopifyListOfLists::total_length(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&ll));
+  _stack.emplace_back(_Enter{&ll});
   /// Loopified total_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -266,8 +266,8 @@ unsigned int LoopifyListOfLists::total_length(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons(list_len(d_a0)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{list_len(d_a0)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -299,7 +299,7 @@ List<unsigned int> LoopifyListOfLists::flatten(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&ll));
+  _stack.emplace_back(_Enter{&ll});
   /// Loopified flatten: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -313,8 +313,8 @@ List<unsigned int> LoopifyListOfLists::flatten(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -341,7 +341,7 @@ unsigned int LoopifyListOfLists::count_total(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&ll));
+  _stack.emplace_back(_Enter{&ll});
   /// Loopified count_total: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -355,8 +355,8 @@ unsigned int LoopifyListOfLists::count_total(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons(list_len(d_a0)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{list_len(d_a0)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -485,7 +485,7 @@ unsigned int LoopifyListOfLists::max_length(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&ll));
+  _stack.emplace_back(_Enter{&ll});
   /// Loopified max_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -499,8 +499,8 @@ unsigned int LoopifyListOfLists::max_length(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons(list_len(d_a0)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{list_len(d_a0)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

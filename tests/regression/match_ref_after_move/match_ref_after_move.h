@@ -67,11 +67,11 @@ struct MatchRefAfterMove {
         const mylist<t_A> *_src = _frame._src;
         mylist<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil();
+          _dst->d_v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons(
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr);
+          _dst->d_v_ = Mycons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -84,20 +84,20 @@ struct MatchRefAfterMove {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil();
+        this->d_v_ = Mynil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons(
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr);
+        this->d_v_ = Mycons{
+            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil()); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
     static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
-          Mycons(std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))));
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -206,7 +206,7 @@ struct MatchRefAfterMove {
     mypair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Mkpair>(_sv.v());
-      return mypair<t_A, t_B>(Mkpair(d_a0, d_a1));
+      return mypair<t_A, t_B>(Mkpair{d_a0, d_a1});
     }
 
     // CREATORS
@@ -214,11 +214,11 @@ struct MatchRefAfterMove {
     explicit mypair(const mypair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename mypair<_U0, _U1>::Mkpair>(_other.v());
-      this->d_v_ = Mkpair(t_A(d_a0), t_B(d_a1));
+      this->d_v_ = Mkpair{t_A(d_a0), t_B(d_a1)};
     }
 
     static mypair<t_A, t_B> mkpair(t_A a0, t_B a1) {
-      return mypair(Mkpair(std::move(a0), std::move(a1)));
+      return mypair(Mkpair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
@@ -375,10 +375,10 @@ struct MatchRefAfterMove {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
-        return either<t_A, t_B>(Left(d_a0));
+        return either<t_A, t_B>(Left{d_a0});
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        return either<t_A, t_B>(Right(d_a0));
+        return either<t_A, t_B>(Right{d_a0});
       }
     }
 
@@ -388,18 +388,18 @@ struct MatchRefAfterMove {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        this->d_v_ = Left(t_A(d_a0));
+        this->d_v_ = Left{t_A(d_a0)};
       } else {
         const auto &[d_a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        this->d_v_ = Right(t_B(d_a0));
+        this->d_v_ = Right{t_B(d_a0)};
       }
     }
 
-    static either<t_A, t_B> left(t_A a0) { return either(Left(std::move(a0))); }
+    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
 
     static either<t_A, t_B> right(t_B a0) {
-      return either(Right(std::move(a0)));
+      return either(Right{std::move(a0)});
     }
 
     // MANIPULATORS

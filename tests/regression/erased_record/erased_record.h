@@ -15,8 +15,8 @@ struct ErasedRecord {
 
     // ACCESSORS
     ManyProps clone() const {
-      return ManyProps((*(this)).field0, (*(this)).field1, (*(this)).field2,
-                       (*(this)).field3, (*(this)).field4);
+      return ManyProps{(*(this)).field0, (*(this)).field1, (*(this)).field2,
+                       (*(this)).field3, (*(this)).field4};
     }
   };
 
@@ -30,17 +30,17 @@ struct ErasedRecord {
 
     // ACCESSORS
     MostlyProps clone() const {
-      return MostlyProps((*(this)).real1, (*(this)).real2, (*(this)).real3);
+      return MostlyProps{(*(this)).real1, (*(this)).real2, (*(this)).real3};
     }
   };
 
   static unsigned int access_mostly_props(const MostlyProps &r);
   static inline const unsigned int test1 =
-      complex_match(ManyProps(1u, 2u, 3u, 4u, 5u));
+      complex_match(ManyProps{1u, 2u, 3u, 4u, 5u});
   static inline const unsigned int test2 =
-      unusual_body(ManyProps(1u, 2u, 3u, 4u, 5u));
+      unusual_body(ManyProps{1u, 2u, 3u, 4u, 5u});
   static inline const unsigned int test3 =
-      access_mostly_props(MostlyProps(5u, 10u, 15u));
+      access_mostly_props(MostlyProps{5u, 10u, 15u});
 };
 
 #endif // INCLUDED_ERASED_RECORD

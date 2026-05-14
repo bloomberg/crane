@@ -17,7 +17,7 @@ unsigned int MemSafetyProbe9::sum_fns(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_fns: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -32,8 +32,8 @@ unsigned int MemSafetyProbe9::sum_fns(
       } else {
         const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe9::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons(d_a0(0u)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{d_a0(0u)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -66,7 +66,7 @@ MemSafetyProbe9::collect_subtree_sums(
   MemSafetyProbe9::mylist<std::function<unsigned int(unsigned int)>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(acc, &t));
+  _stack.emplace_back(_Enter{acc, &t});
   /// Loopified collect_subtree_sums: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -83,19 +83,19 @@ MemSafetyProbe9::collect_subtree_sums(
             std::get<typename MemSafetyProbe9::tree::Node>(t.v());
         MemSafetyProbe9::tree d_a0_value = *(d_a0);
         MemSafetyProbe9::tree d_a2_value = *(d_a2);
-        _stack.emplace_back(_Resume_Node(d_a0.get()));
+        _stack.emplace_back(_Resume_Node{d_a0.get()});
         _stack.emplace_back(
-            _Enter(mylist<std::function<unsigned int(unsigned int)>>::mycons(
+            _Enter{mylist<std::function<unsigned int(unsigned int)>>::mycons(
                        [=](auto _xarg0) mutable {
                          return _collect_subtree_sums_f(_xarg0, d_a0_value,
                                                         d_a1, d_a2_value);
                        },
                        std::move(acc)),
-                   d_a2.get()));
+                   d_a2.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _stack.emplace_back(_Enter(std::move(_result), _f.d_a0_value));
+      _stack.emplace_back(_Enter{std::move(_result), _f.d_a0_value});
     }
   }
   return _result;
@@ -124,7 +124,7 @@ MemSafetyProbe9::collect_left_sums(
   MemSafetyProbe9::mylist<std::function<unsigned int(unsigned int)>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(acc, &t));
+  _stack.emplace_back(_Enter{acc, &t});
   /// Loopified collect_left_sums: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -141,18 +141,18 @@ MemSafetyProbe9::collect_left_sums(
             std::get<typename MemSafetyProbe9::tree::Node>(t.v());
         MemSafetyProbe9::tree d_a0_value = *(d_a0);
         MemSafetyProbe9::tree d_a2_value = *(d_a2);
-        _stack.emplace_back(_Resume_Node(d_a0.get()));
+        _stack.emplace_back(_Resume_Node{d_a0.get()});
         _stack.emplace_back(
-            _Enter(mylist<std::function<unsigned int(unsigned int)>>::mycons(
+            _Enter{mylist<std::function<unsigned int(unsigned int)>>::mycons(
                        [=](auto _xarg0) mutable {
                          return _collect_left_sums_f(_xarg0, d_a0_value);
                        },
                        std::move(acc)),
-                   d_a2.get()));
+                   d_a2.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _stack.emplace_back(_Enter(std::move(_result), _f.d_a0_value));
+      _stack.emplace_back(_Enter{std::move(_result), _f.d_a0_value});
     }
   }
   return _result;
@@ -217,7 +217,7 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
   MemSafetyProbe9::tree _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified make_balanced: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -229,13 +229,13 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
         _result = tree::leaf();
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_After_n_(n_, n));
-        _stack.emplace_back(_Enter(n_));
+        _stack.emplace_back(_After_n_{n_, n});
+        _stack.emplace_back(_Enter{n_});
       }
     } else if (std::holds_alternative<_After_n_>(_frame)) {
       auto _f = std::move(std::get<_After_n_>(_frame));
-      _stack.emplace_back(_Combine_n_(std::move(_result), _f.n));
-      _stack.emplace_back(_Enter(_f.n_));
+      _stack.emplace_back(_Combine_n_{std::move(_result), _f.n});
+      _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
       _result = tree::node(_result, _f.n, _f._result);

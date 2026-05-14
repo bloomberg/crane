@@ -108,12 +108,12 @@ template <OrderedType K, BaseType V> struct MakeMap {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty();
+          _dst->d_v_ = Empty{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->d_v_ =
-              Node(_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2, _alt.d_a3 ? std::make_unique<tree>() : nullptr);
+              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
+                   _alt.d_a2, _alt.d_a3 ? std::make_unique<tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -127,11 +127,11 @@ template <OrderedType K, BaseType V> struct MakeMap {
     }
 
     // CREATORS
-    static tree empty() { return tree(Empty()); }
+    static tree empty() { return tree(Empty{}); }
 
     static tree node(tree a0, key a1, value a2, tree a3) {
-      return tree(Node(std::make_unique<tree>(std::move(a0)), std::move(a1),
-                       std::move(a2), std::make_unique<tree>(std::move(a3))));
+      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+                       std::move(a2), std::make_unique<tree>(std::move(a3))});
     }
 
     // MANIPULATORS

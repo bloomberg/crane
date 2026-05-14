@@ -25,10 +25,10 @@ TimingPreservesWfSimple::execute(const TimingPreservesWfSimple::state &s,
                                  const TimingPreservesWfSimple::Instr i) {
   switch (i) {
   case Instr::e_JMS: {
-    return state(s.regs_len, s.rom_len, s.pc, (s.stack_len + 1));
+    return state{s.regs_len, s.rom_len, s.pc, (s.stack_len + 1)};
   }
   default: {
-    return state(s.regs_len, s.rom_len, s.pc, s.stack_len);
+    return state{s.regs_len, s.rom_len, s.pc, s.stack_len};
   }
   }
 }

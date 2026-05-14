@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -172,13 +172,13 @@ struct PromOps {
 
     // ACCESSORS
     state1 clone() const {
-      return state1((*(this)).prom_data1, (*(this)).prom_enable1);
+      return state1{(*(this)).prom_data1, (*(this)).prom_enable1};
     }
   };
 
   static unsigned int prom_data_or_zero(const state1 &s);
   static inline const unsigned int test1 =
-      prom_data_or_zero(state1(77u, false));
+      prom_data_or_zero(state1{77u, false});
 
   struct state2 {
     unsigned int acc2;
@@ -188,14 +188,14 @@ struct PromOps {
 
     // ACCESSORS
     state2 clone() const {
-      return state2((*(this)).acc2, (*(this)).prom_addr2, (*(this)).prom_data2,
-                    (*(this)).prom_enable2);
+      return state2{(*(this)).acc2, (*(this)).prom_addr2, (*(this)).prom_data2,
+                    (*(this)).prom_enable2};
     }
   };
 
   static unsigned int flagged_sum(const state2 &s);
   static inline const unsigned int test2 =
-      flagged_sum(state2(3u, 12u, 77u, false));
+      flagged_sum(state2{3u, 12u, 77u, false});
 
   struct state3 {
     unsigned int acc3;
@@ -216,12 +216,21 @@ struct PromOps {
 
     // ACCESSORS
     state3 clone() const {
-      return state3(
-          (*(this)).acc3, (*(this)).regs3.clone(), (*(this)).carry3,
-          (*(this)).pc3, (*(this)).stack3.clone(), (*(this)).ram_sys3.clone(),
-          (*(this)).cur_bank3, (*(this)).sel_ram3, (*(this)).rom_ports3.clone(),
-          (*(this)).sel_rom3, (*(this)).rom3.clone(), (*(this)).test_pin3,
-          (*(this)).prom_addr3, (*(this)).prom_data3, (*(this)).prom_enable3);
+      return state3{(*(this)).acc3,
+                    (*(this)).regs3.clone(),
+                    (*(this)).carry3,
+                    (*(this)).pc3,
+                    (*(this)).stack3.clone(),
+                    (*(this)).ram_sys3.clone(),
+                    (*(this)).cur_bank3,
+                    (*(this)).sel_ram3,
+                    (*(this)).rom_ports3.clone(),
+                    (*(this)).sel_rom3,
+                    (*(this)).rom3.clone(),
+                    (*(this)).test_pin3,
+                    (*(this)).prom_addr3,
+                    (*(this)).prom_data3,
+                    (*(this)).prom_enable3};
     }
   };
 
@@ -229,16 +238,24 @@ struct PromOps {
                                  const unsigned int data, const bool enable);
   static inline const unsigned int test3 = []() {
     return []() {
-      state3 s = state3(
+      state3 s = state3{
           1u,
           List<unsigned int>::cons(
               2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())),
-          false, 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()),
-          List<unsigned int>::cons(6u, List<unsigned int>::nil()), 0u, 0u,
-          List<unsigned int>::cons(7u, List<unsigned int>::nil()), 0u,
+          false,
+          4u,
+          List<unsigned int>::cons(5u, List<unsigned int>::nil()),
+          List<unsigned int>::cons(6u, List<unsigned int>::nil()),
+          0u,
+          0u,
+          List<unsigned int>::cons(7u, List<unsigned int>::nil()),
+          0u,
           List<unsigned int>::cons(
               8u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
-          true, 0u, 0u, false);
+          true,
+          0u,
+          0u,
+          false};
       state3 s_ = set_prom_params3(std::move(s), 21u, 144u, true);
       return (
           (s_.prom_addr3 + (s_.prom_enable3 ? std::move(s_).prom_data3 : 0u)) +
@@ -247,16 +264,24 @@ struct PromOps {
   }();
   static inline const unsigned int test4 = []() {
     return []() {
-      state3 s = state3(
+      state3 s = state3{
           1u,
           List<unsigned int>::cons(
               2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())),
-          false, 4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()),
-          List<unsigned int>::cons(6u, List<unsigned int>::nil()), 0u, 0u,
-          List<unsigned int>::cons(7u, List<unsigned int>::nil()), 0u,
+          false,
+          4u,
+          List<unsigned int>::cons(5u, List<unsigned int>::nil()),
+          List<unsigned int>::cons(6u, List<unsigned int>::nil()),
+          0u,
+          0u,
+          List<unsigned int>::cons(7u, List<unsigned int>::nil()),
+          0u,
           List<unsigned int>::cons(
               8u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
-          true, 0u, 0u, false);
+          true,
+          0u,
+          0u,
+          false};
       state3 s_ = set_prom_params3(std::move(s), 21u, 144u, true);
       return (
           (s_.prom_addr3 + (s_.prom_enable3 ? std::move(s_).prom_data3 : 0u)) +
@@ -274,9 +299,9 @@ struct PromOps {
 
     // ACCESSORS
     state5 clone() const {
-      return state5((*(this)).acc5, (*(this)).regs5.clone(),
+      return state5{(*(this)).acc5,         (*(this)).regs5.clone(),
                     (*(this)).rom5.clone(), (*(this)).prom_addr5,
-                    (*(this)).prom_data5, (*(this)).prom_enable5);
+                    (*(this)).prom_data5,   (*(this)).prom_enable5};
     }
   };
 
@@ -284,7 +309,7 @@ struct PromOps {
                                  const unsigned int data, const bool enable);
   static inline const unsigned int test5 = []() {
     return []() {
-      state5 s = state5(
+      state5 s = state5{
           3u,
           List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
@@ -292,7 +317,9 @@ struct PromOps {
               9u,
               List<unsigned int>::cons(
                   8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
-          0u, 0u, false);
+          0u,
+          0u,
+          false};
       state5 s_ = set_prom_params5(std::move(s), 23u, 77u, true);
       return ((s_.acc5 + s_.prom_addr5) +
               (s_.prom_enable5 ? std::move(s_).prom_data5 : 0u));
@@ -307,20 +334,20 @@ struct PromOps {
 
     // ACCESSORS
     state6 clone() const {
-      return state6((*(this)).rom6.clone(), (*(this)).prom_addr6,
-                    (*(this)).prom_data6, (*(this)).prom_enable6);
+      return state6{(*(this)).rom6.clone(), (*(this)).prom_addr6,
+                    (*(this)).prom_data6, (*(this)).prom_enable6};
     }
   };
 
   static state6 set_prom_params6(const state6 &s, const unsigned int addr,
                                  const unsigned int data, const bool enable);
   static inline const state6 sample6 =
-      state6(List<unsigned int>::cons(
+      state6{List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
                           11u, List<unsigned int>::cons(
                                    12u, List<unsigned int>::cons(
                                             13u, List<unsigned int>::nil())))),
-             0u, 0u, false);
+             0u, 0u, false};
   static inline const bool test6 =
       Bool::eqb(set_prom_params6(sample6, 2u, 99u, true).prom_enable6, true);
 
@@ -333,22 +360,22 @@ struct PromOps {
 
     // ACCESSORS
     state7 clone() const {
-      return state7((*(this)).regs7.clone(), (*(this)).ram_sys7.clone(),
+      return state7{(*(this)).regs7.clone(), (*(this)).ram_sys7.clone(),
                     (*(this)).prom_addr7, (*(this)).prom_data7,
-                    (*(this)).prom_enable7);
+                    (*(this)).prom_enable7};
     }
   };
 
   static state7 set_prom_params7(const state7 &s, const unsigned int addr,
                                  const unsigned int data, const bool enable);
-  static inline const state7 sample7 = state7(
+  static inline const state7 sample7 = state7{
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
       List<unsigned int>::cons(
           9u, List<unsigned int>::cons(
                   8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
-      0u, 0u, false);
+      0u, 0u, false};
   static inline const bool test7 = nat_list_eqb(
       set_prom_params7(sample7, 12u, 99u, true).ram_sys7, sample7.ram_sys7);
 
@@ -361,21 +388,21 @@ struct PromOps {
 
     // ACCESSORS
     state8 clone() const {
-      return state8((*(this)).regs8.clone(), (*(this)).ram_sys8.clone(),
+      return state8{(*(this)).regs8.clone(), (*(this)).ram_sys8.clone(),
                     (*(this)).prom_addr8, (*(this)).prom_data8,
-                    (*(this)).prom_enable8);
+                    (*(this)).prom_enable8};
     }
   };
 
   static state8 set_prom_params8(const state8 &s, const unsigned int addr,
                                  const unsigned int data, const bool enable);
-  static inline const state8 sample8 = state8(
+  static inline const state8 sample8 = state8{
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
       List<unsigned int>::cons(
           9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
-      0u, 0u, false);
+      0u, 0u, false};
   static inline const bool test8 = nat_list_eqb(
       set_prom_params8(sample8, 12u, 99u, true).regs8, sample8.regs8);
 
@@ -387,20 +414,20 @@ struct PromOps {
 
     // ACCESSORS
     state9 clone() const {
-      return state9((*(this)).rom9.clone(), (*(this)).prom_addr9,
-                    (*(this)).prom_data9, (*(this)).prom_enable9);
+      return state9{(*(this)).rom9.clone(), (*(this)).prom_addr9,
+                    (*(this)).prom_data9, (*(this)).prom_enable9};
     }
   };
 
   static state9 set_prom_params9(const state9 &s, const unsigned int addr,
                                  const unsigned int data, const bool enable);
   static inline const state9 sample9 =
-      state9(List<unsigned int>::cons(
+      state9{List<unsigned int>::cons(
                  10u, List<unsigned int>::cons(
                           11u, List<unsigned int>::cons(
                                    12u, List<unsigned int>::cons(
                                             13u, List<unsigned int>::nil())))),
-             0u, 0u, false);
+             0u, 0u, false};
   static inline const bool test9 =
       set_prom_params9(sample9, 12u, 99u, true).rom9.length() ==
       sample9.rom9.length();
@@ -420,18 +447,24 @@ struct PromOps {
 
     // ACCESSORS
     state10 clone() const {
-      return state10((*(this)).regs10.clone(), (*(this)).rom10.clone(),
-                     (*(this)).acc10, (*(this)).pc10, (*(this)).stack10.clone(),
-                     (*(this)).cur_bank10, (*(this)).rom_ports10.clone(),
-                     (*(this)).sel_rom10, (*(this)).prom_addr10,
-                     (*(this)).prom_data10, (*(this)).prom_enable10);
+      return state10{(*(this)).regs10.clone(),
+                     (*(this)).rom10.clone(),
+                     (*(this)).acc10,
+                     (*(this)).pc10,
+                     (*(this)).stack10.clone(),
+                     (*(this)).cur_bank10,
+                     (*(this)).rom_ports10.clone(),
+                     (*(this)).sel_rom10,
+                     (*(this)).prom_addr10,
+                     (*(this)).prom_data10,
+                     (*(this)).prom_enable10};
     }
   };
 
   static state10 set_prom_params10(const state10 &s, const unsigned int addr,
                                    const unsigned int data, const bool enable);
   static state10 execute_wpm10(const state10 &s);
-  static inline const state10 sample10 = state10(
+  static inline const state10 sample10 = state10{
       List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(
@@ -453,7 +486,8 @@ struct PromOps {
                                   16u,
                                   List<unsigned int>::cons(
                                       17u, List<unsigned int>::nil())))))))),
-      7u, 1025u,
+      7u,
+      1025u,
       List<unsigned int>::cons(
           7u, List<unsigned int>::cons(9u, List<unsigned int>::nil())),
       2u,
@@ -462,7 +496,10 @@ struct PromOps {
                   4u, List<unsigned int>::cons(
                           5u, List<unsigned int>::cons(
                                   6u, List<unsigned int>::nil())))),
-      5u, 0u, 0u, false);
+      5u,
+      0u,
+      0u,
+      false};
   static inline const bool check_pc_bound = []() {
     state10 after = execute_wpm10(set_prom_params10(sample10, 3u, 99u, true));
     return std::move(after).pc10 < 4096u;
@@ -522,17 +559,17 @@ struct PromOps {
 
     // ACCESSORS
     state11 clone() const {
-      return state11((*(this)).rom11.clone(), (*(this)).prom_addr11,
-                     (*(this)).prom_data11, (*(this)).prom_enable11);
+      return state11{(*(this)).rom11.clone(), (*(this)).prom_addr11,
+                     (*(this)).prom_data11, (*(this)).prom_enable11};
     }
   };
 
   static state11 execute_wpm11(state11 s);
-  static inline const state11 sample11 = state11(
+  static inline const state11 sample11 = state11{
       List<unsigned int>::cons(
           0u, List<unsigned int>::cons(
                   0u, List<unsigned int>::cons(0u, List<unsigned int>::nil()))),
-      1u, 9u, true);
+      1u, 9u, true};
   static inline const unsigned int test11 = ListDef::template nth<unsigned int>(
       1u, execute_wpm11(sample11).rom11, 0u);
   static inline const std::pair<

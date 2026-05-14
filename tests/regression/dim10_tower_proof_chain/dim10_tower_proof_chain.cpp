@@ -27,7 +27,7 @@ Dim10TowerProofChainCase::qpos_denom(const Dim10TowerProofChainCase::QPos &q) {
 
 Dim10TowerProofChainCase::QPos
 Dim10TowerProofChainCase::nat_to_qpos(const unsigned int n) {
-  return QPos(n, 0u);
+  return QPos{n, 0u};
 }
 
 unsigned int Dim10TowerProofChainCase::nat_sub(const unsigned int n,
@@ -59,7 +59,7 @@ unsigned int Dim10TowerProofChainCase::layer_dim(const unsigned int base_dim,
 Dim10TowerProofChainCase::GradedObj
 Dim10TowerProofChainCase::layer_obj(const unsigned int base_dim,
                                     const unsigned int n) {
-  return GradedObj(layer_dim(base_dim, n));
+  return GradedObj{layer_dim(base_dim, n)};
 }
 
 Dim10TowerProofChainCase::QPos
@@ -76,7 +76,7 @@ Dim10TowerProofChainCase::layer_measure_eventually_zero(
 
 Dim10TowerProofChainCase::GradedObj Dim10TowerProofChainCase::P_n_obj(
     const unsigned int n, const Dim10TowerProofChainCase::GradedObj &x) {
-  return GradedObj(poly_approx_dim(x.go_dim, n));
+  return GradedObj{poly_approx_dim(x.go_dim, n)};
 }
 
 Dim10TowerProofChainCase::GradedObj
@@ -99,11 +99,11 @@ Dim10TowerProofChainCase::D_n_measure_eventually_zero(const unsigned int _x0) {
 Dim10TowerProofChainCase::GradedGoodwillieTower
 Dim10TowerProofChainCase::make_graded_goodwillie_tower(
     const unsigned int base_dim) {
-  return GradedGoodwillieTower(
+  return GradedGoodwillieTower{
       [=](const unsigned int n) mutable {
-        return P_n_obj(n, GradedObj(base_dim));
+        return P_n_obj(n, GradedObj{base_dim});
       },
-      [=](const unsigned int n) mutable { return D_n_obj(base_dim, n); });
+      [=](const unsigned int n) mutable { return D_n_obj(base_dim, n); }};
 }
 
 SigT<unsigned int, std::any>
@@ -137,7 +137,7 @@ Dim10TowerProofChainCase::graded_complete_proof_chain(
 Dim10TowerProofChainCase::GoodwillieProofChain
 Dim10TowerProofChainCase::make_goodwillie_proof_chain(
     const unsigned int base_dim) {
-  return GoodwillieProofChain(D_n_measure_eventually_zero(base_dim),
+  return GoodwillieProofChain{D_n_measure_eventually_zero(base_dim),
                               graded_goodwillie_layers_stabilize(base_dim),
-                              graded_goodwillie_P_stabilizes(base_dim));
+                              graded_goodwillie_P_stabilizes(base_dim)};
 }

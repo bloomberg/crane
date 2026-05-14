@@ -19,7 +19,7 @@ unsigned int LoopifyNumbers::factorial(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified factorial: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -31,8 +31,8 @@ unsigned int LoopifyNumbers::factorial(
         _result = 1u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m(n));
-        _stack.emplace_back(_Enter(m));
+        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -65,7 +65,7 @@ unsigned int LoopifyNumbers::fib(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified fib: _Enter -> _After_m -> _Combine_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -81,14 +81,14 @@ unsigned int LoopifyNumbers::fib(
           _result = 1u;
         } else {
           unsigned int m = n_ - 1;
-          _stack.emplace_back(_After_m(n_));
-          _stack.emplace_back(_Enter(m));
+          _stack.emplace_back(_After_m{n_});
+          _stack.emplace_back(_Enter{m});
         }
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_Combine_m(_result));
-      _stack.emplace_back(_Enter(_f.n_));
+      _stack.emplace_back(_Combine_m{_result});
+      _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
       _result = (_result + _f._result);
@@ -133,7 +133,7 @@ unsigned int LoopifyNumbers::tribonacci_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified tribonacci_fuel: _Enter -> _After_m -> _After_m_1 -> _Combine_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -158,20 +158,20 @@ unsigned int LoopifyNumbers::tribonacci_fuel(
               _result = 1u;
             } else {
               unsigned int m = n1 - 1;
-              _stack.emplace_back(_After_m((m + 1), f, ((m + 1) + 1), f));
-              _stack.emplace_back(_Enter(m, f));
+              _stack.emplace_back(_After_m{(m + 1), f, ((m + 1) + 1), f});
+              _stack.emplace_back(_Enter{m, f});
             }
           }
         }
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1(_result, _f._s2, _f.f_1));
-      _stack.emplace_back(_Enter(_f.m, _f.f_0));
+      _stack.emplace_back(_After_m_1{_result, _f._s2, _f.f_1});
+      _stack.emplace_back(_Enter{_f.m, _f.f_0});
     } else if (std::holds_alternative<_After_m_1>(_frame)) {
       auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m(_f._result, _result));
-      _stack.emplace_back(_Enter(_f._s1, _f.f));
+      _stack.emplace_back(_Combine_m{_f._result, _result});
+      _stack.emplace_back(_Enter{_f._s1, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
       _result = (_result + (_f._result_1 + _f._result_0));
@@ -243,7 +243,7 @@ unsigned int LoopifyNumbers::binomial(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(k, n));
+  _stack.emplace_back(_Enter{k, n});
   /// Loopified binomial: _Enter -> _After_k_ -> _Combine_k_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -265,14 +265,14 @@ unsigned int LoopifyNumbers::binomial(
           _result = 1u;
         } else {
           unsigned int k_ = k - 1;
-          _stack.emplace_back(_After_k_(k_, n_));
-          _stack.emplace_back(_Enter(k, n_));
+          _stack.emplace_back(_After_k_{k_, n_});
+          _stack.emplace_back(_Enter{k, n_});
         }
       }
     } else if (std::holds_alternative<_After_k_>(_frame)) {
       auto _f = std::move(std::get<_After_k_>(_frame));
-      _stack.emplace_back(_Combine_k_(_result));
-      _stack.emplace_back(_Enter(_f.k_, _f.n_));
+      _stack.emplace_back(_Combine_k_{_result});
+      _stack.emplace_back(_Enter{_f.k_, _f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_k_>(_frame));
       _result = (_result + _f._result);
@@ -307,7 +307,7 @@ unsigned int LoopifyNumbers::pascal(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(col, row));
+  _stack.emplace_back(_Enter{col, row});
   /// Loopified pascal: _Enter -> _After_r -> _Combine_r.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -324,14 +324,14 @@ unsigned int LoopifyNumbers::pascal(
           _result = 0u;
         } else {
           unsigned int r = row - 1;
-          _stack.emplace_back(_After_r(c, r));
-          _stack.emplace_back(_Enter((c + 1), r));
+          _stack.emplace_back(_After_r{c, r});
+          _stack.emplace_back(_Enter{(c + 1), r});
         }
       }
     } else if (std::holds_alternative<_After_r>(_frame)) {
       auto _f = std::move(std::get<_After_r>(_frame));
-      _stack.emplace_back(_Combine_r(_result));
-      _stack.emplace_back(_Enter(_f.c, _f.r));
+      _stack.emplace_back(_Combine_r{_result});
+      _stack.emplace_back(_Enter{_f.c, _f.r});
     } else {
       auto _f = std::move(std::get<_Combine_r>(_frame));
       _result = (_result + _f._result);
@@ -361,7 +361,7 @@ unsigned int LoopifyNumbers::ackermann_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, m, fuel));
+  _stack.emplace_back(_Enter{n, m, fuel});
   /// Loopified ackermann_fuel: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -380,17 +380,17 @@ unsigned int LoopifyNumbers::ackermann_fuel(
         } else {
           unsigned int m_ = m - 1;
           if (n <= 0) {
-            _stack.emplace_back(_Enter(1u, m_, f));
+            _stack.emplace_back(_Enter{1u, m_, f});
           } else {
             unsigned int n_ = n - 1;
-            _stack.emplace_back(_Resume_n_(m_, f));
-            _stack.emplace_back(_Enter(n_, m, f));
+            _stack.emplace_back(_Resume_n_{m_, f});
+            _stack.emplace_back(_Enter{n_, m, f});
           }
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _stack.emplace_back(_Enter(_result, _f.m_, _f.f));
+      _stack.emplace_back(_Enter{_result, _f.m_, _f.f});
     }
   }
   return _result;
@@ -420,7 +420,7 @@ unsigned int LoopifyNumbers::collatz_length_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_length_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -437,11 +437,11 @@ unsigned int LoopifyNumbers::collatz_length_fuel(
           _result = 0u;
         } else {
           if ((2u ? n % 2u : n) == 0u) {
-            _stack.emplace_back(_Resume1());
-            _stack.emplace_back(_Enter((2u ? n / 2u : 0), f));
+            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Enter{(2u ? n / 2u : 0), f});
           } else {
-            _stack.emplace_back(_Resume2());
-            _stack.emplace_back(_Enter(((3u * n) + 1u), f));
+            _stack.emplace_back(_Resume2{});
+            _stack.emplace_back(_Enter{((3u * n) + 1u), f});
           }
         }
       }
@@ -480,7 +480,7 @@ unsigned int LoopifyNumbers::digitsum_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified digitsum_fuel: _Enter -> _Resume__x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -497,8 +497,8 @@ unsigned int LoopifyNumbers::digitsum_fuel(
           _result = 0u;
         } else {
           unsigned int _x = n - 1;
-          _stack.emplace_back(_Resume__x((10u ? n % 10u : n)));
-          _stack.emplace_back(_Enter((10u ? n / 10u : 0), f));
+          _stack.emplace_back(_Resume__x{(10u ? n % 10u : n)});
+          _stack.emplace_back(_Enter{(10u ? n / 10u : 0), f});
         }
       }
     } else {
@@ -533,7 +533,7 @@ unsigned int LoopifyNumbers::dec_to_bin_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified dec_to_bin_fuel: _Enter -> _Cont__x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -551,8 +551,8 @@ unsigned int LoopifyNumbers::dec_to_bin_fuel(
         } else {
           unsigned int _x = n - 1;
           unsigned int digit = (2u ? n % 2u : n);
-          _stack.emplace_back(_Cont__x(digit));
-          _stack.emplace_back(_Enter((2u ? n / 2u : 0), f));
+          _stack.emplace_back(_Cont__x{digit});
+          _stack.emplace_back(_Enter{(2u ? n / 2u : 0), f});
         }
       }
     } else {
@@ -586,7 +586,7 @@ unsigned int LoopifyNumbers::sum_to(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified sum_to: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -598,8 +598,8 @@ unsigned int LoopifyNumbers::sum_to(
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m(n));
-        _stack.emplace_back(_Enter(m));
+        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -626,7 +626,7 @@ unsigned int LoopifyNumbers::sum_squares(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified sum_squares: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -638,8 +638,8 @@ unsigned int LoopifyNumbers::sum_squares(
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m((n * n)));
-        _stack.emplace_back(_Enter(m));
+        _stack.emplace_back(_Resume_m{(n * n)});
+        _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -713,7 +713,7 @@ unsigned int LoopifyNumbers::staircase_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified staircase_fuel: _Enter -> _After_m -> _After_m_1 -> _Combine_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -738,20 +738,20 @@ unsigned int LoopifyNumbers::staircase_fuel(
               _result = 2u;
             } else {
               unsigned int m = n1 - 1;
-              _stack.emplace_back(_After_m((m + 1), f, ((m + 1) + 1), f));
-              _stack.emplace_back(_Enter(m, f));
+              _stack.emplace_back(_After_m{(m + 1), f, ((m + 1) + 1), f});
+              _stack.emplace_back(_Enter{m, f});
             }
           }
         }
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1(_result, _f._s2, _f.f_1));
-      _stack.emplace_back(_Enter(_f.m, _f.f_0));
+      _stack.emplace_back(_After_m_1{_result, _f._s2, _f.f_1});
+      _stack.emplace_back(_Enter{_f.m, _f.f_0});
     } else if (std::holds_alternative<_After_m_1>(_frame)) {
       auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m(_f._result, _result));
-      _stack.emplace_back(_Enter(_f._s1, _f.f));
+      _stack.emplace_back(_Combine_m{_f._result, _result});
+      _stack.emplace_back(_Enter{_f._s1, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
       _result = (_result + (_f._result_1 + _f._result_0));
@@ -799,7 +799,7 @@ unsigned int LoopifyNumbers::sum_while_positive(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified sum_while_positive: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -811,8 +811,8 @@ unsigned int LoopifyNumbers::sum_while_positive(
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m(n));
-        _stack.emplace_back(_Enter(m));
+        _stack.emplace_back(_Resume_m{n});
+        _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -841,7 +841,7 @@ unsigned int LoopifyNumbers::count_down_by_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified count_down_by_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -861,8 +861,8 @@ unsigned int LoopifyNumbers::count_down_by_fuel(
           if (n < k) {
             _result = 1u;
           } else {
-            _stack.emplace_back(_Resume1());
-            _stack.emplace_back(_Enter((((n - k) > n ? 0 : (n - k))), f));
+            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Enter{(((n - k) > n ? 0 : (n - k))), f});
           }
         }
       }
@@ -916,7 +916,7 @@ unsigned int LoopifyNumbers::mixed_arith_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified mixed_arith_fuel: _Enter -> _After_m -> _After_m_1 ->
   /// _Combine_m.
   while (!_stack.empty()) {
@@ -942,21 +942,21 @@ unsigned int LoopifyNumbers::mixed_arith_fuel(
               _result = 1u;
             } else {
               unsigned int m = n_ - 1;
-              _stack.emplace_back(_After_m(m, f, n_, f));
+              _stack.emplace_back(_After_m{m, f, n_, f});
               _stack.emplace_back(
-                  _Enter((m == 0u ? 0u : (((m - 1u) > m ? 0 : (m - 1u)))), f));
+                  _Enter{(m == 0u ? 0u : (((m - 1u) > m ? 0 : (m - 1u)))), f});
             }
           }
         }
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1(_result, _f.n_, _f.f_1));
-      _stack.emplace_back(_Enter(_f.m, _f.f_0));
+      _stack.emplace_back(_After_m_1{_result, _f.n_, _f.f_1});
+      _stack.emplace_back(_Enter{_f.m, _f.f_0});
     } else if (std::holds_alternative<_After_m_1>(_frame)) {
       auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m(_f._result, _result));
-      _stack.emplace_back(_Enter(_f.n_, _f.f));
+      _stack.emplace_back(_Combine_m{_f._result, _result});
+      _stack.emplace_back(_Enter{_f.n_, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
       _result = ((_result * _f._result_1) + _f._result_0);
@@ -1071,7 +1071,7 @@ unsigned int LoopifyNumbers::power(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(e));
+  _stack.emplace_back(_Enter{e});
   /// Loopified power: _Enter -> _Resume_e_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1083,8 +1083,8 @@ unsigned int LoopifyNumbers::power(
         _result = 1u;
       } else {
         unsigned int e_ = e - 1;
-        _stack.emplace_back(_Resume_e_(b));
-        _stack.emplace_back(_Enter(e_));
+        _stack.emplace_back(_Resume_e_{b});
+        _stack.emplace_back(_Enter{e_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_e_>(_frame));
@@ -1120,7 +1120,7 @@ unsigned int LoopifyNumbers::power_mod_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(e, fuel));
+  _stack.emplace_back(_Enter{e, fuel});
   /// Loopified power_mod_fuel: _Enter -> _Cont1 -> _Cont2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1137,11 +1137,11 @@ unsigned int LoopifyNumbers::power_mod_fuel(
           _result = 1u;
         } else {
           if ((2u ? e % 2u : e) == 0u) {
-            _stack.emplace_back(_Cont1(m));
-            _stack.emplace_back(_Enter((2u ? e / 2u : 0), f));
+            _stack.emplace_back(_Cont1{m});
+            _stack.emplace_back(_Enter{(2u ? e / 2u : 0), f});
           } else {
-            _stack.emplace_back(_Cont2(b, m));
-            _stack.emplace_back(_Enter((2u ? e / 2u : 0), f));
+            _stack.emplace_back(_Cont2{b, m});
+            _stack.emplace_back(_Enter{(2u ? e / 2u : 0), f});
           }
         }
       }
@@ -1186,7 +1186,7 @@ unsigned int LoopifyNumbers::sum_divisors_aux(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(k));
+  _stack.emplace_back(_Enter{k});
   /// Loopified sum_divisors_aux: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1203,10 +1203,10 @@ unsigned int LoopifyNumbers::sum_divisors_aux(
         } else {
           unsigned int _x = k_ - 1;
           if ((k ? n % k : n) == 0u) {
-            _stack.emplace_back(_Resume1(k));
-            _stack.emplace_back(_Enter(k_));
+            _stack.emplace_back(_Resume1{k});
+            _stack.emplace_back(_Enter{k_});
           } else {
-            _stack.emplace_back(_Enter(k_));
+            _stack.emplace_back(_Enter{k_});
           }
         }
       }
@@ -1271,7 +1271,7 @@ unsigned int LoopifyNumbers::sum_even_indices_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l, fuel));
+  _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified sum_even_indices_fuel: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1301,8 +1301,8 @@ unsigned int LoopifyNumbers::sum_even_indices_fuel(
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<unsigned int>::Cons>(_inl_l.v());
-              _stack.emplace_back(_Resume_Cons(d_a0));
-              _stack.emplace_back(_Enter(d_a1.get(), f));
+              _stack.emplace_back(_Resume_Cons{d_a0});
+              _stack.emplace_back(_Enter{d_a1.get(), f});
             }
           }
         }
@@ -1404,7 +1404,7 @@ unsigned int LoopifyNumbers::sum_divisible_by(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified sum_divisible_by: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1417,10 +1417,10 @@ unsigned int LoopifyNumbers::sum_divisible_by(
       } else {
         unsigned int m = n - 1;
         if ((k ? n % k : n) == 0u) {
-          _stack.emplace_back(_Resume1(n));
-          _stack.emplace_back(_Enter(m));
+          _stack.emplace_back(_Resume1{n});
+          _stack.emplace_back(_Enter{m});
         } else {
-          _stack.emplace_back(_Enter(m));
+          _stack.emplace_back(_Enter{m});
         }
       }
     } else {

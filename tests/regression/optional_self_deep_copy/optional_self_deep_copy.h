@@ -68,16 +68,16 @@ struct OptionalSelfDeepCopy {
         const chain *_src = _frame._src;
         chain *_dst = _frame._dst;
         if (std::holds_alternative<Stop>(_src->v())) {
-          _dst->d_v_ = Stop();
+          _dst->d_v_ = Stop{};
         } else {
           const auto &_alt = std::get<More>(_src->v());
-          _dst->d_v_ = More(
+          _dst->d_v_ = More{
               _alt.d_a0
                   ? std::make_unique<std::optional<std::unique_ptr<chain>>>(
                         *(_alt.d_a0)
                             ? std::make_optional(std::make_unique<chain>())
                             : std::nullopt)
-                  : nullptr);
+                  : nullptr};
           auto &_dst_alt = std::get<More>(_dst->d_v_);
           if (_alt.d_a0 && *(_alt.d_a0)) {
             _stack.push_back(
@@ -89,11 +89,11 @@ struct OptionalSelfDeepCopy {
     }
 
     // CREATORS
-    static chain stop() { return chain(Stop()); }
+    static chain stop() { return chain(Stop{}); }
 
     static chain more(std::optional<std::unique_ptr<chain>> a0) {
-      return chain(More(std::make_unique<std::optional<std::unique_ptr<chain>>>(
-          std::move(a0))));
+      return chain(More{std::make_unique<std::optional<std::unique_ptr<chain>>>(
+          std::move(a0))});
     }
 
     // MANIPULATORS

@@ -52,18 +52,18 @@ struct NameClashLetMatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<Left>(_sv.v())) {
         const auto &[d_a0] = std::get<Left>(_sv.v());
-        return either(Left(d_a0));
+        return either(Left{d_a0});
       } else {
         const auto &[d_a0] = std::get<Right>(_sv.v());
-        return either(Right(d_a0));
+        return either(Right{d_a0});
       }
     }
 
     // CREATORS
-    static either left(unsigned int a0) { return either(Left(std::move(a0))); }
+    static either left(unsigned int a0) { return either(Left{std::move(a0)}); }
 
     static either right(unsigned int a0) {
-      return either(Right(std::move(a0)));
+      return either(Right{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -208,12 +208,12 @@ struct NameClashLetMatch {
     triple clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
-      return triple(MkTriple(d_a0, d_a1, d_a2));
+      return triple(MkTriple{d_a0, d_a1, d_a2});
     }
 
     // CREATORS
     static triple mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
-      return triple(MkTriple(std::move(a0), std::move(a1), std::move(a2)));
+      return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS

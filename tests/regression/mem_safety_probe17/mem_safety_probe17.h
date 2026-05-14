@@ -76,14 +76,14 @@ struct MemSafetyProbe17 {
         const qtree *_src = _frame._src;
         qtree *_dst = _frame._dst;
         if (std::holds_alternative<QLeaf>(_src->v())) {
-          _dst->d_v_ = QLeaf();
+          _dst->d_v_ = QLeaf{};
         } else {
           const auto &_alt = std::get<QNode>(_src->v());
           _dst->d_v_ =
-              QNode(_alt.d_a0 ? std::make_unique<qtree>() : nullptr,
+              QNode{_alt.d_a0 ? std::make_unique<qtree>() : nullptr,
                     _alt.d_a1 ? std::make_unique<qtree>() : nullptr, _alt.d_a2,
                     _alt.d_a3 ? std::make_unique<qtree>() : nullptr,
-                    _alt.d_a4 ? std::make_unique<qtree>() : nullptr);
+                    _alt.d_a4 ? std::make_unique<qtree>() : nullptr};
           auto &_dst_alt = std::get<QNode>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -103,14 +103,14 @@ struct MemSafetyProbe17 {
     }
 
     // CREATORS
-    static qtree qleaf() { return qtree(QLeaf()); }
+    static qtree qleaf() { return qtree(QLeaf{}); }
 
     static qtree qnode(qtree a0, qtree a1, unsigned int a2, qtree a3,
                        qtree a4) {
-      return qtree(QNode(std::make_unique<qtree>(std::move(a0)),
+      return qtree(QNode{std::make_unique<qtree>(std::move(a0)),
                          std::make_unique<qtree>(std::move(a1)), std::move(a2),
                          std::make_unique<qtree>(std::move(a3)),
-                         std::make_unique<qtree>(std::move(a4))));
+                         std::make_unique<qtree>(std::move(a4))});
     }
 
     // MANIPULATORS
@@ -201,7 +201,7 @@ struct MemSafetyProbe17 {
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified weighted_sum: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
       while (!_stack.empty()) {
@@ -222,24 +222,24 @@ struct MemSafetyProbe17 {
                   (4u * (*(d_a3)).qtree_sum())) +
                  (5u * (*(d_a4)).qtree_sum()));
             _stack.emplace_back(
-                _After_QNode(d_a3.get(), d_a1.get(), d_a0.get(), local_weight));
-            _stack.emplace_back(_Enter(d_a4.get()));
+                _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), local_weight});
+            _stack.emplace_back(_Enter{d_a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
           _stack.emplace_back(
-              _After_QNode_1(_result, _f._s1, _f._s2, _f.local_weight));
-          _stack.emplace_back(_Enter(_f._s0));
+              _After_QNode_1{_result, _f._s1, _f._s2, _f.local_weight});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(
-              _After_QNode_2(_f._result, _result, _f._s2, _f.local_weight));
-          _stack.emplace_back(_Enter(_f._s1));
+              _After_QNode_2{_f._result, _result, _f._s2, _f.local_weight});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
-          _stack.emplace_back(_Combine_QNode(_f._result_0, _f._result_1,
-                                             _result, _f.local_weight));
-          _stack.emplace_back(_Enter(_f._s2));
+          _stack.emplace_back(_Combine_QNode{_f._result_0, _f._result_1,
+                                             _result, _f.local_weight});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result =
@@ -307,7 +307,7 @@ struct MemSafetyProbe17 {
       qtree _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self, t2));
+      _stack.emplace_back(_Enter{_self, t2});
       /// Loopified qtree_zip: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
       while (!_stack.empty()) {
@@ -328,30 +328,30 @@ struct MemSafetyProbe17 {
             } else {
               auto &[d_a00, d_a10, d_a20, d_a30, d_a40] =
                   std::get<typename qtree::QNode>(t2.v_mut());
-              _stack.emplace_back(_After_QNode(d_a3.get(), *(d_a30), d_a1.get(),
+              _stack.emplace_back(_After_QNode{d_a3.get(), *(d_a30), d_a1.get(),
                                                *(d_a10), d_a0.get(), *(d_a00),
-                                               (d_a2 + d_a20)));
-              _stack.emplace_back(_Enter(d_a4.get(), std::move(*(d_a40))));
+                                               (d_a2 + d_a20)});
+              _stack.emplace_back(_Enter{d_a4.get(), std::move(*(d_a40))});
             }
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
-          _stack.emplace_back(_After_QNode_1(std::move(_result), _f._s2,
+          _stack.emplace_back(_After_QNode_1{std::move(_result), _f._s2,
                                              std::move(_f.d_a10), _f._s4,
-                                             std::move(_f.d_a00), _f._s6));
-          _stack.emplace_back(_Enter(_f._s0, std::move(_f.d_a30)));
+                                             std::move(_f.d_a00), _f._s6});
+          _stack.emplace_back(_Enter{_f._s0, std::move(_f.d_a30)});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
-          _stack.emplace_back(_After_QNode_2(std::move(_f._result),
+          _stack.emplace_back(_After_QNode_2{std::move(_f._result),
                                              std::move(_result), _f._s3,
-                                             std::move(_f.d_a00), _f._s5));
-          _stack.emplace_back(_Enter(_f._s1, std::move(_f.d_a10)));
+                                             std::move(_f.d_a00), _f._s5});
+          _stack.emplace_back(_Enter{_f._s1, std::move(_f.d_a10)});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
-          _stack.emplace_back(_Combine_QNode(std::move(_f._result_0),
+          _stack.emplace_back(_Combine_QNode{std::move(_f._result_0),
                                              std::move(_f._result_1),
-                                             std::move(_result), _f._s4));
-          _stack.emplace_back(_Enter(_f._s2, std::move(_f.d_a00)));
+                                             std::move(_result), _f._s4});
+          _stack.emplace_back(_Enter{_f._s2, std::move(_f.d_a00)});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result = qtree::qnode(_result, _f._result_2, _f._s3, _f._result_1,
@@ -411,7 +411,7 @@ struct MemSafetyProbe17 {
       qtree _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_mirror: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
       while (!_stack.empty()) {
@@ -427,25 +427,25 @@ struct MemSafetyProbe17 {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             _stack.emplace_back(
-                _After_QNode(d_a1.get(), d_a3.get(), d_a4.get(), d_a2));
-            _stack.emplace_back(_Enter(d_a0.get()));
+                _After_QNode{d_a1.get(), d_a3.get(), d_a4.get(), d_a2});
+            _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
           _stack.emplace_back(
-              _After_QNode_1(std::move(_result), _f._s1, _f._s2, _f.d_a2));
-          _stack.emplace_back(_Enter(_f._s0));
+              _After_QNode_1{std::move(_result), _f._s1, _f._s2, _f.d_a2});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
-          _stack.emplace_back(_After_QNode_2(
-              std::move(_f._result), std::move(_result), _f._s2, _f.d_a2));
-          _stack.emplace_back(_Enter(_f._s1));
+          _stack.emplace_back(_After_QNode_2{
+              std::move(_f._result), std::move(_result), _f._s2, _f.d_a2});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
-          _stack.emplace_back(_Combine_QNode(std::move(_f._result_0),
+          _stack.emplace_back(_Combine_QNode{std::move(_f._result_0),
                                              std::move(_f._result_1),
-                                             std::move(_result), _f.d_a2));
-          _stack.emplace_back(_Enter(_f._s2));
+                                             std::move(_result), _f.d_a2});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result = qtree::qnode(_result, _f._result_2, _f.d_a2, _f._result_1,
@@ -504,7 +504,7 @@ struct MemSafetyProbe17 {
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_size: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
       while (!_stack.empty()) {
@@ -520,23 +520,23 @@ struct MemSafetyProbe17 {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             _stack.emplace_back(
-                _After_QNode(d_a3.get(), d_a1.get(), d_a0.get(), 1u));
-            _stack.emplace_back(_Enter(d_a4.get()));
+                _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), 1u});
+            _stack.emplace_back(_Enter{d_a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
-          _stack.emplace_back(_After_QNode_1(_result, _f._s1, _f._s2, _f._s3));
-          _stack.emplace_back(_Enter(_f._s0));
+          _stack.emplace_back(_After_QNode_1{_result, _f._s1, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(
-              _After_QNode_2(_f._result, _result, _f._s2, _f._s3));
-          _stack.emplace_back(_Enter(_f._s1));
+              _After_QNode_2{_f._result, _result, _f._s2, _f._s3});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
           _stack.emplace_back(
-              _Combine_QNode(_f._result_0, _f._result_1, _result, _f._s3));
-          _stack.emplace_back(_Enter(_f._s2));
+              _Combine_QNode{_f._result_0, _f._result_1, _result, _f._s3});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result = ((((_f._s3 + _result) + _f._result_2) + _f._result_1) +
@@ -623,7 +623,7 @@ struct MemSafetyProbe17 {
       unsigned int _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_sum: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
       while (!_stack.empty()) {
@@ -639,23 +639,23 @@ struct MemSafetyProbe17 {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             _stack.emplace_back(
-                _After_QNode(d_a3.get(), d_a1.get(), d_a0.get(), d_a2));
-            _stack.emplace_back(_Enter(d_a4.get()));
+                _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), d_a2});
+            _stack.emplace_back(_Enter{d_a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
-          _stack.emplace_back(_After_QNode_1(_result, _f._s1, _f._s2, _f.d_a2));
-          _stack.emplace_back(_Enter(_f._s0));
+          _stack.emplace_back(_After_QNode_1{_result, _f._s1, _f._s2, _f.d_a2});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(
-              _After_QNode_2(_f._result, _result, _f._s2, _f.d_a2));
-          _stack.emplace_back(_Enter(_f._s1));
+              _After_QNode_2{_f._result, _result, _f._s2, _f.d_a2});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
           _stack.emplace_back(
-              _Combine_QNode(_f._result_0, _f._result_1, _result, _f.d_a2));
-          _stack.emplace_back(_Enter(_f._s2));
+              _Combine_QNode{_f._result_0, _f._result_1, _result, _f.d_a2});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result = ((((_result + _f._result_2) + _f.d_a2) + _f._result_1) +
@@ -734,7 +734,7 @@ struct MemSafetyProbe17 {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_rec: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
       while (!_stack.empty()) {
@@ -749,31 +749,31 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_After_QNode(d_a3.get(), d_a1.get(), d_a0.get(),
+            _stack.emplace_back(_After_QNode{d_a3.get(), d_a1.get(), d_a0.get(),
                                              *(d_a4), *(d_a3), d_a2, *(d_a1),
-                                             *(d_a0)));
-            _stack.emplace_back(_Enter(d_a4.get()));
+                                             *(d_a0)});
+            _stack.emplace_back(_Enter{d_a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
-          _stack.emplace_back(_After_QNode_1(
+          _stack.emplace_back(_After_QNode_1{
               _result, _f._s1, _f._s2, std::move(_f.d_a4), std::move(_f.d_a3),
-              _f.d_a2, std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s0));
+              _f.d_a2, std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(
-              _After_QNode_2(_f._result, _result, _f._s2, std::move(_f.d_a4),
+              _After_QNode_2{_f._result, _result, _f._s2, std::move(_f.d_a4),
                              std::move(_f.d_a3), _f.d_a2, std::move(_f.d_a1),
-                             std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s1));
+                             std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
           _stack.emplace_back(
-              _Combine_QNode(_f._result_0, _f._result_1, _result,
+              _Combine_QNode{_f._result_0, _f._result_1, _result,
                              std::move(_f.d_a4), std::move(_f.d_a3), _f.d_a2,
-                             std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s2));
+                             std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result = f0(_f.d_a0, _result, _f.d_a1, _f._result_2, _f.d_a2,
@@ -852,7 +852,7 @@ struct MemSafetyProbe17 {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified qtree_rect: _Enter -> _After_QNode -> _After_QNode_1 ->
       /// _After_QNode_2 -> _Combine_QNode.
       while (!_stack.empty()) {
@@ -867,31 +867,31 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_After_QNode(d_a3.get(), d_a1.get(), d_a0.get(),
+            _stack.emplace_back(_After_QNode{d_a3.get(), d_a1.get(), d_a0.get(),
                                              *(d_a4), *(d_a3), d_a2, *(d_a1),
-                                             *(d_a0)));
-            _stack.emplace_back(_Enter(d_a4.get()));
+                                             *(d_a0)});
+            _stack.emplace_back(_Enter{d_a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
-          _stack.emplace_back(_After_QNode_1(
+          _stack.emplace_back(_After_QNode_1{
               _result, _f._s1, _f._s2, std::move(_f.d_a4), std::move(_f.d_a3),
-              _f.d_a2, std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s0));
+              _f.d_a2, std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(
-              _After_QNode_2(_f._result, _result, _f._s2, std::move(_f.d_a4),
+              _After_QNode_2{_f._result, _result, _f._s2, std::move(_f.d_a4),
                              std::move(_f.d_a3), _f.d_a2, std::move(_f.d_a1),
-                             std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s1));
+                             std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
           _stack.emplace_back(
-              _Combine_QNode(_f._result_0, _f._result_1, _result,
+              _Combine_QNode{_f._result_0, _f._result_1, _result,
                              std::move(_f.d_a4), std::move(_f.d_a3), _f.d_a2,
-                             std::move(_f.d_a1), std::move(_f.d_a0)));
-          _stack.emplace_back(_Enter(_f._s2));
+                             std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result = f0(_f.d_a0, _result, _f.d_a1, _f._result_2, _f.d_a2,
@@ -992,11 +992,11 @@ struct MemSafetyProbe17 {
         const mylist<t_A> *_src = _frame._src;
         mylist<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil();
+          _dst->d_v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons(
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr);
+          _dst->d_v_ = Mycons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -1009,20 +1009,20 @@ struct MemSafetyProbe17 {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil();
+        this->d_v_ = Mynil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons(
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr);
+        this->d_v_ = Mycons{
+            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil()); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
     static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
-          Mycons(std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))));
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -1099,7 +1099,7 @@ struct MemSafetyProbe17 {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1113,8 +1113,8 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons(f0, *(d_a1), d_a0));
-            _stack.emplace_back(_Enter(d_a1.get()));
+            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
           auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -1146,7 +1146,7 @@ struct MemSafetyProbe17 {
       T1 _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
-      _stack.emplace_back(_Enter(_self));
+      _stack.emplace_back(_Enter{_self});
       /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -1160,8 +1160,8 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons(f0, *(d_a1), d_a0));
-            _stack.emplace_back(_Enter(d_a1.get()));
+            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
           auto _f = std::move(std::get<_Resume_Mycons>(_frame));

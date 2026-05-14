@@ -1451,7 +1451,7 @@ and pp_cpp_expr env args t =
     in
     let name_str = string_of_ppcmds struct_name in
     typename_prefix_for name_str
-    ++ struct_name ++ templates ++ str "(" ++ es_s ++ str ")"
+    ++ struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
   | CPPstruct_id (id, tys, es) ->
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
@@ -1459,7 +1459,7 @@ and pp_cpp_expr env args t =
       | [] -> mt ()
       | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
     in
-    Id.print id ++ templates ++ str "(" ++ es_s ++ str ")"
+    Id.print id ++ templates ++ str "{" ++ es_s ++ str "}"
   | CPPget (e, id) ->
     ( match e with
     | CPPderef _ | CPPraw _ ->

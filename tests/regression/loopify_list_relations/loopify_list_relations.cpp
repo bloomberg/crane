@@ -20,7 +20,7 @@ bool LoopifyListRelations::is_prefix_of(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l2, &l1));
+  _stack.emplace_back(_Enter{&l2, &l1});
   /// Loopified is_prefix_of: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -39,8 +39,8 @@ bool LoopifyListRelations::is_prefix_of(
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
-          _stack.emplace_back(_Resume_Cons(d_a0 == d_a00));
-          _stack.emplace_back(_Enter(d_a10.get(), d_a1.get()));
+          _stack.emplace_back(_Resume_Cons{d_a0 == d_a00});
+          _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
         }
       }
     } else {
@@ -225,7 +225,7 @@ bool LoopifyListRelations::list_eq(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l2, &l1));
+  _stack.emplace_back(_Enter{&l2, &l1});
   /// Loopified list_eq: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -248,8 +248,8 @@ bool LoopifyListRelations::list_eq(
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
-          _stack.emplace_back(_Resume_Cons(d_a0 == d_a00));
-          _stack.emplace_back(_Enter(d_a10.get(), d_a1.get()));
+          _stack.emplace_back(_Resume_Cons{d_a0 == d_a00});
+          _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
         }
       }
     } else {
@@ -551,7 +551,7 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
               bool _result{};
               std::vector<_Frame> _stack;
               _stack.reserve(8);
-              _stack.emplace_back(_Enter(ys));
+              _stack.emplace_back(_Enter{ys});
               /// Loopified member: _Enter -> _Resume_Cons.
               while (!_stack.empty()) {
                 _Frame _frame = std::move(_stack.back());
@@ -565,8 +565,8 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
                   } else {
                     auto &[d_a0, d_a1] =
                         std::get<typename List<unsigned int>::Cons>(ys.v_mut());
-                    _stack.emplace_back(_Resume_Cons(y == d_a0));
-                    _stack.emplace_back(_Enter(std::move(*(d_a1))));
+                    _stack.emplace_back(_Resume_Cons{y == d_a0});
+                    _stack.emplace_back(_Enter{std::move(*(d_a1))});
                   }
                 } else {
                   auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -626,7 +626,7 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
               bool _result{};
               std::vector<_Frame> _stack;
               _stack.reserve(8);
-              _stack.emplace_back(_Enter(ys));
+              _stack.emplace_back(_Enter{ys});
               /// Loopified member: _Enter -> _Resume_Cons.
               while (!_stack.empty()) {
                 _Frame _frame = std::move(_stack.back());
@@ -640,8 +640,8 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
                   } else {
                     auto &[d_a0, d_a1] =
                         std::get<typename List<unsigned int>::Cons>(ys.v_mut());
-                    _stack.emplace_back(_Resume_Cons(y == d_a0));
-                    _stack.emplace_back(_Enter(std::move(*(d_a1))));
+                    _stack.emplace_back(_Resume_Cons{y == d_a0});
+                    _stack.emplace_back(_Enter{std::move(*(d_a1))});
                   }
                 } else {
                   auto _f = std::move(std::get<_Resume_Cons>(_frame));

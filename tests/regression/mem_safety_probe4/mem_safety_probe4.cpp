@@ -21,7 +21,7 @@ unsigned int MemSafetyProbe4::sum_through(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified sum_through: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -37,8 +37,8 @@ unsigned int MemSafetyProbe4::sum_through(
         const auto &[d_a0, d_a1] = std::get<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
-        _stack.emplace_back(_Resume_Mycons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -67,7 +67,7 @@ unsigned int MemSafetyProbe4::add_through(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified add_through: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -87,8 +87,8 @@ unsigned int MemSafetyProbe4::add_through(
             [&](unsigned int _x0) -> unsigned int {
           return d_a0.sum_values(_x0);
         };
-        _stack.emplace_back(_Resume_Mycons(f(0u)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{f(0u)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -117,7 +117,7 @@ unsigned int MemSafetyProbe4::double_partial(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified double_partial: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -142,8 +142,8 @@ unsigned int MemSafetyProbe4::double_partial(
             [&](unsigned int _x0) -> unsigned int {
           return d_a0.sum_values(_x0);
         };
-        _stack.emplace_back(_Resume_Mycons(g(0u), std::move(f)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{g(0u), std::move(f)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -172,7 +172,7 @@ unsigned int MemSafetyProbe4::weighted_sum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(w, &l));
+  _stack.emplace_back(_Enter{w, &l});
   /// Loopified weighted_sum: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -194,8 +194,8 @@ unsigned int MemSafetyProbe4::weighted_sum(
             [=](unsigned int _x0) mutable -> unsigned int {
           return d_a0.sum_values(_x0);
         };
-        _stack.emplace_back(_Resume_Mycons(f(w)));
-        _stack.emplace_back(_Enter(f(0u), d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{f(w)});
+        _stack.emplace_back(_Enter{f(0u), d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -256,7 +256,7 @@ unsigned int MemSafetyProbe4::mysum(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified mysum: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -271,8 +271,8 @@ unsigned int MemSafetyProbe4::mysum(
         const auto &[d_a0, d_a1] =
             std::get<typename MemSafetyProbe4::mylist<unsigned int>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -299,7 +299,7 @@ unsigned int MemSafetyProbe4::process_list(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified process_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -320,8 +320,8 @@ unsigned int MemSafetyProbe4::process_list(
             [=](unsigned int _x0) mutable -> unsigned int {
           return d_a0.sum_values(_x0);
         };
-        _stack.emplace_back(_Resume_Mycons(std::move(f)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Mycons{std::move(f)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));

@@ -1,7 +1,7 @@
 #include "crane_move_hunt.h"
 
 CraneMoveHunt::box CraneMoveHunt::clone_box(const CraneMoveHunt::box &b) {
-  return box(b.payload, b.enabled);
+  return box{b.payload, b.enabled};
 }
 
 CraneMoveHunt::box CraneMoveHunt::keep_box(CraneMoveHunt::box b) { return b; }
@@ -12,7 +12,7 @@ unsigned int CraneMoveHunt::use_state(const CraneMoveHunt::state &s) {
 
 CraneMoveHunt::state
 CraneMoveHunt::render_state(const CraneMoveHunt::state &s) {
-  return state(s.core, s.cursor, s.visible);
+  return state{s.core, s.cursor, s.visible};
 }
 
 unsigned int CraneMoveHunt::sound_state(const CraneMoveHunt::state &before,
@@ -22,7 +22,7 @@ unsigned int CraneMoveHunt::sound_state(const CraneMoveHunt::state &before,
 
 CraneMoveHunt::state
 CraneMoveHunt::resolve_state(const CraneMoveHunt::state &s) {
-  return state(clone_box(s.core), s.cursor, s.visible);
+  return state{clone_box(s.core), s.cursor, s.visible};
 }
 
 std::pair<bool, CraneMoveHunt::state>

@@ -54,20 +54,20 @@ struct ReuseMixedFields {
       auto &&_sv = *(this);
       if (std::holds_alternative<AsNat>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<AsNat>(_sv.v());
-        return payload(AsNat(d_a0, d_a1));
+        return payload(AsNat{d_a0, d_a1});
       } else {
         const auto &[d_a0, d_a1] = std::get<AsPair>(_sv.v());
-        return payload(AsPair(d_a0, d_a1));
+        return payload(AsPair{d_a0, d_a1});
       }
     }
 
     // CREATORS
     static payload asnat(unsigned int a0, unsigned int a1) {
-      return payload(AsNat(std::move(a0), std::move(a1)));
+      return payload(AsNat{std::move(a0), std::move(a1)});
     }
 
     static payload aspair(unsigned int a0, unsigned int a1) {
-      return payload(AsPair(std::move(a0), std::move(a1)));
+      return payload(AsPair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS

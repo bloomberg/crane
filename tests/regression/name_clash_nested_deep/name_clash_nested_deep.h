@@ -66,11 +66,11 @@ struct NameClashNestedDeep {
         const mylist *_src = _frame._src;
         mylist *_dst = _frame._dst;
         if (std::holds_alternative<MyNil>(_src->v())) {
-          _dst->d_v_ = MyNil();
+          _dst->d_v_ = MyNil{};
         } else {
           const auto &_alt = std::get<MyCons>(_src->v());
-          _dst->d_v_ = MyCons(_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr);
+          _dst->d_v_ = MyCons{_alt.d_a0,
+                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
           auto &_dst_alt = std::get<MyCons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,11 +81,11 @@ struct NameClashNestedDeep {
     }
 
     // CREATORS
-    static mylist mynil() { return mylist(MyNil()); }
+    static mylist mynil() { return mylist(MyNil{}); }
 
     static mylist mycons(unsigned int a0, mylist a1) {
       return mylist(
-          MyCons(std::move(a0), std::make_unique<mylist>(std::move(a1))));
+          MyCons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS

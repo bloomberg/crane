@@ -64,11 +64,11 @@ struct DeepApp {
         const mylist<t_A> *_src = _frame._src;
         mylist<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil();
+          _dst->d_v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons(
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr);
+          _dst->d_v_ = Mycons{
+              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -81,20 +81,20 @@ struct DeepApp {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil();
+        this->d_v_ = Mynil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons(
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr);
+        this->d_v_ = Mycons{
+            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil()); }
+    static mylist<t_A> mynil() { return mylist(Mynil{}); }
 
     static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
       return mylist(
-          Mycons(std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))));
+          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -148,7 +148,7 @@ struct DeepApp {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter(&m));
+    _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -161,8 +161,8 @@ struct DeepApp {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons(f0, *(d_a1), d_a0));
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -195,7 +195,7 @@ struct DeepApp {
     T2 _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter(&m));
+    _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -208,8 +208,8 @@ struct DeepApp {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons(f0, *(d_a1), d_a0));
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -299,7 +299,7 @@ struct DeepApp {
     unsigned int _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter(&l));
+    _stack.emplace_back(_Enter{&l});
     /// Loopified length: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -312,8 +312,8 @@ struct DeepApp {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(l.v());
-          _stack.emplace_back(_Resume_Mycons());
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Resume_Mycons{});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));

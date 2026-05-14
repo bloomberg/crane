@@ -13,15 +13,15 @@ unsigned int RamAccessor::get_stat(const RamAccessor::ram_reg &rg,
 RamAccessor::ram_reg
 RamAccessor::upd_main_in_reg(const RamAccessor::ram_reg &rg,
                              const unsigned int i, const unsigned int v) {
-  return ram_reg(update_nth<unsigned int>(i, (16u ? v % 16u : v), rg.reg_main),
-                 rg.reg_status);
+  return ram_reg{update_nth<unsigned int>(i, (16u ? v % 16u : v), rg.reg_main),
+                 rg.reg_status};
 }
 
 RamAccessor::ram_reg
 RamAccessor::upd_stat_in_reg(const RamAccessor::ram_reg &rg,
                              const unsigned int i, const unsigned int v) {
-  return ram_reg(rg.reg_main, update_nth<unsigned int>(i, (16u ? v % 16u : v),
-                                                       rg.reg_status));
+  return ram_reg{rg.reg_main, update_nth<unsigned int>(i, (16u ? v % 16u : v),
+                                                       rg.reg_status)};
 }
 
 RamAccessor::ram_reg RamAccessor::get_regRAM(const RamAccessor::ram_chip &ch,
@@ -34,14 +34,14 @@ RamAccessor::ram_chip
 RamAccessor::upd_reg_in_chip(const RamAccessor::ram_chip &ch,
                              const unsigned int r,
                              const RamAccessor::ram_reg &rg) {
-  return ram_chip(update_nth<RamAccessor::ram_reg>(r, rg, ch.chip_regs),
-                  ch.chip_port);
+  return ram_chip{update_nth<RamAccessor::ram_reg>(r, rg, ch.chip_regs),
+                  ch.chip_port};
 }
 
 RamAccessor::ram_chip
 RamAccessor::upd_port_in_chip(const RamAccessor::ram_chip &ch,
                               const unsigned int v) {
-  return ram_chip(ch.chip_regs, (16u ? v % 16u : v));
+  return ram_chip{ch.chip_regs, (16u ? v % 16u : v)};
 }
 
 RamAccessor::ram_chip RamAccessor::get_chip(const RamAccessor::ram_bank &bk,
@@ -54,7 +54,7 @@ RamAccessor::ram_bank
 RamAccessor::upd_chip_in_bank(const RamAccessor::ram_bank &bk,
                               const unsigned int c,
                               const RamAccessor::ram_chip &ch) {
-  return ram_bank(update_nth<RamAccessor::ram_chip>(c, ch, bk.bank_chips));
+  return ram_bank{update_nth<RamAccessor::ram_chip>(c, ch, bk.bank_chips)};
 }
 
 RamAccessor::ram_bank

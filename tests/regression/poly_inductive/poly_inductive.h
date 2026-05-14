@@ -45,16 +45,16 @@ struct PolyInductive {
     pbox<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<PBox>(_sv.v());
-      return pbox<t_A>(PBox(d_a0));
+      return pbox<t_A>(PBox{d_a0});
     }
 
     // CREATORS
     template <typename _U> explicit pbox(const pbox<_U> &_other) {
       const auto &[d_a0] = std::get<typename pbox<_U>::PBox>(_other.v());
-      this->d_v_ = PBox(t_A(d_a0));
+      this->d_v_ = PBox{t_A(d_a0)};
     }
 
-    static pbox<t_A> PBox_(t_A a0) { return pbox(PBox(std::move(a0))); }
+    static pbox<t_A> PBox_(t_A a0) { return pbox(PBox{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -123,7 +123,7 @@ struct PolyInductive {
     ppair<t_A, t_B> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<PPair>(_sv.v());
-      return ppair<t_A, t_B>(PPair(d_a0, d_a1));
+      return ppair<t_A, t_B>(PPair{d_a0, d_a1});
     }
 
     // CREATORS
@@ -131,11 +131,11 @@ struct PolyInductive {
     explicit ppair(const ppair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename ppair<_U0, _U1>::PPair>(_other.v());
-      this->d_v_ = PPair(t_A(d_a0), t_B(d_a1));
+      this->d_v_ = PPair{t_A(d_a0), t_B(d_a1)};
     }
 
     static ppair<t_A, t_B> PPair_(t_A a0, t_B a1) {
-      return ppair(PPair(std::move(a0), std::move(a1)));
+      return ppair(PPair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
@@ -217,26 +217,26 @@ struct PolyInductive {
     pmaybe<t_A> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<PNothing>(_sv.v())) {
-        return pmaybe<t_A>(PNothing());
+        return pmaybe<t_A>(PNothing{});
       } else {
         const auto &[d_a0] = std::get<PJust>(_sv.v());
-        return pmaybe<t_A>(PJust(d_a0));
+        return pmaybe<t_A>(PJust{d_a0});
       }
     }
 
     // CREATORS
     template <typename _U> explicit pmaybe(const pmaybe<_U> &_other) {
       if (std::holds_alternative<typename pmaybe<_U>::PNothing>(_other.v())) {
-        this->d_v_ = PNothing();
+        this->d_v_ = PNothing{};
       } else {
         const auto &[d_a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
-        this->d_v_ = PJust(t_A(d_a0));
+        this->d_v_ = PJust{t_A(d_a0)};
       }
     }
 
-    static pmaybe<t_A> pnothing() { return pmaybe(PNothing()); }
+    static pmaybe<t_A> pnothing() { return pmaybe(PNothing{}); }
 
-    static pmaybe<t_A> pjust(t_A a0) { return pmaybe(PJust(std::move(a0))); }
+    static pmaybe<t_A> pjust(t_A a0) { return pmaybe(PJust{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -349,12 +349,12 @@ struct PolyInductive {
         ptree<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<PLeaf>(_src->v())) {
           const auto &_alt = std::get<PLeaf>(_src->v());
-          _dst->d_v_ = PLeaf(_alt.d_a0);
+          _dst->d_v_ = PLeaf{_alt.d_a0};
         } else {
           const auto &_alt = std::get<PNode>(_src->v());
           _dst->d_v_ =
-              PNode(_alt.d_a0 ? std::make_unique<ptree<t_A>>() : nullptr,
-                    _alt.d_a1 ? std::make_unique<ptree<t_A>>() : nullptr);
+              PNode{_alt.d_a0 ? std::make_unique<ptree<t_A>>() : nullptr,
+                    _alt.d_a1 ? std::make_unique<ptree<t_A>>() : nullptr};
           auto &_dst_alt = std::get<PNode>(_dst->d_v_);
           if (_alt.d_a0) {
             _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -371,21 +371,21 @@ struct PolyInductive {
     template <typename _U> explicit ptree(const ptree<_U> &_other) {
       if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
         const auto &[d_a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
-        this->d_v_ = PLeaf(t_A(d_a0));
+        this->d_v_ = PLeaf{t_A(d_a0)};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename ptree<_U>::PNode>(_other.v());
         this->d_v_ =
-            PNode(d_a0 ? std::make_unique<ptree<t_A>>(*d_a0) : nullptr,
-                  d_a1 ? std::make_unique<ptree<t_A>>(*d_a1) : nullptr);
+            PNode{d_a0 ? std::make_unique<ptree<t_A>>(*d_a0) : nullptr,
+                  d_a1 ? std::make_unique<ptree<t_A>>(*d_a1) : nullptr};
       }
     }
 
-    static ptree<t_A> pleaf(t_A a0) { return ptree(PLeaf(std::move(a0))); }
+    static ptree<t_A> pleaf(t_A a0) { return ptree(PLeaf{std::move(a0)}); }
 
     static ptree<t_A> pnode(ptree<t_A> a0, ptree<t_A> a1) {
-      return ptree(PNode(std::make_unique<ptree<t_A>>(std::move(a0)),
-                         std::make_unique<ptree<t_A>>(std::move(a1))));
+      return ptree(PNode{std::make_unique<ptree<t_A>>(std::move(a0)),
+                         std::make_unique<ptree<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS

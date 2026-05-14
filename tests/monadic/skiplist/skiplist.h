@@ -1130,7 +1130,7 @@ template <typename K, typename V> struct SkipList {
         dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
     stm::TVar<unsigned int> lvlTV = stm::newTVar(0u);
     stm::TVar<unsigned int> lenTV = stm::newTVar(0u);
-    return SkipList<T1, T2>(headNode, 16u, lvlTV, lenTV);
+    return SkipList<T1, T2>{headNode, 16u, lvlTV, lenTV};
   }
 
   template <typename T1, typename T2>

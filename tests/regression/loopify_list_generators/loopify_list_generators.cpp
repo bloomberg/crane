@@ -19,7 +19,7 @@ List<unsigned int> LoopifyListGenerators::cycle_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified cycle_fuel: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -39,8 +39,8 @@ List<unsigned int> LoopifyListGenerators::cycle_fuel(
           if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
             _result = List<unsigned int>::nil();
           } else {
-            _stack.emplace_back(_Resume_Cons(l));
-            _stack.emplace_back(_Enter(n_, fuel_));
+            _stack.emplace_back(_Resume_Cons{l});
+            _stack.emplace_back(_Enter{n_, fuel_});
           }
         }
       }
@@ -125,7 +125,7 @@ List<unsigned int> LoopifyListGenerators::replicate_each(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified replicate_each: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -139,8 +139,8 @@ List<unsigned int> LoopifyListGenerators::replicate_each(
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         List<unsigned int> reps = replicate_elem(n, d_a0);
-        _stack.emplace_back(_Resume_Cons(std::move(reps)));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{std::move(reps)});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

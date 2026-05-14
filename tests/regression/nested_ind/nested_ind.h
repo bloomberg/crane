@@ -65,11 +65,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -82,19 +82,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -192,12 +192,12 @@ struct NestedInd {
         const custom_list<t_A> *_src = _frame._src;
         custom_list<t_A> *_dst = _frame._dst;
         if (std::holds_alternative<Cnil>(_src->v())) {
-          _dst->d_v_ = Cnil();
+          _dst->d_v_ = Cnil{};
         } else {
           const auto &_alt = std::get<Ccons>(_src->v());
           _dst->d_v_ =
-              Ccons(_alt.d_a0,
-                    _alt.d_a1 ? std::make_unique<custom_list<t_A>>() : nullptr);
+              Ccons{_alt.d_a0,
+                    _alt.d_a1 ? std::make_unique<custom_list<t_A>>() : nullptr};
           auto &_dst_alt = std::get<Ccons>(_dst->d_v_);
           if (_alt.d_a1) {
             _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -210,21 +210,21 @@ struct NestedInd {
     // CREATORS
     template <typename _U> explicit custom_list(const custom_list<_U> &_other) {
       if (std::holds_alternative<typename custom_list<_U>::Cnil>(_other.v())) {
-        this->d_v_ = Cnil();
+        this->d_v_ = Cnil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename custom_list<_U>::Ccons>(_other.v());
         this->d_v_ =
-            Ccons(t_A(d_a0),
-                  d_a1 ? std::make_unique<custom_list<t_A>>(*d_a1) : nullptr);
+            Ccons{t_A(d_a0),
+                  d_a1 ? std::make_unique<custom_list<t_A>>(*d_a1) : nullptr};
       }
     }
 
-    static custom_list<t_A> cnil() { return custom_list(Cnil()); }
+    static custom_list<t_A> cnil() { return custom_list(Cnil{}); }
 
     static custom_list<t_A> ccons(t_A a0, custom_list<t_A> a1) {
-      return custom_list(Ccons(
-          std::move(a0), std::make_unique<custom_list<t_A>>(std::move(a1))));
+      return custom_list(Ccons{
+          std::move(a0), std::make_unique<custom_list<t_A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -330,25 +330,25 @@ struct NestedInd {
     rose<t_A> clone() const {
       auto &&_sv = *(this);
       const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
-      return rose<t_A>(Node(
+      return rose<t_A>(Node{
           d_a0,
           d_a1 ? std::make_unique<NestedInd::custom_list<NestedInd::rose<t_A>>>(
                      d_a1->clone())
-               : nullptr));
+               : nullptr});
     }
 
     // CREATORS
     template <typename _U> explicit rose(const rose<_U> &_other) {
       const auto &[d_a0, d_a1] = std::get<typename rose<_U>::Node>(_other.v());
       this->d_v_ =
-          Node(t_A(d_a0),
+          Node{t_A(d_a0),
                d_a1 ? std::make_unique<NestedInd::custom_list<rose<t_A>>>(*d_a1)
-                    : nullptr);
+                    : nullptr};
     }
 
     static rose<t_A> node(t_A a0, custom_list<rose<t_A>> a1) {
-      return rose(Node(std::move(a0), std::make_unique<custom_list<rose<t_A>>>(
-                                          std::move(a1))));
+      return rose(Node{std::move(a0), std::make_unique<custom_list<rose<t_A>>>(
+                                          std::move(a1))});
     }
 
     // MANIPULATORS
@@ -469,11 +469,11 @@ struct NestedInd {
         expr *_dst = _frame._dst;
         if (std::holds_alternative<Lit>(_src->v())) {
           const auto &_alt = std::get<Lit>(_src->v());
-          _dst->d_v_ = Lit(_alt.d_a0);
+          _dst->d_v_ = Lit{_alt.d_a0};
         } else if (std::holds_alternative<Add>(_src->v())) {
           const auto &_alt = std::get<Add>(_src->v());
           _dst->d_v_ =
-              Add(_alt.d_a0 ? std::make_unique<List<expr>>() : nullptr);
+              Add{_alt.d_a0 ? std::make_unique<List<expr>>() : nullptr};
           auto &_dst_alt = std::get<Add>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
@@ -505,7 +505,7 @@ struct NestedInd {
         } else {
           const auto &_alt = std::get<Mul>(_src->v());
           _dst->d_v_ =
-              Mul(_alt.d_a0 ? std::make_unique<List<expr>>() : nullptr);
+              Mul{_alt.d_a0 ? std::make_unique<List<expr>>() : nullptr};
           auto &_dst_alt = std::get<Mul>(_dst->d_v_);
           [&] {
             if (_alt.d_a0) {
@@ -540,14 +540,14 @@ struct NestedInd {
     }
 
     // CREATORS
-    static expr lit(unsigned int a0) { return expr(Lit(std::move(a0))); }
+    static expr lit(unsigned int a0) { return expr(Lit{std::move(a0)}); }
 
     static expr add(List<expr> a0) {
-      return expr(Add(std::make_unique<List<expr>>(std::move(a0))));
+      return expr(Add{std::make_unique<List<expr>>(std::move(a0))});
     }
 
     static expr mul(List<expr> a0) {
-      return expr(Mul(std::make_unique<List<expr>>(std::move(a0))));
+      return expr(Mul{std::make_unique<List<expr>>(std::move(a0))});
     }
 
     // MANIPULATORS

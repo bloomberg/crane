@@ -66,10 +66,10 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O();
+        _dst->d_v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S(_alt.d_a0 ? std::make_unique<Nat>() : nullptr);
+        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -80,9 +80,9 @@ public:
   }
 
   // CREATORS
-  static Nat o() { return Nat(O()); }
+  static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S(std::make_unique<Nat>(std::move(a0)))); }
+  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -127,18 +127,18 @@ struct RocqBug13581 {
     std::function<t_T0(t_T0)> mixin_f;
 
     // ACCESSORS
-    mixin_of<t_T0> clone() const { return mixin_of<t_T0>((*(this)).mixin_f); }
+    mixin_of<t_T0> clone() const { return mixin_of<t_T0>{(*(this)).mixin_f}; }
   };
 
   static inline const mixin_of<Nat> d =
-      mixin_of<Nat>([](Nat x0) { return x0; });
+      mixin_of<Nat>{[](Nat x0) { return x0; }};
 
   template <typename t_T0> struct R {
     std::function<t_T0(t_T0)> g;
     Nat x;
 
     // ACCESSORS
-    R<t_T0> clone() const { return R<t_T0>((*(this)).g, (*(this)).x.clone()); }
+    R<t_T0> clone() const { return R<t_T0>{(*(this)).g, (*(this)).x.clone()}; }
   };
 
   template <typename T1>
@@ -146,7 +146,7 @@ struct RocqBug13581 {
     return r0.x.add(r0.x);
   }
 
-  static inline const R<Nat> r = R<Nat>([](Nat x0) { return x0; }, Nat::o());
+  static inline const R<Nat> r = R<Nat>{[](Nat x0) { return x0; }, Nat::o()};
   template <typename t_T> struct I;
   template <typename t_T> struct J;
 
@@ -204,10 +204,10 @@ struct RocqBug13581 {
         const I<t_T> *_src = _frame._src;
         I<t_T> *_dst = _frame._dst;
         if (std::holds_alternative<C>(_src->v())) {
-          _dst->d_v_ = C();
+          _dst->d_v_ = C{};
         } else {
           const auto &_alt = std::get<D>(_src->v());
-          _dst->d_v_ = D(_alt.d_a0 ? std::make_unique<J<t_T>>() : nullptr);
+          _dst->d_v_ = D{_alt.d_a0 ? std::make_unique<J<t_T>>() : nullptr};
           auto &_dst_alt = std::get<D>(_dst->d_v_);
           if (_alt.d_a0) {
             if (std::holds_alternative<typename RocqBug13581::J<t_T>::E>(
@@ -230,18 +230,18 @@ struct RocqBug13581 {
     // CREATORS
     template <typename _U> explicit I(const I<_U> &_other) {
       if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
-        this->d_v_ = C();
+        this->d_v_ = C{};
       } else {
         const auto &[d_a0] = std::get<typename I<_U>::D>(_other.v());
         this->d_v_ =
-            D(d_a0 ? std::make_unique<RocqBug13581::J<t_T>>(*d_a0) : nullptr);
+            D{d_a0 ? std::make_unique<RocqBug13581::J<t_T>>(*d_a0) : nullptr};
       }
     }
 
-    static I<t_T> c() { return I(C()); }
+    static I<t_T> c() { return I(C{}); }
 
     static I<t_T> d(J<t_T> a0) {
-      return I(D(std::make_unique<J<t_T>>(std::move(a0))));
+      return I(D{std::make_unique<J<t_T>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -316,19 +316,19 @@ struct RocqBug13581 {
       auto &&_sv = *(this);
       const auto &[d_a0] = std::get<E>(_sv.v());
       return J<t_T>(
-          E(d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(d_a0->clone())
-                 : nullptr));
+          E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(d_a0->clone())
+                 : nullptr});
     }
 
     // CREATORS
     template <typename _U> explicit J(const J<_U> &_other) {
       const auto &[d_a0] = std::get<typename J<_U>::E>(_other.v());
       this->d_v_ =
-          E(d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr);
+          E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr};
     }
 
     static J<t_T> e(I<t_T> a0) {
-      return J(E(std::make_unique<I<t_T>>(std::move(a0))));
+      return J(E{std::make_unique<I<t_T>>(std::move(a0))});
     }
 
     // MANIPULATORS

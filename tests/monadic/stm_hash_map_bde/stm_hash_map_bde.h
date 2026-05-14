@@ -70,11 +70,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (bsl::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = bsl::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? bsl::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? bsl::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = bsl::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -86,17 +86,17 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (bsl::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(bsl::move(a0), bsl::make_unique<List<t_A>>(bsl::move(a1))));
+        Cons{bsl::move(a0), bsl::make_unique<List<t_A>>(bsl::move(a1))});
   }
   // MANIPULATORS
   ~List() {
@@ -303,10 +303,10 @@ template <typename K, typename V> struct CHT {
           [&] { return stm::newTVar(List<bsl::pair<T1, T2>>::nil()); });
       bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>(eqb, hash, v, 1, fb);
+      return CHT<T1, T2>{eqb, hash, v, 1, fb};
     } else {
       stm::TVar<List<bsl::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>(eqb, hash, bs, n, b);
+      return CHT<T1, T2>{eqb, hash, bs, n, b};
     }
   }
 };

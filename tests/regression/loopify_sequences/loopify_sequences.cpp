@@ -51,7 +51,7 @@ List<unsigned int> LoopifySequences::collatz_list_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_list_fuel: _Enter.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -67,9 +67,9 @@ List<unsigned int> LoopifySequences::collatz_list_fuel(
         _result = List<unsigned int>::cons(1u, List<unsigned int>::nil());
       } else {
         if ((2u ? n % 2u : n) == 0u) {
-          _stack.emplace_back(_Enter((2u ? n / 2u : 0), f));
+          _stack.emplace_back(_Enter{(2u ? n / 2u : 0), f});
         } else {
-          _stack.emplace_back(_Enter(((3u * n) + 1u), f));
+          _stack.emplace_back(_Enter{((3u * n) + 1u), f});
         }
       }
     }
@@ -196,7 +196,7 @@ List<unsigned int> LoopifySequences::repeat_string(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified repeat_string: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -208,8 +208,8 @@ List<unsigned int> LoopifySequences::repeat_string(
         _result = List<unsigned int>::nil();
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume_m(s));
-        _stack.emplace_back(_Enter(m));
+        _stack.emplace_back(_Resume_m{s});
+        _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
@@ -239,7 +239,7 @@ List<unsigned int> LoopifySequences::repeat_with_sep(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified repeat_with_sep: _Enter -> _Resume__x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -255,8 +255,8 @@ List<unsigned int> LoopifySequences::repeat_with_sep(
           _result = std::move(s);
         } else {
           unsigned int _x = m - 1;
-          _stack.emplace_back(_Resume__x(s, sep));
-          _stack.emplace_back(_Enter(m));
+          _stack.emplace_back(_Resume__x{s, sep});
+          _stack.emplace_back(_Enter{m});
         }
       }
     } else {
@@ -292,7 +292,7 @@ List<unsigned int> LoopifySequences::string_chain_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified string_chain_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -308,8 +308,8 @@ List<unsigned int> LoopifySequences::string_chain_fuel(
         if (n <= 0u) {
           _result = List<unsigned int>::nil();
         } else {
-          _stack.emplace_back(_Resume1(s, sep, sep.app(end_marker)));
-          _stack.emplace_back(_Enter((((n - 1u) > n ? 0 : (n - 1u))), f));
+          _stack.emplace_back(_Resume1{s, sep, sep.app(end_marker)});
+          _stack.emplace_back(_Enter{(((n - 1u) > n ? 0 : (n - 1u))), f});
         }
       }
     } else {
@@ -448,7 +448,7 @@ List<unsigned int> LoopifySequences::cycle(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified cycle: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -463,8 +463,8 @@ List<unsigned int> LoopifySequences::cycle(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::nil();
         } else {
-          _stack.emplace_back(_Resume_Cons(l));
-          _stack.emplace_back(_Enter(m));
+          _stack.emplace_back(_Resume_Cons{l});
+          _stack.emplace_back(_Enter{m});
         }
       }
     } else {
@@ -615,7 +615,7 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&s));
+  _stack.emplace_back(_Enter{&s});
   /// Loopified string_subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -629,8 +629,8 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(s.v());
-        _stack.emplace_back(_Cont_Cons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_Cons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -654,7 +654,7 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
         List<List<unsigned int>> _result{};
         std::vector<_Frame> _stack;
         _stack.reserve(8);
-        _stack.emplace_back(_Enter(lsts));
+        _stack.emplace_back(_Enter{lsts});
         /// Loopified map_prepend_c: _Enter -> _Resume_Cons.
         while (!_stack.empty()) {
           _Frame _frame = std::move(_stack.back());
@@ -670,8 +670,8 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
                   std::get<typename List<List<unsigned int>>::Cons>(
                       lsts.v_mut());
               _stack.emplace_back(
-                  _Resume_Cons(List<unsigned int>::cons(d_a0, d_a00)));
-              _stack.emplace_back(_Enter(std::move(*(d_a10))));
+                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
+              _stack.emplace_back(_Enter{std::move(*(d_a10))});
             }
           } else {
             auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -845,7 +845,7 @@ bool LoopifySequences::elem(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -858,8 +858,8 @@ bool LoopifySequences::elem(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons(x == d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{x == d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

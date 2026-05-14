@@ -58,21 +58,21 @@ struct GeneratedMethodNameClash {
     token clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Clone>(_sv.v())) {
-        return token(Clone());
+        return token(Clone{});
       } else if (std::holds_alternative<V>(_sv.v())) {
-        return token(V());
+        return token(V{});
       } else {
         const auto &[d_a0] = std::get<Other>(_sv.v());
-        return token(Other(d_a0));
+        return token(Other{d_a0});
       }
     }
 
     // CREATORS
-    static token Clone_() { return token(Clone()); }
+    static token Clone_() { return token(Clone{}); }
 
-    static token V_() { return token(V()); }
+    static token V_() { return token(V{}); }
 
-    static token other(bool a0) { return token(Other(std::move(a0))); }
+    static token other(bool a0) { return token(Other{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

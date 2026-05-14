@@ -15,8 +15,8 @@ struct JcnOps {
 
     // ACCESSORS
     state clone() const {
-      return state((*(this)).acc, (*(this)).carry, (*(this)).test_pin,
-                   (*(this)).pc);
+      return state{(*(this)).acc, (*(this)).carry, (*(this)).test_pin,
+                   (*(this)).pc};
     }
   };
 
@@ -29,17 +29,17 @@ struct JcnOps {
   static unsigned int branch_target(const state &s, const unsigned int cond,
                                     const unsigned int off);
   static inline const unsigned int test_branch_target =
-      branch_target(state(0u, true, false, 300u), 2u, 17u);
+      branch_target(state{0u, true, false, 300u}, 2u, 17u);
   static inline const bool check_carry_clear_gate =
-      jcn_condition(state(1u, false, true, 0u), 10u);
+      jcn_condition(state{1u, false, true, 0u}, 10u);
   static inline const bool check_nonzero_gate =
-      jcn_condition(state(3u, false, true, 0u), 12u);
+      jcn_condition(state{3u, false, true, 0u}, 12u);
   static inline const bool check_test_high =
-      jcn_condition(state(1u, false, true, 0u), 9u);
+      jcn_condition(state{1u, false, true, 0u}, 9u);
   static inline const bool check_test_low =
-      jcn_condition(state(1u, false, false, 0u), 1u);
+      jcn_condition(state{1u, false, false, 0u}, 1u);
   static inline const bool check_zero_gate =
-      jcn_condition(state(0u, false, true, 0u), 4u);
+      jcn_condition(state{0u, false, true, 0u}, 4u);
   static inline const bool test_condition =
       (check_carry_clear_gate &&
        (check_nonzero_gate &&
@@ -52,7 +52,7 @@ struct JcnOps {
   static inline const unsigned int JCN_JNZ = 12u;
   static inline const unsigned int test_constants = []() {
     return []() {
-      state s = state(0u, true, false, 0u);
+      state s = state{0u, true, false, 0u};
       return (((jcn_condition(s, JCN_JC) ? 1u : 0u) +
                (jcn_condition(s, JCN_JZ) ? 1u : 0u)) +
               (jcn_condition(s, JCN_JNT) ? 1u : 0u));

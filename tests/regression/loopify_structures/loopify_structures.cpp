@@ -35,7 +35,7 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l, fuel));
+  _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified sum_nested_list_fuel: _Enter -> _After_NList -> _Combine_NList
   /// -> _Resume_Elem.
   while (!_stack.empty()) {
@@ -59,20 +59,20 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
                   d_a0.v())) {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
-            _stack.emplace_back(_Resume_Elem(d_a00));
-            _stack.emplace_back(_Enter(d_a1.get(), f));
+            _stack.emplace_back(_Resume_Elem{d_a00});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_After_NList(d_a00.get(), f));
-            _stack.emplace_back(_Enter(d_a1.get(), f));
+            _stack.emplace_back(_After_NList{d_a00.get(), f});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           }
         }
       }
     } else if (std::holds_alternative<_After_NList>(_frame)) {
       auto _f = std::move(std::get<_After_NList>(_frame));
-      _stack.emplace_back(_Combine_NList(_result));
-      _stack.emplace_back(_Enter(_f.d_a00, _f.f));
+      _stack.emplace_back(_Combine_NList{_result});
+      _stack.emplace_back(_Enter{_f.d_a00, _f.f});
     } else if (std::holds_alternative<_Combine_NList>(_frame)) {
       auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = (_result + _f._result);
@@ -153,7 +153,7 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l, fuel));
+  _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified flatten_nested_list_fuel: _Enter -> _After_NList ->
   /// _Combine_NList -> _Resume_Elem.
   while (!_stack.empty()) {
@@ -177,20 +177,20 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
                   d_a0.v())) {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
-            _stack.emplace_back(_Resume_Elem(d_a00));
-            _stack.emplace_back(_Enter(d_a1.get(), f));
+            _stack.emplace_back(_Resume_Elem{d_a00});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           } else {
             const auto &[d_a00] =
                 std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_After_NList(d_a00.get(), f));
-            _stack.emplace_back(_Enter(d_a1.get(), f));
+            _stack.emplace_back(_After_NList{d_a00.get(), f});
+            _stack.emplace_back(_Enter{d_a1.get(), f});
           }
         }
       }
     } else if (std::holds_alternative<_After_NList>(_frame)) {
       auto _f = std::move(std::get<_After_NList>(_frame));
-      _stack.emplace_back(_Combine_NList(std::move(_result)));
-      _stack.emplace_back(_Enter(_f.d_a00, _f.f));
+      _stack.emplace_back(_Combine_NList{std::move(_result)});
+      _stack.emplace_back(_Enter{_f.d_a00, _f.f});
     } else if (std::holds_alternative<_Combine_NList>(_frame)) {
       auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = _result.app(_f._result);

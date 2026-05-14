@@ -51,18 +51,18 @@ struct CountLoopTestTarget {
       auto &&_sv = *(this);
       if (std::holds_alternative<ISZ>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
-        return instruction(ISZ(d_a0, d_a1));
+        return instruction(ISZ{d_a0, d_a1});
       } else {
-        return instruction(NOP());
+        return instruction(NOP{});
       }
     }
 
     // CREATORS
     static instruction isz(unsigned int a0, unsigned int a1) {
-      return instruction(ISZ(std::move(a0), std::move(a1)));
+      return instruction(ISZ{std::move(a0), std::move(a1)});
     }
 
-    static instruction nop() { return instruction(NOP()); }
+    static instruction nop() { return instruction(NOP{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

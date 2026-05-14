@@ -20,7 +20,7 @@ template <Sig S> struct Worker {
     typename S::A payload;
 
     // ACCESSORS
-    item clone() const { return item((*(this)).label, (*(this)).payload); }
+    item clone() const { return item{(*(this)).label, (*(this)).payload}; }
   };
 
   static unsigned int get_label(const item &x) { return x.label; }

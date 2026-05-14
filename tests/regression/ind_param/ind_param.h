@@ -62,17 +62,17 @@ struct IndParam {
         auto &&_sv = *(this);
         if (std::holds_alternative<Ok>(_sv.v())) {
           const auto &[d_a0] = std::get<Ok>(_sv.v());
-          return result(Ok(d_a0.clone()));
+          return result(Ok{d_a0.clone()});
         } else {
           const auto &[d_a0] = std::get<Err>(_sv.v());
-          return result(Err(d_a0));
+          return result(Err{d_a0});
         }
       }
 
       // CREATORS
-      static result ok(typename C::t a0) { return result(Ok(std::move(a0))); }
+      static result ok(typename C::t a0) { return result(Ok{std::move(a0)}); }
 
-      static result err(unsigned int a0) { return result(Err(std::move(a0))); }
+      static result err(unsigned int a0) { return result(Err{std::move(a0)}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
@@ -186,23 +186,23 @@ struct IndParam {
       t clone() const {
         auto &&_sv = *(this);
         if (std::holds_alternative<Empty>(_sv.v())) {
-          return t(Empty());
+          return t(Empty{});
         } else if (std::holds_alternative<Single>(_sv.v())) {
           const auto &[d_a0] = std::get<Single>(_sv.v());
-          return t(Single(d_a0));
+          return t(Single{d_a0});
         } else {
           const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-          return t(Pair(d_a0, d_a1));
+          return t(Pair{d_a0, d_a1});
         }
       }
 
       // CREATORS
-      static t empty() { return t(Empty()); }
+      static t empty() { return t(Empty{}); }
 
-      static t single(elem a0) { return t(Single(std::move(a0))); }
+      static t single(elem a0) { return t(Single{std::move(a0)}); }
 
       static t pair(elem a0, elem a1) {
-        return t(Pair(std::move(a0), std::move(a1)));
+        return t(Pair{std::move(a0), std::move(a1)});
       }
 
       // MANIPULATORS

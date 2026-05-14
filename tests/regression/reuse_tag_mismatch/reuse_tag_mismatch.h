@@ -64,20 +64,20 @@ struct ReuseTagMismatch {
       auto &&_sv = *(this);
       if (std::holds_alternative<GoUp>(_sv.v())) {
         const auto &[d_a0] = std::get<GoUp>(_sv.v());
-        return direction(GoUp(d_a0));
+        return direction(GoUp{d_a0});
       } else {
         const auto &[d_a0] = std::get<GoDown>(_sv.v());
-        return direction(GoDown(d_a0));
+        return direction(GoDown{d_a0});
       }
     }
 
     // CREATORS
     static direction goup(unsigned int a0) {
-      return direction(GoUp(std::move(a0)));
+      return direction(GoUp{std::move(a0)});
     }
 
     static direction godown(unsigned int a0) {
-      return direction(GoDown(std::move(a0)));
+      return direction(GoDown{std::move(a0)});
     }
 
     // MANIPULATORS

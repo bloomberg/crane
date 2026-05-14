@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -265,73 +265,73 @@ public:
       const Uint *_src = _frame._src;
       Uint *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else if (std::holds_alternative<D0>(_src->v())) {
         const auto &_alt = std::get<D0>(_src->v());
-        _dst->d_v_ = D0(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D0>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D1>(_src->v())) {
         const auto &_alt = std::get<D1>(_src->v());
-        _dst->d_v_ = D1(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D1>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D2>(_src->v())) {
         const auto &_alt = std::get<D2>(_src->v());
-        _dst->d_v_ = D2(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D2>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D3>(_src->v())) {
         const auto &_alt = std::get<D3>(_src->v());
-        _dst->d_v_ = D3(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D3>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D4>(_src->v())) {
         const auto &_alt = std::get<D4>(_src->v());
-        _dst->d_v_ = D4(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D4>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D5>(_src->v())) {
         const auto &_alt = std::get<D5>(_src->v());
-        _dst->d_v_ = D5(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D5>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D6>(_src->v())) {
         const auto &_alt = std::get<D6>(_src->v());
-        _dst->d_v_ = D6(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D6>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D7>(_src->v())) {
         const auto &_alt = std::get<D7>(_src->v());
-        _dst->d_v_ = D7(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D7>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D8>(_src->v())) {
         const auto &_alt = std::get<D8>(_src->v());
-        _dst->d_v_ = D8(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D8>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else {
         const auto &_alt = std::get<D9>(_src->v());
-        _dst->d_v_ = D9(_alt.d_a0 ? std::make_unique<Uint>() : nullptr);
+        _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
         auto &_dst_alt = std::get<D9>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -342,46 +342,46 @@ public:
   }
 
   // CREATORS
-  static Uint nil() { return Uint(Nil()); }
+  static Uint nil() { return Uint(Nil{}); }
 
   static Uint d0(Uint a0) {
-    return Uint(D0(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D0{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d1(Uint a0) {
-    return Uint(D1(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D1{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d2(Uint a0) {
-    return Uint(D2(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D2{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d3(Uint a0) {
-    return Uint(D3(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D3{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d4(Uint a0) {
-    return Uint(D4(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D4{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d5(Uint a0) {
-    return Uint(D5(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D5{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d6(Uint a0) {
-    return Uint(D6(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D6{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d7(Uint a0) {
-    return Uint(D7(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D7{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d8(Uint a0) {
-    return Uint(D8(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D8{std::make_unique<Uint>(std::move(a0))});
   }
 
   static Uint d9(Uint a0) {
-    return Uint(D9(std::make_unique<Uint>(std::move(a0))));
+    return Uint(D9{std::make_unique<Uint>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -611,115 +611,115 @@ public:
       const Uint0 *_src = _frame._src;
       Uint0 *_dst = _frame._dst;
       if (std::holds_alternative<Nil0>(_src->v())) {
-        _dst->d_v_ = Nil0();
+        _dst->d_v_ = Nil0{};
       } else if (std::holds_alternative<D10>(_src->v())) {
         const auto &_alt = std::get<D10>(_src->v());
-        _dst->d_v_ = D10(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D10>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D11>(_src->v())) {
         const auto &_alt = std::get<D11>(_src->v());
-        _dst->d_v_ = D11(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D11>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D12>(_src->v())) {
         const auto &_alt = std::get<D12>(_src->v());
-        _dst->d_v_ = D12(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D12>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D13>(_src->v())) {
         const auto &_alt = std::get<D13>(_src->v());
-        _dst->d_v_ = D13(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D13>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D14>(_src->v())) {
         const auto &_alt = std::get<D14>(_src->v());
-        _dst->d_v_ = D14(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D14>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D15>(_src->v())) {
         const auto &_alt = std::get<D15>(_src->v());
-        _dst->d_v_ = D15(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D15>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D16>(_src->v())) {
         const auto &_alt = std::get<D16>(_src->v());
-        _dst->d_v_ = D16(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D16>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D17>(_src->v())) {
         const auto &_alt = std::get<D17>(_src->v());
-        _dst->d_v_ = D17(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D17>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D18>(_src->v())) {
         const auto &_alt = std::get<D18>(_src->v());
-        _dst->d_v_ = D18(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D18>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<D19>(_src->v())) {
         const auto &_alt = std::get<D19>(_src->v());
-        _dst->d_v_ = D19(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D19>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<Da>(_src->v())) {
         const auto &_alt = std::get<Da>(_src->v());
-        _dst->d_v_ = Da(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Da>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<Db>(_src->v())) {
         const auto &_alt = std::get<Db>(_src->v());
-        _dst->d_v_ = Db(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Db>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<Dc>(_src->v())) {
         const auto &_alt = std::get<Dc>(_src->v());
-        _dst->d_v_ = Dc(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Dc>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<Dd>(_src->v())) {
         const auto &_alt = std::get<Dd>(_src->v());
-        _dst->d_v_ = Dd(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Dd>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else if (std::holds_alternative<De>(_src->v())) {
         const auto &_alt = std::get<De>(_src->v());
-        _dst->d_v_ = De(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<De>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
         }
       } else {
         const auto &_alt = std::get<Df>(_src->v());
-        _dst->d_v_ = Df(_alt.d_a0 ? std::make_unique<Uint0>() : nullptr);
+        _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Df>(_dst->d_v_);
         if (_alt.d_a0) {
           _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
@@ -730,70 +730,70 @@ public:
   }
 
   // CREATORS
-  static Uint0 nil0() { return Uint0(Nil0()); }
+  static Uint0 nil0() { return Uint0(Nil0{}); }
 
   static Uint0 d10(Uint0 a0) {
-    return Uint0(D10(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D10{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d11(Uint0 a0) {
-    return Uint0(D11(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D11{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d12(Uint0 a0) {
-    return Uint0(D12(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D12{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d13(Uint0 a0) {
-    return Uint0(D13(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D13{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d14(Uint0 a0) {
-    return Uint0(D14(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D14{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d15(Uint0 a0) {
-    return Uint0(D15(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D15{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d16(Uint0 a0) {
-    return Uint0(D16(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D16{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d17(Uint0 a0) {
-    return Uint0(D17(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D17{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d18(Uint0 a0) {
-    return Uint0(D18(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D18{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 d19(Uint0 a0) {
-    return Uint0(D19(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(D19{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 da(Uint0 a0) {
-    return Uint0(Da(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(Da{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 db(Uint0 a0) {
-    return Uint0(Db(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(Db{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 dc(Uint0 a0) {
-    return Uint0(Dc(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(Dc{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 dd(Uint0 a0) {
-    return Uint0(Dd(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(Dd{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 de(Uint0 a0) {
-    return Uint0(De(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(De{std::make_unique<Uint0>(std::move(a0))});
   }
 
   static Uint0 df(Uint0 a0) {
-    return Uint0(Df(std::make_unique<Uint0>(std::move(a0))));
+    return Uint0(Df{std::make_unique<Uint0>(std::move(a0))});
   }
 
   // MANIPULATORS
@@ -957,18 +957,18 @@ public:
     auto &&_sv = *(this);
     if (std::holds_alternative<UIntDecimal>(_sv.v())) {
       const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
-      return Uint1(UIntDecimal(d_u.clone()));
+      return Uint1(UIntDecimal{d_u.clone()});
     } else {
       const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
-      return Uint1(UIntHexadecimal(d_u.clone()));
+      return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
 
   // CREATORS
-  static Uint1 uintdecimal(Uint u) { return Uint1(UIntDecimal(std::move(u))); }
+  static Uint1 uintdecimal(Uint u) { return Uint1(UIntDecimal{std::move(u)}); }
 
   static Uint1 uinthexadecimal(Uint0 u) {
-    return Uint1(UIntHexadecimal(std::move(u)));
+    return Uint1(UIntHexadecimal{std::move(u)});
   }
 
   // MANIPULATORS
@@ -995,14 +995,14 @@ struct ValidatedPumpDeliveryTraceCase {
     unsigned int mg_dL_val;
 
     // ACCESSORS
-    Mg_dL clone() const { return Mg_dL((*(this)).mg_dL_val); }
+    Mg_dL clone() const { return Mg_dL{(*(this)).mg_dL_val}; }
   };
 
   struct Grams {
     unsigned int grams_val;
 
     // ACCESSORS
-    Grams clone() const { return Grams((*(this)).grams_val); }
+    Grams clone() const { return Grams{(*(this)).grams_val}; }
   };
 
   using Carbs_g = Grams;
@@ -1028,15 +1028,15 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     Config clone() const {
-      return Config((*(this)).cfg_bg_rise_per_gram,
+      return Config{(*(this)).cfg_bg_rise_per_gram,
                     (*(this)).cfg_conservative_cob_absorption_percent,
                     (*(this)).cfg_suspend_threshold_mg_dl,
                     (*(this)).cfg_stacking_warning_threshold_min,
-                    (*(this)).cfg_iob_high_threshold_twentieths);
+                    (*(this)).cfg_iob_high_threshold_twentieths};
     }
   };
 
-  static inline const Config default_config = Config(4u, 30u, 80u, 60u, 200u);
+  static inline const Config default_config = Config{4u, 30u, 80u, 60u, 200u};
   enum class ActivityState {
     e_ACTIVITY_NORMAL,
     e_ACTIVITY_LIGHTEXERCISE,
@@ -1158,35 +1158,35 @@ struct ValidatedPumpDeliveryTraceCase {
     FaultStatus clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Fault_None>(_sv.v())) {
-        return FaultStatus(Fault_None());
+        return FaultStatus(Fault_None{});
       } else if (std::holds_alternative<Fault_Occlusion>(_sv.v())) {
-        return FaultStatus(Fault_Occlusion());
+        return FaultStatus(Fault_Occlusion{});
       } else if (std::holds_alternative<Fault_LowReservoir>(_sv.v())) {
         const auto &[d_a0] = std::get<Fault_LowReservoir>(_sv.v());
-        return FaultStatus(Fault_LowReservoir(d_a0));
+        return FaultStatus(Fault_LowReservoir{d_a0});
       } else if (std::holds_alternative<Fault_BatteryLow>(_sv.v())) {
-        return FaultStatus(Fault_BatteryLow());
+        return FaultStatus(Fault_BatteryLow{});
       } else {
-        return FaultStatus(Fault_Unknown());
+        return FaultStatus(Fault_Unknown{});
       }
     }
 
     // CREATORS
-    static FaultStatus fault_none() { return FaultStatus(Fault_None()); }
+    static FaultStatus fault_none() { return FaultStatus(Fault_None{}); }
 
     static FaultStatus fault_occlusion() {
-      return FaultStatus(Fault_Occlusion());
+      return FaultStatus(Fault_Occlusion{});
     }
 
     static FaultStatus fault_lowreservoir(unsigned int a0) {
-      return FaultStatus(Fault_LowReservoir(std::move(a0)));
+      return FaultStatus(Fault_LowReservoir{std::move(a0)});
     }
 
     static FaultStatus fault_batterylow() {
-      return FaultStatus(Fault_BatteryLow());
+      return FaultStatus(Fault_BatteryLow{});
     }
 
-    static FaultStatus fault_unknown() { return FaultStatus(Fault_Unknown()); }
+    static FaultStatus fault_unknown() { return FaultStatus(Fault_Unknown{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -1303,8 +1303,8 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     BolusEvent clone() const {
-      return BolusEvent((*(this)).be_dose_twentieths,
-                        (*(this)).be_time_minutes);
+      return BolusEvent{(*(this)).be_dose_twentieths,
+                        (*(this)).be_time_minutes};
     }
   };
 
@@ -1385,26 +1385,26 @@ struct ValidatedPumpDeliveryTraceCase {
     SuspendDecision clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Suspend_None>(_sv.v())) {
-        return SuspendDecision(Suspend_None());
+        return SuspendDecision(Suspend_None{});
       } else if (std::holds_alternative<Suspend_Reduce>(_sv.v())) {
         const auto &[d_a0] = std::get<Suspend_Reduce>(_sv.v());
-        return SuspendDecision(Suspend_Reduce(d_a0));
+        return SuspendDecision(Suspend_Reduce{d_a0});
       } else {
-        return SuspendDecision(Suspend_Withhold());
+        return SuspendDecision(Suspend_Withhold{});
       }
     }
 
     // CREATORS
     static SuspendDecision suspend_none() {
-      return SuspendDecision(Suspend_None());
+      return SuspendDecision(Suspend_None{});
     }
 
     static SuspendDecision suspend_reduce(Insulin_twentieth a0) {
-      return SuspendDecision(Suspend_Reduce(std::move(a0)));
+      return SuspendDecision(Suspend_Reduce{std::move(a0)});
     }
 
     static SuspendDecision suspend_withhold() {
-      return SuspendDecision(Suspend_Withhold());
+      return SuspendDecision(Suspend_Withhold{});
     }
 
     // MANIPULATORS
@@ -1475,10 +1475,10 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     PrecisionParams clone() const {
-      return PrecisionParams((*(this)).prec_icr_tenths,
+      return PrecisionParams{(*(this)).prec_icr_tenths,
                              (*(this)).prec_isf_tenths,
                              (*(this)).prec_target_bg.clone(),
-                             (*(this)).prec_dia, (*(this)).prec_insulin_type);
+                             (*(this)).prec_dia, (*(this)).prec_insulin_type};
     }
   };
 
@@ -1496,11 +1496,11 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     PrecisionInput clone() const {
-      return PrecisionInput(
-          (*(this)).pi_carbs_g, (*(this)).pi_current_bg.clone(),
-          (*(this)).pi_now, (*(this)).pi_bolus_history.clone(),
-          (*(this)).pi_activity, (*(this)).pi_use_sensor_margin,
-          (*(this)).pi_fault.clone(), (*(this)).pi_weight_kg);
+      return PrecisionInput{
+          (*(this)).pi_carbs_g,       (*(this)).pi_current_bg.clone(),
+          (*(this)).pi_now,           (*(this)).pi_bolus_history.clone(),
+          (*(this)).pi_activity,      (*(this)).pi_use_sensor_margin,
+          (*(this)).pi_fault.clone(), (*(this)).pi_weight_kg};
     }
   };
 
@@ -1559,20 +1559,20 @@ struct ValidatedPumpDeliveryTraceCase {
       auto &&_sv = *(this);
       if (std::holds_alternative<PrecOK>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<PrecOK>(_sv.v());
-        return PrecisionResult(PrecOK(d_a0, d_a1));
+        return PrecisionResult(PrecOK{d_a0, d_a1});
       } else {
         const auto &[d_a0] = std::get<PrecError>(_sv.v());
-        return PrecisionResult(PrecError(d_a0));
+        return PrecisionResult(PrecError{d_a0});
       }
     }
 
     // CREATORS
     static PrecisionResult precok(Insulin_twentieth a0, bool a1) {
-      return PrecisionResult(PrecOK(std::move(a0), std::move(a1)));
+      return PrecisionResult(PrecOK{std::move(a0), std::move(a1)});
     }
 
     static PrecisionResult precerror(unsigned int a0) {
-      return PrecisionResult(PrecError(std::move(a0)));
+      return PrecisionResult(PrecError{std::move(a0)});
     }
 
     // MANIPULATORS
@@ -1663,11 +1663,11 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     MmolPrecisionInput clone() const {
-      return MmolPrecisionInput(
-          (*(this)).mpi_carbs_g, (*(this)).mpi_current_bg_mmol_tenths,
-          (*(this)).mpi_now, (*(this)).mpi_bolus_history.clone(),
-          (*(this)).mpi_activity, (*(this)).mpi_use_sensor_margin,
-          (*(this)).mpi_fault.clone(), (*(this)).mpi_weight_kg);
+      return MmolPrecisionInput{
+          (*(this)).mpi_carbs_g,       (*(this)).mpi_current_bg_mmol_tenths,
+          (*(this)).mpi_now,           (*(this)).mpi_bolus_history.clone(),
+          (*(this)).mpi_activity,      (*(this)).mpi_use_sensor_margin,
+          (*(this)).mpi_fault.clone(), (*(this)).mpi_weight_kg};
     }
   };
 
@@ -1738,10 +1738,10 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     PumpState clone() const {
-      return PumpState(
+      return PumpState{
           (*(this)).ps_reservoir_twentieths, (*(this)).ps_basal_rate_hundredths,
           (*(this)).ps_last_bolus_time, (*(this)).ps_occlusion_detected,
-          (*(this)).ps_battery_percent);
+          (*(this)).ps_battery_percent};
     }
   };
 
@@ -1756,51 +1756,82 @@ struct ValidatedPumpDeliveryTraceCase {
   static unsigned int pump_reservoir_after_result(const PumpState &pump,
                                                   const RoundingMode mode,
                                                   const PrecisionResult &r);
-  static inline const PrecisionParams witness_prec_params = PrecisionParams(
-      100u, 500u, Mg_dL(100u), 240u, InsulinType::e_INSULIN_HUMALOG);
+  static inline const PrecisionParams witness_prec_params = PrecisionParams{
+      100u, 500u, Mg_dL{100u}, 240u, InsulinType::e_INSULIN_HUMALOG};
   static inline const PrecisionInput standard_input =
-      PrecisionInput(Grams(60u), Mg_dL(150u), 0u, List<BolusEvent>::nil(),
-                     ActivityState::e_ACTIVITY_NORMAL, false,
-                     FaultStatus::fault_none(), std::optional<unsigned int>());
-  static inline const MmolPrecisionInput mmol_input = MmolPrecisionInput(
-      Grams(60u), 83u, 0u, List<BolusEvent>::nil(),
-      ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-      std::optional<unsigned int>());
-  static inline const PrecisionInput high_iob_input = PrecisionInput(
-      Grams(0u), Mg_dL(150u), 100u,
-      List<BolusEvent>::cons(BolusEvent(120u, 85u),
-                             List<BolusEvent>::cons(BolusEvent(100u, 80u),
+      PrecisionInput{Grams{60u},
+                     Mg_dL{150u},
+                     0u,
+                     List<BolusEvent>::nil(),
+                     ActivityState::e_ACTIVITY_NORMAL,
+                     false,
+                     FaultStatus::fault_none(),
+                     std::optional<unsigned int>()};
+  static inline const MmolPrecisionInput mmol_input =
+      MmolPrecisionInput{Grams{60u},
+                         83u,
+                         0u,
+                         List<BolusEvent>::nil(),
+                         ActivityState::e_ACTIVITY_NORMAL,
+                         false,
+                         FaultStatus::fault_none(),
+                         std::optional<unsigned int>()};
+  static inline const PrecisionInput high_iob_input = PrecisionInput{
+      Grams{0u},
+      Mg_dL{150u},
+      100u,
+      List<BolusEvent>::cons(BolusEvent{120u, 85u},
+                             List<BolusEvent>::cons(BolusEvent{100u, 80u},
                                                     List<BolusEvent>::nil())),
-      ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-      std::optional<unsigned int>());
-  static inline const PrecisionInput tdd_exceeded_input = PrecisionInput(
-      Grams(60u), Mg_dL(150u), 2000u,
-      List<BolusEvent>::cons(
-          BolusEvent(500u, 1800u),
-          List<BolusEvent>::cons(
-              BolusEvent(500u, 1500u),
-              List<BolusEvent>::cons(BolusEvent(500u, 1000u),
-                                     List<BolusEvent>::nil()))),
-      ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-      std::make_optional<unsigned int>(70u));
-  static inline const PrecisionInput occlusion_input = PrecisionInput(
-      Grams(60u), Mg_dL(150u), 120u,
-      List<BolusEvent>::cons(BolusEvent(40u, 100u), List<BolusEvent>::nil()),
-      ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_occlusion(),
-      std::optional<unsigned int>());
-  static inline const PrecisionInput battery_low_input = PrecisionInput(
-      Grams(60u), Mg_dL(150u), 120u,
-      List<BolusEvent>::cons(BolusEvent(40u, 100u), List<BolusEvent>::nil()),
-      ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_batterylow(),
-      std::optional<unsigned int>());
-  static inline const PrecisionInput pediatric_capped_input = PrecisionInput(
-      Grams(200u), Mg_dL(400u), 0u, List<BolusEvent>::nil(),
-      ActivityState::e_ACTIVITY_NORMAL, false, FaultStatus::fault_none(),
-      std::make_optional<unsigned int>(20u));
+      ActivityState::e_ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_none(),
+      std::optional<unsigned int>()};
+  static inline const PrecisionInput tdd_exceeded_input =
+      PrecisionInput{Grams{60u},
+                     Mg_dL{150u},
+                     2000u,
+                     List<BolusEvent>::cons(
+                         BolusEvent{500u, 1800u},
+                         List<BolusEvent>::cons(
+                             BolusEvent{500u, 1500u},
+                             List<BolusEvent>::cons(BolusEvent{500u, 1000u},
+                                                    List<BolusEvent>::nil()))),
+                     ActivityState::e_ACTIVITY_NORMAL,
+                     false,
+                     FaultStatus::fault_none(),
+                     std::make_optional<unsigned int>(70u)};
+  static inline const PrecisionInput occlusion_input = PrecisionInput{
+      Grams{60u},
+      Mg_dL{150u},
+      120u,
+      List<BolusEvent>::cons(BolusEvent{40u, 100u}, List<BolusEvent>::nil()),
+      ActivityState::e_ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_occlusion(),
+      std::optional<unsigned int>()};
+  static inline const PrecisionInput battery_low_input = PrecisionInput{
+      Grams{60u},
+      Mg_dL{150u},
+      120u,
+      List<BolusEvent>::cons(BolusEvent{40u, 100u}, List<BolusEvent>::nil()),
+      ActivityState::e_ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_batterylow(),
+      std::optional<unsigned int>()};
+  static inline const PrecisionInput pediatric_capped_input =
+      PrecisionInput{Grams{200u},
+                     Mg_dL{400u},
+                     0u,
+                     List<BolusEvent>::nil(),
+                     ActivityState::e_ACTIVITY_NORMAL,
+                     false,
+                     FaultStatus::fault_none(),
+                     std::make_optional<unsigned int>(20u)};
   static inline const PumpState standard_pump =
-      PumpState(2000u, 100u, 0u, false, 80u);
+      PumpState{2000u, 100u, 0u, false, 80u};
   static inline const PumpState low_battery_pump =
-      PumpState(2000u, 100u, 0u, false, 4u);
+      PumpState{2000u, 100u, 0u, false, 4u};
   static inline const PrecisionResult standard_result =
       validated_precision_bolus(standard_input, witness_prec_params);
   static inline const PrecisionResult mmol_result =

@@ -67,30 +67,30 @@ struct FreeMonad {
       auto &&_sv = *(this);
       if (std::holds_alternative<Pure>(_sv.v())) {
         const auto &[d_a] = std::get<Pure>(_sv.v());
-        return IO(Pure(d_a));
+        return IO(Pure{d_a});
       } else if (std::holds_alternative<Bind>(_sv.v())) {
         const auto &[d_a, d_b] = std::get<Bind>(_sv.v());
         return IO(
-            Bind(d_a ? std::make_unique<FreeMonad::IO>(d_a->clone()) : nullptr,
-                 d_b));
+            Bind{d_a ? std::make_unique<FreeMonad::IO>(d_a->clone()) : nullptr,
+                 d_b});
       } else if (std::holds_alternative<Get_line>(_sv.v())) {
-        return IO(Get_line());
+        return IO(Get_line{});
       } else {
         const auto &[d_a0] = std::get<Print>(_sv.v());
-        return IO(Print(d_a0));
+        return IO(Print{d_a0});
       }
     }
 
     // CREATORS
-    static IO pure(std::any a) { return IO(Pure(std::move(a))); }
+    static IO pure(std::any a) { return IO(Pure{std::move(a)}); }
 
     static IO bind(IO a, std::function<IO(std::any)> b) {
-      return IO(Bind(std::make_unique<IO>(std::move(a)), std::move(b)));
+      return IO(Bind{std::make_unique<IO>(std::move(a)), std::move(b)});
     }
 
-    static IO get_line() { return IO(Get_line()); }
+    static IO get_line() { return IO(Get_line{}); }
 
-    static IO print(std::string a0) { return IO(Print(std::move(a0))); }
+    static IO print(std::string a0) { return IO(Print{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

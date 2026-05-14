@@ -18,13 +18,13 @@ unsigned int IncXchNibble::get_reg_pair(const IncXchNibble::state &s,
 
 IncXchNibble::state IncXchNibble::execute_inc(const IncXchNibble::state &s,
                                               const unsigned int r) {
-  return state(
+  return state{
       update_nth<unsigned int>(r, nibble_of_nat((get_reg(s, r) + 1u)), s.regs),
-      s.acc);
+      s.acc};
 }
 
 IncXchNibble::state IncXchNibble::execute_xch(const IncXchNibble::state &s,
                                               const unsigned int r) {
-  return state(update_nth<unsigned int>(r, nibble_of_nat(s.acc), s.regs),
-               get_reg(s, r));
+  return state{update_nth<unsigned int>(r, nibble_of_nat(s.acc), s.regs),
+               get_reg(s, r)};
 }

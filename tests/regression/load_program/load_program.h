@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -167,8 +167,8 @@ struct LoadProgram {
 
     // ACCESSORS
     state clone() const {
-      return state((*(this)).rom.clone(), (*(this)).prom_addr,
-                   (*(this)).prom_data, (*(this)).prom_enable);
+      return state{(*(this)).rom.clone(), (*(this)).prom_addr,
+                   (*(this)).prom_data, (*(this)).prom_enable};
     }
   };
 
@@ -183,10 +183,13 @@ struct LoadProgram {
 
     // ACCESSORS
     state_extended clone() const {
-      return state_extended((*(this)).regs_len, (*(this)).rom_ext.clone(),
-                            (*(this)).pc, (*(this)).stack_len,
-                            (*(this)).prom_addr_ext, (*(this)).prom_data_ext,
-                            (*(this)).prom_enable_ext);
+      return state_extended{(*(this)).regs_len,
+                            (*(this)).rom_ext.clone(),
+                            (*(this)).pc,
+                            (*(this)).stack_len,
+                            (*(this)).prom_addr_ext,
+                            (*(this)).prom_data_ext,
+                            (*(this)).prom_enable_ext};
     }
   };
 
@@ -196,7 +199,7 @@ struct LoadProgram {
 
     // ACCESSORS
     state_simple clone() const {
-      return state_simple((*(this)).rom_.clone(), (*(this)).ptr_);
+      return state_simple{(*(this)).rom_.clone(), (*(this)).ptr_};
     }
   };
 
@@ -215,12 +218,12 @@ struct LoadProgram {
                                           const List<unsigned int> &bytes);
   static inline const bool test_load_program_nil = []() {
     state sample =
-        state(List<unsigned int>::cons(
+        state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
-              0u, 0u, false);
+              0u, 0u, false};
     state after =
         load_program(std::move(sample), 1u, List<unsigned int>::nil());
     return (ListDef::template nth<unsigned int>(0u, after.rom, 0u) == 10u &&
@@ -230,12 +233,12 @@ struct LoadProgram {
   }();
   static inline const bool test_load_program_cons_rom = []() {
     state sample =
-        state(List<unsigned int>::cons(
+        state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
-              0u, 0u, false);
+              0u, 0u, false};
     state after = load_program(
         std::move(sample), 1u,
         List<unsigned int>::cons(
@@ -247,12 +250,12 @@ struct LoadProgram {
   }();
   static inline const bool test_load_preserves_rom_length = []() {
     state sample =
-        state(List<unsigned int>::cons(
+        state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
-              0u, 0u, false);
+              0u, 0u, false};
     state after =
         load_program(std::move(sample), 1u,
                      List<unsigned int>::cons(
@@ -262,14 +265,18 @@ struct LoadProgram {
     return std::move(after).rom.length() == 4u;
   }();
   static inline const bool test_load_program_step_preserves_wf_simple = []() {
-    state_extended sample = state_extended(
+    state_extended sample = state_extended{
         4u,
         List<unsigned int>::cons(
             10u, List<unsigned int>::cons(
                      11u, List<unsigned int>::cons(
                               12u, List<unsigned int>::cons(
                                        13u, List<unsigned int>::nil())))),
-        100u, 2u, 0u, 0u, false);
+        100u,
+        2u,
+        0u,
+        0u,
+        false};
     state_extended after =
         execute_wpm_ext(set_prom_params_ext(std::move(sample), 1u, 99u, true));
     return (after.regs_len == 4u &&
@@ -278,38 +285,38 @@ struct LoadProgram {
   }();
   static inline const bool test_load_program_step_rom_length_weak = []() {
     state sample =
-        state(List<unsigned int>::cons(
+        state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
-              0u, 0u, false);
+              0u, 0u, false};
     state after =
         execute_wpm(set_prom_params(std::move(sample), 1u, 99u, true));
     return std::move(after).rom.length() == 4u;
   }();
   static inline const bool test_load_program_step_writes_at_base = []() {
     state sample =
-        state(List<unsigned int>::cons(
+        state{List<unsigned int>::cons(
                   10u, List<unsigned int>::cons(
                            11u, List<unsigned int>::cons(
                                     12u, List<unsigned int>::cons(
                                              13u, List<unsigned int>::nil())))),
-              0u, 0u, false);
+              0u, 0u, false};
     state after =
         execute_wpm(set_prom_params(std::move(sample), 1u, 99u, true));
     return ListDef::template nth<unsigned int>(1u, std::move(after).rom, 0u) ==
            99u;
   }();
   static inline const unsigned int test_sequential_program_load = []() {
-    state_simple sample = state_simple(
+    state_simple sample = state_simple{
         List<unsigned int>::cons(
             0u, List<unsigned int>::cons(
                     0u, List<unsigned int>::cons(
                             0u, List<unsigned int>::cons(
                                     0u, List<unsigned int>::cons(
                                             0u, List<unsigned int>::nil()))))),
-        1u);
+        1u};
     return ListDef::template nth<unsigned int>(
         2u,
         load_program_simple(

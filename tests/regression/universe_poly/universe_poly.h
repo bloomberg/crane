@@ -63,11 +63,11 @@ public:
       const List<t_A> *_src = _frame._src;
       List<t_A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil();
+        _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons(_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr);
+        _dst->d_v_ = Cons{_alt.d_a0,
+                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->d_v_);
         if (_alt.d_a1) {
           _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
@@ -80,19 +80,19 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil();
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons(t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr);
+          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil()); }
+  static List<t_A> nil() { return List(Nil{}); }
 
   static List<t_A> cons(t_A a0, List<t_A> a1) {
     return List(
-        Cons(std::move(a0), std::make_unique<List<t_A>>(std::move(a1))));
+        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -135,12 +135,12 @@ struct UniversePoly {
 
     // ACCESSORS
     ppair<t_A, t_B> clone() const {
-      return ppair<t_A, t_B>((*(this)).pfst, (*(this)).psnd);
+      return ppair<t_A, t_B>{(*(this)).pfst, (*(this)).psnd};
     }
   };
 
   static inline const ppair<unsigned int, bool> test_pair =
-      ppair<unsigned int, bool>(5u, true);
+      ppair<unsigned int, bool>{5u, true};
   static inline const unsigned int test_pfst = test_pair.pfst;
   static inline const bool test_psnd = test_pair.psnd;
 
@@ -185,26 +185,26 @@ struct UniversePoly {
     poption<t_A> clone() const {
       auto &&_sv = *(this);
       if (std::holds_alternative<Pnone>(_sv.v())) {
-        return poption<t_A>(Pnone());
+        return poption<t_A>(Pnone{});
       } else {
         const auto &[d_a0] = std::get<Psome>(_sv.v());
-        return poption<t_A>(Psome(d_a0));
+        return poption<t_A>(Psome{d_a0});
       }
     }
 
     // CREATORS
     template <typename _U> explicit poption(const poption<_U> &_other) {
       if (std::holds_alternative<typename poption<_U>::Pnone>(_other.v())) {
-        this->d_v_ = Pnone();
+        this->d_v_ = Pnone{};
       } else {
         const auto &[d_a0] = std::get<typename poption<_U>::Psome>(_other.v());
-        this->d_v_ = Psome(t_A(d_a0));
+        this->d_v_ = Psome{t_A(d_a0)};
       }
     }
 
-    static poption<t_A> pnone() { return poption(Pnone()); }
+    static poption<t_A> pnone() { return poption(Pnone{}); }
 
-    static poption<t_A> psome(t_A a0) { return poption(Psome(std::move(a0))); }
+    static poption<t_A> psome(t_A a0) { return poption(Psome{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

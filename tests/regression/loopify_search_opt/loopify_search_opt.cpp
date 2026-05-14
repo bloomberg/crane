@@ -140,7 +140,7 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
   unsigned int _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&items, capacity, fuel));
+  _stack.emplace_back(_Enter{&items, capacity, fuel});
   /// Loopified knapsack_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -165,20 +165,20 @@ unsigned int LoopifySearchOpt::knapsack_fuel(
           const unsigned int &weight = d_a0.first;
           const unsigned int &value = d_a0.second;
           if (capacity < weight) {
-            _stack.emplace_back(_Enter(d_a1.get(), capacity, fuel_));
+            _stack.emplace_back(_Enter{d_a1.get(), capacity, fuel_});
           } else {
-            _stack.emplace_back(_After2(d_a1.get(), capacity, fuel_, value));
-            _stack.emplace_back(_Enter(
+            _stack.emplace_back(_After2{d_a1.get(), capacity, fuel_, value});
+            _stack.emplace_back(_Enter{
                 d_a1.get(),
                 (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-                fuel_));
+                fuel_});
           }
         }
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1(_result, _f.value));
-      _stack.emplace_back(_Enter(_f.d_a1, _f.capacity, _f.fuel_));
+      _stack.emplace_back(_Combine1{_result, _f.value});
+      _stack.emplace_back(_Enter{_f.d_a1, _f.capacity, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
       _result = std::max(_result, (_f.value + _f._result));
@@ -221,7 +221,7 @@ bool LoopifySearchOpt::subset_sum_fuel(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l, target, fuel));
+  _stack.emplace_back(_Enter{&l, target, fuel});
   /// Loopified subset_sum_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -241,19 +241,19 @@ bool LoopifySearchOpt::subset_sum_fuel(
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
           if (target < d_a0) {
-            _stack.emplace_back(_Enter(d_a1.get(), target, fuel_));
+            _stack.emplace_back(_Enter{d_a1.get(), target, fuel_});
           } else {
-            _stack.emplace_back(_After2(d_a1.get(), target, fuel_));
-            _stack.emplace_back(_Enter(
+            _stack.emplace_back(_After2{d_a1.get(), target, fuel_});
+            _stack.emplace_back(_Enter{
                 d_a1.get(), (((target - d_a0) > target ? 0 : (target - d_a0))),
-                fuel_));
+                fuel_});
           }
         }
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1(_result));
-      _stack.emplace_back(_Enter(_f.d_a1, _f.target, _f.fuel_));
+      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Enter{_f.d_a1, _f.target, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
       _result = (_result || _f._result);
@@ -285,7 +285,7 @@ std::pair<unsigned int, unsigned int> LoopifySearchOpt::majority(
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified majority: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -298,8 +298,8 @@ std::pair<unsigned int, unsigned int> LoopifySearchOpt::majority(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons(d_a0));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Cont_Cons{d_a0});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
@@ -413,7 +413,7 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
             List<unsigned int> _result{};
             std::vector<_Frame> _stack;
             _stack.reserve(8);
-            _stack.emplace_back(_Enter(xs, n));
+            _stack.emplace_back(_Enter{xs, n});
             /// Loopified take: _Enter -> _Resume_Cons.
             while (!_stack.empty()) {
               _Frame _frame = std::move(_stack.back());
@@ -432,8 +432,8 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
                   } else {
                     auto &[d_a03, d_a13] =
                         std::get<typename List<unsigned int>::Cons>(xs.v_mut());
-                    _stack.emplace_back(_Resume_Cons(d_a03));
-                    _stack.emplace_back(_Enter(std::move(*(d_a13)), n_));
+                    _stack.emplace_back(_Resume_Cons{d_a03});
+                    _stack.emplace_back(_Enter{std::move(*(d_a13)), n_});
                   }
                 }
               } else {

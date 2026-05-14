@@ -3,42 +3,42 @@
 RamOps::ram_bank_main RamOps::get_bank_main(const RamOps::state_main &s,
                                             const unsigned int b) {
   return ListDef::template nth<RamOps::ram_bank_main>(
-      b, s.ram_sys_main, ram_bank_main(List<RamOps::ram_chip_main>::nil()));
+      b, s.ram_sys_main, ram_bank_main{List<RamOps::ram_chip_main>::nil()});
 }
 
 RamOps::ram_chip_main RamOps::get_chip_main(const RamOps::ram_bank_main &bk,
                                             const unsigned int c) {
   return ListDef::template nth<RamOps::ram_chip_main>(
-      c, bk.bank_chips_main, ram_chip_main(List<RamOps::ram_reg_main>::nil()));
+      c, bk.bank_chips_main, ram_chip_main{List<RamOps::ram_reg_main>::nil()});
 }
 
 RamOps::ram_reg_main RamOps::get_reg_main(const RamOps::ram_chip_main &ch,
                                           const unsigned int r) {
   return ListDef::template nth<RamOps::ram_reg_main>(
-      r, ch.chip_regs_main, ram_reg_main(List<unsigned int>::nil()));
+      r, ch.chip_regs_main, ram_reg_main{List<unsigned int>::nil()});
 }
 
 RamOps::ram_reg_main RamOps::upd_main_in_reg(const RamOps::ram_reg_main &rg,
                                              const unsigned int i,
                                              const unsigned int v) {
-  return ram_reg_main(
-      update_nth_main<unsigned int>(i, (16u ? v % 16u : v), rg.reg_main));
+  return ram_reg_main{
+      update_nth_main<unsigned int>(i, (16u ? v % 16u : v), rg.reg_main)};
 }
 
 RamOps::ram_chip_main
 RamOps::upd_reg_in_chip_main(const RamOps::ram_chip_main &ch,
                              const unsigned int r,
                              const RamOps::ram_reg_main &rg) {
-  return ram_chip_main(
-      update_nth_main<RamOps::ram_reg_main>(r, rg, ch.chip_regs_main));
+  return ram_chip_main{
+      update_nth_main<RamOps::ram_reg_main>(r, rg, ch.chip_regs_main)};
 }
 
 RamOps::ram_bank_main
 RamOps::upd_chip_in_bank_main(const RamOps::ram_bank_main &bk,
                               const unsigned int c,
                               const RamOps::ram_chip_main &ch) {
-  return ram_bank_main(
-      update_nth_main<RamOps::ram_chip_main>(c, ch, bk.bank_chips_main));
+  return ram_bank_main{
+      update_nth_main<RamOps::ram_chip_main>(c, ch, bk.bank_chips_main)};
 }
 
 List<RamOps::ram_bank_main>
@@ -67,25 +67,25 @@ RamOps::ram_write_main_sys(const RamOps::state_main &s, const unsigned int v) {
 RamOps::bank_port RamOps::get_bank_port(const RamOps::state_port &s,
                                         const unsigned int b) {
   return ListDef::template nth<RamOps::bank_port>(
-      b, s.ram_sys_port, bank_port(List<RamOps::chip_port>::nil()));
+      b, s.ram_sys_port, bank_port{List<RamOps::chip_port>::nil()});
 }
 
 RamOps::chip_port RamOps::get_chip_port(const RamOps::bank_port &bk,
                                         const unsigned int c) {
   return ListDef::template nth<RamOps::chip_port>(c, bk.bank_chips_port,
-                                                  chip_port(0u));
+                                                  chip_port{0u});
 }
 
 RamOps::chip_port RamOps::upd_port_in_chip(const RamOps::chip_port &,
                                            const unsigned int v) {
-  return chip_port((16u ? v % 16u : v));
+  return chip_port{(16u ? v % 16u : v)};
 }
 
 RamOps::bank_port RamOps::upd_chip_in_bank_port(const RamOps::bank_port &bk,
                                                 const unsigned int c,
                                                 const RamOps::chip_port &ch) {
-  return bank_port(
-      update_nth_port<RamOps::chip_port>(c, ch, bk.bank_chips_port));
+  return bank_port{
+      update_nth_port<RamOps::chip_port>(c, ch, bk.bank_chips_port)};
 }
 
 List<RamOps::bank_port>
@@ -110,7 +110,7 @@ RamOps::ram_bank_status RamOps::get_bank_status(const RamOps::state_status &s,
                                                 const unsigned int b) {
   return ListDef::template nth<RamOps::ram_bank_status>(
       b, s.ram_sys_status,
-      ram_bank_status(List<RamOps::ram_chip_status>::nil()));
+      ram_bank_status{List<RamOps::ram_chip_status>::nil()});
 }
 
 RamOps::ram_chip_status
@@ -118,36 +118,36 @@ RamOps::get_chip_status(const RamOps::ram_bank_status &bk,
                         const unsigned int c) {
   return ListDef::template nth<RamOps::ram_chip_status>(
       c, bk.bank_chips_status,
-      ram_chip_status(List<RamOps::ram_reg_status>::nil()));
+      ram_chip_status{List<RamOps::ram_reg_status>::nil()});
 }
 
 RamOps::ram_reg_status RamOps::get_reg_status(const RamOps::ram_chip_status &ch,
                                               const unsigned int r) {
   return ListDef::template nth<RamOps::ram_reg_status>(
-      r, ch.chip_regs_status, ram_reg_status(List<unsigned int>::nil()));
+      r, ch.chip_regs_status, ram_reg_status{List<unsigned int>::nil()});
 }
 
 RamOps::ram_reg_status
 RamOps::upd_status_in_reg(const RamOps::ram_reg_status &rg,
                           const unsigned int i, const unsigned int v) {
-  return ram_reg_status(
-      update_nth_status<unsigned int>(i, (16u ? v % 16u : v), rg.reg_status));
+  return ram_reg_status{
+      update_nth_status<unsigned int>(i, (16u ? v % 16u : v), rg.reg_status)};
 }
 
 RamOps::ram_chip_status
 RamOps::upd_reg_in_chip_status(const RamOps::ram_chip_status &ch,
                                const unsigned int r,
                                const RamOps::ram_reg_status &rg) {
-  return ram_chip_status(
-      update_nth_status<RamOps::ram_reg_status>(r, rg, ch.chip_regs_status));
+  return ram_chip_status{
+      update_nth_status<RamOps::ram_reg_status>(r, rg, ch.chip_regs_status)};
 }
 
 RamOps::ram_bank_status
 RamOps::upd_chip_in_bank_status(const RamOps::ram_bank_status &bk,
                                 const unsigned int c,
                                 const RamOps::ram_chip_status &ch) {
-  return ram_bank_status(
-      update_nth_status<RamOps::ram_chip_status>(c, ch, bk.bank_chips_status));
+  return ram_bank_status{
+      update_nth_status<RamOps::ram_chip_status>(c, ch, bk.bank_chips_status)};
 }
 
 List<RamOps::ram_bank_status>
@@ -267,7 +267,7 @@ RamOps::ram_write_main_sys_preserve(const RamOps::state_preserve &s,
 
 RamOps::state_preserve RamOps::execute_write(const RamOps::state_preserve &s,
                                              const unsigned int v) {
-  return state_preserve(ram_write_main_sys_preserve(s, v), s.cur_bank_preserve);
+  return state_preserve{ram_write_main_sys_preserve(s, v), s.cur_bank_preserve};
 }
 
 bool RamOps::ram_addr_disjointb(const unsigned int b1, const unsigned int c1,
@@ -279,17 +279,17 @@ bool RamOps::ram_addr_disjointb(const unsigned int b1, const unsigned int c1,
 
 RamOps::bank_nested_bank RamOps::get_bank0(const RamOps::state_nested_bank &s) {
   return ListDef::template nth<RamOps::bank_nested_bank>(
-      0u, s.banks_, bank_nested_bank(List<RamOps::chip_nested_bank>::nil()));
+      0u, s.banks_, bank_nested_bank{List<RamOps::chip_nested_bank>::nil()});
 }
 
 RamOps::chip_nested_bank RamOps::get_chip0(const RamOps::bank_nested_bank &b) {
   return ListDef::template nth<RamOps::chip_nested_bank>(
-      0u, b.chips_, chip_nested_bank(List<RamOps::reg_nested_bank>::nil()));
+      0u, b.chips_, chip_nested_bank{List<RamOps::reg_nested_bank>::nil()});
 }
 
 RamOps::reg_nested_bank RamOps::get_reg0(const RamOps::chip_nested_bank &c) {
   return ListDef::template nth<RamOps::reg_nested_bank>(
-      0u, c.regs_, reg_nested_bank(List<unsigned int>::nil()));
+      0u, c.regs_, reg_nested_bank{List<unsigned int>::nil()});
 }
 
 RamOps::state_nested_bank
@@ -299,13 +299,13 @@ RamOps::write_status0(const RamOps::state_nested_bank &s,
   RamOps::chip_nested_bank c = get_chip0(b);
   RamOps::reg_nested_bank r = get_reg0(c);
   RamOps::reg_nested_bank r_ =
-      reg_nested_bank(update_nth_nested_bank<unsigned int>(0u, v, r.status_));
-  RamOps::chip_nested_bank c_ = chip_nested_bank(
-      update_nth_nested_bank<RamOps::reg_nested_bank>(0u, r_, c.regs_));
-  RamOps::bank_nested_bank b_ = bank_nested_bank(
-      update_nth_nested_bank<RamOps::chip_nested_bank>(0u, c_, b.chips_));
-  return state_nested_bank(
-      update_nth_nested_bank<RamOps::bank_nested_bank>(0u, b_, s.banks_));
+      reg_nested_bank{update_nth_nested_bank<unsigned int>(0u, v, r.status_)};
+  RamOps::chip_nested_bank c_ = chip_nested_bank{
+      update_nth_nested_bank<RamOps::reg_nested_bank>(0u, r_, c.regs_)};
+  RamOps::bank_nested_bank b_ = bank_nested_bank{
+      update_nth_nested_bank<RamOps::chip_nested_bank>(0u, c_, b.chips_)};
+  return state_nested_bank{
+      update_nth_nested_bank<RamOps::bank_nested_bank>(0u, b_, s.banks_)};
 }
 
 unsigned int RamOps::read_status0(const RamOps::state_nested_bank &s) {

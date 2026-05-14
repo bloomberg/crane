@@ -61,7 +61,7 @@ RecordFieldPatterns::scaled_sum(const unsigned int scale,
 RecordFieldPatterns::Point
 RecordFieldPatterns::PointImpl::mk(const unsigned int x,
                                    const unsigned int x0) {
-  return Point(x, x0);
+  return Point{x, x0};
 }
 
 unsigned int
@@ -114,7 +114,7 @@ RecordFieldPatterns::Point
 RecordFieldPatterns::swap(const RecordFieldPatterns::Point &p) {
   unsigned int x = p.px;
   unsigned int y = p.py;
-  return Point(y, x);
+  return Point{y, x};
 }
 
 RecordFieldPatterns::Point

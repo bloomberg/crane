@@ -68,17 +68,17 @@ struct PairSelfDeepCopy {
         const chain *_src = _frame._src;
         chain *_dst = _frame._dst;
         if (std::holds_alternative<Stop>(_src->v())) {
-          _dst->d_v_ = Stop();
+          _dst->d_v_ = Stop{};
         } else {
           const auto &_alt = std::get<Link>(_src->v());
-          _dst->d_v_ = Link(
+          _dst->d_v_ = Link{
               _alt.d_a0
                   ? std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
                         std::make_pair(_alt.d_a0->first
                                            ? std::make_unique<chain>()
                                            : nullptr,
                                        _alt.d_a0->second))
-                  : nullptr);
+                  : nullptr};
           auto &_dst_alt = std::get<Link>(_dst->d_v_);
           if (_alt.d_a0 && _alt.d_a0->first) {
             _stack.push_back(
@@ -90,12 +90,12 @@ struct PairSelfDeepCopy {
     }
 
     // CREATORS
-    static chain stop() { return chain(Stop()); }
+    static chain stop() { return chain(Stop{}); }
 
     static chain link(std::pair<std::unique_ptr<chain>, bool> a0) {
       return chain(
-          Link(std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
-              std::move(a0))));
+          Link{std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
+              std::move(a0))});
     }
 
     // MANIPULATORS

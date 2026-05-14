@@ -8,7 +8,7 @@ unsigned int RegisterPairOps::get_reg(const RegisterPairOps::state &s,
 RegisterPairOps::state RegisterPairOps::set_reg(const RegisterPairOps::state &s,
                                                 const unsigned int r,
                                                 const unsigned int v) {
-  return state(update_nth<unsigned int>(r, (16u ? v % 16u : v), s.regs));
+  return state{update_nth<unsigned int>(r, (16u ? v % 16u : v), s.regs)};
 }
 
 unsigned int RegisterPairOps::get_reg_pair(const RegisterPairOps::state &s,

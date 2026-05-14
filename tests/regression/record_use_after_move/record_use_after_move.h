@@ -12,13 +12,13 @@ struct RecordUseAfterMove {
     bool enabled;
 
     // ACCESSORS
-    box clone() const { return box((*(this)).payload, (*(this)).enabled); }
+    box clone() const { return box{(*(this)).payload, (*(this)).enabled}; }
   };
 
   static box clone_box(const box &b);
   static box keep_box(box b);
   static unsigned int use_box(const box &b);
-  static inline const box initial_box = box(41u, true);
+  static inline const box initial_box = box{41u, true};
   /// BUG: The same shared_ptr local b is moved into multiple call sites.
   /// After the first std::move(b), subsequent uses dereference a
   /// moved-from shared_ptr, causing a segfault.

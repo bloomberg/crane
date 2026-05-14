@@ -2,7 +2,7 @@
 
 RecordUseAfterMove::box
 RecordUseAfterMove::clone_box(const RecordUseAfterMove::box &b) {
-  return box(b.payload, b.enabled);
+  return box{b.payload, b.enabled};
 }
 
 RecordUseAfterMove::box

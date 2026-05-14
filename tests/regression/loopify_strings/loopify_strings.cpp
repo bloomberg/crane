@@ -84,7 +84,7 @@ List<unsigned int> LoopifyStrings::repeat_string(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified repeat_string: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -96,8 +96,8 @@ List<unsigned int> LoopifyStrings::repeat_string(
         _result = List<unsigned int>::nil();
       } else {
         unsigned int n_ = n - 1;
-        _stack.emplace_back(_Resume_n_(s));
-        _stack.emplace_back(_Enter(n_));
+        _stack.emplace_back(_Resume_n_{s});
+        _stack.emplace_back(_Enter{n_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
@@ -126,7 +126,7 @@ List<unsigned int> LoopifyStrings::repeat_with_sep(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n));
+  _stack.emplace_back(_Enter{n});
   /// Loopified repeat_with_sep: _Enter -> _Resume__x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -142,8 +142,8 @@ List<unsigned int> LoopifyStrings::repeat_with_sep(
           _result = std::move(s);
         } else {
           unsigned int _x = n_ - 1;
-          _stack.emplace_back(_Resume__x(s, sep));
-          _stack.emplace_back(_Enter(n_));
+          _stack.emplace_back(_Resume__x{s, sep});
+          _stack.emplace_back(_Enter{n_});
         }
       }
     } else {
@@ -178,7 +178,7 @@ List<unsigned int> LoopifyStrings::string_chain_fuel(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(n, fuel));
+  _stack.emplace_back(_Enter{n, fuel});
   /// Loopified string_chain_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -194,8 +194,8 @@ List<unsigned int> LoopifyStrings::string_chain_fuel(
         if (n <= 0u) {
           _result = List<unsigned int>::nil();
         } else {
-          _stack.emplace_back(_Resume1(s, sep, end_marker));
-          _stack.emplace_back(_Enter((((n - 1u) > n ? 0 : (n - 1u))), fuel_));
+          _stack.emplace_back(_Resume1{s, sep, end_marker});
+          _stack.emplace_back(_Enter{(((n - 1u) > n ? 0 : (n - 1u))), fuel_});
         }
       }
     } else {
@@ -231,7 +231,7 @@ List<unsigned int> LoopifyStrings::reverse(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l));
+  _stack.emplace_back(_Enter{&l});
   /// Loopified reverse: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -244,9 +244,9 @@ List<unsigned int> LoopifyStrings::reverse(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons(
-            List<unsigned int>::cons(d_a0, List<unsigned int>::nil())));
-        _stack.emplace_back(_Enter(d_a1.get()));
+        _stack.emplace_back(_Resume_Cons{
+            List<unsigned int>::cons(d_a0, List<unsigned int>::nil())});
+        _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -276,7 +276,7 @@ bool LoopifyStrings::list_eq(
   bool _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&l2, &l1));
+  _stack.emplace_back(_Enter{&l2, &l1});
   /// Loopified list_eq: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -299,8 +299,8 @@ bool LoopifyStrings::list_eq(
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
-          _stack.emplace_back(_Resume_Cons(d_a0 == d_a00));
-          _stack.emplace_back(_Enter(d_a10.get(), d_a1.get()));
+          _stack.emplace_back(_Resume_Cons{d_a0 == d_a00});
+          _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
         }
       }
     } else {
@@ -375,7 +375,7 @@ List<unsigned int> LoopifyStrings::intercalate(
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter(&ll));
+  _stack.emplace_back(_Enter{&ll});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -394,8 +394,8 @@ List<unsigned int> LoopifyStrings::intercalate(
                 _sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Resume_Cons(d_a0, sep));
-          _stack.emplace_back(_Enter(d_a1.get()));
+          _stack.emplace_back(_Resume_Cons{d_a0, sep});
+          _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {

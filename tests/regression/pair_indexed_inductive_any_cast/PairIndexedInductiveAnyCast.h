@@ -48,12 +48,12 @@ public:
   Pair_wrap clone() const {
     auto &&_sv = *(this);
     const auto &[d_a] = std::get<Mk_pair_wrap>(_sv.v());
-    return Pair_wrap(Mk_pair_wrap(d_a));
+    return Pair_wrap(Mk_pair_wrap{d_a});
   }
 
   // CREATORS
   static Pair_wrap mk_pair_wrap(std::any a) {
-    return Pair_wrap(Mk_pair_wrap(std::move(a)));
+    return Pair_wrap(Mk_pair_wrap{std::move(a)});
   }
 
   // MANIPULATORS
