@@ -1,0 +1,74 @@
+#ifndef INCLUDED_SEPEXTANYLISTCOLLECT
+#define INCLUDED_SEPEXTANYLISTCOLLECT
+
+#include <any>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+#include "Datatypes.h"
+
+namespace SepExtAnyListCollect {
+
+using tuple = std::any;
+template <typename M>
+concept SymTypes = requires {
+  typename M::sym;
+  typename M::sym_semty;
+};
+
+template <SymTypes Ty> struct ListCollect {
+  using symbols_semty = tuple;
+
+  static typename Datatypes::template List<symbols_semty>
+  collect(const typename Ty::sym,
+          const typename Datatypes::template List<typename Ty::sym> &,
+          const typename Datatypes::Nat &n, const symbols_semty default0) {
+    std::function<typename Datatypes::template List<std::any>(
+        typename Datatypes::Nat, typename Datatypes::template List<std::any>)>
+        go;
+    go = [&](typename Datatypes::Nat n0,
+             typename Datatypes::template List<std::any> acc) ->
+        typename Datatypes::template List<std::any> {
+          if (std::holds_alternative<typename Datatypes::Nat::O>(n0.v())) {
+            return acc;
+          } else {
+            const auto &[d_a0] = std::get<typename Datatypes::Nat::S>(n0.v());
+            return go(*(d_a0), Datatypes::template List<std::any>::cons(
+                                   default0, std::move(acc)));
+          }
+        };
+    return go(n, Datatypes::template List<std::any>::nil());
+  }
+
+  static typename Ty::sym_semty
+  head_first(const typename Ty::sym,
+             const typename Datatypes::template List<typename Ty::sym> &,
+             const typename Datatypes::template List<symbols_semty> &l,
+             const typename Ty::sym_semty default0) {
+    if (std::holds_alternative<
+            typename Datatypes::template List<symbols_semty>::Nil>(l.v())) {
+      return default0;
+    } else {
+      const auto &[d_a0, d_a1] =
+          std::get<typename Datatypes::template List<symbols_semty>::Cons>(
+              l.v());
+      return std::any_cast<std::pair<std::any, std::any>>(d_a0).first;
+    }
+  }
+
+  static typename Ty::sym_semty collect_and_get_first(
+      const typename Ty::sym x,
+      const typename Datatypes::template List<typename Ty::sym> &xs,
+      const typename Datatypes::Nat &n, const symbols_semty default_tuple,
+      const typename Ty::sym_semty default_val) {
+    return head_first(x, xs, collect(x, xs, n, default_tuple), default_val);
+  }
+};
+
+} // namespace SepExtAnyListCollect
+
+#endif // INCLUDED_SEPEXTANYLISTCOLLECT

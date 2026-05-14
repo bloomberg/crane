@@ -10,8 +10,8 @@ struct OpcodeOperandDecode {
   enum class Instruction { e_NOP_, e_WRM_, e_WRR_, e_RDM_, e_DCL_ };
 
   template <typename T1>
-  static T1 instruction_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                             const T1 f3, const Instruction i) {
+  static T1 instruction_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
+                             const Instruction i) {
     switch (i) {
     case Instruction::e_NOP_: {
       return f;
@@ -34,8 +34,8 @@ struct OpcodeOperandDecode {
   }
 
   template <typename T1>
-  static T1 instruction_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                            const T1 f3, const Instruction i) {
+  static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
+                            const Instruction i) {
     switch (i) {
     case Instruction::e_NOP_: {
       return f;

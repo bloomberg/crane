@@ -271,7 +271,7 @@ struct MutualRecursion {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, forest<T1> &, T2 &>
-  static T2 forest_rect(const T2 f, F1 &&f0, const forest<T1> &f1) {
+  static T2 forest_rect(T2 f, F1 &&f0, const forest<T1> &f1) {
     if (std::holds_alternative<typename forest<T1>::Empty>(f1.v())) {
       return f;
     } else {
@@ -282,7 +282,7 @@ struct MutualRecursion {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, forest<T1> &, T2 &>
-  static T2 forest_rec(const T2 f, F1 &&f0, const forest<T1> &f1) {
+  static T2 forest_rec(T2 f, F1 &&f0, const forest<T1> &f1) {
     if (std::holds_alternative<typename forest<T1>::Empty>(f1.v())) {
       return f;
     } else {

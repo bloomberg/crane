@@ -244,7 +244,7 @@ struct PolyInductive {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    t_A pmaybe_default(const t_A d) const {
+    t_A pmaybe_default(t_A d) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
         return d;
@@ -268,7 +268,7 @@ struct PolyInductive {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
-    T1 pmaybe_rec(const T1 f, F1 &&f0) const {
+    T1 pmaybe_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
         return f;
@@ -280,7 +280,7 @@ struct PolyInductive {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
-    T1 pmaybe_rect(const T1 f, F1 &&f0) const {
+    T1 pmaybe_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
         return f;

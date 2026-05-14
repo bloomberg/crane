@@ -138,7 +138,7 @@ struct DeepMap {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rect(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rect(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {
@@ -151,7 +151,7 @@ struct DeepMap {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rec(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {

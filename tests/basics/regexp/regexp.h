@@ -326,8 +326,8 @@ struct Matcher {
              std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
              std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
              std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
-  static T1 regexp_rect(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
-                        const T1 f4, F6 &&f5, const regexp &r) {
+  static T1 regexp_rect(T1 f, F1 &&f0, T1 f1, F3 &&f2, F4 &&f3, T1 f4, F6 &&f5,
+                        const regexp &r) {
     if (std::holds_alternative<typename regexp::Any>(r.v())) {
       return f;
     } else if (std::holds_alternative<typename regexp::Char>(r.v())) {
@@ -356,8 +356,8 @@ struct Matcher {
              std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
              std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
              std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
-  static T1 regexp_rec(const T1 f, F1 &&f0, const T1 f1, F3 &&f2, F4 &&f3,
-                       const T1 f4, F6 &&f5, const regexp &r) {
+  static T1 regexp_rec(T1 f, F1 &&f0, T1 f1, F3 &&f2, F4 &&f3, T1 f4, F6 &&f5,
+                       const regexp &r) {
     if (std::holds_alternative<typename regexp::Any>(r.v())) {
       return f;
     } else if (std::holds_alternative<typename regexp::Char>(r.v())) {

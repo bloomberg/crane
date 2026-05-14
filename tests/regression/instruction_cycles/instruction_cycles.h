@@ -241,7 +241,7 @@ struct InstructionCycles {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
-    T1 instruction1_rec(F0 &&f, const T1 f0) const {
+    T1 instruction1_rec(F0 &&f, T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
         const auto &[d_a0, d_a1] =
@@ -254,7 +254,7 @@ struct InstructionCycles {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
-    T1 instruction1_rect(F0 &&f, const T1 f0) const {
+    T1 instruction1_rect(F0 &&f, T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
         const auto &[d_a0, d_a1] =
@@ -332,7 +332,7 @@ struct InstructionCycles {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-    T1 instruction2_rec(F0 &&f, const T1 f0) const {
+    T1 instruction2_rec(F0 &&f, T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::JMS2>(_sv.v())) {
         const auto &[d_a0] = std::get<typename instruction2::JMS2>(_sv.v());
@@ -344,7 +344,7 @@ struct InstructionCycles {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-    T1 instruction2_rect(F0 &&f, const T1 f0) const {
+    T1 instruction2_rect(F0 &&f, T1 f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::JMS2>(_sv.v())) {
         const auto &[d_a0] = std::get<typename instruction2::JMS2>(_sv.v());
@@ -378,9 +378,8 @@ struct InstructionCycles {
   };
 
   template <typename T1>
-  static T1 instr3_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                        const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                        const T1 f7, const Instr3 i) {
+  static T1 instr3_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                        T1 f7, const Instr3 i) {
     switch (i) {
     case Instr3::e_NOP3: {
       return f;
@@ -415,9 +414,8 @@ struct InstructionCycles {
   }
 
   template <typename T1>
-  static T1 instr3_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                       const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                       const T1 f7, const Instr3 i) {
+  static T1 instr3_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                       T1 f7, const Instr3 i) {
     switch (i) {
     case Instr3::e_NOP3: {
       return f;
@@ -486,9 +484,8 @@ struct InstructionCycles {
   };
 
   template <typename T1>
-  static T1 instr4_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                        const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                        const T1 f7, const Instr4 i) {
+  static T1 instr4_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                        T1 f7, const Instr4 i) {
     switch (i) {
     case Instr4::e_NOP4: {
       return f;
@@ -523,9 +520,8 @@ struct InstructionCycles {
   }
 
   template <typename T1>
-  static T1 instr4_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                       const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                       const T1 f7, const Instr4 i) {
+  static T1 instr4_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                       T1 f7, const Instr4 i) {
     switch (i) {
     case Instr4::e_NOP4: {
       return f;
@@ -699,7 +695,7 @@ struct InstructionCycles {
     template <typename T1, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F2 &, unsigned int &>
-    T1 instruction5_rec(const T1 f, F1 &&f0, F2 &&f1) const {
+    T1 instruction5_rec(T1 f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction5::NOP5>(_sv.v())) {
         return f;
@@ -715,7 +711,7 @@ struct InstructionCycles {
     template <typename T1, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F2 &, unsigned int &>
-    T1 instruction5_rect(const T1 f, F1 &&f0, F2 &&f1) const {
+    T1 instruction5_rect(T1 f, F1 &&f0, F2 &&f1) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction5::NOP5>(_sv.v())) {
         return f;
@@ -741,13 +737,11 @@ struct InstructionCycles {
                                        List<instruction5>::nil()))));
   enum class Instruction6 { e_NOP6 };
 
-  template <typename T1>
-  static T1 instruction6_rect(const T1 f, const Instruction6) {
+  template <typename T1> static T1 instruction6_rect(T1 f, const Instruction6) {
     return f;
   }
 
-  template <typename T1>
-  static T1 instruction6_rec(const T1 f, const Instruction6) {
+  template <typename T1> static T1 instruction6_rec(T1 f, const Instruction6) {
     return f;
   }
 
@@ -777,13 +771,11 @@ struct InstructionCycles {
           std::make_pair(singleton_cycles6, three_nop_cycles6);
   enum class Instruction7 { e_NOP7 };
 
-  template <typename T1>
-  static T1 instruction7_rect(const T1 f, const Instruction7) {
+  template <typename T1> static T1 instruction7_rect(T1 f, const Instruction7) {
     return f;
   }
 
-  template <typename T1>
-  static T1 instruction7_rec(const T1 f, const Instruction7) {
+  template <typename T1> static T1 instruction7_rec(T1 f, const Instruction7) {
     return f;
   }
 

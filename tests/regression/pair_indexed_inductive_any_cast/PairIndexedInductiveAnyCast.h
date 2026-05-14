@@ -74,7 +74,7 @@ struct Ops {
     return std::any_cast<std::pair<T1, Datatypes::Nat>>(d_a).second;
   }
 
-  template <typename T1> static Pair_wrap make(const T1 a, Datatypes::Nat n) {
+  template <typename T1> static Pair_wrap make(T1 a, Datatypes::Nat n) {
     return Pair_wrap::mk_pair_wrap(std::make_pair(a, std::move(n)));
   }
 };

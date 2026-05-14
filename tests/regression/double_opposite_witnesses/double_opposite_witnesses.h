@@ -142,17 +142,17 @@ struct DoubleOppositeWitnessesCase {
   };
 
   template <typename T1, typename T2>
-  static T2 Path_rect(const T1, const T2 f, const T1, const Path<T1> &) {
+  static T2 Path_rect(const T1 &, T2 f, const T1 &, const Path<T1> &) {
     return f;
   }
 
   template <typename T1, typename T2>
-  static T2 Path_rec(const T1, const T2 f, const T1, const Path<T1> &) {
+  static T2 Path_rec(const T1 &, T2 f, const T1 &, const Path<T1> &) {
     return f;
   }
 
   template <typename T1>
-  static unsigned int path_code(const T1, const T1, const Path<T1> &) {
+  static unsigned int path_code(const T1 &, const T1 &, const Path<T1> &) {
     return 1u;
   }
 
@@ -261,11 +261,11 @@ struct DoubleOppositeWitnessesCase {
                     out_of_double_opposite_functor<
                         typename _tcI0::base_category>(),
                     std::make_pair(
-                        [](const typename _tcI0::base_category::Obj) {
+                        [](const typename _tcI0::base_category::Obj &) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         },
-                        [](const typename _tcI0::base_category::Obj) {
+                        [](const typename _tcI0::base_category::Obj &) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         })));

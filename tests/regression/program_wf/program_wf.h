@@ -202,8 +202,7 @@ struct ProgramWf {
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 instruction_rect(F0 &&f, F1 &&f0, const T1 f1,
-                             const instruction &i) {
+  static T1 instruction_rect(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[d_a0] = std::get<typename instruction::JUN>(i.v());
       return f(d_a0);
@@ -218,8 +217,7 @@ struct ProgramWf {
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 instruction_rec(F0 &&f, F1 &&f0, const T1 f1,
-                            const instruction &i) {
+  static T1 instruction_rec(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[d_a0] = std::get<typename instruction::JUN>(i.v());
       return f(d_a0);

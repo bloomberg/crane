@@ -138,7 +138,7 @@ public:
 struct Pos {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
-  static T1 iter(F0 &&f, const T1 x, const unsigned int n) {
+  static T1 iter(F0 &&f, const T1 &x, const unsigned int n) {
     if (n == 1u) {
       return f(x);
     } else if (n % 2u != 0u) {
@@ -157,7 +157,7 @@ struct BinInt {
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct Q {
@@ -193,7 +193,7 @@ struct PolygonWindingAreaTraceCase {
   using Polygon = List<Point>;
 
   template <typename T1>
-  static T1 nth_cyclic(const T1 default0, const List<T1> &l,
+  static T1 nth_cyclic(const T1 &default0, const List<T1> &l,
                        const unsigned int i) {
     return ListDef::template nth<T1>((l.length() ? i % l.length() : i), l,
                                      default0);
@@ -256,7 +256,7 @@ struct PolygonWindingAreaTraceCase {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

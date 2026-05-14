@@ -126,7 +126,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -171,7 +171,7 @@ struct RecordFieldPatterns {
   static unsigned int classify_point(const Point &p);
   static unsigned int zero_x(const Point &p);
 
-  template <typename T1> static T1 identity(const T1 x) { return x; }
+  template <typename T1> static T1 identity(T1 x) { return x; }
 
   /// Apply a polymorphic function to a record — the record type flows
   /// through a type variable.

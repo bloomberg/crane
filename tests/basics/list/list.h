@@ -124,7 +124,7 @@ public:
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, t_A &, List<t_A> &, T1 &>
-  T1 list_rect(const T1 f, F1 &&f0) const {
+  T1 list_rect(T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return f;
@@ -136,7 +136,7 @@ public:
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, t_A &, List<t_A> &, T1 &>
-  T1 list_rec(const T1 f, F1 &&f0) const {
+  T1 list_rec(T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return f;
@@ -156,7 +156,7 @@ public:
     }
   }
 
-  t_A hd(const t_A x) const {
+  t_A hd(t_A x) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return x;
@@ -166,7 +166,7 @@ public:
     }
   }
 
-  t_A last(const t_A x) const {
+  t_A last(t_A x) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return x;

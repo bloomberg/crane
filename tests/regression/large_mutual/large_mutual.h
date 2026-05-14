@@ -624,8 +624,7 @@ struct LargeMutual {
              std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
                                    T1 &> &&
              std::is_invocable_r_v<T1, F3 &, bexpr &, stmt &, T1 &>
-  static T1 stmt_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
-                      const stmt &s) {
+  static T1 stmt_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, T1 f3, const stmt &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s.v())) {
       const auto &[d_a0, d_a1] = std::get<typename stmt::SAssign>(s.v());
       return f(d_a0, *(d_a1));
@@ -651,8 +650,7 @@ struct LargeMutual {
              std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
                                    T1 &> &&
              std::is_invocable_r_v<T1, F3 &, bexpr &, stmt &, T1 &>
-  static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const T1 f3,
-                     const stmt &s) {
+  static T1 stmt_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, T1 f3, const stmt &s) {
     if (std::holds_alternative<typename stmt::SAssign>(s.v())) {
       const auto &[d_a0, d_a1] = std::get<typename stmt::SAssign>(s.v());
       return f(d_a0, *(d_a1));
@@ -741,8 +739,8 @@ struct LargeMutual {
              std::is_invocable_r_v<T1, F4 &, bexpr &, T1 &, bexpr &, T1 &> &&
              std::is_invocable_r_v<T1, F5 &, bexpr &, T1 &, bexpr &, T1 &> &&
              std::is_invocable_r_v<T1, F6 &, bexpr &, T1 &>
-  static T1 bexpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                       F5 &&f4, F6 &&f5, const bexpr &b) {
+  static T1 bexpr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4, F6 &&f5,
+                       const bexpr &b) {
     if (std::holds_alternative<typename bexpr::BTrue>(b.v())) {
       return f;
     } else if (std::holds_alternative<typename bexpr::BFalse>(b.v())) {
@@ -774,8 +772,8 @@ struct LargeMutual {
              std::is_invocable_r_v<T1, F4 &, bexpr &, T1 &, bexpr &, T1 &> &&
              std::is_invocable_r_v<T1, F5 &, bexpr &, T1 &, bexpr &, T1 &> &&
              std::is_invocable_r_v<T1, F6 &, bexpr &, T1 &>
-  static T1 bexpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                      F5 &&f4, F6 &&f5, const bexpr &b) {
+  static T1 bexpr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4, F6 &&f5,
+                      const bexpr &b) {
     if (std::holds_alternative<typename bexpr::BTrue>(b.v())) {
       return f;
     } else if (std::holds_alternative<typename bexpr::BFalse>(b.v())) {

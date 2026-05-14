@@ -127,7 +127,7 @@ struct RecRecord {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
-  static T2 rlist_rect(const T2 f, F1 &&f0, const rlist<T1> &r) {
+  static T2 rlist_rect(T2 f, F1 &&f0, const rlist<T1> &r) {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {
@@ -138,7 +138,7 @@ struct RecRecord {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
-  static T2 rlist_rec(const T2 f, F1 &&f0, const rlist<T1> &r) {
+  static T2 rlist_rec(T2 f, F1 &&f0, const rlist<T1> &r) {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {

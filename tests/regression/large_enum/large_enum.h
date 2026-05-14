@@ -24,10 +24,8 @@ struct LargeEnum {
   };
 
   template <typename T1>
-  static T1 color_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                       const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                       const T1 f7, const T1 f8, const T1 f9, const T1 f10,
-                       const Color c) {
+  static T1 color_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                       T1 f7, T1 f8, T1 f9, T1 f10, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -71,10 +69,8 @@ struct LargeEnum {
   }
 
   template <typename T1>
-  static T1 color_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                      const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                      const T1 f7, const T1 f8, const T1 f9, const T1 f10,
-                      const Color c) {
+  static T1 color_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                      T1 f7, T1 f8, T1 f9, T1 f10, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -268,9 +264,8 @@ struct LargeEnum {
   template <typename T1, typename F0, typename F10>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F10 &, unsigned int &>
-  static T1 tok_rect(F0 &&f, const T1 f0, const T1 f1, const T1 f2, const T1 f3,
-                     const T1 f4, const T1 f5, const T1 f6, const T1 f7,
-                     const T1 f8, F10 &&f9, const T1 f10, const tok &t) {
+  static T1 tok_rect(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                     T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {
       const auto &[d_a0] = std::get<typename tok::TNum>(t.v());
       return f(d_a0);
@@ -303,9 +298,8 @@ struct LargeEnum {
   template <typename T1, typename F0, typename F10>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F10 &, unsigned int &>
-  static T1 tok_rec(F0 &&f, const T1 f0, const T1 f1, const T1 f2, const T1 f3,
-                    const T1 f4, const T1 f5, const T1 f6, const T1 f7,
-                    const T1 f8, F10 &&f9, const T1 f10, const tok &t) {
+  static T1 tok_rec(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
+                    T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {
       const auto &[d_a0] = std::get<typename tok::TNum>(t.v());
       return f(d_a0);

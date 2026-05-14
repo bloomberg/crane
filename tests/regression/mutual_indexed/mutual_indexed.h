@@ -224,7 +224,7 @@ struct MutualIndexed {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &,
                                    OddTree &>
-  static T1 EvenTree_rect(const T1 f, F1 &&f0, const unsigned int,
+  static T1 EvenTree_rect(T1 f, F1 &&f0, const unsigned int,
                           const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
       return f;
@@ -237,8 +237,7 @@ struct MutualIndexed {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &,
                                    OddTree &>
-  static T1 EvenTree_rec(const T1 f, F1 &&f0, const unsigned int,
-                         const EvenTree &e) {
+  static T1 EvenTree_rec(T1 f, F1 &&f0, const unsigned int, const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
       return f;
     } else {

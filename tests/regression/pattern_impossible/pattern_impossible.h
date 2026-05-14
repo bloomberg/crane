@@ -12,7 +12,7 @@ struct PatternImpossible {
   enum class Three { e_ONE, e_TWO, e_THREE };
 
   template <typename T1>
-  static T1 three_rect(const T1 f, const T1 f0, const T1 f1, const Three t) {
+  static T1 three_rect(T1 f, T1 f0, T1 f1, const Three t) {
     switch (t) {
     case Three::e_ONE: {
       return f;
@@ -29,7 +29,7 @@ struct PatternImpossible {
   }
 
   template <typename T1>
-  static T1 three_rec(const T1 f, const T1 f0, const T1 f1, const Three t) {
+  static T1 three_rec(T1 f, T1 f0, T1 f1, const Three t) {
     switch (t) {
     case Three::e_ONE: {
       return f;

@@ -163,7 +163,8 @@ struct MemSafetyProbe6 {
 
     /// TEST 2: Closure from match that reconstructs using both
     /// a value field and a recursive field.
-    mylist<t_A> head_and_tail(const unsigned int, const t_A, const t_A) const {
+    mylist<t_A> head_and_tail(const unsigned int, const t_A &,
+                              const t_A &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return mylist<t_A>::mynil();
@@ -232,7 +233,7 @@ struct MemSafetyProbe6 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rec(const T1 f, F1 &&f0) const {
+    T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -279,7 +280,7 @@ struct MemSafetyProbe6 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rect(const T1 f, F1 &&f0) const {
+    T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -532,7 +533,7 @@ struct MemSafetyProbe6 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rec(const T1 f, F1 &&f0) const {
+    T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -596,7 +597,7 @@ struct MemSafetyProbe6 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rect(const T1 f, F1 &&f0) const {
+    T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.

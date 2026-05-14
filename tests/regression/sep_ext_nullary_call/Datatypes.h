@@ -126,7 +126,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  t_A hd(const t_A default0) const {
+  t_A hd(t_A default0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return default0;

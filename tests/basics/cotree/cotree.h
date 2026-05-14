@@ -417,7 +417,7 @@ struct Cotree {
     }
   }
 
-  template <typename T1> static cotree<T1> singleton_cotree(const T1 a) {
+  template <typename T1> static cotree<T1> singleton_cotree(T1 a) {
     return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
       return cotree<T1>::conode(a, colist<cotree<T1>>::conil());
     });
@@ -425,7 +425,7 @@ struct Cotree {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<colist<T1>, F0 &, T1 &>
-  static cotree<T1> unfold_cotree(F0 &&next, const T1 init) {
+  static cotree<T1> unfold_cotree(F0 &&next, T1 init) {
     return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
       return cotree<T1>::conode(init, comap<T1, cotree<T1>>(
                                           [=](T1 _x0) mutable -> cotree<T1> {

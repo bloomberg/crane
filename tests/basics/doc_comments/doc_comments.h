@@ -146,7 +146,7 @@ struct DocComments {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
@@ -157,7 +157,7 @@ struct DocComments {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
@@ -169,7 +169,7 @@ struct DocComments {
   static unsigned int no_doc_comment(const unsigned int x);
 
   /// The identity function: returns its argument unchanged.
-  template <typename T1> static T1 identity(const T1 x) { return x; }
+  template <typename T1> static T1 identity(T1 x) { return x; }
 
   /// double n returns 2 * n.
   static unsigned int double_(const unsigned int n);
@@ -184,7 +184,7 @@ struct DocComments {
   };
 
   template <typename T1>
-  static T1 color_rect(const T1 f, const T1 f0, const T1 f1, const Color c) {
+  static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -201,7 +201,7 @@ struct DocComments {
   }
 
   template <typename T1>
-  static T1 color_rec(const T1 f, const T1 f0, const T1 f1, const Color c) {
+  static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;

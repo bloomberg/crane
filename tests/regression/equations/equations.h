@@ -502,7 +502,7 @@ struct Equations {
     return gcd_graph_mut(
         f, f0,
         [=](const unsigned int, const unsigned int, const gcd_clause_3_graph &,
-            const T1 x) mutable {
+            const T1 &x) mutable {
           const unsigned int &_x2 = p.first;
           const unsigned int &_x3 = p.second;
           return x;
@@ -865,7 +865,7 @@ struct Equations {
 
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
-  static T1 collatz_steps_graph_mut(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
+  static T1 collatz_steps_graph_mut(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
                                     F4 &&f3, const unsigned int _x0,
                                     const unsigned int _x1,
                                     collatz_steps_graph _x2) {
@@ -924,7 +924,7 @@ struct Equations {
              std::is_invocable_r_v<T2, F4 &, unsigned int &,
                                    collatz_steps_graph &, T1 &>
   static T2
-  collatz_steps_clause_3_graph_mut(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
+  collatz_steps_clause_3_graph_mut(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
                                    F4 &&f3, const unsigned int _x0,
                                    const bool _x1, const unsigned int _x2,
                                    collatz_steps_clause_3_graph _x3) {
@@ -977,7 +977,7 @@ struct Equations {
 
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
-  static T1 collatz_steps_graph_rect(const T1 _x0, const T1 _x1, F2 &&_x2,
+  static T1 collatz_steps_graph_rect(const T1 &_x0, const T1 &_x1, F2 &&_x2,
                                      F3 &&_x3, F4 &&_x4, const unsigned int _x5,
                                      const unsigned int _x6,
                                      const collatz_steps_graph &_x7) {
@@ -990,12 +990,12 @@ struct Equations {
   template <typename T1, typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F2 &, unsigned int &, T1 &> &&
              std::is_invocable_r_v<T1, F3 &, unsigned int &, T1 &>
-  static T1 collatz_steps_elim(const T1 f, const T1 f0, F2 &&f2, F3 &&f3,
+  static T1 collatz_steps_elim(const T1 &f, const T1 &f0, F2 &&f2, F3 &&f3,
                                const unsigned int n) {
     return collatz_steps_graph_mut(
         f, f0,
         [](const unsigned int, const collatz_steps_clause_3_graph &,
-           const T1 x) { return x; },
+           const T1 &x) { return x; },
         [=](const unsigned int n0, const collatz_steps_graph &) mutable {
           return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
         },

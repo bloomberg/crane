@@ -320,9 +320,8 @@ struct EncodeOps {
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F5 &, unsigned int &>
-    T1 instruction1_rec(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
-                        F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
-                        const T1 f8, const T1 f9) const {
+    T1 instruction1_rec(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
+                        T1 f6, T1 f7, T1 f8, T1 f9) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return f;
@@ -358,9 +357,8 @@ struct EncodeOps {
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F5 &, unsigned int &>
-    T1 instruction1_rect(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
-                         F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
-                         const T1 f8, const T1 f9) const {
+    T1 instruction1_rect(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
+                         T1 f6, T1 f7, T1 f8, T1 f9) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return f;
@@ -479,7 +477,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction2_rec(const T1 f, F1 &&f0) const {
+    T1 instruction2_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return f;
@@ -491,7 +489,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction2_rect(const T1 f, F1 &&f0) const {
+    T1 instruction2_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return f;
@@ -586,7 +584,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction3_rec(const T1 f, F1 &&f0) const {
+    T1 instruction3_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return f;
@@ -598,7 +596,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction3_rect(const T1 f, F1 &&f0) const {
+    T1 instruction3_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return f;

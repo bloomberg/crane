@@ -139,7 +139,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
-  T1 fold_right(F0 &&f, const T1 a0) const {
+  T1 fold_right(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return a0;
@@ -538,8 +538,7 @@ struct PendantSumtreeRoundtripCase {
   decode_multi(const unsigned int n, const List<List<T>> &segments);
   enum class Twist { e_TS, e_TZ };
 
-  template <typename T1>
-  static T1 Twist_rect(const T1 f, const T1 f0, const Twist t1) {
+  template <typename T1> static T1 Twist_rect(T1 f, T1 f0, const Twist t1) {
     switch (t1) {
     case Twist::e_TS: {
       return f;
@@ -552,8 +551,7 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1>
-  static T1 Twist_rec(const T1 f, const T1 f0, const Twist t1) {
+  template <typename T1> static T1 Twist_rec(T1 f, T1 f0, const Twist t1) {
     switch (t1) {
     case Twist::e_TS: {
       return f;
@@ -567,8 +565,7 @@ struct PendantSumtreeRoundtripCase {
   }
   enum class Fiber { e_COTTON, e_CAMELID };
 
-  template <typename T1>
-  static T1 Fiber_rect(const T1 f, const T1 f0, const Fiber f1) {
+  template <typename T1> static T1 Fiber_rect(T1 f, T1 f0, const Fiber f1) {
     switch (f1) {
     case Fiber::e_COTTON: {
       return f;
@@ -581,8 +578,7 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1>
-  static T1 Fiber_rec(const T1 f, const T1 f0, const Fiber f1) {
+  template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, const Fiber f1) {
     switch (f1) {
     case Fiber::e_COTTON: {
       return f;
@@ -597,8 +593,7 @@ struct PendantSumtreeRoundtripCase {
   enum class Color { e_WHITE, e_BROWN, e_RED, e_BLUE };
 
   template <typename T1>
-  static T1 Color_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                       const Color c) {
+  static T1 Color_rect(T1 f, T1 f0, T1 f1, T1 f2, const Color c) {
     switch (c) {
     case Color::e_WHITE: {
       return f;
@@ -618,8 +613,7 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1>
-  static T1 Color_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                      const Color c) {
+  static T1 Color_rec(T1 f, T1 f0, T1 f1, T1 f2, const Color c) {
     switch (c) {
     case Color::e_WHITE: {
       return f;

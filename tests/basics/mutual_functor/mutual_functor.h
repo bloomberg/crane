@@ -255,7 +255,7 @@ template <Elem E> struct MutualTree {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
-  static T1 forest_rect(const T1 f, F1 &&f0, const forest &f1) {
+  static T1 forest_rect(T1 f, F1 &&f0, const forest &f1) {
     if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;
     } else {
@@ -266,7 +266,7 @@ template <Elem E> struct MutualTree {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
-  static T1 forest_rec(const T1 f, F1 &&f0, const forest &f1) {
+  static T1 forest_rec(T1 f, F1 &&f0, const forest &f1) {
     if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;
     } else {

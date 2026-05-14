@@ -228,7 +228,7 @@ struct MutualValueDeepDestruct {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &, b &>
-  static T1 a_rect(const T1 f, F1 &&f0, const a &a0) {
+  static T1 a_rect(T1 f, F1 &&f0, const a &a0) {
     if (std::holds_alternative<typename a::AEnd>(a0.v())) {
       return f;
     } else {
@@ -239,7 +239,7 @@ struct MutualValueDeepDestruct {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &, b &>
-  static T1 a_rec(const T1 f, F1 &&f0, const a &a0) {
+  static T1 a_rec(T1 f, F1 &&f0, const a &a0) {
     if (std::holds_alternative<typename a::AEnd>(a0.v())) {
       return f;
     } else {

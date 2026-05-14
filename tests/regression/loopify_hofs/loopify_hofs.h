@@ -192,10 +192,10 @@ struct LoopifyHofs {
   /// list.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
-  static T1 foldl1_aux(F0 &&f, const T1 acc, const List<T1> &l) {
+  static T1 foldl1_aux(F0 &&f, T1 acc, const List<T1> &l) {
     T1 _result;
     const List<T1> *_loop_l = &l;
-    T1 _loop_acc = acc;
+    T1 _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
@@ -212,7 +212,7 @@ struct LoopifyHofs {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
-  static T1 foldl1(F0 &&f, const T1 default0, const List<T1> &l) {
+  static T1 foldl1(F0 &&f, T1 default0, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

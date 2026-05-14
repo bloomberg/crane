@@ -12,7 +12,7 @@
 struct HigherKinded {
   template <typename T1, typename T2 = void, typename T3 = void, typename F0,
             typename F1>
-  static T1 hk_map(F0 &&map_f, F1 &&f, const T1 x) {
+  static T1 hk_map(F0 &&map_f, F1 &&f, const T1 &x) {
     return std::any_cast<T1>(map_f(f, x));
   }
 
@@ -203,7 +203,7 @@ struct HigherKinded {
 
   template <typename T1> static unsigned int tree_size(const Tree<T1> &t) {
     return tree_fold<T1, unsigned int>(
-        [](const T1) { return 1u; },
+        [](const T1 &) { return 1u; },
         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
           return (_x0 + _x1);
         },

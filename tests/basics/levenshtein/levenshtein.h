@@ -778,7 +778,7 @@ struct Levenshtein {
                                      Nat &, chain &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
                                      Nat &, edit &, chain &, T1 &>
-    T1 chain_rec(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
+    T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                  const Nat &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
@@ -801,7 +801,7 @@ struct Levenshtein {
                                      Nat &, chain &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
                                      Nat &, edit &, chain &, T1 &>
-    T1 chain_rect(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
+    T1 chain_rect(T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                   const Nat &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
@@ -840,7 +840,7 @@ struct Levenshtein {
 
   template <typename T1, typename F3>
     requires std::is_invocable_r_v<Nat, F3 &, T1 &>
-  static T1 min3_app(const T1 x, const T1 y, const T1 z, F3 &&f) {
+  static T1 min3_app(T1 x, T1 y, T1 z, F3 &&f) {
     Nat n1 = f(x);
     Nat n2 = f(y);
     Nat n3 = f(z);

@@ -155,7 +155,7 @@ struct PulseParseCertificateCase {
   enum class PulseClass { e_MARKSHORT, e_MARKLONG };
 
   template <typename T1>
-  static T1 PulseClass_rect(const T1 f, const T1 f0, const PulseClass p) {
+  static T1 PulseClass_rect(T1 f, T1 f0, const PulseClass p) {
     switch (p) {
     case PulseClass::e_MARKSHORT: {
       return f;
@@ -169,7 +169,7 @@ struct PulseParseCertificateCase {
   }
 
   template <typename T1>
-  static T1 PulseClass_rec(const T1 f, const T1 f0, const PulseClass p) {
+  static T1 PulseClass_rec(T1 f, T1 f0, const PulseClass p) {
     switch (p) {
     case PulseClass::e_MARKSHORT: {
       return f;

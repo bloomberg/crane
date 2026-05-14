@@ -147,8 +147,7 @@ public:
 };
 
 struct ListDef {
-  template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
 };
 
 struct LoopifyExprVariants {
@@ -1741,7 +1740,7 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
-    T1 bool_expr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+    T1 bool_expr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const bool_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1852,8 +1851,7 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
-    T1 bool_expr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
-                      F4 &&f3) const {
+    T1 bool_expr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const bool_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2260,7 +2258,7 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
-    T1 list_expr_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+    T1 list_expr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2348,7 +2346,7 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
-    T1 list_expr_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+    T1 list_expr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2432,8 +2430,7 @@ struct LoopifyExprVariants {
   };
 };
 
-template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
   std::unique_ptr<List<T1>> _head{};
   std::unique_ptr<List<T1>> *_write = &_head;
   unsigned int _loop_n = n;

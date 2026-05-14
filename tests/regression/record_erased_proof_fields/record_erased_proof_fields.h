@@ -124,7 +124,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -147,8 +147,7 @@ struct RecordErasedProofFieldsCase {
   };
 
   template <typename T1>
-  static T1 ItemKind_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                          const T1 f3, const T1 f4, const T1 f5,
+  static T1 ItemKind_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                           const ItemKind i) {
     switch (i) {
     case ItemKind::e_KINDA: {
@@ -178,8 +177,7 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 ItemKind_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                         const T1 f3, const T1 f4, const T1 f5,
+  static T1 ItemKind_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                          const ItemKind i) {
     switch (i) {
     case ItemKind::e_KINDA: {
@@ -302,8 +300,7 @@ struct RecordErasedProofFieldsCase {
   enum class TraceBucket { e_BUCKETA, e_BUCKETB, e_BUCKETC };
 
   template <typename T1>
-  static T1 TraceBucket_rect(const T1 f, const T1 f0, const T1 f1,
-                             const TraceBucket t) {
+  static T1 TraceBucket_rect(T1 f, T1 f0, T1 f1, const TraceBucket t) {
     switch (t) {
     case TraceBucket::e_BUCKETA: {
       return f;
@@ -320,8 +317,7 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 TraceBucket_rec(const T1 f, const T1 f0, const T1 f1,
-                            const TraceBucket t) {
+  static T1 TraceBucket_rec(T1 f, T1 f0, T1 f1, const TraceBucket t) {
     switch (t) {
     case TraceBucket::e_BUCKETA: {
       return f;

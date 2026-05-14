@@ -137,7 +137,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -1025,8 +1025,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   enum class HLALocus { e_LOCUS_A, e_LOCUS_B, e_LOCUS_DR };
 
   template <typename T1>
-  static T1 HLALocus_rect(const T1 f, const T1 f0, const T1 f1,
-                          const HLALocus h) {
+  static T1 HLALocus_rect(T1 f, T1 f0, T1 f1, const HLALocus h) {
     switch (h) {
     case HLALocus::e_LOCUS_A: {
       return f;
@@ -1043,8 +1042,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 HLALocus_rec(const T1 f, const T1 f0, const T1 f1,
-                         const HLALocus h) {
+  static T1 HLALocus_rec(T1 f, T1 f0, T1 f1, const HLALocus h) {
     switch (h) {
     case HLALocus::e_LOCUS_A: {
       return f;
@@ -1177,8 +1175,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 MFIStrength_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                             const T1 f3, const MFIStrength m) {
+  static T1 MFIStrength_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
+                             const MFIStrength m) {
     switch (m) {
     case MFIStrength::e_MFI_NEGATIVE: {
       return f;
@@ -1201,8 +1199,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 MFIStrength_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                            const T1 f3, const MFIStrength m) {
+  static T1 MFIStrength_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
+                            const MFIStrength m) {
     switch (m) {
     case MFIStrength::e_MFI_NEGATIVE: {
       return f;
@@ -1241,8 +1239,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 VirtualXMResult_rect(const T1 f, const T1 f0, const T1 f1,
-                                 const T1 f2, const VirtualXMResult v) {
+  static T1 VirtualXMResult_rect(T1 f, T1 f0, T1 f1, T1 f2,
+                                 const VirtualXMResult v) {
     switch (v) {
     case VirtualXMResult::e_VXM_NEGATIVE: {
       return f;
@@ -1262,8 +1260,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 VirtualXMResult_rec(const T1 f, const T1 f0, const T1 f1,
-                                const T1 f2, const VirtualXMResult v) {
+  static T1 VirtualXMResult_rec(T1 f, T1 f0, T1 f1, T1 f2,
+                                const VirtualXMResult v) {
     switch (v) {
     case VirtualXMResult::e_VXM_NEGATIVE: {
       return f;
@@ -1294,8 +1292,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 TransplantAcceptability_rect(const T1 f, const T1 f0, const T1 f1,
-                                         const T1 f2,
+  static T1 TransplantAcceptability_rect(T1 f, T1 f0, T1 f1, T1 f2,
                                          const TransplantAcceptability t) {
     switch (t) {
     case TransplantAcceptability::e_ACCEPTABLE: {
@@ -1316,8 +1313,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 TransplantAcceptability_rec(const T1 f, const T1 f0, const T1 f1,
-                                        const T1 f2,
+  static T1 TransplantAcceptability_rec(T1 f, T1 f0, T1 f1, T1 f2,
                                         const TransplantAcceptability t) {
     switch (t) {
     case TransplantAcceptability::e_ACCEPTABLE: {
@@ -1351,8 +1347,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 TestConfidence_rect(const T1 f, const T1 f0, const T1 f1,
-                                const TestConfidence t) {
+  static T1 TestConfidence_rect(T1 f, T1 f0, T1 f1, const TestConfidence t) {
     switch (t) {
     case TestConfidence::e_CONFIDENCE_HIGH: {
       return f;
@@ -1369,8 +1364,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 TestConfidence_rec(const T1 f, const T1 f0, const T1 f1,
-                               const TestConfidence t) {
+  static T1 TestConfidence_rec(T1 f, T1 f0, T1 f1, const TestConfidence t) {
     switch (t) {
     case TestConfidence::e_CONFIDENCE_HIGH: {
       return f;
@@ -1393,8 +1387,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 CrossmatchResult_rect(const T1 f, const T1 f0, const T1 f1,
-                                  const T1 f2, const CrossmatchResult c) {
+  static T1 CrossmatchResult_rect(T1 f, T1 f0, T1 f1, T1 f2,
+                                  const CrossmatchResult c) {
     switch (c) {
     case CrossmatchResult::e_XM_COMPATIBLE: {
       return f;
@@ -1414,8 +1408,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 CrossmatchResult_rec(const T1 f, const T1 f0, const T1 f1,
-                                 const T1 f2, const CrossmatchResult c) {
+  static T1 CrossmatchResult_rec(T1 f, T1 f0, T1 f1, T1 f2,
+                                 const CrossmatchResult c) {
     switch (c) {
     case CrossmatchResult::e_XM_COMPATIBLE: {
       return f;

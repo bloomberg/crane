@@ -125,13 +125,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct FinOperatesOnPairs {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, const T1 x,
-                             const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -186,7 +185,7 @@ struct FinOperatesOnPairs {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

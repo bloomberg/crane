@@ -30,8 +30,7 @@ struct LetMatchType {
   enum class Direction { e_NORTH, e_SOUTH, e_EAST, e_WEST };
 
   template <typename T1>
-  static T1 direction_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                           const Direction d) {
+  static T1 direction_rect(T1 f, T1 f0, T1 f1, T1 f2, const Direction d) {
     switch (d) {
     case Direction::e_NORTH: {
       return f;
@@ -51,8 +50,7 @@ struct LetMatchType {
   }
 
   template <typename T1>
-  static T1 direction_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                          const Direction d) {
+  static T1 direction_rec(T1 f, T1 f0, T1 f1, T1 f2, const Direction d) {
     switch (d) {
     case Direction::e_NORTH: {
       return f;

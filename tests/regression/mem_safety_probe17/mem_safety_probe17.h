@@ -669,7 +669,7 @@ struct MemSafetyProbe17 {
       requires std::is_invocable_r_v<T1, F1 &, qtree &, T1 &, qtree &, T1 &,
                                      unsigned int &, qtree &, T1 &, qtree &,
                                      T1 &>
-    T1 qtree_rec(const T1 f, F1 &&f0) const {
+    T1 qtree_rec(T1 f, F1 &&f0) const {
       const qtree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -787,7 +787,7 @@ struct MemSafetyProbe17 {
       requires std::is_invocable_r_v<T1, F1 &, qtree &, T1 &, qtree &, T1 &,
                                      unsigned int &, qtree &, T1 &, qtree &,
                                      T1 &>
-    T1 qtree_rect(const T1 f, F1 &&f0) const {
+    T1 qtree_rect(T1 f, F1 &&f0) const {
       const qtree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1079,7 +1079,7 @@ struct MemSafetyProbe17 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rec(const T1 f, F1 &&f0) const {
+    T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1126,7 +1126,7 @@ struct MemSafetyProbe17 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rect(const T1 f, F1 &&f0) const {
+    T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.

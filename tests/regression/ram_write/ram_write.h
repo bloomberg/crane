@@ -134,16 +134,14 @@ public:
 };
 
 struct ListDef {
+  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
   template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int n);
-  template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct RamWrite {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, const T1 x,
-                             const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -263,8 +261,7 @@ struct RamWrite {
       ram_write_main_sys(init_state, 12u).length();
 };
 
-template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
@@ -274,7 +271,7 @@ List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
 }
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

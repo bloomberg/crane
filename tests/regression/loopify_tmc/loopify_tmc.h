@@ -131,7 +131,7 @@ struct LoopifyTmc {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rect(const T2 f, F1 &&f0,
+  list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// _Enter: captures varying parameters for
                                  /// each recursive call.
 
@@ -177,7 +177,7 @@ struct LoopifyTmc {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rec(const T2 f, F1 &&f0,
+  list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// _Enter: captures varying parameters for each
                                 /// recursive call.
 
@@ -286,7 +286,7 @@ struct LoopifyTmc {
   }
 
   /// snoc l x appends x at the end. TMC, base case allocates a cell.
-  template <typename T1> static list<T1> snoc(const list<T1> &l, const T1 x) {
+  template <typename T1> static list<T1> snoc(const list<T1> &l, T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
     const list<T1> *_loop_l = &l;
@@ -310,8 +310,7 @@ struct LoopifyTmc {
   }
 
   /// replicate n x creates n copies of x. Nat recursion producing list.
-  template <typename T1>
-  static list<T1> replicate(const unsigned int n, const T1 x) {
+  template <typename T1> static list<T1> replicate(const unsigned int n, T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
     unsigned int _loop_n = n;

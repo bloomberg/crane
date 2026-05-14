@@ -189,7 +189,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename T1>
-  static unsigned int numeric_double(const T1 x) {
+  static unsigned int numeric_double(const T1 &x) {
     return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
   }
 
@@ -206,7 +206,7 @@ struct Typeclasses {
   static_assert(Ord<ordNat, unsigned int>);
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static std::pair<T1, T1> sort_pair(const T1 x, const T1 y) {
+  static std::pair<T1, T1> sort_pair(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return std::make_pair(x, y);
     } else {
@@ -215,7 +215,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static T1 min_of(const T1 x, const T1 y) {
+  static T1 min_of(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return x;
     } else {
@@ -224,7 +224,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static T1 max_of(const T1 x, const T1 y) {
+  static T1 max_of(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return y;
     } else {
@@ -233,7 +233,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static unsigned int describe(const T1 x, const T1 y) {
+  static unsigned int describe(const T1 &x, const T1 &y) {
     if (_tcI0::eqb(x, y)) {
       return _tcI1::to_nat(x);
     } else {

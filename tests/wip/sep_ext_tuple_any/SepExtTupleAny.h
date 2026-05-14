@@ -25,7 +25,7 @@ template <SymTypes Ty> struct Defs {
   get_first(const typename Ty::symbol,
             const typename Datatypes::template List<typename Ty::symbol> &,
             const symbols_semty vs) {
-    return vs.first;
+    return std::any_cast<std::pair<std::any, std::any>>(vs).first;
   }
 };
 

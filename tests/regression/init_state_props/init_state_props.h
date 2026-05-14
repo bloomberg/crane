@@ -134,8 +134,7 @@ public:
 };
 
 struct ListDef {
-  template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
 };
 
 struct InitStateProps {
@@ -159,8 +158,7 @@ struct InitStateProps {
       std::make_pair(test_register_count, test_rom_length);
 };
 
-template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

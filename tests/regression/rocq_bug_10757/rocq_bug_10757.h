@@ -71,14 +71,14 @@ struct RocqBug10757 {
              std::is_invocable_r_v<T1, F1 &, T1 &>
   static Sig<T1>
   iterate_func(F0 &&beq, F1 &&f,
-               const T1 x) { // Precondition: (exists _ : le x (F x), forall z :
-                             // A, le (F z) z -> le x z)
+               const T1 &x) { // Precondition: (exists _ : le x (F x), forall z
+                              // : A, le (F z) z -> le x z)
     assert(true);
     T1 x0 = [&]() {
       const auto &[d_x] = std::get<typename Sig<T1>::Exist>(x.v());
       return d_x;
     }();
-    std::function<Sig<T1>(T1)> iterate0 = [=](const T1 x1) mutable {
+    std::function<Sig<T1>(T1)> iterate0 = [=](T1 x1) mutable {
       Sig<T1> y = Sig<Sig<T1>>::exist(Sig<T1>::exist(x1));
       return iterate_func<T1>(beq, f, [=]() mutable {
         auto &[d_x] = std::get<typename Sig<T1>::Exist>(y.v_mut());
@@ -102,7 +102,7 @@ struct RocqBug10757 {
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<Bool0, F0 &, T1 &, T1 &> &&
              std::is_invocable_r_v<T1, F1 &, T1 &>
-  static Sig<T1> iterate(F0 &&beq, F1 &&f, const T1 x) {
+  static Sig<T1> iterate(F0 &&beq, F1 &&f, T1 x) {
     return iterate_func(beq, f, Sig<T1>::exist(x));
   }
 };

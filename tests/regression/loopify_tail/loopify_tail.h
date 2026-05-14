@@ -128,7 +128,7 @@ struct LoopifyTail {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rect(const T2 f, F1 &&f0,
+  list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// _Enter: captures varying parameters for
                                  /// each recursive call.
 
@@ -174,7 +174,7 @@ struct LoopifyTail {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rec(const T2 f, F1 &&f0,
+  list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// _Enter: captures varying parameters for each
                                 /// recursive call.
 
@@ -217,10 +217,10 @@ struct LoopifyTail {
     return _result;
   } /// Tail-recursive: last element of a list
 
-  template <typename T1> static T1 last(const T1 x, const list<T1> &l) {
+  template <typename T1> static T1 last(T1 x, const list<T1> &l) {
     T1 _result;
     const list<T1> *_loop_l = &l;
-    T1 _loop_x = x;
+    T1 _loop_x = std::move(x);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_x;
@@ -267,10 +267,10 @@ struct LoopifyTail {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
-  static T2 fold_left(F0 &&f, const T2 acc, const list<T1> &l) {
+  static T2 fold_left(F0 &&f, T2 acc, const list<T1> &l) {
     T2 _result;
     const list<T1> *_loop_l = &l;
-    T2 _loop_acc = acc;
+    T2 _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;

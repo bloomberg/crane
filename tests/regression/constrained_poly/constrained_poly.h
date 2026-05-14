@@ -8,7 +8,7 @@
 #include <variant>
 
 struct ConstrainedPoly {
-  template <typename T1> static T1 poly_id(const T1 x) { return x; }
+  template <typename T1> static T1 poly_id(T1 x) { return x; }
 
   template <typename t_A, typename t_B> struct UPair {
     t_A ufst;
@@ -26,7 +26,7 @@ struct ConstrainedPoly {
   }
 
   template <typename T1, typename T2>
-  static UPair<T1, T2> wrap_pair(const T1 a, const T2 b) {
+  static UPair<T1, T2> wrap_pair(T1 a, T2 b) {
     return UPair<T1, T2>(a, b);
   }
 
@@ -101,7 +101,7 @@ struct ConstrainedPoly {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 UOption_rect(F0 &&f, const T2 f0, const UOption<T1> &u) {
+  static T2 UOption_rect(F0 &&f, T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
       const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u.v());
       return f(d_a0);
@@ -112,7 +112,7 @@ struct ConstrainedPoly {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 UOption_rec(F0 &&f, const T2 f0, const UOption<T1> &u) {
+  static T2 UOption_rec(F0 &&f, T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
       const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u.v());
       return f(d_a0);

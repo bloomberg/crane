@@ -125,7 +125,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
-  T1 fold_right(F0 &&f, const T1 a0) const {
+  T1 fold_right(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -253,7 +253,7 @@ struct FoldClosureAccum {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                    tree &, T1 &>
-  static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
+  static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
@@ -266,7 +266,7 @@ struct FoldClosureAccum {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                    tree &, T1 &>
-  static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
+  static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {

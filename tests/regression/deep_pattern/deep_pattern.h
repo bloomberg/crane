@@ -525,7 +525,7 @@ struct DeepPattern {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rec(const T1 f, F1 &&f0) const {
+    T1 list_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
@@ -537,7 +537,7 @@ struct DeepPattern {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rect(const T1 f, F1 &&f0) const {
+    T1 list_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;

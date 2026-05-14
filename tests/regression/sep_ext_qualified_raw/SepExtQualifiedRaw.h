@@ -135,7 +135,7 @@ template <OrderedType X> struct Make {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Fmap<T1> &,
                                    T2 &>
-  static T2 fmap_rect(const T2 f, F1 &&f0, const Fmap<T1> &f1) {
+  static T2 fmap_rect(T2 f, F1 &&f0, const Fmap<T1> &f1) {
     if (std::holds_alternative<typename Fmap<T1>::Empty>(f1.v())) {
       return f;
     } else {
@@ -148,7 +148,7 @@ template <OrderedType X> struct Make {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Fmap<T1> &,
                                    T2 &>
-  static T2 fmap_rec(const T2 f, F1 &&f0, const Fmap<T1> &f1) {
+  static T2 fmap_rec(T2 f, F1 &&f0, const Fmap<T1> &f1) {
     if (std::holds_alternative<typename Fmap<T1>::Empty>(f1.v())) {
       return f;
     } else {

@@ -234,7 +234,7 @@ struct MemSafetyProbe29 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, unsigned int &,
                                      inner &, T1 &>
-    T1 inner_rec(const T1 f, F1 &&f0) const {
+    T1 inner_rec(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -298,7 +298,7 @@ struct MemSafetyProbe29 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, unsigned int &,
                                      inner &, T1 &>
-    T1 inner_rect(const T1 f, F1 &&f0) const {
+    T1 inner_rect(T1 f, F1 &&f0) const {
       const inner *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -589,7 +589,7 @@ struct MemSafetyProbe29 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, outer &, T1 &, inner &, outer &,
                                      T1 &>
-    T1 outer_rec(const T1 f, F1 &&f0) const {
+    T1 outer_rec(T1 f, F1 &&f0) const {
       const outer *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -654,7 +654,7 @@ struct MemSafetyProbe29 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, outer &, T1 &, inner &, outer &,
                                      T1 &>
-    T1 outer_rect(const T1 f, F1 &&f0) const {
+    T1 outer_rect(T1 f, F1 &&f0) const {
       const outer *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1544,7 +1544,7 @@ struct MemSafetyProbe29 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
                                      tree3 &, T1 &, unsigned int &>
-    T1 tree3_rec(const T1 f, F1 &&f0) const {
+    T1 tree3_rec(T1 f, F1 &&f0) const {
       const tree3 *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1633,7 +1633,7 @@ struct MemSafetyProbe29 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
                                      tree3 &, T1 &, unsigned int &>
-    T1 tree3_rect(const T1 f, F1 &&f0) const {
+    T1 tree3_rect(T1 f, F1 &&f0) const {
       const tree3 *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.

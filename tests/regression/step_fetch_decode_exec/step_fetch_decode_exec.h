@@ -125,7 +125,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct StepFetchDecodeExec {
@@ -193,7 +193,7 @@ struct StepFetchDecodeExec {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 instruction_rect(const T1 f, F1 &&f0, const instruction &i) {
+  static T1 instruction_rect(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
     } else {
@@ -204,7 +204,7 @@ struct StepFetchDecodeExec {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 instruction_rec(const T1 f, F1 &&f0, const instruction &i) {
+  static T1 instruction_rec(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
     } else {
@@ -240,7 +240,7 @@ struct StepFetchDecodeExec {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

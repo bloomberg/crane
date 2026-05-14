@@ -74,7 +74,7 @@ struct GeneratedVariantFactoryNameClash {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &>
-  static T1 token_rect(const T1 f, F1 &&f0, const token &t) {
+  static T1 token_rect(T1 f, F1 &&f0, const token &t) {
     if (std::holds_alternative<typename token::Variant_t>(t.v())) {
       return f;
     } else {
@@ -85,7 +85,7 @@ struct GeneratedVariantFactoryNameClash {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &>
-  static T1 token_rec(const T1 f, F1 &&f0, const token &t) {
+  static T1 token_rec(T1 f, F1 &&f0, const token &t) {
     if (std::holds_alternative<typename token::Variant_t>(t.v())) {
       return f;
     } else {

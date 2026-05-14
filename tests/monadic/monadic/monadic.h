@@ -125,7 +125,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -137,7 +137,7 @@ public:
 };
 
 struct Monadic {
-  template <typename T1> static std::optional<T1> option_return(const T1 x) {
+  template <typename T1> static std::optional<T1> option_return(T1 x) {
     return std::make_optional<T1>(x);
   }
 
@@ -162,15 +162,14 @@ struct Monadic {
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
-  template <typename T1, typename T2>
-  static State<T1, T2> state_return(const T2 x) {
-    return [=](const T1 s) mutable { return std::make_pair(x, s); };
+  template <typename T1, typename T2> static State<T1, T2> state_return(T2 x) {
+    return [=](T1 s) mutable { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3, typename F1>
     requires std::is_invocable_r_v<State<T1, T3>, F1 &, T2 &>
   static State<T1, T3> state_bind(const State<T1, T2> ma, F1 &&f) {
-    return [=](const T1 s) mutable {
+    return [=](const T1 &s) mutable {
       auto _cs = ma(s);
       const T2 &a = _cs.first;
       const T1 &s_ = _cs.second;
@@ -185,10 +184,9 @@ struct Monadic {
     return v;
   }
 
-  template <typename T1>
-  static State<T1, std::monostate> state_put(const T1 s) {
+  template <typename T1> static State<T1, std::monostate> state_put(T1 s) {
     return
-        [=](const T1) mutable { return std::make_pair(std::monostate{}, s); };
+        [=](const T1 &) mutable { return std::make_pair(std::monostate{}, s); };
   }
 
   template <typename T1>
@@ -197,7 +195,7 @@ struct Monadic {
         [](const std::function<std::pair<unsigned int, unsigned int>(
                unsigned int)>
                acc,
-           const T1) {
+           const T1 &) {
           return state_bind<unsigned int, unsigned int,
                             unsigned int>(acc, [](const unsigned int) {
             return state_bind<unsigned int, unsigned int, unsigned int>(

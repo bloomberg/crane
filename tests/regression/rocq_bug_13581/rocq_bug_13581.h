@@ -368,7 +368,7 @@ struct RocqBug13581 {
 
   template <typename T1, typename T2, typename F3>
     requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
-  static T2 I_rect(const T1, const T1, const T2 f, F3 &&f0, const Nat &,
+  static T2 I_rect(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
                    const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
       return f;
@@ -380,7 +380,7 @@ struct RocqBug13581 {
 
   template <typename T1, typename T2, typename F3>
     requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
-  static T2 I_rec(const T1, const T1, const T2 f, F3 &&f0, const Nat &,
+  static T2 I_rec(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
                   const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
       return f;
@@ -392,14 +392,15 @@ struct RocqBug13581 {
 
   template <typename T1, typename T2, typename F2>
     requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
-  static T2 J_rect(const T1, const T1, F2 &&f, const Bool0, const J<T1> &j) {
+  static T2 J_rect(const T1 &, const T1 &, F2 &&f, const Bool0,
+                   const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
     return f(*(d_a0));
   }
 
   template <typename T1, typename T2, typename F2>
     requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
-  static T2 J_rec(const T1, const T1, F2 &&f, const Bool0, const J<T1> &j) {
+  static T2 J_rec(const T1 &, const T1 &, F2 &&f, const Bool0, const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
     return f(*(d_a0));
   }

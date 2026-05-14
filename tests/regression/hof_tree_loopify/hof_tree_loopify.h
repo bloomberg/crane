@@ -971,7 +971,7 @@ struct HofTreeLoopify {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rect(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rect(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {
@@ -984,7 +984,7 @@ struct HofTreeLoopify {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rec(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {
@@ -1010,7 +1010,7 @@ struct HofTreeLoopify {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T2 &, T1 &, T2 &>
-  static T2 tree_fold(const T2 base, F1 &&f, const tree<T1> &t) {
+  static T2 tree_fold(T2 base, F1 &&f, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return base;
     } else {
@@ -1043,7 +1043,7 @@ struct HofTreeLoopify {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
-  static std::pair<T3, tree<T2>> tree_map_accum(F0 &&f, const T3 acc,
+  static std::pair<T3, tree<T2>> tree_map_accum(F0 &&f, T3 acc,
                                                 const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return std::make_pair(acc, tree<T2>::leaf());

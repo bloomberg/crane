@@ -167,7 +167,7 @@ public:
   }
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
-  T1 fold_right(F0 &&f, const T1 a0) const {
+  T1 fold_right(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -281,9 +281,9 @@ struct TopologicalSort {
         T1 e1 = d_a0.first;
         T1 e2 = d_a0.second;
         bsl::optional<T1> f1 =
-            h.find([=](const T1 x) mutable { return eqb_node(e1, x); });
+            h.find([=](const T1 &x) mutable { return eqb_node(e1, x); });
         bsl::optional<T1> f2 =
-            h.find([=](const T1 x) mutable { return eqb_node(e2, x); });
+            h.find([=](const T1 &x) mutable { return eqb_node(e2, x); });
         if (f1.has_value()) {
           T1 _x = *f1;
           if (f2.has_value()) {
@@ -314,7 +314,7 @@ struct TopologicalSort {
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static entry<T1> make_entry(F0 &&eqb_node, const List<bsl::pair<T1, T1>> &l,
-                              const T1 e) {
+                              T1 e) {
     return bsl::make_pair(
         e, l.template fold_right<List<T1>>(
                [=](const bsl::pair<T1, T1> &x, List<T1> ret) mutable {
@@ -331,7 +331,7 @@ struct TopologicalSort {
   static graph<T1> make_graph(F0 &&eqb_node, List<bsl::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
     return bsl::move(elems).template fold_right<List<entry<T1>>>(
-        [=](const T1 e, List<bsl::pair<T1, List<T1>>> ret) mutable {
+        [=](const T1 &e, List<bsl::pair<T1, List<T1>>> ret) mutable {
           return List<bsl::pair<T1, List<T1>>>::cons(
               make_entry<T1>(eqb_node, l, e), ret);
         },
@@ -339,7 +339,7 @@ struct TopologicalSort {
   }
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static List<T1> graph_lookup(F0 &&eqb_node, const T1 elem,
+  static List<T1> graph_lookup(F0 &&eqb_node, const T1 &elem,
                                const List<bsl::pair<T1, List<T1>>> &graph0) {
     auto _cs = graph0.find([=](const bsl::pair<T1, List<T1>> &entry0) mutable {
       return eqb_node(elem, entry0.first);
@@ -355,8 +355,8 @@ struct TopologicalSort {
   }
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static bool contains(F0 &&eqb_node, const T1 elem, const List<T1> &es) {
-    auto _cs = es.find([=](const T1 x) mutable { return eqb_node(elem, x); });
+  static bool contains(F0 &&eqb_node, const T1 &elem, const List<T1> &es) {
+    auto _cs = es.find([=](const T1 &x) mutable { return eqb_node(elem, x); });
     if (_cs.has_value()) {
       T1 _x = *_cs;
       return true;
@@ -368,7 +368,7 @@ struct TopologicalSort {
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static T1
   cycle_entry_aux(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0,
-                  List<T1> seens, const T1 elem, const unsigned int counter) {
+                  List<T1> seens, T1 elem, const unsigned int counter) {
     if (contains<T1>(eqb_node, elem, seens)) {
       return elem;
     } else {
@@ -408,7 +408,7 @@ struct TopologicalSort {
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1>
   cycle_extract_aux(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0,
-                    const unsigned int counter, const T1 elem, List<T1> cycl) {
+                    const unsigned int counter, T1 elem, List<T1> cycl) {
     if (counter <= 0) {
       return cycl;
     } else {
@@ -481,7 +481,7 @@ struct TopologicalSort {
                 [=](const bsl::pair<T1, List<T1>> &entry0) mutable {
                   return bsl::make_pair(
                       entry0.first,
-                      entry0.second.filter([=](const T1 e) mutable {
+                      entry0.second.filter([=](const T1 &e) mutable {
                         return !(contains<T1>(eqb_node, e, mins_));
                       }));
                 });
@@ -518,7 +518,7 @@ struct TopologicalSort {
               List<T1> fs = x.first;
               unsigned int rk = x.second;
               return fs.template map<bsl::pair<T1, unsigned int>>(
-                  [=](const T1 f) mutable { return bsl::make_pair(f, rk); });
+                  [=](T1 f) mutable { return bsl::make_pair(f, rk); });
             })
         .template concat<bsl::pair<T1, unsigned int>>();
   }

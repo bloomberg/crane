@@ -142,7 +142,7 @@ struct EffectPoly {
   static unsigned int test_map_result();
 
   /// 2. Polymorphic bind-and-return
-  template <typename T1> static T1 lift_pure(const T1 _x0) { return _x0; }
+  template <typename T1> static T1 lift_pure(const T1 &_x0) { return _x0; }
 
   static unsigned int test_lift_nat();
   static std::string test_lift_string();
@@ -158,7 +158,7 @@ struct EffectPoly {
 
   /// 6. Polymorphic fold over itree results
   template <typename T1, typename T2, typename F0>
-  static T1 fold_m(F0 &&f, const T1 init, const List<T2> &xs) {
+  static T1 fold_m(F0 &&f, const T1 &init, const List<T2> &xs) {
     if (std::holds_alternative<typename List<T2>::Nil>(xs.v())) {
       return init;
     } else {

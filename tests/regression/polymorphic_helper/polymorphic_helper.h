@@ -244,7 +244,7 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(const T1 x, const Nat &n);
+  template <typename T1> static List<T1> repeat(T1 x, const Nat &n);
 };
 
 template <typename T1> Nat _foo_aux(const T1 a, const Nat n) {
@@ -253,7 +253,7 @@ template <typename T1> Nat _foo_aux(const T1 a, const Nat n) {
 
 Nat foo(Nat n, const bool b);
 
-template <typename T1> List<T1> ListDef::repeat(const T1 x, const Nat &n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, const Nat &n) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
     return List<T1>::nil();
   } else {

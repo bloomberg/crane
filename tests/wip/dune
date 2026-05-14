@@ -218,3 +218,36 @@
   (alias runtest)
   (deps sep_ext_nullary_module_alias.t.exe)
   (action (run ./sep_ext_nullary_module_alias.t.exe))))
+
+(subdir sep_ext_any_fun_call
+ (rule
+  (targets sep_ext_any_fun_call.t.exe)
+  (deps SepExtAnyFunCall.vo sep_ext_any_fun_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_fun_call.t.exe SepExtAnyFunCall.cpp sep_ext_any_fun_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_any_fun_call.t.exe)
+  (action (run ./sep_ext_any_fun_call.t.exe))))
+
+(subdir sep_ext_any_list_collect
+ (rule
+  (targets sep_ext_any_list_collect.t.exe)
+  (deps SepExtAnyListCollect.vo sep_ext_any_list_collect.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_list_collect.t.exe SepExtAnyListCollect.cpp sep_ext_any_list_collect.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_any_list_collect.t.exe)
+  (action (run ./sep_ext_any_list_collect.t.exe))))
+
+(subdir sep_ext_any_nested_match
+ (rule
+  (targets sep_ext_any_nested_match.t.exe)
+  (deps SepExtAnyNestedMatch.vo sep_ext_any_nested_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_nested_match.t.exe SepExtAnyNestedMatch.cpp sep_ext_any_nested_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_any_nested_match.t.exe)
+  (action (run ./sep_ext_any_nested_match.t.exe))))

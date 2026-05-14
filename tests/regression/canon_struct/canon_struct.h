@@ -37,8 +37,8 @@ struct CanonStruct {
   static_assert(EqType<bool_eqType>);
 
   template <EqType _tcI0>
-  static bool same(const typename _tcI0::carrier x,
-                   const typename _tcI0::carrier y) {
+  static bool same(const typename _tcI0::carrier &x,
+                   const typename _tcI0::carrier &y) {
     return _tcI0::eqb(x, y);
   }
 

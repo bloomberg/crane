@@ -539,7 +539,7 @@ struct LoopifyPolymorphic {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static bool poly_member(F0 &&eq, const T1 x, const List<T1> &l) {
+  static bool poly_member(F0 &&eq, const T1 &x, const List<T1> &l) {
     bool _result;
     const List<T1> *_loop_l = &l;
     while (true) {
@@ -561,7 +561,7 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1>
-  static List<T1> poly_replicate(const unsigned int n, const T1 x) {
+  static List<T1> poly_replicate(const unsigned int n, T1 x) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     unsigned int _loop_n = n;

@@ -147,7 +147,7 @@ struct UnitVoidEdge {
     return 42u;
   }
 
-  template <typename T1> static T1 id(const T1 x) { return x; }
+  template <typename T1> static T1 id(T1 x) { return x; }
 
   static inline const std::monostate id_unit = []() {
     id<std::monostate>(std::monostate{});
@@ -169,7 +169,9 @@ struct UnitVoidEdge {
   static void seq_voids(const unsigned int _x);
   static void conditional_unit(const bool b);
 
-  template <typename T1> static unsigned int poly_take(const T1) { return 42u; }
+  template <typename T1> static unsigned int poly_take(const T1 &) {
+    return 42u;
+  }
 
   static inline const unsigned int take_tt =
       poly_take<std::monostate>(std::monostate{});

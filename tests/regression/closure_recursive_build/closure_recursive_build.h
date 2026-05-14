@@ -120,7 +120,7 @@ struct ClosureRecursiveBuild {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<
         T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
-  static T1 fn_list_rect(const T1 f, F1 &&f0, const fn_list &f1) {
+  static T1 fn_list_rect(T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
     } else {
@@ -132,7 +132,7 @@ struct ClosureRecursiveBuild {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<
         T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
-  static T1 fn_list_rec(const T1 f, F1 &&f0, const fn_list &f1) {
+  static T1 fn_list_rec(T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
     } else {

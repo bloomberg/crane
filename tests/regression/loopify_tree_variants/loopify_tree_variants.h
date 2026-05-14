@@ -274,7 +274,7 @@ struct LoopifyTreeVariants {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, unsigned int &,
                                      ternary &, T1 &, ternary &, T1 &>
-    T1 ternary_rec(const T1 f, F1 &&f0) const {
+    T1 ternary_rec(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -363,7 +363,7 @@ struct LoopifyTreeVariants {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, unsigned int &,
                                      ternary &, T1 &, ternary &, T1 &>
-    T1 ternary_rect(const T1 f, F1 &&f0) const {
+    T1 ternary_rect(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.

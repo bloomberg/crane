@@ -128,7 +128,7 @@ struct LoopifyOption {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rect(const T2 f, F1 &&f0,
+  list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// _Enter: captures varying parameters for
                                  /// each recursive call.
 
@@ -174,7 +174,7 @@ struct LoopifyOption {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rec(const T2 f, F1 &&f0,
+  list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// _Enter: captures varying parameters for each
                                 /// recursive call.
 

@@ -198,7 +198,7 @@ struct LoopifyCoindStream {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
-  static stream<T1> iterate(F0 &&f, const T1 x) {
+  static stream<T1> iterate(F0 &&f, T1 x) {
     return stream<T1>::lazy_([=]() mutable -> stream<T1> {
       return stream<T1>::scons(x, iterate<T1>(f, f(x)));
     });
@@ -223,7 +223,7 @@ struct LoopifyCoindStream {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<std::pair<T1, T2>, F0 &, T2 &>
-  static stream<T1> unfold(F0 &&f, const T2 seed) {
+  static stream<T1> unfold(F0 &&f, const T2 &seed) {
     auto _cs = f(seed);
     const T1 &a = _cs.first;
     const T2 &s_ = _cs.second;

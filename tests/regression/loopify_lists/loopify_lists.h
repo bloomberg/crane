@@ -131,7 +131,7 @@ struct LoopifyLists {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rect(const T2 f, F1 &&f0,
+  list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// _Enter: captures varying parameters for
                                  /// each recursive call.
 
@@ -177,7 +177,7 @@ struct LoopifyLists {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
-  list_rec(const T2 f, F1 &&f0,
+  list_rec(T2 f, F1 &&f0,
            const list<T1> &l) { /// _Enter: captures varying parameters for each
                                 /// recursive call.
 
@@ -251,7 +251,7 @@ struct LoopifyLists {
   }
 
   /// snoc l x appends x at the end (reverse cons).
-  template <typename T1> static list<T1> snoc(const list<T1> &l, const T1 x) {
+  template <typename T1> static list<T1> snoc(const list<T1> &l, T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
     const list<T1> *_loop_l = &l;
@@ -276,7 +276,7 @@ struct LoopifyLists {
 
   /// intersperse sep l inserts separator between elements.
   template <typename T1>
-  static list<T1> intersperse(const T1 sep, const list<T1> &l) {
+  static list<T1> intersperse(T1 sep, const list<T1> &l) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
     const list<T1> *_loop_l = &l;
@@ -313,8 +313,7 @@ struct LoopifyLists {
   }
 
   /// replicate n x creates n copies of x.
-  template <typename T1>
-  static list<T1> replicate(const unsigned int n, const T1 x) {
+  template <typename T1> static list<T1> replicate(const unsigned int n, T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
     unsigned int _loop_n = n;
@@ -581,11 +580,11 @@ struct LoopifyLists {
   /// scanl f acc l returns intermediate fold results.
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
-  static list<T2> scanl(F0 &&f, const T2 acc, const list<T1> &l) {
+  static list<T2> scanl(F0 &&f, T2 acc, const list<T1> &l) {
     std::unique_ptr<list<T2>> _head{};
     std::unique_ptr<list<T2>> *_write = &_head;
     const list<T1> *_loop_l = &l;
-    T2 _loop_acc = acc;
+    T2 _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         *(_write) = std::make_unique<list<T2>>(
@@ -610,7 +609,7 @@ struct LoopifyLists {
   /// group_by eq l groups consecutive equal elements.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static list<list<T1>> group_by_aux(F0 &&eq, const T1 prev, list<T1> acc,
+  static list<list<T1>> group_by_aux(F0 &&eq, const T1 &prev, list<T1> acc,
                                      const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<list<T1>>::cons(std::move(acc), list<list<T1>>::nil());
@@ -868,7 +867,7 @@ struct LoopifyLists {
   template <typename T1>
   static list<std::pair<T1, T1>>
   zip_longest_aux(const unsigned int fuel, const list<T1> &l1,
-                  const list<T1> &l2, const T1 default0) {
+                  const list<T1> &l2, T1 default0) {
     std::unique_ptr<list<std::pair<T1, T1>>> _head{};
     std::unique_ptr<list<std::pair<T1, T1>>> *_write = &_head;
     list<T1> _loop_l2 = l2;
@@ -939,7 +938,7 @@ struct LoopifyLists {
 
   template <typename T1>
   static list<std::pair<T1, T1>>
-  zip_longest(const list<T1> &l1, const list<T1> &l2, const T1 default0) {
+  zip_longest(const list<T1> &l1, const list<T1> &l2, const T1 &default0) {
     std::function<unsigned int(list<T1>)> length;
     length = [&](list<T1> l) -> unsigned int {
       /// _Enter: captures varying parameters for each recursive call.
@@ -1236,7 +1235,7 @@ struct LoopifyLists {
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
   static std::pair<T3, list<T2>>
-  map_accum_l(F0 &&f, const T3 acc,
+  map_accum_l(F0 &&f, T3 acc,
               const list<T1> &l) { /// _Enter: captures varying parameters for
                                    /// each recursive call.
 
@@ -1263,7 +1262,7 @@ struct LoopifyLists {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *(_f.l);
-        const T3 acc = _f.acc;
+        T3 acc = _f.acc;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(acc, list<T2>::nil());
         } else {

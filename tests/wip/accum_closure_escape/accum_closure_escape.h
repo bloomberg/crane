@@ -147,7 +147,7 @@ struct AccumClosureEscape {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rec(const T1 f, F1 &&f0) const {
+    T1 mylist_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return f;
@@ -160,7 +160,7 @@ struct AccumClosureEscape {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rect(const T1 f, F1 &&f0) const {
+    T1 mylist_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
         return f;
@@ -319,7 +319,7 @@ struct AccumClosureEscape {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rec(const T1 f, F1 &&f0) const {
+    T1 tree_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
         return f;
@@ -334,7 +334,7 @@ struct AccumClosureEscape {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rect(const T1 f, F1 &&f0) const {
+    T1 tree_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
         return f;

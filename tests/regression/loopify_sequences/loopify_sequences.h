@@ -245,8 +245,7 @@ struct LoopifySequences {
   }
 
   /// join_with sep l joins list elements with separator.
-  template <typename T1>
-  static List<T1> join_with(const T1 sep, const List<T1> &l) {
+  template <typename T1> static List<T1> join_with(T1 sep, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return List<T1>::nil();
     } else {

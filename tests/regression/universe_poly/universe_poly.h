@@ -124,7 +124,7 @@ public:
 };
 
 struct UniversePoly {
-  template <typename T1> static T1 poly_id(const T1 x) { return x; }
+  template <typename T1> static T1 poly_id(T1 x) { return x; }
 
   static inline const unsigned int test_id_nat = poly_id<unsigned int>(42u);
   static inline const bool test_id_bool = poly_id<bool>(true);
@@ -215,7 +215,7 @@ struct UniversePoly {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &>
-  static T2 poption_rect(const T2 f, F1 &&f0, const poption<T1> &p) {
+  static T2 poption_rect(T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
     } else {
@@ -226,7 +226,7 @@ struct UniversePoly {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &>
-  static T2 poption_rec(const T2 f, F1 &&f0, const poption<T1> &p) {
+  static T2 poption_rec(T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
     } else {

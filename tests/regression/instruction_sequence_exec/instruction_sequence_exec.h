@@ -204,8 +204,7 @@ struct InstructionSequenceExec {
 
   template <typename T1, typename F2>
     requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
-  static T1 instruction_rect(const T1 f, const T1 f0, F2 &&f1,
-                             const instruction &i) {
+  static T1 instruction_rect(T1 f, T1 f0, F2 &&f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP_>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instruction::INC_PC>(i.v())) {
@@ -218,8 +217,7 @@ struct InstructionSequenceExec {
 
   template <typename T1, typename F2>
     requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
-  static T1 instruction_rec(const T1 f, const T1 f0, F2 &&f1,
-                            const instruction &i) {
+  static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP_>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instruction::INC_PC>(i.v())) {

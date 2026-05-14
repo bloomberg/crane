@@ -125,7 +125,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct RamOps {
@@ -172,7 +172,7 @@ struct RamOps {
   };
 
   template <typename T1>
-  static List<T1> update_nth_main(const unsigned int n, const T1 x,
+  static List<T1> update_nth_main(const unsigned int n, T1 x,
                                   const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -263,7 +263,7 @@ struct RamOps {
   };
 
   template <typename T1>
-  static List<T1> update_nth_port(const unsigned int n, const T1 x,
+  static List<T1> update_nth_port(const unsigned int n, T1 x,
                                   const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -350,7 +350,7 @@ struct RamOps {
   };
 
   template <typename T1>
-  static List<T1> update_nth_status(const unsigned int n, const T1 x,
+  static List<T1> update_nth_status(const unsigned int n, T1 x,
                                     const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -604,7 +604,7 @@ struct RamOps {
       ram_read_main_nested(sample_state_nested);
 
   template <typename T1>
-  static List<T1> update_nth_frame(const unsigned int n, const T1 x,
+  static List<T1> update_nth_frame(const unsigned int n, T1 x,
                                    const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -684,7 +684,7 @@ struct RamOps {
           0u) == 7u;
 
   template <typename T1>
-  static List<T1> update_nth_preserve(const unsigned int n, const T1 x,
+  static List<T1> update_nth_preserve(const unsigned int n, T1 x,
                                       const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -774,7 +774,7 @@ struct RamOps {
   };
 
   template <typename T1>
-  static List<T1> update_nth_nested_bank(const unsigned int n, const T1 x,
+  static List<T1> update_nth_nested_bank(const unsigned int n, T1 x,
                                          const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -815,8 +815,7 @@ struct RamOps {
       read_status0(write_status0(sample_nested_bank, 7u));
   enum class Item { e_S_, e_S_0 };
 
-  template <typename T1>
-  static T1 item_rect(const T1 f, const T1 f0, const Item i) {
+  template <typename T1> static T1 item_rect(T1 f, T1 f0, const Item i) {
     switch (i) {
     case Item::e_S_: {
       return f;
@@ -829,8 +828,7 @@ struct RamOps {
     }
   }
 
-  template <typename T1>
-  static T1 item_rec(const T1 f, const T1 f0, const Item i) {
+  template <typename T1> static T1 item_rec(T1 f, T1 f0, const Item i) {
     switch (i) {
     case Item::e_S_: {
       return f;
@@ -882,7 +880,7 @@ struct RamOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

@@ -10,8 +10,7 @@ struct TimingPreservesWfSimple {
   enum class Instr { e_NOP, e_ADD, e_WRM, e_FIM, e_JMS };
 
   template <typename T1>
-  static T1 instr_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                       const T1 f3, const Instr i) {
+  static T1 instr_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, const Instr i) {
     switch (i) {
     case Instr::e_NOP: {
       return f;
@@ -34,8 +33,7 @@ struct TimingPreservesWfSimple {
   }
 
   template <typename T1>
-  static T1 instr_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                      const T1 f3, const Instr i) {
+  static T1 instr_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, const Instr i) {
     switch (i) {
     case Instr::e_NOP: {
       return f;

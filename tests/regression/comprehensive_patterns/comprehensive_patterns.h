@@ -257,7 +257,7 @@ struct ComprehensivePatterns {
   enum class Three { e_A, e_B, e_C };
 
   template <typename T1>
-  static T1 Three_rect(const T1 f, const T1 f0, const T1 f3, const Three t) {
+  static T1 Three_rect(T1 f, T1 f0, T1 f3, const Three t) {
     switch (t) {
     case Three::e_A: {
       return f;
@@ -274,7 +274,7 @@ struct ComprehensivePatterns {
   }
 
   template <typename T1>
-  static T1 Three_rec(const T1 f, const T1 f0, const T1 f3, const Three t) {
+  static T1 Three_rec(T1 f, T1 f0, T1 f3, const Three t) {
     switch (t) {
     case Three::e_A: {
       return f;
@@ -1129,7 +1129,7 @@ struct ComprehensivePatterns {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, StateRO &>
-    T1 Container_rec(const T1 f, F1 &&f0) const {
+    T1 Container_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Container::Empty>(_sv.v())) {
         return f;
@@ -1141,7 +1141,7 @@ struct ComprehensivePatterns {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, StateRO &>
-    T1 Container_rect(const T1 f, F1 &&f0) const {
+    T1 Container_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Container::Empty>(_sv.v())) {
         return f;

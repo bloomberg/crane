@@ -518,13 +518,19 @@ let print_cpp_type_var vl i =
     cleared after. *)
 let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
 
+(** Set of type names introduced by [using X = std::any;] — tracked so
+    [is_any_type] can recognize [Tid] aliases for [std::any]. *)
+let any_type_aliases : Id.Set.t ref = ref Id.Set.empty
+
 (** [true] iff the C++ type ultimately resolves to [std::any], including through
-    type modifiers ([Tmod], [Tref], [Tnamespace]) and [Tunknown] aliases. *)
+    type modifiers ([Tmod], [Tref], [Tnamespace]), [Tunknown] aliases, and
+    [Tid] names registered as any-type aliases via [Fnested_using]. *)
 let rec is_any_type = function
   | Tany -> true
   | Tmod (_, inner) -> is_any_type inner
   | Tref inner -> is_any_type inner
   | Tnamespace (_, inner) -> is_any_type inner
+  | Tid (id, []) -> Id.Set.mem id !any_type_aliases
   | Tglob (GlobRef.ConstRef c, _, _) ->
     (try Table.find_type (GlobRef.ConstRef c) = Miniml.Tunknown
      with Not_found -> false)
@@ -1803,6 +1809,8 @@ and pp_cpp_stmt env args = function
          fields
     ++ str "};"
   | Susing (name, ty) ->
+    if is_any_type ty then
+      any_type_aliases := Id.Set.add name !any_type_aliases;
     str "using " ++ Id.print name ++ str " = " ++ pp_cpp_type false [] ty ++ str ";"
   | Sdecl_init (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str "{};"
@@ -1960,10 +1968,19 @@ and pp_cpp_stmt env args = function
     (* Helper: binding statement inside the if-block.
        - Structured bindings: [const auto& [f1, f2] = std::get<T>(scrut);]
        - Frame dispatch (no field bindings): [const auto& _f = std::get<T>(scrut);]
-       - No binding: empty. *)
+       - No binding: empty.
+       Side effect: registers any-typed field bindings in
+       [current_any_typed_params] so that subsequent body printing can detect
+       variables holding [std::any] values (needed for inline customs like
+       [fst]/[snd] that access .first/.second on erased tuple elements). *)
     let pp_block_binding scrut_var_pp br =
       match br.smb_field_bindings with
       | _ :: _ ->
+        List.iter (fun (bname, bty, _used) ->
+          if is_any_type bty then
+            current_any_typed_params :=
+              Id.Set.add bname !current_any_typed_params
+        ) br.smb_field_bindings;
         let binding_qual =
           if br.smb_is_owned then "auto& [" else "const auto& ["
         in
@@ -2223,15 +2240,30 @@ and expr_is_any_typed_param = function
   | CPPmove e -> expr_is_any_typed_param e
   | _ -> false
 
+(** Replace unresolved type variables ([Tvar(_, None)]) with [Tany] so that
+    [any_cast] targets render as [std::any] instead of invalid placeholders. *)
+and resolve_tvars_to_any = function
+  | Tvar (_, None) -> Tany
+  | Tglob (g, ts, es) -> Tglob (g, List.map resolve_tvars_to_any ts, es)
+  | Tfun (dom, cod) ->
+    Tfun (List.map resolve_tvars_to_any dom, resolve_tvars_to_any cod)
+  | Tmod (m, t) -> Tmod (m, resolve_tvars_to_any t)
+  | Tref t -> Tref (resolve_tvars_to_any t)
+  | Tshared_ptr t -> Tshared_ptr (resolve_tvars_to_any t)
+  | Tunique_ptr t -> Tunique_ptr (resolve_tvars_to_any t)
+  | t -> t
+
 (** Wrap a pretty-printed expression in [std::any_cast<T>(...)] when it
-    returns [std::any] but the context expects a concrete type [T]. *)
+    returns [std::any] but the context expects a concrete type [T].
+    Unresolved type variables in [T] are replaced with [std::any]. *)
 and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
   if (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
      && is_concrete_cpp_type expected_ty
   then
+    let resolved_ty = resolve_tvars_to_any expected_ty in
     str (sn ()).any_cast
     ++ str "<"
-    ++ pp_cpp_type false vl expected_ty
+    ++ pp_cpp_type false vl resolved_ty
     ++ str ">("
     ++ expr_printed
     ++ str ")"
@@ -2618,6 +2650,8 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ fnl ()
     ++ str "};"
   | Fnested_using (id, ty) ->
+    if is_any_type ty then
+      any_type_aliases := Id.Set.add id !any_type_aliases;
     h
       ( str "using "
       ++ Id.print id
@@ -3169,6 +3203,9 @@ and pp_cpp_decl_raw env = function
           n = "dummy_prop" || n = "dummy_type" || n = "dummy_implicit") ->
     mt () (* Skip erased type aliases *)
   | Dusing (id, ty) ->
+    if is_any_type ty then
+      any_type_aliases :=
+        Id.Set.add (Id.of_string (Common.pp_global_name Type id)) !any_type_aliases;
     str "using "
     ++ pp_global Type id
     ++ str " = "

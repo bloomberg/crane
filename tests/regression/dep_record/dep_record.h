@@ -213,8 +213,7 @@ struct DepRecord {
               3u, List<unsigned int>::cons(4u, List<unsigned int>::nil())))));
   enum class Tag { e_TNAT, e_TBOOL };
 
-  template <typename T1>
-  static T1 tag_rect(const T1 f, const T1 f0, const Tag t) {
+  template <typename T1> static T1 tag_rect(T1 f, T1 f0, const Tag t) {
     switch (t) {
     case Tag::e_TNAT: {
       return f;
@@ -227,8 +226,7 @@ struct DepRecord {
     }
   }
 
-  template <typename T1>
-  static T1 tag_rec(const T1 f, const T1 f0, const Tag t) {
+  template <typename T1> static T1 tag_rec(T1 f, T1 f0, const Tag t) {
     switch (t) {
     case Tag::e_TNAT: {
       return f;

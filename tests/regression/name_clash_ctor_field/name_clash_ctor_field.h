@@ -336,7 +336,7 @@ struct NameClashCtorField {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
-  static T1 box_rect(F0 &&f, const T1 f0, const box &b) {
+  static T1 box_rect(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);
@@ -347,7 +347,7 @@ struct NameClashCtorField {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
-  static T1 box_rec(F0 &&f, const T1 f0, const box &b) {
+  static T1 box_rec(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[d_a0] = std::get<typename box::Box0>(b.v());
       return f(d_a0);

@@ -607,32 +607,30 @@ struct RocqBug14174 {
       const variant_t &v() const { return d_v_; }
 
       template <typename T1>
-      T1 eq_sig_rec_uncurried(const sig<t_A> &_x1, const T1 _x2) const {
+      T1 eq_sig_rec_uncurried(const sig<t_A> &_x1, const T1 &_x2) const {
         return (*(this)).eq_sig_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sig_rect_uncurried(const sig<t_A> &v, const T1 f) const {
+      T1 eq_sig_rect_uncurried(const sig<t_A> &v, T1 f) const {
         return (*(this)).eq_sig_rect(v, [=]() mutable { return f; }());
       }
 
-      template <typename T1>
-      T1 eq_sig_rect_exist_r(const t_A v1, const T1 f) const {
+      template <typename T1> T1 eq_sig_rect_exist_r(t_A v1, const T1 &f) const {
         return (*(this)).eq_sig_rect(sig<t_A>::exist(v1), f);
       }
 
-      template <typename T1>
-      T1 eq_sig_rect_exist_l(const t_A u1, const T1 f) const {
+      template <typename T1> T1 eq_sig_rect_exist_l(t_A u1, const T1 &f) const {
         return sig<t_A>::exist(u1).eq_sig_rect(*(this), f);
       }
 
       template <typename T1>
-      T1 eq_sig_rec(const sig<t_A> &_x1, const T1 _x2) const {
+      T1 eq_sig_rec(const sig<t_A> &_x1, const T1 &_x2) const {
         return (*(this)).eq_sig_rect(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sig_rect(const sig<t_A> &, const T1 f) const {
+      T1 eq_sig_rect(const sig<t_A> &, const T1 &f) const {
         return f;
       }
 
@@ -713,32 +711,32 @@ struct RocqBug14174 {
       const variant_t &v() const { return d_v_; }
 
       template <typename T1>
-      T1 eq_sig2_rec_uncurried(const sig2<t_A> &_x1, const T1 _x2) const {
+      T1 eq_sig2_rec_uncurried(const sig2<t_A> &_x1, const T1 &_x2) const {
         return (*(this)).eq_sig2_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sig2_rect_uncurried(const sig2<t_A> &v, const T1 f) const {
+      T1 eq_sig2_rect_uncurried(const sig2<t_A> &v, T1 f) const {
         return (*(this)).eq_sig2_rect(v, [=]() mutable { return f; }());
       }
 
       template <typename T1>
-      T1 eq_sig2_rect_exist2_r(const t_A v1, const T1 f) const {
+      T1 eq_sig2_rect_exist2_r(t_A v1, const T1 &f) const {
         return (*(this)).eq_sig2_rect(sig2<t_A>::exist2(v1), f);
       }
 
       template <typename T1>
-      T1 eq_sig2_rect_exist2_l(const t_A u1, const T1 f) const {
+      T1 eq_sig2_rect_exist2_l(t_A u1, const T1 &f) const {
         return sig2<t_A>::exist2(u1).eq_sig2_rect(*(this), f);
       }
 
       template <typename T1>
-      T1 eq_sig2_rec(const sig2<t_A> &_x1, const T1 _x2) const {
+      T1 eq_sig2_rec(const sig2<t_A> &_x1, const T1 &_x2) const {
         return (*(this)).eq_sig2_rect(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sig2_rect(const sig2<t_A> &, const T1 f) const {
+      T1 eq_sig2_rect(const sig2<t_A> &, const T1 &f) const {
         return f;
       }
 
@@ -828,32 +826,32 @@ struct RocqBug14174 {
       const variant_t &v() const { return d_v_; }
 
       template <typename T1>
-      T1 eq_sigT_rec_uncurried(const sigT<t_A, t_P> &_x1, const T1 _x2) const {
+      T1 eq_sigT_rec_uncurried(const sigT<t_A, t_P> &_x1, const T1 &_x2) const {
         return (*(this)).eq_sigT_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sigT_rect_uncurried(const sigT<t_A, t_P> &v, const T1 f) const {
+      T1 eq_sigT_rect_uncurried(const sigT<t_A, t_P> &v, T1 f) const {
         return (*(this)).eq_sigT_rect(v, [=]() mutable { return f; }());
       }
 
       template <typename T1>
-      T1 eq_sigT_rect_existT_r(const t_A v1, const t_P v2, const T1 f) const {
+      T1 eq_sigT_rect_existT_r(t_A v1, t_P v2, const T1 &f) const {
         return (*(this)).eq_sigT_rect(sigT<t_A, t_P>::existt(v1, v2), f);
       }
 
       template <typename T1>
-      T1 eq_sigT_rect_existT_l(const t_A u1, const t_P u2, const T1 f) const {
+      T1 eq_sigT_rect_existT_l(t_A u1, t_P u2, const T1 &f) const {
         return sigT<t_A, t_P>::existt(u1, u2).eq_sigT_rect(*(this), f);
       }
 
       template <typename T1>
-      T1 eq_sigT_rec(const sigT<t_A, t_P> &_x1, const T1 _x2) const {
+      T1 eq_sigT_rec(const sigT<t_A, t_P> &_x1, const T1 &_x2) const {
         return (*(this)).eq_sigT_rect(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sigT_rect(const sigT<t_A, t_P> &, const T1 f) const {
+      T1 eq_sigT_rect(const sigT<t_A, t_P> &, const T1 &f) const {
         return f;
       }
 
@@ -956,37 +954,34 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sigT2_rec_uncurried(const sigT2<t_A, t_P, t_Q> &_x1,
-                                const T1 _x2) const {
+                                const T1 &_x2) const {
         return (*(this)).eq_sigT2_rect_uncurried(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sigT2_rect_uncurried(const sigT2<t_A, t_P, t_Q> &v,
-                                 const T1 f) const {
+      T1 eq_sigT2_rect_uncurried(const sigT2<t_A, t_P, t_Q> &v, T1 f) const {
         return (*(this)).eq_sigT2_rect(v, [=]() mutable { return f; }());
       }
 
       template <typename T1>
-      T1 eq_sigT2_rect_existT2_r(const t_A v1, const t_P v2, const t_Q v3,
-                                 const T1 f) const {
+      T1 eq_sigT2_rect_existT2_r(t_A v1, t_P v2, t_Q v3, const T1 &f) const {
         return (*(this)).eq_sigT2_rect(
             sigT2<t_A, t_P, t_Q>::existt2(v1, v2, v3), f);
       }
 
       template <typename T1>
-      T1 eq_sigT2_rect_existT2_l(const t_A u1, const t_P u2, const t_Q u3,
-                                 const T1 f) const {
+      T1 eq_sigT2_rect_existT2_l(t_A u1, t_P u2, t_Q u3, const T1 &f) const {
         return sigT2<t_A, t_P, t_Q>::existt2(u1, u2, u3)
             .eq_sigT2_rect(*(this), f);
       }
 
       template <typename T1>
-      T1 eq_sigT2_rec(const sigT2<t_A, t_P, t_Q> &_x1, const T1 _x2) const {
+      T1 eq_sigT2_rec(const sigT2<t_A, t_P, t_Q> &_x1, const T1 &_x2) const {
         return (*(this)).eq_sigT2_rect(_x1, _x2);
       }
 
       template <typename T1>
-      T1 eq_sigT2_rect(const sigT2<t_A, t_P, t_Q> &, const T1 f) const {
+      T1 eq_sigT2_rect(const sigT2<t_A, t_P, t_Q> &, const T1 &f) const {
         return f;
       }
 
@@ -1062,33 +1057,31 @@ struct RocqBug14174 {
     }
 
     template <typename T1, typename T2, typename T3>
-    static T3 eq_sigT_rect_existT(const T1 u1, const T2 u2, const T1 v1,
-                                  const T2 v2, const T3 f) {
+    static T3 eq_sigT_rect_existT(T1 u1, T2 u2, T1 v1, T2 v2, const T3 &f) {
       return sigT<T1, T2>::existt(u1, u2).eq_sigT_rect(
           sigT<T1, T2>::existt(v1, v2), f);
     }
 
     template <typename T1, typename T2>
-    static T2 eq_sig_rect_exist(const T1 u1, const T1 v1, const T2 f) {
+    static T2 eq_sig_rect_exist(T1 u1, T1 v1, const T2 &f) {
       return sig<T1>::exist(u1).eq_sig_rect(sig<T1>::exist(v1), f);
     }
 
     template <typename T1, typename T2, typename T3, typename T4>
-    static T4 eq_sigT2_rect_existT2(const T1 u1, const T2 u2, const T3 u3,
-                                    const T1 v1, const T2 v2, const T3 v3,
-                                    const T4 f) {
+    static T4 eq_sigT2_rect_existT2(T1 u1, T2 u2, T3 u3, T1 v1, T2 v2, T3 v3,
+                                    const T4 &f) {
       return sigT2<T1, T2, T3>::existt2(u1, u2, u3)
           .eq_sigT2_rect(sigT2<T1, T2, T3>::existt2(v1, v2, v3), f);
     }
 
     template <typename T1, typename T2>
-    static T2 eq_sig2_rect_exist2(const T1 u1, const T1 v1, const T2 f) {
+    static T2 eq_sig2_rect_exist2(T1 u1, T1 v1, const T2 &f) {
       return sig2<T1>::exist2(u1).eq_sig2_rect(sig2<T1>::exist2(v1), f);
     }
     enum class Sumbool { e_LEFT, e_RIGHT };
 
     template <typename T1>
-    static T1 sumbool_rect(const T1 f, const T1 f0, const Sumbool s) {
+    static T1 sumbool_rect(const T1 &f, const T1 &f0, const Sumbool s) {
       switch (s) {
       case Sumbool::e_LEFT: {
         return f;
@@ -1102,7 +1095,7 @@ struct RocqBug14174 {
     }
 
     template <typename T1>
-    static T1 sumbool_rec(const T1 f, const T1 f0, const Sumbool s) {
+    static T1 sumbool_rec(const T1 &f, const T1 &f0, const Sumbool s) {
       switch (s) {
       case Sumbool::e_LEFT: {
         return f;
@@ -1184,7 +1177,7 @@ struct RocqBug14174 {
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, t_A &>
-      T1 sumor_rec(F0 &&f, const T1 f0) const {
+      T1 sumor_rec(F0 &&f, const T1 &f0) const {
         auto &&_sv = *(this);
         if (std::holds_alternative<typename sumor<t_A>::Inleft>(_sv.v())) {
           const auto &[d_a0] = std::get<typename sumor<t_A>::Inleft>(_sv.v());
@@ -1196,7 +1189,7 @@ struct RocqBug14174 {
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, t_A &>
-      T1 sumor_rect(F0 &&f, const T1 f0) const {
+      T1 sumor_rect(F0 &&f, const T1 &f0) const {
         auto &&_sv = *(this);
         if (std::holds_alternative<typename sumor<t_A>::Inleft>(_sv.v())) {
           const auto &[d_a0] = std::get<typename sumor<t_A>::Inleft>(_sv.v());
@@ -1211,15 +1204,15 @@ struct RocqBug14174 {
       requires std::is_invocable_r_v<sig<T2>, F0 &, T1 &>
     static sig<std::function<T2(T1)>> Choice(F0 &&h) {
       return sig<std::function<T2(T1)>>::exist(
-          [=](const T1 z) mutable { return h(z).proj1_sig(); });
+          [=](const T1 &z) mutable { return h(z).proj1_sig(); });
     }
 
     template <typename T1, typename T2, typename T3, typename F0>
       requires std::is_invocable_r_v<sigT<T2, T3>, F0 &, T1 &>
     static sigT<std::function<T2(T1)>, std::function<T3(T1)>> Choice2(F0 &&h) {
       return sigT<std::function<T2(T1)>, std::function<T3(T1)>>::existt(
-          [=](const T1 z) mutable { return h(z).projT1(); },
-          [=](const T1 z) mutable {
+          [=](const T1 &z) mutable { return h(z).projT1(); },
+          [=](const T1 &z) mutable {
             sigT<T2, T3> s = h(z);
             auto &[d_x, d_a1] =
                 std::get<typename sigT<T2, T3>::ExistT>(s.v_mut());
@@ -1230,7 +1223,7 @@ struct RocqBug14174 {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<Sumbool, F0 &, T1 &>
     static sig<std::function<Bool0(T1)>> bool_choice(F0 &&h) {
-      return sig<std::function<Bool0(T1)>>::exist([=](const T1 z) mutable {
+      return sig<std::function<Bool0(T1)>>::exist([=](const T1 &z) mutable {
         switch (h(z)) {
         case Sumbool::e_LEFT: {
           return Bool0::e_TRUE;
@@ -1246,7 +1239,7 @@ struct RocqBug14174 {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<sig<T1>, F0 &, T1 &>
-    static sig<std::function<T1(Nat)>> dependent_choice(F0 &&h, const T1 x0) {
+    static sig<std::function<T1(Nat)>> dependent_choice(F0 &&h, T1 x0) {
       auto f_impl = [=](auto &_self_f, Nat n) mutable -> T1 {
         if (std::holds_alternative<typename Nat::O>(n.v())) {
           return x0;
@@ -1261,7 +1254,7 @@ struct RocqBug14174 {
 
     template <typename a> using Exc = Option<a>;
 
-    template <typename T1> static Option<T1> value(const T1 x) {
+    template <typename T1> static Option<T1> value(T1 x) {
       return Option<T1>::some(x);
     }
 

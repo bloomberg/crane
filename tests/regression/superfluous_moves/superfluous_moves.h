@@ -134,8 +134,7 @@ struct SuperfluousMoves {
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { e_CHASE, e_FRIGHTENED };
 
-  template <typename T1>
-  static T1 mode_rect(const T1 f, const T1 f0, const Mode m) {
+  template <typename T1> static T1 mode_rect(T1 f, T1 f0, const Mode m) {
     switch (m) {
     case Mode::e_CHASE: {
       return f;
@@ -148,8 +147,7 @@ struct SuperfluousMoves {
     }
   }
 
-  template <typename T1>
-  static T1 mode_rec(const T1 f, const T1 f0, const Mode m) {
+  template <typename T1> static T1 mode_rec(T1 f, T1 f0, const Mode m) {
     switch (m) {
     case Mode::e_CHASE: {
       return f;

@@ -25,18 +25,18 @@ concept Monoid = requires {
 };
 
 struct TypeApp {
-  template <typename T1> static T1 id(const T1 x) { return x; }
+  template <typename T1> static T1 id(T1 x) { return x; }
 
   static inline const unsigned int id_int = id<unsigned int>(42u);
   static inline const bool id_bool = id<bool>(true);
 
   template <typename T1, typename T2 = void, typename T3, typename F0,
             typename F1>
-  static T3 compose(F0 &&g, F1 &&f, const T1 x) {
+  static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
 
-  template <typename T1> static T1 nested_poly(const T1 x) {
+  template <typename T1> static T1 nested_poly(const T1 &x) {
     return id<T1>(id<T1>(id<T1>(x)));
   }
 
@@ -158,7 +158,7 @@ struct TypeApp {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2 list_rect(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
@@ -169,7 +169,7 @@ struct TypeApp {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
@@ -203,7 +203,7 @@ struct TypeApp {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
-  static T1 twice(F0 &&f, const T1 x) {
+  static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }
 

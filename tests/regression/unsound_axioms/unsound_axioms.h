@@ -8,7 +8,7 @@
 #include <variant>
 
 struct UnsoundAxioms {
-  template <typename T1, typename T2> static T2 unsafe_cast(const T1) {
+  template <typename T1, typename T2> static T2 unsafe_cast(const T1 &) {
     throw std::logic_error("unrealized axiom: "
                            "CraneTestsRegression.unsound_axioms.UnsoundAxioms."
                            "UnsoundAxioms.unsafe_cast");

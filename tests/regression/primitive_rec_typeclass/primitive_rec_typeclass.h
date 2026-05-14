@@ -44,7 +44,7 @@ struct PrimitiveRecTypeclass {
   static_assert(HasNorm<vec3Norm, vec3>);
 
   template <typename _tcI0, typename T1>
-  static unsigned int double_norm(const T1 x) {
+  static unsigned int double_norm(const T1 &x) {
     return (_tcI0::norm(x) + _tcI0::norm(x));
   }
 

@@ -124,8 +124,7 @@ public:
 };
 
 struct ListDef {
-  template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
 };
 
 struct RamEmptyWf {
@@ -182,8 +181,7 @@ struct RamEmptyWf {
   static inline const unsigned int default_bank_idx = default_sel.sel_bank;
 };
 
-template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

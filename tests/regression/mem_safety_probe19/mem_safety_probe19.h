@@ -213,7 +213,7 @@ struct MemSafetyProbe19 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rec(const T1 f, F1 &&f0) const {
+    T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -277,7 +277,7 @@ struct MemSafetyProbe19 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rect(const T1 f, F1 &&f0) const {
+    T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -413,7 +413,7 @@ struct MemSafetyProbe19 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
-    T1 myopt_rec(const T1 f, F1 &&f0) const {
+    T1 myopt_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename myopt<t_A>::Mynone>(_sv.v())) {
         return f;
@@ -425,7 +425,7 @@ struct MemSafetyProbe19 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
-    T1 myopt_rect(const T1 f, F1 &&f0) const {
+    T1 myopt_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename myopt<t_A>::Mynone>(_sv.v())) {
         return f;
@@ -445,7 +445,7 @@ struct MemSafetyProbe19 {
   enum class Choice { e_CLEFT, e_CRIGHT, e_CBOTH };
 
   template <typename T1>
-  static T1 choice_rect(const T1 f, const T1 f0, const T1 f1, const Choice c) {
+  static T1 choice_rect(T1 f, T1 f0, T1 f1, const Choice c) {
     switch (c) {
     case Choice::e_CLEFT: {
       return f;
@@ -462,7 +462,7 @@ struct MemSafetyProbe19 {
   }
 
   template <typename T1>
-  static T1 choice_rec(const T1 f, const T1 f0, const T1 f1, const Choice c) {
+  static T1 choice_rec(T1 f, T1 f0, T1 f1, const Choice c) {
     switch (c) {
     case Choice::e_CLEFT: {
       return f;

@@ -161,7 +161,7 @@ struct RecordCaseBody {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2 list_rect(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
@@ -172,7 +172,7 @@ struct RecordCaseBody {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {

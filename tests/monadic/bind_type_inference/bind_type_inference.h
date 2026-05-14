@@ -128,7 +128,7 @@ public:
 };
 
 struct BindTypeInference {
-  template <typename T1> static T1 ignoreAndReturn(const T1 b) { return b; }
+  template <typename T1> static T1 ignoreAndReturn(const T1 &b) { return b; }
 
   static int64_t test1();
 
@@ -143,7 +143,7 @@ struct BindTypeInference {
 
   template <typename T1, typename T2 = void, typename T3, typename F1,
             typename F2>
-  static T3 nested(const T1 a, F1 &&f, F2 &&g) {
+  static T3 nested(const T1 &a, F1 &&f, F2 &&g) {
     T1 x = a;
     T2 y = f(x);
     return g(y);

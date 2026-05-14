@@ -507,7 +507,7 @@ struct LoopifyTrees {
       return _result;
     }
 
-    t_A rightmost(const t_A default0) const {
+    t_A rightmost(t_A default0) const {
       t_A _result;
       const tree *_loop_self = this;
       while (true) {
@@ -531,7 +531,7 @@ struct LoopifyTrees {
     }
 
     /// leftmost/rightmost finds edge values.
-    t_A leftmost(const t_A default0) const {
+    t_A leftmost(t_A default0) const {
       t_A _result;
       const tree *_loop_self = this;
       while (true) {
@@ -704,7 +704,7 @@ struct LoopifyTrees {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree<t_A> &, T1 &, t_A &,
                                      tree<t_A> &, T1 &>
-    T1 tree_rec(const T1 f, F1 &&f0) const {
+    T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -768,7 +768,7 @@ struct LoopifyTrees {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree<t_A> &, T1 &, t_A &,
                                      tree<t_A> &, T1 &>
-    T1 tree_rect(const T1 f, F1 &&f0) const {
+    T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1062,7 +1062,7 @@ struct LoopifyTrees {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
                                      ternary &, T1 &, unsigned int &>
-    T1 ternary_rec(const T1 f, F1 &&f0) const {
+    T1 ternary_rec(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1151,7 +1151,7 @@ struct LoopifyTrees {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
                                      ternary &, T1 &, unsigned int &>
-    T1 ternary_rect(const T1 f, F1 &&f0) const {
+    T1 ternary_rect(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.

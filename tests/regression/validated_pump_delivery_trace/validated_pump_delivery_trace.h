@@ -136,7 +136,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -1047,8 +1047,7 @@ struct ValidatedPumpDeliveryTraceCase {
   };
 
   template <typename T1>
-  static T1 ActivityState_rect(const T1 f, const T1 f0, const T1 f1,
-                               const T1 f2, const T1 f3, const T1 f4,
+  static T1 ActivityState_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4,
                                const ActivityState a) {
     switch (a) {
     case ActivityState::e_ACTIVITY_NORMAL: {
@@ -1075,8 +1074,8 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 ActivityState_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                              const T1 f3, const T1 f4, const ActivityState a) {
+  static T1 ActivityState_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4,
+                              const ActivityState a) {
     switch (a) {
     case ActivityState::e_ACTIVITY_NORMAL: {
       return f;
@@ -1214,8 +1213,7 @@ struct ValidatedPumpDeliveryTraceCase {
 
     template <typename T1, typename F2>
       requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
-    T1 FaultStatus_rec(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
-                       const T1 f3) const {
+    T1 FaultStatus_rec(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename FaultStatus::Fault_None>(_sv.v())) {
         return f;
@@ -1237,8 +1235,7 @@ struct ValidatedPumpDeliveryTraceCase {
 
     template <typename T1, typename F2>
       requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
-    T1 FaultStatus_rect(const T1 f, const T1 f0, F2 &&f1, const T1 f2,
-                        const T1 f3) const {
+    T1 FaultStatus_rect(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename FaultStatus::Fault_None>(_sv.v())) {
         return f;
@@ -1265,8 +1262,7 @@ struct ValidatedPumpDeliveryTraceCase {
   };
 
   template <typename T1>
-  static T1 InsulinType_rect(const T1 f, const T1 f0, const T1 f1,
-                             const InsulinType i) {
+  static T1 InsulinType_rect(T1 f, T1 f0, T1 f1, const InsulinType i) {
     switch (i) {
     case InsulinType::e_INSULIN_HUMALOG: {
       return f;
@@ -1283,8 +1279,7 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 InsulinType_rec(const T1 f, const T1 f0, const T1 f1,
-                            const InsulinType i) {
+  static T1 InsulinType_rec(T1 f, T1 f0, T1 f1, const InsulinType i) {
     switch (i) {
     case InsulinType::e_INSULIN_HUMALOG: {
       return f;
@@ -1421,7 +1416,7 @@ struct ValidatedPumpDeliveryTraceCase {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 SuspendDecision_rect(const T1 f, F1 &&f0, const T1 f1,
+  static T1 SuspendDecision_rect(T1 f, F1 &&f0, T1 f1,
                                  const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
       return f;
@@ -1437,7 +1432,7 @@ struct ValidatedPumpDeliveryTraceCase {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 SuspendDecision_rec(const T1 f, F1 &&f0, const T1 f1,
+  static T1 SuspendDecision_rec(T1 f, F1 &&f0, T1 f1,
                                 const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
       return f;
@@ -1688,8 +1683,7 @@ struct ValidatedPumpDeliveryTraceCase {
   };
 
   template <typename T1>
-  static T1 RoundingMode_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                              const RoundingMode r) {
+  static T1 RoundingMode_rect(T1 f, T1 f0, T1 f1, T1 f2, const RoundingMode r) {
     switch (r) {
     case RoundingMode::e_ROUNDTWENTIETH: {
       return f;
@@ -1709,8 +1703,7 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1>
-  static T1 RoundingMode_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                             const RoundingMode r) {
+  static T1 RoundingMode_rec(T1 f, T1 f0, T1 f1, T1 f2, const RoundingMode r) {
     switch (r) {
     case RoundingMode::e_ROUNDTWENTIETH: {
       return f;

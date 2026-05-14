@@ -10,8 +10,7 @@ struct EnumSwitchQualified {
   struct Outer {
     enum class Color { e_RED, e_BLUE };
 
-    template <typename T1>
-    static T1 color_rect(const T1 f, const T1 f0, const Color c) {
+    template <typename T1> static T1 color_rect(T1 f, T1 f0, const Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;
@@ -24,8 +23,7 @@ struct EnumSwitchQualified {
       }
     }
 
-    template <typename T1>
-    static T1 color_rec(const T1 f, const T1 f0, const Color c) {
+    template <typename T1> static T1 color_rec(T1 f, T1 f0, const Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;

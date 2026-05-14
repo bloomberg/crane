@@ -30,7 +30,7 @@ struct UnitMonostateErase {
   enum class Color { e_RED, e_GREEN, e_BLUE };
 
   template <typename T1>
-  static T1 color_rect(const T1 f, const T1 f0, const T1 f1, const Color c) {
+  static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -47,7 +47,7 @@ struct UnitMonostateErase {
   }
 
   template <typename T1>
-  static T1 color_rec(const T1 f, const T1 f0, const T1 f1, const Color c) {
+  static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;

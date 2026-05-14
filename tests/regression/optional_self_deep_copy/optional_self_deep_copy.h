@@ -126,7 +126,7 @@ struct OptionalSelfDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::optional<chain> &>
-  static T1 chain_rect(const T1 f, F1 &&f0, const chain &c) {
+  static T1 chain_rect(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {
@@ -137,7 +137,7 @@ struct OptionalSelfDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::optional<chain> &>
-  static T1 chain_rec(const T1 f, F1 &&f0, const chain &c) {
+  static T1 chain_rec(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {

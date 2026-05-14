@@ -155,13 +155,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct CpuEmulator {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, const T1 x,
-                             const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -555,13 +554,12 @@ struct CpuEmulator {
              std::is_invocable_r_v<T1, F26 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F27 &, unsigned int &, unsigned int &> &&
              std::is_invocable_r_v<T1, F28 &, unsigned int &>
-  static T1 instr_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                       F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
-                       const T1 f9, const T1 f10, const T1 f11, const T1 f12,
-                       const T1 f13, const T1 f14, const T1 f15, const T1 f16,
-                       const T1 f17, const T1 f18, F20 &&f19, F21 &&f20,
-                       F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
-                       F27 &&f26, F28 &&f27, const instr &i) {
+  static T1 instr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                       F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
+                       T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
+                       F20 &&f19, F21 &&f20, F22 &&f21, F23 &&f22, F24 &&f23,
+                       F25 &&f24, F26 &&f25, F27 &&f26, F28 &&f27,
+                       const instr &i) {
     if (std::holds_alternative<typename instr::NOP>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instr::LDM>(i.v())) {
@@ -657,13 +655,12 @@ struct CpuEmulator {
              std::is_invocable_r_v<T1, F26 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F27 &, unsigned int &, unsigned int &> &&
              std::is_invocable_r_v<T1, F28 &, unsigned int &>
-  static T1 instr_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                      F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
-                      const T1 f9, const T1 f10, const T1 f11, const T1 f12,
-                      const T1 f13, const T1 f14, const T1 f15, const T1 f16,
-                      const T1 f17, const T1 f18, F20 &&f19, F21 &&f20,
-                      F22 &&f21, F23 &&f22, F24 &&f23, F25 &&f24, F26 &&f25,
-                      F27 &&f26, F28 &&f27, const instr &i) {
+  static T1 instr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                      F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
+                      T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
+                      F20 &&f19, F21 &&f20, F22 &&f21, F23 &&f22, F24 &&f23,
+                      F25 &&f24, F26 &&f25, F27 &&f26, F28 &&f27,
+                      const instr &i) {
     if (std::holds_alternative<typename instr::NOP>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instr::LDM>(i.v())) {
@@ -797,7 +794,7 @@ struct CpuEmulator {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

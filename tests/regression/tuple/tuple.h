@@ -171,7 +171,7 @@ struct Tuple {
   template <typename a, typename b> using pair = Prod<a, b>;
 
   template <typename T1, typename T2>
-  static Prod<T1, T2> make_pair(const T1 a, const T2 b) {
+  static Prod<T1, T2> make_pair(T1 a, T2 b) {
     return Prod<T1, T2>::pair(a, b);
   }
 

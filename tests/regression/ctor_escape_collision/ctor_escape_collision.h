@@ -10,8 +10,7 @@ struct CtorEscapeCollision {
   enum class Item { e_D_, e_D_0, e_D__, e_D__0, e_D__1, e_D__2 };
 
   template <typename T1>
-  static T1 item_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                      const T1 f3, const T1 f4, const Item i) {
+  static T1 item_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, const Item i) {
     switch (i) {
     case Item::e_D_: {
       return f;
@@ -37,8 +36,7 @@ struct CtorEscapeCollision {
   }
 
   template <typename T1>
-  static T1 item_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                     const T1 f3, const T1 f4, const Item i) {
+  static T1 item_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, const Item i) {
     switch (i) {
     case Item::e_D_: {
       return f;

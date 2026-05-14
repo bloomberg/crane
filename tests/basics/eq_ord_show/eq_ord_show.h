@@ -52,28 +52,28 @@ struct NatShow {
 
 static_assert(Show<NatShow, unsigned int>);
 
-template <typename _tcI0, typename T1> bool is_equal(const T1 x, const T1 y) {
+template <typename _tcI0, typename T1> bool is_equal(const T1 &x, const T1 &y) {
   return _tcI0::eqb(x, y);
 }
 
 template <typename _tcI0, typename T1>
-bool is_different(const T1 x, const T1 y) {
+bool is_different(const T1 &x, const T1 &y) {
   return _tcI0::neqb(x, y);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-bool is_less_than(const T1 x, const T1 y) {
+bool is_less_than(const T1 &x, const T1 &y) {
   return _tcI0::lt(x, y);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-bool is_less_or_equal(const T1 x, const T1 y) {
+bool is_less_or_equal(const T1 &x, const T1 &y) {
   return _tcI0::le(x, y);
 }
 enum class Ordering { e_LT, e_EQ, e_GT };
 
 template <typename _tcI0, typename _tcI1, typename T1>
-Ordering compare(const T1 x, const T1 y) {
+Ordering compare(const T1 &x, const T1 &y) {
   if (_tcI0::lt(x, y)) {
     return Ordering::e_LT;
   } else {
@@ -85,12 +85,12 @@ Ordering compare(const T1 x, const T1 y) {
   }
 }
 
-template <typename _tcI0, typename T1> std::string to_string(const T1 x) {
+template <typename _tcI0, typename T1> std::string to_string(const T1 &x) {
   return _tcI0::show(x);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-std::string show_if_equal(const T1 x, const T1 y) {
+std::string show_if_equal(const T1 &x, const T1 &y) {
   if (_tcI1::eqb(x, y)) {
     return _tcI0::show(x);
   } else {
@@ -99,7 +99,7 @@ std::string show_if_equal(const T1 x, const T1 y) {
 }
 
 template <typename _tcI0, typename _tcI1, typename _tcI2, typename T1>
-std::string show_comparison(const T1 x, const T1 y) {
+std::string show_comparison(const T1 &x, const T1 &y) {
   if (_tcI1::lt(x, y)) {
     return _tcI0::show(x) + " < "s + _tcI0::show(y);
   } else {

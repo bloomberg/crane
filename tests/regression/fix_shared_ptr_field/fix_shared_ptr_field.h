@@ -179,7 +179,7 @@ struct FixSharedPtrField {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
-    T1 mylist_rec(const T1 f, F1 &&f0) const {
+    T1 mylist_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return f;
@@ -191,7 +191,7 @@ struct FixSharedPtrField {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
-    T1 mylist_rect(const T1 f, F1 &&f0) const {
+    T1 mylist_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
         return f;

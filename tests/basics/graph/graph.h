@@ -277,7 +277,7 @@ template <typename t_A> struct DirectedEdge {
 };
 
 template <typename _tcI0, typename T1>
-bool directed_originates(const T1 a, const DirectedEdge<T1> &e) {
+bool directed_originates(const T1 &a, const DirectedEdge<T1> &e) {
   return _tcI0::eqb(e.edge_from, a);
 }
 
@@ -333,7 +333,7 @@ template <typename t_A> struct UndirectedEdge {
 };
 
 template <typename _tcI0, typename T1>
-bool undirected_originates(const T1 a, const UndirectedEdge<T1> &e) {
+bool undirected_originates(const T1 &a, const UndirectedEdge<T1> &e) {
   return (_tcI0::eqb(e.edge_first, a) || _tcI0::eqb(e.edge_second, a));
 }
 
@@ -386,7 +386,7 @@ struct NatEq {
 
 static_assert(Eq<NatEq, Nat>);
 
-template <typename _tcI0, typename T1> bool test_eq(const T1 x, const T1 y) {
+template <typename _tcI0, typename T1> bool test_eq(const T1 &x, const T1 &y) {
   return _tcI0::eqb(x, y);
 }
 

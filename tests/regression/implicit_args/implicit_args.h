@@ -9,21 +9,21 @@
 #include <vector>
 
 struct ImplicitArgs {
-  template <typename T1> static T1 id(const T1 x) { return x; }
+  template <typename T1> static T1 id(T1 x) { return x; }
 
-  template <typename T1, typename T2> static T1 fst_of(const T1 x, const T2) {
+  template <typename T1, typename T2> static T1 fst_of(T1 x, const T2 &) {
     return x;
   }
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply(F0 &&f, const T1 _x0) {
+  static T2 apply(F0 &&f, T1 _x0) {
     return f(_x0);
   }
 
   template <typename T1, typename T2 = void, typename T3, typename F0,
             typename F1>
-  static T3 compose(F0 &&g, F1 &&f, const T1 x) {
+  static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
 
@@ -145,7 +145,7 @@ struct ImplicitArgs {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
@@ -156,7 +156,7 @@ struct ImplicitArgs {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
@@ -202,8 +202,7 @@ struct ImplicitArgs {
   static inline const unsigned int use_from_zero = from_zero(5u);
   static inline const unsigned int use_from_ten = from_ten(5u);
 
-  template <typename T1>
-  static T1 head_or(const T1 default0, const mylist<T1> &l) {
+  template <typename T1> static T1 head_or(T1 default0, const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return default0;
     } else {

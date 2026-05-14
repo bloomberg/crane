@@ -278,7 +278,7 @@ public:
     }
   }
 
-  template <typename T1> static Stream<T1> repeat(const T1 x) {
+  template <typename T1> static Stream<T1> repeat(T1 x) {
     return Stream<T1>::lazy_([=]() mutable -> Stream<T1> {
       return Stream<T1>::scons(x, repeat<T1>(x));
     });

@@ -9,11 +9,11 @@ struct ShadowQualNode {
   struct Node {
     enum class Shadow { e_TAG };
 
-    template <typename T1> static T1 shadow_rect(const T1 f, const Shadow) {
+    template <typename T1> static T1 shadow_rect(T1 f, const Shadow) {
       return f;
     }
 
-    template <typename T1> static T1 shadow_rec(const T1 f, const Shadow) {
+    template <typename T1> static T1 shadow_rec(T1 f, const Shadow) {
       return f;
     }
   };

@@ -243,7 +243,7 @@ struct AxiomTypes {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rec(const T1 f, F1 &&f0) const {
+    T1 list_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
@@ -255,7 +255,7 @@ struct AxiomTypes {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rect(const T1 f, F1 &&f0) const {
+    T1 list_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
@@ -268,7 +268,7 @@ struct AxiomTypes {
 
   static list<MysteryType> axiom_list(const std::monostate _x);
 
-  template <typename T1> static T1 poly_axiom(const T1 x) { return x; }
+  template <typename T1> static T1 poly_axiom(T1 x) { return x; }
 
   static MysteryType use_poly_axiom(const std::monostate _x);
 };

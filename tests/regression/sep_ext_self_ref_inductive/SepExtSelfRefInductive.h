@@ -147,7 +147,7 @@ template <S X> struct HashTrie {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Trie<T1> &,
                                    T2 &, Trie<T1> &, T2 &>
-  static T2 Trie_rect(const T2 f, F1 &&f0, const Trie<T1> &t0) {
+  static T2 Trie_rect(T2 f, F1 &&f0, const Trie<T1> &t0) {
     if (std::holds_alternative<typename Trie<T1>::Empty>(t0.v())) {
       return f;
     } else {
@@ -161,7 +161,7 @@ template <S X> struct HashTrie {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Trie<T1> &,
                                    T2 &, Trie<T1> &, T2 &>
-  static T2 Trie_rec(const T2 f, F1 &&f0, const Trie<T1> &t0) {
+  static T2 Trie_rec(T2 f, F1 &&f0, const Trie<T1> &t0) {
     if (std::holds_alternative<typename Trie<T1>::Empty>(t0.v())) {
       return f;
     } else {

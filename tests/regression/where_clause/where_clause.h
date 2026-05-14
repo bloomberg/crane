@@ -417,7 +417,7 @@ struct WhereClause {
       requires std::is_invocable_r_v<T1, F2 &, BExpr &, T1 &, BExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
-    T1 BExpr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+    T1 BExpr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
         return f;
@@ -441,7 +441,7 @@ struct WhereClause {
       requires std::is_invocable_r_v<T1, F2 &, BExpr &, T1 &, BExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
-    T1 BExpr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+    T1 BExpr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
         return f;
