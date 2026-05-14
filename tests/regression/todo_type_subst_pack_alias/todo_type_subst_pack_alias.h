@@ -23,7 +23,7 @@ struct TodoTypeSubstPackAlias {
   using carrier = std::any;
 
   template <Pack _tcI0>
-  static typename _tcI0::carrier step_of(const typename _tcI0::carrier _x0) {
+  static typename _tcI0::carrier step_of(const typename _tcI0::carrier &_x0) {
     return _tcI0::step(_x0);
   }
 

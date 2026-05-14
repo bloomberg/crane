@@ -1,4 +1,4 @@
-#include <lambda.h>
+#include "lambda.h"
 
 unsigned int Lambda::simple_lambda(const unsigned int x) { return x; }
 

@@ -108,6 +108,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -237,6 +238,7 @@ public:
   // MANIPULATORS
   ~Uint() {
     std::vector<std::unique_ptr<Uint>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Uint &_node) {
       if (std::holds_alternative<D0>(_node.d_v_)) {
         auto &_alt = std::get<D0>(_node.d_v_);
@@ -452,6 +454,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -647,6 +650,7 @@ public:
   // MANIPULATORS
   ~Uint0() {
     std::vector<std::unique_ptr<Uint0>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Uint0 &_node) {
       if (std::holds_alternative<D10>(_node.d_v_)) {
         auto &_alt = std::get<D10>(_node.d_v_);
@@ -886,6 +890,7 @@ struct HofTreeLoopify {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -914,11 +919,11 @@ struct HofTreeLoopify {
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        d_v_ = Leaf{};
+        this->d_v_ = Leaf{};
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        d_v_ =
+        this->d_v_ =
             Node{d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
                  d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr};
       }
@@ -935,6 +940,7 @@ struct HofTreeLoopify {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree<t_A> &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -965,7 +971,7 @@ struct HofTreeLoopify {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rect(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rect(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {
@@ -978,7 +984,7 @@ struct HofTreeLoopify {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rec(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {
@@ -1004,7 +1010,7 @@ struct HofTreeLoopify {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T2 &, T1 &, T2 &>
-  static T2 tree_fold(const T2 base, F1 &&f, const tree<T1> &t) {
+  static T2 tree_fold(T2 base, F1 &&f, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return base;
     } else {
@@ -1037,7 +1043,7 @@ struct HofTreeLoopify {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
-  static std::pair<T3, tree<T2>> tree_map_accum(F0 &&f, const T3 acc,
+  static std::pair<T3, tree<T2>> tree_map_accum(F0 &&f, T3 acc,
                                                 const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return std::make_pair(acc, tree<T2>::leaf());

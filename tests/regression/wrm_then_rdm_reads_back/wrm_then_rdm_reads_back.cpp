@@ -1,4 +1,4 @@
-#include <wrm_then_rdm_reads_back.h>
+#include "wrm_then_rdm_reads_back.h"
 
 unsigned int WrmThenRdmReadsBack::get_reg(const WrmThenRdmReadsBack::state &s,
                                           const unsigned int r) {

@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -122,16 +124,14 @@ public:
 };
 
 struct ListDef {
+  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
   template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int n);
-  template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct RamAccessor {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, const T1 x,
-                             const List<T1> &l) {
+  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -257,8 +257,7 @@ struct RamAccessor {
   static inline const unsigned int init_read = ram_read_main(init_state);
 };
 
-template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
@@ -268,7 +267,7 @@ List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
 }
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

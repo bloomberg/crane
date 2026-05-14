@@ -8,7 +8,7 @@
 #include <variant>
 
 struct UnsoundAxioms {
-  template <typename T1, typename T2> static T2 unsafe_cast(const T1) {
+  template <typename T1, typename T2> static T2 unsafe_cast(const T1 &) {
     throw std::logic_error("unrealized axiom: "
                            "CraneTestsRegression.unsound_axioms.UnsoundAxioms."
                            "UnsoundAxioms.unsafe_cast");
@@ -44,7 +44,7 @@ struct UnsoundAxioms {
   static unsigned int extract_proof_computation(const ProofRec &pr);
   static bool use_type_eq(const unsigned int n);
   static Rec impossible_rec();
-  static unsigned int use_impossible(const std::monostate &_x);
+  static unsigned int use_impossible(const std::monostate _x);
   static unsigned int from_false(const Rec &_x);
   static unsigned int prop_as_type();
   static unsigned int use_prop_as_type(const Rec &r);

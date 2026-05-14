@@ -1,23 +1,26 @@
-#include <loopify_expr.h>
+#include "loopify_expr.h"
 
 /// sum_shapes l sums values from shapes using unified pattern.
 /// Tests or-pattern style matching in Coq.
-unsigned int LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
+unsigned int LoopifyExpr::sum_shapes(
+    const List<LoopifyExpr::shape>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<LoopifyExpr::shape> *l;
   };
 
-  /// Continuation: saves [val] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [val], resumes after recursive call with _result.
+  struct _Resume_Cons {
     unsigned int val;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified sum_shapes: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -47,11 +50,11 @@ unsigned int LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
             return d_a00;
           }
         }();
-        _stack.emplace_back(_Resume1{val});
+        _stack.emplace_back(_Resume_Cons{val});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f.val + _result);
     }
   }
@@ -60,22 +63,26 @@ unsigned int LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
 
 /// count_by_shape l counts shapes: (circles, squares, triangles).
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
+LoopifyExpr::count_by_shape(
+    const List<LoopifyExpr::shape>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<LoopifyExpr::shape> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     LoopifyExpr::shape d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified count_by_shape: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -88,11 +95,11 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyExpr::shape d_a0 = std::move(_f.d_a0);
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &t = _result.second;

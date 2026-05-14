@@ -215,7 +215,7 @@ struct IndParam {
     template <typename T1, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
-    static T1 t_rect(const T1 f, F1 &&f0, F2 &&f1, const t &t0) {
+    static T1 t_rect(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
       } else if (std::holds_alternative<typename t::Single>(t0.v())) {
@@ -230,7 +230,7 @@ struct IndParam {
     template <typename T1, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
-    static T1 t_rec(const T1 f, F1 &&f0, F2 &&f1, const t &t0) {
+    static T1 t_rec(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
       } else if (std::holds_alternative<typename t::Single>(t0.v())) {

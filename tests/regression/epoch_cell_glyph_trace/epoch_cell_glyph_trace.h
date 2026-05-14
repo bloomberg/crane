@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -174,6 +176,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -215,6 +218,7 @@ public:
   // MANIPULATORS
   ~Positive() {
     std::vector<std::unique_ptr<Positive>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
       if (std::holds_alternative<XI>(_node.d_v_)) {
         auto &_alt = std::get<XI>(_node.d_v_);
@@ -328,7 +332,7 @@ struct Pos {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
-  static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
+  static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
       return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));
@@ -389,8 +393,7 @@ struct EpochCellGlyphTraceCase {
   };
 
   template <typename T1>
-  static T1 LunarPhase_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                            const LunarPhase l) {
+  static T1 LunarPhase_rect(T1 f, T1 f0, T1 f1, T1 f2, const LunarPhase l) {
     switch (l) {
     case LunarPhase::e_NEWMOON: {
       return f;
@@ -410,8 +413,7 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 LunarPhase_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                           const LunarPhase l) {
+  static T1 LunarPhase_rec(T1 f, T1 f0, T1 f1, T1 f2, const LunarPhase l) {
     switch (l) {
     case LunarPhase::e_NEWMOON: {
       return f;
@@ -448,9 +450,8 @@ struct EpochCellGlyphTraceCase {
   };
 
   template <typename T1>
-  static T1 ZodiacSign_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                            const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                            const T1 f7, const T1 f8, const T1 f9, const T1 f10,
+  static T1 ZodiacSign_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
+                            T1 f6, T1 f7, T1 f8, T1 f9, T1 f10,
                             const ZodiacSign z) {
     switch (z) {
     case ZodiacSign::e_ARIES: {
@@ -495,9 +496,8 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 ZodiacSign_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                           const T1 f3, const T1 f4, const T1 f5, const T1 f6,
-                           const T1 f7, const T1 f8, const T1 f9, const T1 f10,
+  static T1 ZodiacSign_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
+                           T1 f6, T1 f7, T1 f8, T1 f9, T1 f10,
                            const ZodiacSign z) {
     switch (z) {
     case ZodiacSign::e_ARIES: {
@@ -596,8 +596,7 @@ struct EpochCellGlyphTraceCase {
   };
 
   template <typename T1>
-  static T1 EclipseCategory_rect(const T1 f, const T1 f0, const T1 f1,
-                                 const T1 f2, const T1 f3,
+  static T1 EclipseCategory_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
                                  const EclipseCategory e) {
     switch (e) {
     case EclipseCategory::e_EC_TOTALLUNAR: {
@@ -621,8 +620,7 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 EclipseCategory_rec(const T1 f, const T1 f0, const T1 f1,
-                                const T1 f2, const T1 f3,
+  static T1 EclipseCategory_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
                                 const EclipseCategory e) {
     switch (e) {
     case EclipseCategory::e_EC_TOTALLUNAR: {
@@ -678,8 +676,8 @@ struct EpochCellGlyphTraceCase {
   };
 
   template <typename T1>
-  static T1 DialGlyph_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                           const T1 f3, const DialGlyph d) {
+  static T1 DialGlyph_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
+                           const DialGlyph d) {
     switch (d) {
     case DialGlyph::e_GLYPH_SIGMA: {
       return f;
@@ -702,8 +700,7 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 DialGlyph_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                          const T1 f3, const DialGlyph d) {
+  static T1 DialGlyph_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, const DialGlyph d) {
     switch (d) {
     case DialGlyph::e_GLYPH_SIGMA: {
       return f;

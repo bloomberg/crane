@@ -56,6 +56,7 @@ struct RecRecord {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -80,12 +81,12 @@ struct RecRecord {
     // CREATORS
     template <typename _U> explicit rlist(const rlist<_U> &_other) {
       if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
-        d_v_ = Rnil{};
+        this->d_v_ = Rnil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename rlist<_U>::Rcons>(_other.v());
-        d_v_ = Rcons{t_A(d_a0),
-                     d_a1 ? std::make_unique<rlist<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Rcons{t_A(d_a0), d_a1 ? std::make_unique<rlist<t_A>>(*d_a1)
+                                           : nullptr};
       }
     }
 
@@ -99,6 +100,7 @@ struct RecRecord {
     // MANIPULATORS
     ~rlist() {
       std::vector<std::unique_ptr<rlist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](rlist<t_A> &_node) {
         if (std::holds_alternative<Rcons>(_node.d_v_)) {
           auto &_alt = std::get<Rcons>(_node.d_v_);
@@ -125,7 +127,7 @@ struct RecRecord {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
-  static T2 rlist_rect(const T2 f, F1 &&f0, const rlist<T1> &r) {
+  static T2 rlist_rect(T2 f, F1 &&f0, const rlist<T1> &r) {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {
@@ -136,7 +138,7 @@ struct RecRecord {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
-  static T2 rlist_rec(const T2 f, F1 &&f0, const rlist<T1> &r) {
+  static T2 rlist_rec(T2 f, F1 &&f0, const rlist<T1> &r) {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {

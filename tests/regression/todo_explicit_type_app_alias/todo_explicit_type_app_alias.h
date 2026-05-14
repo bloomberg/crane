@@ -6,7 +6,7 @@
 #include <type_traits>
 
 struct TodoExplicitTypeAppAlias {
-  template <typename T1> static T1 id(const T1 x) { return x; }
+  template <typename T1> static T1 id(T1 x) { return x; }
 
   static inline const unsigned int test_value = []() {
     return []() {

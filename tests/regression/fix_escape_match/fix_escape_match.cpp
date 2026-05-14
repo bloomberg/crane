@@ -1,4 +1,4 @@
-#include <fix_escape_match.h>
+#include "fix_escape_match.h"
 
 /// A local fixpoint inside a match branch capturing a pattern variable.
 /// The pattern variable h is a structured binding reference into the
@@ -36,7 +36,7 @@ FixEscapeMatch::make_fn_from_pair(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+    List<unsigned int> d_a1_value = *(d_a1);
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             d_a1_value.v())) {
       return std::optional<std::function<unsigned int(unsigned int)>>();

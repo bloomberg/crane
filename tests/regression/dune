@@ -1886,6 +1886,62 @@
   (deps sections_modules.t.exe)
   (action (run ./sections_modules.t.exe))))
 
+(subdir separate_extraction
+ (rule
+  (targets separate_extraction.t.exe)
+  (deps SeparateExtraction.vo separate_extraction.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} separate_extraction.t.exe SeparateExtraction.cpp separate_extraction.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps separate_extraction.t.exe)
+  (action (run ./separate_extraction.t.exe))))
+
+
+(subdir sep_ext_cross_module
+ (rule
+  (targets sep_ext_cross_module.t.exe)
+  (deps SepExtCrossModule.vo sep_ext_cross_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_module.t.exe SepExtCrossModule.cpp sep_ext_cross_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_cross_module.t.exe)
+  (action (run ./sep_ext_cross_module.t.exe))))
+
+(subdir sep_ext_double_typename
+ (rule
+  (targets sep_ext_double_typename.t.exe)
+  (deps SepExtDoubleTypename.vo sep_ext_double_typename.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_double_typename.t.exe SepExtDoubleTypename.cpp sep_ext_double_typename.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_double_typename.t.exe)
+  (action (run ./sep_ext_double_typename.t.exe))))
+
+(subdir sep_ext_name_collision
+ (rule
+  (targets sep_ext_name_collision.t.exe)
+  (deps SetA.vo SetB.vo sep_ext_name_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_name_collision.t.exe SetA.cpp SetB.cpp sep_ext_name_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_name_collision.t.exe)
+  (action (run ./sep_ext_name_collision.t.exe))))
+
+(subdir sep_ext_alias_clash
+ (rule
+  (targets sep_ext_alias_clash.t.exe)
+  (deps SepExtAliasClash.vo sep_ext_alias_clash.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_alias_clash.t.exe SepExtAliasClash.cpp sep_ext_alias_clash.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_alias_clash.t.exe)
+  (action (run ./sep_ext_alias_clash.t.exe))))
+
 (subdir tuple
  (rule
   (targets tuple.t.exe)
@@ -3416,6 +3472,17 @@
   (deps fix_partial_app.t.exe)
   (action (run ./fix_partial_app.t.exe))))
 
+(subdir fix_partial_app_escape
+ (rule
+  (targets fix_partial_app_escape.t.exe)
+  (deps FixPartialAppEscape.vo fix_partial_app_escape.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_partial_app_escape.t.exe fix_partial_app_escape.cpp fix_partial_app_escape.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_partial_app_escape.t.exe)
+  (action (run ./fix_partial_app_escape.t.exe))))
+
 (subdir fold_closure_accum
  (rule
   (targets fold_closure_accum.t.exe)
@@ -4680,3 +4747,632 @@
   (alias runtest)
   (deps mutual_value_deep_destruct.t.exe)
   (action (run ./mutual_value_deep_destruct.t.exe))))
+
+(subdir mem_safety_probe
+ (rule
+  (targets mem_safety_probe.t.exe)
+  (deps MemSafetyProbe.vo mem_safety_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe.t.exe mem_safety_probe.cpp mem_safety_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe.t.exe)
+  (action (run ./mem_safety_probe.t.exe))))
+
+(subdir mem_safety_probe2
+ (rule
+  (targets mem_safety_probe2.t.exe)
+  (deps MemSafetyProbe2.vo mem_safety_probe2.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe2.t.exe mem_safety_probe2.cpp mem_safety_probe2.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe2.t.exe)
+  (action (run ./mem_safety_probe2.t.exe))))
+
+(subdir mem_safety_probe3
+ (rule
+  (targets mem_safety_probe3.t.exe)
+  (deps MemSafetyProbe3.vo mem_safety_probe3.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe3.t.exe mem_safety_probe3.cpp mem_safety_probe3.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe3.t.exe)
+  (action (run ./mem_safety_probe3.t.exe))))
+
+(subdir mem_safety_probe4
+ (rule
+  (targets mem_safety_probe4.t.exe)
+  (deps MemSafetyProbe4.vo mem_safety_probe4.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe4.t.exe mem_safety_probe4.cpp mem_safety_probe4.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe4.t.exe)
+  (action (run ./mem_safety_probe4.t.exe))))
+
+(subdir mem_safety_probe5
+ (rule
+  (targets mem_safety_probe5.t.exe)
+  (deps MemSafetyProbe5.vo mem_safety_probe5.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe5.t.exe mem_safety_probe5.cpp mem_safety_probe5.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe5.t.exe)
+  (action (run ./mem_safety_probe5.t.exe))))
+
+(subdir mem_safety_probe6
+ (rule
+  (targets mem_safety_probe6.t.exe)
+  (deps MemSafetyProbe6.vo mem_safety_probe6.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe6.t.exe mem_safety_probe6.cpp mem_safety_probe6.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe6.t.exe)
+  (action (run ./mem_safety_probe6.t.exe))))
+
+(subdir mem_safety_probe7
+ (rule
+  (targets mem_safety_probe7.t.exe)
+  (deps MemSafetyProbe7.vo mem_safety_probe7.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe7.t.exe mem_safety_probe7.cpp mem_safety_probe7.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe7.t.exe)
+  (action (run ./mem_safety_probe7.t.exe))))
+
+(subdir mem_safety_probe8
+ (rule
+  (targets mem_safety_probe8.t.exe)
+  (deps MemSafetyProbe8.vo mem_safety_probe8.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe8.t.exe mem_safety_probe8.cpp mem_safety_probe8.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe8.t.exe)
+  (action (run ./mem_safety_probe8.t.exe))))
+
+(subdir mem_safety_probe9
+ (rule
+  (targets mem_safety_probe9.t.exe)
+  (deps MemSafetyProbe9.vo mem_safety_probe9.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe9.t.exe mem_safety_probe9.cpp mem_safety_probe9.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe9.t.exe)
+  (action (run ./mem_safety_probe9.t.exe))))
+
+(subdir mem_safety_probe11
+ (rule
+  (targets mem_safety_probe11.t.exe)
+  (deps MemSafetyProbe11.vo mem_safety_probe11.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe11.t.exe mem_safety_probe11.cpp mem_safety_probe11.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe11.t.exe)
+  (action (run ./mem_safety_probe11.t.exe))))
+
+(subdir mem_safety_probe12
+ (rule
+  (targets mem_safety_probe12.t.exe)
+  (deps MemSafetyProbe12.vo mem_safety_probe12.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe12.t.exe mem_safety_probe12.cpp mem_safety_probe12.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe12.t.exe)
+  (action (run ./mem_safety_probe12.t.exe))))
+
+(subdir mem_safety_probe15
+ (rule
+  (targets mem_safety_probe15.t.exe)
+  (deps MemSafetyProbe15.vo mem_safety_probe15.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe15.t.exe mem_safety_probe15.cpp mem_safety_probe15.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe15.t.exe)
+  (action (run ./mem_safety_probe15.t.exe))))
+
+(subdir mem_safety_probe16
+ (rule
+  (targets mem_safety_probe16.t.exe)
+  (deps MemSafetyProbe16.vo mem_safety_probe16.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe16.t.exe mem_safety_probe16.cpp mem_safety_probe16.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe16.t.exe)
+  (action (run ./mem_safety_probe16.t.exe))))
+
+(subdir mem_safety_probe17
+ (rule
+  (targets mem_safety_probe17.t.exe)
+  (deps MemSafetyProbe17.vo mem_safety_probe17.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe17.t.exe mem_safety_probe17.cpp mem_safety_probe17.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe17.t.exe)
+  (action (run ./mem_safety_probe17.t.exe))))
+
+(subdir mem_safety_probe18
+ (rule
+  (targets mem_safety_probe18.t.exe)
+  (deps MemSafetyProbe18.vo mem_safety_probe18.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe18.t.exe mem_safety_probe18.cpp mem_safety_probe18.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe18.t.exe)
+  (action (run ./mem_safety_probe18.t.exe))))
+
+(subdir mem_safety_probe19
+ (rule
+  (targets mem_safety_probe19.t.exe)
+  (deps MemSafetyProbe19.vo mem_safety_probe19.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe19.t.exe mem_safety_probe19.cpp mem_safety_probe19.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe19.t.exe)
+  (action (run ./mem_safety_probe19.t.exe))))
+
+(subdir mem_safety_probe20
+ (rule
+  (targets mem_safety_probe20.t.exe)
+  (deps MemSafetyProbe20.vo mem_safety_probe20.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe20.t.exe mem_safety_probe20.cpp mem_safety_probe20.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe20.t.exe)
+  (action (run ./mem_safety_probe20.t.exe))))
+
+(subdir mem_safety_probe21
+ (rule
+  (targets mem_safety_probe21.t.exe)
+  (deps MemSafetyProbe21.vo mem_safety_probe21.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe21.t.exe mem_safety_probe21.cpp mem_safety_probe21.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe21.t.exe)
+  (action (run ./mem_safety_probe21.t.exe))))
+
+(subdir mem_safety_probe22
+ (rule
+  (targets mem_safety_probe22.t.exe)
+  (deps MemSafetyProbe22.vo mem_safety_probe22.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe22.t.exe mem_safety_probe22.cpp mem_safety_probe22.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe22.t.exe)
+  (action (run ./mem_safety_probe22.t.exe))))
+
+(subdir mem_safety_probe23
+ (rule
+  (targets mem_safety_probe23.t.exe)
+  (deps MemSafetyProbe23.vo mem_safety_probe23.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe23.t.exe mem_safety_probe23.cpp mem_safety_probe23.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe23.t.exe)
+  (action (run ./mem_safety_probe23.t.exe))))
+
+(subdir mem_safety_probe24
+ (rule
+  (targets mem_safety_probe24.t.exe)
+  (deps MemSafetyProbe24.vo mem_safety_probe24.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe24.t.exe mem_safety_probe24.cpp mem_safety_probe24.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe24.t.exe)
+  (action (run ./mem_safety_probe24.t.exe))))
+
+(subdir mem_safety_probe25
+ (rule
+  (targets mem_safety_probe25.t.exe)
+  (deps MemSafetyProbe25.vo mem_safety_probe25.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe25.t.exe mem_safety_probe25.cpp mem_safety_probe25.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe25.t.exe)
+  (action (run ./mem_safety_probe25.t.exe))))
+
+(subdir mem_safety_probe26
+ (rule
+  (targets mem_safety_probe26.t.exe)
+  (deps MemSafetyProbe26.vo mem_safety_probe26.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe26.t.exe mem_safety_probe26.cpp mem_safety_probe26.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe26.t.exe)
+  (action (run ./mem_safety_probe26.t.exe))))
+
+
+(subdir mem_safety_probe27
+ (rule
+  (targets mem_safety_probe27.t.exe)
+  (deps MemSafetyProbe27.vo mem_safety_probe27.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe27.t.exe mem_safety_probe27.cpp mem_safety_probe27.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe27.t.exe)
+  (action (run ./mem_safety_probe27.t.exe))))
+
+(subdir mem_safety_probe28
+ (rule
+  (targets mem_safety_probe28.t.exe)
+  (deps MemSafetyProbe28.vo mem_safety_probe28.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe28.t.exe mem_safety_probe28.cpp mem_safety_probe28.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe28.t.exe)
+  (action (run ./mem_safety_probe28.t.exe))))
+
+(subdir mem_safety_probe29
+ (rule
+  (targets mem_safety_probe29.t.exe)
+  (deps MemSafetyProbe29.vo mem_safety_probe29.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe29.t.exe mem_safety_probe29.cpp mem_safety_probe29.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe29.t.exe)
+  (action (run ./mem_safety_probe29.t.exe))))
+
+(subdir mem_safety_probe13
+ (rule
+  (targets mem_safety_probe13.t.exe)
+  (deps MemSafetyProbe13.vo mem_safety_probe13.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe13.t.exe mem_safety_probe13.cpp mem_safety_probe13.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe13.t.exe)
+  (action (run ./mem_safety_probe13.t.exe))))
+
+(subdir mem_safety_probe14
+ (rule
+  (targets mem_safety_probe14.t.exe)
+  (deps MemSafetyProbe14.vo mem_safety_probe14.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe14.t.exe mem_safety_probe14.cpp mem_safety_probe14.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe14.t.exe)
+  (action (run ./mem_safety_probe14.t.exe))))
+
+(subdir existential_closure_probe
+ (rule
+  (targets existential_closure_probe.t.exe)
+  (deps ExistentialClosureProbe.vo existential_closure_probe.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} existential_closure_probe.t.exe existential_closure_probe.cpp existential_closure_probe.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps existential_closure_probe.t.exe)
+  (action (run ./existential_closure_probe.t.exe))))
+
+(subdir mem_safety_probe10
+ (rule
+  (targets mem_safety_probe10.t.exe)
+  (deps MemSafetyProbe10.vo mem_safety_probe10.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mem_safety_probe10.t.exe mem_safety_probe10.cpp mem_safety_probe10.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mem_safety_probe10.t.exe)
+  (action (run ./mem_safety_probe10.t.exe))))
+
+(subdir concept_qualify_args
+ (rule
+  (targets concept_qualify_args.t.exe)
+  (deps ConceptQualifyArgs.vo concept_qualify_args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_qualify_args.t.exe concept_qualify_args.cpp concept_qualify_args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_qualify_args.t.exe)
+  (action (run ./concept_qualify_args.t.exe))))
+
+(subdir double_typename
+ (rule
+  (targets double_typename.t.exe)
+  (deps DoubleTypename.vo double_typename.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_typename.t.exe double_typename.cpp double_typename.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps double_typename.t.exe)
+  (action (run ./double_typename.t.exe))))
+
+(subdir sep_ext_concept_include
+ (rule
+  (targets sep_ext_concept_include.t.exe)
+  (deps SepExtConceptInclude.vo sep_ext_concept_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_include.t.exe SepExtConceptInclude.cpp sep_ext_concept_include.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_concept_include.t.exe)
+  (action (run ./sep_ext_concept_include.t.exe))))
+
+(subdir sep_ext_enum_qualified
+ (rule
+  (targets sep_ext_enum_qualified.t.exe)
+  (deps SepExtEnumQualified.vo sep_ext_enum_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_enum_qualified.t.exe SepExtEnumQualified.cpp sep_ext_enum_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_enum_qualified.t.exe)
+  (action (run ./sep_ext_enum_qualified.t.exe))))
+
+(subdir sep_ext_qualified_raw
+ (rule
+  (targets sep_ext_qualified_raw.t.exe)
+  (deps SepExtQualifiedRaw.vo sep_ext_qualified_raw.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_qualified_raw.t.exe SepExtQualifiedRaw.cpp sep_ext_qualified_raw.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_qualified_raw.t.exe)
+  (action (run ./sep_ext_qualified_raw.t.exe))))
+
+(subdir sep_ext_uptr_clone_qual
+ (rule
+  (targets sep_ext_uptr_clone_qual.t.exe)
+  (deps SepExtUptrCloneQual.vo sep_ext_uptr_clone_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_uptr_clone_qual.t.exe SepExtUptrCloneQual.cpp sep_ext_uptr_clone_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_uptr_clone_qual.t.exe)
+  (action (run ./sep_ext_uptr_clone_qual.t.exe))))
+
+(subdir sep_ext_module_abbrev
+ (rule
+  (targets sep_ext_module_abbrev.t.exe)
+  (deps SepExtModuleAbbrev.vo sep_ext_module_abbrev.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_module_abbrev.t.exe SepExtModuleAbbrev.cpp sep_ext_module_abbrev.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_module_abbrev.t.exe)
+  (action (run ./sep_ext_module_abbrev.t.exe))))
+
+(subdir sep_ext_template_alias
+ (rule
+  (targets sep_ext_template_alias.t.exe)
+  (deps SepExtTemplateAlias.vo sep_ext_template_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_template_alias.t.exe SepExtTemplateAlias.cpp sep_ext_template_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_template_alias.t.exe)
+  (action (run ./sep_ext_template_alias.t.exe))))
+
+(subdir sep_ext_clone_ctor_qual
+ (rule
+  (targets sep_ext_clone_ctor_qual.t.exe)
+  (deps SepExtCloneCtorQual.vo sep_ext_clone_ctor_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_clone_ctor_qual.t.exe SepExtCloneCtorQual.cpp sep_ext_clone_ctor_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_clone_ctor_qual.t.exe)
+  (action (run ./sep_ext_clone_ctor_qual.t.exe))))
+
+(subdir sep_ext_fun_type_qual
+ (rule
+  (targets sep_ext_fun_type_qual.t.exe)
+  (deps SepExtFunTypeQual.vo sep_ext_fun_type_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_fun_type_qual.t.exe SepExtFunTypeQual.cpp sep_ext_fun_type_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_fun_type_qual.t.exe)
+  (action (run ./sep_ext_fun_type_qual.t.exe))))
+
+(subdir sep_ext_concept_qualified
+ (rule
+  (targets sep_ext_concept_qualified.t.exe)
+  (deps SepExtConceptQualified.vo sep_ext_concept_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_concept_qualified.t.exe SepExtConceptQualified.cpp sep_ext_concept_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_concept_qualified.t.exe)
+  (action (run ./sep_ext_concept_qualified.t.exe))))
+
+(subdir sep_ext_template_keyword
+ (rule
+  (targets sep_ext_template_keyword.t.exe)
+  (deps SepExtTemplateKeyword.vo sep_ext_template_keyword.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_template_keyword.t.exe SepExtTemplateKeyword.cpp sep_ext_template_keyword.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_template_keyword.t.exe)
+  (action (run ./sep_ext_template_keyword.t.exe))))
+
+(subdir sep_ext_ns_alias
+ (rule
+  (targets sep_ext_ns_alias.t.exe)
+  (deps SepExtNsAlias.vo sep_ext_ns_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_ns_alias.t.exe SepExtNsAlias.cpp sep_ext_ns_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_ns_alias.t.exe)
+  (action (run ./sep_ext_ns_alias.t.exe))))
+
+(subdir sep_ext_prop_erased_using
+ (rule
+  (targets sep_ext_prop_erased_using.t.exe)
+  (deps SepExtPropErasedUsing.vo sep_ext_prop_erased_using.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_prop_erased_using.t.exe SepExtPropErasedUsing.cpp sep_ext_prop_erased_using.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_prop_erased_using.t.exe)
+  (action (run ./sep_ext_prop_erased_using.t.exe))))
+
+
+(subdir sep_ext_this_in_free_fn
+ (rule
+  (targets sep_ext_this_in_free_fn.t.exe)
+  (deps SepExtThisInFreeFn.vo sep_ext_this_in_free_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_this_in_free_fn.t.exe SepExtThisInFreeFn.cpp sep_ext_this_in_free_fn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_this_in_free_fn.t.exe)
+  (action (run ./sep_ext_this_in_free_fn.t.exe))))
+
+(subdir sep_ext_list_clone_qual
+ (rule
+  (targets sep_ext_list_clone_qual.t.exe)
+  (deps SepExtListCloneQual.vo sep_ext_list_clone_qual.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_list_clone_qual.t.exe SepExtListCloneQual.cpp sep_ext_list_clone_qual.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_list_clone_qual.t.exe)
+  (action (run ./sep_ext_list_clone_qual.t.exe))))
+
+(subdir retype_error_extract
+ (rule
+  (targets retype_error_extract.t.exe)
+  (deps RetypeErrorExtract.vo retype_error_extract.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} retype_error_extract.t.exe RetypeErrorExtract.cpp retype_error_extract.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps retype_error_extract.t.exe)
+  (action (run ./retype_error_extract.t.exe))))
+
+(subdir sep_ext_sigt_any
+ (rule
+  (targets sep_ext_sigt_any.t.exe)
+  (deps SepExtSigtAny.vo sep_ext_sigt_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_sigt_any.t.exe SepExtSigtAny.cpp sep_ext_sigt_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_sigt_any.t.exe)
+  (action (run ./sep_ext_sigt_any.t.exe))))
+
+(subdir sep_ext_sigt_dependent
+ (rule
+  (targets sep_ext_sigt_dependent.t.exe)
+  (deps SepExtSigtDependent.vo sep_ext_sigt_dependent.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_sigt_dependent.t.exe sep_ext_sigt_dependent.cpp sep_ext_sigt_dependent.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_sigt_dependent.t.exe)
+  (action (run ./sep_ext_sigt_dependent.t.exe))))
+
+(subdir sep_ext_projection_lambda
+ (rule
+  (targets sep_ext_projection_lambda.t.exe)
+  (deps SepExtProjectionLambda.vo sep_ext_projection_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_projection_lambda.t.exe SepExtProjectionLambda.cpp sep_ext_projection_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_projection_lambda.t.exe)
+  (action (run ./sep_ext_projection_lambda.t.exe))))
+
+(subdir sep_ext_ns_alias_in_functor
+ (rule
+  (targets sep_ext_ns_alias_in_functor.t.exe)
+  (deps SepExtNsAliasInFunctor.vo sep_ext_ns_alias_in_functor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_ns_alias_in_functor.t.exe SepExtNsAliasInFunctor.cpp sep_ext_ns_alias_in_functor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_ns_alias_in_functor.t.exe)
+  (action (run ./sep_ext_ns_alias_in_functor.t.exe))))
+
+(subdir undecl_tvar_template
+ (rule
+  (targets undecl_tvar_template.t.exe)
+  (deps UndeclTvarTemplate.vo undecl_tvar_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} undecl_tvar_template.t.exe UndeclTvarTemplate.cpp undecl_tvar_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps undecl_tvar_template.t.exe)
+  (action (run ./undecl_tvar_template.t.exe))))
+
+(subdir sep_ext_self_ref_inductive
+ (rule
+  (targets sep_ext_self_ref_inductive.t.exe)
+  (deps SepExtSelfRefInductive.vo sep_ext_self_ref_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_self_ref_inductive.t.exe SepExtSelfRefInductive.cpp sep_ext_self_ref_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_self_ref_inductive.t.exe)
+  (action (run ./sep_ext_self_ref_inductive.t.exe))))
+
+(subdir sep_ext_driver_no_include
+ (rule
+  (targets sep_ext_driver_no_include.t.exe)
+  (deps SepExtDriverNoInclude.vo sep_ext_driver_no_include.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_driver_no_include.t.exe SepExtDriverNoInclude.cpp sep_ext_driver_no_include.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_driver_no_include.t.exe)
+  (action (run ./sep_ext_driver_no_include.t.exe))))
+
+(subdir pair_indexed_inductive_any_cast
+ (rule
+  (targets pair_indexed_inductive_any_cast.t.exe)
+  (deps PairIndexedInductiveAnyCast.vo pair_indexed_inductive_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_indexed_inductive_any_cast.t.exe PairIndexedInductiveAnyCast.cpp pair_indexed_inductive_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_indexed_inductive_any_cast.t.exe)
+  (action (run ./pair_indexed_inductive_any_cast.t.exe))))
+
+(subdir sep_ext_nullary_call
+ (rule
+  (targets sep_ext_nullary_call.t.exe)
+  (deps SepExtNullaryCall.vo sep_ext_nullary_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_call.t.exe SepExtNullaryCall.cpp sep_ext_nullary_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nullary_call.t.exe)
+  (action (run ./sep_ext_nullary_call.t.exe))))
+
+(subdir sep_ext_nullary_modparam
+ (rule
+  (targets sep_ext_nullary_modparam.t.exe)
+  (deps SepExtNullaryModparam.vo sep_ext_nullary_modparam.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_modparam.t.exe SepExtNullaryModparam.cpp sep_ext_nullary_modparam.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_nullary_modparam.t.exe)
+  (action (run ./sep_ext_nullary_modparam.t.exe))))

@@ -1,4 +1,4 @@
-#include <generated_method_name_clash.h>
+#include "generated_method_name_clash.h"
 
 bool GeneratedMethodNameClash::is_clone(
     const GeneratedMethodNameClash::token &t) {

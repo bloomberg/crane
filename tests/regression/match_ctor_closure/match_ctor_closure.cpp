@@ -1,4 +1,4 @@
-#include <match_ctor_closure.h>
+#include "match_ctor_closure.h"
 
 /// BUG HYPOTHESIS: Match arm stores a partial application (closure)
 /// in a constructor. The lambda captures a PATTERN VARIABLE (_args.d_a0)

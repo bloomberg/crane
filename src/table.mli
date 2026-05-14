@@ -111,8 +111,12 @@ val is_modfile : ModPath.t -> bool
 (** Get string representation of module file. *)
 val string_of_modfile : ModPath.t -> string
 
-(** Get file name from module file. *)
+
+(** Get file name from module file. Escapes C standard header collisions. *)
 val file_of_modfile : ModPath.t -> string
+
+(** Get namespace name from module file. No filename escaping applied. *)
+val ns_of_modfile : ModPath.t -> string
 
 (** Check if module path is toplevel. *)
 val is_toplevel : ModPath.t -> bool
@@ -149,6 +153,8 @@ val add_typedef : Constant.t -> constant_body -> ml_type -> unit
 
 (** Lookup type definition from cache. *)
 val lookup_typedef : Constant.t -> constant_body -> ml_type option
+
+val lookup_typedef_unchecked : Constant.t -> ml_type option
 
 (** Add constant type schema to cache. *)
 val add_cst_type : Constant.t -> constant_body -> ml_schema -> unit
@@ -260,10 +266,19 @@ val is_enum_inductive : GlobRef.t -> bool
     store self-refs as [shared_ptr] internally. *)
 val has_recursive_fields : GlobRef.t -> bool
 
+(** Check whether an inductive type has dependent parameters — i.e., the type
+    of some parameter references an earlier parameter (via de Bruijn index). *)
+val has_dependent_params : GlobRef.t -> bool
+
 (** Check if an inductive packet qualifies as an enum based on its structure.
     Returns true if all constructors are nullary, no type parameters are kept,
     and at least one constructor exists. *)
 val is_enum_inductive_packet : Miniml.ml_ind -> int -> bool
+
+(** Compute the C++ enum constructor name for constructor [j] of inductive
+    [(kn, i)] by looking up the extraction packet. Deterministic regardless
+    of the KerName used (canonical or functor-applied). *)
+val enum_ctor_name_of_ref : MutInd.t -> int -> int -> string
 
 (** Sigma type assertion. *)
 type sigma_assertion =
@@ -712,3 +727,8 @@ val reset_extraction_blacklist : unit -> unit
 
 (** Print current blacklist. *)
 val print_extraction_blacklist : unit -> Pp.t
+
+(** Inductives promoted into their own namespace struct (e.g. String.string →
+    [namespace String { struct String }]).  Lives here to break the
+    Translation ↔ Cpp_state cycle. *)
+val promoted_inductives : (GlobRef.t, unit) Hashtbl.t

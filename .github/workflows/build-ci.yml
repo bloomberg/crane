@@ -82,11 +82,24 @@ jobs:
                 compile_script="scripts/compile-gmp.sh"
               fi
 
+              # Collect all .cpp source files (excluding the .t.cpp driver).
+              # Separate extraction tests produce per-module .cpp files
+              # (e.g. Datatypes.cpp, List.cpp) instead of a single
+              # $test_name.cpp.
+              cpp_sources=()
+              for f in "$test_dir"/*.cpp; do
+                [ -f "$f" ] || continue
+                fname=$(basename "$f")
+                # Skip the test driver — it's added explicitly below
+                if [[ "$fname" == *.t.cpp ]]; then continue; fi
+                cpp_sources+=("$fname")
+              done
+
               # Compile the test
               if (
                 cd "$test_dir"
                 "$GITHUB_WORKSPACE/$compile_script" "$GITHUB_WORKSPACE" "$test_name.t.exe" \
-                  "$test_name.cpp" "$test_name.t.cpp"
+                  "${cpp_sources[@]}" "$test_name.t.cpp"
               ) 2>&1; then
                 # Run the test from its directory (tests may read files by relative path)
                 if (cd "$test_dir" && "./$test_name.t.exe"); then

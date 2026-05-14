@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -205,6 +207,7 @@ struct DeepPatterns {
     // MANIPULATORS
     ~outer() {
       std::vector<std::unique_ptr<outer>> _stack{};
+      _stack.reserve(8);
       auto _drain = [](outer &_node) {
         if (std::holds_alternative<OLeft>(_node.d_v_)) {
           auto &_alt = std::get<OLeft>(_node.d_v_);
@@ -393,7 +396,7 @@ struct DeepPatterns {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
     static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
@@ -472,6 +475,7 @@ struct DeepPatterns {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -496,12 +500,12 @@ struct DeepPatterns {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Nil>(_other.v())) {
-        d_v_ = Nil{};
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Cons>(_other.v());
-        d_v_ = Cons{t_A(d_a0),
-                    d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Cons{t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1)
+                                          : nullptr};
       }
     }
 
@@ -515,6 +519,7 @@ struct DeepPatterns {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Cons>(_node.d_v_)) {
           auto &_alt = std::get<Cons>(_node.d_v_);
@@ -540,7 +545,7 @@ struct DeepPatterns {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rec(const T1 f, F1 &&f0) const {
+    T1 mylist_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {
         return f;
@@ -553,7 +558,7 @@ struct DeepPatterns {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
-    T1 mylist_rect(const T1 f, F1 &&f0) const {
+    T1 mylist_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {
         return f;

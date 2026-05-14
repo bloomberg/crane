@@ -1,4 +1,4 @@
-#include <iife_name_clash.h>
+#include "iife_name_clash.h"
 
 unsigned int IifeNameClash::double_get(const IifeNameClash::wrapper &w1,
                                        const IifeNameClash::wrapper &w2) {

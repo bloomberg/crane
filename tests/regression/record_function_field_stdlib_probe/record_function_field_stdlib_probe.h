@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Datatypes {
   static Bool0 negb(const Bool0 b);
@@ -22,7 +22,7 @@ struct RecordFunctionFieldStdlibProbe {
   };
 
   static inline const endo e = endo{Datatypes::negb};
-  static inline const Bool0 sample = e.run(Bool0::e_TRUE0);
+  static inline const Bool0 sample = e.run(Bool0::e_TRUE);
 };
 
 #endif // INCLUDED_RECORD_FUNCTION_FIELD_STDLIB_PROBE

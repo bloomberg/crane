@@ -1,4 +1,4 @@
-#include <functor_comp.h>
+#include "functor_comp.h"
 
 FunctorComp::Stack::t FunctorComp::Stack::push(const unsigned int x,
                                                List<unsigned int> s) {

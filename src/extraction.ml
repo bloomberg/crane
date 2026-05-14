@@ -2199,7 +2199,12 @@ let extract_constant access env kn cb =
     let s, vl = type_sign_vl env sg typ in
     let db = db_from_sign s in
     let t = extract_type_scheme env sg db c (List.length s) in
-    Dtype (r, vl, t)
+    let is_logical =
+      try fst (flag_of_type env sg c) == Logic
+      with Retyping.RetypeError _ -> false
+    in
+    if is_logical then Dtype (r, vl, Tdummy Ktype)
+    else Dtype (r, vl, t)
   in
   let mk_ax () =
     let t = extract_axiom env sg kn typ in

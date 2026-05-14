@@ -1,4 +1,4 @@
-#include <loopify_list_transforms.h>
+#include "loopify_list_transforms.h"
 
 List<std::pair<unsigned int, unsigned int>>
 LoopifyListTransforms::run_length_encode(const List<unsigned int> &l) {
@@ -403,22 +403,26 @@ LoopifyListTransforms::uniq_sorted(const List<unsigned int> &l) {
   return uniq_sorted_fuel(len, l);
 }
 
-unsigned int LoopifyListTransforms::step_sum(const List<unsigned int> &l) {
+unsigned int LoopifyListTransforms::step_sum(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [contribution] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [contribution], resumes after recursive call with
+  /// _result.
+  struct _Resume_Cons {
     unsigned int contribution;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -436,11 +440,11 @@ unsigned int LoopifyListTransforms::step_sum(const List<unsigned int> &l) {
         } else {
           contribution = (d_a0 * 2u);
         }
-        _stack.emplace_back(_Resume1{contribution});
+        _stack.emplace_back(_Resume_Cons{contribution});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f.contribution + _result);
     }
   }

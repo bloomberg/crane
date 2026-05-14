@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -425,12 +427,9 @@ struct InstructionClassifiers {
                std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_acc_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                     F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
-                     const T1 f9, const T1 f10, const T1 f11, const T1 f12,
-                     const T1 f13, const T1 f14, const T1 f15, const T1 f16,
-                     const T1 f17, const T1 f18, const T1 f19, const T1 f20,
-                     const T1 f21, const T1 f22, const T1 f23,
-                     const T1 f24) const {
+                     F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
+                     T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
+                     T1 f19, T1 f20, T1 f21, T1 f22, T1 f23, T1 f24) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_acc::LDM>(_sv.v())) {
         const auto &[d_a0] = std::get<typename instr_acc::LDM>(_sv.v());
@@ -504,12 +503,9 @@ struct InstructionClassifiers {
                std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_acc_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                      F6 &&f5, const T1 f6, const T1 f7, const T1 f8,
-                      const T1 f9, const T1 f10, const T1 f11, const T1 f12,
-                      const T1 f13, const T1 f14, const T1 f15, const T1 f16,
-                      const T1 f17, const T1 f18, const T1 f19, const T1 f20,
-                      const T1 f21, const T1 f22, const T1 f23,
-                      const T1 f24) const {
+                      F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
+                      T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
+                      T1 f19, T1 f20, T1 f21, T1 f22, T1 f23, T1 f24) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_acc::LDM>(_sv.v())) {
         const auto &[d_a0] = std::get<typename instr_acc::LDM>(_sv.v());
@@ -711,8 +707,8 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F7>
       requires std::is_invocable_r_v<T1, F7 &, unsigned int &>
-    T1 instr_ram_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                     const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
+    T1 instr_ram_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
+                     F7 &&f6) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_ram::WRM>(_sv.v())) {
         return f;
@@ -736,8 +732,8 @@ struct InstructionClassifiers {
 
     template <typename T1, typename F7>
       requires std::is_invocable_r_v<T1, F7 &, unsigned int &>
-    T1 instr_ram_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                      const T1 f3, const T1 f4, const T1 f5, F7 &&f6) const {
+    T1 instr_ram_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
+                      F7 &&f6) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_ram::WRM>(_sv.v())) {
         return f;
@@ -926,7 +922,7 @@ struct InstructionClassifiers {
                std::is_invocable_r_v<T1, F4 &, unsigned int &,
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F6 &, unsigned int &>
-    T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
+    T1 instr_regs_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, T1 f4,
                       F6 &&f5) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_regs::XCH_regs>(_sv.v())) {
@@ -964,7 +960,7 @@ struct InstructionClassifiers {
                std::is_invocable_r_v<T1, F4 &, unsigned int &,
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F6 &, unsigned int &>
-    T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, const T1 f4,
+    T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, T1 f4,
                        F6 &&f5) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_regs::XCH_regs>(_sv.v())) {
@@ -1172,7 +1168,7 @@ struct InstructionClassifiers {
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_jump_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                      F6 &&f5, const T1 f6) const {
+                      F6 &&f5, T1 f6) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_jump::JCN>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename instr_jump::JCN>(_sv.v());
@@ -1216,7 +1212,7 @@ struct InstructionClassifiers {
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F6 &, unsigned int &>
     T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                       F6 &&f5, const T1 f6) const {
+                       F6 &&f5, T1 f6) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_jump::JCN>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename instr_jump::JCN>(_sv.v());

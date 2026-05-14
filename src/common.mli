@@ -136,6 +136,26 @@ val get_phase : unit -> phase
 (** Compute which libraries should be opened initially. *)
 val opened_libraries : unit -> ModPath.t list
 
+(** Clear the set of opened-module paths.  Used in separate extraction to
+    force fully qualified cross-module references. *)
+val mpfiles_clear : unit -> unit
+val mpfiles_save : unit -> Names.MPset.t
+val mpfiles_restore : Names.MPset.t -> unit
+
+(** Activate "force qualified capitalization" mode: when set, qualified type
+    names like [Datatypes::list] have their last component capitalized to
+    match the C++ struct name ([Datatypes::List]).  Set after {!mpfiles_clear}
+    in separate extraction.  Cleared automatically on reset. *)
+val set_force_qualified_capitalization : unit -> unit
+
+val get_force_qualified_capitalization : unit -> bool
+
+val set_non_output_modules : Names.ModPath.t list -> unit
+
+val is_non_output_module : Names.ModPath.t -> bool
+
+val clear_non_output_modules : unit -> unit
+
 type kind =
   | Term
   | Type
@@ -159,11 +179,19 @@ val pp_type_name_capitalized : GlobRef.t -> string
 (** Print a module path. *)
 val pp_module : ModPath.t -> string
 
+(** Compute the C++ name for a module label without the [add_visible]
+    side-effect.  Use when the module is a transparent alias ([MEident] /
+    [MEapply]) and you only need the string for display. *)
+val module_label_name : Label.t -> string
+
 (** Pre-scan the structure for sibling module-inductive name collisions.
     When a module and an inductive type with the same C++ name are siblings
     in the same scope, the module is renamed with a ["_Mod"] suffix.
     Must be called before any [pp_global] or [pp_module] calls. *)
 val detect_sibling_module_inductive_collisions : ml_structure -> unit
+
+(** Get module paths of all visible layers. *)
+val get_visible_mps : unit -> ModPath.t list
 
 (** Get the module path of the innermost visible layer. *)
 val top_visible_mp : unit -> ModPath.t
@@ -268,5 +296,12 @@ val db_fallback_id : int -> Id.t
 val tparam_name : Id.t -> Id.t
 
 val enum_ctor_name : string -> string
+
+val enum_ctor_name_of_id : Id.t -> string
+
+(** Compute C++ enum constructor names for all constructors of an inductive
+    type packet. Handles prime escaping and intra-enum collision avoidance.
+    Deterministic: same packet always produces the same names. *)
+val enum_ctor_names_of_packet : Id.t array -> string array
 
 val capitalize_last_component : string -> string

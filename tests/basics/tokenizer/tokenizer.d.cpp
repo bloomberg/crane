@@ -42,8 +42,8 @@ std::vector<std::string> tokenize_functional(const std::string soft,
                                              std::string input) {
   std::basic_string_view<char> delim = {soft.data(), soft.size()};
   std::basic_string_view<char> in = {input.data(), input.size()};
-  auto l = list_tokens(in, delim, std::string_view(nullptr, 0));
-  return list_to_vec_map<std::basic_string_view<char>, std::string>(s_of_sv, l);
+  auto l = Tokenizer::list_tokens(in, delim, std::string_view(nullptr, 0));
+  return Tokenizer::list_to_vec_map<std::basic_string_view<char>, std::string>(s_of_sv, l);
 }
 
 std::vector<std::string> tokenize_cpp(const std::string soft,

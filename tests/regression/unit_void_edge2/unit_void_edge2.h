@@ -14,7 +14,7 @@
 using namespace std::string_literals;
 
 struct UnitVoidEdge2 {
-  static unsigned int take_unit(const std::monostate &_x);
+  static unsigned int take_unit(const std::monostate _x);
   static void opaque_unit(const unsigned int _x);
   static unsigned int let_use_as_arg(const unsigned int n);
   static void let_return_unit(const unsigned int _x0);
@@ -50,7 +50,7 @@ struct UnitVoidEdge2 {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply(F0 &&f, const T1 _x0) {
+  static T2 apply(F0 &&f, T1 _x0) {
     return f(_x0);
   }
 
@@ -105,7 +105,7 @@ struct UnitVoidEdge2 {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
     static pair<t_A, t_B> pair0(t_A a0, t_B a1) {

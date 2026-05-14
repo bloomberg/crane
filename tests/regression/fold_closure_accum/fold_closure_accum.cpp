@@ -1,4 +1,4 @@
-#include <fold_closure_accum.h>
+#include "fold_closure_accum.h"
 
 /// Sum all values in a tree.
 unsigned int FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {

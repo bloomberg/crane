@@ -12,7 +12,7 @@
 struct HigherKinded {
   template <typename T1, typename T2 = void, typename T3 = void, typename F0,
             typename F1>
-  static T1 hk_map(F0 &&map_f, F1 &&f, const T1 x) {
+  static T1 hk_map(F0 &&map_f, F1 &&f, const T1 &x) {
     return std::any_cast<T1>(map_f(f, x));
   }
 
@@ -65,6 +65,7 @@ struct HigherKinded {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -95,12 +96,13 @@ struct HigherKinded {
     template <typename _U> explicit Tree(const Tree<_U> &_other) {
       if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
         const auto &[d_a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
-        d_v_ = Leaf{t_A(d_a0)};
+        this->d_v_ = Leaf{t_A(d_a0)};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename Tree<_U>::Branch>(_other.v());
-        d_v_ = Branch{d_a0 ? std::make_unique<Tree<t_A>>(*d_a0) : nullptr,
-                      d_a1 ? std::make_unique<Tree<t_A>>(*d_a1) : nullptr};
+        this->d_v_ =
+            Branch{d_a0 ? std::make_unique<Tree<t_A>>(*d_a0) : nullptr,
+                   d_a1 ? std::make_unique<Tree<t_A>>(*d_a1) : nullptr};
       }
     }
 
@@ -114,6 +116,7 @@ struct HigherKinded {
     // MANIPULATORS
     ~Tree() {
       std::vector<std::unique_ptr<Tree<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](Tree<t_A> &_node) {
         if (std::holds_alternative<Branch>(_node.d_v_)) {
           auto &_alt = std::get<Branch>(_node.d_v_);
@@ -200,7 +203,7 @@ struct HigherKinded {
 
   template <typename T1> static unsigned int tree_size(const Tree<T1> &t) {
     return tree_fold<T1, unsigned int>(
-        [](const T1) { return 1u; },
+        [](const T1 &) { return 1u; },
         [](unsigned int _x0, unsigned int _x1) -> unsigned int {
           return (_x0 + _x1);
         },

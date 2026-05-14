@@ -59,7 +59,7 @@ struct Currying {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
     static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
@@ -89,7 +89,7 @@ struct Currying {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<T3, F0 &, pair<T1, T2> &>
-  static T3 curry(F0 &&f, const T1 a, const T2 b) {
+  static T3 curry(F0 &&f, T1 a, T2 b) {
     return f(pair<T1, T2>::pair0(a, b));
   }
 
@@ -108,7 +108,7 @@ struct Currying {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
-  static T3 flip(F0 &&f, const T2 b, const T1 a) {
+  static T3 flip(F0 &&f, const T2 &b, const T1 &a) {
     return f(a, b);
   }
 

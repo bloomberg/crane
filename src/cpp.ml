@@ -134,7 +134,7 @@ and ml_type_has_tvar = function
       such as [Parameter F : Type -> Type]).  The dummy [void] arguments
       serve only to check that the template exists with the correct arity;
       no semantic meaning is attached to the instantiation. *)
-and pp_spec_as_requirement modtype_refs = function
+and pp_spec_as_requirement modtype_mp modtype_refs = function
   | Sval (r, _, _) when is_inline_custom r -> mt ()
   | Stype (r, _, _) when is_inline_custom r -> mt ()
   | Sind (kn, i) ->
@@ -158,11 +158,25 @@ and pp_spec_as_requirement modtype_refs = function
     let declval = (sn ()).declval in
     let convertible_to = (sn ()).convertible_to in
     require_header "concepts";
+    let rec is_mp_under base mp =
+      ModPath.equal mp base
+      || match mp with MPdot (parent, _) -> is_mp_under base parent | _ -> false
+    in
+    let is_member_ref r =
+      let rmp = modpath_of_r r in
+      let rec get_base_mp = function
+        | MPdot (parent, _) -> get_base_mp parent
+        | mp -> mp
+      in
+      is_mp_under modtype_mp rmp
+      || (match get_base_mp rmp with MPbound _ -> true | _ -> false)
+    in
     let rec qualify_type = function
-      | Tglob (r, [], _) when not (is_custom r) ->
+      | Tglob (r, [], _) when not (is_custom r) && is_member_ref r ->
         str "typename M::" ++ pp_global Type r
-      | Tglob (r, args, _) when not (is_custom r) ->
-        pp_global Type r
+      | Tglob (r, args, _) when not (is_custom r) && is_member_ref r ->
+        str "typename M::template "
+        ++ pp_global Type r
         ++ str "<"
         ++ prlist_with_sep (fun () -> str ", ") qualify_type args
         ++ str ">"
@@ -173,7 +187,14 @@ and pp_spec_as_requirement modtype_refs = function
             qualify_custom_template custom_str args qualify_type
           else
             str custom_str
-        | None -> pp_cpp_type false [] (Tglob (r, args, [])) )
+        | None ->
+          ( match args with
+          | [] -> pp_cpp_type false [] (Tglob (r, [], []))
+          | _ ->
+            pp_cpp_type false [] (Tglob (r, [], []))
+            ++ str "<"
+            ++ prlist_with_sep (fun () -> str ", ") qualify_type args
+            ++ str ">" ) )
       | Tshared_ptr ty ->
         str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
       | Tunique_ptr ty ->
@@ -183,12 +204,28 @@ and pp_spec_as_requirement modtype_refs = function
         ++ str "variant<"
         ++ prlist_with_sep (fun () -> str ", ") qualify_type tys
         ++ str ">"
+      | Tnamespace (r, Tglob (r', args, e)) when not (is_member_ref r) ->
+        ( match args with
+        | [] -> pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+        | _ ->
+          pp_cpp_type false [] (Tnamespace (r, Tglob (r', [], e)))
+          ++ str "<"
+          ++ prlist_with_sep (fun () -> str ", ") qualify_type args
+          ++ str ">" )
       | Tnamespace (r, ty) ->
-        if List.exists (Environ.QGlobRef.equal Environ.empty_env r) modtype_refs
-        then
-          qualify_type ty
-        else
-          pp_cpp_type false [] ty
+        if is_member_ref r then qualify_type ty
+        else pp_cpp_type false [] (Tnamespace (r, ty))
+      | Tfun (d, c) ->
+        (* Function-type argument: qualify member types inside the function
+           signature.  Without this case, (elt -> bool) would fall through to
+           pp_cpp_type and render as std::function<bool(elt)> — elt is bare.
+           We need std::function<bool(typename M::elt)>. *)
+        require_header "functional";
+        str stdlib_ns ++ str "function<"
+        ++ qualify_type c
+        ++ str "("
+        ++ prlist_with_sep (fun () -> str ", ") qualify_type d
+        ++ str ")>"
       | ty -> pp_cpp_type false [] ty
     in
     if args = [] then
@@ -255,6 +292,48 @@ and pp_spec_as_requirement modtype_refs = function
       ++ str ">;"
       ++ fnl ()
 
+(** Render a concept name from a module path reference.  In separate extraction,
+    concepts live inside their own namespace, so cross-file references need
+    qualification.  For a top-level module type [X] that is its own extraction
+    unit, the C++ structure is [namespace X { concept X = ...; }], requiring
+    [X::X] from outside. *)
+and pp_concept_ref kn =
+  match kn with
+  | MPdot (mp0, l') ->
+    if get_force_qualified_capitalization () then begin
+      (* Separate extraction: pp_modname produces visibility-aware names. *)
+      let name = pp_modname kn in
+      let name_str = Pp.string_of_ppcmds name in
+      (* Self-qualify when the concept is a top-level module type from a
+         different file: its namespace and concept share a name, so from
+         outside [ConceptName] refers to the namespace — we need
+         [ConceptName::ConceptName].
+
+         Compare mp0 against the file-level MPfile of the current context,
+         not top_visible_mp() — the latter may be an MPdot (e.g. inside a
+         module-type body) even when the concept is in the same file. *)
+      let rec get_file_mp = function
+        | ModPath.MPfile _ as mp -> mp
+        | ModPath.MPdot (mp, _) -> get_file_mp mp
+        | ModPath.MPbound _ -> mp0  (* functor param scope — treat as same *)
+      in
+      let current_file_mp = get_file_mp (top_visible_mp ()) in
+      if (match mp0 with MPfile _ -> true | _ -> false)
+         && not (ModPath.equal mp0 current_file_mp)
+         && not (is_qualified_name name_str) then
+        name ++ str "::" ++ str (Label.to_string l')
+      else
+        name
+    end else begin
+      (* Monolithic extraction: pp_module may over-qualify same-module
+         concepts because the visibility context shifts inside
+         pp_module_type.  Keep the short label and just trigger include
+         tracking. *)
+      ignore (Common.pp_module kn);
+      str (Label.to_string l')
+    end
+  | _ -> pp_modname kn
+
 (** Convert a module type to a C++20 concept. MTsig generates requires clauses,
     MTfunsig is handled by param tracking, MTident references an existing
     concept by name. *)
@@ -275,15 +354,11 @@ and pp_module_type params = function
     in
     let pp_req (label, specif) =
       match specif with
-      | Spec s -> pp_spec_as_requirement modtype_refs s
+      | Spec s -> pp_spec_as_requirement mp modtype_refs s
       | Smodule mod_type ->
         ( match mod_type with
         | MTident kn ->
-          let concept_name =
-            match kn with
-            | MPdot (_, l') -> str (Label.to_string l')
-            | _ -> pp_modname kn
-          in
+          let concept_name = pp_concept_ref kn in
           let label_name = Label.to_string label in
           str "  requires "
           ++ concept_name
@@ -358,10 +433,23 @@ let rec pp_structure_elem ~is_header f = function
   | l, SEmodule m ->
     let mp = MPdot (top_visible_mp (), l) in
     let name =
-      let raw = pp_modname mp in
-      let s = Pp.string_of_ppcmds raw in
-      let escaped = Table.escape_reserved_struct_name s in
-      if String.equal s escaped then raw else str escaped
+      match m.ml_mod_expr with
+      | MEident _ | MEapply _ ->
+        (* Transparent aliases generate a [using X = Y;] alias in C++.
+           Calling [pp_modname mp] would call [add_visible (Mod, s) l], which
+           marks this short name as "in scope" and triggers a spurious
+           [error_module_clash] when two modules at different nesting depths
+           share the same short name (e.g. a top-level [Module Impl] and an
+           inner [Module Impl := ...] inside a functor body).  Since aliases
+           don't introduce new identifiers into the qualified-name namespace,
+           we compute the label name without registering it. *)
+        let s = Common.module_label_name l in
+        str (Table.escape_reserved_struct_name s)
+      | _ ->
+        let raw = pp_modname mp in
+        let s = Pp.string_of_ppcmds raw in
+        let escaped = Table.escape_reserved_struct_name s in
+        if String.equal s escaped then raw else str escaped
     in
     let mod_pp =
       match m.ml_mod_expr with
@@ -396,7 +484,7 @@ let rec pp_structure_elem ~is_header f = function
              helper, pp_module_type would inline the concept body into the
              template parameter list, producing garbled C++. *)
           let rec get_concept_name_from_mt = function
-            | MTident kn -> Some (pp_modname kn)
+            | MTident kn -> Some (pp_concept_ref kn)
             | MTwith (mt, _) -> get_concept_name_from_mt mt
             | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
             | MTsig _ -> None
@@ -449,14 +537,34 @@ let rec pp_structure_elem ~is_header f = function
                   (List.map (fun (mbid, _) -> MPbound mbid) template_params)
                   body )
           in
-          template_decl
-          ++ fnl ()
-          ++ str "struct "
-          ++ name
-          ++ str " {"
-          ++ fnl ()
-          ++ struct_body
-          ++ str "};"
+          (match body with
+          | MEapply _ ->
+            let () =
+              let rec get_base_fmp = function
+                | MEapply (f, _) -> get_base_fmp f
+                | MEident fmp -> Some fmp
+                | _ -> None
+              in
+              match get_base_fmp body with
+              | Some fmp -> Hashtbl.replace functor_app_sources mp fmp
+              | None -> ()
+            in
+            template_decl
+            ++ fnl ()
+            ++ str "struct "
+            ++ name
+            ++ str " : "
+            ++ struct_body
+            ++ str " {};"
+          | _ ->
+            template_decl
+            ++ fnl ()
+            ++ str "struct "
+            ++ name
+            ++ str " {"
+            ++ fnl ()
+            ++ struct_body
+            ++ str "};")
       | MEapply _ ->
         if not is_header then
           mt ()
@@ -474,7 +582,7 @@ let rec pp_structure_elem ~is_header f = function
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
           let rec get_concept_name = function
-            | MTident kn -> Some (pp_modname kn)
+            | MTident kn -> Some (pp_concept_ref kn)
             | MTwith (mt, _) -> get_concept_name mt
             | MTfunsig (_, mt, mt') -> get_concept_name mt'
             | MTsig _ -> None
@@ -668,11 +776,7 @@ let rec pp_structure_elem ~is_header f = function
                   let concept_pp =
                     match get_base_concept m with
                     | Some base_kn ->
-                      let base_name =
-                        match base_kn with
-                        | MPdot (_, l') -> str (Label.to_string l')
-                        | _ -> pp_modname base_kn
-                      in
+                      let base_name = pp_concept_ref base_kn in
                       str "template<typename M>"
                       ++ fnl ()
                       ++ hov
@@ -1008,7 +1112,7 @@ let rec pp_structure_elem ~is_header f = function
                 ++ str "};"
               in
               let rec get_concept_name = function
-                | MTident kn -> Some (pp_modname kn)
+                | MTident kn -> Some (pp_concept_ref kn)
                 | MTwith (mt, _) -> get_concept_name mt
                 | MTfunsig (_, mt, mt') -> get_concept_name mt'
                 | MTsig _ -> None
@@ -1034,6 +1138,11 @@ let rec pp_structure_elem ~is_header f = function
         if not is_header then
           mt ()
         else
+          (* Register MEident module aliases in functor_app_sources so that
+             is_accessor can resolve alias chains to find registered accessors. *)
+          let () = match m.ml_mod_expr with
+          | MEident fmp -> Hashtbl.replace functor_app_sources mp fmp
+          | _ -> () in
           let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
           let body_str = Pp.string_of_ppcmds body in
           (* Skip [using] aliases whose target is a [Coq__N] duplicate
@@ -1050,7 +1159,87 @@ let rec pp_structure_elem ~is_header f = function
              && String.sub body_str 0 5 = "Coq__" then
             mt ()
           else
-            str "using " ++ name ++ str " = " ++ body ++ str ";"
+            (* Check whether this alias is itself a functor (i.e., the module
+               type has MTfunsig parameters).  This happens when Rocq's
+               extraction eta-reduces [Module Facts (M:WS) := WFacts M.] to
+               [MEident(WFacts)].  A bare [using Facts = WFacts;] is invalid
+               C++ when WFacts is a template struct; we need a template alias
+               [template<WS M> using Facts = WFacts<M>;] instead. *)
+            let rec collect_functor_params acc = function
+              | MTfunsig (mbid, mt, rest) ->
+                collect_functor_params ((mbid, mt) :: acc) rest
+              | _ -> List.rev acc
+            in
+            let functor_params = collect_functor_params [] m.ml_mod_type in
+            if functor_params = [] then
+              (* Non-functor alias. File-level modules are rendered as C++
+                 namespaces; a [using R = Namespace;] alias inside a struct
+                 body is invalid C++, so we drop it.  Aliases whose target is
+                 a sub-module (MPdot — rendered as a struct) are valid type
+                 aliases inside a struct body and are kept. *)
+              let target_is_namespace =
+                match m.ml_mod_expr with
+                | MEident mp -> is_modfile mp
+                | _ -> false
+              in
+              if target_is_namespace && render_ctx.rc_in_struct then
+                mt ()
+              else
+                let body_with_typename =
+                  if render_ctx.rc_in_template && is_qualified_name body_str then
+                    str "typename " ++ body
+                  else body
+                in
+                str "using " ++ name ++ str " = " ++ body_with_typename ++ str ";"
+            else begin
+              (* Functor alias: emit [template<...> using Name = Body<params>;].
+                 Re-uses the same template-param rendering as the MEfunctor case. *)
+              let rec get_concept_name_from_mt = function
+                | MTident kn -> Some (pp_concept_ref kn)
+                | MTwith (mt, _) -> get_concept_name_from_mt mt
+                | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
+                | MTsig _ -> None
+              in
+              let pp_template_param (mbid, mt) =
+                let param_name = pp_modname (MPbound mbid) in
+                match get_concept_name_from_mt mt with
+                | Some cname -> cname ++ str " " ++ param_name
+                | None ->
+                  let concept_body = pp_module_type [] mt in
+                  if Pp.ismt concept_body then
+                    str "typename " ++ param_name
+                  else
+                    let body_str' = Pp.string_of_ppcmds concept_body in
+                    if String.contains body_str' '\n'
+                       || String.length body_str' > 40 then
+                      str "typename " ++ param_name
+                    else
+                      concept_body ++ str " " ++ param_name
+              in
+              let template_decl =
+                str "template<"
+                ++ prlist_with_sep
+                     (fun () -> str ", ")
+                     pp_template_param
+                     functor_params
+                ++ str ">"
+              in
+              let param_args =
+                prlist_with_sep
+                  (fun () -> str ", ")
+                  (fun (mbid, _) -> pp_modname (MPbound mbid))
+                  functor_params
+              in
+              template_decl
+              ++ fnl ()
+              ++ str "using "
+              ++ name
+              ++ str " = "
+              ++ body
+              ++ str "<"
+              ++ param_args
+              ++ str ">;"
+            end
     in
     if Pp.ismt mod_pp then
       mt ()
@@ -1070,11 +1259,7 @@ let rec pp_structure_elem ~is_header f = function
       let concept_pp =
         match get_base_concept m with
         | Some base_kn ->
-          let base_name =
-            match base_kn with
-            | MPdot (_, l') -> str (Label.to_string l')
-            | _ -> pp_modname base_kn
-          in
+          let base_name = pp_concept_ref base_kn in
           hov 1 (str "concept " ++ name ++ str " = " ++ base_name ++ str "<M>;")
         | None ->
           let old_hoisted = !hoisted_concept_defs in
@@ -1125,8 +1310,16 @@ and pp_module_expr ~is_header f params = function
     in
     let base, args = collect_args [me'] me in
     let base_pp = pp_module_expr ~is_header f [] base in
+    let pp_module_arg arg =
+      let arg_pp = pp_module_expr ~is_header f [] arg in
+      if render_ctx.rc_in_template then
+        let s = Pp.string_of_ppcmds arg_pp in
+        if is_qualified_name s then str "typename " ++ arg_pp
+        else arg_pp
+      else arg_pp
+    in
     let args_pp =
-      prlist_with_sep (fun () -> str ", ") (pp_module_expr ~is_header f []) args
+      prlist_with_sep (fun () -> str ", ") pp_module_arg args
     in
     let base_pp =
       if render_ctx.rc_in_template then
@@ -1193,6 +1386,23 @@ let rec prlist_sep_nonempty sep f = function
 
     The is_header parameter controls which definitions are generated via
     gen_dfuns_dual/gen_decl_for_pp_dual. *)
+let lifted_decl_key = function
+  | Dtemplate (_, _, Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _)) ->
+    Some (Id.to_string v)
+  | Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _) ->
+    Some (Id.to_string v)
+  | _ -> None
+
+let dedup_lifted_decls ds =
+  let seen = Hashtbl.create 16 in
+  List.filter (fun d ->
+    match lifted_decl_key d with
+    | Some k ->
+      if Hashtbl.mem seen k then false
+      else (Hashtbl.replace seen k (); true)
+    | None -> true
+  ) ds
+
 let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let is_method_candidate x =
     List.exists
@@ -1284,7 +1494,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
           | _ -> () )
         defs )
     all_results;
-  let all_lifted = List.concat_map (fun (_, _, l) -> l) all_results in
+  let all_lifted =
+    List.concat_map (fun (_, _, l) -> l) all_results
+    |> dedup_lifted_decls in
   let render_sel_specs (specs, _, _) =
     match specs with
     | [] -> mt ()
@@ -1328,9 +1540,23 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     proper C++ declaration order. *)
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
+  Translation.clear_seen_lifted_refs ();
   init_std_names ();
+  (* In Separate Extraction mode the visibility stack is empty when we enter
+     here, but analysis helpers (mp_renaming, top_visible, etc.) expect at
+     least one entry.  Push the top-level module paths now; they will be
+     popped at the end of this function.  The inner per-module push/pop in
+     [ppl] adds a second layer which is harmless. *)
+  let initial_mps =
+    List.filter_map
+      (fun (mp, _) -> if is_modfile mp then Some mp else None) s
+  in
+  List.iter (fun mp -> push_visible mp []) initial_mps;
   Common.detect_sibling_module_inductive_collisions s;
-  method_registry := Some (Method_registry.create s);
+  method_registry := Some
+    ( match !global_method_registry with
+    | Some reg -> reg
+    | None -> Method_registry.create s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
   Hashtbl.clear global_inductive_names;
   List.iter
@@ -1683,7 +1909,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       mt ()
   in
   Hashtbl.clear pending_wrapper_decls;
-  let pass2_lifted = Translation.take_lifted_decls () in
+  let pass2_lifted = Translation.take_lifted_decls () |> dedup_lifted_decls in
   let pass2_pre_pp, pass2_post_pp =
     if is_header then
       let main_module_name =
@@ -1738,6 +1964,8 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   if not (modular ()) then
     repeat (List.length wrapper_names) pop_visible ();
+  (* Pop the initial visibility entries pushed at the top of this function. *)
+  List.iter (fun _ -> pop_visible ()) initial_mps;
   v 0 (p ++ pass2_post_pp ++ deferred_lifted ++ deferred_defs) ++ fnl ()
 
 (** Simple structure renderer without wrapper module handling. Used for

@@ -10,9 +10,7 @@ struct LowercaseEponymousRecord {
     unsigned int x;
     unsigned int y;
 
-    state set_x(const unsigned int n) const {
-      return state{n, (*(this)).state::y};
-    }
+    state set_x(const unsigned int n) const { return state{n, (*(this)).y}; }
   };
 
   static inline const state example = state{0u, 0u}.set_x(42u);

@@ -1,4 +1,4 @@
-#include <unsound_axioms.h>
+#include "unsound_axioms.h"
 
 unsigned int UnsoundAxioms::cast_confusion(const UnsoundAxioms::Rec &r) {
   unsigned int a = r.f1;
@@ -28,7 +28,7 @@ UnsoundAxioms::Rec UnsoundAxioms::impossible_rec() {
                          "UnsoundAxioms.impossible_rec");
 }
 
-unsigned int UnsoundAxioms::use_impossible(const std::monostate &) {
+unsigned int UnsoundAxioms::use_impossible(const std::monostate) {
   unsigned int a = impossible_rec().f1;
   unsigned int b = impossible_rec().f2;
   return (a + b);

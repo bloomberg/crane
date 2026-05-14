@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -80,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -130,24 +132,28 @@ struct LoopifyExtrema {
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int max_by(F0 &&f, const List<unsigned int> &l) {
+  static unsigned int
+  max_by(F0 &&f,
+         const List<unsigned int> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
+
     struct _Enter {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0, f] across recursive call, then processes
-    /// rest.
-    struct _Cont1 {
+    /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
       unsigned int d_a0;
       F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Cont1>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Cont1.
+    /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -164,12 +170,12 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Cont_Cons{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
         unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         unsigned int rest_max = _result;
@@ -186,24 +192,28 @@ struct LoopifyExtrema {
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int min_by(F0 &&f, const List<unsigned int> &l) {
+  static unsigned int
+  min_by(F0 &&f,
+         const List<unsigned int> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
+
     struct _Enter {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0, f] across recursive call, then processes
-    /// rest.
-    struct _Cont1 {
+    /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
       unsigned int d_a0;
       F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Cont1>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Cont1.
+    /// Loopified min_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -220,12 +230,12 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = f(d_a0);
           } else {
-            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Cont_Cons{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
         unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         unsigned int rest_min = _result;
@@ -242,24 +252,28 @@ struct LoopifyExtrema {
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int argmax(F0 &&f, const List<unsigned int> &l) {
+  static unsigned int
+  argmax(F0 &&f,
+         const List<unsigned int> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
+
     struct _Enter {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0, f] across recursive call, then processes
-    /// rest.
-    struct _Cont1 {
+    /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
       unsigned int d_a0;
       F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Cont1>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Cont1.
+    /// Loopified argmax: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -276,12 +290,12 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Cont_Cons{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
         unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         unsigned int rest_best = _result;
@@ -299,24 +313,28 @@ struct LoopifyExtrema {
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int argmin(F0 &&f, const List<unsigned int> &l) {
+  static unsigned int
+  argmin(F0 &&f,
+         const List<unsigned int> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
+
     struct _Enter {
       const List<unsigned int> *l;
     };
 
-    /// Continuation: saves [d_a0, f] across recursive call, then processes
-    /// rest.
-    struct _Cont1 {
+    /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
       unsigned int d_a0;
       F0 f;
     };
 
-    using _Frame = std::variant<_Enter, _Cont1>;
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
-    /// Frame dispatch: _Enter, _Cont1.
+    /// Loopified argmin: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -333,12 +351,12 @@ struct LoopifyExtrema {
                   _sv.v())) {
             _result = d_a0;
           } else {
-            _stack.emplace_back(_Cont1{d_a0, f});
+            _stack.emplace_back(_Cont_Cons{d_a0, f});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
         unsigned int d_a0 = _f.d_a0;
         F0 f = _f.f;
         unsigned int rest_best = _result;

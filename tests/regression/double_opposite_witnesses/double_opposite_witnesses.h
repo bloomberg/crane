@@ -55,7 +55,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -142,17 +142,17 @@ struct DoubleOppositeWitnessesCase {
   };
 
   template <typename T1, typename T2>
-  static T2 Path_rect(const T1, const T2 f, const T1, const Path<T1> &) {
+  static T2 Path_rect(const T1 &, T2 f, const T1 &, const Path<T1> &) {
     return f;
   }
 
   template <typename T1, typename T2>
-  static T2 Path_rec(const T1, const T2 f, const T1, const Path<T1> &) {
+  static T2 Path_rec(const T1 &, T2 f, const T1 &, const Path<T1> &) {
     return f;
   }
 
   template <typename T1>
-  static unsigned int path_code(const T1, const T1, const Path<T1> &) {
+  static unsigned int path_code(const T1 &, const T1 &, const Path<T1> &) {
     return 1u;
   }
 
@@ -182,8 +182,8 @@ struct DoubleOppositeWitnessesCase {
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
   static Functor compose_functor(Functor f, Functor g) {
     return Functor{
-        [=](const std::any x) mutable { return f.object_of(g.object_of(x)); },
-        [=](const std::any x, const std::any y, const std::any f0) mutable {
+        [=](const auto &x) mutable { return f.object_of(g.object_of(x)); },
+        [=](const auto &x, const auto &y, const auto &f0) mutable {
           return f.morphism_of(g.object_of(x), g.object_of(y),
                                g.morphism_of(x, y, f0));
         }};
@@ -224,15 +224,13 @@ struct DoubleOppositeWitnessesCase {
   static_assert(PreStableCategory<toy_prestable>);
 
   template <PreCategory _tcI0> static Functor into_double_opposite_functor() {
-    return Functor{
-        [](const std::any x) { return x; },
-        [](const std::any, const std::any, const std::any f) { return f; }};
+    return Functor{[](const auto &x) { return x; },
+                   [](const auto &, const auto &, const auto &f) { return f; }};
   }
 
   template <PreCategory _tcI0> static Functor out_of_double_opposite_functor() {
-    return Functor{
-        [](const std::any x) { return x; },
-        [](const std::any, const std::any, const std::any f) { return f; }};
+    return Functor{[](const auto &x) { return x; },
+                   [](const auto &, const auto &, const auto &f) { return f; }};
   }
 
   template <PreStableCategory _tcI0>
@@ -263,11 +261,11 @@ struct DoubleOppositeWitnessesCase {
                     out_of_double_opposite_functor<
                         typename _tcI0::base_category>(),
                     std::make_pair(
-                        [](const typename _tcI0::base_category::Obj) {
+                        [](const typename _tcI0::base_category::Obj &) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         },
-                        [](const typename _tcI0::base_category::Obj) {
+                        [](const typename _tcI0::base_category::Obj &) {
                           return Path<
                               typename _tcI0::base_category::Obj>::path_refl();
                         })));

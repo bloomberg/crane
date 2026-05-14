@@ -1,4 +1,4 @@
-#include <prop_erasure.h>
+#include "prop_erasure.h"
 
 unsigned int PropErasure::with_proof_arg(const unsigned int n) { return n; }
 

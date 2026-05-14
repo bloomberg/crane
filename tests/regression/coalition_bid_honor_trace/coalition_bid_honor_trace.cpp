@@ -1,4 +1,4 @@
-#include <coalition_bid_honor_trace.h>
+#include "coalition_bid_honor_trace.h"
 
 Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {

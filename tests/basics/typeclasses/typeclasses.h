@@ -57,6 +57,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -81,10 +82,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -99,6 +100,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -187,7 +189,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename T1>
-  static unsigned int numeric_double(const T1 x) {
+  static unsigned int numeric_double(const T1 &x) {
     return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
   }
 
@@ -204,7 +206,7 @@ struct Typeclasses {
   static_assert(Ord<ordNat, unsigned int>);
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static std::pair<T1, T1> sort_pair(const T1 x, const T1 y) {
+  static std::pair<T1, T1> sort_pair(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return std::make_pair(x, y);
     } else {
@@ -213,7 +215,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static T1 min_of(const T1 x, const T1 y) {
+  static T1 min_of(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return x;
     } else {
@@ -222,7 +224,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static T1 max_of(const T1 x, const T1 y) {
+  static T1 max_of(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return y;
     } else {
@@ -231,7 +233,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static unsigned int describe(const T1 x, const T1 y) {
+  static unsigned int describe(const T1 &x, const T1 &y) {
     if (_tcI0::eqb(x, y)) {
       return _tcI1::to_nat(x);
     } else {

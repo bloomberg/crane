@@ -1,4 +1,4 @@
-#include <decode_list.h>
+#include "decode_list.h"
 
 DecodeList::instruction DecodeList::decode(const unsigned int b1,
                                            const unsigned int b2) {

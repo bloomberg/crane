@@ -455,20 +455,57 @@ let mktable_modpath autoclean =
 let add_mpfiles_content, get_mpfiles_content, clear_mpfiles_content =
   mktable_modpath false
 
-(** Retrieve module file content, raising [Failure] if not registered. *)
+(** Retrieve module file content, returning an empty map when the module
+    has not been registered yet (e.g. during the Pre phase of Separate
+    Extraction where [pop_visible] has not yet populated the table). *)
 let get_mpfiles_content mp =
-  try get_mpfiles_content mp with Not_found -> failwith "get_mpfiles_content"
+  try get_mpfiles_content mp with Not_found -> KMap.empty
 
 (** The list of external modules that will be opened initially *)
 
-let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_clear =
+let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_clear,
+    mpfiles_save, mpfiles_restore =
   let m = ref MPset.empty in
   let add mp = m := MPset.add mp !m
   and mem mp = MPset.mem mp !m
   and list () = MPset.elements !m
-  and clear () = m := MPset.empty in
+  and clear () = m := MPset.empty
+  and save () = !m
+  and restore s = m := s in
   register_cleanup clear;
-  (add, mem, list, clear)
+  (add, mem, list, clear, save, restore)
+
+(** When [mpfiles_clear] is called (separate extraction mode), this flag is set
+    to indicate that cross-module references need full qualification.  Used by
+    the C++ printer to capitalize qualified type names correctly. *)
+let force_qualified_capitalization = ref false
+
+let set_force_qualified_capitalization () =
+  force_qualified_capitalization := true
+
+let get_force_qualified_capitalization () = !force_qualified_capitalization
+
+let () = register_cleanup (fun () -> force_qualified_capitalization := false)
+
+(** Set of module paths that are included in the current extraction output.
+    When non-empty, references to modules outside this set are rendered without
+    their qualifier (as if the module is an external dependency). *)
+let valid_output_module_set : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
+
+(** Record which module paths belong to the current extraction output.
+    [valid_mps] are the modules being written; references to any other module
+    path will be treated as external by {!is_non_output_module}. *)
+let set_non_output_modules valid_mps =
+  Hashtbl.clear valid_output_module_set;
+  List.iter (fun mp -> Hashtbl.replace valid_output_module_set mp ()) valid_mps
+
+(** [true] iff [mp] is known but not part of the current extraction output —
+    i.e., its definition will live in a different generated file. *)
+let is_non_output_module mp =
+  Hashtbl.length valid_output_module_set > 0
+  && not (Hashtbl.mem valid_output_module_set mp)
+
+let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
 
 (** List of module parameters that we should alpha-rename *)
 
@@ -692,8 +729,15 @@ let rec mp_renaming_fun full_mp =
     assert (modular ());
     (* see [at_toplevel] above *)
     assert (get_phase () == Pre);
-    let current_mpfile = (List.last (get_visible ())).mp in
-    if not (ModPath.equal full_mp current_mpfile) then mpfiles_add full_mp;
+    (* During Separate Extraction, the visibility stack may be empty when
+       mp_renaming_fun is called before do_struct_with_decl_tracking has
+       pushed the top-level module.  In that case we conservatively register
+       the file as an external dependency. *)
+    (match get_visible () with
+     | [] -> mpfiles_add full_mp
+     | vis ->
+       let current_mpfile = (List.last vis).mp in
+       if not (ModPath.equal full_mp current_mpfile) then mpfiles_add full_mp);
     [string_of_modfile full_mp]
 
 (** ... and its version using a cache *)
@@ -988,6 +1032,8 @@ let pp_cpp_gen k mp rls olab =
     let base = base_mp mp in
     if is_mp_bound base then
       pp_ocaml_bound base rls
+    else if is_non_output_module base then
+      unquote (last rls)
     else
       pp_ocaml_extern k base rls
 
@@ -1040,6 +1086,13 @@ let pp_module mp =
     add_visible (Mod, s) l;
     s
   | _ -> pp_ocaml_gen Mod mp (List.rev ls) None
+
+(** Compute the C++ name for a module label without registering it in the
+    visible scope.  Use this instead of [pp_module] when the module produces a
+    [using] alias (MEident / MEapply) and the side-effect of [add_visible]
+    would incorrectly mark the name as "occupied" in the current scope,
+    triggering spurious [error_module_clash] errors. *)
+let module_label_name l = modular_rename Mod (Label.to_id l)
 
 (** Special hack for constants of type Ascii.ascii : if an
     [Extract Inductive ascii => char] has been declared, then the constants are
@@ -1266,6 +1319,42 @@ let tparam_name id = Id.of_string ("t_" ^ Id.to_string id)
 
 let enum_ctor_name s = "e_" ^ String.uppercase_ascii s
 
+(** Compute the C++ enum constructor name for a single constructor [Id.t],
+    applying prime-to-underscore escaping.  Does not perform collision
+    avoidance; use {!enum_ctor_names_of_packet} when the full sibling set is
+    available, or {!Table.enum_ctor_name_of_ref} when looking up by position. *)
+let enum_ctor_name_of_id id =
+  let s = ascii_of_id id in
+  let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+  enum_ctor_name s
+
+let enum_ctor_names_of_packet (consnames : Id.t array) : string array =
+  let escaped =
+    Array.map
+      (fun id ->
+        let s = ascii_of_id id in
+        let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+        enum_ctor_name s)
+      consnames
+  in
+  let seen = Hashtbl.create (Array.length escaped) in
+  Array.map
+    (fun name ->
+      let base = name in
+      let final =
+        if Hashtbl.mem seen name then
+          let rec find_unique i =
+            let candidate = base ^ string_of_int i in
+            if Hashtbl.mem seen candidate then find_unique (i + 1)
+            else candidate
+          in
+          find_unique 0
+        else name
+      in
+      Hashtbl.replace seen final true;
+      final)
+    escaped
+
 (** Capitalize only the last [::]-separated component of a qualified name. *)
 let capitalize_last_component s =
   match String.rindex_opt s ':' with
@@ -1274,3 +1363,4 @@ let capitalize_last_component s =
     let suffix = String.sub s (i + 1) (String.length s - i - 1) in
     prefix ^ String.capitalize_ascii suffix
   | _ -> String.capitalize_ascii s
+

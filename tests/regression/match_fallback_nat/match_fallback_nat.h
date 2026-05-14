@@ -71,7 +71,7 @@ struct MatchFallbackNat {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-  static T1 maybe_nat_rect(F0 &&f, const T1 f0, const maybe_nat &m) {
+  static T1 maybe_nat_rect(F0 &&f, T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
       const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m.v());
       return f(d_a0);
@@ -82,7 +82,7 @@ struct MatchFallbackNat {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-  static T1 maybe_nat_rec(F0 &&f, const T1 f0, const maybe_nat &m) {
+  static T1 maybe_nat_rec(F0 &&f, T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
       const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m.v());
       return f(d_a0);

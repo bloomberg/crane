@@ -1,4 +1,4 @@
-#include <currying.h>
+#include "currying.h"
 
 unsigned int Currying::add3(const unsigned int a, const unsigned int b,
                             const unsigned int c) {

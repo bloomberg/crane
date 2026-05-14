@@ -1,4 +1,4 @@
-#include <rocq_bug_14843.h>
+#include "rocq_bug_14843.h"
 
 void RocqBug14843::M::f1(const Unit) { return; }
 

@@ -1,4 +1,4 @@
-#include <block_template_edge.h>
+#include "block_template_edge.h"
 
 /// 1. Block template result used immediately in if-then-else
 std::string BlockTemplateEdge::block_in_if() {

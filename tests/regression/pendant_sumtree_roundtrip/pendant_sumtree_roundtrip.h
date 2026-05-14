@@ -58,6 +58,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -82,10 +83,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
-      d_v_ = Nil0{};
+      this->d_v_ = Nil0{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons0>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons0{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -100,6 +101,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons0>(_node.d_v_)) {
         auto &_alt = std::get<Cons0>(_node.d_v_);
@@ -137,7 +139,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
-  T1 fold_right(F0 &&f, const T1 a0) const {
+  T1 fold_right(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
       return a0;
@@ -233,7 +235,7 @@ public:
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    d_v_ = Exist{t_A(d_x)};
+    this->d_v_ = Exist{t_A(d_x)};
   }
 
   static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
@@ -290,7 +292,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -357,12 +359,12 @@ public:
   // CREATORS
   template <typename _U> explicit T0(const T0<_U> &_other) {
     if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_h, d_n, d_a2] =
           std::get<typename T0<_U>::Cons>(_other.v());
-      d_v_ = Cons{t_A(d_h), d_n,
-                  d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
+      this->d_v_ = Cons{t_A(d_h), d_n,
+                        d_a2 ? std::make_unique<T0<t_A>>(*d_a2) : nullptr};
     }
   }
 
@@ -429,6 +431,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -460,6 +463,7 @@ public:
   // MANIPULATORS
   ~T() {
     std::vector<std::unique_ptr<T>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](T &_node) {
       if (std::holds_alternative<FS>(_node.d_v_)) {
         auto &_alt = std::get<FS>(_node.d_v_);
@@ -534,8 +538,7 @@ struct PendantSumtreeRoundtripCase {
   decode_multi(const unsigned int n, const List<List<T>> &segments);
   enum class Twist { e_TS, e_TZ };
 
-  template <typename T1>
-  static T1 Twist_rect(const T1 f, const T1 f0, const Twist t1) {
+  template <typename T1> static T1 Twist_rect(T1 f, T1 f0, const Twist t1) {
     switch (t1) {
     case Twist::e_TS: {
       return f;
@@ -548,8 +551,7 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1>
-  static T1 Twist_rec(const T1 f, const T1 f0, const Twist t1) {
+  template <typename T1> static T1 Twist_rec(T1 f, T1 f0, const Twist t1) {
     switch (t1) {
     case Twist::e_TS: {
       return f;
@@ -563,8 +565,7 @@ struct PendantSumtreeRoundtripCase {
   }
   enum class Fiber { e_COTTON, e_CAMELID };
 
-  template <typename T1>
-  static T1 Fiber_rect(const T1 f, const T1 f0, const Fiber f1) {
+  template <typename T1> static T1 Fiber_rect(T1 f, T1 f0, const Fiber f1) {
     switch (f1) {
     case Fiber::e_COTTON: {
       return f;
@@ -577,8 +578,7 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1>
-  static T1 Fiber_rec(const T1 f, const T1 f0, const Fiber f1) {
+  template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, const Fiber f1) {
     switch (f1) {
     case Fiber::e_COTTON: {
       return f;
@@ -593,8 +593,7 @@ struct PendantSumtreeRoundtripCase {
   enum class Color { e_WHITE, e_BROWN, e_RED, e_BLUE };
 
   template <typename T1>
-  static T1 Color_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                       const Color c) {
+  static T1 Color_rect(T1 f, T1 f0, T1 f1, T1 f2, const Color c) {
     switch (c) {
     case Color::e_WHITE: {
       return f;
@@ -614,8 +613,7 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1>
-  static T1 Color_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                      const Color c) {
+  static T1 Color_rec(T1 f, T1 f0, T1 f1, T1 f2, const Color c) {
     switch (c) {
     case Color::e_WHITE: {
       return f;
@@ -728,6 +726,7 @@ struct PendantSumtreeRoundtripCase {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -739,34 +738,23 @@ struct PendantSumtreeRoundtripCase {
           _dst->d_v_ = SumLeaf{_alt.d_a0.clone()};
         } else {
           const auto &_alt = std::get<SumNode>(_src->v());
-          _dst->d_v_ = SumNode{
-              _alt.d_a0.clone(),
-              _alt.d_a1 ? std::make_unique<
-                              List<PendantSumtreeRoundtripCase::SumTree>>()
-                        : nullptr};
+          _dst->d_v_ =
+              SumNode{_alt.d_a0.clone(),
+                      _alt.d_a1 ? std::make_unique<List<SumTree>>() : nullptr};
           auto &_dst_alt = std::get<SumNode>(_dst->d_v_);
           [&] {
             if (_alt.d_a1) {
-              const List<PendantSumtreeRoundtripCase::SumTree> *_lsrc =
-                  _alt.d_a1.get();
-              List<PendantSumtreeRoundtripCase::SumTree> *_ldst =
-                  _dst_alt.d_a1.get();
-              while (std::holds_alternative<typename List<
-                         PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+              const List<SumTree> *_lsrc = _alt.d_a1.get();
+              List<SumTree> *_ldst = _dst_alt.d_a1.get();
+              while (std::holds_alternative<typename List<SumTree>::Cons0>(
                   _lsrc->v())) {
-                const auto &_lsrc_c = std::get<
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
-                    _lsrc->v());
-                _ldst->v_mut() =
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0{
-                        PendantSumtreeRoundtripCase::SumTree{},
-                        _lsrc_c.d_a1
-                            ? std::make_unique<
-                                  List<PendantSumtreeRoundtripCase::SumTree>>()
-                            : nullptr};
-                auto &_ldst_c = std::get<
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
-                    _ldst->v_mut());
+                const auto &_lsrc_c =
+                    std::get<typename List<SumTree>::Cons0>(_lsrc->v());
+                _ldst->v_mut() = typename List<SumTree>::Cons0{
+                    SumTree{},
+                    _lsrc_c.d_a1 ? std::make_unique<List<SumTree>>() : nullptr};
+                auto &_ldst_c =
+                    std::get<typename List<SumTree>::Cons0>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.d_a0, &_ldst_c.d_a0});
                 if (_lsrc_c.d_a1) {
                   _lsrc = _lsrc_c.d_a1.get();
@@ -775,11 +763,9 @@ struct PendantSumtreeRoundtripCase {
                   break;
                 }
               }
-              if (std::holds_alternative<typename List<
-                      PendantSumtreeRoundtripCase::SumTree>::Nil0>(
+              if (std::holds_alternative<typename List<SumTree>::Nil0>(
                       _lsrc->v())) {
-                _ldst->v_mut() =
-                    typename List<PendantSumtreeRoundtripCase::SumTree>::Nil0{};
+                _ldst->v_mut() = typename List<SumTree>::Nil0{};
               }
             }
           }();
@@ -801,20 +787,16 @@ struct PendantSumtreeRoundtripCase {
     // MANIPULATORS
     ~SumTree() {
       std::vector<std::unique_ptr<SumTree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](SumTree &_node) {
         if (std::holds_alternative<SumNode>(_node.d_v_)) {
           auto &_alt = std::get<SumNode>(_node.d_v_);
           if (_alt.d_a1) {
             auto *_lp = _alt.d_a1.get();
-            while (std::holds_alternative<
-                   typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
+            while (std::holds_alternative<typename List<SumTree>::Cons0>(
                 _lp->v())) {
-              auto &_lc = std::get<
-                  typename List<PendantSumtreeRoundtripCase::SumTree>::Cons0>(
-                  _lp->v_mut());
-              _stack.push_back(
-                  std::make_unique<PendantSumtreeRoundtripCase::SumTree>(
-                      std::move(_lc.d_a0)));
+              auto &_lc = std::get<typename List<SumTree>::Cons0>(_lp->v_mut());
+              _stack.push_back(std::make_unique<SumTree>(std::move(_lc.d_a0)));
               if (_lc.d_a1) {
                 _lp = _lc.d_a1.get();
               } else {

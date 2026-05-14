@@ -1,4 +1,4 @@
-#include <setoid_rw.h>
+#include "setoid_rw.h"
 
 unsigned int SetoidRw::mod3(const unsigned int n) { return (3u ? n % 3u : n); }
 

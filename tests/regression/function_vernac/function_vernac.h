@@ -1,7 +1,6 @@
 #ifndef INCLUDED_FUNCTION_VERNAC
 #define INCLUDED_FUNCTION_VERNAC
 
-#include <any>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -57,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -81,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -99,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -165,7 +166,7 @@ public:
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
     const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    d_v_ = Exist{t_A(d_x)};
+    this->d_v_ = Exist{t_A(d_x)};
   }
 
   static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
@@ -254,6 +255,7 @@ struct FunctionVernac {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -298,6 +300,7 @@ struct FunctionVernac {
     // MANIPULATORS
     ~R_div2() {
       std::vector<std::unique_ptr<R_div2>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](R_div2 &_node) {
         if (std::holds_alternative<R_div2_2>(_node.d_v_)) {
           auto &_alt = std::get<R_div2_2>(_node.d_v_);
@@ -374,8 +377,8 @@ struct FunctionVernac {
   static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, const unsigned int n) {
     std::function<T1(unsigned int, T1)> f2 =
         [=](unsigned int _pa0, T1 _pa1) mutable { return f1(n, _pa0, _pa1); };
-    T1 f3 = std::any_cast<T1>(f0(n));
-    T1 f4 = std::any_cast<T1>(f(n));
+    T1 f3 = f0(n);
+    T1 f4 = f(n);
     if (n <= 0) {
       return f4;
     } else {
@@ -472,6 +475,7 @@ struct FunctionVernac {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -511,6 +515,7 @@ struct FunctionVernac {
     // MANIPULATORS
     ~R_list_sum() {
       std::vector<std::unique_ptr<R_list_sum>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](R_list_sum &_node) {
         if (std::holds_alternative<R_list_sum_1>(_node.d_v_)) {
           auto &_alt = std::get<R_list_sum_1>(_node.d_v_);
@@ -584,13 +589,13 @@ struct FunctionVernac {
         [=](unsigned int _pa0, List<unsigned int> _pa1, T1 _pa2) mutable {
           return f0(l, _pa0, _pa1, _pa2);
         };
-    T1 f2 = std::any_cast<T1>(f(l));
+    T1 f2 = f(l);
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return f2;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
+      List<unsigned int> d_a1_value = *(d_a1);
       std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
         return f1(d_a0, d_a1_value, _pa0);
       };

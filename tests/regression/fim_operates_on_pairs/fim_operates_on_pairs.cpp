@@ -1,4 +1,4 @@
-#include <fim_operates_on_pairs.h>
+#include "fim_operates_on_pairs.h"
 
 unsigned int FimOperatesOnPairs::get_reg(const FimOperatesOnPairs::state &s,
                                          const unsigned int r) {

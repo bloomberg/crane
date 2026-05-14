@@ -11,7 +11,7 @@ struct NameClashScrutinee {
   enum class Color { e_RED, e_GREEN, e_BLUE };
 
   template <typename T1>
-  static T1 color_rect(const T1 f, const T1 f0, const T1 f1, const Color c) {
+  static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -28,7 +28,7 @@ struct NameClashScrutinee {
   }
 
   template <typename T1>
-  static T1 color_rec(const T1 f, const T1 f0, const T1 f1, const Color c) {
+  static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -311,7 +311,7 @@ struct NameClashScrutinee {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, Color &, shape &>
-  static T1 wrapper_rect(F0 &&f, const T1 f0, const wrapper &w) {
+  static T1 wrapper_rect(F0 &&f, T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
       const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(w.v());
       return f(d_a0, d_a1);
@@ -322,7 +322,7 @@ struct NameClashScrutinee {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, Color &, shape &>
-  static T1 wrapper_rec(F0 &&f, const T1 f0, const wrapper &w) {
+  static T1 wrapper_rec(F0 &&f, T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
       const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(w.v());
       return f(d_a0, d_a1);

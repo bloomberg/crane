@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -122,7 +124,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -145,8 +147,7 @@ struct RecordErasedProofFieldsCase {
   };
 
   template <typename T1>
-  static T1 ItemKind_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                          const T1 f3, const T1 f4, const T1 f5,
+  static T1 ItemKind_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                           const ItemKind i) {
     switch (i) {
     case ItemKind::e_KINDA: {
@@ -176,8 +177,7 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 ItemKind_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                         const T1 f3, const T1 f4, const T1 f5,
+  static T1 ItemKind_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                          const ItemKind i) {
     switch (i) {
     case ItemKind::e_KINDA: {
@@ -300,8 +300,7 @@ struct RecordErasedProofFieldsCase {
   enum class TraceBucket { e_BUCKETA, e_BUCKETB, e_BUCKETC };
 
   template <typename T1>
-  static T1 TraceBucket_rect(const T1 f, const T1 f0, const T1 f1,
-                             const TraceBucket t) {
+  static T1 TraceBucket_rect(T1 f, T1 f0, T1 f1, const TraceBucket t) {
     switch (t) {
     case TraceBucket::e_BUCKETA: {
       return f;
@@ -318,8 +317,7 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 TraceBucket_rec(const T1 f, const T1 f0, const T1 f1,
-                            const TraceBucket t) {
+  static T1 TraceBucket_rec(T1 f, T1 f0, T1 f1, const TraceBucket t) {
     switch (t) {
     case TraceBucket::e_BUCKETA: {
       return f;

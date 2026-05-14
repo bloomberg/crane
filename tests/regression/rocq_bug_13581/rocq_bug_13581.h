@@ -10,7 +10,7 @@
 #include <vector>
 
 enum class Unit { e_TT };
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Nat {
   // TYPES
@@ -58,6 +58,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -86,6 +87,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -194,6 +196,7 @@ struct RocqBug13581 {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -204,8 +207,7 @@ struct RocqBug13581 {
           _dst->d_v_ = C{};
         } else {
           const auto &_alt = std::get<D>(_src->v());
-          _dst->d_v_ =
-              D{_alt.d_a0 ? std::make_unique<RocqBug13581::J<t_T>>() : nullptr};
+          _dst->d_v_ = D{_alt.d_a0 ? std::make_unique<J<t_T>>() : nullptr};
           auto &_dst_alt = std::get<D>(_dst->d_v_);
           if (_alt.d_a0) {
             if (std::holds_alternative<typename RocqBug13581::J<t_T>::E>(
@@ -215,7 +217,7 @@ struct RocqBug13581 {
               auto &_pdst = std::get<typename RocqBug13581::J<t_T>::E>(
                   _dst_alt.d_a0->v_mut());
               if (_psrc.d_a0) {
-                _pdst.d_a0 = std::make_unique<RocqBug13581::I<t_T>>();
+                _pdst.d_a0 = std::make_unique<I<t_T>>();
                 _stack.push_back({_psrc.d_a0.get(), _pdst.d_a0.get()});
               }
             }
@@ -228,10 +230,10 @@ struct RocqBug13581 {
     // CREATORS
     template <typename _U> explicit I(const I<_U> &_other) {
       if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
-        d_v_ = C{};
+        this->d_v_ = C{};
       } else {
         const auto &[d_a0] = std::get<typename I<_U>::D>(_other.v());
-        d_v_ =
+        this->d_v_ =
             D{d_a0 ? std::make_unique<RocqBug13581::J<t_T>>(*d_a0) : nullptr};
       }
     }
@@ -245,6 +247,7 @@ struct RocqBug13581 {
     // MANIPULATORS
     ~I() {
       std::vector<std::unique_ptr<I<t_T>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](I<t_T> &_node) {
         if (std::holds_alternative<D>(_node.d_v_)) {
           auto &_alt = std::get<D>(_node.d_v_);
@@ -320,7 +323,8 @@ struct RocqBug13581 {
     // CREATORS
     template <typename _U> explicit J(const J<_U> &_other) {
       const auto &[d_a0] = std::get<typename J<_U>::E>(_other.v());
-      d_v_ = E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr};
+      this->d_v_ =
+          E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(*d_a0) : nullptr};
     }
 
     static J<t_T> e(I<t_T> a0) {
@@ -330,6 +334,7 @@ struct RocqBug13581 {
     // MANIPULATORS
     ~J() {
       std::vector<std::unique_ptr<J<t_T>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](J<t_T> &_node) {
         if (std::holds_alternative<E>(_node.d_v_)) {
           auto &_alt = std::get<E>(_node.d_v_);
@@ -363,7 +368,7 @@ struct RocqBug13581 {
 
   template <typename T1, typename T2, typename F3>
     requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
-  static T2 I_rect(const T1, const T1, const T2 f, F3 &&f0, const Nat &,
+  static T2 I_rect(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
                    const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
       return f;
@@ -375,7 +380,7 @@ struct RocqBug13581 {
 
   template <typename T1, typename T2, typename F3>
     requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
-  static T2 I_rec(const T1, const T1, const T2 f, F3 &&f0, const Nat &,
+  static T2 I_rec(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
                   const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
       return f;
@@ -387,14 +392,15 @@ struct RocqBug13581 {
 
   template <typename T1, typename T2, typename F2>
     requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
-  static T2 J_rect(const T1, const T1, F2 &&f, const Bool0, const J<T1> &j) {
+  static T2 J_rect(const T1 &, const T1 &, F2 &&f, const Bool0,
+                   const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
     return f(*(d_a0));
   }
 
   template <typename T1, typename T2, typename F2>
     requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
-  static T2 J_rec(const T1, const T1, F2 &&f, const Bool0, const J<T1> &j) {
+  static T2 J_rec(const T1 &, const T1 &, F2 &&f, const Bool0, const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
     return f(*(d_a0));
   }

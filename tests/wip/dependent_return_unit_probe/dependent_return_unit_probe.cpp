@@ -1,12 +1,12 @@
-#include <dependent_return_unit_probe.h>
+#include "dependent_return_unit_probe.h"
 
 std::any DependentReturnUnitProbe::dep(const Bool0 b) {
   switch (b) {
-  case Bool0::e_TRUE0: {
+  case Bool0::e_TRUE: {
     return Unit::e_TT;
   }
-  case Bool0::e_FALSE0: {
-    return Bool0::e_FALSE0;
+  case Bool0::e_FALSE: {
+    return Bool0::e_FALSE;
   }
   default:
     std::unreachable();

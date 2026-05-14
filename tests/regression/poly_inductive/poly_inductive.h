@@ -51,7 +51,7 @@ struct PolyInductive {
     // CREATORS
     template <typename _U> explicit pbox(const pbox<_U> &_other) {
       const auto &[d_a0] = std::get<typename pbox<_U>::PBox>(_other.v());
-      d_v_ = PBox{t_A(d_a0)};
+      this->d_v_ = PBox{t_A(d_a0)};
     }
 
     static pbox<t_A> PBox_(t_A a0) { return pbox(PBox{std::move(a0)}); }
@@ -131,7 +131,7 @@ struct PolyInductive {
     explicit ppair(const ppair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename ppair<_U0, _U1>::PPair>(_other.v());
-      d_v_ = PPair{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = PPair{t_A(d_a0), t_B(d_a1)};
     }
 
     static ppair<t_A, t_B> PPair_(t_A a0, t_B a1) {
@@ -227,10 +227,10 @@ struct PolyInductive {
     // CREATORS
     template <typename _U> explicit pmaybe(const pmaybe<_U> &_other) {
       if (std::holds_alternative<typename pmaybe<_U>::PNothing>(_other.v())) {
-        d_v_ = PNothing{};
+        this->d_v_ = PNothing{};
       } else {
         const auto &[d_a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
-        d_v_ = PJust{t_A(d_a0)};
+        this->d_v_ = PJust{t_A(d_a0)};
       }
     }
 
@@ -244,7 +244,7 @@ struct PolyInductive {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    t_A pmaybe_default(const t_A d) const {
+    t_A pmaybe_default(t_A d) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
         return d;
@@ -268,7 +268,7 @@ struct PolyInductive {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
-    T1 pmaybe_rec(const T1 f, F1 &&f0) const {
+    T1 pmaybe_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
         return f;
@@ -280,7 +280,7 @@ struct PolyInductive {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
-    T1 pmaybe_rect(const T1 f, F1 &&f0) const {
+    T1 pmaybe_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
         return f;
@@ -340,6 +340,7 @@ struct PolyInductive {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -370,12 +371,13 @@ struct PolyInductive {
     template <typename _U> explicit ptree(const ptree<_U> &_other) {
       if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
         const auto &[d_a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
-        d_v_ = PLeaf{t_A(d_a0)};
+        this->d_v_ = PLeaf{t_A(d_a0)};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename ptree<_U>::PNode>(_other.v());
-        d_v_ = PNode{d_a0 ? std::make_unique<ptree<t_A>>(*d_a0) : nullptr,
-                     d_a1 ? std::make_unique<ptree<t_A>>(*d_a1) : nullptr};
+        this->d_v_ =
+            PNode{d_a0 ? std::make_unique<ptree<t_A>>(*d_a0) : nullptr,
+                  d_a1 ? std::make_unique<ptree<t_A>>(*d_a1) : nullptr};
       }
     }
 
@@ -389,6 +391,7 @@ struct PolyInductive {
     // MANIPULATORS
     ~ptree() {
       std::vector<std::unique_ptr<ptree<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](ptree<t_A> &_node) {
         if (std::holds_alternative<PNode>(_node.d_v_)) {
           auto &_alt = std::get<PNode>(_node.d_v_);

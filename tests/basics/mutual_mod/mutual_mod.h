@@ -59,6 +59,7 @@ struct EvenOdd {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -69,9 +70,8 @@ struct EvenOdd {
           _dst->d_v_ = ENil{};
         } else {
           const auto &_alt = std::get<ECons>(_src->v());
-          _dst->d_v_ =
-              ECons{_alt.d_a0, _alt.d_a1 ? std::make_unique<EvenOdd::odd_list>()
-                                         : nullptr};
+          _dst->d_v_ = ECons{_alt.d_a0, _alt.d_a1 ? std::make_unique<odd_list>()
+                                                  : nullptr};
           auto &_dst_alt = std::get<ECons>(_dst->d_v_);
           if (_alt.d_a1) {
             if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
@@ -81,7 +81,7 @@ struct EvenOdd {
               auto &_pdst = std::get<typename EvenOdd::odd_list::OCons>(
                   _dst_alt.d_a1->v_mut());
               if (_psrc.d_a1) {
-                _pdst.d_a1 = std::make_unique<EvenOdd::even_list>();
+                _pdst.d_a1 = std::make_unique<even_list>();
                 _stack.push_back({_psrc.d_a1.get(), _pdst.d_a1.get()});
               }
             }
@@ -102,6 +102,7 @@ struct EvenOdd {
     // MANIPULATORS
     ~even_list() {
       std::vector<std::unique_ptr<even_list>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](even_list &_node) {
         if (std::holds_alternative<ECons>(_node.d_v_)) {
           auto &_alt = std::get<ECons>(_node.d_v_);
@@ -184,6 +185,7 @@ struct EvenOdd {
     // MANIPULATORS
     ~odd_list() {
       std::vector<std::unique_ptr<odd_list>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](odd_list &_node) {
         if (std::holds_alternative<OCons>(_node.d_v_)) {
           auto &_alt = std::get<OCons>(_node.d_v_);

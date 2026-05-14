@@ -1,4 +1,4 @@
-#include <sigma_assert.h>
+#include "sigma_assert.h"
 
 unsigned int PeanoNat::div2(const unsigned int n) {
   if (n <= 0) {

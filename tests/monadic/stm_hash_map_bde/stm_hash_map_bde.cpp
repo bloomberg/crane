@@ -1,4 +1,4 @@
-#include <stm_hash_map_bde.h>
+#include "stm_hash_map_bde.h"
 
 #include <bdlf_overloaded.h>
 #include <bdls_filesystemutil.h>

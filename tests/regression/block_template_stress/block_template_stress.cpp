@@ -1,4 +1,4 @@
-#include <block_template_stress.h>
+#include "block_template_stress.h"
 
 /// 1. Block template in a fixpoint body
 List<std::string> BlockTemplateStress::read_n_lines(const unsigned int n) {

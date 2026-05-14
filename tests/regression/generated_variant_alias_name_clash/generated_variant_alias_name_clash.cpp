@@ -1,4 +1,4 @@
-#include <generated_variant_alias_name_clash.h>
+#include "generated_variant_alias_name_clash.h"
 
 bool GeneratedVariantAliasNameClash::is_flag(
     const GeneratedVariantAliasNameClash::variant_t &x) {

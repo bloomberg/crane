@@ -8,7 +8,7 @@
 #include <utility>
 #include <variant>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct TypeIndexedInductiveProbe {
   /// Regression test for type-indexed inductives with erased type parameters.
@@ -68,19 +68,19 @@ struct TypeIndexedInductiveProbe {
     const variant_t &v() const { return d_v_; }
   };
 
-  template <typename T1, typename F0>
+  template <typename T1, typename T2, typename F0>
   static T1 wrap_rect(F0 &&f, const wrap &w0) {
     const auto &[d_a] = std::get<typename wrap::Wrap0>(w0.v());
-    return std::any_cast<T1>(f(d_a));
+    return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
   }
 
-  template <typename T1, typename F0>
+  template <typename T1, typename T2, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w0) {
     const auto &[d_a] = std::get<typename wrap::Wrap0>(w0.v());
-    return std::any_cast<T1>(f(d_a));
+    return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
   }
 
-  static inline const wrap w = wrap::wrap0(Bool0::e_TRUE0);
+  static inline const wrap w = wrap::wrap0(Bool0::e_TRUE);
   static inline const Bool0 sample = []() {
     auto &&_sv0 = w;
     const auto &[d_a0] = std::get<typename wrap::Wrap0>(_sv0.v());

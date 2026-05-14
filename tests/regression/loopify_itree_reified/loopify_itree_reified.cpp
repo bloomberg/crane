@@ -1,25 +1,27 @@
-#include <loopify_itree_reified.h>
+#include "loopify_itree_reified.h"
 
 /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
 /// fixpoint with recursion on fuel that processes reified ITrees. Should
 /// be loopified normally (nontail with _Enter/_Call frames).
-unsigned int
-LoopifyItreeReified::count_taus(const unsigned int fuel,
-                                const std::shared_ptr<ITree<unsigned int>> &t) {
+unsigned int LoopifyItreeReified::count_taus(
+    const unsigned int fuel,
+    const std::shared_ptr<ITree<unsigned int>>
+        &t) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     std::shared_ptr<ITree<unsigned int>> t;
     unsigned int fuel;
   };
 
-  /// Continuation: saves across recursive call.
-  struct _Resume1 {};
+  /// _Resume_t_: resumes after recursive call with _result.
+  struct _Resume_t_ {};
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_t_>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{t, fuel});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified count_taus: _Enter -> _Resume_t_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -42,7 +44,7 @@ LoopifyItreeReified::count_taus(const unsigned int fuel,
           const auto &_itf =
               *std::get_if<typename ITree<unsigned int>::Tau>(&_cs);
           auto t_ = _itf.next;
-          _stack.emplace_back(_Resume1{});
+          _stack.emplace_back(_Resume_t_{});
           _stack.emplace_back(_Enter{t_, fuel_});
         } else {
           const auto &_itf =
@@ -53,7 +55,7 @@ LoopifyItreeReified::count_taus(const unsigned int fuel,
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_t_>(_frame));
       _result = (_result + 1);
     }
   }

@@ -48,6 +48,13 @@ let hov _ x = x
 *)
 let method_registry : Method_registry.t option ref = ref None
 
+(** In separate extraction, a pre-built method registry from the full
+    structure is used so that cross-module method calls are recognized. *)
+let global_method_registry : Method_registry.t option ref = ref None
+
+let set_global_method_registry reg = global_method_registry := Some reg
+let clear_global_method_registry () = global_method_registry := None
+
 (** Get the method registry, raising an anomaly if not initialized. *)
 let get_method_registry () =
   match !method_registry with
@@ -194,8 +201,34 @@ let keywords =
 (** Note: do not shorten [str "foo" ++ fnl ()] into [str "foo\n"], the '\n'
     character interacts badly with the Format boxing mechanism *)
 
+(** Set of module paths that produce output files in separate extraction.
+    When non-empty, pp_open skips modules not in this set. *)
+let valid_output_modules : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
+
+let set_valid_output_modules mps =
+  Hashtbl.clear valid_output_modules;
+  List.iter (fun mp -> Hashtbl.replace valid_output_modules mp ()) mps
+
+let clear_valid_output_modules () = Hashtbl.clear valid_output_modules
+
+let global_unmerged_wrappers : (string, unit) Hashtbl.t = Hashtbl.create 16
+
+let mark_global_unmerged name =
+  Hashtbl.replace global_unmerged_wrappers name ()
+
+let is_global_unmerged name =
+  Hashtbl.mem global_unmerged_wrappers name
+
+let clear_global_unmerged () =
+  Hashtbl.clear global_unmerged_wrappers
+
 (** Pretty-print an open directive for a module. *)
-let pp_open mp = str ("open " ^ string_of_modfile mp) ++ fnl ()
+let pp_open mp =
+  if Hashtbl.length valid_output_modules > 0
+     && not (Hashtbl.mem valid_output_modules mp) then
+    mt ()
+  else
+    str ("#include \"" ^ file_of_modfile mp ^ ".h\"") ++ fnl ()
 
 (** Pretty-print a comment with OCaml-style delimiters. *)
 let pp_comment s = str "(* " ++ hov 0 s ++ str " *)"
@@ -213,7 +246,8 @@ let preamble _ comment used_modules _usf =
   pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
 (** Generate preamble for signature/header files. *)
-let sig_preamble _ comment _used_modules _usf = pp_header_comment comment
+let sig_preamble _ comment used_modules _usf =
+  pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
 (** {2 The pretty-printer for C++ syntax} *)
 
@@ -236,6 +270,10 @@ type render_ctx = {
   mutable rc_struct_mp : ModPath.t option;
   (* Inside a template struct (functor)? Affects typename keyword insertion. *)
   mutable rc_in_template : bool;
+  (* Inside the initializer expression of a Meyers singleton? Suppresses
+     MPbound-based accessor detection to avoid adding () to functor-parameter
+     references that are plain values in their concrete implementations. *)
+  mutable rc_in_meyers_body : bool;
 }
 
 (** Global render context state. *)
@@ -246,6 +284,7 @@ let render_ctx =
     rc_struct_name = None;
     rc_struct_mp = None;
     rc_in_template = false;
+    rc_in_meyers_body = false;
   }
 
 (** Accumulator for nested module type concepts that must be hoisted out of
@@ -261,6 +300,7 @@ type render_ctx_snapshot = {
   rcs_struct_name : Pp.t option;
   rcs_struct_mp : ModPath.t option;
   rcs_in_template : bool;
+  rcs_in_meyers_body : bool;
 }
 
 (** Save the current render context state. *)
@@ -271,6 +311,7 @@ let save_render_ctx () =
     rcs_struct_name = render_ctx.rc_struct_name;
     rcs_struct_mp = render_ctx.rc_struct_mp;
     rcs_in_template = render_ctx.rc_in_template;
+    rcs_in_meyers_body = render_ctx.rc_in_meyers_body;
   }
 
 (** Restore render context from a snapshot. *)
@@ -279,7 +320,8 @@ let restore_render_ctx s =
   render_ctx.rc_concepts_hoisted <- s.rcs_concepts_hoisted;
   render_ctx.rc_struct_name <- s.rcs_struct_name;
   render_ctx.rc_struct_mp <- s.rcs_struct_mp;
-  render_ctx.rc_in_template <- s.rcs_in_template
+  render_ctx.rc_in_template <- s.rcs_in_template;
+  render_ctx.rc_in_meyers_body <- s.rcs_in_meyers_body
 
 (** Execute [f] with modified render context, restoring the snapshot afterward.
     This replaces the error-prone pattern of manually saving/restoring
@@ -293,11 +335,16 @@ let with_render_ctx ~(setup : unit -> unit) (f : unit -> 'a) : 'a =
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores
-    (functor_modpath, label) pairs. At call sites, we match by label and check
-    if the caller's modpath corresponds to an application of the functor. This
-    is needed because functor application creates new constants with distinct
-    canonical names that can't be matched by GlobRef equality. *)
+    both (modpath, label) pairs for direct matching and canonical KerNames for
+    cross-functor matching. [non_accessor_labels] tracks labels that are
+    also used by NON-Meyers-singleton definitions, to prevent false positives
+    when doing label-only fallback matching. *)
 let template_static_accessors : (ModPath.t * Label.t) list ref = ref []
+let template_static_accessor_kns : (KerName.t, unit) Hashtbl.t = Hashtbl.create 16
+let non_accessor_labels : (Label.t, unit) Hashtbl.t = Hashtbl.create 16
+
+let register_template_static_accessor mp lbl =
+  template_static_accessors := (mp, lbl) :: !template_static_accessors
 
 (** Maps applied module paths to their functor source modpaths. E.g.,
     NatWrapper's modpath -> Wrapper's modpath. Populated when processing
@@ -318,9 +365,6 @@ let eponymous_promote_ref : GlobRef.t option ref = ref None
     promoted template struct at file scope. *)
 let eponymous_deferred : Pp.t ref = ref (Pp.mt ())
 
-(** Set of promoted inductives — overrides is_merged_inductive for name
-    resolution so that promoted types use the capitalized module name. *)
-let promoted_inductives : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 4
 
 (** Whether the promoted inductive needs enable_shared_from_this. Captured
     during flat rendering in cpp_ind.ml, consumed by the MEstruct wrapper in
@@ -683,6 +727,7 @@ let reset_cpp_state () =
   method_candidates := [];
   current_structure_decls := [];
   method_registry := None;
+  global_method_registry := None;
   name_cache := None;
   Hashtbl.clear global_eponymous_record_registry;
   Hashtbl.clear wrapper_module_table;
@@ -692,7 +737,11 @@ let reset_cpp_state () =
   Hashtbl.clear pending_wrapper_decls;
   Hashtbl.clear unmerged_wrappers;
   Hashtbl.clear global_inductive_names;
+  Hashtbl.clear valid_output_modules;
+  Hashtbl.clear global_unmerged_wrappers;
   template_static_accessors := [];
+  Hashtbl.clear template_static_accessor_kns;
+  Hashtbl.clear non_accessor_labels;
   Hashtbl.clear functor_app_sources;
   hoisted_concept_defs := [];
   Common.reset_ctor_field_names ();

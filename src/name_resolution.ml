@@ -96,8 +96,27 @@ let classify_inductive
     | _ -> false
   in
   let is_en = is_enum_inductive ind_ref in
+  let parent_mp = Names.MutInd.modpath kn in
+  let parent_module_label =
+    match parent_mp with
+    | Names.ModPath.MPdot (_, l) ->
+      let lbl = String.capitalize_ascii (Names.Label.to_string l) in
+      if String.equal lbl (String.capitalize_ascii raw_name) then None
+      else Some lbl
+    | _ -> None
+  in
+  let rec has_bound_ancestor = function
+    | Names.ModPath.MPdot (p, _) -> has_bound_ancestor p
+    | Names.ModPath.MPbound _ -> true
+    | Names.ModPath.MPfile _ -> false
+  in
+  let cap_raw = String.capitalize_ascii raw_name in
   let is_merged =
-    not (Hashtbl.mem unmerged (String.capitalize_ascii raw_name))
+    not (Hashtbl.mem unmerged cap_raw)
+    && (match parent_module_label with
+        | Some lbl -> not (Hashtbl.mem unmerged lbl)
+        | None -> true)
+    && not (has_bound_ancestor parent_mp)
   in
   let is_gse = Hashtbl.mem global_scope_enums ind_ref in
   let kind =

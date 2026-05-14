@@ -59,6 +59,7 @@ struct ReuseMoveShadow {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -95,6 +96,7 @@ struct ReuseMoveShadow {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -125,7 +127,7 @@ struct ReuseMoveShadow {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
                                    tree &, T1 &>
-  static T1 tree_rect(F0 &&f, const T1 f0, const tree &t) {
+  static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
       return f(d_a0, *(d_a1), tree_rect<T1>(f, f0, *(d_a1)), *(d_a2),
@@ -138,7 +140,7 @@ struct ReuseMoveShadow {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
                                    tree &, T1 &>
-  static T1 tree_rec(F0 &&f, const T1 f0, const tree &t) {
+  static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
       return f(d_a0, *(d_a1), tree_rec<T1>(f, f0, *(d_a1)), *(d_a2),

@@ -1,4 +1,4 @@
-#include <unit_void_edge.h>
+#include "unit_void_edge.h"
 
 void UnitVoidEdge::return_unit(const unsigned int) { return; }
 
@@ -38,19 +38,19 @@ UnitVoidEdge::return_some_tt(const unsigned int n) {
   }
 }
 
-void UnitVoidEdge::unit_chain(std::monostate) { return; }
+void UnitVoidEdge::unit_chain(const std::monostate) { return; }
 
 void UnitVoidEdge::helper_void(const unsigned int) { return; }
 
 unsigned int UnitVoidEdge::use_helper(const unsigned int n) { return n; }
 
-unsigned int UnitVoidEdge::match_unit_nontail(const std::monostate &) {
+unsigned int UnitVoidEdge::match_unit_nontail(const std::monostate) {
   {
     return 7u;
   }
 }
 
-void UnitVoidEdge::unit_to_unit_with_work(const std::monostate &) {
+void UnitVoidEdge::unit_to_unit_with_work(const std::monostate) {
   {
     return;
   }
@@ -66,8 +66,8 @@ void UnitVoidEdge::conditional_unit(const bool b) {
   }
 }
 
-unsigned int UnitVoidEdge::double_match_unit(const std::monostate &,
-                                             const std::monostate &) {
+unsigned int UnitVoidEdge::double_match_unit(const std::monostate,
+                                             const std::monostate) {
   {
     {
       return 99u;
@@ -83,7 +83,7 @@ unsigned int UnitVoidEdge::get_value(const UnitVoidEdge::tagged_nat &t) {
   return t.tn_value;
 }
 
-void UnitVoidEdge::make_callback(const unsigned int n, const std::monostate &) {
+void UnitVoidEdge::make_callback(const unsigned int n, const std::monostate) {
   return_unit(n);
   return;
 }

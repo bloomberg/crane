@@ -1,4 +1,4 @@
-#include <function_return_branch_probe.h>
+#include "function_return_branch_probe.h"
 
 /// A recursive function whose match branches return different lambda
 /// expressions.  Crane generates an inner lambda with no explicit return type,
@@ -10,7 +10,7 @@ Nat FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &_x0) {
       return [](Nat x) { return x; };
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(n.v());
-      Nat d_a0_value = Nat(*(d_a0));
+      Nat d_a0_value = *(d_a0);
       std::function<Nat(Nat)> f = [=](Nat _x0) mutable -> Nat {
         return make_adder(d_a0_value, _x0);
       };

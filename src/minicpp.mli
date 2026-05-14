@@ -154,6 +154,7 @@ and cpp_stmt =
   | Sif_then of cpp_expr * cpp_stmt list
       (** Conditional without an else branch *)
   | Sraw of string  (** Raw C++ code printed verbatim *)
+  | Scomment of string  (** Documentation comment, printed as [/// text] *)
   | Sstruct_def of Id.t * (Id.t * cpp_type) list
       (** Local struct definition: struct Name { T1 f1; T2 f2; }; *)
   | Susing of Id.t * cpp_type
@@ -243,6 +244,8 @@ and cpp_expr =
   | CPPnamespace of GlobRef.t * cpp_expr  (** Namespace-qualified expression *)
   | CPPfun_call of cpp_expr * cpp_expr list
       (** Function call with arguments (stored in reverse order) *)
+  | CPPconverting_ctor of cpp_type * cpp_expr list
+      (** Converting constructor call: [Type(args)] *)
   | CPPderef of cpp_expr  (** Pointer dereference *)
   | CPPmove of cpp_expr  (** std::move for move semantics *)
   | CPPforward of cpp_type * cpp_expr
@@ -289,16 +292,18 @@ and cpp_expr =
   | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list
       (** Dot method call: object.method(args) *)
   | CPPqualified of cpp_expr * Id.t  (** Scope resolution: expr::id *)
+  | CPPqualified_t of cpp_type * Id.t  (** Type-qualified member: Type::id *)
   | CPPconvertible_to of cpp_type  (** std::convertible_to<T> type trait *)
   | CPPabort of string  (** Unreachable code marker, calls std::abort() *)
   | CPPenum_val of GlobRef.t * Id.t
       (** Enum class value: EnumType::Constructor *)
   | CPPnullptr  (** nullptr literal *)
   | CPPbraced of cpp_expr list  (** Braced initializer: {a, b, ...} *)
-  | CPPstd_get of cpp_type * cpp_expr option
-      (** std::get<T> or std::get<T>(expr) *)
-  | CPPstd_holds_alternative of cpp_type
-      (** std::holds_alternative<T> *)
+  | CPPstd_get of cpp_type * Id.t option * cpp_expr option
+      (** [std::get<T>(expr)] or [std::get<typename T::Ctor>(expr)] *)
+  | CPPstd_holds_alternative of cpp_type * Id.t option
+      (** [std::holds_alternative<T>(...)] or
+          [std::holds_alternative<typename T::Ctor>(...)] *)
   | CPPdeclval of cpp_type  (** std::declval<T>() *)
   | CPPtypename_qualified of cpp_type * Id.t
       (** typename T::Nested *)
@@ -346,6 +351,13 @@ and cpp_field =
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of Id.t * cpp_type  (** Nested using type alias declaration *)
   | Fdeleted_ctor  (** Deleted default constructor: ctor() = delete *)
+  | Ftemplate_ctor of
+      (template_type * Id.t) list
+      * bool
+      * (Id.t * cpp_type) list
+      * cpp_stmt list
+      (** Template converting constructor: template params, explicit flag,
+          constructor params, body statements *)
   | Fraw of string  (** Raw C++ field declaration *)
 
 (** Method descriptor record. *)
@@ -433,6 +445,17 @@ val iter_expr_children :
 val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
+
+(** [fold_expr_children f acc e] folds [f] over the immediate child
+    expressions of [e], threading [acc].  Mirrors {!iter_expr_children}. *)
+val fold_expr_children :
+  ('a -> cpp_expr -> 'a) -> 'a -> cpp_expr -> 'a
+
+(** [fold_stmt_children ~on_expr ~on_stmts acc s] folds over the immediate
+    children of [s], threading [acc].  Mirrors {!iter_stmt_children}. *)
+val fold_stmt_children :
+  on_expr:('a -> cpp_expr -> 'a) -> on_stmts:('a -> cpp_stmt list -> 'a) ->
+  'a -> cpp_stmt -> 'a
 
 (** {2 Top-level declarations} *)
 

@@ -1,4 +1,4 @@
-#include <density_potential_trace.h>
+#include "density_potential_trace.h"
 
 Real DensityPotentialTraceCase::sample_activation(const Real z) { return z; }
 

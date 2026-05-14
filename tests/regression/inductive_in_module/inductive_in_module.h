@@ -12,7 +12,7 @@ struct InductiveInModule {
     enum class Color { e_RED, e_GREEN, e_BLUE };
 
     template <typename T1>
-    static T1 color_rect(const T1 f, const T1 f0, const T1 f1, const Color c) {
+    static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;
@@ -29,7 +29,7 @@ struct InductiveInModule {
     }
 
     template <typename T1>
-    static T1 color_rec(const T1 f, const T1 f0, const T1 f1, const Color c) {
+    static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;
@@ -105,11 +105,11 @@ struct InductiveInModule {
         // CREATORS
         template <typename _U> explicit option(const option<_U> &_other) {
           if (std::holds_alternative<typename option<_U>::None>(_other.v())) {
-            d_v_ = None{};
+            this->d_v_ = None{};
           } else {
             const auto &[d_a0] =
                 std::get<typename option<_U>::Some>(_other.v());
-            d_v_ = Some{t_A(d_a0)};
+            this->d_v_ = Some{t_A(d_a0)};
           }
         }
 
@@ -126,7 +126,7 @@ struct InductiveInModule {
 
       template <typename T1, typename T2, typename F1>
         requires std::is_invocable_r_v<T2, F1 &, T1 &>
-      static T2 option_rect(const T2 f, F1 &&f0, const option<T1> &o) {
+      static T2 option_rect(T2 f, F1 &&f0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;
         } else {
@@ -137,7 +137,7 @@ struct InductiveInModule {
 
       template <typename T1, typename T2, typename F1>
         requires std::is_invocable_r_v<T2, F1 &, T1 &>
-      static T2 option_rec(const T2 f, F1 &&f0, const option<T1> &o) {
+      static T2 option_rec(T2 f, F1 &&f0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;
         } else {
@@ -147,7 +147,7 @@ struct InductiveInModule {
       }
 
       template <typename T1>
-      static T1 get_or_default(const T1 default0, const option<T1> &o) {
+      static T1 get_or_default(T1 default0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return default0;
         } else {

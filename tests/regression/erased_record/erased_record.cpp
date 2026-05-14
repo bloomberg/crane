@@ -1,4 +1,4 @@
-#include <erased_record.h>
+#include "erased_record.h"
 
 unsigned int ErasedRecord::complex_match(const ErasedRecord::ManyProps &r) {
   unsigned int f0 = r.field0;

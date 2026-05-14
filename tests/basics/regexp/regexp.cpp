@@ -1,4 +1,4 @@
-#include <regexp.h>
+#include "regexp.h"
 
 bool Matcher::char_eq(const int64_t x, const int64_t y) {
   bool b = x == y;

@@ -1,4 +1,4 @@
-#include <fold_sequence_state_trace.h>
+#include "fold_sequence_state_trace.h"
 
 FoldSequenceStateTraceCase::Line
 FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,

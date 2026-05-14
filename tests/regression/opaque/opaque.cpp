@@ -1,4 +1,4 @@
-#include <opaque.h>
+#include "opaque.h"
 
 unsigned int Opaque::safe_pred(const unsigned int n) {
   if (n <= 0) {

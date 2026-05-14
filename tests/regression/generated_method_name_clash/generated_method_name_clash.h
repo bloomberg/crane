@@ -83,7 +83,7 @@ struct GeneratedMethodNameClash {
 
   template <typename T1, typename F2>
     requires std::is_invocable_r_v<T1, F2 &, bool &>
-  static T1 token_rect(const T1 f, const T1 f0, F2 &&f1, const token &t) {
+  static T1 token_rect(T1 f, T1 f0, F2 &&f1, const token &t) {
     if (std::holds_alternative<typename token::Clone>(t.v())) {
       return f;
     } else if (std::holds_alternative<typename token::V>(t.v())) {
@@ -96,7 +96,7 @@ struct GeneratedMethodNameClash {
 
   template <typename T1, typename F2>
     requires std::is_invocable_r_v<T1, F2 &, bool &>
-  static T1 token_rec(const T1 f, const T1 f0, F2 &&f1, const token &t) {
+  static T1 token_rec(T1 f, T1 f0, F2 &&f1, const token &t) {
     if (std::holds_alternative<typename token::Clone>(t.v())) {
       return f;
     } else if (std::holds_alternative<typename token::V>(t.v())) {

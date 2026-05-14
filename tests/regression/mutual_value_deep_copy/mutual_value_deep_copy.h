@@ -65,6 +65,7 @@ struct MutualValueDeepCopy {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -75,9 +76,8 @@ struct MutualValueDeepCopy {
           _dst->d_v_ = AEnd{};
         } else {
           const auto &_alt = std::get<ANode>(_src->v());
-          _dst->d_v_ = ANode{
-              _alt.d_a0,
-              _alt.d_a1 ? std::make_unique<MutualValueDeepCopy::b>() : nullptr};
+          _dst->d_v_ =
+              ANode{_alt.d_a0, _alt.d_a1 ? std::make_unique<b>() : nullptr};
           auto &_dst_alt = std::get<ANode>(_dst->d_v_);
           if (_alt.d_a1) {
             if (std::holds_alternative<typename MutualValueDeepCopy::b::BNode>(
@@ -88,7 +88,7 @@ struct MutualValueDeepCopy {
               auto &_pdst = std::get<typename MutualValueDeepCopy::b::BNode>(
                   _dst_alt.d_a1->v_mut());
               if (_psrc.d_a0) {
-                _pdst.d_a0 = std::make_unique<MutualValueDeepCopy::a>();
+                _pdst.d_a0 = std::make_unique<a>();
                 _stack.push_back({_psrc.d_a0.get(), _pdst.d_a0.get()});
               }
             }
@@ -108,6 +108,7 @@ struct MutualValueDeepCopy {
     // MANIPULATORS
     ~a() {
       std::vector<std::unique_ptr<a>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](a &_node) {
         if (std::holds_alternative<ANode>(_node.d_v_)) {
           auto &_alt = std::get<ANode>(_node.d_v_);
@@ -188,6 +189,7 @@ struct MutualValueDeepCopy {
     // MANIPULATORS
     ~b() {
       std::vector<std::unique_ptr<b>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](b &_node) {
         if (std::holds_alternative<BNode>(_node.d_v_)) {
           auto &_alt = std::get<BNode>(_node.d_v_);
@@ -221,7 +223,7 @@ struct MutualValueDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &, b &>
-  static T1 a_rect(const T1 f, F1 &&f0, const a &a0) {
+  static T1 a_rect(T1 f, F1 &&f0, const a &a0) {
     if (std::holds_alternative<typename a::AEnd>(a0.v())) {
       return f;
     } else {
@@ -232,7 +234,7 @@ struct MutualValueDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, bool &, b &>
-  static T1 a_rec(const T1 f, F1 &&f0, const a &a0) {
+  static T1 a_rec(T1 f, F1 &&f0, const a &a0) {
     if (std::holds_alternative<typename a::AEnd>(a0.v())) {
       return f;
     } else {

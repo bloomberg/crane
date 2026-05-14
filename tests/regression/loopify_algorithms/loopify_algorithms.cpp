@@ -1,20 +1,23 @@
-#include <loopify_algorithms.h>
+#include "loopify_algorithms.h"
 
 /// Consolidated UNIQUE list/sequence algorithms.
-unsigned int LoopifyAlgorithms::len_impl(const List<unsigned int> &l) {
+unsigned int LoopifyAlgorithms::len_impl(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves across recursive call.
-  struct _Resume1 {};
+  /// _Resume_Cons: resumes after recursive call with _result.
+  struct _Resume_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -26,11 +29,11 @@ unsigned int LoopifyAlgorithms::len_impl(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{});
+        _stack.emplace_back(_Resume_Cons{});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_result + 1);
     }
   }
@@ -58,24 +61,25 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
             filter_multiples;
         filter_multiples = [&](unsigned int p,
                                List<unsigned int> rest) -> List<unsigned int> {
+          /// _Enter: captures varying parameters for each recursive call.
           struct _Enter {
             List<unsigned int> rest;
           };
-          /// Continuation: saves [d_a00] across recursive call.
+          /// _Resume1: saves [d_a00], resumes after recursive call with
+          /// _result.
           struct _Resume1 {
             unsigned int d_a00;
           };
           using _Frame = std::variant<_Enter, _Resume1>;
           List<unsigned int> _result{};
           std::vector<_Frame> _stack;
-          _stack.reserve(16);
+          _stack.reserve(8);
           _stack.emplace_back(_Enter{rest});
-          /// Frame dispatch: _Enter, _Resume1.
+          /// Loopified filter_multiples: _Enter -> _Resume1.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
             _stack.pop_back();
@@ -83,16 +87,16 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
               auto _f = std::move(std::get<_Enter>(_frame));
               List<unsigned int> rest = std::move(_f.rest);
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                      rest.v())) {
+                      rest.v_mut())) {
                 _result = List<unsigned int>::nil();
               } else {
-                const auto &[d_a00, d_a10] =
-                    std::get<typename List<unsigned int>::Cons>(rest.v());
+                auto &[d_a00, d_a10] =
+                    std::get<typename List<unsigned int>::Cons>(rest.v_mut());
                 if ((p ? d_a00 % p : d_a00) == 0u) {
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 } else {
                   _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 }
               }
             } else {
@@ -108,7 +112,7 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = filter_multiples(d_a0, d_a1_value);
+        _loop_l = filter_multiples(d_a0, *(d_a1));
         _loop_fuel = f;
         continue;
       }
@@ -285,24 +289,25 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        List<unsigned int> d_a1_value = List<unsigned int>(*(d_a1));
         std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
             filter_out;
         filter_out = [&](unsigned int val,
                          List<unsigned int> rest) -> List<unsigned int> {
+          /// _Enter: captures varying parameters for each recursive call.
           struct _Enter {
             List<unsigned int> rest;
           };
-          /// Continuation: saves [d_a00] across recursive call.
+          /// _Resume1: saves [d_a00], resumes after recursive call with
+          /// _result.
           struct _Resume1 {
             unsigned int d_a00;
           };
           using _Frame = std::variant<_Enter, _Resume1>;
           List<unsigned int> _result{};
           std::vector<_Frame> _stack;
-          _stack.reserve(16);
+          _stack.reserve(8);
           _stack.emplace_back(_Enter{rest});
-          /// Frame dispatch: _Enter, _Resume1.
+          /// Loopified filter_out: _Enter -> _Resume1.
           while (!_stack.empty()) {
             _Frame _frame = std::move(_stack.back());
             _stack.pop_back();
@@ -310,16 +315,16 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
               auto _f = std::move(std::get<_Enter>(_frame));
               List<unsigned int> rest = std::move(_f.rest);
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                      rest.v())) {
+                      rest.v_mut())) {
                 _result = List<unsigned int>::nil();
               } else {
-                const auto &[d_a00, d_a10] =
-                    std::get<typename List<unsigned int>::Cons>(rest.v());
+                auto &[d_a00, d_a10] =
+                    std::get<typename List<unsigned int>::Cons>(rest.v_mut());
                 if (val == d_a00) {
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 } else {
                   _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{*(d_a10)});
+                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
                 }
               }
             } else {
@@ -336,7 +341,7 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
         _loop_fuel = f;
-        _loop_l = filter_out(d_a0, d_a1_value);
+        _loop_l = filter_out(d_a0, *(d_a1));
         continue;
       }
     }
@@ -544,22 +549,26 @@ LoopifyAlgorithms::sliding_pairs(const List<unsigned int> &l) {
 }
 
 /// max_prefix_sum l maximum sum of prefix (Kadane-like pattern).
-unsigned int LoopifyAlgorithms::max_prefix_sum(const List<unsigned int> &l) {
+unsigned int LoopifyAlgorithms::max_prefix_sum(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified max_prefix_sum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -571,11 +580,11 @@ unsigned int LoopifyAlgorithms::max_prefix_sum(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int rest = _result;
       unsigned int sum = (d_a0 + rest);
@@ -594,25 +603,27 @@ unsigned int LoopifyAlgorithms::max_prefix_sum(const List<unsigned int> &l) {
 }
 
 /// weighted_sum i l computes weighted sum with increasing index.
-unsigned int LoopifyAlgorithms::weighted_sum(const unsigned int i,
-                                             const List<unsigned int> &l) {
+unsigned int LoopifyAlgorithms::weighted_sum(
+    const unsigned int i,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
     unsigned int i;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
-    decltype((std::declval<const unsigned int &>() *
-              std::declval<unsigned int &>())) _s0;
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    unsigned int _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, i});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified weighted_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -625,11 +636,11 @@ unsigned int LoopifyAlgorithms::weighted_sum(const unsigned int i,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{(i * d_a0)});
+        _stack.emplace_back(_Resume_Cons{(i * d_a0)});
         _stack.emplace_back(_Enter{d_a1.get(), (i + 1)});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f._s0 + _result);
     }
   }
@@ -637,22 +648,26 @@ unsigned int LoopifyAlgorithms::weighted_sum(const unsigned int i,
 }
 
 /// step_sum l sums with conditional doubling for odd numbers.
-unsigned int LoopifyAlgorithms::step_sum(const List<unsigned int> &l) {
+unsigned int LoopifyAlgorithms::step_sum(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [contribution] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [contribution], resumes after recursive call with
+  /// _result.
+  struct _Resume_Cons {
     unsigned int contribution;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -670,11 +685,11 @@ unsigned int LoopifyAlgorithms::step_sum(const List<unsigned int> &l) {
         } else {
           contribution = (d_a0 * 2u);
         }
-        _stack.emplace_back(_Resume1{contribution});
+        _stack.emplace_back(_Resume_Cons{contribution});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f.contribution + _result);
     }
   }
@@ -694,22 +709,26 @@ unsigned int LoopifyAlgorithms::head_nat(const unsigned int d,
 }
 
 /// suffix_sums l computes suffix sums (reverse of prefix sums).
-List<unsigned int> LoopifyAlgorithms::suffix_sums(const List<unsigned int> &l) {
+List<unsigned int> LoopifyAlgorithms::suffix_sums(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified suffix_sums: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -721,11 +740,11 @@ List<unsigned int> LoopifyAlgorithms::suffix_sums(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons((d_a0 + head_nat(0u, rest)), rest);

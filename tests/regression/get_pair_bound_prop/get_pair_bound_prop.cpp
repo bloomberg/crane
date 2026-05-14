@@ -1,4 +1,4 @@
-#include <get_pair_bound_prop.h>
+#include "get_pair_bound_prop.h"
 
 unsigned int GetPairBoundProp::get_reg(const GetPairBoundProp::state &s,
                                        const unsigned int r) {

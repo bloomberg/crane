@@ -667,6 +667,30 @@ let header_imports_bsl =
   ]
 
 let mk_include s = str ("#include <" ^ s ^ ">")
+let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
+
+(** True when BDE (Bloomberg Development Environment) mode is active. *)
+let is_bde () = String.equal (Table.std_lib ()) "BDE"
+
+(** Compute the include guard macro name for a given filename. *)
+let include_guard_name s =
+  let base = Filename.basename s in
+  let name = Filename.remove_extension base in
+  String.uppercase_ascii ("INCLUDED_" ^ name)
+
+(** Strip trailing slash from BDE directory path. *)
+let normalize_bde_dir () =
+  let d = Table.bde_dir () in
+  let n = String.length d in
+  if n > 0 && d.[n - 1] = '/' then String.sub d 0 (n - 1) else d
+
+(** Create a temporary file for capturing compiler error output. *)
+let make_error_file prefix infile =
+  Filename.temp_file (prefix ^ Filename.basename infile ^ "_error") ".log"
+
+(** Remove an error file if it exists. *)
+let cleanup_error_file errfile =
+  if Sys.file_exists errfile then Sys.remove errfile
 
 (** Generates the [#include] block for a C++ implementation file.
     Standard and custom headers are omitted for non-BDE mode because they
@@ -679,10 +703,10 @@ let header fn () =
     | Some s ->
       let s = Filename.basename s in
       let hdr = Filename.remove_extension s ^ ".h" in
-      mk_include hdr ++ fnl ()
+      mk_include_quoted hdr ++ fnl ()
     | None -> mt ()
   in
-  if Table.std_lib () = "BDE" then
+  if is_bde () then
     let imps = get_custom_imports () in
     let himports = header_imports_bsl in
     let h =
@@ -701,25 +725,16 @@ let header fn () =
   else
     self_include ++ fnl2 ()
 
-let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
-
 (** Generates the header file preamble: include guard, includes, BDE concept
     boilerplate (if applicable), and string literals directive. *)
 let spec_header si () =
   let imps = get_custom_imports () in
   let himports =
-    if Table.std_lib () = "BDE" then header_imports_bsl
+    if is_bde () then header_imports_bsl
     else needed_std_headers ()
   in
   (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
-  let guard_name =
-    match si with
-    | Some s ->
-      let base = Filename.basename s in
-      let name = Filename.remove_extension base in
-      Some (String.uppercase_ascii ("INCLUDED_" ^ name))
-    | None -> None
-  in
+  let guard_name = Option.map include_guard_name si in
   let guard_open =
     match guard_name with
     | Some g ->
@@ -750,7 +765,7 @@ let spec_header si () =
       h
   in
   let fun_concept =
-    if Table.std_lib () = "BDE" then
+    if is_bde () then
       "template <class From, class To>\n\
        concept convertible_to = bsl::is_convertible<From, To>::value;\n\n\
        template <class T, class U>\n\
@@ -761,14 +776,14 @@ let spec_header si () =
   in
   let string_lit_directive =
     if Table.needs_string_literals () then
-      if Table.std_lib () = "BDE" then
+      if is_bde () then
         fnl () ++ str "using namespace bsl::string_literals;" ++ fnl ()
       else
         fnl () ++ str "using namespace std::string_literals;" ++ fnl ()
     else
       mt ()
   in
-  if Table.std_lib () = "BDE" then
+  if is_bde () then
     guard_open
     ++ h
     ++ fnl2 ()
@@ -789,9 +804,7 @@ let spec_header si () =
 let spec_footer si () =
   match si with
   | Some s ->
-    let base = Filename.basename s in
-    let name = Filename.remove_extension base in
-    let guard = String.uppercase_ascii ("INCLUDED_" ^ name) in
+    let guard = include_guard_name s in
     fnl () ++ str ("#endif // " ^ guard) ++ fnl ()
   | None -> mt ()
 
@@ -942,7 +955,7 @@ let format_buffer_to_string (buf : Buffer.t) : string =
     if the formatter is unavailable or style is set to ["None"]. *)
 let format_file_inplace (filename : string) : unit =
   let skip_format = Table.format_style () = "None" in
-  let use_bde = Table.format_style () = "BDE" || Table.std_lib () = "BDE" in
+  let use_bde = Table.format_style () = "BDE" || is_bde () in
   let available =
     if use_bde then
       bde_format_available ()
@@ -1001,7 +1014,7 @@ let mark_higher_order_projections struc =
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
 *)
-let print_structure_to_file (fn, si, mo) dry struc =
+let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
   reset_renaming_tables AllButExternal;
@@ -1057,6 +1070,23 @@ let print_structure_to_file (fn, si, mo) dry struc =
     Cpp_state.require_header "optional"
   end;
   let opened = opened_libraries () in
+  (* In separate extraction, force fully qualified cross-module references
+     (e.g. Datatypes::List instead of bare List). *)
+  ( match namespace with
+  | Some _ ->
+    Common.mpfiles_clear ();
+    Common.set_force_qualified_capitalization ()
+  | None -> () );
+  let ns_open =
+    match namespace with
+    | Some ns -> str ("namespace " ^ ns ^ " {") ++ fnl2 ()
+    | None -> mt ()
+  in
+  let ns_close =
+    match namespace with
+    | Some ns -> fnl () ++ str ("} // namespace " ^ ns) ++ fnl ()
+    | None -> mt ()
+  in
   (* Print the implementation *)
   let cout = if dry then None else Option.map open_out fn in
   let ft = formatter dry cout in
@@ -1066,7 +1096,9 @@ let print_structure_to_file (fn, si, mo) dry struc =
       set_phase Impl;
       pp_with ft (header fn ());
       pp_with ft (d.preamble mo comment opened unsafe_needs);
+      pp_with ft ns_open;
       pp_with ft (d.pp_struct struc);
+      pp_with ft ns_close;
       (* If a [main] function returning a monad was found, it was renamed to
          [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
          calls [_main()->run()] to execute the ITree; in sequential mode (monad
@@ -1112,7 +1144,9 @@ let print_structure_to_file (fn, si, mo) dry struc =
           set_phase Intf;
           pp_with ft (spec_header (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+          pp_with ft ns_open;
           pp_with ft (d.pp_hstruct struc);
+          pp_with ft ns_close;
           pp_with ft (spec_footer (Some si) ());
           Format.pp_print_flush ft ();
           close_out cout
@@ -1133,7 +1167,9 @@ let print_structure_to_file (fn, si, mo) dry struc =
       set_phase Intf;
       pp_with ft (spec_header None ());
       pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+      pp_with ft ns_open;
       pp_with ft (d.pp_hstruct struc);
+      pp_with ft ns_close;
       Format.pp_print_flush ft ()
     with reraise ->
       Format.pp_print_flush ft ();
@@ -1299,12 +1335,292 @@ let separate_extraction ~opaque_access lr =
       struc
   in
   warns ();
+  (* Skip modules whose declarations are all custom-extracted (they would
+     produce empty files containing only boilerplate headers). *)
+  let decl_refs = function
+    | Dind (kn, _) -> [GlobRef.IndRef (kn, 0)]
+    | Dtype (r, _, _) | Dterm (r, _, _) -> [r]
+    | Dfix (rv, _, _) -> Array.to_list rv
+  in
+  let has_real_decls sel =
+    List.exists
+      (fun (_, se) ->
+        match se with
+        | SEdecl d ->
+          List.exists (fun r -> not (is_any_custom r)) (decl_refs d)
+        | SEmodule _ | SEmodtype _ -> true )
+      sel
+  in
+  (* Check whether a namespace name collides with any top-level declaration
+     inside the module (e.g. concept OrderedType inside namespace OrderedType). *)
+  let ref_label = function
+    | GlobRef.ConstRef c -> Label.to_string (Constant.label c)
+    | GlobRef.IndRef (ind, _) -> Label.to_string (MutInd.label ind)
+    | GlobRef.ConstructRef ((ind, _), _) -> Label.to_string (MutInd.label ind)
+    | GlobRef.VarRef v -> Id.to_string v
+  in
+  let decl_names = function
+    | Dterm (r, _, _) | Dtype (r, _, _) -> [ref_label r]
+    | Dfix (rv, _, _) -> Array.to_list (Array.map ref_label rv)
+    | Dind (kn, ind) ->
+      Array.to_list (Array.map (fun ip -> Id.to_string ip.ip_typename) ind.ind_packets)
+  in
+  let ns_collides_with_decl ns sel =
+    List.exists
+      (fun (_, se) ->
+        match se with
+        | SEdecl d -> List.exists (String.equal ns) (decl_names d)
+        | _ -> false )
+      sel
+  in
+  let valid_mps =
+    List.filter_map (fun (mp, sel) -> if has_real_decls sel then Some mp else None) struc
+  in
+  Cpp_state.set_valid_output_modules valid_mps;
+  Common.set_non_output_modules valid_mps;
+  let rec pre_scan_unmerged sel =
+    let refs_unmerged_functor (me : ml_module_expr) =
+      let rec get_base : ml_module_expr -> bool = function
+        | MEapply (me2, _) -> get_base me2
+        | MEident mp ->
+          let lbl = match mp with
+            | ModPath.MPdot (_, l) -> Some (String.capitalize_ascii (Label.to_string l))
+            | _ -> None
+          in
+          (match lbl with Some n -> Cpp_state.is_global_unmerged n | None -> false)
+        | MEfunctor (_, _, me2) -> get_base me2
+        | MEstruct _ -> false
+      in get_base me
+    in
+    List.iter (fun (l, se) ->
+      match se with
+      | SEmodule { ml_mod_expr = MEident _; _ } -> ()
+      | SEmodule m ->
+        let subs = match m.ml_mod_expr with
+          | MEstruct (_, s) -> s
+          | MEapply (me, _) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEapply (me2, _) -> get_subs me2
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+          | MEident _ -> []
+          | MEfunctor (_, _, me) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEapply (me2, _) ->
+                let rec get2 = function
+                  | MEstruct (_, s) -> s | MEapply (m2, _) -> get2 m2
+                  | MEfunctor (_, _, m2) -> get2 m2 | MEident _ -> []
+                in get2 me2
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+        in
+        let has_funcs = List.exists (fun (_, se') ->
+          match se' with
+          | SEdecl (Dterm _ | Dfix _) -> true
+          | _ -> false
+        ) subs in
+        let is_unmerged_apply = refs_unmerged_functor m.ml_mod_expr in
+        if has_funcs || is_unmerged_apply then begin
+          let name = String.capitalize_ascii (Label.to_string l) in
+          Cpp_state.mark_global_unmerged name
+        end;
+        pre_scan_unmerged subs
+      | _ -> ()
+    ) sel
+  in
+  List.iter (fun (_, sel) -> pre_scan_unmerged sel) struc;
+  let modtype_table : (ModPath.t, ml_module_type) Hashtbl.t = Hashtbl.create 16 in
+  let rec collect_modtypes mp_prefix sel =
+    List.iter (fun (l, se) ->
+      match se with
+      | SEmodtype mt ->
+        let mt_mp = Names.ModPath.MPdot (mp_prefix, l) in
+        Hashtbl.replace modtype_table mt_mp mt
+      | SEmodule m ->
+        let sub_mp = Names.ModPath.MPdot (mp_prefix, l) in
+        (match m.ml_mod_expr with
+         | MEstruct (_, subs) -> collect_modtypes sub_mp subs
+         | _ -> ())
+      | _ -> ()
+    ) sel
+  in
+  List.iter (fun (mp, sel) -> collect_modtypes mp sel) struc;
+  let rec pre_scan_meyers_singletons ~in_template sel =
+    List.iter (fun (_l, se) ->
+      match se with
+      | SEdecl (Dterm (r, _body, ty)) ->
+        let is_function = match ty with Tarr _ -> true | _ -> false in
+        if in_template && not is_function then begin
+          let mp = Table.modpath_of_r r in
+          let lbl = Table.label_of_r r in
+          Cpp_state.template_static_accessors :=
+            (mp, lbl) :: !Cpp_state.template_static_accessors;
+          (match r with
+           | GlobRef.ConstRef c ->
+             Hashtbl.replace Cpp_state.template_static_accessor_kns
+               (Constant.canonical c) ()
+           | _ -> ())
+        end else if not in_template && not is_function then begin
+          let lbl = Table.label_of_r r in
+          Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
+        end
+      | SEdecl (Dfix (refs, _bodies, tys)) ->
+        Array.iteri (fun i r ->
+          let is_function = match tys.(i) with Tarr _ -> true | _ -> false in
+          if in_template && not is_function then begin
+            let mp = Table.modpath_of_r r in
+            let lbl = Table.label_of_r r in
+            Cpp_state.template_static_accessors :=
+              (mp, lbl) :: !Cpp_state.template_static_accessors;
+            (match r with
+             | GlobRef.ConstRef c ->
+               Hashtbl.replace Cpp_state.template_static_accessor_kns
+                 (Constant.canonical c) ()
+             | _ -> ())
+          end else if not in_template && not is_function then begin
+            let lbl = Table.label_of_r r in
+            Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
+          end
+        ) refs
+      | SEmodule m ->
+        let has_params = match m.ml_mod_expr with
+          | MEfunctor _ -> true
+          | _ -> false
+        in
+        let sub_in_template = in_template || has_params in
+        let rec register_modtype_accessors modtype_table ?param_mp = function
+          | MTsig (_, sig_items) ->
+            List.iter (fun (l, specif) ->
+              match specif with
+              | Spec (Sval (r, _, ty)) ->
+                let is_function = match ty with Tarr _ -> true | _ -> false in
+                if not is_function then begin
+                  let mp = Table.modpath_of_r r in
+                  let lbl = Table.label_of_r r in
+                  Cpp_state.template_static_accessors :=
+                    (mp, lbl) :: !Cpp_state.template_static_accessors;
+                  (match param_mp with
+                   | Some pmp ->
+                     Cpp_state.template_static_accessors :=
+                       (pmp, lbl) :: !Cpp_state.template_static_accessors
+                   | None -> ())
+                end
+              | Smodule mt ->
+                let sub_param_mp = match param_mp with
+                  | Some pmp -> Some (Names.ModPath.MPdot (pmp, l))
+                  | None -> None
+                in
+                register_modtype_accessors modtype_table ?param_mp:sub_param_mp mt
+              | _ -> ()
+            ) sig_items
+          | MTfunsig (_, _, mt') -> register_modtype_accessors modtype_table ?param_mp mt'
+          | MTwith (mt', _) -> register_modtype_accessors modtype_table ?param_mp mt'
+          | MTident mp ->
+            (match Hashtbl.find_opt modtype_table mp with
+             | Some resolved_mt -> register_modtype_accessors modtype_table ?param_mp resolved_mt
+             | None -> ())
+        in
+        let rec scan_functor_type_params modtype_table = function
+          | MTfunsig (mbid, param_mt, body_mt) ->
+            let param_mp = Names.ModPath.MPbound mbid in
+            register_modtype_accessors modtype_table ~param_mp param_mt;
+            scan_functor_type_params modtype_table body_mt
+          | _ -> ()
+        in
+        scan_functor_type_params modtype_table m.ml_mod_type;
+        let subs = match m.ml_mod_expr with
+          | MEstruct (_, s) -> s
+          | MEfunctor (_, _, me) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEapply (me2, _) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+          | MEapply (me, _) ->
+            let rec get_subs = function
+              | MEstruct (_, s) -> s
+              | MEapply (me2, _) -> get_subs me2
+              | MEfunctor (_, _, me2) -> get_subs me2
+              | MEident _ -> []
+            in get_subs me
+          | MEident _ -> []
+        in
+        pre_scan_meyers_singletons ~in_template:sub_in_template subs
+      | _ -> ()
+    ) sel
+  in
+  List.iter (fun (_, sel) -> pre_scan_meyers_singletons ~in_template:false sel) struc;
   let print = function
-    | ((MPfile dir as mp), sel) as e ->
-      print_structure_to_file (module_filename mp) false [e]
+    | ((MPfile _dir as mp), sel) as e ->
+      if has_real_decls sel then begin
+        let ns =
+          let base = ns_of_modfile mp in
+          if ns_collides_with_decl base sel then base ^ "_"
+          else base
+        in
+        print_structure_to_file ~namespace:(Some ns) (module_filename mp) false [e]
+      end
     | (MPdot _ | MPbound _), _ -> assert false
   in
+  (* Pre-build the method registry from the full structure so that
+     cross-module method calls are recognized during per-module rendering.
+     The registry creation calls pp_global_name which has side effects on
+     mpfiles (include tracking), so save/restore the mpfiles state. *)
+  let saved_mpfiles = Common.mpfiles_save () in
+  set_phase Pre;
+  Cpp_state.set_global_method_registry (Method_registry.create struc);
+  (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
+     and calls [visit ~in_struct elem] on each structure element. *)
+  let iter_structure visit struc =
+    let rec walk_elem ~in_struct = function
+      | SEmodule m -> walk_mexpr m.ml_mod_expr
+      | se -> visit ~in_struct se
+    and walk_mexpr = function
+      | MEstruct (_, sel) ->
+        List.iter (fun (_, se) -> walk_elem ~in_struct:true se) sel
+      | MEfunctor (_, _, me) -> walk_mexpr me
+      | MEapply (me, _) -> walk_mexpr me
+      | MEident _ -> ()
+    in
+    List.iter (fun (_, sel) ->
+      List.iter (fun (_, se) -> walk_elem ~in_struct:false se) sel
+    ) struc
+  in
+  (* Pre-register enum inductives and struct-member value accessors. *)
+  iter_structure (fun ~in_struct se ->
+    match se with
+    | SEdecl (Dind (kn, ind)) ->
+      let is_mutual = Array.length ind.ind_packets > 1 in
+      Array.iteri (fun i _p ->
+        let ind_ref = GlobRef.IndRef (kn, i) in
+        if not (Table.is_custom ind_ref) && not is_mutual then
+          if Table.is_enum_inductive_packet ind i then
+            Table.add_enum_inductive ind_ref
+      ) ind.ind_packets
+    | SEdecl (Dterm (r, _, ty)) when in_struct ->
+      if (match ty with Tarr _ -> false | _ -> true) then
+        Cpp_state.register_template_static_accessor
+          (Table.modpath_of_r r) (Table.label_of_r r)
+    | SEdecl (Dfix (refs, _, tys)) when in_struct ->
+      Array.iteri (fun i r ->
+        if (match tys.(i) with Tarr _ -> false | _ -> true) then
+          Cpp_state.register_template_static_accessor
+            (Table.modpath_of_r r) (Table.label_of_r r)
+      ) refs
+    | _ -> ()
+  ) struc;
+  set_phase Impl;
+  Common.mpfiles_restore saved_mpfiles;
   List.iter print struc;
+  Cpp_state.clear_global_method_registry ();
+  Cpp_state.clear_valid_output_modules ();
+  Cpp_state.clear_global_unmerged ();
+  Common.clear_non_output_modules ();
   reset ()
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
@@ -1397,8 +1713,7 @@ let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
   let errfile =
     match errfile with
     | Some e -> e
-    | None ->
-      Filename.temp_file ("cpp_" ^ Filename.basename infile ^ "_error") ".log"
+    | None -> make_error_file "cpp_" infile
   in
   let outfile =
     match outfile with
@@ -1407,14 +1722,8 @@ let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
       Filename.chop_suffix infile ".cpp" ^ if shouldlink then "" else ".o"
   in
   let args =
-    if Table.std_lib () = "BDE" then
-      let bde_dir =
-        let n = String.length (Table.bde_dir ()) in
-        if n > 0 && (Table.bde_dir ()).[n - 1] = '/' then
-          String.sub (Table.bde_dir ()) 0 (n - 1)
-        else
-          Table.bde_dir ()
-      in
+    if is_bde () then
+      let bde_dir = normalize_bde_dir () in
       ["clang++"]
       @ prepend_to_all "-I" includes
       @ [
@@ -1452,9 +1761,9 @@ let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
     let ic = open_in errfile in
     let errors = really_input_string ic (in_channel_length ic) in
     close_in ic;
-    if Sys.file_exists errfile then Sys.remove errfile;
+    cleanup_error_file errfile;
     raise (ClangError (res, errors)) );
-  if Sys.file_exists errfile then Sys.remove errfile
+  cleanup_error_file errfile
 
 exception NoOcamloptFound
 
@@ -1473,7 +1782,7 @@ let compile_ocaml
     match errfile with
     | Some e -> e
     | None ->
-      Filename.temp_file ("ocaml_" ^ Filename.basename infile ^ "_error") ".log"
+      make_error_file "ocaml_" infile
   in
   let outfile =
     match outfile with
@@ -1491,9 +1800,9 @@ let compile_ocaml
     let ic = open_in errfile in
     let errors = really_input_string ic (in_channel_length ic) in
     close_in ic;
-    if Sys.file_exists errfile then Sys.remove errfile;
+    cleanup_error_file errfile;
     raise (OcamloptError (res, errors)) );
-  if Sys.file_exists errfile then Sys.remove errfile
+  cleanup_error_file errfile
 
 (** Links and runs a test executable from the compiled object and its
     [.t.cpp] test driver. Returns the test's stdout. Raises [ClangError] on
@@ -1505,7 +1814,7 @@ let compile_and_test ?outfile ?errfile infile =
     match errfile with
     | Some e -> e
     | None ->
-      Filename.temp_file ("cpp_" ^ Filename.basename infile ^ "_error") ".log"
+      make_error_file "cpp_" infile
   in
   let ofile =
     match outfile with
@@ -1513,14 +1822,8 @@ let compile_and_test ?outfile ?errfile infile =
     | None -> Filename.chop_suffix infile ".cpp" ^ ".t.exe"
   in
   let args =
-    if Table.std_lib () = "BDE" then
-      let bde_dir =
-        let n = String.length (Table.bde_dir ()) in
-        if n > 0 && (Table.bde_dir ()).[n - 1] = '/' then
-          String.sub (Table.bde_dir ()) 0 (n - 1)
-        else
-          Table.bde_dir ()
-      in
+    if is_bde () then
+      let bde_dir = normalize_bde_dir () in
       [
         "clang++";
         "-O2";
@@ -1562,9 +1865,9 @@ let compile_and_test ?outfile ?errfile infile =
     let ic = open_in errfile in
     let errors = really_input_string ic (in_channel_length ic) in
     close_in ic;
-    if Sys.file_exists errfile then Sys.remove errfile;
+    cleanup_error_file errfile;
     raise (ClangError (res, errors)) );
-  if Sys.file_exists errfile then Sys.remove errfile;
+  cleanup_error_file errfile;
   let out = Filename.temp_file "test_out" ".log" in
   let test_exit_code = Sys.command (ofile ^ " >" ^ out ^ " 2>&1") in
   let ic = open_in out in

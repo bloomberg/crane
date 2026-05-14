@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -134,7 +136,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
-  T1 fold_right(F0 &&f, const T1 a0) const {
+  T1 fold_right(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -241,6 +243,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -282,6 +285,7 @@ public:
   // MANIPULATORS
   ~Positive() {
     std::vector<std::unique_ptr<Positive>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
       if (std::holds_alternative<XI>(_node.d_v_)) {
         auto &_alt = std::get<XI>(_node.d_v_);
@@ -401,14 +405,13 @@ struct BinInt {
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, const T1 default0);
+  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct CoalitionBidHonorTraceCase {
   enum class Clan { e_CLANWOLF, e_CLANJADEFALCON, e_CLANGHOSTBEAR };
 
-  template <typename T1>
-  static T1 Clan_rect(const T1 f, const T1 f0, const T1 f1, const Clan c) {
+  template <typename T1> static T1 Clan_rect(T1 f, T1 f0, T1 f1, const Clan c) {
     switch (c) {
     case Clan::e_CLANWOLF: {
       return f;
@@ -424,8 +427,7 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1>
-  static T1 Clan_rec(const T1 f, const T1 f0, const T1 f1, const Clan c) {
+  template <typename T1> static T1 Clan_rec(T1 f, T1 f0, T1 f1, const Clan c) {
     switch (c) {
     case Clan::e_CLANWOLF: {
       return f;
@@ -445,8 +447,7 @@ struct CoalitionBidHonorTraceCase {
   static bool clan_eqb(const Clan c1, const Clan c2);
   enum class Rank { e_WARRIOR, e_STARCAPTAIN, e_STARCOLONEL };
 
-  template <typename T1>
-  static T1 Rank_rect(const T1 f, const T1 f0, const T1 f1, const Rank r) {
+  template <typename T1> static T1 Rank_rect(T1 f, T1 f0, T1 f1, const Rank r) {
     switch (r) {
     case Rank::e_WARRIOR: {
       return f;
@@ -462,8 +463,7 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1>
-  static T1 Rank_rec(const T1 f, const T1 f0, const T1 f1, const Rank r) {
+  template <typename T1> static T1 Rank_rec(T1 f, T1 f0, T1 f1, const Rank r) {
     switch (r) {
     case Rank::e_WARRIOR: {
       return f;
@@ -499,8 +499,7 @@ struct CoalitionBidHonorTraceCase {
   enum class UnitClass { e_OMNIMECH, e_BATTLEMECH, e_ELEMENTAL };
 
   template <typename T1>
-  static T1 UnitClass_rect(const T1 f, const T1 f0, const T1 f1,
-                           const UnitClass u) {
+  static T1 UnitClass_rect(T1 f, T1 f0, T1 f1, const UnitClass u) {
     switch (u) {
     case UnitClass::e_OMNIMECH: {
       return f;
@@ -517,8 +516,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 UnitClass_rec(const T1 f, const T1 f0, const T1 f1,
-                          const UnitClass u) {
+  static T1 UnitClass_rec(T1 f, T1 f0, T1 f1, const UnitClass u) {
     switch (u) {
     case UnitClass::e_OMNIMECH: {
       return f;
@@ -536,8 +534,7 @@ struct CoalitionBidHonorTraceCase {
   enum class WeightClass { e_LIGHT, e_HEAVY, e_ASSAULT };
 
   template <typename T1>
-  static T1 WeightClass_rect(const T1 f, const T1 f0, const T1 f1,
-                             const WeightClass w) {
+  static T1 WeightClass_rect(T1 f, T1 f0, T1 f1, const WeightClass w) {
     switch (w) {
     case WeightClass::e_LIGHT: {
       return f;
@@ -554,8 +551,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 WeightClass_rec(const T1 f, const T1 f0, const T1 f1,
-                            const WeightClass w) {
+  static T1 WeightClass_rec(T1 f, T1 f0, T1 f1, const WeightClass w) {
     switch (w) {
     case WeightClass::e_LIGHT: {
       return f;
@@ -626,8 +622,7 @@ struct CoalitionBidHonorTraceCase {
   static bool metrics_total_lt(const ForceMetrics &m1, const ForceMetrics &m2);
   enum class Side { e_ATTACKER, e_DEFENDER };
 
-  template <typename T1>
-  static T1 Side_rect(const T1 f, const T1 f0, const Side s) {
+  template <typename T1> static T1 Side_rect(T1 f, T1 f0, const Side s) {
     switch (s) {
     case Side::e_ATTACKER: {
       return f;
@@ -640,8 +635,7 @@ struct CoalitionBidHonorTraceCase {
     }
   }
 
-  template <typename T1>
-  static T1 Side_rec(const T1 f, const T1 f0, const Side s) {
+  template <typename T1> static T1 Side_rec(T1 f, T1 f0, const Side s) {
     switch (s) {
     case Side::e_ATTACKER: {
       return f;
@@ -713,7 +707,7 @@ struct CoalitionBidHonorTraceCase {
   enum class TrialType { e_TRIALOFPOSSESSION, e_TRIALOFANNIHILATION };
 
   template <typename T1>
-  static T1 TrialType_rect(const T1 f, const T1 f0, const TrialType t) {
+  static T1 TrialType_rect(T1 f, T1 f0, const TrialType t) {
     switch (t) {
     case TrialType::e_TRIALOFPOSSESSION: {
       return f;
@@ -727,7 +721,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 TrialType_rec(const T1 f, const T1 f0, const TrialType t) {
+  static T1 TrialType_rec(T1 f, T1 f0, const TrialType t) {
     switch (t) {
     case TrialType::e_TRIALOFPOSSESSION: {
       return f;
@@ -802,7 +796,7 @@ struct CoalitionBidHonorTraceCase {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 Prize_rec(const T1 f, F1 &&f0) const {
+    T1 Prize_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Prize::PrizeHonor>(_sv.v())) {
         return f;
@@ -815,7 +809,7 @@ struct CoalitionBidHonorTraceCase {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 Prize_rect(const T1 f, F1 &&f0) const {
+    T1 Prize_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename Prize::PrizeHonor>(_sv.v())) {
         return f;
@@ -1043,7 +1037,7 @@ struct CoalitionBidHonorTraceCase {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 RefusalReason_rec(const T1 f, F1 &&f0) const {
+    T1 RefusalReason_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<
               typename RefusalReason::RefusalInsufficientRank>(_sv.v())) {
@@ -1057,7 +1051,7 @@ struct CoalitionBidHonorTraceCase {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 RefusalReason_rect(const T1 f, F1 &&f0) const {
+    T1 RefusalReason_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<
               typename RefusalReason::RefusalInsufficientRank>(_sv.v())) {
@@ -1236,7 +1230,7 @@ struct CoalitionBidHonorTraceCase {
              std::is_invocable_r_v<T1, F7 &, Side &> &&
              std::is_invocable_r_v<T1, F8 &, Side &>
   static T1 ProtocolAction_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                                F5 &&f4, const T1 f5, F7 &&f6, F8 &&f7,
+                                F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
                                 const ProtocolAction &p) {
     if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p.v())) {
       const auto &[d_chal] =
@@ -1290,7 +1284,7 @@ struct CoalitionBidHonorTraceCase {
              std::is_invocable_r_v<T1, F7 &, Side &> &&
              std::is_invocable_r_v<T1, F8 &, Side &>
   static T1 ProtocolAction_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                               F5 &&f4, const T1 f5, F7 &&f6, F8 &&f7,
+                               F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
                                const ProtocolAction &p) {
     if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p.v())) {
       const auto &[d_chal] =
@@ -1340,8 +1334,7 @@ struct CoalitionBidHonorTraceCase {
   };
 
   template <typename T1>
-  static T1 ReadyStatus_rect(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                             const ReadyStatus r) {
+  static T1 ReadyStatus_rect(T1 f, T1 f0, T1 f1, T1 f2, const ReadyStatus r) {
     switch (r) {
     case ReadyStatus::e_NEITHERREADY: {
       return f;
@@ -1361,8 +1354,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1>
-  static T1 ReadyStatus_rec(const T1 f, const T1 f0, const T1 f1, const T1 f2,
-                            const ReadyStatus r) {
+  static T1 ReadyStatus_rec(T1 f, T1 f0, T1 f1, T1 f2, const ReadyStatus r) {
     switch (r) {
     case ReadyStatus::e_NEITHERREADY: {
       return f;
@@ -1702,7 +1694,7 @@ struct CoalitionBidHonorTraceCase {
              std::is_invocable_r_v<T1, F5 &, BatchallChallenge &,
                                    RefusalReason &> &&
              std::is_invocable_r_v<T1, F6 &, ProtocolAction &>
-  static T1 BatchallPhase_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
+  static T1 BatchallPhase_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                F5 &&f4, F6 &&f5, const BatchallPhase &b) {
     if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b.v())) {
       return f;
@@ -1759,8 +1751,8 @@ struct CoalitionBidHonorTraceCase {
              std::is_invocable_r_v<T1, F5 &, BatchallChallenge &,
                                    RefusalReason &> &&
              std::is_invocable_r_v<T1, F6 &, ProtocolAction &>
-  static T1 BatchallPhase_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                              F5 &&f4, F6 &&f5, const BatchallPhase &b) {
+  static T1 BatchallPhase_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
+                              F6 &&f5, const BatchallPhase &b) {
     if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b.v())) {
       return f;
     } else if (std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
@@ -2006,7 +1998,7 @@ struct CoalitionBidHonorTraceCase {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, const T1 default0) {
+T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;

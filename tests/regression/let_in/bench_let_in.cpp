@@ -1,4 +1,4 @@
-#include <bench_let_in.h>
+#include "bench_let_in.h"
 
 unsigned int BenchLetIn::swap_snd(const unsigned int a, const unsigned int b) {
   BenchLetIn::pair<unsigned int, unsigned int> p =

@@ -1,4 +1,4 @@
-#include <ind_param.h>
+#include "ind_param.h"
 
 unsigned int IndParam::NatContainer::size(const IndParam::NatContainer::t &c) {
   if (std::holds_alternative<typename IndParam::NatContainer::t::Empty>(

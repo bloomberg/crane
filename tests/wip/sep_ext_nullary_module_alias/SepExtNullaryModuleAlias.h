@@ -1,0 +1,50 @@
+#ifndef INCLUDED_SEPEXTNULLARYMODULEALIAS
+#define INCLUDED_SEPEXTNULLARYMODULEALIAS
+
+#include <concepts>
+#include <memory>
+#include <optional>
+#include <type_traits>
+
+namespace SepExtNullaryModuleAlias {
+
+template <typename M>
+concept HasVal = requires {
+  typename M::t;
+  requires(
+      requires {
+        { M::empty } -> std::convertible_to<typename M::t>;
+      } ||
+      requires {
+        { M::empty() } -> std::convertible_to<typename M::t>;
+      });
+};
+template <typename M>
+concept Config = requires {
+  requires HasVal<typename M::V>;
+  requires(
+      requires {
+        { M::default_val } -> std::convertible_to<unsigned int>;
+      } ||
+      requires {
+        { M::default_val() } -> std::convertible_to<unsigned int>;
+      });
+};
+
+template <Config C> struct Worker {
+  using MyV = typename C::V;
+
+  static const typename MyV::t &get_empty() {
+    static const typename MyV::t v = MyV::empty();
+    return v;
+  }
+
+  static const unsigned int &get_default() {
+    static const unsigned int v = C::default_val();
+    return v;
+  }
+};
+
+} // namespace SepExtNullaryModuleAlias
+
+#endif // INCLUDED_SEPEXTNULLARYMODULEALIAS

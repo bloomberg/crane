@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Datatypes {
   static Bool0 negb(const Bool0 b);
@@ -25,11 +25,11 @@ struct TypeclassFunctionFieldProbe {
 
   static_assert(HasEndo<boolEndo, Bool0>);
 
-  template <typename _tcI0, typename T1> static T1 use(const T1 x) {
+  template <typename _tcI0, typename T1> static T1 use(const T1 &x) {
     return _tcI0::endo(_tcI0::endo(x));
   }
 
-  static inline const Bool0 sample = use<boolEndo, Bool0>(Bool0::e_TRUE0);
+  static inline const Bool0 sample = use<boolEndo, Bool0>(Bool0::e_TRUE);
 };
 
 #endif // INCLUDED_TYPECLASS_FUNCTION_FIELD_PROBE

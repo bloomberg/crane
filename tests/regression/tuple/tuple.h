@@ -54,6 +54,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -82,6 +83,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -151,7 +153,7 @@ public:
   explicit Prod(const Prod<_U0, _U1> &_other) {
     const auto &[d_a0, d_a1] =
         std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
+    this->d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
   }
 
   static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
@@ -169,7 +171,7 @@ struct Tuple {
   template <typename a, typename b> using pair = Prod<a, b>;
 
   template <typename T1, typename T2>
-  static Prod<T1, T2> make_pair(const T1 a, const T2 b) {
+  static Prod<T1, T2> make_pair(T1 a, T2 b) {
     return Prod<T1, T2>::pair(a, b);
   }
 

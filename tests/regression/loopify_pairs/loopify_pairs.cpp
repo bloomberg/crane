@@ -1,27 +1,29 @@
-#include <loopify_pairs.h>
+#include "loopify_pairs.h"
 
 /// Consolidated UNIQUE pair/tuple operations.
 /// unzip l splits list of nat pairs into pair of lists.
 std::pair<LoopifyPairs::list<unsigned int>, LoopifyPairs::list<unsigned int>>
 LoopifyPairs::unzip(
-    const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> &l) {
+    const LoopifyPairs::list<std::pair<unsigned int, unsigned int>>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPairs::list<std::pair<unsigned int, unsigned int>> *l;
   };
 
-  /// Continuation: saves [x, y] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_x: saves [x, y], resumes after recursive call, then processes rest.
+  struct _Cont_x {
     unsigned int x;
     unsigned int y;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_x>;
   std::pair<LoopifyPairs::list<unsigned int>, LoopifyPairs::list<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified unzip: _Enter -> _Cont_x.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -38,11 +40,11 @@ LoopifyPairs::unzip(
             std::pair<unsigned int, unsigned int>>::Cons>(l.v());
         const unsigned int &x = d_a0.first;
         const unsigned int &y = d_a0.second;
-        _stack.emplace_back(_Cont1{x, y});
+        _stack.emplace_back(_Cont_x{x, y});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_x>(_frame));
       unsigned int x = _f.x;
       unsigned int y = _f.y;
       const LoopifyPairs::list<unsigned int> &xs = _result.first;
@@ -58,28 +60,31 @@ LoopifyPairs::unzip(
 std::pair<LoopifyPairs::list<unsigned int>,
           std::pair<LoopifyPairs::list<unsigned int>,
                     LoopifyPairs::list<unsigned int>>>
-LoopifyPairs::partition3(const unsigned int pivot,
-                         const LoopifyPairs::list<unsigned int> &l) {
+LoopifyPairs::partition3(
+    const unsigned int pivot,
+    const LoopifyPairs::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPairs::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0, pivot] across recursive call, then processes
-  /// rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0, pivot], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
     unsigned int pivot;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<LoopifyPairs::list<unsigned int>,
             std::pair<LoopifyPairs::list<unsigned int>,
                       LoopifyPairs::list<unsigned int>>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified partition3: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -94,11 +99,11 @@ LoopifyPairs::partition3(const unsigned int pivot,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0, pivot});
+        _stack.emplace_back(_Cont_Cons{d_a0, pivot});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       const unsigned int pivot = _f.pivot;
       const LoopifyPairs::list<unsigned int> &lt = _result.first;
@@ -124,23 +129,26 @@ LoopifyPairs::partition3(const unsigned int pivot,
 }
 
 /// min_max l finds both min and max in one pass.
-std::pair<unsigned int, unsigned int>
-LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
+std::pair<unsigned int, unsigned int> LoopifyPairs::min_max(
+    const LoopifyPairs::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPairs::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified min_max: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -158,12 +166,12 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
                 typename LoopifyPairs::list<unsigned int>::Nil>(_sv.v())) {
           _result = std::make_pair(d_a0, d_a0);
         } else {
-          _stack.emplace_back(_Cont1{d_a0});
+          _stack.emplace_back(_Cont_Cons{d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       const unsigned int &mn = _result.first;
       const unsigned int &mx = _result.second;
@@ -175,23 +183,26 @@ LoopifyPairs::min_max(const LoopifyPairs::list<unsigned int> &l) {
 }
 
 /// sum_and_count computes both in one pass.
-std::pair<unsigned int, unsigned int>
-LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
+std::pair<unsigned int, unsigned int> LoopifyPairs::sum_and_count(
+    const LoopifyPairs::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPairs::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified sum_and_count: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -204,11 +215,11 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       const unsigned int &s = _result.first;
       const unsigned int &c = _result.second;
@@ -220,22 +231,26 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<unsigned int> &l) {
 
 /// sum_prod_count triple accumulator.
 std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
-LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
+LoopifyPairs::sum_prod_count(
+    const LoopifyPairs::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPairs::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<unsigned int, std::pair<unsigned int, unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified sum_prod_count: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -248,11 +263,11 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPairs::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       const unsigned int &s = _result.first;
       const std::pair<unsigned int, unsigned int> &p0 = _result.second;

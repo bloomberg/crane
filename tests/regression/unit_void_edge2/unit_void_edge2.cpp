@@ -1,6 +1,6 @@
-#include <unit_void_edge2.h>
+#include "unit_void_edge2.h"
 
-unsigned int UnitVoidEdge2::take_unit(const std::monostate &) { return 42u; }
+unsigned int UnitVoidEdge2::take_unit(const std::monostate) { return 42u; }
 
 void UnitVoidEdge2::opaque_unit(const unsigned int) { return; }
 

@@ -11,7 +11,7 @@ int main() {
   // If this compiles and runs, the bug is fixed.
   auto b = DependentReturnUnitProbe::sample_bool;
   std::cout << "sample_bool = " << static_cast<int>(b) << std::endl;
-  assert(b == Bool0::e_FALSE0);
+  assert(b == Bool0::e_FALSE);
 
   return 0;
 }

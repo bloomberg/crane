@@ -1,4 +1,4 @@
-#include <numeral_stress.h>
+#include "numeral_stress.h"
 
 /// 6. Numeral inside a fixpoint
 unsigned int NumeralStress::count_from(const unsigned int n,

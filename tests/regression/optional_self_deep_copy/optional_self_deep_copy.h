@@ -60,6 +60,7 @@ struct OptionalSelfDeepCopy {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -72,11 +73,9 @@ struct OptionalSelfDeepCopy {
           const auto &_alt = std::get<More>(_src->v());
           _dst->d_v_ = More{
               _alt.d_a0
-                  ? std::make_unique<std::optional<
-                        std::unique_ptr<OptionalSelfDeepCopy::chain>>>(
-                        (*_alt.d_a0)
-                            ? std::make_optional(std::make_unique<
-                                                 OptionalSelfDeepCopy::chain>())
+                  ? std::make_unique<std::optional<std::unique_ptr<chain>>>(
+                        *(_alt.d_a0)
+                            ? std::make_optional(std::make_unique<chain>())
                             : std::nullopt)
                   : nullptr};
           auto &_dst_alt = std::get<More>(_dst->d_v_);
@@ -100,6 +99,7 @@ struct OptionalSelfDeepCopy {
     // MANIPULATORS
     ~chain() {
       std::vector<std::unique_ptr<chain>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<More>(_node.d_v_)) {
           auto &_alt = std::get<More>(_node.d_v_);
@@ -126,7 +126,7 @@ struct OptionalSelfDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::optional<chain> &>
-  static T1 chain_rect(const T1 f, F1 &&f0, const chain &c) {
+  static T1 chain_rect(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {
@@ -137,7 +137,7 @@ struct OptionalSelfDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::optional<chain> &>
-  static T1 chain_rec(const T1 f, F1 &&f0, const chain &c) {
+  static T1 chain_rec(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {

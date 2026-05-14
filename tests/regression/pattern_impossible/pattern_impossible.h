@@ -9,10 +9,10 @@
 #include <vector>
 
 struct PatternImpossible {
-  enum class Three { e_ONE, e_TWO, e_THREE0 };
+  enum class Three { e_ONE, e_TWO, e_THREE };
 
   template <typename T1>
-  static T1 three_rect(const T1 f, const T1 f0, const T1 f1, const Three t) {
+  static T1 three_rect(T1 f, T1 f0, T1 f1, const Three t) {
     switch (t) {
     case Three::e_ONE: {
       return f;
@@ -20,7 +20,7 @@ struct PatternImpossible {
     case Three::e_TWO: {
       return f0;
     }
-    case Three::e_THREE0: {
+    case Three::e_THREE: {
       return f1;
     }
     default:
@@ -29,7 +29,7 @@ struct PatternImpossible {
   }
 
   template <typename T1>
-  static T1 three_rec(const T1 f, const T1 f0, const T1 f1, const Three t) {
+  static T1 three_rec(T1 f, T1 f0, T1 f1, const Three t) {
     switch (t) {
     case Three::e_ONE: {
       return f;
@@ -37,7 +37,7 @@ struct PatternImpossible {
     case Three::e_TWO: {
       return f0;
     }
-    case Three::e_THREE0: {
+    case Three::e_THREE: {
       return f1;
     }
     default:
@@ -94,6 +94,7 @@ struct PatternImpossible {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -130,6 +131,7 @@ struct PatternImpossible {
     // MANIPULATORS
     ~nested() {
       std::vector<std::unique_ptr<nested>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](nested &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);

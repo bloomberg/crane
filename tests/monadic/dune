@@ -56,6 +56,35 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 (subdir bind_type_inference
  (rule
   (targets bind_type_inference.t.exe)
@@ -89,6 +118,39 @@
   (deps io.t.exe)
   (action (run ./io.t.exe))))
 
+(subdir itree_effects
+ (rule
+  (targets itree_effects.t.exe)
+  (deps ITreeEffects.vo itree_effects.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_effects.t.exe itree_effects.cpp itree_effects.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_effects.t.exe)
+  (action (run ./itree_effects.t.exe))))
+
+(subdir itree_reified
+ (rule
+  (targets itree_reified.t.exe)
+  (deps ITreeReified.vo itree_reified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_reified.t.exe itree_reified.cpp itree_reified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_reified.t.exe)
+  (action (run ./itree_reified.t.exe))))
+
+(subdir monadic
+ (rule
+  (targets monadic.t.exe)
+  (deps Monadic.vo monadic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monadic.t.exe monadic.cpp monadic.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monadic.t.exe)
+  (action (run ./monadic.t.exe))))
+
 (subdir mutable_vector
  (rule
   (targets mutable_vector.t.exe)
@@ -110,6 +172,28 @@
   (alias runtest)
   (deps parallel.t.exe)
   (action (run ./parallel.t.exe))))
+
+(subdir skiplist_bde
+ (rule
+  (targets skiplist_bde.t.exe)
+  (deps SkipList.vo skiplist_bde.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-bde.sh %{project_root} skiplist_bde.t.exe skiplist_bde.cpp skiplist_bde.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skiplist_bde.t.exe)
+  (action (run ./skiplist_bde.t.exe))))
+
+(subdir skiplist
+ (rule
+  (targets skiplist.t.exe)
+  (deps SkipList.vo skiplist.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} skiplist.t.exe skiplist.cpp skiplist.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps skiplist.t.exe)
+  (action (run ./skiplist.t.exe))))
 
 (subdir stm_hash_map_bde
  (rule
@@ -154,59 +238,3 @@
   (alias runtest)
   (deps thread.t.exe)
   (action (run ./thread.t.exe))))
-
-(subdir monadic
- (rule
-  (targets monadic.t.exe)
-  (deps Monadic.vo monadic.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} monadic.t.exe monadic.cpp monadic.t.cpp)))
- (rule
-  (alias runtest)
-  (deps monadic.t.exe)
-  (action (run ./monadic.t.exe))))
-
-(subdir itree_effects
- (rule
-  (targets itree_effects.t.exe)
-  (deps ITreeEffects.vo itree_effects.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_effects.t.exe itree_effects.cpp itree_effects.t.cpp)))
- (rule
-  (alias runtest)
-  (deps itree_effects.t.exe)
-  (action (run ./itree_effects.t.exe))))
-
-(subdir itree_reified
- (rule
-  (targets itree_reified.t.exe)
-  (deps ITreeReified.vo itree_reified.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_reified.t.exe itree_reified.cpp itree_reified.t.cpp)))
- (rule
-  (alias runtest)
-  (deps itree_reified.t.exe)
-  (action (run ./itree_reified.t.exe))))
-
-(subdir skiplist
- (rule
-  (targets skiplist.t.exe)
-  (deps SkipList.vo skiplist.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} skiplist.t.exe skiplist.cpp skiplist.t.cpp)))
- (rule
-  (alias runtest)
-  (deps skiplist.t.exe)
-  (action (run ./skiplist.t.exe))))
-
-(subdir skiplist_bde
- (rule
-  (targets skiplist_bde.t.exe)
-  (deps SkipList.vo skiplist_bde.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-bde.sh %{project_root} skiplist_bde.t.exe skiplist_bde.cpp skiplist_bde.t.cpp)))
- (rule
-  (alias runtest)
-  (deps skiplist_bde.t.exe)
-  (action (run ./skiplist_bde.t.exe))))
-

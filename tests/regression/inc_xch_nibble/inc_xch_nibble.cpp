@@ -1,4 +1,4 @@
-#include <inc_xch_nibble.h>
+#include "inc_xch_nibble.h"
 
 unsigned int IncXchNibble::get_reg(const IncXchNibble::state &s,
                                    const unsigned int r) {

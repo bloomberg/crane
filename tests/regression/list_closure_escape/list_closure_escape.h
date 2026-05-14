@@ -58,6 +58,7 @@ struct ListClosureEscape {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -94,6 +95,7 @@ struct ListClosureEscape {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -147,7 +149,7 @@ struct ListClosureEscape {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rec(const T1 f, F1 &&f0) const {
+    T1 tree_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;
@@ -161,7 +163,7 @@ struct ListClosureEscape {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rect(const T1 f, F1 &&f0) const {
+    T1 tree_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;
@@ -221,6 +223,7 @@ struct ListClosureEscape {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -254,6 +257,7 @@ struct ListClosureEscape {
     // MANIPULATORS
     ~fn_list() {
       std::vector<std::unique_ptr<fn_list>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](fn_list &_node) {
         if (std::holds_alternative<FCons>(_node.d_v_)) {
           auto &_alt = std::get<FCons>(_node.d_v_);
@@ -291,7 +295,7 @@ struct ListClosureEscape {
       requires std::is_invocable_r_v<
           T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
           T1 &>
-    T1 fn_list_rec(const T1 f, F1 &&f0) const {
+    T1 fn_list_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return f;
@@ -305,7 +309,7 @@ struct ListClosureEscape {
       requires std::is_invocable_r_v<
           T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
           T1 &>
-    T1 fn_list_rect(const T1 f, F1 &&f0) const {
+    T1 fn_list_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
         return f;

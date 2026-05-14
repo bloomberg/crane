@@ -1,4 +1,4 @@
-#include <loopify_list_combining.h>
+#include "loopify_list_combining.h"
 
 List<unsigned int> LoopifyListCombining::append(const List<unsigned int> &a,
                                                 List<unsigned int> b) {
@@ -67,25 +67,28 @@ LoopifyListCombining::intersperse(const unsigned int sep,
   return std::move(*(_head));
 }
 
-List<unsigned int>
-LoopifyListCombining::intercalate(const List<unsigned int> &sep,
-                                  const List<List<unsigned int>> &ll) {
+List<unsigned int> LoopifyListCombining::intercalate(
+    const List<unsigned int> &sep,
+    const List<List<unsigned int>>
+        &ll) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<List<unsigned int>> *ll;
   };
 
-  /// Continuation: saves [d_a0, sep] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [d_a0, sep], resumes after recursive call with
+  /// _result.
+  struct _Resume_Cons {
     List<unsigned int> d_a0;
     List<unsigned int> sep;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -103,35 +106,37 @@ LoopifyListCombining::intercalate(const List<unsigned int> &sep,
                 _sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Resume1{d_a0, sep});
+          _stack.emplace_back(_Resume_Cons{d_a0, sep});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = append(_f.d_a0, append(_f.sep, _result));
     }
   }
   return _result;
 }
 
-List<unsigned int>
-LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
+List<unsigned int> LoopifyListCombining::concat(
+    const List<List<unsigned int>>
+        &ll) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<List<unsigned int>> *ll;
   };
 
-  /// Continuation: saves [d_a0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  struct _Resume_Cons {
     List<unsigned int> d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified concat: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -144,36 +149,39 @@ LoopifyListCombining::concat(const List<List<unsigned int>> &ll) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume1{d_a0});
+        _stack.emplace_back(_Resume_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = append(_f.d_a0, _result);
     }
   }
   return _result;
 }
 
-List<unsigned int> LoopifyListCombining::mapcat(const List<unsigned int> &l) {
+List<unsigned int> LoopifyListCombining::mapcat(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Cons {
     decltype(List<unsigned int>::cons(
         std::declval<unsigned int &>(),
         List<unsigned int>::cons(std::declval<unsigned int &>(),
                                  List<unsigned int>::nil()))) _s0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified mapcat: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -185,12 +193,12 @@ List<unsigned int> LoopifyListCombining::mapcat(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{List<unsigned int>::cons(
+        _stack.emplace_back(_Resume_Cons{List<unsigned int>::cons(
             d_a0, List<unsigned int>::cons(d_a0, List<unsigned int>::nil()))});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = append(_f._s0, _result);
     }
   }
@@ -239,25 +247,28 @@ List<unsigned int> LoopifyListCombining::interleave_two(List<unsigned int> l1,
   return std::move(*(_head));
 }
 
-List<unsigned int>
-LoopifyListCombining::concat_sep(const unsigned int sep,
-                                 const List<List<unsigned int>> &ll) {
+List<unsigned int> LoopifyListCombining::concat_sep(
+    const unsigned int sep,
+    const List<List<unsigned int>>
+        &ll) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<List<unsigned int>> *ll;
   };
 
-  /// Continuation: saves [d_a0, sep] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [d_a0, sep], resumes after recursive call with
+  /// _result.
+  struct _Resume_Cons {
     List<unsigned int> d_a0;
     unsigned int sep;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified concat_sep: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -275,12 +286,12 @@ LoopifyListCombining::concat_sep(const unsigned int sep,
                 _sv.v())) {
           _result = d_a0;
         } else {
-          _stack.emplace_back(_Resume1{d_a0, sep});
+          _stack.emplace_back(_Resume_Cons{d_a0, sep});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = append(_f.d_a0, List<unsigned int>::cons(_f.sep, _result));
     }
   }

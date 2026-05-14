@@ -32,6 +32,14 @@ module Refset' = GlobRef.Set_env
 module StringMap = HMap.Make (String)
 module StringSet = StringMap.Set
 
+(* Create a ref-based membership set with init/add/mem interface. *)
+let make_refset () =
+  let tbl = ref Refset'.empty in
+  let init () = tbl := Refset'.empty in
+  let add r = tbl := Refset'.add r !tbl in
+  let mem r = Refset'.mem r !tbl in
+  (init, add, mem)
+
 (** {1 Utilities about [module_path] and [kernel_names] and [global_reference]}
 *)
 
@@ -141,8 +149,14 @@ let labels_of_ref r =
 
 (** {2 Constants tables} *)
 
-(** Generic lookup helper with body checksum validation. Returns [Some data] if
-    the key exists and the body checksum matches. *)
+(** Generic lookup with body-checksum validation.
+
+    Each cache entry stores the [constant_body] (or [mutual_inductive_body])
+    that was current when the entry was created.  This function uses physical
+    equality ([==]) to compare the stored body with the caller-provided [cb],
+    which is O(1).  A mismatch means the Rocq kernel object was replaced
+    (e.g. after [Reset] or re-evaluation), so the cached extraction data is
+    stale and [None] is returned. *)
 let lookup_with_body_check find_opt kn cb =
   match find_opt kn with
   | Some (cb0, data) when cb0 == cb -> Some data
@@ -162,6 +176,12 @@ let add_typedef kn cb t = typedefs := Cmap_env.add kn (cb, t) !typedefs
     matches. *)
 let lookup_typedef kn cb =
   lookup_with_body_check (fun kn -> Cmap_env.find_opt kn !typedefs) kn cb
+
+(** Like {!lookup_typedef} but without the constant-body checksum validation. *)
+let lookup_typedef_unchecked kn =
+  match Cmap_env.find_opt kn !typedefs with
+  | Some (_, t) -> Some t
+  | None -> None
 
 (** Cache of constant type schemes, keyed by constant. *)
 let cst_types = ref (Cmap_env.empty : (constant_body * ml_schema) Cmap_env.t)
@@ -388,13 +408,29 @@ let rec is_typeclass_type_cpp = function
 
 (** {2 Enum inductives table} *)
 
-let enum_inductives = ref Refset'.empty
+let (init_enum_inductives, add_enum_inductive, is_enum_inductive_registered) =
+  make_refset ()
 
-let init_enum_inductives () = enum_inductives := Refset'.empty
+(** Check if an inductive packet qualifies as an enum: all constructors nullary,
+    no kept type parameters, at least one constructor. *)
+let is_enum_inductive_packet ind i =
+  let p = ind.ind_packets.(i) in
+  let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
+  let param_sign = List.firstn ind.ind_nparams p.ip_sign in
+  let num_param_vars =
+    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+  in
+  all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0
 
-let add_enum_inductive r = enum_inductives := Refset'.add r !enum_inductives
-
-let is_enum_inductive r = Refset'.mem r !enum_inductives
+let is_enum_inductive r =
+  if is_enum_inductive_registered r then true
+  else match r with
+  | GlobRef.IndRef (kn, i) ->
+    ( try
+        let ind = snd (Mindmap_env.find kn !inductives) in
+        Array.length ind.ind_packets = 1 && is_enum_inductive_packet ind i
+      with Not_found | Invalid_argument _ -> false )
+  | _ -> false
 
 (** Check if the inductive referred to by [r] has any constructor field
     whose ip_type refers back to the same MutInd, either directly or
@@ -426,16 +462,75 @@ let has_recursive_fields r =
       with Not_found | Invalid_argument _ -> false )
   | _ -> false
 
-(** Check if an inductive packet qualifies as an enum: all constructors nullary,
-    no kept type parameters, at least one constructor. *)
-let is_enum_inductive_packet ind i =
-  let p = ind.ind_packets.(i) in
-  let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
-  let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-  let num_param_vars =
-    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+(** Check whether an inductive type has dependent parameters — i.e., the type
+    of some parameter references an earlier parameter (via de Bruijn index).
+    For example, [sigT (A : Type) (P : A -> Type)] has a dependent second
+    parameter because [P]'s type mentions [A].  [prod (A B : Type)] does not.
+    Returns [true] if any parameter depends on an earlier one. *)
+let has_dependent_params r =
+  match r with
+  | GlobRef.IndRef (kn, _) ->
+    ( try
+        let mib = Global.lookup_mind kn in
+        let ctx = mib.mind_params_ctxt in
+        List.exists (fun decl ->
+          match decl with
+          | Context.Rel.Declaration.LocalAssum (_, ty) ->
+            not (Vars.closed0 ty)
+          | Context.Rel.Declaration.LocalDef (_, body, ty) ->
+            not (Vars.closed0 ty) || not (Vars.closed0 body)
+        ) ctx
+      with _ -> false )
+  | _ -> false
+
+(** Compute the C++ enum constructor name for constructor [j] (1-based) of
+    inductive [(kn, i)].  Handles non-ASCII escaping, prime-to-underscore
+    conversion, and intra-enum collision avoidance identically to
+    {!Common.enum_ctor_names_of_packet}. *)
+let enum_ctor_name_of_ref kn i j =
+  let ascii_of_id id =
+    let s = Id.to_string id in
+    let b = Bytes.create (String.length s) in
+    for i = 0 to String.length s - 1 do
+      let c = Char.code s.[i] in
+      Bytes.set b i (if c < 128 then s.[i] else '_')
+    done;
+    Bytes.to_string b
   in
-  all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0
+  let ctor_name s = "e_" ^ String.uppercase_ascii s in
+  try
+    let ind = unsafe_lookup_ind kn in
+    let packet = ind.ind_packets.(i) in
+    let consnames = packet.ip_consnames in
+    let escaped =
+      Array.map
+        (fun id ->
+          let s = ascii_of_id id in
+          let s = String.map (fun c -> if c = '\'' then '_' else c) s in
+          ctor_name s)
+        consnames
+    in
+    let seen = Hashtbl.create (Array.length escaped) in
+    let result =
+      Array.map
+        (fun name ->
+          let final =
+            if Hashtbl.mem seen name then
+              let rec find_unique k =
+                let candidate = name ^ string_of_int k in
+                if Hashtbl.mem seen candidate then find_unique (k + 1)
+                else candidate
+              in
+              find_unique 0
+            else name
+          in
+          Hashtbl.replace seen final true;
+          final)
+        escaped
+    in
+    result.(j - 1)
+  with Not_found | Invalid_argument _ ->
+    ctor_name ("ctor" ^ string_of_int j)
 
 (** {2 Sigma assertion table} *)
 
@@ -580,17 +675,11 @@ let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
    cannot resolve them statically.  Distinguished from promoted type vars
    (simple [Type]-valued fields like [Obj]) and concrete type aliases
    (standalone definitions like [Force := list Unit]). *)
-let erased_type_consts = ref Refset'.empty
-
-let init_erased_type_consts () = erased_type_consts := Refset'.empty
-
-(** Register a record field as an erased type constant (dependent type family
-    that becomes [std::any] in C++). *)
-let add_erased_type_const r =
-  erased_type_consts := Refset'.add r !erased_type_consts
-
-(** Check if a GlobRef refers to an erased type constant. *)
-let is_erased_type_const r = Refset'.mem r !erased_type_consts
+(** Erased type constants: dependent type families that become [std::any] in C++,
+    including promoted record fields (simple [Type]-valued like [Obj]) and concrete
+    type aliases (standalone definitions like [Force := list Unit]). *)
+let (init_erased_type_consts, add_erased_type_const, is_erased_type_const) =
+  make_refset ()
 
 (* Table of promoted type bindings for typeclass instances. Maps an instance
    ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
@@ -613,14 +702,9 @@ let get_instance_promoted_types r =
 (* Table of projections used in higher-order positions (as function values).
    Projections not in this set are only accessed via record->field syntax and
    don't need standalone C++ function definitions. *)
-let higher_order_projections = ref Refset'.empty
-
-let init_higher_order_projections () = higher_order_projections := Refset'.empty
-
-let mark_higher_order_projection r =
-  higher_order_projections := Refset'.add r !higher_order_projections
-
-let is_higher_order_projection r = Refset'.mem r !higher_order_projections
+let (init_higher_order_projections, mark_higher_order_projection,
+     is_higher_order_projection) =
+  make_refset ()
 
 (** {2 Phantom type variables table} *)
 
@@ -766,8 +850,11 @@ let safe_pr_long_global r =
     | _ -> assert false )
 
 let pr_long_mp mp =
-  let lid = DirPath.repr (Nametab.dirpath_of_module mp) in
-  str (String.concat "." (List.rev_map Id.to_string lid))
+  try
+    let lid = DirPath.repr (Nametab.dirpath_of_module mp) in
+    str (String.concat "." (List.rev_map Id.to_string lid))
+  with Not_found ->
+    str (ModPath.to_string mp)
 
 let pr_long_global ref = pr_path (Nametab.path_of_global ref)
 
@@ -1532,6 +1619,12 @@ let modfile_ids = ref Id.Set.empty
 
 let modfile_mps = ref MPmap.empty
 
+(** Inductives that have been "promoted" into their own namespace struct
+    (e.g. [String.string] → [namespace String { struct String { ... }; }]).
+    Referenced by both [Translation] and the [Cpp_state]/[Cpp_print] pipeline
+    so it lives here to avoid a dependency cycle. *)
+let promoted_inductives : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 4
+
 let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty
@@ -1549,9 +1642,34 @@ let string_of_modfile mp =
     modfile_mps := MPmap.add mp s' !modfile_mps;
     s'
 
+let reserved_c_header_basenames =
+  [ "string"; "locale"; "signal"; "complex"; "memory"; "random";
+    "utility"; "limits"; "float"; "assert"; "errno"; "math";
+    "setjmp"; "stdarg"; "stddef"; "stdio"; "stdlib"; "time";
+    "ctype"; "wchar"; "wctype"; "fenv"; "inttypes"; "stdint";
+    "uchar" ]
+
+let escape_reserved_filename s =
+  if List.exists (fun h ->
+       String.lowercase_ascii s = h) reserved_c_header_basenames
+  then s ^ "_"
+  else s
+
 (** Compute the full output file path for a module, preserving the original
-    capitalization of the first character. *)
+    capitalization of the first character. Escapes names that would collide with
+    C standard headers on case-insensitive filesystems. *)
 let file_of_modfile mp =
+  let s0 =
+    match mp with
+    | MPfile f -> Id.to_string (List.hd (DirPath.repr f))
+    | _ -> assert false
+  in
+  let base = String.mapi (fun i c -> if i = 0 then s0.[0] else c) (string_of_modfile mp) in
+  escape_reserved_filename base
+
+(** Like {!file_of_modfile} but without filename escaping — returns the base
+    name suitable for use as a C++ namespace identifier. *)
+let ns_of_modfile mp =
   let s0 =
     match mp with
     | MPfile f -> Id.to_string (List.hd (DirPath.repr f))

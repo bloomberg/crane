@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -212,8 +214,7 @@ struct ProgramTargetsRegionScan {
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 instruction_rect(F0 &&f, F1 &&f0, const T1 f1,
-                             const instruction &i) {
+  static T1 instruction_rect(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[d_a0] = std::get<typename instruction::JUN>(i.v());
       return f(d_a0);
@@ -228,8 +229,7 @@ struct ProgramTargetsRegionScan {
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 instruction_rec(F0 &&f, F1 &&f0, const T1 f1,
-                            const instruction &i) {
+  static T1 instruction_rec(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[d_a0] = std::get<typename instruction::JUN>(i.v());
       return f(d_a0);
@@ -254,7 +254,8 @@ struct ProgramTargetsRegionScan {
   static std::optional<unsigned int> jump_target(const instruction &i);
   static bool addr_in_regionb(const unsigned int addr, const layout &l);
   static bool target_in_layoutb(const layout &l, const instruction &i);
-  static bool program_targets_okb(const List<instruction> &prog, layout l);
+  static bool program_targets_okb(const List<instruction> &prog,
+                                  const layout &l);
   static inline const unsigned int t = []() {
     layout l = layout{200u, 20u};
     List<instruction> p = List<instruction>::cons(

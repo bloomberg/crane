@@ -9,8 +9,7 @@
 struct Comparison {
   enum class Cmp { e_CMPLT, e_CMPEQ, e_CMPGT };
 
-  template <typename T1>
-  static T1 cmp_rect(const T1 f, const T1 f0, const T1 f1, const Cmp c) {
+  template <typename T1> static T1 cmp_rect(T1 f, T1 f0, T1 f1, const Cmp c) {
     switch (c) {
     case Cmp::e_CMPLT: {
       return f;
@@ -26,8 +25,7 @@ struct Comparison {
     }
   }
 
-  template <typename T1>
-  static T1 cmp_rec(const T1 f, const T1 f0, const T1 f1, const Cmp c) {
+  template <typename T1> static T1 cmp_rec(T1 f, T1 f0, T1 f1, const Cmp c) {
     switch (c) {
     case Cmp::e_CMPLT: {
       return f;

@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -122,7 +124,7 @@ public:
 };
 
 struct UniversePoly {
-  template <typename T1> static T1 poly_id(const T1 x) { return x; }
+  template <typename T1> static T1 poly_id(T1 x) { return x; }
 
   static inline const unsigned int test_id_nat = poly_id<unsigned int>(42u);
   static inline const bool test_id_bool = poly_id<bool>(true);
@@ -193,10 +195,10 @@ struct UniversePoly {
     // CREATORS
     template <typename _U> explicit poption(const poption<_U> &_other) {
       if (std::holds_alternative<typename poption<_U>::Pnone>(_other.v())) {
-        d_v_ = Pnone{};
+        this->d_v_ = Pnone{};
       } else {
         const auto &[d_a0] = std::get<typename poption<_U>::Psome>(_other.v());
-        d_v_ = Psome{t_A(d_a0)};
+        this->d_v_ = Psome{t_A(d_a0)};
       }
     }
 
@@ -213,7 +215,7 @@ struct UniversePoly {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &>
-  static T2 poption_rect(const T2 f, F1 &&f0, const poption<T1> &p) {
+  static T2 poption_rect(T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
     } else {
@@ -224,7 +226,7 @@ struct UniversePoly {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &>
-  static T2 poption_rec(const T2 f, F1 &&f0, const poption<T1> &p) {
+  static T2 poption_rec(T2 f, F1 &&f0, const poption<T1> &p) {
     if (std::holds_alternative<typename poption<T1>::Pnone>(p.v())) {
       return f;
     } else {

@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -80,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -123,7 +125,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -198,7 +200,7 @@ struct PartialApply {
     // CREATORS
     template <typename _U> explicit tagged(const tagged<_U> &_other) {
       const auto &[d_a0, d_a1] = std::get<typename tagged<_U>::Tag>(_other.v());
-      d_v_ = Tag{d_a0, t_A(d_a1)};
+      this->d_v_ = Tag{d_a0, t_A(d_a1)};
     }
 
     static tagged<t_A> tag(unsigned int a0, t_A a1) {

@@ -1,4 +1,4 @@
-#include <historical_event_safety_trace.h>
+#include "historical_event_safety_trace.h"
 
 bool HistoricalEventSafetyTraceCase::is_safe_bool(
     const HistoricalEventSafetyTraceCase::PlantConfig &pconf,

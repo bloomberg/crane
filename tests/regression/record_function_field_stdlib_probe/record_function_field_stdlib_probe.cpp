@@ -1,12 +1,12 @@
-#include <record_function_field_stdlib_probe.h>
+#include "record_function_field_stdlib_probe.h"
 
 Bool0 Datatypes::negb(const Bool0 b) {
   switch (b) {
-  case Bool0::e_TRUE0: {
-    return Bool0::e_FALSE0;
+  case Bool0::e_TRUE: {
+    return Bool0::e_FALSE;
   }
-  case Bool0::e_FALSE0: {
-    return Bool0::e_TRUE0;
+  case Bool0::e_FALSE: {
+    return Bool0::e_TRUE;
   }
   default:
     std::unreachable();

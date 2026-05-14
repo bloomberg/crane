@@ -28,8 +28,8 @@ struct TodoDependentFieldAlias {
   static_assert(Magma<nat_magma>);
 
   template <Magma _tcI0>
-  static typename _tcI0::carrier pick_op(const typename _tcI0::carrier _x0,
-                                         const typename _tcI0::carrier _x1) {
+  static typename _tcI0::carrier pick_op(const typename _tcI0::carrier &_x0,
+                                         const typename _tcI0::carrier &_x1) {
     return _tcI0::op(_x0, _x1);
   }
 

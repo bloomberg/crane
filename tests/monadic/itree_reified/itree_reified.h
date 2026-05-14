@@ -1,7 +1,6 @@
 #ifndef INCLUDED_ITREE_REIFIED
 #define INCLUDED_ITREE_REIFIED
 
-#include <any>
 #include <crane_itree.h>
 #include <memory>
 #include <optional>
@@ -16,7 +15,7 @@ struct ITreeReified {
   static void run_tree(std::shared_ptr<ITree<void>> t);
   /// Sequence two reified itrees.
   static void sequence_trees(const std::shared_ptr<ITree<void>> &t1,
-                             std::shared_ptr<ITree<void>> t2);
+                             const std::shared_ptr<ITree<void>> &t2);
   /// Direct mode (no itree params) should be unchanged.
   static std::shared_ptr<ITree<void>> test_direct();
 
@@ -38,7 +37,7 @@ struct ITreeReified {
             std::cout << "[tau]"s << '\n';
             return std::any{};
           },
-          [=](const std::any) mutable {
+          [=](const auto &) mutable {
             return [&]() {
               auto t = rec(t_);
               return ITree<decltype(t->run())>::tau(t);
@@ -53,9 +52,9 @@ struct ITreeReified {
             std::cout << "[vis]"s << '\n';
             return std::any{};
           },
-          [=](const std::any) mutable {
-            return itree_vis(
-                e, [=](const std::any x) mutable { return rec(k(x)); });
+          [=](const auto &) mutable {
+            return itree_vis(e,
+                             [=](const auto &x) mutable { return rec(k(x)); });
           });
     }
   }

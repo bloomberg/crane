@@ -31,14 +31,14 @@ struct CanonStruct {
   struct bool_eqType {
     using carrier = bool;
 
-    static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
+    constexpr static bool eqb(bool a0, bool a1) { return Bool::eqb(a0, a1); }
   };
 
   static_assert(EqType<bool_eqType>);
 
   template <EqType _tcI0>
-  static bool same(const typename _tcI0::carrier x,
-                   const typename _tcI0::carrier y) {
+  static bool same(const typename _tcI0::carrier &x,
+                   const typename _tcI0::carrier &y) {
     return _tcI0::eqb(x, y);
   }
 

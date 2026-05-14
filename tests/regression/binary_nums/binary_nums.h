@@ -62,6 +62,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -103,6 +104,7 @@ public:
   // MANIPULATORS
   ~Positive() {
     std::vector<std::unique_ptr<Positive>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
       if (std::holds_alternative<XI>(_node.d_v_)) {
         auto &_alt = std::get<XI>(_node.d_v_);
@@ -348,7 +350,7 @@ struct Pos {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
-  static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
+  static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
       return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));
@@ -371,7 +373,7 @@ struct Coq_Pos {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
-  static T1 iter_op(F0 &&op, const Positive &p, const T1 a) {
+  static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
       return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));

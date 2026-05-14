@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -83,6 +84,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -154,6 +156,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -178,10 +181,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -196,6 +199,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -282,12 +286,12 @@ struct NestedTree {
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        d_v_ = Leaf{};
+        this->d_v_ = Leaf{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename tree<_U>::Node>(_other.v());
-        d_v_ =
-            Node{t_A(d_a0), std::shared_ptr<tree<std::pair<t_A, t_A>>>(d_a1)};
+        this->d_v_ = Node{t_A(d_a0),
+                          std::shared_ptr<tree<std::pair<t_A, t_A>>>(*(d_a1))};
       }
     }
 
@@ -305,7 +309,7 @@ struct NestedTree {
   };
 
   template <typename T1, typename T2, typename F1>
-  static T1 tree_rect(const T1 f, F1 &&f0, const tree<T2> &t) {
+  static T1 tree_rect(const T1 &f, F1 &&f0, const tree<T2> &t) {
     if (std::holds_alternative<typename tree<T2>::Leaf>(t.v())) {
       return f;
     } else {
@@ -316,7 +320,7 @@ struct NestedTree {
   }
 
   template <typename T1, typename T2, typename F1>
-  static T1 tree_rec(const T1 f, F1 &&f0, const tree<T2> &t) {
+  static T1 tree_rec(const T1 &f, F1 &&f0, const tree<T2> &t) {
     if (std::holds_alternative<typename tree<T2>::Leaf>(t.v())) {
       return f;
     } else {
@@ -355,7 +359,7 @@ struct NestedTree {
 
   template <typename T1> static List<List<T1>> flatten_tree(const tree<T1> &t) {
     return _flatten_tree_go<T1, List<List<T1>>>(
-        [](const T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
+        [](T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };
 

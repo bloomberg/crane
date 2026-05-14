@@ -58,6 +58,7 @@ struct DeepPattern {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -94,6 +95,7 @@ struct DeepPattern {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -453,6 +455,7 @@ struct DeepPattern {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -477,12 +480,12 @@ struct DeepPattern {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        d_v_ = Nil{};
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        d_v_ = Cons{t_A(d_a0),
-                    d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Cons{t_A(d_a0),
+                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
       }
     }
 
@@ -496,6 +499,7 @@ struct DeepPattern {
     // MANIPULATORS
     ~list() {
       std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](list<t_A> &_node) {
         if (std::holds_alternative<Cons>(_node.d_v_)) {
           auto &_alt = std::get<Cons>(_node.d_v_);
@@ -521,7 +525,7 @@ struct DeepPattern {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rec(const T1 f, F1 &&f0) const {
+    T1 list_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
@@ -533,7 +537,7 @@ struct DeepPattern {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rect(const T1 f, F1 &&f0) const {
+    T1 list_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;

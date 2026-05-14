@@ -1,4 +1,4 @@
-#include <custom_inline_bug.h>
+#include "custom_inline_bug.h"
 
 std::optional<unsigned int>
 CustomInlineBug::bug_some_proj(const CustomInlineBug::State &s) {

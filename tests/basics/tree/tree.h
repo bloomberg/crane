@@ -8,7 +8,7 @@
 #include <variant>
 #include <vector>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Nat {
   // TYPES
@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -84,6 +85,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -180,6 +182,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -204,10 +207,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -222,6 +225,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -306,6 +310,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -334,11 +339,11 @@ public:
   // CREATORS
   template <typename _U> explicit Tree(const Tree<_U> &_other) {
     if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
-      d_v_ = Leaf{};
+      this->d_v_ = Leaf{};
     } else {
       const auto &[d_a0, d_a1, d_a2] =
           std::get<typename Tree<_U>::Node>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Node{d_a0 ? std::make_unique<Tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
                d_a2 ? std::make_unique<Tree<t_A>>(*d_a2) : nullptr};
     }
@@ -354,6 +359,7 @@ public:
   // MANIPULATORS
   ~Tree() {
     std::vector<std::unique_ptr<Tree<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Tree<t_A> &_node) {
       if (std::holds_alternative<Node>(_node.d_v_)) {
         auto &_alt = std::get<Node>(_node.d_v_);
@@ -383,7 +389,7 @@ public:
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
                                    Tree<t_A> &, T1 &>
-  T1 tree_rect(const T1 f, F1 &&f0) const {
+  T1 tree_rect(T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
       return f;
@@ -398,7 +404,7 @@ public:
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
                                    Tree<t_A> &, T1 &>
-  T1 tree_rec(const T1 f, F1 &&f0) const {
+  T1 tree_rec(T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
       return f;
@@ -414,9 +420,9 @@ public:
   Bool0 is_leaf() const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
-      return Bool0::e_TRUE0;
+      return Bool0::e_TRUE;
     } else {
-      return Bool0::e_FALSE0;
+      return Bool0::e_FALSE;
     }
   }
 

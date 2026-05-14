@@ -83,7 +83,7 @@ template <Elem E> struct Container {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 maybe_rect(const T1 f, F1 &&f0, const maybe &m) {
+  static T1 maybe_rect(T1 f, F1 &&f0, const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
     } else {
@@ -94,7 +94,7 @@ template <Elem E> struct Container {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 maybe_rec(const T1 f, F1 &&f0, const maybe &m) {
+  static T1 maybe_rec(T1 f, F1 &&f0, const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
     } else {
@@ -150,6 +150,7 @@ template <Elem E> struct Container {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -182,6 +183,7 @@ template <Elem E> struct Container {
     // MANIPULATORS
     ~mlist() {
       std::vector<std::unique_ptr<mlist>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mlist &_node) {
         if (std::holds_alternative<MCons>(_node.d_v_)) {
           auto &_alt = std::get<MCons>(_node.d_v_);
@@ -208,7 +210,7 @@ template <Elem E> struct Container {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
-  static T1 mlist_rect(const T1 f, F1 &&f0, const mlist &m) {
+  static T1 mlist_rect(T1 f, F1 &&f0, const mlist &m) {
     if (std::holds_alternative<typename mlist::MNil>(m.v())) {
       return f;
     } else {
@@ -219,7 +221,7 @@ template <Elem E> struct Container {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
-  static T1 mlist_rec(const T1 f, F1 &&f0, const mlist &m) {
+  static T1 mlist_rec(T1 f, F1 &&f0, const mlist &m) {
     if (std::holds_alternative<typename mlist::MNil>(m.v())) {
       return f;
     } else {

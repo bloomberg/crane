@@ -14,7 +14,7 @@ struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
   static MysteryType mystery_function(const MysteryType _x0);
-  static MysteryType use_axiom(const std::monostate &_x);
+  static MysteryType use_axiom(const std::monostate _x);
 
   struct AxiomRecord {
     unsigned int normal_field;
@@ -26,7 +26,7 @@ struct AxiomTypes {
     }
   };
 
-  static AxiomRecord make_axiom_record(const std::monostate &_x);
+  static AxiomRecord make_axiom_record(const std::monostate _x);
   static MysteryType extract_axiom_field(const AxiomRecord &r);
 
   struct AxiomInductive {
@@ -122,9 +122,9 @@ struct AxiomTypes {
     }
   }
 
-  static AxiomInductive use_axiom_inductive(const std::monostate &_x);
+  static AxiomInductive use_axiom_inductive(const std::monostate _x);
   static MysteryType axiom_identity(const MysteryType x);
-  static MysteryType nested_axiom(const std::monostate &_x);
+  static MysteryType nested_axiom(const std::monostate _x);
 
   template <typename t_A> struct list {
     // TYPES
@@ -173,6 +173,7 @@ struct AxiomTypes {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -197,12 +198,12 @@ struct AxiomTypes {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        d_v_ = Nil{};
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        d_v_ = Cons{t_A(d_a0),
-                    d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Cons{t_A(d_a0),
+                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
       }
     }
 
@@ -216,6 +217,7 @@ struct AxiomTypes {
     // MANIPULATORS
     ~list() {
       std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](list<t_A> &_node) {
         if (std::holds_alternative<Cons>(_node.d_v_)) {
           auto &_alt = std::get<Cons>(_node.d_v_);
@@ -241,7 +243,7 @@ struct AxiomTypes {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rec(const T1 f, F1 &&f0) const {
+    T1 list_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
@@ -253,7 +255,7 @@ struct AxiomTypes {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
-    T1 list_rect(const T1 f, F1 &&f0) const {
+    T1 list_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
         return f;
@@ -264,11 +266,11 @@ struct AxiomTypes {
     }
   };
 
-  static list<MysteryType> axiom_list(const std::monostate &_x);
+  static list<MysteryType> axiom_list(const std::monostate _x);
 
-  template <typename T1> static T1 poly_axiom(const T1 x) { return x; }
+  template <typename T1> static T1 poly_axiom(T1 x) { return x; }
 
-  static MysteryType use_poly_axiom(const std::monostate &_x);
+  static MysteryType use_poly_axiom(const std::monostate _x);
 };
 
 #endif // INCLUDED_AXIOM_TYPES

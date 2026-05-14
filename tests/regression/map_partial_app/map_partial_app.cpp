@@ -1,4 +1,4 @@
-#include <map_partial_app.h>
+#include "map_partial_app.h"
 
 unsigned int MapPartialApp::tree_sum(const MapPartialApp::tree &t) {
   if (std::holds_alternative<typename MapPartialApp::tree::Leaf>(t.v())) {

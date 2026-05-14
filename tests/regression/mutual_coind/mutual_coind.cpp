@@ -1,4 +1,4 @@
-#include <mutual_coind.h>
+#include "mutual_coind.h"
 
 MutualCoind::streamA<unsigned int> MutualCoind::countA(const unsigned int n) {
   return streamA<unsigned int>::lazy_(

@@ -25,18 +25,18 @@ concept Monoid = requires {
 };
 
 struct TypeApp {
-  template <typename T1> static T1 id(const T1 x) { return x; }
+  template <typename T1> static T1 id(T1 x) { return x; }
 
   static inline const unsigned int id_int = id<unsigned int>(42u);
   static inline const bool id_bool = id<bool>(true);
 
   template <typename T1, typename T2 = void, typename T3, typename F0,
             typename F1>
-  static T3 compose(F0 &&g, F1 &&f, const T1 x) {
+  static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
 
-  template <typename T1> static T1 nested_poly(const T1 x) {
+  template <typename T1> static T1 nested_poly(const T1 &x) {
     return id<T1>(id<T1>(id<T1>(x)));
   }
 
@@ -87,6 +87,7 @@ struct TypeApp {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -111,12 +112,12 @@ struct TypeApp {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        d_v_ = Nil{};
+        this->d_v_ = Nil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<_U>::Cons>(_other.v());
-        d_v_ = Cons{t_A(d_a0),
-                    d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Cons{t_A(d_a0),
+                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
       }
     }
 
@@ -130,6 +131,7 @@ struct TypeApp {
     // MANIPULATORS
     ~list() {
       std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](list<t_A> &_node) {
         if (std::holds_alternative<Cons>(_node.d_v_)) {
           auto &_alt = std::get<Cons>(_node.d_v_);
@@ -156,7 +158,7 @@ struct TypeApp {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rect(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2 list_rect(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
@@ -167,7 +169,7 @@ struct TypeApp {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2 list_rec(const T2 f, F1 &&f0, const list<T1> &l) {
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
@@ -201,7 +203,7 @@ struct TypeApp {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
-  static T1 twice(F0 &&f, const T1 x) {
+  static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }
 

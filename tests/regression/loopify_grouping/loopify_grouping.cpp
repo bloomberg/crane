@@ -1,4 +1,4 @@
-#include <loopify_grouping.h>
+#include "loopify_grouping.h"
 
 List<List<unsigned int>>
 LoopifyGrouping::prepend_to_groups(const unsigned int x, const bool same,
@@ -22,27 +22,29 @@ LoopifyGrouping::prepend_to_groups(const unsigned int x, const bool same,
   }
 }
 
-List<List<unsigned int>>
-LoopifyGrouping::group_fuel(const unsigned int fuel,
-                            const List<unsigned int> &l) {
+List<List<unsigned int>> LoopifyGrouping::group_fuel(
+    const unsigned int fuel,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     List<unsigned int> l;
     unsigned int fuel;
   };
 
-  /// Continuation: saves [d_a0, d_a00] across recursive call, then processes
-  /// rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0, d_a00], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
     unsigned int d_a00;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<unsigned int>> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified group_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -68,14 +70,14 @@ LoopifyGrouping::group_fuel(const unsigned int fuel,
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<unsigned int>::Cons>(_sv0.v());
-            _stack.emplace_back(_Cont1{d_a0, d_a00});
+            _stack.emplace_back(_Cont_Cons{d_a0, d_a00});
             _stack.emplace_back(
                 _Enter{List<unsigned int>::cons(d_a00, *(d_a10)), fuel_});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int d_a00 = _f.d_a00;
       List<List<unsigned int>> rec_result = _result;
@@ -111,22 +113,26 @@ bool LoopifyGrouping::elem(const unsigned int x, const List<unsigned int> &l) {
   return _result;
 }
 
-List<unsigned int> LoopifyGrouping::nub(const List<unsigned int> &l) {
+List<unsigned int> LoopifyGrouping::nub(
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified nub: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -138,11 +144,11 @@ List<unsigned int> LoopifyGrouping::nub(const List<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<unsigned int> rest = _result;
       if (elem(d_a0, rest)) {
@@ -188,27 +194,30 @@ List<unsigned int> LoopifyGrouping::remove_elem(const unsigned int x,
 }
 
 std::pair<std::pair<List<unsigned int>, List<unsigned int>>, List<unsigned int>>
-LoopifyGrouping::partition3(const unsigned int pivot,
-                            const List<unsigned int> &l) {
+LoopifyGrouping::partition3(
+    const unsigned int pivot,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0, pivot] across recursive call, then processes
-  /// rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0, pivot], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
     unsigned int pivot;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<std::pair<List<unsigned int>, List<unsigned int>>,
             List<unsigned int>>
       _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified partition3: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -222,11 +231,11 @@ LoopifyGrouping::partition3(const unsigned int pivot,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0, pivot});
+        _stack.emplace_back(_Cont_Cons{d_a0, pivot});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       const unsigned int pivot = _f.pivot;
       const std::pair<List<unsigned int>, List<unsigned int>> &p =
@@ -253,13 +262,16 @@ LoopifyGrouping::partition3(const unsigned int pivot,
   return _result;
 }
 
-unsigned int LoopifyGrouping::count_elem(const unsigned int x,
-                                         const List<unsigned int> &l) {
+unsigned int LoopifyGrouping::count_elem(
+    const unsigned int x,
+    const List<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const List<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
+  /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
     decltype(1u) _s0;
   };
@@ -267,9 +279,9 @@ unsigned int LoopifyGrouping::count_elem(const unsigned int x,
   using _Frame = std::variant<_Enter, _Resume1>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified count_elem: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();

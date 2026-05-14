@@ -8,13 +8,13 @@
 #include <utility>
 
 enum class Unit { e_TT };
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct DependentElimStdexceptProbe {
   enum class Avail { e_PRESENT, e_ABSENT };
 
   template <typename T1>
-  static T1 avail_rect(const T1 f, const T1 f0, const Bool0, const Avail a) {
+  static T1 avail_rect(T1 f, T1 f0, const Bool0, const Avail a) {
     switch (a) {
     case Avail::e_PRESENT: {
       return f;
@@ -28,7 +28,7 @@ struct DependentElimStdexceptProbe {
   }
 
   template <typename T1>
-  static T1 avail_rec(const T1 f, const T1 f0, const Bool0, const Avail a) {
+  static T1 avail_rec(T1 f, T1 f0, const Bool0, const Avail a) {
     switch (a) {
     case Avail::e_PRESENT: {
       return f;

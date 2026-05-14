@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -202,8 +204,7 @@ struct InstructionSequenceExec {
 
   template <typename T1, typename F2>
     requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
-  static T1 instruction_rect(const T1 f, const T1 f0, F2 &&f1,
-                             const instruction &i) {
+  static T1 instruction_rect(T1 f, T1 f0, F2 &&f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP_>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instruction::INC_PC>(i.v())) {
@@ -216,8 +217,7 @@ struct InstructionSequenceExec {
 
   template <typename T1, typename F2>
     requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
-  static T1 instruction_rec(const T1 f, const T1 f0, F2 &&f1,
-                            const instruction &i) {
+  static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP_>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instruction::INC_PC>(i.v())) {

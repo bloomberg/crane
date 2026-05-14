@@ -130,40 +130,36 @@ let is_partial_app head args =
     - Case scrutinee (MLcase) → destructured immediately
     - Under MLmagic → transparent wrapper
     - Function arguments (MLapp) → callee's responsibility *)
-let escapes k t =
-  (* [check k in_tail t]: does [MLrel k] escape in [t]? [in_tail]: are we in
-     tail position (return value)? *)
-  let rec check k in_tail = function
+let escapes ?(refined = false) k t =
+  let rec check k in_tail in_fn_arg = function
     | MLrel i -> i = k && in_tail
     | MLcase (_, scrut, branches) ->
-      (* Scrutinee is safe (destructured). Branches inherit tail position. *)
       ( match scrut with
-      | MLrel i when i = k -> false (* Safe: scrutinee position *)
-      | _ -> check k false scrut )
+      | MLrel i when i = k -> false
+      | _ -> check k false false scrut )
       || Array.exists
-           (fun (ids, _, _, body) -> check (k + List.length ids) in_tail body)
+           (fun (ids, _, _, body) ->
+             check (k + List.length ids) in_tail false body )
            branches
     | MLletin (_, _, rhs, cont) ->
-      check k false rhs || check (k + 1) in_tail cont
-    | MLlam (_, _, body) -> occurs (k + 1) body (* Lambda capture → escape *)
+      check k false false rhs || check (k + 1) in_tail false cont
+    | MLlam (_, _, body) ->
+      if refined && in_fn_arg then
+        check (k + 1) false false body
+      else
+        occurs (k + 1) body
     | MLapp (head, args) ->
-      check k false head
-      || List.exists (check k false) args
-      || (* Partial application: args are captured by the generated closure *)
-      (is_partial_app head args && List.exists (occurs k) args)
+      check k false false head
+      || List.exists (check k false (refined)) args
+      || (not in_fn_arg && is_partial_app head args
+         && List.exists (occurs k) args)
     | MLfix (_, ids, bodies, _) ->
       let k' = k + Array.length ids in
-      Array.exists (occurs k') bodies (* Fixpoint capture → escape *)
+      Array.exists (occurs k') bodies
     | MLcons (_, _, args) ->
-      (* Constructor arguments escape if the parameter appears in a truly
-         escaping position.  Use [check k true] instead of [occurs k]: this
-         distinguishes between direct storage ([MLrel k] → escaping) and
-         field-access scrutinee positions ([MLcase(MLrel k, ...)] → safe).
-         E.g., [mkState(s.field1, s.field2)] does not require owned [s]
-         because [s] only appears as a field-access scrutinee, not stored. *)
-      List.exists (check k true) args
-    | MLtuple args -> List.exists (check k true) args
-    | MLmagic a -> check k in_tail a
+      List.exists (check k true false) args
+    | MLtuple args -> List.exists (check k true false) args
+    | MLmagic a -> check k in_tail false a
     | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
     | MLglob _
      |MLexn _
@@ -173,7 +169,7 @@ let escapes k t =
      |MLfloat _
      |MLstring _ -> false
   in
-  check k true t
+  check k true false t
 
 (** {2 Owned/borrowed parameter inference} *)
 
@@ -193,7 +189,7 @@ let escapes k t =
     needs to pass ownership rather than just lend a reference. *)
 
 let infer_owned_params n_params body =
-  List.init n_params (fun i -> escapes (i + 1) body)
+  List.init n_params (fun i -> escapes ~refined:true (i + 1) body)
 
 (** {2 Utility functions} *)
 

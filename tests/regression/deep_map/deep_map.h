@@ -57,6 +57,7 @@ struct DeepMap {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -85,11 +86,11 @@ struct DeepMap {
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        d_v_ = Leaf{};
+        this->d_v_ = Leaf{};
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        d_v_ =
+        this->d_v_ =
             Node{d_a0 ? std::make_unique<tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
                  d_a2 ? std::make_unique<tree<t_A>>(*d_a2) : nullptr};
       }
@@ -106,6 +107,7 @@ struct DeepMap {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree<t_A> &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -136,7 +138,7 @@ struct DeepMap {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rect(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rect(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {
@@ -149,7 +151,7 @@ struct DeepMap {
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, tree<T1> &, T2 &, T1 &, tree<T1> &,
                                    T2 &>
-  static T2 tree_rec(const T2 f, F1 &&f0, const tree<T1> &t) {
+  static T2 tree_rec(T2 f, F1 &&f0, const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
       return f;
     } else {

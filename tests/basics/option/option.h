@@ -25,7 +25,7 @@ struct Option {
 
   template <typename T1, typename T2>
   static std::optional<T2>
-  apply_if_some(const std::optional<std::function<T2(T1)>> &f, const T1 x) {
+  apply_if_some(const std::optional<std::function<T2(T1)>> &f, const T1 &x) {
     if (f.has_value()) {
       const std::function<T2(T1)> &g = *f;
       return std::make_optional<T2>(g(x));

@@ -57,6 +57,7 @@ struct ReuseSelfCycle {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -89,6 +90,7 @@ struct ReuseSelfCycle {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
         if (std::holds_alternative<Mycons>(_node.d_v_)) {
           auto &_alt = std::get<Mycons>(_node.d_v_);
@@ -115,7 +117,7 @@ struct ReuseSelfCycle {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
-  static T1 mylist_rect(F0 &&f, const T1 f0, const mylist &m) {
+  static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
       return f(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
@@ -126,7 +128,7 @@ struct ReuseSelfCycle {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
-  static T1 mylist_rec(F0 &&f, const T1 f0, const mylist &m) {
+  static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
       return f(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));

@@ -1,4 +1,4 @@
-#include <bank_lookup_default.h>
+#include "bank_lookup_default.h"
 
 BankLookupDefault::ram_bank
 BankLookupDefault::get_bank(const BankLookupDefault::state &s,

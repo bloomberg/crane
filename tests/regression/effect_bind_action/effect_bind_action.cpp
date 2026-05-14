@@ -1,4 +1,4 @@
-#include <effect_bind_action.h>
+#include "effect_bind_action.h"
 
 /// 1. Bool match inside bind action: one branch block template
 std::string EffectBindAction::conditional_read(const bool use_stdin) {

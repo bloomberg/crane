@@ -1,4 +1,4 @@
-#include <match_closure_escape.h>
+#include "match_closure_escape.h"
 
 /// BUG TRIGGER: match_arm_box
 /// The partial application sum_values l inside a match arm creates a

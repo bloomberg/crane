@@ -1,4 +1,4 @@
-#include <bool_dec_std.h>
+#include "bool_dec_std.h"
 
 bool BoolDecStd::eqb_dec(const bool a, const bool b) {
   if (Bool::bool_dec(a, b)) {

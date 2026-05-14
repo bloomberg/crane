@@ -1,4 +1,4 @@
-#include <singleton_record.h>
+#include "singleton_record.h"
 
 unsigned int SingletonRecord::get_value(const SingletonRecord::wrapper &w) {
   return w.value;

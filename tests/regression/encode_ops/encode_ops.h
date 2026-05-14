@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -318,9 +320,8 @@ struct EncodeOps {
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F5 &, unsigned int &>
-    T1 instruction1_rec(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
-                        F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
-                        const T1 f8, const T1 f9) const {
+    T1 instruction1_rec(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
+                        T1 f6, T1 f7, T1 f8, T1 f9) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return f;
@@ -356,9 +357,8 @@ struct EncodeOps {
                                      unsigned int &> &&
                std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F5 &, unsigned int &>
-    T1 instruction1_rect(const T1 f, const T1 f0, const T1 f1, F3 &&f2, F4 &&f3,
-                         F5 &&f4, const T1 f5, const T1 f6, const T1 f7,
-                         const T1 f8, const T1 f9) const {
+    T1 instruction1_rect(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
+                         T1 f6, T1 f7, T1 f8, T1 f9) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
         return f;
@@ -477,7 +477,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction2_rec(const T1 f, F1 &&f0) const {
+    T1 instruction2_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return f;
@@ -489,7 +489,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction2_rect(const T1 f, F1 &&f0) const {
+    T1 instruction2_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
         return f;
@@ -584,7 +584,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction3_rec(const T1 f, F1 &&f0) const {
+    T1 instruction3_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return f;
@@ -596,7 +596,7 @@ struct EncodeOps {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-    T1 instruction3_rect(const T1 f, F1 &&f0) const {
+    T1 instruction3_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
         return f;

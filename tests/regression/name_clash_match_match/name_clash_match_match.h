@@ -60,6 +60,7 @@ struct NameClashMatchMatch {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -96,6 +97,7 @@ struct NameClashMatchMatch {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -126,7 +128,7 @@ struct NameClashMatchMatch {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                    tree &, T1 &>
-  static T1 tree_rect(const T1 f, F1 &&f0, const tree &t) {
+  static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
@@ -139,7 +141,7 @@ struct NameClashMatchMatch {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                    tree &, T1 &>
-  static T1 tree_rec(const T1 f, F1 &&f0, const tree &t) {
+  static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
@@ -151,8 +153,7 @@ struct NameClashMatchMatch {
   /// Returns a subtree based on a direction.
   enum class Dir { e_GOLEFT, e_GORIGHT };
 
-  template <typename T1>
-  static T1 dir_rect(const T1 f, const T1 f0, const Dir d) {
+  template <typename T1> static T1 dir_rect(T1 f, T1 f0, const Dir d) {
     switch (d) {
     case Dir::e_GOLEFT: {
       return f;
@@ -165,8 +166,7 @@ struct NameClashMatchMatch {
     }
   }
 
-  template <typename T1>
-  static T1 dir_rec(const T1 f, const T1 f0, const Dir d) {
+  template <typename T1> static T1 dir_rec(T1 f, T1 f0, const Dir d) {
     switch (d) {
     case Dir::e_GOLEFT: {
       return f;

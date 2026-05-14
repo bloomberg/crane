@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -80,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -123,7 +125,7 @@ public:
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
-  T1 fold_left(F0 &&f, const T1 a0) const {
+  T1 fold_left(F0 &&f, T1 a0) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
       return a0;
@@ -135,7 +137,7 @@ public:
 };
 
 struct Monadic {
-  template <typename T1> static std::optional<T1> option_return(const T1 x) {
+  template <typename T1> static std::optional<T1> option_return(T1 x) {
     return std::make_optional<T1>(x);
   }
 
@@ -160,15 +162,14 @@ struct Monadic {
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
-  template <typename T1, typename T2>
-  static State<T1, T2> state_return(const T2 x) {
-    return [=](const T1 s) mutable { return std::make_pair(x, s); };
+  template <typename T1, typename T2> static State<T1, T2> state_return(T2 x) {
+    return [=](T1 s) mutable { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3, typename F1>
     requires std::is_invocable_r_v<State<T1, T3>, F1 &, T2 &>
   static State<T1, T3> state_bind(const State<T1, T2> ma, F1 &&f) {
-    return [=](const T1 s) mutable {
+    return [=](const T1 &s) mutable {
       auto _cs = ma(s);
       const T2 &a = _cs.first;
       const T1 &s_ = _cs.second;
@@ -177,16 +178,15 @@ struct Monadic {
   }
 
   template <typename T1> static const State<T1, T1> &state_get() {
-    static const State<T1, T1> v = [](const T1 s) {
+    static const State<T1, T1> v = [](const auto &s) {
       return std::make_pair(s, s);
     };
     return v;
   }
 
-  template <typename T1>
-  static State<T1, std::monostate> state_put(const T1 s) {
+  template <typename T1> static State<T1, std::monostate> state_put(T1 s) {
     return
-        [=](const T1) mutable { return std::make_pair(std::monostate{}, s); };
+        [=](const T1 &) mutable { return std::make_pair(std::monostate{}, s); };
   }
 
   template <typename T1>
@@ -195,14 +195,14 @@ struct Monadic {
         [](const std::function<std::pair<unsigned int, unsigned int>(
                unsigned int)>
                acc,
-           const T1) {
+           const T1 &) {
           return state_bind<unsigned int, unsigned int,
                             unsigned int>(acc, [](const unsigned int) {
             return state_bind<unsigned int, unsigned int, unsigned int>(
                 state_get<unsigned int>(), [](const unsigned int n) {
                   return state_bind<unsigned int, std::monostate, unsigned int>(
                       state_put<unsigned int>((n + 1)),
-                      [=](const std::monostate &) mutable {
+                      [=](const std::monostate) mutable {
                         return state_return<unsigned int, unsigned int>(n);
                       });
                 });

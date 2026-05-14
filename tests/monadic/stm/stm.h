@@ -59,6 +59,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -83,10 +84,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -101,6 +102,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -153,7 +155,7 @@ struct stmtest {
     }
   }
 
-  static unsigned int stm_basic_counter(const std::monostate &_x);
+  static unsigned int stm_basic_counter(const std::monostate _x);
   static unsigned int io_basic_counter();
   static unsigned int stm_inc(const unsigned int x);
   static unsigned int io_inc(const unsigned int x);
@@ -166,7 +168,7 @@ struct stmtest {
                                      const unsigned int dflt);
   static unsigned int stm_queue_roundtrip(const unsigned int x);
   static unsigned int io_queue_roundtrip(const unsigned int x);
-  static unsigned int stm_orElse_retry_example(const std::monostate &_x);
+  static unsigned int stm_orElse_retry_example(const std::monostate _x);
   static unsigned int io_orElse_retry_example();
 };
 

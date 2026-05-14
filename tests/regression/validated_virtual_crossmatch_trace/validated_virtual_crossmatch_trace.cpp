@@ -1,4 +1,4 @@
-#include <validated_virtual_crossmatch_trace.h>
+#include "validated_virtual_crossmatch_trace.h"
 
 bool PeanoNat::eq_dec(const unsigned int n, const unsigned int m) {
   if (n <= 0) {
@@ -268,8 +268,7 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
     const auto &[d_a0, d_a1] = std::get<
         typename List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::Cons>(
         l.v());
-    List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> d_a1_value =
-        List<HLAEpitope>(*(d_a1));
+    List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> d_a1_value = *(d_a1);
     if (d_a1_value.existsb(
             [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) mutable
                 -> bool { return epitope_eqb(d_a0, _x0); })) {
@@ -325,7 +324,8 @@ unsigned int ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
       epitope_dedup(typing_epitopes(donor));
   return recipient.vxm_epitope_abs.template fold_left<unsigned int>(
       [=](const unsigned int acc,
-          ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody ab) mutable {
+          const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody
+              &ab) mutable {
         if (donor_epitopes.existsb(
                 [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) mutable
                     -> bool { return epitope_eqb(ab.ab_epitope, _x0); })) {
@@ -343,7 +343,8 @@ bool ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
       epitope_dedup(typing_epitopes(donor));
   return recipient.vxm_epitope_abs.existsb(
-      [=](ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody ab) mutable {
+      [=](const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody
+              &ab) mutable {
         return (
             (ab.ab_complement_fixing && mfi_negative_threshold < ab.ab_mfi) &&
             donor_epitopes.existsb(

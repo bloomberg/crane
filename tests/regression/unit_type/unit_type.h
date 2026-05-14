@@ -10,8 +10,8 @@
 struct UnitType {
   static inline const std::monostate unit_val = std::monostate{};
   static void return_unit(const unsigned int _x);
-  static unsigned int take_unit(const std::monostate &_x);
-  static unsigned int match_unit(const std::monostate &u);
+  static unsigned int take_unit(const std::monostate _x);
+  static unsigned int match_unit(const std::monostate u);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -58,7 +58,7 @@ struct UnitType {
     explicit pair(const pair<_U0, _U1> &_other) {
       const auto &[d_a0, d_a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
     }
 
     static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
@@ -91,9 +91,9 @@ struct UnitType {
   static inline const pair<std::monostate, std::monostate> unit_pair =
       pair<std::monostate, std::monostate>::pair0(std::monostate{},
                                                   std::monostate{});
-  static void unit_to_unit(std::monostate u);
+  static void unit_to_unit(const std::monostate u);
 
-  template <typename T1, typename T2> static T2 seq(const T1, const T2 b) {
+  template <typename T1, typename T2> static T2 seq(const T1 &, T2 b) {
     return b;
   }
 

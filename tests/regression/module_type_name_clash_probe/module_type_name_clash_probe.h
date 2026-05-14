@@ -7,7 +7,7 @@
 #include <utility>
 #include <variant>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct ModuleTypeNameClashProbe {
   struct M_Mod {
@@ -138,7 +138,7 @@ struct ModuleTypeNameClashProbe {
     return f(d_a0);
   }
 
-  static inline const Bool0 sample = Bool0::e_TRUE0;
+  static inline const Bool0 sample = Bool0::e_TRUE;
 };
 
 #endif // INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE

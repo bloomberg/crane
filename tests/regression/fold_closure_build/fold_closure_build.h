@@ -72,6 +72,7 @@ struct FoldClosureBuild {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -96,12 +97,12 @@ struct FoldClosureBuild {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        d_v_ = Mynil{};
+        this->d_v_ = Mynil{};
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        d_v_ = Mycons{t_A(d_a0),
-                      d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->d_v_ = Mycons{
+            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
       }
     }
 
@@ -115,6 +116,7 @@ struct FoldClosureBuild {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist<t_A> &_node) {
         if (std::holds_alternative<Mycons>(_node.d_v_)) {
           auto &_alt = std::get<Mycons>(_node.d_v_);
@@ -141,7 +143,7 @@ struct FoldClosureBuild {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rect(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
@@ -152,7 +154,7 @@ struct FoldClosureBuild {
 
   template <typename T1, typename T2, typename F1>
     requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
-  static T2 mylist_rec(const T2 f, F1 &&f0, const mylist<T1> &m) {
+  static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
@@ -163,7 +165,7 @@ struct FoldClosureBuild {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T2 &>
-  static T1 fold_left(F0 &&f, const T1 acc, const mylist<T2> &l) {
+  static T1 fold_left(F0 &&f, T1 acc, const mylist<T2> &l) {
     if (std::holds_alternative<typename mylist<T2>::Mynil>(l.v())) {
       return acc;
     } else {

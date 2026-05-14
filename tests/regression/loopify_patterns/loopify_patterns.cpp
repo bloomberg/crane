@@ -1,23 +1,26 @@
-#include <loopify_patterns.h>
+#include "loopify_patterns.h"
 
 /// Complex control flow and pattern matching edge cases.
 /// multi_let n multiple sequential let bindings before recursion.
-unsigned int LoopifyPatterns::multi_let(const unsigned int n) {
+unsigned int LoopifyPatterns::multi_let(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [c] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [c], resumes after recursive call with _result.
+  struct _Resume_m {
     unsigned int c;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified multi_let: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -30,11 +33,11 @@ unsigned int LoopifyPatterns::multi_let(const unsigned int n) {
         unsigned int m = n - 1;
         unsigned int b = (m * 2u);
         unsigned int c = (b + 3u);
-        _stack.emplace_back(_Resume1{c});
+        _stack.emplace_back(_Resume_m{c});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_f.c + _result);
     }
   }
@@ -87,24 +90,28 @@ unsigned int LoopifyPatterns::nested_if(const unsigned int n) {
 }
 
 /// deep_nest n deeply nested function application.
-unsigned int LoopifyPatterns::deep_nest(const unsigned int n) {
+unsigned int LoopifyPatterns::deep_nest(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0, _s1, _s2] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [_s0, _s1, _s2], resumes after recursive call with
+  /// _result.
+  struct _Resume_m {
     decltype(1u) _s0;
     decltype(1u) _s1;
     decltype(1u) _s2;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified deep_nest: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -115,11 +122,11 @@ unsigned int LoopifyPatterns::deep_nest(const unsigned int n) {
         _result = 0u;
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Resume1{1u, 1u, 1u});
+        _stack.emplace_back(_Resume_m{1u, 1u, 1u});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_f._s0 + (_f._s1 + (_f._s2 + _result)));
     }
   }
@@ -127,15 +134,17 @@ unsigned int LoopifyPatterns::deep_nest(const unsigned int n) {
 }
 
 /// bool_chain n target multiple recursive calls in || chain.
-bool LoopifyPatterns::bool_chain_fuel(const unsigned int fuel,
-                                      const unsigned int n,
-                                      const unsigned int target) {
+bool LoopifyPatterns::bool_chain_fuel(
+    const unsigned int fuel, const unsigned int n,
+    const unsigned int target) { /// _Enter: captures varying parameters for
+                                 /// each recursive call.
+
   struct _Enter {
     unsigned int n;
     unsigned int fuel;
   };
 
-  /// Intermediate: saves [_s0, f], dispatches next recursive call.
+  /// _After2: saves [_s0, f], dispatches next recursive call.
   struct _After2 {
     decltype((((std::declval<const unsigned int &>() - 1u) >
                        std::declval<const unsigned int &>()
@@ -144,7 +153,8 @@ bool LoopifyPatterns::bool_chain_fuel(const unsigned int fuel,
     unsigned int f;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
+  /// _Combine1: receives partial results, combines with _result from final
+  /// call.
   struct _Combine1 {
     bool _result;
   };
@@ -152,9 +162,9 @@ bool LoopifyPatterns::bool_chain_fuel(const unsigned int fuel,
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified bool_chain_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -199,27 +209,31 @@ bool LoopifyPatterns::bool_chain(const unsigned int n,
 }
 
 /// chained_comp n boolean result with double recursion.
-bool LoopifyPatterns::chained_comp(const unsigned int n) {
+bool LoopifyPatterns::chained_comp(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Intermediate: saves [n_], dispatches next recursive call.
-  struct _After2 {
+  /// _After_m: saves [n_], dispatches next recursive call.
+  struct _After_m {
     unsigned int n_;
   };
 
-  /// Combiner: receives first result, combines with second recursive call.
-  struct _Combine1 {
+  /// _Combine_m: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_m {
     bool _result;
   };
 
-  using _Frame = std::variant<_Enter, _After2, _Combine1>;
+  using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
   bool _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _After2, _Combine1.
+  /// Loopified chained_comp: _Enter -> _After_m -> _Combine_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -234,16 +248,16 @@ bool LoopifyPatterns::chained_comp(const unsigned int n) {
           _result = true;
         } else {
           unsigned int m = n_ - 1;
-          _stack.emplace_back(_After2{n_});
+          _stack.emplace_back(_After_m{n_});
           _stack.emplace_back(_Enter{m});
         }
       }
-    } else if (std::holds_alternative<_After2>(_frame)) {
-      auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+    } else if (std::holds_alternative<_After_m>(_frame)) {
+      auto _f = std::move(std::get<_After_m>(_frame));
+      _stack.emplace_back(_Combine_m{_result});
       _stack.emplace_back(_Enter{_f.n_});
     } else {
-      auto _f = std::move(std::get<_Combine1>(_frame));
+      auto _f = std::move(std::get<_Combine_m>(_frame));
       _result = (_result && _f._result);
     }
   }
@@ -252,22 +266,25 @@ bool LoopifyPatterns::chained_comp(const unsigned int n) {
 
 /// tuple_constr n recursive calls in multiple tuple positions.
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-LoopifyPatterns::tuple_constr(const unsigned int n) {
+LoopifyPatterns::tuple_constr(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [n] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_m: saves [n], resumes after recursive call, then processes rest.
+  struct _Cont_m {
     unsigned int n;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_m>;
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified tuple_constr: _Enter -> _Cont_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -278,11 +295,11 @@ LoopifyPatterns::tuple_constr(const unsigned int n) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
       } else {
         unsigned int m = n - 1;
-        _stack.emplace_back(_Cont1{n});
+        _stack.emplace_back(_Cont_m{n});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_m>(_frame));
       const unsigned int n = _f.n;
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &c = _result.second;
@@ -441,22 +458,25 @@ LoopifyPatterns::cons_computed(const unsigned int n,
 }
 
 /// mod_pattern n recursive call in mod expression.
-unsigned int LoopifyPatterns::mod_pattern(const unsigned int n) {
+unsigned int LoopifyPatterns::mod_pattern(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [n_] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [n_], resumes after recursive call with _result.
+  struct _Resume_m {
     unsigned int n_;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified mod_pattern: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -471,12 +491,12 @@ unsigned int LoopifyPatterns::mod_pattern(const unsigned int n) {
           _result = 1u;
         } else {
           unsigned int m = n_ - 1;
-          _stack.emplace_back(_Resume1{n_});
+          _stack.emplace_back(_Resume_m{n_});
           _stack.emplace_back(_Enter{m});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = ((_result + 1) ? _f.n_ % (_result + 1) : _f.n_);
     }
   }
@@ -484,27 +504,30 @@ unsigned int LoopifyPatterns::mod_pattern(const unsigned int n) {
 }
 
 /// alternating_ops n alternating operations based on modulo.
-unsigned int LoopifyPatterns::alternating_ops(const unsigned int n) {
+unsigned int LoopifyPatterns::alternating_ops(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [n] across recursive call.
+  /// _Resume1: saves [n], resumes after recursive call with _result.
   struct _Resume1 {
     unsigned int n;
   };
 
-  /// Continuation: saves [_s0] across recursive call.
+  /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    decltype((std::declval<const unsigned int &>() * 2u)) _s0;
+    unsigned int _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1, _Resume2.
+  /// Loopified alternating_ops: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -576,25 +599,27 @@ LoopifyPatterns::replace_at(const unsigned int idx, const unsigned int value,
 /// nested_pattern l three-element tuple pattern.
 unsigned int LoopifyPatterns::nested_pattern(
     const LoopifyPatterns::list<
-        std::pair<std::pair<unsigned int, unsigned int>, unsigned int>> &l) {
+        std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPatterns::list<
         std::pair<std::pair<unsigned int, unsigned int>, unsigned int>> *l;
   };
 
-  /// Continuation: saves [a, b, c] across recursive call.
-  struct _Resume1 {
+  /// _Resume_a: saves [a, b, c], resumes after recursive call with _result.
+  struct _Resume_a {
     unsigned int a;
     unsigned int b;
     unsigned int c;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_a>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified nested_pattern: _Enter -> _Resume_a.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -616,11 +641,11 @@ unsigned int LoopifyPatterns::nested_pattern(
         const unsigned int &c = d_a0.second;
         const unsigned int &a = p0.first;
         const unsigned int &b = p0.second;
-        _stack.emplace_back(_Resume1{a, b, c});
+        _stack.emplace_back(_Resume_a{a, b, c});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_a>(_frame));
       _result = (_f.a + (_f.b + (_f.c + _result)));
     }
   }
@@ -628,22 +653,25 @@ unsigned int LoopifyPatterns::nested_pattern(
 }
 
 /// let_nested n let with nested let in binding.
-unsigned int LoopifyPatterns::let_nested(const unsigned int n) {
+unsigned int LoopifyPatterns::let_nested(
+    const unsigned int
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     unsigned int n;
   };
 
-  /// Continuation: saves [a] across recursive call.
-  struct _Resume1 {
+  /// _Resume_m: saves [a], resumes after recursive call with _result.
+  struct _Resume_m {
     unsigned int a;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_m>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified let_nested: _Enter -> _Resume_m.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -655,11 +683,11 @@ unsigned int LoopifyPatterns::let_nested(const unsigned int n) {
       } else {
         unsigned int m = n - 1;
         unsigned int a = (m + 1);
-        _stack.emplace_back(_Resume1{a});
+        _stack.emplace_back(_Resume_m{a});
         _stack.emplace_back(_Enter{m});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = (_f.a + _result);
     }
   }
@@ -667,21 +695,23 @@ unsigned int LoopifyPatterns::let_nested(const unsigned int n) {
 }
 
 /// Helper: list length.
-unsigned int
-LoopifyPatterns::list_len(const LoopifyPatterns::list<unsigned int> &l) {
+unsigned int LoopifyPatterns::list_len(
+    const LoopifyPatterns::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// Continuation: saves across recursive call.
-  struct _Resume1 {};
+  /// _Resume_Cons: resumes after recursive call with _result.
+  struct _Resume_Cons {};
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified list_len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -694,11 +724,11 @@ LoopifyPatterns::list_len(const LoopifyPatterns::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume1{});
+        _stack.emplace_back(_Resume_Cons{});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_result + 1);
     }
   }
@@ -706,31 +736,35 @@ LoopifyPatterns::list_len(const LoopifyPatterns::list<unsigned int> &l) {
 }
 
 /// process_twice l applies recursion twice: process(process(xs)).
-LoopifyPatterns::list<unsigned int>
-LoopifyPatterns::process_twice_fuel(const unsigned int fuel,
-                                    LoopifyPatterns::list<unsigned int> l) {
+LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
+    const unsigned int fuel,
+    LoopifyPatterns::list<unsigned int>
+        l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     LoopifyPatterns::list<unsigned int> l;
     unsigned int fuel;
   };
 
-  /// Continuation: saves [d_a0, f] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
     unsigned int f;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont2 {
+  /// _Cont_Cons_1: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons_1 {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
+  using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
-  /// Frame dispatch: _Enter, _Cont1, _Cont2.
+  /// Loopified process_twice_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -749,19 +783,19 @@ LoopifyPatterns::process_twice_fuel(const unsigned int fuel,
           auto &[d_a0, d_a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Cont1{d_a0, f});
-          _stack.emplace_back(_Enter{*(d_a1), f});
+          _stack.emplace_back(_Cont_Cons{d_a0, f});
+          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
         }
       }
-    } else if (std::holds_alternative<_Cont1>(_frame)) {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+    } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int f = _f.f;
       LoopifyPatterns::list<unsigned int> first = _result;
-      _stack.emplace_back(_Cont2{d_a0});
+      _stack.emplace_back(_Cont_Cons_1{d_a0});
       _stack.emplace_back(_Enter{std::move(first), f});
     } else {
-      auto _f = std::move(std::get<_Cont2>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       unsigned int d_a0 = _f.d_a0;
       LoopifyPatterns::list<unsigned int> second = _result;
       _result = list<unsigned int>::cons(d_a0, std::move(second));
@@ -830,25 +864,25 @@ LoopifyPatterns::as_guard(const LoopifyPatterns::list<unsigned int> &l) {
 
 /// quad_sum_pattern l pattern with 4-way split.
 unsigned int LoopifyPatterns::quad_sum_pattern(
-    const LoopifyPatterns::list<unsigned int> &l) {
+    const LoopifyPatterns::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [_s0, _s1] across recursive call.
-  struct _Resume1 {
-    decltype((std::declval<unsigned int &>() +
-              std::declval<unsigned int &>())) _s0;
-    decltype((std::declval<unsigned int &>() +
-              std::declval<unsigned int &>())) _s1;
+  /// _Resume_Cons: saves [_s0, _s1], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    unsigned int _s0;
+    unsigned int _s1;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified quad_sum_pattern: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -887,14 +921,15 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
               const auto &[d_a02, d_a12] =
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(_Resume1{(d_a0 + d_a00), (d_a01 + d_a02)});
+              _stack.emplace_back(
+                  _Resume_Cons{(d_a0 + d_a00), (d_a01 + d_a02)});
               _stack.emplace_back(_Enter{d_a12.get()});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f._s0 + (_f._s1 + _result));
     }
   }
@@ -902,23 +937,26 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
 }
 
 /// multi_guard l demonstrates pattern with multiple conditional branches.
-unsigned int
-LoopifyPatterns::multi_guard(const LoopifyPatterns::list<unsigned int> &l) {
+unsigned int LoopifyPatterns::multi_guard(
+    const LoopifyPatterns::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified multi_guard: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -931,11 +969,11 @@ LoopifyPatterns::multi_guard(const LoopifyPatterns::list<unsigned int> &l) {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int rest = _result;
       if (10u < d_a0) {
@@ -983,25 +1021,28 @@ LoopifyPatterns::append_lists(const LoopifyPatterns::list<unsigned int> &l1,
 }
 
 /// double_append l1 l2 uses recursive result twice: h :: (rest @ rest).
-LoopifyPatterns::list<unsigned int>
-LoopifyPatterns::double_append(const LoopifyPatterns::list<unsigned int> &l1,
-                               LoopifyPatterns::list<unsigned int> l2) {
+LoopifyPatterns::list<unsigned int> LoopifyPatterns::double_append(
+    const LoopifyPatterns::list<unsigned int> &l1,
+    LoopifyPatterns::list<unsigned int>
+        l2) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     LoopifyPatterns::list<unsigned int> l2;
     const LoopifyPatterns::list<unsigned int> *l1;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l2, &l1});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1016,11 +1057,11 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<unsigned int> &l1,
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 l1.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       LoopifyPatterns::list<unsigned int> rest = _result;
       _result = list<unsigned int>::cons(d_a0, append_lists(rest, rest));
@@ -1030,31 +1071,35 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<unsigned int> &l1,
 }
 
 /// process_twice_alt l applies transformation twice on recursive result.
-LoopifyPatterns::list<unsigned int>
-LoopifyPatterns::process_twice_alt_fuel(const unsigned int fuel,
-                                        LoopifyPatterns::list<unsigned int> l) {
+LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
+    const unsigned int fuel,
+    LoopifyPatterns::list<unsigned int>
+        l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     LoopifyPatterns::list<unsigned int> l;
     unsigned int fuel;
   };
 
-  /// Continuation: saves [d_a0, f] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
     unsigned int f;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont2 {
+  /// _Cont_Cons_1: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons_1 {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
+  using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
   LoopifyPatterns::list<unsigned int> _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{l, fuel});
-  /// Frame dispatch: _Enter, _Cont1, _Cont2.
+  /// Loopified process_twice_alt_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1073,19 +1118,19 @@ LoopifyPatterns::process_twice_alt_fuel(const unsigned int fuel,
           auto &[d_a0, d_a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Cont1{d_a0, f});
-          _stack.emplace_back(_Enter{*(d_a1), f});
+          _stack.emplace_back(_Cont_Cons{d_a0, f});
+          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
         }
       }
-    } else if (std::holds_alternative<_Cont1>(_frame)) {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+    } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int f = _f.f;
       LoopifyPatterns::list<unsigned int> once = _result;
-      _stack.emplace_back(_Cont2{d_a0});
+      _stack.emplace_back(_Cont_Cons_1{d_a0});
       _stack.emplace_back(_Enter{std::move(once), f});
     } else {
-      auto _f = std::move(std::get<_Cont2>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       unsigned int d_a0 = _f.d_a0;
       LoopifyPatterns::list<unsigned int> twice = _result;
       _result = list<unsigned int>::cons(d_a0, std::move(twice));
@@ -1101,22 +1146,25 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt(
 
 /// sum_if_positive_else_double l conditional logic on each element.
 unsigned int LoopifyPatterns::sum_if_positive_else_double(
-    const LoopifyPatterns::list<unsigned int> &l) {
+    const LoopifyPatterns::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0] across recursive call, then processes rest.
-  struct _Cont1 {
+  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Cons {
     unsigned int d_a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont1>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Cont1.
+  /// Loopified sum_if_positive_else_double: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1129,11 +1177,11 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont1{d_a0});
+        _stack.emplace_back(_Cont_Cons{d_a0});
         _stack.emplace_back(_Enter{d_a1.get()});
       }
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       unsigned int rest = _result;
       if (d_a0 == 0u) {
@@ -1197,26 +1245,29 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
 }
 
 /// four_elem l four-element destructuring pattern with fallback cases.
-unsigned int
-LoopifyPatterns::four_elem(const LoopifyPatterns::list<unsigned int> &l) {
+unsigned int LoopifyPatterns::four_elem(
+    const LoopifyPatterns::list<unsigned int>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
   struct _Enter {
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// Continuation: saves [d_a0, d_a00, d_a01, d_a02] across recursive call.
-  struct _Resume1 {
+  /// _Resume_Cons: saves [d_a0, d_a00, d_a01, d_a02], resumes after recursive
+  /// call with _result.
+  struct _Resume_Cons {
     unsigned int d_a0;
     unsigned int d_a00;
     unsigned int d_a01;
     unsigned int d_a02;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
   unsigned int _result{};
   std::vector<_Frame> _stack;
-  _stack.reserve(16);
+  _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
-  /// Frame dispatch: _Enter, _Resume1.
+  /// Loopified four_elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1255,14 +1306,14 @@ LoopifyPatterns::four_elem(const LoopifyPatterns::list<unsigned int> &l) {
               const auto &[d_a02, d_a12] =
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(_Resume1{d_a0, d_a00, d_a01, d_a02});
+              _stack.emplace_back(_Resume_Cons{d_a0, d_a00, d_a01, d_a02});
               _stack.emplace_back(_Enter{d_a12.get()});
             }
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = (_f.d_a0 + (_f.d_a00 + (_f.d_a01 + (_f.d_a02 + _result))));
     }
   }

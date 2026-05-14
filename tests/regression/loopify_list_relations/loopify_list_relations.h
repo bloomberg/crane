@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -80,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -124,19 +126,20 @@ public:
   unsigned int length() const {
     const List *_self = this;
 
+    /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
       const List *_self;
     };
 
-    /// Continuation: saves across recursive call.
-    struct _Resume1 {};
+    /// _Resume_Cons: resumes after recursive call with _result.
+    struct _Resume_Cons {};
 
-    using _Frame = std::variant<_Enter, _Resume1>;
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
     unsigned int _result{};
     std::vector<_Frame> _stack;
-    _stack.reserve(16);
+    _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
-    /// Frame dispatch: _Enter, _Resume1.
+    /// Loopified length: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
@@ -149,11 +152,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(_Resume1{});
+          _stack.emplace_back(_Resume_Cons{});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
-        auto _f = std::move(std::get<_Resume1>(_frame));
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
         _result = (_result + 1);
       }
     }

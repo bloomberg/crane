@@ -1,4 +1,4 @@
-#include <deep_pattern.h>
+#include "deep_pattern.h"
 
 unsigned int
 DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {

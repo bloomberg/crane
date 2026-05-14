@@ -58,6 +58,7 @@ struct ThisCaptureDangling {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -94,6 +95,7 @@ struct ThisCaptureDangling {
     // MANIPULATORS
     ~tree() {
       std::vector<std::unique_ptr<tree>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.d_v_)) {
           auto &_alt = std::get<Node>(_node.d_v_);
@@ -134,7 +136,7 @@ struct ThisCaptureDangling {
     ///
     /// Note: option is custom-extracted to std::optional.
     std::optional<std::function<unsigned int(unsigned int)>> get_fn() const {
-      tree _self = *(this);
+      tree _self_val = *(this);
       auto _cs = (*(this)).tree_sum();
       if (_cs <= 0) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -142,7 +144,7 @@ struct ThisCaptureDangling {
         unsigned int _x = _cs - 1;
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
             [=](const unsigned int x) mutable {
-              return (x + _self.tree_sum());
+              return (x + _self_val.tree_sum());
             });
       }
     }
@@ -160,7 +162,7 @@ struct ThisCaptureDangling {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rec(const T1 f, F1 &&f0) const {
+    T1 tree_rec(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;
@@ -174,7 +176,7 @@ struct ThisCaptureDangling {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
-    T1 tree_rect(const T1 f, F1 &&f0) const {
+    T1 tree_rect(T1 f, F1 &&f0) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return f;

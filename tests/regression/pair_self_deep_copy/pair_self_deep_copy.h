@@ -60,6 +60,7 @@ struct PairSelfDeepCopy {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -72,13 +73,11 @@ struct PairSelfDeepCopy {
           const auto &_alt = std::get<Link>(_src->v());
           _dst->d_v_ = Link{
               _alt.d_a0
-                  ? std::make_unique<std::pair<
-                        std::unique_ptr<PairSelfDeepCopy::chain>, bool>>(
-                        std::make_pair(
-                            _alt.d_a0->first
-                                ? std::make_unique<PairSelfDeepCopy::chain>()
-                                : nullptr,
-                            _alt.d_a0->second))
+                  ? std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
+                        std::make_pair(_alt.d_a0->first
+                                           ? std::make_unique<chain>()
+                                           : nullptr,
+                                       _alt.d_a0->second))
                   : nullptr};
           auto &_dst_alt = std::get<Link>(_dst->d_v_);
           if (_alt.d_a0 && _alt.d_a0->first) {
@@ -102,6 +101,7 @@ struct PairSelfDeepCopy {
     // MANIPULATORS
     ~chain() {
       std::vector<std::unique_ptr<chain>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<Link>(_node.d_v_)) {
           auto &_alt = std::get<Link>(_node.d_v_);
@@ -128,7 +128,7 @@ struct PairSelfDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::pair<chain, bool> &>
-  static T1 chain_rect(const T1 f, F1 &&f0, const chain &c) {
+  static T1 chain_rect(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {
@@ -139,7 +139,7 @@ struct PairSelfDeepCopy {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::pair<chain, bool> &>
-  static T1 chain_rec(const T1 f, F1 &&f0, const chain &c) {
+  static T1 chain_rec(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {

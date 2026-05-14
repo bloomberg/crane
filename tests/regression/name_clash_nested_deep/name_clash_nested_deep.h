@@ -58,6 +58,7 @@ struct NameClashNestedDeep {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -90,6 +91,7 @@ struct NameClashNestedDeep {
     // MANIPULATORS
     ~mylist() {
       std::vector<std::unique_ptr<mylist>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
         if (std::holds_alternative<MyCons>(_node.d_v_)) {
           auto &_alt = std::get<MyCons>(_node.d_v_);
@@ -116,7 +118,7 @@ struct NameClashNestedDeep {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
-  static T1 mylist_rect(const T1 f, F1 &&f0, const mylist &m) {
+  static T1 mylist_rect(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
     } else {
@@ -127,7 +129,7 @@ struct NameClashNestedDeep {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
-  static T1 mylist_rec(const T1 f, F1 &&f0, const mylist &m) {
+  static T1 mylist_rec(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
     } else {

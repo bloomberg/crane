@@ -1,4 +1,4 @@
-#include <canon_struct.h>
+#include "canon_struct.h"
 
 bool Bool::eqb(const bool b1, const bool b2) {
   if (b1) {

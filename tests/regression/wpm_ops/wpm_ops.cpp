@@ -1,4 +1,4 @@
-#include <wpm_ops.h>
+#include "wpm_ops.h"
 
 bool WpmOps::nat_list_eqb(const List<unsigned int> &xs,
                           const List<unsigned int> &ys) {

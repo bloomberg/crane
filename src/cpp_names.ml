@@ -61,7 +61,10 @@ let is_merged_inductive (r : GlobRef.t) : bool =
   Hashtbl.mem promoted_inductives r
   ||
   let base = str_global Type r in
-  let wrapper_name = String.capitalize_ascii base in
+  let wrapper_name =
+    if Common.get_force_qualified_capitalization ()
+    then Common.capitalize_last_component base
+    else String.capitalize_ascii base in
   not (Hashtbl.mem unmerged_wrappers wrapper_name)
 
 (** grammar from OCaml 4.06 manual, "Prefix and infix symbols" *)
@@ -197,9 +200,21 @@ let inductive_name_info r =
   | GlobRef.IndRef _ when is_eponymous_record_global r ->
     (str (Common.pp_type_name_capitalized r), false)
   | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
-    (str (String.capitalize_ascii (str_global Type r)), false)
-  | GlobRef.IndRef _ when is_local_inductive r -> (pp_global Type r, false)
-  | GlobRef.IndRef _ -> (str (String.capitalize_ascii (str_global Type r)), true)
+    let s = str_global Type r in
+    let cap = if Common.get_force_qualified_capitalization ()
+              then Common.capitalize_last_component s
+              else String.capitalize_ascii s in
+    (str cap, false)
+  | GlobRef.IndRef _ when is_local_inductive r ->
+    if Common.get_force_qualified_capitalization ()
+    then (str (String.capitalize_ascii (Common.pp_global_name Type r)), false)
+    else (pp_global Type r, false)
+  | GlobRef.IndRef _ ->
+    let s = str_global Type r in
+    let cap = if Common.get_force_qualified_capitalization ()
+              then Common.capitalize_last_component s
+              else String.capitalize_ascii s in
+    (str cap, true)
   | _ -> (pp_global Type r, false)
 
 (** Check if capitalizing an enum type name would collide with its parent
@@ -240,18 +255,40 @@ let pp_inductive_type_name r =
   let result =
     match r with
     | GlobRef.IndRef _ when is_eponymous_record_global r ->
-      str (Common.pp_type_name_capitalized r)
+      let cap_name = Common.pp_type_name_capitalized r in
+      if Common.get_force_qualified_capitalization ()
+      then str (cap_name ^ "::" ^ cap_name)
+      else str cap_name
     | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
-      str (String.capitalize_ascii (str_global Type r))
-    | GlobRef.IndRef _ when is_record_inductive r -> pp_global Type r
+      let s = str_global Type r in
+      let cap = if Common.get_force_qualified_capitalization ()
+                then Common.capitalize_last_component s
+                else String.capitalize_ascii s in
+      str cap
+    | GlobRef.IndRef _ when is_record_inductive r ->
+      pp_global Type r
     | GlobRef.IndRef _ when is_enum_inductive r ->
-      let base_name = Common.pp_global_name Type r in
-      str (capitalize_enum_name base_name r)
-    | GlobRef.IndRef _ when is_local_inductive r -> pp_global Type r
+      if is_local_inductive r then
+        let base_name = Common.pp_global_name Type r in
+        str (capitalize_enum_name base_name r)
+      else
+        let base = str_global Type r in
+        if is_qualified_name base then
+          str (capitalize_enum_qualified base r)
+        else
+          let base_name = Common.pp_global_name Type r in
+          str (capitalize_enum_name base_name r)
+    | GlobRef.IndRef _ when is_local_inductive r ->
+      if Common.get_force_qualified_capitalization ()
+      then str (String.capitalize_ascii (Common.pp_global_name Type r))
+      else pp_global Type r
     | GlobRef.IndRef _ ->
       let base = str_global Type r in
       if is_qualified_name base then
-        str base
+        if Common.get_force_qualified_capitalization () then
+          str (Common.capitalize_last_component base)
+        else
+          str base
       else if is_merged_inductive r then
         str (String.capitalize_ascii base)
       else
@@ -268,6 +305,36 @@ let typename_prefix_for name_str =
     str "typename "
   else
     mt ()
+
+(** Deduplicate trailing A::A in a qualified C++ name.  When the last two
+    "::" components are equal and [allow_bare] is false, collapse only if
+    there is an outer prefix (e.g. "X::A::A" → "X::A").  When [allow_bare]
+    is true, also collapse bare "A::A" → "A".  Returns the (possibly
+    shortened) string unchanged if no dedup applies. *)
+let dedup_qualified_tail ?(allow_bare = false) cap =
+  match String.rindex_opt cap ':' with
+  | Some last_colon when last_colon < String.length cap - 1 ->
+    let last = String.sub cap (last_colon + 1) (String.length cap - last_colon - 1) in
+    let prev_start =
+      if last_colon > 1 then
+        match String.rindex_from_opt cap (last_colon - 2) ':' with
+        | Some j -> j + 1
+        | None -> 0
+      else 0
+    in
+    let parent =
+      if last_colon > 1 then
+        String.sub cap prev_start (last_colon - 1 - prev_start)
+      else ""
+    in
+    if String.equal parent last && (prev_start > 0 || allow_bare) then
+      let prefix =
+        if prev_start > 2 then String.sub cap 0 (prev_start - 2) ^ "::"
+        else ""
+      in
+      prefix ^ last
+    else cap
+  | _ -> cap
 
 (** Convert a C++ qualified name ([A::B::C]) to its Rocq dotted form
     ([A.B.C]). *)
@@ -378,7 +445,16 @@ let struct_qualifier_for r name_str =
         | Some i -> String.sub struct_name_dotted 0 i
         | None -> struct_name_dotted
       in
-      if
+      if full_path = struct_name_dotted then
+        (* The type IS the current struct itself (self-referential use in out-of-struct
+           context).  Adding the full struct_name:: prefix would double the last
+           component (e.g. "HashTrie::Trie::Trie<X>").  Use only the parent module
+           qualifier so the combined name is just "HashTrie::Trie". *)
+        (match String.rindex_opt struct_name_str ':' with
+         | Some i when i > 0 ->
+           str (String.sub struct_name_str 0 (i - 1)) ++ str "::"
+         | _ -> mt ())
+      else if
         Common.contains_substring full_path struct_name_dotted
         || is_qualified_name name_str
            && Common.contains_substring full_path parent_struct_dotted
@@ -415,7 +491,15 @@ let needs_global_qualifier x =
         match
           render_ctx.rc_struct_mp
         with
-        | Some struct_mp -> not (ModPath.equal (modpath_of_r x) struct_mp)
+        | Some struct_mp ->
+          let callee_mp = modpath_of_r x in
+          let rec is_ancestor mp =
+            ModPath.equal callee_mp mp ||
+            match mp with
+            | Names.ModPath.MPdot (parent, _) -> is_ancestor parent
+            | _ -> false
+          in
+          not (is_ancestor struct_mp)
         | None -> true )
   | None -> false
 

@@ -1,4 +1,4 @@
-#include <sum.h>
+#include "sum.h"
 
 unsigned int
 Sum::either_to_nat(const Sum::either<unsigned int, unsigned int> &e) {

@@ -298,6 +298,16 @@ type translation_ctx = {
      inside container types (e.g. [List<tree>]) get [shared_ptr] wrapping,
      matching the struct definition.  Empty outside method bodies. *)
   mutable method_self_ns : Refset'.t;
+  (* When generating a custom constructor arg, holds the expected ML type for
+     the argument being generated (from the enclosing constructor's type params).
+     Used by gen_ctor_call to recover concrete element types for nil lists when
+     the ML type annotation has unresolved metas (Tmeta{contents=None}). *)
+  mutable expected_ml_type_for_arg : ml_type option;
+  (* Track which lifted function refs have already been added so that the same
+     helper (e.g. _index_eq_dec_F) is emitted only once per file even when
+     multiple functions in the same module all use it. Reset per-file via
+     clear_seen_lifted_refs. *)
+  mutable seen_lifted_refs : GlobRef.t list;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -327,6 +337,8 @@ let tctx =
     eta_keep_moves = false;
     cs_counter = 0;
     method_self_ns = Refset'.empty;
+    expected_ml_type_for_arg = None;
+    seen_lifted_refs = [];
   }
 
 (** {3 Accessor wrappers} --- thin layer over {!tctx} fields. *)
@@ -352,15 +364,39 @@ let get_param_type_by_index (idx : int) : ml_type option =
 (** Reset the current parameter types to the empty list. *)
 let clear_current_param_types () = tctx.current_param_types <- []
 
-(** Enqueue a declaration to be lifted to the enclosing scope. *)
+let lifted_decl_ref = function
+  | Dtemplate (_, _, Dfundef ((r, _) :: _, _, _, _, _)) -> Some r
+  | Dfundef ((r, _) :: _, _, _, _, _) -> Some r
+  | _ -> None
+
+(** Enqueue a declaration to be lifted to the enclosing scope.
+    Skips duplicate declarations (same GlobRef) so identical helpers like
+    _index_eq_dec_F are only emitted once per file even when multiple
+    functions use them. *)
 let add_lifted_decl (d : cpp_decl) =
-  tctx.pending_lifted_decls <- d :: tctx.pending_lifted_decls
+  let is_dup =
+    match lifted_decl_ref d with
+    | None -> false
+    | Some r ->
+      List.exists (Environ.QGlobRef.equal Environ.empty_env r) tctx.seen_lifted_refs
+  in
+  if not is_dup then begin
+    ( match lifted_decl_ref d with
+    | Some r -> tctx.seen_lifted_refs <- r :: tctx.seen_lifted_refs
+    | None -> () );
+    tctx.pending_lifted_decls <- d :: tctx.pending_lifted_decls
+  end
 
 (** Drain and return the pending lifted declarations in definition order. *)
 let take_lifted_decls () =
   let ds = List.rev tctx.pending_lifted_decls in
   tctx.pending_lifted_decls <- [];
   ds
+
+(** Reset the seen-lifted-refs deduplication set. Call at the start of each
+    new output file so that identical helpers in different files are not
+    suppressed. *)
+let clear_seen_lifted_refs () = tctx.seen_lifted_refs <- []
 
 (** Prepend bindings to the de Bruijn environment type stack. *)
 let push_env_types (ids : (Id.t * ml_type) list) =
@@ -377,6 +413,20 @@ let rec resolve_tmeta = function
   | Miniml.Tmeta {contents = Some t} -> resolve_tmeta t
   | t -> t
 
+(** Check if an ML type is directly erased (non-recursive, top-level only).
+    Matches unresolved [Tmeta], [Tdummy], and [Tvar]. *)
+let is_erased_ml_type = function
+  | Miniml.Tmeta {contents = None} | Miniml.Tdummy _ | Miniml.Tvar _ -> true
+  | _ -> false
+
+(** Recursive check for erased sub-types inside an ML type.  Resolves [Tmeta]
+    chains before checking, then recurses into [Tglob] type arguments. *)
+let rec has_erased_ml_sub ty =
+  match resolve_tmeta ty with
+  | Miniml.Tmeta _ | Miniml.Tdummy _ | Miniml.Tvar _ -> true
+  | Miniml.Tglob (_, tys, _) -> List.exists has_erased_ml_sub tys
+  | _ -> false
+
 (** Return the codomain of an ML type, chasing through arrows and meta
     indirections. For [A -> B -> C] this returns [C]. *)
 let rec ml_codomain = function
@@ -392,6 +442,15 @@ let rec count_ml_value_arrows = function
   | Miniml.Tarr (_, t2) -> count_ml_value_arrows t2
   | Miniml.Tmeta {contents = Some t} -> count_ml_value_arrows t
   | _ -> 0
+
+(** Check if the codomain of an ML type (after all arrows) is a type variable.
+    When true, the type variable might hide additional arrows, so the arrow
+    count is not reliable for over-application detection. *)
+let rec ml_codomain_is_tvar = function
+  | Miniml.Tarr (_, t2) -> ml_codomain_is_tvar t2
+  | Miniml.Tmeta {contents = Some t} -> ml_codomain_is_tvar t
+  | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+  | _ -> false
 
 (** Count the total number of arrow levels in an ML type (including erased). *)
 let rec count_ml_arrows = function
@@ -472,13 +531,22 @@ let filter_value_types = List.filter (fun t -> not (isTdummy t))
 
     [n] counts the value-domain arrows to skip before inspecting the codomain;
     pass [0] to query the type's immediate codomain.  The [?has_dummy] flag
-    accumulates whether a [Tdummy] was seen; callers should omit it (defaults
-    to [false]). *)
+    accumulates whether a [Tdummy Ktype] was seen; callers should omit it
+    (defaults to [false]).  Note: [Tdummy Kprop] (erased proof) is skipped
+    without setting [has_dummy] — a proof argument does not make the codomain
+    [std::any]. *)
 let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
   | Miniml.Tarr (t, rest) ->
-    if isTdummy t then ml_codomain_erases_to_any ~has_dummy:true n rest
-    else if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
-    else false
+    ( match t with
+    | Miniml.Tdummy Miniml.Ktype ->
+      ml_codomain_erases_to_any ~has_dummy:true n rest
+    | _ when isTdummy t ->
+      (* Tdummy Kprop / Kimplicit: erased proof/implicit, skip without
+         setting has_dummy and without consuming a value-arg slot. *)
+      ml_codomain_erases_to_any ~has_dummy n rest
+    | _ ->
+      if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
+      else false )
   | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> n = 0 && has_dummy
   | Miniml.Tmeta {contents = Some t} -> ml_codomain_erases_to_any ~has_dummy n t
   | _ -> false
@@ -527,15 +595,13 @@ let mk_tt_expr () =
   | Some tt_ref when Table.is_custom tt_ref ->
     mk_cppglob tt_ref []
   | Some tt_ref ->
-    let ind_ref =
+    let ind_ref, ctor_name =
       match tt_ref with
-      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
+      | GlobRef.ConstructRef ((kn, i), cidx) ->
+        ( GlobRef.IndRef (kn, i),
+          Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) )
       | _ ->
         CErrors.anomaly (Pp.str "mk_tt_expr: tt is not a ConstructRef")
-    in
-    let ctor_name =
-      Id.of_string
-        (Common.enum_ctor_name (Common.pp_global_name Type tt_ref))
     in
     CPPenum_val (ind_ref, ctor_name)
   | None ->
@@ -668,7 +734,10 @@ let resolve_indref_base ?(no_custom_inductives = Refset'.empty)
       List.exists
         (Environ.QGlobRef.equal Environ.empty_env r)
         (get_local_inductives ())
-    then Common.pp_global Type r
+    then
+      if Common.get_force_qualified_capitalization ()
+      then String.capitalize_ascii (Common.pp_global_name Type r)
+      else Common.pp_global Type r
     else cap
 
 (** Render a C++ type as a plain string.  Used in [ITree<R>] qualified
@@ -729,6 +798,11 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
     else if not (get_record_fields g == []) then render t
     else
     let inner = render t in
+    let inner_base =
+      match String.index_opt inner '<' with
+      | Some i -> String.sub inner 0 i
+      | None -> inner
+    in
     let parent_ns =
       match g with
       | GlobRef.IndRef (kn, _) ->
@@ -736,15 +810,39 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
         | Names.ModPath.MPdot (_, label) ->
           let parent = Names.Label.to_string label in
           (* Strip template args before comparing: "List<t_A>" → "List" *)
-          let inner_base =
-            match String.index_opt inner '<' with
-            | Some i -> String.sub inner 0 i
-            | None -> inner
-          in
           let cap_inner = Common.capitalize_last_component inner_base in
-          (* Eponymous: parent "List" = inner "List" → no qualification *)
+          (* Eponymous shortcut: parent "List" = inner "List" → no prefix.
+             For MPdot types (inner module blocks), stripping the prefix avoids
+             the incorrect `Trie::Trie<T>` form from inside the module.  Note
+             that the MPdot branch cannot produce a fully qualified external
+             path anyway (it only sees the last label), so this shortcut is
+             the safest option for inner-module types. *)
           if String.equal parent cap_inner then ""
           else parent ^ "::"
+        | Names.ModPath.MPfile f ->
+          (* Top-level inductive in a .v file (e.g. list in Datatypes.v).
+             In separate extraction, external inductives need their parent
+             namespace as prefix (e.g. "Datatypes::").  In monolithic
+             extraction, everything is in the same file so no prefix is
+             needed — matching the old behaviour of the catch-all [_ -> ""]
+             branch. *)
+          if List.exists
+               (Environ.QGlobRef.equal Environ.empty_env g)
+               (get_local_inductives ())
+          then ""
+          else if not (Common.get_force_qualified_capitalization ())
+          then ""
+          else
+            let parent =
+              String.capitalize_ascii
+                (Id.to_string (List.hd (Names.DirPath.repr f)))
+            in
+            (* Always emit the file-namespace prefix, even if the inductive
+               name matches the file name (e.g. String::String).  The eponymous
+               shortcut is wrong here: `String` alone resolves to the C++
+               namespace, not to the type, so callers outside that namespace
+               always need the `String::String` qualified form. *)
+            parent ^ "::"
         | _ -> "" )
       | _ -> ""
     in
@@ -756,6 +854,8 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
   | Tvar (_, Some n) ->
     let s = Id.to_string n in
     ( match resolve_special_id s with Some r -> r | None -> s )
+  | Tqualified (base, id) ->
+    "typename " ^ render base ^ "::" ^ Id.to_string id
   | Tshared_ptr t -> "std::shared_ptr<" ^ render t ^ ">"
   | Tunique_ptr t -> "std::unique_ptr<" ^ render t ^ ">"
   | Tvoid -> "void"
@@ -773,9 +873,17 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
     let core = Tglob (g, List.map (qualify_inductives ~skip) ts, es) in
     ( match g with
     | GlobRef.IndRef _ when skip g -> core
+    | GlobRef.IndRef _ when Table.is_inline_custom g -> core
     | GlobRef.IndRef _ -> Tnamespace (g, core)
     | _ -> core )
-  | Tnamespace (g, t) -> Tnamespace (g, qualify_inductives ~skip t)
+  | Tnamespace (g, t) ->
+    (* qualify_inductives may add Tnamespace to a Tglob(g,...) inside t;
+       avoid double-wrapping when the inner result already carries the
+       same Tnamespace. *)
+    let inner = qualify_inductives ~skip t in
+    ( match inner with
+    | Tnamespace (g2, _) when GlobRef.CanOrd.equal g g2 -> inner
+    | _ -> Tnamespace (g, inner) )
   | Tshared_ptr t -> Tshared_ptr (qualify_inductives ~skip t)
   | Tunique_ptr t -> Tunique_ptr (qualify_inductives ~skip t)
   | Tref t -> Tref (qualify_inductives ~skip t)
@@ -787,6 +895,8 @@ let rec qualify_inductives ?(skip = fun _ -> false) = function
   | Tid (id, ts) -> Tid (id, List.map (qualify_inductives ~skip) ts)
   | Tid_external (id, ts) ->
     Tid_external (id, List.map (qualify_inductives ~skip) ts)
+  | Tqualified (base, id) ->
+    Tqualified (qualify_inductives ~skip base, id)
   | t -> t
 
 (** Render a C++ type as a string suitable for use in raw C++ template
@@ -879,13 +989,25 @@ let rec render_cpp_expr_simple = function
   | _ -> None
 
 (** Generate inline C++ clone code for a constructor field, converting
-    from [src_ty] to [dst_ty].  For non-copyable types ([unique_ptr],
-    [optional<unique_ptr>]) emits explicit inline clone code.  For
-    everything else — including type variables — emits a plain copy,
-    relying on the deep-copy copy constructor that every Crane-generated
-    inductive type provides. *)
-let gen_clone_field_expr ~src_ty ~dst_ty expr =
-  let render ty = render_cpp_type_for_raw_template (qualify_inductives ty) in
+    from [src_ty] to [dst_ty].
+
+    Type conversion matrix (rows = source, columns = destination):
+    - [unique_ptr<S> -> unique_ptr<T>]: null-check, dereference, make_unique
+    - [unique_ptr<T> -> T]: dereference (converting ctor if types differ)
+    - [shared_ptr<T> -> T]: dereference (converting ctor if types differ)
+    - [T -> unique_ptr<T>]: wrap in make_unique
+    - [optional<ptr<T>> -> optional<T>]: null-check + unwrap inner ptr
+    - [optional<T> -> optional<ptr<T>>]: value-check + wrap in ptr
+    - [Tglob(g, ts1) -> Tglob(g, ts2)]: same container, different elems
+    - Everything else (including type variables): converting constructor
+
+    Uses [render_cpp_type_for_raw_template] to produce type strings for
+    [CPPraw]-based converting constructors, since [pp_cpp_type] renders
+    custom-extracted types differently (e.g. namespace qualification). *)
+let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
+  let render ty =
+    render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
+  in
   (* Strip a single [Tnamespace] wrapper when it matches the inner [Tglob].
      [convert_ml_type_to_cpp_type] wraps external inductives as
      [Tnamespace(g, Tglob(g,...))] for qualified rendering, but for pattern
@@ -894,6 +1016,12 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
     | Tnamespace (g, (Tglob (g2, _, _) as core)) when GlobRef.CanOrd.equal g g2 -> core
     | t -> t
   in
+  (* Save the original dst_ty (with its Tnamespace wrapper, if any) before
+     stripping.  The stripped form is used for structural comparison; the
+     original is used for rendering converting constructors via
+     CPPconverting_ctor, which uses pp_cpp_type and correctly emits namespace
+     qualification and typename keywords. *)
+  let orig_dst_ty = dst_ty in
   let src_ty = strip_ns src_ty and dst_ty = strip_ns dst_ty in
   (* Inline clone for a [unique_ptr<T>] field: null-safe make_unique using
      the pointee's clone() method. *)
@@ -1009,21 +1137,24 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
         ~make_body:(fun s ->
           s ^ " ? std::make_unique<" ^ dst_inner_s ^ ">(*" ^ s ^ ") : nullptr")
     | Tunique_ptr inner, _ ->
-      (* unique_ptr<T> → T: dereference; if inner type differs from dst,
-         apply a converting constructor after dereferencing. *)
+      (* unique_ptr<T> → T: dereference.  Also strip Tnamespace from inner
+         before comparing to dst_ty: strip_ns was applied to dst_ty at the
+         top of this function but not to inner (which sits one level deeper
+         inside Tunique_ptr).  Without stripping inner, a
+         [Tnamespace(list, Tglob(list,...))] inner would wrongly appear
+         different from the stripped [Tglob(list,...)] dst_ty and generate a
+         spurious converting constructor with an unqualified type name. *)
+      let inner = strip_ns inner in
       let derefed = CPPderef expr in
       if inner = dst_ty then derefed
-      else
-        let dst_s = render dst_ty in
-        CPPfun_call (CPPraw dst_s, [derefed])
+      else CPPconverting_ctor (orig_dst_ty, [derefed])
     | Tshared_ptr inner, _ ->
-      (* shared_ptr<T> → T: dereference; if inner type differs from dst,
-         apply a converting constructor after dereferencing. *)
+      (* shared_ptr<T> → T: dereference; same Tnamespace-stripping fix as
+         the Tunique_ptr case above. *)
+      let inner = strip_ns inner in
       let derefed = CPPderef expr in
       if inner = dst_ty then derefed
-      else
-        let dst_s = render dst_ty in
-        CPPfun_call (CPPraw dst_s, [derefed])
+      else CPPconverting_ctor (orig_dst_ty, [derefed])
     | _, Tunique_ptr inner ->
       (* T → unique_ptr<T>: wrap in make_unique *)
       CPPfun_call (CPPmk_unique inner, [expr])
@@ -1064,24 +1195,18 @@ let gen_clone_field_expr ~src_ty ~dst_ty expr =
       when GlobRef.CanOrd.equal g1 g2 && _src_ts <> _dst_ts
            && not (Table.is_inline_custom g1) ->
       (* Same Crane container, different element types → converting ctor *)
-      let dst_type_s = render dst_ty in
-      CPPfun_call (CPPraw dst_type_s, [expr])
+      CPPconverting_ctor (orig_dst_ty, [expr])
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never unique_ptr)
          because nested self-references are wrapped at the field level. *)
-      let dst_s = render dst_ty in
-      CPPfun_call (CPPraw dst_s, [expr])
+      CPPconverting_ctor (orig_dst_ty, [expr])
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
 let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
-  let type_str =
-    if r_cpp = Tvoid then "void" else render_cpp_type_simple r_cpp
-  in
-  CPPfun_call (
-    CPPqualified (CPPraw ("ITree<" ^ type_str ^ ">"), Id.of_string "ret"),
-    args)
+  let itree_ty = Tid_external (Id.of_string_soft "ITree", [r_cpp]) in
+  CPPfun_call (CPPqualified_t (itree_ty, Id.of_string "ret"), args)
 
 (** Build [ITree<R>::ret(v)] or [ITree<void>::ret()] depending on whether
     the result type is void.  [r_cpp] is the C++ result type; [r_ml] is
@@ -1182,8 +1307,8 @@ let return_captures_by_value stmts =
   and stmt = function
     | Sreturn (Some e) -> Sreturn (Some (expr e))
     | Sexpr e -> Sexpr (expr e)
-    | Sasgn (id, ty, e) -> Sasgn (id, ty, expr e)
-    | Sderef_asgn (lhs, e) -> Sderef_asgn (expr lhs, expr e)
+    | Sasgn (_, _, _) as s -> s
+    | Sderef_asgn (_, _) as s -> s
     | Sif (c, t, f) -> Sif (expr c, List.map stmt t, List.map stmt f)
     | Sswitch (scrut, ind, branches, default) ->
       Sswitch
@@ -1358,10 +1483,14 @@ let is_skipped_ml_type = function
     lambda expression. *)
 let rec has_tany_in_type = function
   | Tany -> true
+  | Tvar (_, None) -> true  (* unnamed Tvar erases to std::any via tvar_erase_type *)
   | Tfun (dom, cod) -> List.exists has_tany_in_type dom || has_tany_in_type cod
-  | Tmod (_, t) -> has_tany_in_type t
-  | Tshared_ptr t -> has_tany_in_type t
-  | Tunique_ptr t -> has_tany_in_type t
+  | Tmod (_, t) | Tnamespace (_, t) -> has_tany_in_type t
+  | Tshared_ptr t | Tunique_ptr t | Tref t | Tptr t -> has_tany_in_type t
+  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists has_tany_in_type ts
+  | Tvariant ts -> List.exists has_tany_in_type ts
+  | Tqualified (base, _) -> has_tany_in_type base
   | _ -> false
 
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
@@ -1788,17 +1917,17 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | CPPbinop (_, l, r) -> ve l; ve r
     | CPPcond (c, t, f) -> ve c; ve t; ve f
     | CPPbraced es -> List.iter ve es
-    | CPPstd_get (_, Some e) -> ve e
+    | CPPstd_get (_, _, Some e) -> ve e
     | CPPunop (_, e) -> ve e
     | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _ | CPPstring _
     | CPPuint _ | CPPfloat _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _
-    | CPPnullptr | CPPstd_get (_, None) | CPPstd_holds_alternative _
+    | CPPnullptr | CPPstd_get (_, _, None) | CPPstd_holds_alternative _
     | CPPdeclval _ | CPPtypename_qualified _ | CPPraw _ | CPPbool _ | CPPint _
-    | CPPbrace_init | CPPthis -> ()
+    | CPPbrace_init | CPPthis | CPPconverting_ctor _ | CPPqualified_t _ -> ()
   and vs = function
     | Sreturn (Some e) | Sexpr e -> ve e
-    | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Sstruct_def _
-    | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
+    | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
+    | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
     | Sasgn (_, _, e) | Sderef_asgn (_, e) -> ve e
     | Sassign_expr (lhs, e) -> ve lhs; ve e
     | Sif (c, t, f) -> ve c; List.iter vs t; List.iter vs f
@@ -2001,6 +2130,77 @@ let rec get_args_and_ret acc = function
   | Tarr (t, rest) -> get_args_and_ret (t :: acc) rest
   | ret_ty -> (List.rev acc, ret_ty)
 
+(** Strip [n] non-dummy arrow levels from an ML type, resolving Tmeta
+    indirections and automatically skipping erased (Tdummy) arrows.
+    Returns the codomain after stripping, or [None] if the type has fewer
+    than [n] non-dummy arrow levels. *)
+let rec strip_tarr_n n ty =
+  if n <= 0 then Some ty
+  else match resolve_tmeta ty with
+    | Tarr (t1, rest) when Mlutil.isTdummy t1 ->
+      (* Skip erased type-param arrow without consuming a real argument *)
+      strip_tarr_n n rest
+    | Tarr (_, rest) -> strip_tarr_n (n - 1) rest
+    | _ -> None
+
+(** Strip one level of reference or const-qualification from a C++ type.
+    Normalises lambda parameter types before building [Tfun] wrappers.
+    Unlike [Loopify.strip_ref_and_const_type] this is intentionally
+    non-recursive: a double-ref [Tref (Tref t)] stays as [Tref t]. *)
+let strip_cpp_ref_const = function
+  | Tref t | Tmod (TMconst, t) -> t
+  | t -> t
+
+(** Count non-erased arguments in an ML application.
+    [MLdummy] nodes represent erased type/proof parameters that are not
+    passed to C++ functions; this returns the count of the remaining actual
+    value arguments. *)
+let count_real_ml_args args =
+  List.length (List.filter (fun a ->
+    match a with MLdummy _ -> false | _ -> true) args)
+
+(** Substitute type schema variables [Tvar i] with concrete types.
+    [ml_subst_tvars subst ty] replaces [Tvar i] with [subst.(i-1)] when
+    the index is in range. Used to instantiate the polymorphic type of a
+    global reference with its actual type arguments from [MLglob(r, tys)]. *)
+let rec ml_subst_tvars (subst : ml_type array) (ty : ml_type) : ml_type =
+  match ty with
+  | Tvar i | Tvar' i when i >= 1 && i <= Array.length subst -> subst.(i - 1)
+  | Tarr (t1, t2) -> Tarr (ml_subst_tvars subst t1, ml_subst_tvars subst t2)
+  | Tglob (g, ts, args) ->
+    Tglob (g, List.map (ml_subst_tvars subst) ts, args)
+  | Tmeta {contents = Some t} -> ml_subst_tvars subst t
+  | _ -> ty
+
+(** Infer the ML type of a body expression from its structure.
+    Returns [None] when the type cannot be determined.
+    Used to annotate CPPlambda return types so that loopify's frame type
+    inference doesn't fall back to [decltype(lambda)]. *)
+let rec infer_ml_body_type (a : ml_ast) : ml_type option =
+  match a with
+  | MLapp (MLglob (r, tys), args) ->
+    ( match find_type_opt r with
+    | Some ty ->
+      (* Instantiate type schema variables with actual type arguments *)
+      let ty = match tys with
+        | [] -> ty
+        | _ -> ml_subst_tvars (Array.of_list tys) ty
+      in
+      strip_tarr_n (count_real_ml_args args) ty
+    | None -> None )
+  | MLcons (ty, _, _) -> Some (resolve_tmeta ty)
+  | MLcase (_, _, pv) when Array.length pv > 0 ->
+    let (_, rty, _, _) = pv.(0) in
+    Some (resolve_tmeta rty)
+  | MLletin (_, _, _, body) -> infer_ml_body_type body
+  | MLlam (_, ty, body) ->
+    ( match infer_ml_body_type body with
+    | Some rty -> Some (Tarr (ty, rty))
+    | None -> None )
+  | MLglob (r, _) -> find_type_opt r
+  | MLmagic e -> infer_ml_body_type e
+  | _ -> None
+
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
 let ref_returns_typeclass r =
@@ -2180,6 +2380,12 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
   | _ when is_inductive_value_type cpp_ty ->
     if is_owned then cpp_ty  (* pass by value, caller moves *)
     else Tref (Tmod (TMconst, cpp_ty))  (* const T& for borrowing *)
+  | Tvar _ | Tqualified _ ->
+    (* Template type parameters and dependent types (e.g. typename C::t) have
+       unknown concrete size; always pass by const-ref to avoid deep copies.
+       When owned (caller moves in), pass by value to enable move semantics. *)
+    if is_owned then cpp_ty
+    else Tref (Tmod (TMconst, cpp_ty))
   | _ -> Tmod (TMconst, cpp_ty)
 
 (** Check if the return type of an ML function type is erased — i.e., it
@@ -2299,11 +2505,17 @@ let rec convert_ml_type_to_cpp_type
      sites become [unique_ptr]. *)
   match ml_t with
   | Tarr (t1, t2) ->
-    let t1c = convert_ml_type_to_cpp_type env ns tvars t1 in
+    (* std::function<F(A)> is already a value type and provides the heap
+       indirection needed to break recursive layout cycles.  Always pass an
+       empty [ns] for domain and codomain so that recursive self-references
+       inside function types stay as value types instead of being wrapped in
+       unique_ptr.  The outer field-position wrapping (unique_ptr for direct
+       self-ref fields) is handled at the call site, not here. *)
+    let t1c = convert_ml_type_to_cpp_type env Refset'.empty tvars t1 in
     (* Reify monadic domain types: itree E R in parameter position becomes
        shared_ptr<ITree<R>> so the tree can be passed as a value. *)
     let t1c = reify_monadic_param_type t1 t1c in
-    let t2c = convert_ml_type_to_cpp_type env ns tvars t2 in
+    let t2c = convert_ml_type_to_cpp_type env Refset'.empty tvars t2 in
     (* Skip erased params: isTdummy catches direct Tdummy, is_cpp_dummy_type
        catches Tdummy wrapped in Tmeta (e.g., Tmeta{contents=Some(Tdummy Kprop)}
        which converts to dummy_prop glob). Do NOT use is_erased_type here as it
@@ -2412,6 +2624,21 @@ let rec convert_ml_type_to_cpp_type
     in
     let converted_ts =
       List.map (convert_ml_type_to_cpp_type env ns_for_args tvars) filtered_ts
+    in
+    let converted_ts =
+      match g with
+      | GlobRef.IndRef _ ->
+        let rec first_ktype_idx i = function
+          | [] -> max_int
+          | (Tdummy Ktype | Tmeta {contents = Some (Tdummy Ktype)}) :: _ -> i
+          | _ :: rest -> first_ktype_idx (i + 1) rest
+        in
+        let cutoff = first_ktype_idx 0 filtered_ts in
+        if cutoff < max_int then
+          List.mapi (fun i t -> if i > cutoff then Tany else t) converted_ts
+        else
+          converted_ts
+      | _ -> converted_ts
     in
     let core = Tglob (g, converted_ts, []) in
     ( match g with
@@ -2693,7 +2920,98 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       wrap_void_call_as_value (gen_expr env e)
     | _ -> gen_expr env e
   in
-  let args = List.rev_map gen_ctor_arg ts in
+  (* Generate args with expected type hints: set expected_ml_type_for_arg to
+     the i-th type arg of the constructor's inductive type before generating
+     the i-th value arg.  This allows gen_ctor_call to recover concrete element
+     types for nil lists whose ML annotation has unresolved metas (Tmeta{None}).
+     Specifically: in pair(fr, nil), the pair type args [A, B] tell us B = list(A),
+     so the nil's element type can be recovered as A even if its annotation is Tmeta. *)
+  (* Try to get type args from the pair type annotation, falling back to the
+     outer expected_ml_type_for_arg (set by an enclosing MLletin or MLapp
+     lookahead) when the pair type itself is erased (Tmeta{None}). This
+     recovers the expected element type for nil args in pairs like
+       let sk0 : parser_frame × list(parser_frame) = (fr(...), nil)
+     where the pair MLcons has type annotation Tmeta{None}. *)
+  let ty_args_for_expected =
+    let rec deep_resolve ty =
+      match resolve_tmeta ty with
+      | Miniml.Tglob (n, tys, s) -> Miniml.Tglob (n, List.map deep_resolve tys, s)
+      | Miniml.Tarr (t1, t2) -> Miniml.Tarr (deep_resolve t1, deep_resolve t2)
+      | t -> t
+    in
+    (* Also try the expected type from the enclosing let-binding when deep_resolve
+       can't resolve sub-metas in the pair's own type annotation.
+       The expected type comes from t_effective which may have different (resolved) metas. *)
+    let fallback_from_expected tys =
+      if List.exists has_erased_ml_sub tys then
+        match tctx.expected_ml_type_for_arg with
+        | Some exp ->
+          let ctor_ind = match r with
+            | GlobRef.ConstructRef ((kn, i), _) -> Some (GlobRef.IndRef (kn, i))
+            | _ -> None
+          in
+          (match deep_resolve exp, ctor_ind with
+          | Miniml.Tglob (exp_n, exp_tys, _), Some ind
+            when GlobRef.CanOrd.equal exp_n ind
+                 && List.length exp_tys = List.length tys ->
+            List.map2 (fun local outer ->
+              if has_erased_ml_sub local then outer else local) tys exp_tys
+          | _ -> tys)
+        | None -> tys
+      else tys
+    in
+    match deep_resolve ty with
+    | Miniml.Tglob (_, tys, _) -> fallback_from_expected tys
+    | _ ->
+      (match tctx.expected_ml_type_for_arg with
+      | Some exp ->
+        let ctor_ind = match r with
+          | GlobRef.ConstructRef ((kn, i), _) -> Some (GlobRef.IndRef (kn, i))
+          | _ -> None
+        in
+        (match deep_resolve exp, ctor_ind with
+        | Miniml.Tglob (exp_n, exp_tys, _), Some ind
+          when GlobRef.CanOrd.equal exp_n ind -> exp_tys
+        | _ -> [])
+      | None -> [])
+  in
+  (* Pre-compute field types and draft template types so we can wrap lambdas
+     that are stored in erased (std::any) fields.  This mirrors the logic in
+     wrap_if_needed_for_field for the standard MLcons path. *)
+  let field_types_for_wrap = match Table.get_ctor_ip_types_opt r with
+    | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+    | None -> [] in
+  let draft_ctor_temps_for_wrap = match ty with
+    | Miniml.Tglob (cn, raw_tys, _) ->
+      let tys = match cn with
+        | GlobRef.IndRef (kn, _) ->
+          (match Table.get_ind_num_param_vars_opt kn with
+          | Some nv -> safe_firstn nv raw_tys
+          | None -> raw_tys)
+        | _ -> raw_tys
+      in
+      build_template_params env [] tys
+    | _ -> []
+  in
+  let args =
+    List.rev (List.mapi (fun i e ->
+      let saved_expected = tctx.expected_ml_type_for_arg in
+      let new_expected = List.nth_opt ty_args_for_expected i in
+      tctx.expected_ml_type_for_arg <- new_expected;
+      let result = gen_ctor_arg e in
+      tctx.expected_ml_type_for_arg <- saved_expected;
+      let result = match List.nth_opt field_types_for_wrap i with
+        | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
+          (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
+          | Some Tany ->
+            (match result with
+            | CPPlambda _ -> CPPconverting_ctor (Tfun ([Tany], Tany), [result])
+            | _ -> result)
+          | _ -> result)
+        | _ -> result
+      in
+      result) ts)
+  in
   (* Helper to wrap expression in function call syntax if it has arguments *)
   let app x =
     match args with
@@ -3080,6 +3398,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               let param_cpp_ty =
                 match body_subst with
                 | Some _ -> Tref (Tmod (TMconst, stored_cpp_ty))
+                | None when has_tany_in_type bare_cpp_ty ->
+                  (* The ML type contains erased positions (std::any).  Use
+                     [const auto&] so the C++ compiler deduces the concrete
+                     type at the call site — explicit std::any in the param
+                     type would block valid calls and prevent field accesses
+                     inside the body from resolving to the concrete type. *)
+                  Tref (Tmod (TMconst, Tauto))
                 | None -> wrap_param_by_ownership ~is_owned:owned bare_cpp_ty
               in
               (param_cpp_ty, Some id, body_subst) )
@@ -3104,6 +3429,77 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
             cpp_arg_info
         in
         let body_stmts = return_captures_by_value body_stmts in
+        (* When the lambda body is a standalone fixpoint (MLfix with no
+           applied args), the fix represents a function value that would make
+           this lambda curried — e.g. [fun x => fix f r := ...] generates
+           [[=](x){auto f=...; return f;}] (1-arg returning fn) instead of
+           the flat [[=](x,r){auto f=...; return f(r);}] (2-arg).  Fold the
+           fix's own params into this lambda so the result is uncurried and
+           directly compatible with [std::function<R(A,B)>] contexts. *)
+        let cpp_args, body_stmts =
+          match a with
+          | MLfix (fix_x, _fix_ids, fix_funs, _)
+            when List.length filtered_args <= 1 ->
+            let fix_lam_params, _ = Mlutil.collect_lams fix_funs.(fix_x) in
+            let fix_value_params =
+              List.filter
+                (fun (_, ty) -> not (isTdummy ty) && not (ml_type_is_void ty))
+                fix_lam_params
+            in
+            ( match fix_value_params with
+            | [] -> (cpp_args, body_stmts)
+            | _ ->
+              (* Only fold when body_stmts ends with a bare variable return,
+                 i.e. the non-lifted ycomb path.  Lifted (polymorphic) fixes
+                 are returned via a call expression and don't need folding. *)
+              let last_is_var_return =
+                match List.rev body_stmts with
+                | Sreturn (Some (CPPvar _)) :: _ -> true
+                | _ -> false
+              in
+              if not last_is_var_return then (cpp_args, body_stmts)
+              else
+                let extra_cpp_params =
+                  List.mapi
+                    (fun i (_, ml_ty) ->
+                      let bare =
+                        convert_ml_type_to_cpp_type
+                          env Refset'.empty tvars ml_ty
+                      in
+                      let param_ty =
+                        match bare with
+                        | Tshared_ptr _ | Tunique_ptr _ ->
+                          Tref (Tmod (TMconst, bare))
+                        | _ -> bare
+                      in
+                      (param_ty,
+                       Some (Id.of_string (Printf.sprintf "_fea%d" i))) )
+                    fix_value_params
+                in
+                let extra_args =
+                  List.map
+                    (fun (_, id_opt) -> CPPvar (Option.get id_opt))
+                    extra_cpp_params
+                in
+                let rec modify_last_return = function
+                  | [] -> []
+                  | [Sreturn (Some e)] ->
+                    [Sreturn (Some (CPPfun_call (e, List.rev extra_args)))]
+                  | stmt :: rest -> stmt :: modify_last_return rest
+                in
+                (* The printer does List.rev on params, so put extra params
+                   first (they will print last, after the outer lambda's own
+                   params).  Within extra_cpp_params, reverse so that fix param
+                   i prints at position i from the left (natural order). *)
+                ( List.rev extra_cpp_params @ cpp_args,
+                  modify_last_return body_stmts ) )
+          | _ -> (cpp_args, body_stmts)
+        in
+        (* The return type annotation is left as [None]; loopify's
+           [infer_saved_type] infers it from the body when computing frame
+           struct field types.  Annotating here caused regressions for inner
+           lambdas whose bodies return further closures (the inferred type
+           became [std::function<...>] instead of the plain return type). *)
         CPPlambda (cpp_args, None, body_stmts, true) )
     in
     tctx.env_types <- saved_env_types;
@@ -3406,15 +3802,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           | _ -> t )
         tys
     in
-    (* If any type arg is Tany or a dummy type glob (from erased type/prop
-       params), drop ALL explicit type args via filter_erased_type_args and let
-       the compiler deduce everything. See filter_erased_type_args for why we
-       must drop all args rather than just the erased ones. *)
     let cglob = mk_cppglob x (filter_erased_type_args tys_cpp) in
-    (* Monadic non-function definitions (e.g. [base : IO nat]) are generated as
-       zero-arg thunks. A bare [MLglob] reference to such a definition must call
-       the thunk to obtain its value. CoFixpoint definitions are also zero-arg
-       functions and must be called. *)
     let needs_call =
       match find_type_opt x with
       | Some ml_ty when is_monadic_ml_type ml_ty -> true
@@ -3486,13 +3874,11 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          | GlobRef.ConstructRef ((kn, _), _) ->
            is_enum_inductive (GlobRef.IndRef (kn, 0))
          | _ -> false ->
-    (* Enum constructor: emit bare EnumType::Constructor value *)
-    let ctor_name =
-      Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
-    in
-    let ind_ref =
+    let ind_ref, ctor_name =
       match r with
-      | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
+      | GlobRef.ConstructRef ((kn, i), cidx) ->
+        ( GlobRef.IndRef (kn, i),
+          Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) )
       | _ ->
         CErrors.anomaly
           (Pp.str "gen_expr: enum constructor expected ConstructRef")
@@ -3654,6 +4040,68 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           in
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys in
+          (* For inductives with dependent parameters (e.g. sigT where the
+             second param's type references the first), the dependent type arg
+             extracts as a bare reference to the same inductive as an earlier
+             arg.  Erase the duplicate to Tany to avoid mismatched template
+             instantiations. *)
+          let temps =
+            if Table.has_dependent_params n then
+              match tys with
+              | [fst_ty; snd_ty] ->
+                let same_base = match fst_ty, snd_ty with
+                  | Miniml.Tglob (g1, _, _), Miniml.Tglob (g2, sub2, _) ->
+                    GlobRef.CanOrd.equal g1 g2 && sub2 = []
+                  | _ -> false
+                in
+                if same_base then
+                  match temps with
+                  | [fst; _] -> [fst; Tany]
+                  | _ -> temps
+                else temps
+              | _ -> temps
+            else temps
+          in
+          (* When all template params resolved to Tany (all type args were
+             unresolved Tmeta), try to recover the concrete element type from
+             an expected type threaded down from an enclosing constructor.
+             Example: the pair (Fr [...], []) has a concrete pair annotation
+             with second type arg list(parser_frame); when generating the nil
+             for the second slot, expected_ml_type_for_arg = list(parser_frame),
+             so we produce List<Parser_frame>::nil() instead of List<any>::nil(). *)
+          let temps =
+            (* Treat unnamed Tvars (Tvar(_, None)) as erased: they become
+               std::any after tvar_erase_type, so we should try to recover
+               the concrete type from the expected type annotation. *)
+            let is_effectively_erased t =
+              is_erased_type t || (match t with Tvar (_, None) -> true | _ -> false)
+            in
+            if List.for_all is_effectively_erased temps && temps <> [] then
+              (* Resolve any metas in the expected type before matching.
+                 The let-binding type may be Tmeta{Some Tglob(...)} so we
+                 need to unwrap the meta to get the concrete Tglob. *)
+              let expected_resolved = match tctx.expected_ml_type_for_arg with
+                | Some exp -> Some (resolve_tmeta exp)
+                | None -> None
+              in
+              (match expected_resolved with
+              | Some (Miniml.Tglob (exp_n, exp_tys, _))
+                when GlobRef.CanOrd.equal n exp_n
+                     && List.length exp_tys = List.length tys ->
+                (* Compute the recovered type with in_constructor_expr = false so
+                   that promoted type vars resolve via promoted_var_map (giving
+                   e.g. typename D::Defs::Parser_frame) rather than being erased
+                   to std::any by the constructor-expression shortcut. *)
+                let saved_ctor = tctx.in_constructor_expr in
+                tctx.in_constructor_expr <- false;
+                let recovered = build_template_params env tvars exp_tys in
+                tctx.in_constructor_expr <- saved_ctor;
+                if List.for_all (fun t -> not (is_erased_type t)) recovered
+                then recovered
+                else temps
+              | _ -> temps)
+            else temps
+          in
           (* In dependent types, if a constructor arg at position i is
              [MLdummy Ktype] (a type-valued argument — e.g. [x : A] where
              [A : Type]), any template param at a later position j > i must
@@ -3709,6 +4157,12 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
          resolves to an owning pointer type (because T is in method_self_ns),
          the generated arg expression is a bare T value.  Wrap it so the
          field's stored type matches. *)
+      (* All ML type arguments from the MLcons type — used to recover the
+         actual type for fields erased to std::any when ind_nparams = 0. *)
+      let ty_ml_tparams = match resolve_tmeta ty with
+        | Tglob (_, tys_orig, _) -> tys_orig
+        | _ -> []
+      in
       let ctor_temps = match ty with
         | Tglob (n, tys_orig, _) ->
           let tys_filt = match n with
@@ -3723,7 +4177,13 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         | _ -> []
       in
       let field_types = match Table.get_ctor_ip_types_opt r with
-        | Some ft -> ft | None -> [] in
+        | Some ft ->
+          (* Filter out killed (Tdummy) entries — these are erased type/prop
+             parameters that make_mlargs skips during extraction, so they
+             don't appear in MLcons args.  Filtering aligns the field type
+             indices with the actual constructor arguments in ts_updated. *)
+          List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+        | None -> [] in
       let wrap_if_needed_for_field ft expr =
         match ft with
         | Miniml.Tvar i | Miniml.Tvar' i ->
@@ -3742,8 +4202,84 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               | Some g when Refset'.mem g tctx.method_self_ns ->
                 CPPfun_call (CPPmk_unique inner, [expr])
               | _ -> expr )
+            | Tany ->
+              (* Field is erased to std::any — wrap lambda in
+                 std::function<std::any(std::any)> so any_cast can recover it. *)
+              ( match expr with
+              | CPPlambda _ -> CPPconverting_ctor (Tfun ([Tany], Tany), [expr])
+              | _ -> expr )
             | _ -> expr
-            with Failure _ | Invalid_argument _ -> expr )
+            with Failure _ | Invalid_argument _ ->
+              (* Field type index is beyond ctor_temps — this field is erased
+                 to std::any.  If the expression is a lambda, wrap it in
+                 std::function so that std::any stores the type-erased wrapper
+                 and any_cast<std::function<...>> can recover it. *)
+              match expr with
+              | CPPlambda (params, ret_ty_opt, body_stmts, _) ->
+                let param_types = List.map (fun (ty, _) ->
+                  strip_cpp_ref_const ty) params in
+                (* Build a name→type map from the lambda's parameter list. *)
+                let param_env =
+                  List.filter_map
+                    (fun (ty, id_opt) ->
+                      Option.map (fun id -> (id, strip_cpp_ref_const ty)) id_opt)
+                    params
+                in
+                (* Infer return type from the first Sreturn in the body. *)
+                let rec infer_ret_from_expr = function
+                  | CPPvar id ->
+                    List.assoc_opt id param_env
+                  | CPPbinop (_, a, b) ->
+                    ( match infer_ret_from_expr a with
+                    | Some _ as r -> r
+                    | None -> infer_ret_from_expr b )
+                  | _ -> None
+                in
+                let rec infer_ret_from_stmts = function
+                  | [] -> None
+                  | Sreturn (Some e) :: _ -> infer_ret_from_expr e
+                  | Sif (_, t, f) :: rest ->
+                    ( match infer_ret_from_stmts t with
+                    | Some _ as r -> r
+                    | None ->
+                      match infer_ret_from_stmts f with
+                      | Some _ as r -> r
+                      | None -> infer_ret_from_stmts rest )
+                  | Sblock ss :: rest ->
+                    ( match infer_ret_from_stmts ss with
+                    | Some _ as r -> r
+                    | None -> infer_ret_from_stmts rest )
+                  | _ :: rest -> infer_ret_from_stmts rest
+                in
+                let ret_ty = match ret_ty_opt with
+                  | Some ty -> strip_cpp_ref_const ty
+                  | None ->
+                    (* Try the lambda body first (works when the return expression
+                       contains a lambda parameter). *)
+                    ( match infer_ret_from_stmts body_stmts with
+                    | Some ty -> ty
+                    | None ->
+                      (* Fall back: recover the return type from the MLcons type
+                         arguments.  For [ft = Tvar i], the actual ML type is
+                         [ty_ml_tparams.(i-1)] = e.g. [nat -> nat].  Strip as many
+                         arrow levels as there are C++ params to get the codomain.
+                         This works for type-PARAMETER inductives (ind_nparams > 0);
+                         for type-INDEXED inductives the tys list may be empty. *)
+                      let actual_ml_ty =
+                        try List.nth ty_ml_tparams (i - 1)
+                        with Failure _ | Invalid_argument _ ->
+                          Tmeta {Miniml.id = -1; Miniml.contents = None}
+                      in
+                      let n_params = List.length param_types in
+                      let tvars = get_current_type_vars () in
+                      match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
+                      | Some ret_ml ->
+                        let r = convert_ml_type_to_cpp_type env Refset'.empty tvars ret_ml in
+                        strip_cpp_ref_const r
+                      | None -> Tvoid )
+                in
+                CPPconverting_ctor (Tfun (param_types, ret_ty), [expr])
+              | _ -> expr )
         | _ -> expr
       in
       let gen_and_wrap i e =
@@ -4742,6 +5278,7 @@ and eta_fun env f args =
             ( match resolve_tmeta cod with
             | Miniml.Tglob _ -> true
             | Miniml.Tarr _ -> true
+            | Miniml.Tunknown -> true
             | Miniml.Tvar _ ->
               (* Type variable: instantiate with the call-site type args to
                  determine if the return type is actually a function.
@@ -4766,6 +5303,8 @@ and eta_fun env f args =
                 ( match resolve_tmeta cod_inst with
                 | Miniml.Tarr _ -> true
                 | Miniml.Tglob _ -> true
+                | Miniml.Tdummy Miniml.Ktype -> true
+                | Miniml.Tunknown -> true
                 | _ -> false )
             | _ -> false )
           | None -> false
@@ -4921,6 +5460,66 @@ and eta_fun env f args =
         single_arg
       | _ -> primary_result
     in
+    (* Wrap pair-accessor inline custom arguments in any_cast when the
+       argument's ML type is erased.  E.g. [fst vs] where [vs : std::any]
+       generates [any_cast<pair<any,any>>(vs).first] instead of [vs.first].
+       This is the inline-custom analog of Fix A for match scrutinees. *)
+    let primary_result =
+      match primary_result with
+      | CPPfun_call (CPPglob (n, _, Some ci) as cglob', [single_arg])
+        when ( match ci.ci_inline with
+               | Some s -> Common.contains_substring s ".first"
+                        || Common.contains_substring s ".second"
+               | None -> false ) ->
+        let arg_ml_erased =
+          let rec has_magic = function
+            | MLmagic _ -> true
+            | MLapp (MLglob (r, _), args) ->
+              (* If the callee is itself a pair accessor (.first/.second) and
+                 its product arg was coerced, result is also std::any *)
+              let is_pair_accessor =
+                match Table.find_custom_opt r with
+                | Some s -> Common.contains_substring s ".first"
+                         || Common.contains_substring s ".second"
+                | None -> false
+              in
+              if is_pair_accessor then
+                let inner_args =
+                  List.filter (fun x -> match x with MLdummy _ -> false | _ -> true) args
+                in
+                List.exists has_magic inner_args
+              else false
+            | MLapp (MLmagic _, _) -> true
+            | _ -> false
+          in
+          if List.length regular_ml_args > 0 then
+            has_magic (List.nth regular_ml_args 0)
+          else false
+        in
+        if arg_ml_erased then
+          let prod_g_opt =
+            try
+              let ml_ty = Table.find_type n in
+              let rec find_prod = function
+                | Miniml.Tarr (t, rest) ->
+                  ( match resolve_tmeta t with
+                  | Miniml.Tglob (g, _, _) when is_prod_global g -> Some g
+                  | Miniml.Tdummy _ -> find_prod rest
+                  | _ -> None )
+                | _ -> None
+              in
+              find_prod ml_ty
+            with Not_found -> None
+          in
+          ( match prod_g_opt with
+          | Some g ->
+            CPPfun_call (cglob',
+              [CPPany_cast (Tglob (g, [Tany; Tany], []), single_arg)])
+          | None -> primary_result )
+        else
+          primary_result
+      | _ -> primary_result
+    in
     wrap_excess primary_result
   | _ ->
     (* Non-global callee (e.g., a local variable from MLrel). Filter out MLdummy
@@ -4945,10 +5544,20 @@ and eta_fun env f args =
        into a primary call and a chained application of excess args. Example: [f
        : A -> State S B] applied as [f(a, s')] becomes [f(a)(s')]. *)
     let n_value_dom =
-      match f with
-      | MLrel i ->
-        (try count_ml_value_arrows (get_env_type i) with _ -> List.length args)
-      | _ -> List.length args
+      let rel_idx_f = match f with
+        | MLrel i | MLmagic (MLrel i) -> Some i
+        | _ -> None
+      in
+      match rel_idx_f with
+      | Some i ->
+        ( try
+            let ty = get_env_type i in
+            let n = count_ml_value_arrows ty in
+            if n < List.length args && ml_codomain_is_tvar ty then
+              List.length args
+            else n
+          with _ -> List.length args )
+      | None -> List.length args
     in
     let n_args = List.length args in
     if n_args = 0 then
@@ -5015,6 +5624,38 @@ and eta_fun env f args =
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call (CPPfun_call (gen_expr env f, primary), excess)
     else
+      (* When the callee is a local variable whose ML type is a bare type
+         variable (Tvar/Tvar'/Tunknown), its C++ type is std::any.  std::any
+         is not callable, so we must wrap it with std::any_cast to recover the
+         std::function type before calling.  Both arg and return types
+         default to std::any since the original types are erased.
+         The MLmagic wrapper is transparent — peel it to find the MLrel. *)
+      let callee_expr =
+        let rel_idx = match f with
+          | MLrel i | MLmagic (MLrel i) -> Some i
+          | _ -> None
+        in
+        match rel_idx with
+        | Some i ->
+          let callee_is_any =
+            try
+              let ty = get_env_type i in
+              let rec is_erased_type = function
+                | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+                | Miniml.Tmeta {contents = None} -> true
+                | Miniml.Tmeta {contents = Some t} -> is_erased_type t
+                | _ -> false
+              in
+              is_erased_type ty
+            with _ -> false
+          in
+          if callee_is_any then
+            let arg_tys = List.init n_args (fun _ -> Tany) in
+            CPPany_cast (Tfun (arg_tys, Tany), gen_expr env f)
+          else
+            gen_expr env f
+        | None -> gen_expr env f
+      in
       (* Check whether this call returns [std::any] (erased type) but the
          enclosing function expects a concrete type, requiring an
          [std::any_cast<T>] wrapper.  See [ml_codomain_erases_to_any].
@@ -5024,7 +5665,7 @@ and eta_fun env f args =
            [std::function<std::any(std::any)>]).
          - [MLrel] higher-rank callback whose env-type has a [Tvar] codomain
            guarded by [Tdummy] (e.g. [f : forall A, A -> A]). *)
-      let result = CPPfun_call (gen_expr env f, List.rev args) in
+      let result = CPPfun_call (callee_expr, List.rev args) in
       let n = n_args in
       let erased_cod =
         match f with
@@ -5332,7 +5973,15 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       (* IIFE: lambda is invoked immediately, so reference captures are safe.
          Only check the lambda body for nested non-IIFE lambdas. *)
       List.exists stmt_has_lambda body
-    | CPPlambda _ -> true
+    | CPPlambda (_, _, _, true) ->
+      (* [=] value-capture: unique_ptr fields cannot be copied into the closure;
+         preextract into a value binding before the lambda. *)
+      true
+    | CPPlambda (_, _, body, false) ->
+      (* [&] ref-capture: unique_ptr fields are captured by reference, which is
+         fine — no copy. Check the body for nested [=] lambdas that would need
+         preextract. *)
+      List.exists stmt_has_lambda body
     | e ->
       let found = ref false in
       iter_expr_children
@@ -5388,6 +6037,27 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let branch_needs_uptr_preextract =
     branch_has_lambda || return_type_is_coinductive
   in
+  (* A non-self-referential field in a type-indexed inductive (no template
+     params) whose def-site type contains an unnamed Tvar is stored as
+     [std::any] in the struct.  At the match site we recover the ML-known
+     type with [std::any_cast<bare_ty>].  This handles every access pattern
+     uniformly — fst, snd, or any other function — because the cast is
+     applied at the binding site, not at individual use sites. *)
+  let field_is_wholesale_erased =
+    let num_pv = Table.get_ctor_num_param_vars cname in
+    fun i ->
+      num_pv = 0
+      && not (field_is_self_or_mutual_ref_at_def i)
+      && not (field_has_nested_self_ref_at_def i)
+      && (match List.nth_opt non_erased_def_site_field_tys i with
+          | Some def_ty ->
+            let cpp_ty =
+              convert_ml_type_to_cpp_type (empty_env ())
+                (Refset'.add ind_ref Refset'.empty) [] def_ty
+            in
+            has_unnamed_tvar cpp_ty
+          | None -> false)
+  in
   (* Substitute pattern variable references with the structured-binding
      names.  For unique_ptr fields (self-references at definition site),
      the structured binding gives [const unique_ptr<T>& d_field]; we
@@ -5418,6 +6088,9 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                     && contains_shared_ptr_or_unique_ptr field_ty then
               gen_clone_field_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (CPPvar binding_name)
+            else if field_is_wholesale_erased i
+                    && not (is_erased_type bare_ty) then
+              CPPany_cast (bare_ty, CPPvar binding_name)
             else
               CPPvar binding_name
           in
@@ -5455,74 +6128,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       (List.mapi (fun i x -> (i, x)) rev_ids)
   in
   let body_stmts = uptr_value_bindings @ body_stmts in
-  (* For fields stored as [std::any] (erased type indices in type-indexed
-     inductives such as [wrap : Set -> Type]), wrap direct returns of those
-     bindings with [std::any_cast<rty>].
-
-     A struct field is [std::any] when [gen_ind_header_v2] erases its type:
-     this happens when a field's ML type is a [Tvar] that references a type
-     INDEX (not a kept PARAMETER), so it has no C++ template name and
-     [tvar_erase_type] converts it to [Tany].  The pattern variable's ML type
-     is NOT a reliable indicator — the Tmeta reconstructor resolves it to a
-     concrete type in monomorphic contexts, masking the [std::any] storage.
-
-     We only fix DIRECT [return <binding>;] statements.  When the binding is
-     passed to a higher-rank callback (e.g. the auto-generated [wrap_rect]),
-     the field is forwarded as [std::any] unchanged; the existing
-     [ml_codomain_erases_to_any] mechanism handles the cast on the call result. *)
-  let body_stmts =
-    match Table.get_ctor_ip_types_opt cname with
-    | None -> body_stmts
-    | Some ip_tys ->
-      let cast_ty_opt =
-        let t = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
-        if type_is_erased t then None else Some t
-      in
-      ( match cast_ty_opt with
-      | None -> body_stmts
-      | Some cast_ty ->
-        (* Identify which field bindings are stored as std::any in C++.
-           A field is std::any iff gen_ind_header_v2 would erase its type.
-           gen_ind_header_v2 uses only PARAMETER type vars (not index vars)
-           and applies tvar_erase_type when param_vars is empty — making
-           any Tvar that references an index (rather than a parameter)
-           collapse to Tany.  We replicate that computation here. *)
-        let num_param_vars = Table.get_ctor_num_param_vars cname in
-        let param_vars =
-          List.map Common.tparam_name
-            (List.firstn num_param_vars (Table.get_ind_ip_vars cname))
-        in
-        let ind_ref =
-          match cname with
-          | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
-          | r -> r
-        in
-        let ind_ns = Refset'.add ind_ref Refset'.empty in
-        let non_dummy_ip_tys = List.filter (fun t -> not (isTdummy t)) ip_tys in
-        let erased_names =
-          List.mapi (fun i (bn, _, _, _) ->
-              match List.nth_opt non_dummy_ip_tys i with
-              | Some ip_ty ->
-                let cpp_ty =
-                  convert_ml_type_to_cpp_type (empty_env ()) ind_ns param_vars ip_ty
-                in
-                let cpp_ty =
-                  if param_vars = [] then tvar_erase_type cpp_ty else cpp_ty
-                in
-                if is_erased_type cpp_ty then Some bn else None
-              | None -> None)
-            field_bindings
-          |> List.filter_map Fun.id
-        in
-        if erased_names = [] then body_stmts
-        else
-          List.map (function
-            | Sreturn (Some (CPPvar id))
-              when List.exists (Id.equal id) erased_names ->
-              Sreturn (Some (CPPany_cast (cast_ty, CPPvar id)))
-            | s -> s )
-            body_stmts )
-  in
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)
   let has_used_fields = List.exists Fun.id dummies in
@@ -5637,7 +6242,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
             env
         in
         let ctor_name =
-          Id.of_string (Common.enum_ctor_name (Common.pp_global_name Type r))
+          match r with
+          | GlobRef.ConstructRef ((kn, i), cidx) ->
+            Id.of_string (Table.enum_ctor_name_of_ref kn i cidx)
+          | _ -> Id.of_string (Common.enum_ctor_name_of_id
+                   (Table.safe_basename_of_global r))
         in
         let body_stmts = gen_stmts env' (fun x -> Sreturn (Some x)) body in
         (ctor_name, body_stmts) :: gen_enum_branches cs
@@ -5992,12 +6601,27 @@ and is_trivial_scrut = function
     [auto _cs = expr;] is prepended before the [Scustom_case] node. *)
 and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
-  let temps =
-    match typ with
-    | Tglob (r, tys, _) -> build_template_params env tvars tys
-    | _ -> []
-  in
+  (* Save the ML type for temps computation after fix_a_fired is known. *)
+  let ml_typ = typ in
+  let scrut_is_magic = match t with MLmagic _ -> true | _ -> false in
   let typ = convert_ml_type_to_cpp_type env Refset'.empty tvars typ in
+  let concrete_match_type =
+    if is_erased_type typ then
+      try
+        let _, _, pat0, _ = pv.(0) in
+        let ind_ref = match pat0 with
+          | Pusual (GlobRef.ConstructRef (ip, _))
+          | Pcons (GlobRef.ConstructRef (ip, _), _) -> GlobRef.IndRef ip
+          | _ -> raise Not_found
+        in
+        let ids0, _, _, _ = pv.(0) in
+        let tyargs = List.rev_map (fun (_, ty) ->
+          convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+        ) ids0 in
+        Tglob (ind_ref, tyargs, [])
+      with _ -> typ
+    else typ
+  in
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
      (%scrut.has_value()) { ... *%scrut; ... }"). Each occurrence re-prints the
      scrutinee C++ expression, so any std::move in the scrutinee would fire
@@ -6023,6 +6647,46 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     tctx.move_dead_after <- Escape.IntSet.empty;
   let t = gen_expr env t in
   tctx.move_dead_after <- saved_dead;
+  let pair_g_opt = match concrete_match_type with
+    | Tglob (g, _, _) when is_prod_global g -> Some g
+    | _ -> None
+  in
+  let t, fix_a_fired =
+    if scrut_is_magic && not (is_erased_type concrete_match_type) then
+      (CPPany_cast (concrete_match_type, t), false)
+    else if is_erased_type typ || has_tany_in_type typ then
+      match pair_g_opt with
+      | Some g ->
+        (* Scrutinee is erased (std::any) or its pair type contains erased
+           positions.  In either case the scrutinee will be std::any at
+           runtime (symbols_semty / tuple are all erased to std::any).
+           Add any_cast<pair<any,any>> so .first/.second accesses compile.
+           Always use pair<any,any>: the runtime encoding of tuples is always
+           std::pair<std::any, std::any> regardless of field types. *)
+        (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
+      | None -> (t, false)
+    else (t, false)
+  in
+  (* Compute temps after fix_a_fired: when Fix A fires, the scrutinee is cast
+     to pair<any,any>, so ALL .first/.second fields are std::any regardless of
+     the original field types.  Force Tauto for every position so the template
+     generates [const auto& var = _cs.first] — Fix C then inserts any_cast<T>
+     at each use site in the body.  Without this, a concrete %t0 like
+     [String::String] would generate [const String::String& s = _cs.first]
+     which fails because _cs.first is std::any after the pair cast. *)
+  let temps =
+    match ml_typ with
+    | Tglob (_, tys, _) ->
+      let raw = build_template_params env tvars tys in
+      (* In match binding context, a %t0 whose type contains erased positions
+         (Tany / unnamed Tvar) would generate [const std::any& prs = scrut.fst]
+         which blocks valid concrete-type calls.  Substitute Tauto so the
+         template generates [const auto& prs = ...] and C++ deduces the type.
+         Also force Tauto when Fix A fired — see comment above. *)
+      List.map (fun ty ->
+        if fix_a_fired || has_tany_in_type ty then Tauto else ty) raw
+    | _ -> []
+  in
   (* When the template uses %scrut more than once and the scrutinee is a
      non-trivial expression (function call, constructor, etc.), cache it in
      a temporary to avoid double evaluation. *)
@@ -6053,13 +6717,54 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
       push_env_types ids';
-      let br =
+      let (br_ids, br_ret, br_stmts) =
         with_shifted_move_tracking n_pat_vars (fun () ->
           gen_cpp_custom_body env' k rty ids' t)
       in
       tctx.env_types <- saved_env_types;
       tctx.move_owned_vars <- saved_owned;
-      br :: gen_cases cs
+      (* When Fix A fired, pair fields are all std::any at the binding site.
+         Pattern variables whose actual ML type is concrete need any_cast<T>
+         at each use site so the body compiles (e.g. List<any>::cons needs
+         a List<any>, not std::any). *)
+      let br_stmts =
+        if fix_a_fired then
+          List.fold_left
+            (fun stmts (name, cpp_ty) ->
+               if not (is_erased_type cpp_ty) then
+                 List.map
+                   (local_var_subst_stmt name
+                      (CPPany_cast (cpp_ty, CPPvar name)))
+                   stmts
+               else stmts)
+            br_stmts
+            br_ids
+        else br_stmts
+      in
+      (* Post-Fix-C: strip explicit template type args from function calls
+         where any argument is any_cast<T_with_Tany>.  After Fix C, erased
+         pattern variables are substituted with any_cast<T> at use sites.
+         Explicit Coq type applications (e.g. nodupKeys<Json_value>) then
+         conflict with the erased argument type (List<pair<String,any>>).
+         Stripping the template args lets C++ deduce the correct erased type
+         (std::any) from the argument instead of using the concrete one. *)
+      let br_stmts =
+        if fix_a_fired then
+          let rec fix_expr e =
+            match e with
+            | CPPfun_call (CPPglob (r, _ :: _, ci), args)
+              when List.exists
+                     (function
+                       | CPPany_cast (ty, _) -> has_tany_in_type ty
+                       | _ -> false)
+                     args ->
+              CPPfun_call (CPPglob (r, [], ci), List.map fix_expr args)
+            | _ -> map_expr fix_expr fix_stmt Fun.id e
+          and fix_stmt s = map_stmt fix_expr fix_stmt Fun.id s in
+          List.map fix_stmt br_stmts
+        else br_stmts
+      in
+      (br_ids, br_ret, br_stmts) :: gen_cases cs
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
   in
   cache_prefix @
@@ -6961,21 +7666,40 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           | CPPfun_call (CPPvar id, args) when Id.equal id target ->
             CPPfun_call (mk_cppglob lifted [], free_args @ List.map sub args)
           | CPPvar id when Id.equal id target ->
-            (* Bare reference to lifted function: if there are free args, wrap
-               in a lambda *)
-            if free_args = [] then
+            (* Bare reference to lifted function: generate a properly-typed
+               wrapper lambda with one parameter per non-erased Rocq lambda
+               param. Capture by value ([=]) so that free variables don't
+               dangle when the wrapper outlives the current stack frame. *)
+            let n_actual_params =
+              List.length
+                (List.filter
+                   (fun (_, ty) ->
+                     (not (isTdummy ty)) && not (ml_type_is_void ty))
+                   params)
+            in
+            if free_args = [] && n_actual_params = 0 then
               mk_cppglob lifted []
             else
-              (* Generate a lambda that captures and forwards: [&]() { return
-                 lifted(free_args...); } *)
+              let fresh_ids =
+                List.init n_actual_params (fun i ->
+                  Id.of_string (Printf.sprintf "_xarg%d" i))
+              in
+              let wrapper_params =
+                List.map (fun id -> (Tauto, Some id)) fresh_ids
+              in
+              let wrapper_call_args =
+                free_args @ List.map (fun id -> CPPvar id) fresh_ids
+              in
               CPPlambda
-                ( [],
+                ( wrapper_params,
                   None,
                   [
                     Sreturn
-                      (Some (CPPfun_call (mk_cppglob lifted [], free_args)));
+                      (Some
+                         (CPPfun_call
+                            (mk_cppglob lifted [], wrapper_call_args)));
                   ],
-                  false )
+                  true )
           | CPPfun_call (f, args) -> CPPfun_call (sub f, List.map sub args)
           | CPPderef e' -> CPPderef (sub e')
           | CPPmove e' -> CPPmove (sub e')
@@ -7249,7 +7973,132 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let saved_eta_keep = tctx.eta_keep_moves in
       if is_single_use_partial_app then tctx.eta_keep_moves <- true;
       let afun v = Sasgn (x_renamed, None, v) in
+      (* Thread the let-binding's type annotation as expected_ml_type_for_arg
+         so that gen_ctor_call can recover the concrete element type for
+         constructors (like nil) whose ML annotation has unresolved metas or
+         erased type args.  For example: let sk = [] : list parser_frame — the
+         let-binding knows the element type even when the nil's own annotation
+         has Tdummy Ktype. *)
+      let saved_expected_letin = tctx.expected_ml_type_for_arg in
+      (* Look ahead: if t has erased type args, look at the body b to see if the
+         bound var (MLrel 1 in b) is used as the i-th arg of a constructor call
+         with a non-erased corresponding type arg. If so, use that type instead of t.
+         This recovers the correct element type for nils bound before pair constructors:
+           let empty_stack : list(Tmeta) = [] in make_pair(fr, empty_stack)
+         where the pair type says the second arg is list(parser_frame). *)
+      let t_effective =
+        let t_has_erased = has_erased_ml_sub t in
+        if not t_has_erased then t
+        else begin
+          (* Try to infer from an MLcons that immediately follows in the body.
+             The body b may be directly an MLcons, or wrapped in one more MLletin. *)
+          let try_cons_body (b_inner : Miniml.ml_ast) db_offset =
+            (* db_offset: how many let-bindings above b_inner, so MLrel (1+db_offset) = x *)
+            let target_rel = 1 + db_offset in
+            (* Resolve t to get the underlying inductive (through metas) *)
+            let t_ind_opt = match resolve_tmeta t with
+              | Miniml.Tglob (t_ind, _, _) -> Some t_ind
+              | _ -> None
+            in
+            match b_inner with
+            | Miniml.MLcons (ctor_ty, _, ts) ->
+              let result = ref None in
+              List.iteri (fun i (ti : Miniml.ml_ast) ->
+                match ti with
+                | Miniml.MLrel r when r = target_rel ->
+                  (match resolve_tmeta ctor_ty with
+                   | Miniml.Tglob (_, ctor_tys, _) ->
+                     (match List.nth_opt ctor_tys i with
+                      | Some raw_candidate ->
+                        (match resolve_tmeta raw_candidate with
+                        | Miniml.Tglob (ind, sub_tys, _) as candidate ->
+                          (* Check that candidate's inductive matches t's inductive.
+                             When t is fully erased (Tmeta{None}), accept any concrete type. *)
+                          let matches_t = match t_ind_opt with
+                            | Some t_ind -> GlobRef.CanOrd.equal ind t_ind
+                            | None -> true
+                          in
+                          if matches_t && not (List.exists is_erased_ml_type sub_tys) then
+                            result := Some candidate
+                        | _ -> ())
+                      | _ -> ())
+                   | _ -> ())
+                | _ -> ()
+              ) ts;
+              !result
+            | _ -> None
+          in
+          (* Try to infer t from an MLapp body: find the position of target_rel
+             in the application args, look up the function's ML type, and extract
+             the type of that arg.  This handles the pattern:
+               let sk0 : Tmeta = (fr, nil) in multistep(..., sk0, ...)
+             where multistep's type tells us sk0 has type parser_frame × list(parser_frame). *)
+          let try_app_body (b_inner : Miniml.ml_ast) db_offset =
+            let target_rel = 1 + db_offset in
+            match b_inner with
+            | Miniml.MLapp (Miniml.MLglob (func_ref, _), app_args)
+            | Miniml.MLapp (Miniml.MLmagic (Miniml.MLglob (func_ref, _)), app_args) ->
+              let rec find_pos args i =
+                match args with
+                | [] -> None
+                | (Miniml.MLrel r) :: _ when r = target_rel -> Some i
+                | (Miniml.MLmagic (Miniml.MLrel r)) :: _ when r = target_rel -> Some i
+                | _ :: rest -> find_pos rest (i + 1)
+              in
+              (match find_pos app_args 0 with
+              | None -> None
+              | Some idx ->
+                (match find_type_opt func_ref with
+                | None -> None
+                | Some func_ty ->
+                  let rec nth_arg ty n =
+                    match ty with
+                    | Miniml.Tarr (Miniml.Tdummy _, cod) -> nth_arg cod n
+                    | Miniml.Tarr (dom, _) when n = 0 -> Some dom
+                    | Miniml.Tarr (_, cod) -> nth_arg cod (n - 1)
+                    | Miniml.Tmeta {contents = Some t2} -> nth_arg t2 n
+                    | _ -> None
+                  in
+                  let try_unfold_typedef resolved =
+                    match resolved with
+                    | Miniml.Tglob (GlobRef.ConstRef kn, _, _) ->
+                      (match Table.lookup_typedef_unchecked kn with
+                       | Some expanded -> expanded
+                       | None -> resolved)
+                    | _ -> resolved
+                  in
+                  (match nth_arg func_ty idx with
+                  | Some arg_ty ->
+                    let resolved = resolve_tmeta arg_ty in
+                    let resolved = try_unfold_typedef resolved in
+                    (match resolve_tmeta t, resolved with
+                    | _, Miniml.Tglob (_, r_sub, _)
+                      when not (List.exists is_erased_ml_type r_sub) ->
+                      Some resolved
+                    | _ -> None)
+                  | None -> None)))
+            | _ -> None
+          in
+          let inferred = match (b : Miniml.ml_ast) with
+            | Miniml.MLcons _ -> try_cons_body b 0
+            | Miniml.MLletin (_, _, a', _) ->
+              (* In body = MLletin(sk0, pair_expr, ...), nil is at MLrel 1 in pair_expr.
+                 db_offset=0 because pair_expr is evaluated before sk0 is bound. *)
+              (match try_cons_body a' 0 with
+               | Some _ as r -> r
+               | None -> try_cons_body b 0)
+            | Miniml.MLapp _ ->
+              (* Body is a function application — look up the function type to find
+                 the type expected for the bound variable at its argument position. *)
+              try_app_body b 0
+            | _ -> None
+          in
+          match inferred with Some ty -> ty | None -> t
+        end
+      in
+      tctx.expected_ml_type_for_arg <- Some t_effective;
       let asgn = gen_stmts env afun a in
+      tctx.expected_ml_type_for_arg <- saved_expected_letin;
       tctx.eta_keep_moves <- saved_eta_keep;
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
@@ -7317,6 +8166,15 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                   List.rev_map (fun (ty, _) -> strip_tmod ty) params
                 in
                 Tfun (param_tys, ret_ty)
+              | _, CPPlambda _ -> cpp_ty
+              | _, _ when has_tany_in_type cpp_ty ->
+                (* Type contains erased positions (Tany) but the expression is
+                   not a lambda with inferable types.  Use [auto] so the C++
+                   compiler deduces the concrete type from the RHS — e.g. for
+                   pair-projection bindings like [const auto &prs = tup.first]
+                   where the erased type would be [List<pair<String, any>>] but
+                   the actual type of [tup.first] is [List<pair<String, JV>>]. *)
+                Tauto
               | _ -> cpp_ty
             in
             (* Apply const-ref binding when safe. *)
@@ -7499,13 +8357,48 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let funs_with_params =
         List.map (fun (_, params, body) -> (params, body)) funs_compiled
       in
-      let decls, defs =
-        gen_local_fix_by_ref env renamed_ids funs_with_params
-      in
       let args = List.rev_map (gen_expr env) args in
-      decls @ defs
-      @ [k (CPPfun_call
-              (CPPvar (fst (List.nth renamed_ids x)), args))]
+      let _, fix_params, _ = List.nth funs_compiled x in
+      let n_provided = List.length args in
+      let n_fix_params = List.length fix_params in
+      if n_provided < n_fix_params then begin
+        (* Partial application: the fixpoint escapes (returned as a lambda).
+           Use Y-combinator pattern so the fixpoint body doesn't capture
+           a stack-local std::function by reference. *)
+        let decls, defs, deref_subst =
+          gen_local_fix_ycomb env renamed_ids funs_with_params
+        in
+        let remaining_params =
+          let rec drop n lst =
+            if n = 0 then lst
+            else match lst with [] -> [] | _ :: t -> drop (n - 1) t
+          in
+          drop n_provided fix_params
+        in
+        let tvars = get_current_type_vars () in
+        let pa_params =
+          List.mapi
+            (fun j (_, ml_ty) ->
+              let cpp_ty =
+                convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty
+              in
+              (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
+            remaining_params
+        in
+        let pa_exprs =
+          List.map (fun (_, id_opt) -> CPPvar (Option.get id_opt)) pa_params
+        in
+        let fix_id = fst (List.nth renamed_ids x) in
+        let full_call = CPPfun_call (CPPvar fix_id, List.rev (args @ pa_exprs)) in
+        decls @ defs
+        @ deref_subst [k (CPPlambda (List.rev pa_params, None, [Sreturn (Some full_call)], true))]
+      end else begin
+        let decls, defs =
+          gen_local_fix_by_ref env renamed_ids funs_with_params
+        in
+        decls @ defs
+        @ [k (CPPfun_call (CPPvar (fst (List.nth renamed_ids x)), args))]
+      end
   | MLfix (x, ids, funs, _) ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
        RHS of a let-binding.  Since the fixpoint value itself is returned (not
@@ -7799,10 +8692,22 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                 wrap_api_expr ~storage_ty ~api_ty e
               | _ -> e
             in
-            Sasgn
-              ( renamed_name,
-                Some (convert_ml_type_to_cpp_type env Refset'.empty tvars ty),
-                e ) )
+            let api_ty_for_decl =
+              convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+            in
+            (* When the field type contains erased positions (Tany / unnamed
+               Tvar), use [const auto&] so that C++ deduces the concrete type
+               from the expression rather than locking in std::any.  This is
+               important when the enclosing lambda parameter is also [const auto&]
+               (from an existential): the whole chain gets the right concrete
+               type by deduction from the call site. *)
+            let decl_ty =
+              if has_tany_in_type api_ty_for_decl then
+                Tref (Tmod (TMconst, Tauto))
+              else
+                api_ty_for_decl
+            in
+            Sasgn ( renamed_name, Some decl_ty, e ) )
           (List.combine renamed_ids_fwd ids)
       in
       push_env_types
@@ -9182,6 +10087,46 @@ let primary_tvar_indices dom cod =
     IntSet.empty
     (cod :: non_fun_dom)
 
+(** Collect tvar indices that appear in type INDEX positions of inductives
+    in the ML type.  Type indices are stripped from the C++ type by
+    {!convert_ml_type_to_cpp_type} but may be needed in function bodies
+    for [any_cast] when matching on type-indexed inductives with
+    wholesale-erased fields.
+
+    Only collects tvars from inductives where [get_ind_num_param_vars_opt]
+    succeeds and the number of type args exceeds the parameter count
+    (indicating genuine indices, not parameters). *)
+let collect_ml_type_index_tvars ml_ty =
+  let result = ref IntSet.empty in
+  let rec collect_tvars = function
+    | Miniml.Tvar i | Miniml.Tvar' i ->
+      result := IntSet.add i !result
+    | Miniml.Tarr (t1, t2) ->
+      collect_tvars t1; collect_tvars t2
+    | Miniml.Tglob (_, ts, _) ->
+      List.iter collect_tvars ts
+    | Miniml.Tmeta {contents = Some t} -> collect_tvars t
+    | _ -> ()
+  in
+  let rec walk = function
+    | Miniml.Tarr (t1, t2) -> walk t1; walk t2
+    | Miniml.Tglob (g, ts, _) ->
+      ( match g with
+      | GlobRef.IndRef (kn, _) ->
+        ( match Table.get_ind_num_param_vars_opt kn with
+        | Some num_param_vars when num_param_vars < List.length ts ->
+          List.iteri (fun i t ->
+            if i >= num_param_vars then collect_tvars t
+          ) ts
+        | _ -> () );
+        List.iter walk ts
+      | _ -> List.iter walk ts )
+    | Miniml.Tmeta {contents = Some t} -> walk t
+    | _ -> ()
+  in
+  walk ml_ty;
+  !result
+
 (** Build template parameter list with phantom detection.
 
     Type variables that appear in the codomain or non-function domain params
@@ -9192,19 +10137,35 @@ let primary_tvar_indices dom cod =
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the
-    pipeline (see {!convert_ml_type_to_cpp_type}). *)
-let phantom_aware_temps cty tvars =
+    pipeline (see {!convert_ml_type_to_cpp_type}).
+
+    @param force_required  Set of tvar indices that must be required (plain
+      [typename T]) even if they don't appear in the C++ function type.
+      Used for type INDEX tvars that are stripped from the C++ type but needed
+      for [any_cast] in function bodies. *)
+let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
   match cty with
   | Tfun (dom, cod) ->
     let tvars_indexed = get_tvars_indexed cty in
     let primary = primary_tvar_indices dom cod in
+    let primary = IntSet.union primary force_required in
+    let extra =
+      IntSet.fold (fun i acc ->
+        if List.exists (fun (j, _) -> j = i) tvars_indexed then acc
+        else (i, tvar_id i) :: acc
+      ) force_required []
+    in
+    let all_tvars_indexed =
+      List.sort (fun (x, _) (y, _) -> Int.compare x y)
+        (tvars_indexed @ extra)
+    in
     List.map
       (fun (i, id) ->
         if IntSet.mem i primary then
           (TTtypename, id)
         else
           (TTtypename_default Tvoid, id) )
-      tvars_indexed
+      all_tvars_indexed
   | _ -> List.map (fun id -> (TTtypename, id)) tvars
 
 (** Substitute [CPPglob id] with [repl] in expressions and statements. Uses
@@ -9464,6 +10425,67 @@ let gen_dfun n b cty ty temps =
         sig_types_for_ids
     else
       ids
+  in
+  let tvar_subst_from_sig =
+    if not (has_tvar ty)
+       && List.length ids = List.length sig_types_for_ids then
+      let rec chase = function
+        | Miniml.Tmeta {contents = Some t} -> chase t
+        | t -> t
+      in
+      let rec collect body_ty sig_ty acc =
+        let body_ty = chase body_ty in
+        let sig_ty = chase sig_ty in
+        match (body_ty, sig_ty) with
+        | (Miniml.Tvar i | Miniml.Tvar' i), _
+          when not (has_tvar sig_ty) ->
+          if List.mem_assoc i acc then acc else (i, sig_ty) :: acc
+        | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
+          when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
+          List.fold_left2 (fun acc a b -> collect a b acc) acc ts1 ts2
+        | Miniml.Tarr (a1, b1), Miniml.Tarr (a2, b2) ->
+          collect a1 a2 (collect b1 b2 acc)
+        | _ -> acc
+      in
+      let direct = List.fold_left2
+        (fun acc (_, body_ty) sig_ty -> collect body_ty sig_ty acc)
+        [] ids sig_types_for_ids in
+      if direct <> [] then direct
+      else begin
+        let all_body = List.map (fun (_, ty) -> ty) ids in
+        let rec cross t1 t2 acc =
+          let t1 = chase t1 in
+          let t2 = chase t2 in
+          match (t1, t2) with
+          | (Miniml.Tvar i | Miniml.Tvar' i), _
+            when not (has_tvar t2) ->
+            if List.mem_assoc i acc then acc else (i, t2) :: acc
+          | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
+            when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
+            List.fold_left2 (fun acc a b -> cross a b acc) acc ts1 ts2
+          | Miniml.Tarr (a1, b1), Miniml.Tarr (a2, b2) ->
+            cross a1 a2 (cross b1 b2 acc)
+          | _ -> acc
+        in
+        let pairs = List.concat_map (fun t1 ->
+          List.concat_map (fun t2 ->
+            if t1 == t2 then [] else cross t1 t2 []
+          ) all_body
+        ) all_body in
+        List.fold_left (fun acc (i, t) ->
+          if List.mem_assoc i acc then acc else (i, t) :: acc
+        ) [] pairs
+      end
+    else
+      []
+  in
+  let ids, b =
+    match tvar_subst_from_sig with
+    | [] -> (ids, b)
+    | subst ->
+      let apply_subst ty = subst_tvars_type subst ty in
+      ( List.map (fun (id, ty) -> (id, apply_subst ty)) ids,
+        map_types_in_ast apply_subst b )
   in
   (* Detect which function-typed parameters are NOT simply forwarded at
      self-recursive call sites.  These are excluded from template-parameter
@@ -10482,6 +11504,7 @@ let gen_decl_for_pp n b ty =
     | _ -> carrier_refs
   in
   let b = rewrite_ml_ast_types carrier_refs b in
+  let b = resolve_body_tvars b ty in
   let saved_method_ns = set_method_ns_for_locals () in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
@@ -10494,7 +11517,17 @@ let gen_decl_for_pp n b ty =
     | Tarr _ -> collect_typeclass_param_ids ty
     | _ -> []
   in
-  let temps = phantom_aware_temps cty tvars in
+  let index_tvar_set = collect_ml_type_index_tvars ty in
+  let extra_index_tvars =
+    IntSet.fold (fun i acc ->
+      let id = tvar_id i in
+      if List.exists (Id.equal id) tvars then acc
+      else id :: acc
+    ) index_tvar_set []
+    |> List.rev
+  in
+  let tvars = tvars @ extra_index_tvars in
+  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
   let result = match cty with
   | Tfun (dom, _) ->
     let f, e = gen_dfun n b cty ty temps in
@@ -10542,7 +11575,17 @@ let gen_dfun_def n b ty =
   let saved_method_ns = set_method_ns_for_locals () in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ty in
   let tvars = get_tvars cty in
-  let temps = phantom_aware_temps cty tvars in
+  let index_tvar_set = collect_ml_type_index_tvars ty in
+  let extra_index_tvars =
+    IntSet.fold (fun i acc ->
+      let id = tvar_id i in
+      if List.exists (Id.equal id) tvars then acc
+      else id :: acc
+    ) index_tvar_set []
+    |> List.rev
+  in
+  let tvars = tvars @ extra_index_tvars in
+  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
   (* Count typeclass-typed parameters in the ML domain — these become template
      params inside gen_dfun but aren't reflected in tvars (which comes from the
      C++ type). We need tvars to be non-empty when typeclass params exist so
@@ -11078,9 +12121,14 @@ let replace_this_in_lambdas self_type stmts =
       | Tglob (self_ref, _, _) -> not (is_enum_inductive self_ref)
       | _ -> false
     in
-    (* Substitute CPPthis and CPPshared_from_this → CPPvar "_self" inside
-       by-value lambda bodies.  For value-type _self, also collapse
-       CPPderef(CPPthis) → CPPvar "_self" to avoid dereferencing a value. *)
+    (* For value-type methods, the loopifier uses "_self" as the name for the
+       receiver pointer (const T *_self = this / _f._self).  Using the same
+       name for the value copy would cause a redefinition conflict in loopified
+       methods.  Use "_self_val" for the value copy to avoid the clash. *)
+    let self_id = if is_value_self then Id.of_string "_self_val" else self_id in
+    (* Substitute CPPthis and CPPshared_from_this → CPPvar self_id inside
+       by-value lambda bodies.  For value-type _self_val, also collapse
+       CPPderef(CPPthis) → CPPvar self_id to avoid dereferencing a value. *)
     let rec subst_expr = function
       | CPPderef (CPPthis | CPPshared_from_this _) when is_value_self ->
         CPPvar self_id
@@ -11157,9 +12205,13 @@ and stmt_has_shared_from_this = function
   | Sasgn (_, _, e) -> expr_has_shared_from_this e
   | _ -> false
 
-(** Generate a single method from a method candidate. name: the containing
-    type's GlobRef vars: type variables of the containing type (func_ref, body,
-    ty, this_pos): the method candidate *)
+(** Generate a single method for an inductive type from a method candidate.
+    @param name     [GlobRef] of the containing inductive type
+    @param vars     Template type variables of the containing inductive
+    @param func_ref Rocq reference for the Rocq function being methodified
+    @param body     ML body of the function
+    @param ty       ML type of the function
+    @param this_pos 0-based index of the [this] argument in the parameter list *)
 let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let num_ind_vars = List.length vars in
   let func_name = Id.of_string (Common.pp_global_name Term func_ref) in
@@ -11283,6 +12335,40 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      signature, causing errors like: void method(tree t) { ... t0->v() ... }
      where 't0' in the body didn't exist as a parameter. *)
   let ids_with_types, inner_body = Mlutil.collect_lams body in
+  (* Eta-expansion: if the body has fewer lambdas than the ML type's domain,
+     add missing parameters (innermost first, named _x0, _x1, ...).
+     This handles functions like [tree_to_adder : tree -> nat -> nat] where
+     the body is a match expression returning closures rather than being
+     directly lambda-wrapped.  Mirrors the same logic in gen_dfun. *)
+  let rec get_method_dom l ty =
+    match ty with
+    | Tarr (t1, t2) -> get_method_dom (t1 :: l) t2
+    | _ -> l
+  in
+  let mldom_for_eta = get_method_dom [] ty in
+  let n_type_dom_eta = List.length mldom_for_eta in
+  let n_body_dom_eta = List.length ids_with_types in
+  let n_missing_eta = max 0 (n_type_dom_eta - n_body_dom_eta) in
+  let ids_with_types, inner_body =
+    if n_missing_eta = 0 then (ids_with_types, inner_body)
+    else
+      let missing_types = safe_firstn n_missing_eta mldom_for_eta in
+      let n_miss = List.length missing_types in
+      let missing =
+        List.mapi
+          (fun i t -> (Id (eta_param_id (n_miss - 1 - i)), t))
+          missing_types
+      in
+      let lifted_b = ast_lift n_missing_eta inner_body in
+      let args =
+        List.rev
+          (List.filter_map
+             (fun (i, (_, t)) ->
+               if isTdummy t then None else Some (MLrel (i + 1)) )
+             (List.mapi (fun i x -> (i, x)) missing) )
+      in
+      (missing @ ids_with_types, MLapp (lifted_b, args))
+  in
   let ids_converted =
     List.map
       (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
@@ -11641,6 +12727,23 @@ let ml_self_ref_is_uniform ~ind_ref ~cname ml_ty =
     ) (List.mapi (fun j a -> (j, a)) args)
   | None -> true
 
+(** Generate the C++ struct definition for an inductive type.
+
+    Produces one of three shapes depending on the inductive:
+    - {b Value type}: a struct with an inner [std::variant] of constructor
+      structs, factory methods, [clone()], and [v()]/[v_mut()] accessors.
+    - {b Shared-ptr type}: same struct wrapped in [std::shared_ptr] at use
+      sites, with [shared_from_this] support and pointer-based destructors.
+    - {b Enum}: a simple [enum class] with no variant or constructor structs.
+
+    Major sections generated (in order): constructor structs, variant typedef,
+    factory methods, iterative destructor (for recursive types), clone method,
+    converting constructor (for mutual-inductive field-type differences),
+    [operator==], and stream insertion.
+
+    @param is_mutual     true when this type is part of a mutual block
+    @param consarg_names field names from Rocq binders, indexed by constructor
+    @param mutual_partners other types in the mutual block *)
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
@@ -11682,9 +12785,8 @@ let gen_ind_header_v2
           (Array.map
              (fun c ->
                match c with
-               | GlobRef.ConstructRef _ ->
-                 Id.of_string
-                   (Common.enum_ctor_name (Common.pp_global_name Type c))
+               | GlobRef.ConstructRef ((kn, i), cidx) ->
+                 Id.of_string (Table.enum_ctor_name_of_ref kn i cidx)
                | _ -> ctor_fallback_id 0 )
              cnames )
       in
@@ -11751,10 +12853,14 @@ let gen_ind_header_v2
                          else Tshared_ptr cpp_ty
                        else cpp_ty
                      in
-                     (* For indexed inductives (no template params), erase
-                        unnamed Tvars to std::any *)
                      let cpp_ty =
-                       if vars = [] then tvar_erase_type cpp_ty else cpp_ty
+                       if vars = [] then
+                         match cpp_ty with
+                         | Tunique_ptr _ | Tshared_ptr _ ->
+                           tvar_erase_type cpp_ty
+                         | _ when has_unnamed_tvar cpp_ty -> Tany
+                         | _ -> cpp_ty
+                       else cpp_ty
                      in
                      let field_name = List.nth field_ids j in
                      (Fvar (field_name, cpp_ty), VPublic, SNoTag) )
@@ -11870,10 +12976,10 @@ let gen_ind_header_v2
           []
       in
 
-      (* Shared self-reference classification for iterative destructor and clone.
-         [is_direct_self_ref] checks if a ML type IS the self type directly.
-         [classify_ml_self_ref] extends this to detect self-references hidden
-         inside container types (option, pair, list). *)
+      (* Test whether ml_ty is exactly the self type T<a1,...,aN> with
+         identity type arguments (each Tvar k matching its position).
+         Resolves Tmeta indirections.  Does NOT look inside containers
+         — use classify_ml_self_ref for that. *)
       let rec is_direct_self_ref = function
         | Miniml.Tglob (r, args, _) ->
           Environ.QGlobRef.equal Environ.empty_env r name
@@ -11890,6 +12996,16 @@ let gen_ind_header_v2
         | Miniml.Tmeta {contents = Some t} -> is_direct_self_ref t
         | _ -> false
       in
+      (* Classify how a constructor field type references the inductive being
+         defined.  Returns a polymorphic variant indicating the shape:
+         - `Direct — the field IS the self type (e.g. tree in Node of tree)
+         - `Optional — option<self>
+         - `PairFst, `PairSnd, `PairBoth — self appears in a pair
+         - `List g — list<self>, with g as the list GlobRef
+         - `None — no self-reference
+
+         Used by the iterative destructor and clone to determine how to
+         traverse or deep-copy each field. *)
       let rec classify_ml_self_ref = function
         | ml_ty when is_direct_self_ref ml_ty -> `Direct
         | Miniml.Tglob (g, [arg], _)
@@ -11937,12 +13053,12 @@ let gen_ind_header_v2
         if is_coinductive then []
         else
           let render_q_destr ty =
-            render_cpp_type_for_raw_template (qualify_inductives ty)
+            let skip g =
+              Environ.QGlobRef.equal Environ.empty_env g name
+            in
+            render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
           in
           let self_s_destr = render_q_destr self_ty in
-          let list_self_s_destr =
-            render_q_destr (Tid_external (Id.of_string_soft "List", [self_ty]))
-          in
           let ctor_moves =
             Array.to_list
               (Array.mapi
@@ -11981,7 +13097,7 @@ let gen_ind_header_v2
                          ( alt_id,
                            Some (Tref Tauto),
                            CPPstd_get
-                             ( ctor_ty,
+                             ( ctor_ty, None,
                                Some (CPPmember (CPPvar node_id, vmn_id)) ) )
                        :: List.concat_map
                             (fun (field, cls) ->
@@ -12031,7 +13147,9 @@ let gen_ind_header_v2
                                    make_unique and push.  Must reference
                                    stack_id via AST so lambda capture
                                    analysis detects it. *)
-                                let ls = list_self_s_destr in
+                                let ls = render_q_destr
+                                  (Tglob (list_g, [self_ty], []))
+                                in
                                 let ss = self_s_destr in
                                 let fes =
                                   Id.to_string alt_id ^ "."
@@ -12075,7 +13193,7 @@ let gen_ind_header_v2
                      Some
                        (Sif_then
                           ( CPPfun_call
-                              ( CPPstd_holds_alternative ctor_ty,
+                              ( CPPstd_holds_alternative (ctor_ty, None),
                                 [CPPmember (CPPvar node_id, vmn_id)] ),
                             body )))
                  tys)
@@ -12126,7 +13244,7 @@ let gen_ind_header_v2
                            ( alt_id,
                              Some (Tref Tauto),
                              CPPstd_get
-                               ( ctor_ty,
+                               ( ctor_ty, None,
                                  Some (CPPmember
                                          (CPPvar node_id, vmn_id)) ) )
                          :: List.concat_map
@@ -12234,7 +13352,7 @@ let gen_ind_header_v2
                        Some
                          (Sif_then
                             ( CPPfun_call
-                                ( CPPstd_holds_alternative ctor_ty,
+                                ( CPPstd_holds_alternative (ctor_ty, None),
                                   [CPPmember
                                      (CPPvar node_id, vmn_id)] ),
                               body )))
@@ -12258,6 +13376,8 @@ let gen_ind_header_v2
             let body =
               [
                 Sdecl_init (stack_id, stack_ty);
+                Sexpr (CPPdot_method_call
+                  (CPPvar stack_id, Id.of_string "reserve", [CPPint 8]));
                 Sasgn
                   ( drain_id,
                     Some Tauto,
@@ -12366,10 +13486,22 @@ let gen_ind_header_v2
                   ty
               in
               let storage_ty =
-                if vars = [] then tvar_erase_type storage_ty else storage_ty
+                if vars = [] then
+                  match storage_ty with
+                  | Tunique_ptr _ | Tshared_ptr _ ->
+                    tvar_erase_type storage_ty
+                  | _ when has_unnamed_tvar storage_ty -> Tany
+                  | _ -> storage_ty
+                else storage_ty
               in
               let api_ty =
-                if vars = [] then tvar_erase_type api_ty else api_ty
+                if vars = [] then
+                  match api_ty with
+                  | Tunique_ptr _ | Tshared_ptr _ ->
+                    tvar_erase_type api_ty
+                  | _ when has_unnamed_tvar api_ty -> Tany
+                  | _ -> api_ty
+                else api_ty
               in
               (j, storage_ty, api_ty) )
             tys_list
@@ -12573,7 +13705,13 @@ let gen_ind_header_v2
                            else cpp_ty
                          in
                          let cpp_ty =
-                           if vars = [] then tvar_erase_type cpp_ty else cpp_ty
+                           if vars = [] then
+                             match cpp_ty with
+                             | Tunique_ptr _ | Tshared_ptr _ ->
+                               tvar_erase_type cpp_ty
+                             | _ when has_unnamed_tvar cpp_ty -> Tany
+                             | _ -> cpp_ty
+                           else cpp_ty
                          in
                          (field_id, cpp_ty, true))
                        tys_list
@@ -12597,8 +13735,16 @@ let gen_ind_header_v2
                              else Tshared_ptr cpp_ty
                            else cpp_ty
                          in
-                         if target_tvar_ids = [] then tvar_erase_type cpp_ty
-                         else cpp_ty)
+                         let cpp_ty =
+                           if target_tvar_ids = [] then
+                             match cpp_ty with
+                             | Tunique_ptr _ | Tshared_ptr _ ->
+                               tvar_erase_type cpp_ty
+                             | _ when has_unnamed_tvar cpp_ty -> Tany
+                             | _ -> cpp_ty
+                           else cpp_ty
+                         in
+                         cpp_ty)
                        tys_list
                    in
                    let ctor_args =
@@ -12728,16 +13874,17 @@ let gen_ind_header_v2
                            tys_list
                        in
                        let render_q ty =
-                         render_cpp_type_for_raw_template (qualify_inductives ty)
+                         let skip g =
+                           Environ.QGlobRef.equal Environ.empty_env g name
+                         in
+                         render_cpp_type_for_raw_template
+                           (qualify_inductives ~skip ty)
                        in
                        let self_s = render_q self_ty in
                        let ctor_args =
                          List.map
                            (fun (field_id, ml_ty, source_ty, target_ty) ->
                              let field_expr = CPPmember (CPPvar alt_id, field_id) in
-                             let field_s =
-                               Id.to_string alt_id ^ "." ^ Id.to_string field_id
-                             in
                              match classify_ml_self_ref ml_ty with
                              | `Direct ->
                                CPPcond
@@ -12745,57 +13892,76 @@ let gen_ind_header_v2
                                    CPPfun_call (CPPmk_unique self_ty, []),
                                    CPPnullptr )
                              | `Optional ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">((*" ^ field_s
-                                 ^ ") ? std::make_optional(std::make_unique<"
-                                 ^ self_s ^ ">()) : std::nullopt) : nullptr")
+                               let self_placeholder =
+                                 CPPfun_call (CPPmk_unique self_ty, [])
+                               in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPcond (CPPderef field_expr,
+                                     CPPfun_call (CPPraw "std::make_optional",
+                                       [self_placeholder]),
+                                     CPPraw "std::nullopt")]),
+                                 CPPnullptr)
                              | `PairFst ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">(std::make_pair(" ^ field_s
-                                 ^ "->first ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr, " ^ field_s
-                                 ^ "->second)) : nullptr")
+                               let id_first = Id.of_string "first" in
+                               let id_second = Id.of_string "second" in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPfun_call (CPPraw "std::make_pair", [
+                                     CPParrow (field_expr, id_second);
+                                     CPPcond (CPParrow (field_expr, id_first),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr)])]),
+                                 CPPnullptr)
                              | `PairSnd ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">(std::make_pair(" ^ field_s
-                                 ^ "->first, " ^ field_s
-                                 ^ "->second ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr)) : nullptr")
+                               let id_first = Id.of_string "first" in
+                               let id_second = Id.of_string "second" in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPfun_call (CPPraw "std::make_pair", [
+                                     CPPcond (CPParrow (field_expr, id_second),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr);
+                                     CPParrow (field_expr, id_first)])]),
+                                 CPPnullptr)
                              | `PairBoth ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner_ty = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">(std::make_pair(" ^ field_s
-                                 ^ "->first ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr, " ^ field_s
-                                 ^ "->second ? std::make_unique<" ^ self_s
-                                 ^ ">() : nullptr)) : nullptr")
+                               let id_first = Id.of_string "first" in
+                               let id_second = Id.of_string "second" in
+                               CPPcond (field_expr,
+                                 CPPfun_call (CPPmk_unique inner_ty, [
+                                   CPPfun_call (CPPraw "std::make_pair", [
+                                     CPPcond (CPParrow (field_expr, id_second),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr);
+                                     CPPcond (CPParrow (field_expr, id_first),
+                                       CPPfun_call (CPPmk_unique self_ty, []),
+                                       CPPnullptr)])]),
+                                 CPPnullptr)
                              | `List _ ->
-                               let inner_s = match source_ty with
-                                 | Tunique_ptr inner -> render_q inner
+                               let inner = match source_ty with
+                                 | Tunique_ptr inner -> inner
                                  | _ -> assert false
                                in
-                               CPPraw (
-                                 field_s ^ " ? std::make_unique<" ^ inner_s
-                                 ^ ">() : nullptr")
+                               CPPcond
+                                 ( field_expr,
+                                   CPPfun_call (CPPmk_unique inner, []),
+                                   CPPnullptr )
                              | `None ->
                                (* Check for mutual partner reference.
                                   Only use placeholder+push for single-
@@ -12809,10 +13975,10 @@ let gen_ind_header_v2
                                  let partner_ty =
                                    Tglob (pname, ty_vars, [])
                                  in
-                                 let partner_s = render_q partner_ty in
-                                 CPPraw (
-                                   field_s ^ " ? std::make_unique<"
-                                   ^ partner_s ^ ">() : nullptr")
+                                 CPPcond
+                                   ( field_expr,
+                                     CPPfun_call (CPPmk_unique partner_ty, []),
+                                     CPPnullptr )
                                | _ ->
                                  gen_clone_field_expr
                                    ~src_ty:source_ty ~dst_ty:target_ty
@@ -12860,7 +14026,7 @@ let gen_ind_header_v2
                                 ( dst_alt_id,
                                   Some (Tref Tauto),
                                   CPPstd_get
-                                    ( ctor_ty,
+                                    ( ctor_ty, None,
                                       Some
                                         (CPParrow (CPPvar dst_id, vmn_id)) ) )
                            :: List.concat_map
@@ -12890,42 +14056,66 @@ let gen_ind_header_v2
                                          [ push_frame (get sf) (get df) ] )]
                                   | `Optional ->
                                     (* unique_ptr<optional<unique_ptr<Self>>>:
-                                       drill to inner unique_ptr, call .get *)
+                                       drill to inner unique_ptr, call .get.
+                                       Kept as CPPraw: the double-deref + .get()
+                                       pattern needs explicit parens that the
+                                       AST printer doesn't generate. *)
                                     [Sif_then
                                        ( CPPraw (sfs ^ " && *(" ^ sfs ^ ")"),
                                          [ push_frame
                                              (CPPraw ("(*(*(" ^ sfs ^ "))).get()"))
                                              (CPPraw ("(*(*(" ^ dfs ^ "))).get()")) ] )]
                                   | `PairFst ->
+                                    let df = CPPmember (CPPvar dst_alt_id, field_id) in
+                                    let id_first = Id.of_string "first" in
+                                    let id_get = Id.of_string "get" in
                                     [Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->first"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_first)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->first.get()"))
-                                             (CPPraw (dfs ^ "->first.get()")) ] )]
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_first), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_first), id_get, [])) ] )]
                                   | `PairSnd ->
+                                    let df = CPPmember (CPPvar dst_alt_id, field_id) in
+                                    let id_second = Id.of_string "second" in
+                                    let id_get = Id.of_string "get" in
                                     [Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->second"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_second)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->second.get()"))
-                                             (CPPraw (dfs ^ "->second.get()")) ] )]
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_second), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_second), id_get, [])) ] )]
                                   | `PairBoth ->
+                                    let df = CPPmember (CPPvar dst_alt_id, field_id) in
+                                    let id_first = Id.of_string "first" in
+                                    let id_second = Id.of_string "second" in
+                                    let id_get = Id.of_string "get" in
                                     [Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->first"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_first)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->first.get()"))
-                                             (CPPraw (dfs ^ "->first.get()")) ] );
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_first), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_first), id_get, [])) ] );
                                      Sif_then
-                                       ( CPPraw (sfs ^ " && " ^ sfs ^ "->second"),
+                                       ( CPPbinop ("&&", sf,
+                                           CPParrow (sf, id_second)),
                                          [ push_frame
-                                             (CPPraw (sfs ^ "->second.get()"))
-                                             (CPPraw (dfs ^ "->second.get()")) ] )]
+                                             (CPPdot_method_call
+                                                (CPParrow (sf, id_second), id_get, []))
+                                             (CPPdot_method_call
+                                                (CPParrow (df, id_second), id_get, [])) ] )]
                                   | `List list_g ->
                                     (* unique_ptr<List<Self>>: walk source
                                        list, build dest list spine with
                                        placeholder elements, push frames *)
                                     let ls = render_q
-                                      (Tid_external
-                                         (Id.of_string_soft "List", [self_ty]))
+                                      (Tglob (list_g, [self_ty], []))
                                     in
                                     let (nil_s, cons_s) =
                                       list_ctor_struct_names list_g
@@ -13093,6 +14283,8 @@ let gen_ind_header_v2
                           ( frame_id,
                             [(src_id, src_ptr_ty); (dst_id, dst_ptr_ty)] );
                         Sdecl_init (stack_id, stack_ty);
+                        Sexpr (CPPdot_method_call
+                          (CPPvar stack_id, Id.of_string "reserve", [CPPint 8]));
                         Sexpr
                           (CPPdot_method_call
                              ( CPPvar stack_id,
@@ -13248,24 +14440,16 @@ let gen_ind_header_v2
               in
               let source_ty = Tglob (name, u_tys, []) in
               let source_type_s = render_ty source_ty in
-              let struct_local_name = "%SELF%" in
-              let template_params =
-                String.concat ", "
-                  (List.map
-                     (fun u -> "typename " ^ Id.to_string u)
-                     u_var_names)
-              in
               let n_ctors = Array.length cnames in
+              let other_id = Id.of_string "_other" in
+              let vmn_id = Id.of_string variant_member_name in
               let gen_branch i tys_list =
                 let c = cnames.(i) in
                 let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
                 let ctor_struct_name =
                   ctor_struct_name_of_ref ~fallback_idx:i c
                 in
-                let cname_s = Id.to_string cname_id in
-                let source_ctor_s =
-                  "typename " ^ source_type_s ^ "::" ^ cname_s
-                in
+                let source_ctor_ty = Tvar (0, Some cname_id) in
                 let field_info =
                   List.mapi
                     (fun j ty ->
@@ -13296,111 +14480,27 @@ let gen_ind_header_v2
                       (field_id, src_fty, dst_fty))
                     tys_list
                 in
-                let convert_field (field_id, src_fty, dst_fty) =
-                  let field_s = Id.to_string field_id in
-                  if src_fty = dst_fty then
-                    match src_fty with
-                    | Tunique_ptr inner ->
-                      (* unique_ptr<T>: null-safe clone via ->clone() *)
-                      let inner_s = render_ty inner in
-                      field_s ^ " ? std::make_unique<" ^ inner_s ^ ">("
-                      ^ field_s ^ "->clone()) : nullptr"
-                    | Tglob (g, [Tunique_ptr inner], _)
-                      when is_option_global g ->
-                      (* optional<unique_ptr<T>>: element-wise clone *)
-                      let inner_s = render_ty inner in
-                      field_s ^ ".has_value() ? std::make_optional("
-                      ^ "std::make_unique<" ^ inner_s ^ ">((*" ^ field_s
-                      ^ ")->clone())) : std::nullopt"
-                    | Tglob (g, [Tshared_ptr inner], _)
-                      when is_option_global g ->
-                      (* optional<shared_ptr<T>>: element-wise clone *)
-                      let inner_s = render_ty inner in
-                      field_s ^ ".has_value() ? std::make_optional("
-                      ^ "std::make_shared<" ^ inner_s ^ ">((*" ^ field_s
-                      ^ ")->clone())) : std::nullopt"
-                    | Tglob (GlobRef.IndRef _ as g, _, _)
-                      when not (Table.is_inline_custom g)
-                           && not (Table.is_enum_inductive g) ->
-                      (* Crane-generated inductive struct: always has clone() *)
-                      field_s ^ ".clone()"
-                    | _ ->
-                      (* Type variables, scalars, shared_ptr, type aliases, etc.:
-                         plain copy.  Copy ctor deep-copies for Crane types. *)
-                      field_s
-                  else
-                    match (src_fty, dst_fty) with
-                    | Tunique_ptr _, Tunique_ptr dst_inner ->
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ " ? std::make_unique<" ^ dst_inner_s
-                      ^ ">(*" ^ field_s ^ ") : nullptr"
-                    | Tglob (g1, [src_inner_ty], _), Tglob (g2, [dst_inner], _)
-                      when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
-                           && (match src_inner_ty with
-                               | Tunique_ptr _ | Tshared_ptr _ -> true
-                               | _ -> false)
-                           && (match dst_inner with
-                               | Tunique_ptr _ | Tshared_ptr _ -> false
-                               | _ -> true) ->
-                      (* optional<unique_ptr/shared_ptr<T>> → optional<T>:
-                         clone the pointed-to value (direct copy is deleted
-                         when T itself contains a unique_ptr field). *)
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ ".has_value() ? std::make_optional<"
-                      ^ dst_inner_s ^ ">((*" ^ field_s ^ ")->clone()) : std::nullopt"
-                    | Tglob (g1, [src_inner], _), Tglob (g2, [Tunique_ptr dst_inner], _)
-                      when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
-                           && (match src_inner with
-                               | Tunique_ptr _ | Tshared_ptr _ -> false
-                               | _ -> true) ->
-                      (* optional<T> → optional<unique_ptr<T>> *)
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ ".has_value() ? std::make_optional(std::make_unique<"
-                      ^ dst_inner_s ^ ">((*" ^ field_s ^ ").clone())) : std::nullopt"
-                    | Tglob (g1, [src_inner], _), Tglob (g2, [Tshared_ptr dst_inner], _)
-                      when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
-                           && (match src_inner with
-                               | Tunique_ptr _ | Tshared_ptr _ -> false
-                               | _ -> true) ->
-                      (* optional<T> → optional<shared_ptr<T>> *)
-                      let dst_inner_s = render_ty dst_inner in
-                      field_s ^ ".has_value() ? std::make_optional(std::make_shared<"
-                      ^ dst_inner_s ^ ">((*" ^ field_s ^ ").clone())) : std::nullopt"
-                    | Tglob (g1, _, _), Tglob (g2, _, _)
-                      when GlobRef.CanOrd.equal g1 g2 ->
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
-                    | (Tvar _ | Tauto), _ | _, (Tvar _ | Tauto) ->
-                      (* Type variable conversion: converting constructor *)
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
-                    | _ when contains_tvar dst_fty || contains_tvar src_fty ->
-                      (* Contains type variable: converting constructor *)
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
-                    | _ ->
-                      (* Fully concrete, different: converting constructor *)
-                      render_ty dst_fty ^ "(" ^ field_s ^ ")"
+                let converted =
+                  List.map
+                    (fun (field_id, src_fty, dst_fty) ->
+                      gen_clone_field_expr
+                        ~skip:(fun g -> GlobRef.CanOrd.equal g name)
+                        ~src_ty:src_fty ~dst_ty:dst_fty
+                        (CPPvar field_id))
+                    field_info
                 in
-                ( source_ctor_s,
-                  cname_s,
-                  field_info,
-                  List.map convert_field field_info )
+                (source_ctor_ty, cname_id, field_info, converted)
               in
               let branches =
                 List.init n_ctors (fun i -> gen_branch i tys.(i))
               in
-              let buf = Buffer.create 256 in
-              Buffer.add_string buf
-                ("template <" ^ template_params ^ ">\n");
-              Buffer.add_string buf
-                ("explicit " ^ struct_local_name ^ "(const "
-                 ^ source_type_s ^ "& _other) {\n");
-              if n_ctors = 1 then begin
-                let source_ctor_s, cname_s, field_info, converted =
-                  List.hd branches
-                in
+              (* Build body statements for each branch *)
+              let make_branch_body cname_id field_info converted =
                 match field_info with
                 | [] ->
-                  Buffer.add_string buf
-                    ("  " ^ variant_member_name ^ " = " ^ cname_s ^ "{};\n")
+                  [Sassign_expr
+                     ( CPParrow (CPPthis, vmn_id),
+                       CPPstruct_id (cname_id, [], []) )]
                 | _ ->
                   let bindings =
                     String.concat ", "
@@ -13408,52 +14508,61 @@ let gen_ind_header_v2
                          (fun (id, _, _) -> Id.to_string id)
                          field_info)
                   in
-                  Buffer.add_string buf
-                    ("  const auto& [" ^ bindings
+                  let source_ctor_s =
+                    "typename " ^ source_type_s ^ "::"
+                    ^ Id.to_string cname_id
+                  in
+                  [Sraw (
+                     "const auto& [" ^ bindings
                      ^ "] = std::get<" ^ source_ctor_s
-                     ^ ">(_other.v());\n");
-                  Buffer.add_string buf
-                    ("  " ^ variant_member_name ^ " = " ^ cname_s ^ "{"
-                     ^ String.concat ", " converted ^ "};\n")
-              end
-              else begin
-                List.iteri
-                  (fun idx
-                       (source_ctor_s, cname_s, field_info, converted) ->
-                    let is_last = idx = n_ctors - 1 in
-                    if idx = 0 then
-                      Buffer.add_string buf
-                        ("  if (std::holds_alternative<" ^ source_ctor_s
-                         ^ ">(_other.v())) {\n")
-                    else if is_last then
-                      Buffer.add_string buf "  } else {\n"
-                    else
-                      Buffer.add_string buf
-                        ("  } else if (std::holds_alternative<"
-                         ^ source_ctor_s ^ ">(_other.v())) {\n");
-                    match field_info with
-                    | [] ->
-                      Buffer.add_string buf
-                        ("    " ^ variant_member_name ^ " = " ^ cname_s ^ "{};\n")
-                    | _ ->
-                      let bindings =
-                        String.concat ", "
-                          (List.map
-                             (fun (id, _, _) -> Id.to_string id)
-                             field_info)
+                     ^ ">(" ^ "_other.v()" ^ ");");
+                   Sassign_expr
+                     ( CPParrow (CPPthis, vmn_id),
+                       CPPstruct_id (cname_id, [], converted) )]
+              in
+              let body =
+                if n_ctors = 1 then
+                  let source_ctor_ty, cname_id, field_info, converted =
+                    List.hd branches
+                  in
+                  make_branch_body cname_id field_info converted
+                else
+                  (* Build if/else if/else chain *)
+                  let other_v =
+                    CPPdot_method_call (CPPvar other_id,
+                                       Id.of_string "v", [])
+                  in
+                  let rec build_if_chain = function
+                    | [] -> assert false
+                    | [(_, cname_id, field_info, converted)] ->
+                      (* Last branch: no guard *)
+                      make_branch_body cname_id field_info converted
+                    | (_source_ctor_ty, cname_id, field_info, converted)
+                      :: rest ->
+                      let guard =
+                        CPPfun_call
+                          ( CPPstd_holds_alternative
+                              (source_ty, Some cname_id),
+                            [other_v] )
                       in
-                      Buffer.add_string buf
-                        ("    const auto& [" ^ bindings
-                         ^ "] = std::get<" ^ source_ctor_s
-                         ^ ">(_other.v());\n");
-                      Buffer.add_string buf
-                        ("    " ^ variant_member_name ^ " = " ^ cname_s ^ "{"
-                         ^ String.concat ", " converted ^ "};\n"))
-                  branches;
-                Buffer.add_string buf "  }\n"
-              end;
-              Buffer.add_string buf "}";
-              [(Fraw (Buffer.contents buf), VPublic, SCreators)]
+                      let body =
+                        make_branch_body cname_id field_info converted
+                      in
+                      [Sif (guard, body, build_if_chain rest)]
+                  in
+                  build_if_chain branches
+              in
+              let tparams =
+                List.map
+                  (fun u -> (TTtypename, u))
+                  u_var_names
+              in
+              let ctor_params =
+                [(other_id,
+                  Tref (Tmod (TMconst, source_ty)))]
+              in
+              [(Ftemplate_ctor (tparams, true, ctor_params, body),
+                VPublic, SCreators)]
           in
           [copy_ctor; move_ctor; copy_assign; move_assign; clone_method]
           @ converting_ctor

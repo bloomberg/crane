@@ -1,4 +1,4 @@
-#include <simple_lambda_field_capture.h>
+#include "simple_lambda_field_capture.h"
 
 /// Dummy use of tag.
 SimpleLambdaFieldCapture::tag

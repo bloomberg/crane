@@ -1,4 +1,4 @@
-#include <nat_mod_zero.h>
+#include "nat_mod_zero.h"
 
 /// In Rocq, Nat.modulo n 0 = n — perfectly defined.
 /// But NatIntStd maps Nat.modulo to (%a0 % %a1) with

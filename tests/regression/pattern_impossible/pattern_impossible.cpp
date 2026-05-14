@@ -1,4 +1,4 @@
-#include <pattern_impossible.h>
+#include "pattern_impossible.h"
 
 unsigned int
 PatternImpossible::complex_match(const PatternImpossible::Three x) {
@@ -9,7 +9,7 @@ PatternImpossible::complex_match(const PatternImpossible::Three x) {
   case Three::e_TWO: {
     return 2u;
   }
-  case Three::e_THREE0: {
+  case Three::e_THREE: {
     return 3u;
   }
   default:
@@ -57,7 +57,7 @@ unsigned int PatternImpossible::double_match(const PatternImpossible::Three x,
     case Three::e_TWO: {
       return 2u;
     }
-    case Three::e_THREE0: {
+    case Three::e_THREE: {
       return 3u;
     }
     default:
@@ -67,7 +67,7 @@ unsigned int PatternImpossible::double_match(const PatternImpossible::Three x,
   case Three::e_TWO: {
     return 10u;
   }
-  case Three::e_THREE0: {
+  case Three::e_THREE: {
     return 20u;
   }
   default:

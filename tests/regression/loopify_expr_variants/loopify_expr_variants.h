@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -145,8 +147,7 @@ public:
 };
 
 struct ListDef {
-  template <typename T1>
-  static List<T1> repeat(const T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
 };
 
 struct LoopifyExprVariants {
@@ -207,6 +208,7 @@ struct LoopifyExprVariants {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -267,6 +269,7 @@ struct LoopifyExprVariants {
     // MANIPULATORS
     ~cond_expr() {
       std::vector<std::unique_ptr<cond_expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](cond_expr &_node) {
         if (std::holds_alternative<Add>(_node.d_v_)) {
           auto &_alt = std::get<Add>(_node.d_v_);
@@ -308,52 +311,55 @@ struct LoopifyExprVariants {
     unsigned int size_cond() const {
       const cond_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const cond_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
-      struct _After2 {
+      /// _After_Add: saves [_s0, _s1], dispatches next recursive call.
+      struct _After_Add {
         cond_expr *_s0;
         decltype(1u) _s1;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After3 {
+      /// _After_Cond: saves [_s0, _s1, _s2], dispatches next recursive call.
+      struct _After_Cond {
         const cond_expr *_s0;
         const cond_expr *_s1;
         decltype(1u) _s2;
       };
 
-      /// Intermediate: saves [_result, _s1, _s2], dispatches next recursive
+      /// _After_Cond_1: saves [_result, _s1, _s2], dispatches next recursive
       /// call.
-      struct _After4 {
+      struct _After_Cond_1 {
         unsigned int _result;
         const cond_expr *_s1;
         decltype(1u) _s2;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
         unsigned int _result;
         decltype(1u) _s1;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine5 {
+      /// _Combine_Cond: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Cond {
         unsigned int _result_0;
         unsigned int _result_1;
         decltype(1u) _s2;
       };
 
-      using _Frame =
-          std::variant<_Enter, _After2, _After3, _After4, _Combine1, _Combine5>;
+      using _Frame = std::variant<_Enter, _After_Add, _After_Cond,
+                                  _After_Cond_1, _Combine_Add, _Combine_Cond>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After3, _After4, _Combine1,
-      /// _Combine5.
+      /// Loopified size_cond: _Enter -> _After_Add -> _After_Cond ->
+      /// _After_Cond_1 -> _Combine_Add -> _Combine_Cond.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -366,31 +372,31 @@ struct LoopifyExprVariants {
           } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename cond_expr::Add>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), 1u});
+            _stack.emplace_back(_After_Add{d_a0.get(), 1u});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename cond_expr::Cond>(_sv.v());
-            _stack.emplace_back(_After3{d_a1.get(), d_a0.get(), 1u});
+            _stack.emplace_back(_After_Cond{d_a1.get(), d_a0.get(), 1u});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
-          _stack.emplace_back(_Combine1{_result, _f._s1});
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
+          _stack.emplace_back(_Combine_Add{_result, _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After3>(_frame)) {
-          auto _f = std::move(std::get<_After3>(_frame));
-          _stack.emplace_back(_After4{_result, _f._s1, _f._s2});
+        } else if (std::holds_alternative<_After_Cond>(_frame)) {
+          auto _f = std::move(std::get<_After_Cond>(_frame));
+          _stack.emplace_back(_After_Cond_1{_result, _f._s1, _f._s2});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
-          _stack.emplace_back(_Combine5{_f._result, _result, _f._s2});
+        } else if (std::holds_alternative<_After_Cond_1>(_frame)) {
+          auto _f = std::move(std::get<_After_Cond_1>(_frame));
+          _stack.emplace_back(_Combine_Cond{_f._result, _result, _f._s2});
           _stack.emplace_back(_Enter{_f._s1});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
           _result = ((_f._s1 + _result) + _f._result);
         } else {
-          auto _f = std::move(std::get<_Combine5>(_frame));
+          auto _f = std::move(std::get<_Combine_Cond>(_frame));
           _result = (((_f._s2 + _result) + _f._result_1) + _f._result_0);
         }
       }
@@ -426,61 +432,64 @@ struct LoopifyExprVariants {
     T1 cond_expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const cond_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After2 {
+      /// _After_Add: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_Add {
         cond_expr *_s0;
-        cond_expr _s1;
-        cond_expr _s2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2, _s3, _s4], dispatches next
+      /// _After_Cond: saves [_s0, _s1, d_a2, d_a1, d_a0], dispatches next
       /// recursive call.
-      struct _After3 {
+      struct _After_Cond {
         const cond_expr *_s0;
         const cond_expr *_s1;
-        cond_expr _s2;
-        cond_expr _s3;
-        cond_expr _s4;
+        cond_expr d_a2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Intermediate: saves [_result, _s1, _s2, _s3, _s4], dispatches next
+      /// _After_Cond_1: saves [_result, _s1, d_a2, d_a1, d_a0], dispatches next
       /// recursive call.
-      struct _After4 {
+      struct _After_Cond_1 {
         T1 _result;
         const cond_expr *_s1;
-        cond_expr _s2;
-        cond_expr _s3;
-        cond_expr _s4;
+        cond_expr d_a2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
         T1 _result;
-        cond_expr _s1;
-        cond_expr _s2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine5 {
+      /// _Combine_Cond: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Cond {
         T1 _result_0;
         T1 _result_1;
-        cond_expr _s2;
-        cond_expr _s3;
-        cond_expr _s4;
+        cond_expr d_a2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      using _Frame =
-          std::variant<_Enter, _After2, _After3, _After4, _Combine1, _Combine5>;
+      using _Frame = std::variant<_Enter, _After_Add, _After_Cond,
+                                  _After_Cond_1, _Combine_Add, _Combine_Cond>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After3, _After4, _Combine1,
-      /// _Combine5.
+      /// Loopified cond_expr_rec: _Enter -> _After_Add -> _After_Cond ->
+      /// _After_Cond_1 -> _Combine_Add -> _Combine_Cond.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -494,37 +503,39 @@ struct LoopifyExprVariants {
           } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename cond_expr::Add>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_Add{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename cond_expr::Cond>(_sv.v());
             _stack.emplace_back(
-                _After3{d_a1.get(), d_a0.get(), *(d_a2), *(d_a1), *(d_a0)});
+                _After_Cond{d_a1.get(), d_a0.get(), *(d_a2), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
           _stack.emplace_back(
-              _Combine1{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_Add{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After3>(_frame)) {
-          auto _f = std::move(std::get<_After3>(_frame));
-          _stack.emplace_back(_After4{_result, _f._s1, std::move(_f._s2),
-                                      std::move(_f._s3), std::move(_f._s4)});
+        } else if (std::holds_alternative<_After_Cond>(_frame)) {
+          auto _f = std::move(std::get<_After_Cond>(_frame));
+          _stack.emplace_back(_After_Cond_1{_result, _f._s1, std::move(_f.d_a2),
+                                            std::move(_f.d_a1),
+                                            std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
-          _stack.emplace_back(_Combine5{_f._result, _result, std::move(_f._s2),
-                                        std::move(_f._s3), std::move(_f._s4)});
+        } else if (std::holds_alternative<_After_Cond_1>(_frame)) {
+          auto _f = std::move(std::get<_After_Cond_1>(_frame));
+          _stack.emplace_back(
+              _Combine_Cond{_f._result, _result, std::move(_f.d_a2),
+                            std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s1});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f0(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result = f0(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Combine5>(_frame));
-          _result =
-              f1(_f._s4, _result, _f._s3, _f._result_1, _f._s2, _f._result_0);
+          auto _f = std::move(std::get<_Combine_Cond>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result_1, _f.d_a2,
+                       _f._result_0);
         }
       }
       return _result;
@@ -539,61 +550,64 @@ struct LoopifyExprVariants {
     T1 cond_expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const cond_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const cond_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After2 {
+      /// _After_Add: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_Add {
         cond_expr *_s0;
-        cond_expr _s1;
-        cond_expr _s2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2, _s3, _s4], dispatches next
+      /// _After_Cond: saves [_s0, _s1, d_a2, d_a1, d_a0], dispatches next
       /// recursive call.
-      struct _After3 {
+      struct _After_Cond {
         const cond_expr *_s0;
         const cond_expr *_s1;
-        cond_expr _s2;
-        cond_expr _s3;
-        cond_expr _s4;
+        cond_expr d_a2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Intermediate: saves [_result, _s1, _s2, _s3, _s4], dispatches next
+      /// _After_Cond_1: saves [_result, _s1, d_a2, d_a1, d_a0], dispatches next
       /// recursive call.
-      struct _After4 {
+      struct _After_Cond_1 {
         T1 _result;
         const cond_expr *_s1;
-        cond_expr _s2;
-        cond_expr _s3;
-        cond_expr _s4;
+        cond_expr d_a2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
         T1 _result;
-        cond_expr _s1;
-        cond_expr _s2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine5 {
+      /// _Combine_Cond: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Cond {
         T1 _result_0;
         T1 _result_1;
-        cond_expr _s2;
-        cond_expr _s3;
-        cond_expr _s4;
+        cond_expr d_a2;
+        cond_expr d_a1;
+        cond_expr d_a0;
       };
 
-      using _Frame =
-          std::variant<_Enter, _After2, _After3, _After4, _Combine1, _Combine5>;
+      using _Frame = std::variant<_Enter, _After_Add, _After_Cond,
+                                  _After_Cond_1, _Combine_Add, _Combine_Cond>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After3, _After4, _Combine1,
-      /// _Combine5.
+      /// Loopified cond_expr_rect: _Enter -> _After_Add -> _After_Cond ->
+      /// _After_Cond_1 -> _Combine_Add -> _Combine_Cond.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -607,37 +621,39 @@ struct LoopifyExprVariants {
           } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename cond_expr::Add>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_Add{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename cond_expr::Cond>(_sv.v());
             _stack.emplace_back(
-                _After3{d_a1.get(), d_a0.get(), *(d_a2), *(d_a1), *(d_a0)});
+                _After_Cond{d_a1.get(), d_a0.get(), *(d_a2), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
           _stack.emplace_back(
-              _Combine1{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_Add{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After3>(_frame)) {
-          auto _f = std::move(std::get<_After3>(_frame));
-          _stack.emplace_back(_After4{_result, _f._s1, std::move(_f._s2),
-                                      std::move(_f._s3), std::move(_f._s4)});
+        } else if (std::holds_alternative<_After_Cond>(_frame)) {
+          auto _f = std::move(std::get<_After_Cond>(_frame));
+          _stack.emplace_back(_After_Cond_1{_result, _f._s1, std::move(_f.d_a2),
+                                            std::move(_f.d_a1),
+                                            std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
-          _stack.emplace_back(_Combine5{_f._result, _result, std::move(_f._s2),
-                                        std::move(_f._s3), std::move(_f._s4)});
+        } else if (std::holds_alternative<_After_Cond_1>(_frame)) {
+          auto _f = std::move(std::get<_After_Cond_1>(_frame));
+          _stack.emplace_back(
+              _Combine_Cond{_f._result, _result, std::move(_f.d_a2),
+                            std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s1});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f0(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result = f0(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Combine5>(_frame));
-          _result =
-              f1(_f._s4, _result, _f._s3, _f._result_1, _f._s2, _f._result_0);
+          auto _f = std::move(std::get<_Combine_Cond>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result_1, _f.d_a2,
+                       _f._result_0);
         }
       }
       return _result;
@@ -708,6 +724,7 @@ struct LoopifyExprVariants {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -781,6 +798,7 @@ struct LoopifyExprVariants {
     // MANIPULATORS
     ~arith_expr() {
       std::vector<std::unique_ptr<arith_expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](arith_expr &_node) {
         if (std::holds_alternative<AAdd>(_node.d_v_)) {
           auto &_alt = std::get<AAdd>(_node.d_v_);
@@ -828,54 +846,58 @@ struct LoopifyExprVariants {
     unsigned int count_ops() const {
       const arith_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const arith_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
-      struct _After2 {
+      /// _After_AAdd: saves [_s0, _s1], dispatches next recursive call.
+      struct _After_AAdd {
         arith_expr *_s0;
         decltype(1u) _s1;
       };
 
-      /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
-      struct _After4 {
+      /// _After_ADiv: saves [_s0, _s1], dispatches next recursive call.
+      struct _After_ADiv {
         arith_expr *_s0;
         decltype(1u) _s1;
       };
 
-      /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
-      struct _After6 {
+      /// _After_AMul: saves [_s0, _s1], dispatches next recursive call.
+      struct _After_AMul {
         arith_expr *_s0;
         decltype(1u) _s1;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_AAdd: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_AAdd {
         unsigned int _result;
         decltype(1u) _s1;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine3 {
+      /// _Combine_ADiv: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_ADiv {
         unsigned int _result;
         decltype(1u) _s1;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine5 {
+      /// _Combine_AMul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_AMul {
         unsigned int _result;
         decltype(1u) _s1;
       };
 
-      using _Frame = std::variant<_Enter, _After2, _After4, _After6, _Combine1,
-                                  _Combine3, _Combine5>;
+      using _Frame = std::variant<_Enter, _After_AAdd, _After_ADiv, _After_AMul,
+                                  _Combine_AAdd, _Combine_ADiv, _Combine_AMul>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After4, _After6, _Combine1,
-      /// _Combine3, _Combine5.
+      /// Loopified count_ops: _Enter -> _After_AAdd -> _After_ADiv ->
+      /// _After_AMul -> _Combine_AAdd -> _Combine_ADiv -> _Combine_AMul.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -889,40 +911,40 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AAdd>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), 1u});
+            _stack.emplace_back(_After_AAdd{d_a0.get(), 1u});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AMul>(_sv.v());
-            _stack.emplace_back(_After4{d_a0.get(), 1u});
+            _stack.emplace_back(_After_AMul{d_a0.get(), 1u});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::ADiv>(_sv.v());
-            _stack.emplace_back(_After6{d_a0.get(), 1u});
+            _stack.emplace_back(_After_ADiv{d_a0.get(), 1u});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
-          _stack.emplace_back(_Combine1{_result, _f._s1});
+        } else if (std::holds_alternative<_After_AAdd>(_frame)) {
+          auto _f = std::move(std::get<_After_AAdd>(_frame));
+          _stack.emplace_back(_Combine_AAdd{_result, _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
-          _stack.emplace_back(_Combine3{_result, _f._s1});
+        } else if (std::holds_alternative<_After_ADiv>(_frame)) {
+          auto _f = std::move(std::get<_After_ADiv>(_frame));
+          _stack.emplace_back(_Combine_ADiv{_result, _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After6>(_frame)) {
-          auto _f = std::move(std::get<_After6>(_frame));
-          _stack.emplace_back(_Combine5{_result, _f._s1});
+        } else if (std::holds_alternative<_After_AMul>(_frame)) {
+          auto _f = std::move(std::get<_After_AMul>(_frame));
+          _stack.emplace_back(_Combine_AMul{_result, _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
+        } else if (std::holds_alternative<_Combine_AAdd>(_frame)) {
+          auto _f = std::move(std::get<_Combine_AAdd>(_frame));
           _result = ((_f._s1 + _result) + _f._result);
-        } else if (std::holds_alternative<_Combine3>(_frame)) {
-          auto _f = std::move(std::get<_Combine3>(_frame));
+        } else if (std::holds_alternative<_Combine_ADiv>(_frame)) {
+          auto _f = std::move(std::get<_Combine_ADiv>(_frame));
           _result = ((_f._s1 + _result) + _f._result);
         } else {
-          auto _f = std::move(std::get<_Combine5>(_frame));
+          auto _f = std::move(std::get<_Combine_AMul>(_frame));
           _result = ((_f._s1 + _result) + _f._result);
         }
       }
@@ -964,60 +986,64 @@ struct LoopifyExprVariants {
     T1 arith_expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const arith_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const arith_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After2 {
+      /// _After_AAdd: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_AAdd {
         arith_expr *_s0;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After4 {
+      /// _After_ADiv: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_ADiv {
         arith_expr *_s0;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After6 {
+      /// _After_AMul: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_AMul {
         arith_expr *_s0;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_AAdd: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_AAdd {
         T1 _result;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine3 {
+      /// _Combine_ADiv: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_ADiv {
         T1 _result;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine5 {
+      /// _Combine_AMul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_AMul {
         T1 _result;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After2, _After4, _After6, _Combine1,
-                                  _Combine3, _Combine5>;
+      using _Frame = std::variant<_Enter, _After_AAdd, _After_ADiv, _After_AMul,
+                                  _Combine_AAdd, _Combine_ADiv, _Combine_AMul>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After4, _After6, _Combine1,
-      /// _Combine3, _Combine5.
+      /// Loopified arith_expr_rec: _Enter -> _After_AAdd -> _After_ADiv ->
+      /// _After_AMul -> _Combine_AAdd -> _Combine_ADiv -> _Combine_AMul.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1032,44 +1058,44 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AAdd>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AAdd{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AMul>(_sv.v());
-            _stack.emplace_back(_After4{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AMul{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::ADiv>(_sv.v());
-            _stack.emplace_back(_After6{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_ADiv{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
+        } else if (std::holds_alternative<_After_AAdd>(_frame)) {
+          auto _f = std::move(std::get<_After_AAdd>(_frame));
           _stack.emplace_back(
-              _Combine1{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_AAdd{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
+        } else if (std::holds_alternative<_After_ADiv>(_frame)) {
+          auto _f = std::move(std::get<_After_ADiv>(_frame));
           _stack.emplace_back(
-              _Combine3{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_ADiv{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After6>(_frame)) {
-          auto _f = std::move(std::get<_After6>(_frame));
+        } else if (std::holds_alternative<_After_AMul>(_frame)) {
+          auto _f = std::move(std::get<_After_AMul>(_frame));
           _stack.emplace_back(
-              _Combine5{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_AMul{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f0(_f._s2, _result, _f._s1, _f._result);
-        } else if (std::holds_alternative<_Combine3>(_frame)) {
-          auto _f = std::move(std::get<_Combine3>(_frame));
-          _result = f1(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_AAdd>(_frame)) {
+          auto _f = std::move(std::get<_Combine_AAdd>(_frame));
+          _result = f0(_f.d_a0, _result, _f.d_a1, _f._result);
+        } else if (std::holds_alternative<_Combine_ADiv>(_frame)) {
+          auto _f = std::move(std::get<_Combine_ADiv>(_frame));
+          _result = f2(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Combine5>(_frame));
-          _result = f2(_f._s2, _result, _f._s1, _f._result);
+          auto _f = std::move(std::get<_Combine_AMul>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result);
         }
       }
       return _result;
@@ -1086,60 +1112,64 @@ struct LoopifyExprVariants {
     T1 arith_expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const arith_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const arith_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After2 {
+      /// _After_AAdd: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_AAdd {
         arith_expr *_s0;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After4 {
+      /// _After_ADiv: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_ADiv {
         arith_expr *_s0;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After6 {
+      /// _After_AMul: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_AMul {
         arith_expr *_s0;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_AAdd: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_AAdd {
         T1 _result;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine3 {
+      /// _Combine_ADiv: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_ADiv {
         T1 _result;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine5 {
+      /// _Combine_AMul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_AMul {
         T1 _result;
-        arith_expr _s1;
-        arith_expr _s2;
+        arith_expr d_a1;
+        arith_expr d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After2, _After4, _After6, _Combine1,
-                                  _Combine3, _Combine5>;
+      using _Frame = std::variant<_Enter, _After_AAdd, _After_ADiv, _After_AMul,
+                                  _Combine_AAdd, _Combine_ADiv, _Combine_AMul>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After4, _After6, _Combine1,
-      /// _Combine3, _Combine5.
+      /// Loopified arith_expr_rect: _Enter -> _After_AAdd -> _After_ADiv ->
+      /// _After_AMul -> _Combine_AAdd -> _Combine_ADiv -> _Combine_AMul.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1154,44 +1184,44 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AAdd>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AAdd{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AMul>(_sv.v());
-            _stack.emplace_back(_After4{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AMul{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::ADiv>(_sv.v());
-            _stack.emplace_back(_After6{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_ADiv{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
+        } else if (std::holds_alternative<_After_AAdd>(_frame)) {
+          auto _f = std::move(std::get<_After_AAdd>(_frame));
           _stack.emplace_back(
-              _Combine1{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_AAdd{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
+        } else if (std::holds_alternative<_After_ADiv>(_frame)) {
+          auto _f = std::move(std::get<_After_ADiv>(_frame));
           _stack.emplace_back(
-              _Combine3{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_ADiv{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After6>(_frame)) {
-          auto _f = std::move(std::get<_After6>(_frame));
+        } else if (std::holds_alternative<_After_AMul>(_frame)) {
+          auto _f = std::move(std::get<_After_AMul>(_frame));
           _stack.emplace_back(
-              _Combine5{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_AMul{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f0(_f._s2, _result, _f._s1, _f._result);
-        } else if (std::holds_alternative<_Combine3>(_frame)) {
-          auto _f = std::move(std::get<_Combine3>(_frame));
-          _result = f1(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_AAdd>(_frame)) {
+          auto _f = std::move(std::get<_Combine_AAdd>(_frame));
+          _result = f0(_f.d_a0, _result, _f.d_a1, _f._result);
+        } else if (std::holds_alternative<_Combine_ADiv>(_frame)) {
+          auto _f = std::move(std::get<_Combine_ADiv>(_frame));
+          _result = f2(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Combine5>(_frame));
-          _result = f2(_f._s2, _result, _f._s1, _f._result);
+          auto _f = std::move(std::get<_Combine_AMul>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result);
         }
       }
       return _result;
@@ -1262,6 +1292,7 @@ struct LoopifyExprVariants {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -1330,6 +1361,7 @@ struct LoopifyExprVariants {
     // MANIPULATORS
     ~bool_expr() {
       std::vector<std::unique_ptr<bool_expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](bool_expr &_node) {
         if (std::holds_alternative<BAnd>(_node.d_v_)) {
           auto &_alt = std::get<BAnd>(_node.d_v_);
@@ -1614,41 +1646,44 @@ struct LoopifyExprVariants {
     bool eval_bool() const {
       const bool_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const bool_expr *_self;
       };
 
-      /// Intermediate: saves [_s0], dispatches next recursive call.
-      struct _After2 {
+      /// _After_BAnd: saves [_s0], dispatches next recursive call.
+      struct _After_BAnd {
         bool_expr *_s0;
       };
 
-      /// Intermediate: saves [_s0], dispatches next recursive call.
-      struct _After4 {
+      /// _After_BOr: saves [_s0], dispatches next recursive call.
+      struct _After_BOr {
         bool_expr *_s0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_BAnd: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_BAnd {
         bool _result;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine3 {
+      /// _Combine_BOr: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_BOr {
         bool _result;
       };
 
-      /// Continuation: saves across recursive call.
-      struct _Resume5 {};
+      /// _Resume_BNot: resumes after recursive call with _result.
+      struct _Resume_BNot {};
 
-      using _Frame = std::variant<_Enter, _After2, _After4, _Combine1,
-                                  _Combine3, _Resume5>;
+      using _Frame = std::variant<_Enter, _After_BAnd, _After_BOr,
+                                  _Combine_BAnd, _Combine_BOr, _Resume_BNot>;
       bool _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After4, _Combine1, _Combine3,
-      /// _Resume5.
+      /// Loopified eval_bool: _Enter -> _After_BAnd -> _After_BOr ->
+      /// _Combine_BAnd -> _Combine_BOr -> _Resume_BNot.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1665,34 +1700,34 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BAnd>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get()});
+            _stack.emplace_back(_After_BAnd{d_a0.get()});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BOr>(_sv.v());
-            _stack.emplace_back(_After4{d_a0.get()});
+            _stack.emplace_back(_After_BOr{d_a0.get()});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-            _stack.emplace_back(_Resume5{});
+            _stack.emplace_back(_Resume_BNot{});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
-          _stack.emplace_back(_Combine1{_result});
+        } else if (std::holds_alternative<_After_BAnd>(_frame)) {
+          auto _f = std::move(std::get<_After_BAnd>(_frame));
+          _stack.emplace_back(_Combine_BAnd{_result});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
-          _stack.emplace_back(_Combine3{_result});
+        } else if (std::holds_alternative<_After_BOr>(_frame)) {
+          auto _f = std::move(std::get<_After_BOr>(_frame));
+          _stack.emplace_back(_Combine_BOr{_result});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
+        } else if (std::holds_alternative<_Combine_BAnd>(_frame)) {
+          auto _f = std::move(std::get<_Combine_BAnd>(_frame));
           _result = (_result && _f._result);
-        } else if (std::holds_alternative<_Combine3>(_frame)) {
-          auto _f = std::move(std::get<_Combine3>(_frame));
+        } else if (std::holds_alternative<_Combine_BOr>(_frame)) {
+          auto _f = std::move(std::get<_Combine_BOr>(_frame));
           _result = (_result || _f._result);
         } else {
-          auto _f = std::move(std::get<_Resume5>(_frame));
+          auto _f = std::move(std::get<_Resume_BNot>(_frame));
           _result = !(_result);
         }
       }
@@ -1705,55 +1740,59 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
-    T1 bool_expr_rec(const T1 f, const T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
+    T1 bool_expr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const bool_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const bool_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After2 {
+      /// _After_BAnd: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_BAnd {
         bool_expr *_s0;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After4 {
+      /// _After_BOr: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_BOr {
         bool_expr *_s0;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_BAnd: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_BAnd {
         T1 _result;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine3 {
+      /// _Combine_BOr: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_BOr {
         T1 _result;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Continuation: saves [f3, _s1] across recursive call.
-      struct _Resume5 {
+      /// _Resume_BNot: saves [f3, d_a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_BNot {
         F4 f3;
-        bool_expr _s1;
+        bool_expr d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After2, _After4, _Combine1,
-                                  _Combine3, _Resume5>;
+      using _Frame = std::variant<_Enter, _After_BAnd, _After_BOr,
+                                  _Combine_BAnd, _Combine_BOr, _Resume_BNot>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After4, _Combine1, _Combine3,
-      /// _Resume5.
+      /// Loopified bool_expr_rec: _Enter -> _After_BAnd -> _After_BOr ->
+      /// _Combine_BAnd -> _Combine_BOr -> _Resume_BNot.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1770,37 +1809,37 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BAnd>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BAnd{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BOr>(_sv.v());
-            _stack.emplace_back(_After4{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BOr{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-            _stack.emplace_back(_Resume5{f3, *(d_a0)});
+            _stack.emplace_back(_Resume_BNot{f3, *(d_a0)});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
+        } else if (std::holds_alternative<_After_BAnd>(_frame)) {
+          auto _f = std::move(std::get<_After_BAnd>(_frame));
           _stack.emplace_back(
-              _Combine1{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_BAnd{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
+        } else if (std::holds_alternative<_After_BOr>(_frame)) {
+          auto _f = std::move(std::get<_After_BOr>(_frame));
           _stack.emplace_back(
-              _Combine3{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_BOr{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f1(_f._s2, _result, _f._s1, _f._result);
-        } else if (std::holds_alternative<_Combine3>(_frame)) {
-          auto _f = std::move(std::get<_Combine3>(_frame));
-          _result = f2(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_BAnd>(_frame)) {
+          auto _f = std::move(std::get<_Combine_BAnd>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result);
+        } else if (std::holds_alternative<_Combine_BOr>(_frame)) {
+          auto _f = std::move(std::get<_Combine_BOr>(_frame));
+          _result = f2(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Resume5>(_frame));
-          _result = _f.f3(_f._s1, _result);
+          auto _f = std::move(std::get<_Resume_BNot>(_frame));
+          _result = _f.f3(_f.d_a0, _result);
         }
       }
       return _result;
@@ -1812,56 +1851,59 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F3 &, bool_expr &, T1 &, bool_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F4 &, bool_expr &, T1 &>
-    T1 bool_expr_rect(const T1 f, const T1 f0, F2 &&f1, F3 &&f2,
-                      F4 &&f3) const {
+    T1 bool_expr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
       const bool_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const bool_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After2 {
+      /// _After_BAnd: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_BAnd {
         bool_expr *_s0;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After4 {
+      /// _After_BOr: saves [_s0, d_a1, d_a0], dispatches next recursive call.
+      struct _After_BOr {
         bool_expr *_s0;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine1 {
+      /// _Combine_BAnd: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_BAnd {
         T1 _result;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine3 {
+      /// _Combine_BOr: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_BOr {
         T1 _result;
-        bool_expr _s1;
-        bool_expr _s2;
+        bool_expr d_a1;
+        bool_expr d_a0;
       };
 
-      /// Continuation: saves [f3, _s1] across recursive call.
-      struct _Resume5 {
+      /// _Resume_BNot: saves [f3, d_a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_BNot {
         F4 f3;
-        bool_expr _s1;
+        bool_expr d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After2, _After4, _Combine1,
-                                  _Combine3, _Resume5>;
+      using _Frame = std::variant<_Enter, _After_BAnd, _After_BOr,
+                                  _Combine_BAnd, _Combine_BOr, _Resume_BNot>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After2, _After4, _Combine1, _Combine3,
-      /// _Resume5.
+      /// Loopified bool_expr_rect: _Enter -> _After_BAnd -> _After_BOr ->
+      /// _Combine_BAnd -> _Combine_BOr -> _Resume_BNot.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -1878,37 +1920,37 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BAnd>(_sv.v());
-            _stack.emplace_back(_After2{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BAnd{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BOr>(_sv.v());
-            _stack.emplace_back(_After4{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BOr{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-            _stack.emplace_back(_Resume5{f3, *(d_a0)});
+            _stack.emplace_back(_Resume_BNot{f3, *(d_a0)});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
-        } else if (std::holds_alternative<_After2>(_frame)) {
-          auto _f = std::move(std::get<_After2>(_frame));
+        } else if (std::holds_alternative<_After_BAnd>(_frame)) {
+          auto _f = std::move(std::get<_After_BAnd>(_frame));
           _stack.emplace_back(
-              _Combine1{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_BAnd{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_After4>(_frame)) {
-          auto _f = std::move(std::get<_After4>(_frame));
+        } else if (std::holds_alternative<_After_BOr>(_frame)) {
+          auto _f = std::move(std::get<_After_BOr>(_frame));
           _stack.emplace_back(
-              _Combine3{_result, std::move(_f._s1), std::move(_f._s2)});
+              _Combine_BOr{_result, std::move(_f.d_a1), std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine1>(_frame)) {
-          auto _f = std::move(std::get<_Combine1>(_frame));
-          _result = f1(_f._s2, _result, _f._s1, _f._result);
-        } else if (std::holds_alternative<_Combine3>(_frame)) {
-          auto _f = std::move(std::get<_Combine3>(_frame));
-          _result = f2(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_BAnd>(_frame)) {
+          auto _f = std::move(std::get<_Combine_BAnd>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result);
+        } else if (std::holds_alternative<_Combine_BOr>(_frame)) {
+          auto _f = std::move(std::get<_Combine_BOr>(_frame));
+          _result = f2(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Resume5>(_frame));
-          _result = _f.f3(_f._s1, _result);
+          auto _f = std::move(std::get<_Resume_BNot>(_frame));
+          _result = _f.f3(_f.d_a0, _result);
         }
       }
       return _result;
@@ -1976,6 +2018,7 @@ struct LoopifyExprVariants {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -2032,6 +2075,7 @@ struct LoopifyExprVariants {
     // MANIPULATORS
     ~list_expr() {
       std::vector<std::unique_ptr<list_expr>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](list_expr &_node) {
         if (std::holds_alternative<LCons>(_node.d_v_)) {
           auto &_alt = std::get<LCons>(_node.d_v_);
@@ -2067,33 +2111,37 @@ struct LoopifyExprVariants {
     unsigned int list_expr_size() const {
       const list_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const list_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1], dispatches next recursive call.
-      struct _After3 {
+      /// _After_LAppend: saves [_s0, _s1], dispatches next recursive call.
+      struct _After_LAppend {
         list_expr *_s0;
         decltype(1u) _s1;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine2 {
+      /// _Combine_LAppend: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_LAppend {
         unsigned int _result;
         decltype(1u) _s1;
       };
 
-      /// Continuation: saves [_s0] across recursive call.
-      struct _Resume1 {
+      /// _Resume_LCons: saves [_s0], resumes after recursive call with _result.
+      struct _Resume_LCons {
         decltype(1u) _s0;
       };
 
-      using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
+      using _Frame =
+          std::variant<_Enter, _After_LAppend, _Combine_LAppend, _Resume_LCons>;
       unsigned int _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
+      /// Loopified list_expr_size: _Enter -> _After_LAppend -> _Combine_LAppend
+      /// -> _Resume_LCons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2104,26 +2152,26 @@ struct LoopifyExprVariants {
           if (std::holds_alternative<typename list_expr::LCons>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume1{1u});
+            _stack.emplace_back(_Resume_LCons{1u});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
-            _stack.emplace_back(_After3{d_a0.get(), 1u});
+            _stack.emplace_back(_After_LAppend{d_a0.get(), 1u});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             _result = 1u;
           }
-        } else if (std::holds_alternative<_After3>(_frame)) {
-          auto _f = std::move(std::get<_After3>(_frame));
-          _stack.emplace_back(_Combine2{_result, _f._s1});
+        } else if (std::holds_alternative<_After_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_After_LAppend>(_frame));
+          _stack.emplace_back(_Combine_LAppend{_result, _f._s1});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine2>(_frame)) {
-          auto _f = std::move(std::get<_Combine2>(_frame));
+        } else if (std::holds_alternative<_Combine_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_Combine_LAppend>(_frame));
           _result = ((_f._s1 + _result) + _f._result);
         } else {
-          auto _f = std::move(std::get<_Resume1>(_frame));
+          auto _f = std::move(std::get<_Resume_LCons>(_frame));
           _result = (_f._s0 + _result);
         }
       }
@@ -2133,31 +2181,36 @@ struct LoopifyExprVariants {
     List<unsigned int> eval_list() const {
       const list_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const list_expr *_self;
       };
 
-      /// Intermediate: saves [_s0], dispatches next recursive call.
-      struct _After3 {
+      /// _After_LAppend: saves [_s0], dispatches next recursive call.
+      struct _After_LAppend {
         list_expr *_s0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine2 {
+      /// _Combine_LAppend: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_LAppend {
         List<unsigned int> _result;
       };
 
-      /// Continuation: saves [d_a0] across recursive call.
-      struct _Resume1 {
+      /// _Resume_LCons: saves [d_a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_LCons {
         unsigned int d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
+      using _Frame =
+          std::variant<_Enter, _After_LAppend, _Combine_LAppend, _Resume_LCons>;
       List<unsigned int> _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
+      /// Loopified eval_list: _Enter -> _After_LAppend -> _Combine_LAppend ->
+      /// _Resume_LCons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2171,28 +2224,28 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume1{d_a0});
+            _stack.emplace_back(_Resume_LCons{d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
-            _stack.emplace_back(_After3{d_a0.get()});
+            _stack.emplace_back(_After_LAppend{d_a0.get()});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LReplicate>(_sv.v());
             _result = ListDef::template repeat<unsigned int>(d_a1, d_a0);
           }
-        } else if (std::holds_alternative<_After3>(_frame)) {
-          auto _f = std::move(std::get<_After3>(_frame));
-          _stack.emplace_back(_Combine2{std::move(_result)});
+        } else if (std::holds_alternative<_After_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_After_LAppend>(_frame));
+          _stack.emplace_back(_Combine_LAppend{std::move(_result)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine2>(_frame)) {
-          auto _f = std::move(std::get<_Combine2>(_frame));
+        } else if (std::holds_alternative<_Combine_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_Combine_LAppend>(_frame));
           _result = _result.app(_f._result);
         } else {
-          auto _f = std::move(std::get<_Resume1>(_frame));
+          auto _f = std::move(std::get<_Resume_LCons>(_frame));
           _result = List<unsigned int>::cons(_f.d_a0, _result);
         }
       }
@@ -2205,40 +2258,46 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
-    T1 list_expr_rec(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+    T1 list_expr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const list_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After3 {
+      /// _After_LAppend: saves [_s0, d_a1, d_a0], dispatches next recursive
+      /// call.
+      struct _After_LAppend {
         list_expr *_s0;
-        list_expr _s1;
-        list_expr _s2;
+        list_expr d_a1;
+        list_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine2 {
+      /// _Combine_LAppend: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_LAppend {
         T1 _result;
-        list_expr _s1;
-        list_expr _s2;
+        list_expr d_a1;
+        list_expr d_a0;
       };
 
-      /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-      struct _Resume1 {
+      /// _Resume_LCons: saves [f0, d_a1, d_a0], resumes after recursive call
+      /// with _result.
+      struct _Resume_LCons {
         F1 f0;
-        list_expr _s1;
+        list_expr d_a1;
         unsigned int d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
+      using _Frame =
+          std::variant<_Enter, _After_LAppend, _Combine_LAppend, _Resume_LCons>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
+      /// Loopified list_expr_rec: _Enter -> _After_LAppend -> _Combine_LAppend
+      /// -> _Resume_LCons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2252,30 +2311,30 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_LCons{f0, *(d_a1), d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
-            _stack.emplace_back(_After3{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_LAppend{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LReplicate>(_sv.v());
             _result = f2(d_a0, d_a1);
           }
-        } else if (std::holds_alternative<_After3>(_frame)) {
-          auto _f = std::move(std::get<_After3>(_frame));
-          _stack.emplace_back(
-              _Combine2{_result, std::move(_f._s1), std::move(_f._s2)});
+        } else if (std::holds_alternative<_After_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_After_LAppend>(_frame));
+          _stack.emplace_back(_Combine_LAppend{_result, std::move(_f.d_a1),
+                                               std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine2>(_frame)) {
-          auto _f = std::move(std::get<_Combine2>(_frame));
-          _result = f1(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_Combine_LAppend>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Resume1>(_frame));
-          _result = _f.f0(_f.d_a0, _f._s1, _result);
+          auto _f = std::move(std::get<_Resume_LCons>(_frame));
+          _result = _f.f0(_f.d_a0, _f.d_a1, _result);
         }
       }
       return _result;
@@ -2287,40 +2346,46 @@ struct LoopifyExprVariants {
                std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
-    T1 list_expr_rect(const T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+    T1 list_expr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
+      /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const list_expr *_self;
       };
 
-      /// Intermediate: saves [_s0, _s1, _s2], dispatches next recursive call.
-      struct _After3 {
+      /// _After_LAppend: saves [_s0, d_a1, d_a0], dispatches next recursive
+      /// call.
+      struct _After_LAppend {
         list_expr *_s0;
-        list_expr _s1;
-        list_expr _s2;
+        list_expr d_a1;
+        list_expr d_a0;
       };
 
-      /// Combiner: receives first result, combines with second recursive call.
-      struct _Combine2 {
+      /// _Combine_LAppend: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_LAppend {
         T1 _result;
-        list_expr _s1;
-        list_expr _s2;
+        list_expr d_a1;
+        list_expr d_a0;
       };
 
-      /// Continuation: saves [f0, _s1, d_a0] across recursive call.
-      struct _Resume1 {
+      /// _Resume_LCons: saves [f0, d_a1, d_a0], resumes after recursive call
+      /// with _result.
+      struct _Resume_LCons {
         F1 f0;
-        list_expr _s1;
+        list_expr d_a1;
         unsigned int d_a0;
       };
 
-      using _Frame = std::variant<_Enter, _After3, _Combine2, _Resume1>;
+      using _Frame =
+          std::variant<_Enter, _After_LAppend, _Combine_LAppend, _Resume_LCons>;
       T1 _result{};
       std::vector<_Frame> _stack;
-      _stack.reserve(16);
+      _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
-      /// Frame dispatch: _Enter, _After3, _Combine2, _Resume1.
+      /// Loopified list_expr_rect: _Enter -> _After_LAppend -> _Combine_LAppend
+      /// -> _Resume_LCons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
@@ -2334,30 +2399,30 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume1{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_LCons{f0, *(d_a1), d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
-            _stack.emplace_back(_After3{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_LAppend{d_a0.get(), *(d_a1), *(d_a0)});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LReplicate>(_sv.v());
             _result = f2(d_a0, d_a1);
           }
-        } else if (std::holds_alternative<_After3>(_frame)) {
-          auto _f = std::move(std::get<_After3>(_frame));
-          _stack.emplace_back(
-              _Combine2{_result, std::move(_f._s1), std::move(_f._s2)});
+        } else if (std::holds_alternative<_After_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_After_LAppend>(_frame));
+          _stack.emplace_back(_Combine_LAppend{_result, std::move(_f.d_a1),
+                                               std::move(_f.d_a0)});
           _stack.emplace_back(_Enter{_f._s0});
-        } else if (std::holds_alternative<_Combine2>(_frame)) {
-          auto _f = std::move(std::get<_Combine2>(_frame));
-          _result = f1(_f._s2, _result, _f._s1, _f._result);
+        } else if (std::holds_alternative<_Combine_LAppend>(_frame)) {
+          auto _f = std::move(std::get<_Combine_LAppend>(_frame));
+          _result = f1(_f.d_a0, _result, _f.d_a1, _f._result);
         } else {
-          auto _f = std::move(std::get<_Resume1>(_frame));
-          _result = _f.f0(_f.d_a0, _f._s1, _result);
+          auto _f = std::move(std::get<_Resume_LCons>(_frame));
+          _result = _f.f0(_f.d_a0, _f.d_a1, _result);
         }
       }
       return _result;
@@ -2365,8 +2430,7 @@ struct LoopifyExprVariants {
   };
 };
 
-template <typename T1>
-List<T1> ListDef::repeat(const T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
   std::unique_ptr<List<T1>> _head{};
   std::unique_ptr<List<T1>> *_write = &_head;
   unsigned int _loop_n = n;

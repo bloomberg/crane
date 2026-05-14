@@ -1,4 +1,4 @@
-#include <inductive_in_module.h>
+#include "inductive_in_module.h"
 
 unsigned int InductiveInModule::Inner::color_to_nat(
     const InductiveInModule::Inner::Color c) {

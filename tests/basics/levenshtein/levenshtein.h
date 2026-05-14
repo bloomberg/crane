@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Nat {
   // TYPES
@@ -57,6 +57,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -85,6 +86,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -111,11 +113,11 @@ public:
   Bool0 leb(const Nat &m) const {
     auto &&_sv = *(this);
     if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-      return Bool0::e_TRUE0;
+      return Bool0::e_TRUE;
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
       if (std::holds_alternative<typename Nat::O>(m.v())) {
-        return Bool0::e_FALSE0;
+        return Bool0::e_FALSE;
       } else {
         const auto &[d_a00] = std::get<typename Nat::S>(m.v());
         return (*(d_a0)).leb(*(d_a00));
@@ -169,7 +171,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -385,6 +387,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -417,6 +420,7 @@ public:
   // MANIPULATORS
   ~String() {
     std::vector<std::unique_ptr<String>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](String &_node) {
       if (std::holds_alternative<String0>(_node.d_v_)) {
         auto &_alt = std::get<String0>(_node.d_v_);
@@ -646,6 +650,7 @@ struct Levenshtein {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -698,6 +703,7 @@ struct Levenshtein {
     // MANIPULATORS
     ~chain() {
       std::vector<std::unique_ptr<chain>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<Skip>(_node.d_v_)) {
           auto &_alt = std::get<Skip>(_node.d_v_);
@@ -774,7 +780,7 @@ struct Levenshtein {
                                      Nat &, chain &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
                                      Nat &, edit &, chain &, T1 &>
-    T1 chain_rec(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
+    T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                  const Nat &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
@@ -797,7 +803,7 @@ struct Levenshtein {
                                      Nat &, chain &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
                                      Nat &, edit &, chain &, T1 &>
-    T1 chain_rect(const T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
+    T1 chain_rect(T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
                   const Nat &) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
@@ -836,29 +842,29 @@ struct Levenshtein {
 
   template <typename T1, typename F3>
     requires std::is_invocable_r_v<Nat, F3 &, T1 &>
-  static T1 min3_app(const T1 x, const T1 y, const T1 z, F3 &&f) {
+  static T1 min3_app(T1 x, T1 y, T1 z, F3 &&f) {
     Nat n1 = f(x);
     Nat n2 = f(y);
     Nat n3 = f(z);
     switch (n1.leb(n2)) {
-    case Bool0::e_TRUE0: {
+    case Bool0::e_TRUE: {
       switch (std::move(n1).leb(std::move(n3))) {
-      case Bool0::e_TRUE0: {
+      case Bool0::e_TRUE: {
         return x;
       }
-      case Bool0::e_FALSE0: {
+      case Bool0::e_FALSE: {
         return z;
       }
       default:
         std::unreachable();
       }
     }
-    case Bool0::e_FALSE0: {
+    case Bool0::e_FALSE: {
       switch (std::move(n2).leb(std::move(n3))) {
-      case Bool0::e_TRUE0: {
+      case Bool0::e_TRUE: {
         return y;
       }
-      case Bool0::e_FALSE0: {
+      case Bool0::e_FALSE: {
         return z;
       }
       default:

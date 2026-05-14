@@ -53,6 +53,7 @@ public:
       Nat *_dst;
     };
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -64,7 +65,7 @@ public:
       } else {
         const auto &_alt = bsl::get<S>(_src->v());
         _dst->d_v_ = S{_alt.d_n ? bsl::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->d_v_);
+        auto &_dst_alt = bsl::get<S>(_dst->d_v_);
         if (_alt.d_n) {
           _stack.push_back({_alt.d_n.get(), _dst_alt.d_n.get()});
         }
@@ -78,9 +79,10 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<bsl::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.d_v_)) {
-        auto &_alt = std::get<S>(_node.d_v_);
+      if (bsl::holds_alternative<S>(_node.d_v_)) {
+        auto &_alt = bsl::get<S>(_node.d_v_);
         if (_alt.d_n) {
           _stack.push_back(bsl::move(_alt.d_n));
         }
@@ -100,7 +102,7 @@ public:
   const variant_t &v() const { return d_v_; }
   template <typename T1, typename F1>
     requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
-  T1 nat_rect(const T1 f, F1 &&f0) const {
+  T1 nat_rect(T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {
       return f;
@@ -111,7 +113,7 @@ public:
   }
   template <typename T1, typename F1>
     requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
-  T1 nat_rec(const T1 f, F1 &&f0) const {
+  T1 nat_rec(T1 f, F1 &&f0) const {
     auto &&_sv = *(this);
     if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {
       return f;

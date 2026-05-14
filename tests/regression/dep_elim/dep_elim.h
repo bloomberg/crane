@@ -56,6 +56,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -80,10 +81,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -98,6 +99,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -172,6 +174,7 @@ struct DepElim {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -204,6 +207,7 @@ struct DepElim {
     // MANIPULATORS
     ~fin() {
       std::vector<std::unique_ptr<fin>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](fin &_node) {
         if (std::holds_alternative<FS>(_node.d_v_)) {
           auto &_alt = std::get<FS>(_node.d_v_);
@@ -314,6 +318,7 @@ struct DepElim {
       };
 
       std::vector<_CloneFrame> _stack{};
+      _stack.reserve(8);
       _stack.push_back({this, &_out});
       while (!_stack.empty()) {
         auto _frame = _stack.back();
@@ -339,12 +344,12 @@ struct DepElim {
     // CREATORS
     template <typename _U> explicit vec(const vec<_U> &_other) {
       if (std::holds_alternative<typename vec<_U>::Vnil>(_other.v())) {
-        d_v_ = Vnil{};
+        this->d_v_ = Vnil{};
       } else {
         const auto &[d_n, d_a1, d_a2] =
             std::get<typename vec<_U>::Vcons>(_other.v());
-        d_v_ = Vcons{d_n, t_A(d_a1),
-                     d_a2 ? std::make_unique<vec<t_A>>(*d_a2) : nullptr};
+        this->d_v_ = Vcons{d_n, t_A(d_a1),
+                           d_a2 ? std::make_unique<vec<t_A>>(*d_a2) : nullptr};
       }
     }
 
@@ -358,6 +363,7 @@ struct DepElim {
     // MANIPULATORS
     ~vec() {
       std::vector<std::unique_ptr<vec<t_A>>> _stack{};
+      _stack.reserve(8);
       auto _drain = [&](vec<t_A> &_node) {
         if (std::holds_alternative<Vcons>(_node.d_v_)) {
           auto &_alt = std::get<Vcons>(_node.d_v_);
@@ -431,7 +437,7 @@ struct DepElim {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, t_A &,
                                      vec<t_A> &, T1 &>
-    T1 vec_rec(const T1 f, F1 &&f0, const unsigned int) const {
+    T1 vec_rec(T1 f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return f;
@@ -446,7 +452,7 @@ struct DepElim {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, t_A &,
                                      vec<t_A> &, T1 &>
-    T1 vec_rect(const T1 f, F1 &&f0, const unsigned int) const {
+    T1 vec_rect(T1 f, F1 &&f0, const unsigned int) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
         return f;
@@ -531,7 +537,7 @@ struct DepElim {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-    T1 avail_rec(F0 &&f, const T1 f0, const bool) const {
+    T1 avail_rec(F0 &&f, T1 f0, const bool) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename avail::Present>(_sv.v())) {
         const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());
@@ -543,7 +549,7 @@ struct DepElim {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-    T1 avail_rect(F0 &&f, const T1 f0, const bool) const {
+    T1 avail_rect(F0 &&f, T1 f0, const bool) const {
       auto &&_sv = *(this);
       if (std::holds_alternative<typename avail::Present>(_sv.v())) {
         const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());

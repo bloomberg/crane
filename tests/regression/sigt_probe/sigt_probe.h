@@ -9,7 +9,7 @@
 #include <variant>
 #include <vector>
 
-enum class Bool0 { e_TRUE0, e_FALSE0 };
+enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Nat {
   // TYPES
@@ -57,6 +57,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -85,6 +86,7 @@ public:
   // MANIPULATORS
   ~Nat() {
     std::vector<std::unique_ptr<Nat>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.d_v_)) {
         auto &_alt = std::get<S>(_node.d_v_);
@@ -154,7 +156,7 @@ public:
   explicit SigT(const SigT<_U0, _U1> &_other) {
     const auto &[d_x, d_a1] =
         std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
   }
 
   static SigT<t_A, t_P> existt(t_A x, t_P a1) {
@@ -175,7 +177,7 @@ struct SigTProbe {
   /// but declare the type as SigT<std::any, std::any>, producing
   /// incompatible shared_ptr template instantiations.
   static inline const SigT<std::any, std::any> packed =
-      SigT<std::any, std::any>::existt(std::any{}, Bool0::e_TRUE0);
+      SigT<std::any, std::any>::existt(std::any{}, Bool0::e_TRUE);
   static inline const Nat sample = Nat::o();
 };
 

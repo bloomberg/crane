@@ -1,4 +1,4 @@
-#include <large_enum.h>
+#include "large_enum.h"
 
 unsigned int LargeEnum::color_to_nat(const LargeEnum::Color c) {
   switch (c) {

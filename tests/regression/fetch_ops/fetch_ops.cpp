@@ -1,4 +1,4 @@
-#include <fetch_ops.h>
+#include "fetch_ops.h"
 
 unsigned int FetchOps::fetch_byte(const FetchOps::state &s,
                                   const unsigned int addr) {

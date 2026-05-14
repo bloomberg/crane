@@ -55,6 +55,7 @@ public:
     };
 
     std::vector<_CloneFrame> _stack{};
+    _stack.reserve(8);
     _stack.push_back({this, &_out});
     while (!_stack.empty()) {
       auto _frame = _stack.back();
@@ -79,10 +80,10 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      d_v_ = Nil{};
+      this->d_v_ = Nil{};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      d_v_ =
+      this->d_v_ =
           Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
     }
   }
@@ -97,6 +98,7 @@ public:
   // MANIPULATORS
   ~List() {
     std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (std::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = std::get<Cons>(_node.d_v_);
@@ -145,7 +147,7 @@ struct UnitVoidEdge {
     return 42u;
   }
 
-  template <typename T1> static T1 id(const T1 x) { return x; }
+  template <typename T1> static T1 id(T1 x) { return x; }
 
   static inline const std::monostate id_unit = []() {
     id<std::monostate>(std::monostate{});
@@ -159,15 +161,17 @@ struct UnitVoidEdge {
       std::optional<std::monostate>();
   static unsigned int match_option_unit(const std::optional<std::monostate> &o);
   static std::optional<std::monostate> return_some_tt(const unsigned int n);
-  static void unit_chain(std::monostate u);
+  static void unit_chain(const std::monostate u);
   static void helper_void(const unsigned int _x);
   static unsigned int use_helper(const unsigned int n);
-  static unsigned int match_unit_nontail(const std::monostate &u);
-  static void unit_to_unit_with_work(const std::monostate &u);
+  static unsigned int match_unit_nontail(const std::monostate u);
+  static void unit_to_unit_with_work(const std::monostate u);
   static void seq_voids(const unsigned int _x);
   static void conditional_unit(const bool b);
 
-  template <typename T1> static unsigned int poly_take(const T1) { return 42u; }
+  template <typename T1> static unsigned int poly_take(const T1 &) {
+    return 42u;
+  }
 
   static inline const unsigned int take_tt =
       poly_take<std::monostate>(std::monostate{});
@@ -175,8 +179,8 @@ struct UnitVoidEdge {
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
                                 std::monostate{}, List<std::monostate>::nil()));
-  static unsigned int double_match_unit(const std::monostate &u1,
-                                        const std::monostate &u2);
+  static unsigned int double_match_unit(const std::monostate u1,
+                                        const std::monostate u2);
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, unsigned int &>
@@ -206,7 +210,7 @@ struct UnitVoidEdge {
     tagged_nat t = make_tagged(99u);
     return get_value(std::move(t));
   }();
-  static void make_callback(const unsigned int n, const std::monostate &_x);
+  static void make_callback(const unsigned int n, const std::monostate _x);
   static inline const std::monostate test_make_callback = []() {
     make_callback(5u, std::monostate{});
     return std::monostate{};
