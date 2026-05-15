@@ -10,7 +10,7 @@
 /// and step itself. When build_chain returns, the stack frame
 /// is destroyed, and the returned closure holds dangling references.
 std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-FixChainBuild::build_chain(const unsigned int n) {
+FixChainBuild::build_chain(unsigned int n) {
   if (n <= 0) {
     return std::make_pair(0u, [](const unsigned int x) { return x; });
   } else {
@@ -30,6 +30,6 @@ FixChainBuild::build_chain(const unsigned int n) {
     auto step = [=](unsigned int x) mutable -> unsigned int {
       return step_impl(step_impl, x);
     };
-    return std::make_pair(n, step);
+    return std::make_pair(std::move(n), step);
   }
 }

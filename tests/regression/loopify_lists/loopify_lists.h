@@ -1062,21 +1062,22 @@ struct LoopifyLists {
         const list<T1> &l = *(_f.l);
         T3 acc = _f.acc;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::make_pair(acc, list<T2>::nil());
+          _result = std::make_pair(std::move(acc), list<T2>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
           auto _cs = f(acc, d_a0);
           const T3 &acc_ = _cs.first;
           const T2 &y = _cs.second;
           _stack.emplace_back(_Cont_acc_{y});
-          _stack.emplace_back(_Enter{d_a1.get(), acc_});
+          _stack.emplace_back(_Enter{d_a1.get(), std::move(_cs.first)});
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         T2 y = _f.y;
         const T3 &acc__ = _result.first;
         const list<T2> &ys = _result.second;
-        _result = std::make_pair(acc__, list<T2>::cons(y, ys));
+        _result =
+            std::make_pair(std::move(_result.first), list<T2>::cons(y, ys));
       }
     }
     return _result;

@@ -4374,6 +4374,17 @@
   (deps fix_move_capture.t.exe)
   (action (run ./fix_move_capture.t.exe))))
 
+(subdir fix_state_threading
+ (rule
+  (targets fix_state_threading.t.exe)
+  (deps FixStateThreading.vo fix_state_threading.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_state_threading.t.exe fix_state_threading.cpp fix_state_threading.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_state_threading.t.exe)
+  (action (run ./fix_state_threading.t.exe))))
+
 (subdir reuse_fn_in_body
  (rule
   (targets reuse_fn_in_body.t.exe)

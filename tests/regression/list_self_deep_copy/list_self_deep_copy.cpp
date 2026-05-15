@@ -2,5 +2,5 @@
 
 std::pair<ListSelfDeepCopy::chain, ListSelfDeepCopy::chain>
 ListSelfDeepCopy::dup_chain(ListSelfDeepCopy::chain c) {
-  return std::make_pair(c, c);
+  return std::make_pair(std::move(c), c);
 }

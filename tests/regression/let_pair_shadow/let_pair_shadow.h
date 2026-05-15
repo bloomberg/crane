@@ -209,9 +209,9 @@ struct LetPairShadow {
   }();
   /// Helper functions that return pairs (force temporary allocation).
   static std::pair<unsigned int, unsigned int> add_pair(const unsigned int a,
-                                                        const unsigned int b);
+                                                        unsigned int b);
   static std::pair<unsigned int, unsigned int> sub_pair(const unsigned int a,
-                                                        const unsigned int b);
+                                                        unsigned int b);
   /// Pattern 2: Two destructs of function-call results in top-level body.
   static unsigned int double_call_destruct(const unsigned int a,
                                            const unsigned int b,

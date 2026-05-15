@@ -17,7 +17,7 @@ struct NatModZero {
   /// In Rocq, divmod n 0 = (0, n).
   /// In C++, the second component triggers UB.
   static std::pair<unsigned int, unsigned int> divmod(const unsigned int a,
-                                                      const unsigned int b);
+                                                      unsigned int b);
 };
 
 #endif // INCLUDED_NAT_MOD_ZERO

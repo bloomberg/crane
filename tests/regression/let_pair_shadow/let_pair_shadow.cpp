@@ -14,12 +14,12 @@ LetPairShadow::mylist_sum(const LetPairShadow::mylist<unsigned int> &l) {
 
 /// Helper functions that return pairs (force temporary allocation).
 std::pair<unsigned int, unsigned int>
-LetPairShadow::add_pair(const unsigned int a, const unsigned int b) {
+LetPairShadow::add_pair(const unsigned int a, unsigned int b) {
   return std::make_pair((a + b), (a * b));
 }
 
 std::pair<unsigned int, unsigned int>
-LetPairShadow::sub_pair(const unsigned int a, const unsigned int b) {
+LetPairShadow::sub_pair(const unsigned int a, unsigned int b) {
   return std::make_pair((((a - b) > a ? 0 : (a - b))), (a + b));
 }
 

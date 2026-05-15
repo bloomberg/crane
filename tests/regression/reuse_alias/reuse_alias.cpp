@@ -34,11 +34,11 @@ std::pair<ReuseAlias::mylist<unsigned int>, unsigned int>
 ReuseAlias::alias_and_match(ReuseAlias::mylist<unsigned int> l) {
   if (std::holds_alternative<typename ReuseAlias::mylist<unsigned int>::Mynil>(
           l.v_mut())) {
-    return std::make_pair(l, 0u);
+    return std::make_pair(std::move(l), 0u);
   } else {
     auto &[d_a0, d_a1] =
         std::get<typename ReuseAlias::mylist<unsigned int>::Mycons>(l.v_mut());
-    return std::make_pair(l, d_a0);
+    return std::make_pair(std::move(l), d_a0);
   }
 }
 
@@ -53,7 +53,7 @@ ReuseAlias::scrutinee_in_branch(ReuseAlias::mylist<unsigned int> l) {
   } else {
     auto &[d_a0, d_a1] =
         std::get<typename ReuseAlias::mylist<unsigned int>::Mycons>(l.v_mut());
-    return std::make_pair(l, *(d_a1));
+    return std::make_pair(std::move(l), *(d_a1));
   }
 }
 

@@ -11,8 +11,7 @@ unsigned int FetchOps::fetch_byte_direct(const List<unsigned int> &rom_data,
 }
 
 std::pair<unsigned int, unsigned int>
-FetchOps::fetch_pair(const List<unsigned int> &rom_data,
-                     const unsigned int addr) {
+FetchOps::fetch_pair(const List<unsigned int> &rom_data, unsigned int addr) {
   auto &&_sv = drop<unsigned int>(addr, rom_data);
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return std::make_pair(0u, 0u);

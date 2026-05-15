@@ -4,7 +4,7 @@
 /// in a pair. The fixpoint's & capture creates a dangling reference
 /// to the captured parameter after the enclosing function returns.
 std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-FixEscapeCapture::make_pair_fn(const unsigned int base) {
+FixEscapeCapture::make_pair_fn(unsigned int base) {
   auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
@@ -16,13 +16,13 @@ FixEscapeCapture::make_pair_fn(const unsigned int base) {
   auto add = [=](unsigned int x) mutable -> unsigned int {
     return add_impl(add_impl, x);
   };
-  return std::make_pair(base, add);
+  return std::make_pair(std::move(base), add);
 }
 
 /// Same pattern with a non-recursive local fixpoint to isolate the
 /// capture issue from self-reference.
 std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-FixEscapeCapture::make_pair_fn2(const unsigned int base) {
+FixEscapeCapture::make_pair_fn2(unsigned int base) {
   auto id_add_impl = [=](auto &_self_id_add,
                          unsigned int x) mutable -> unsigned int {
     if (x <= 0) {

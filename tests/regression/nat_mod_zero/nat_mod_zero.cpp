@@ -14,6 +14,6 @@ unsigned int NatModZero::my_mod(const unsigned int _x0,
 /// In Rocq, divmod n 0 = (0, n).
 /// In C++, the second component triggers UB.
 std::pair<unsigned int, unsigned int> NatModZero::divmod(const unsigned int a,
-                                                         const unsigned int b) {
+                                                         unsigned int b) {
   return std::make_pair((b ? a / b : 0), (b ? a % b : a));
 }

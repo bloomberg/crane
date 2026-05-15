@@ -549,7 +549,7 @@ struct LoopifyPairs {
     requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
                                    unsigned int &, unsigned int &>
   static std::pair<unsigned int, list<unsigned int>> mapAccumL(
-      F0 &&f, const unsigned int acc,
+      F0 &&f, unsigned int acc,
       const list<unsigned int>
           &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -576,9 +576,9 @@ struct LoopifyPairs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<unsigned int> &l = *(_f.l);
-        const unsigned int acc = _f.acc;
+        unsigned int acc = _f.acc;
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-          _result = std::make_pair(acc, list<unsigned int>::nil());
+          _result = std::make_pair(std::move(acc), list<unsigned int>::nil());
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<unsigned int>::Cons>(l.v());
@@ -586,14 +586,15 @@ struct LoopifyPairs {
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
           _stack.emplace_back(_Cont_acc_{y});
-          _stack.emplace_back(_Enter{d_a1.get(), acc_});
+          _stack.emplace_back(_Enter{d_a1.get(), std::move(_cs.first)});
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         unsigned int y = _f.y;
         const unsigned int &final_acc = _result.first;
         const list<unsigned int> &ys = _result.second;
-        _result = std::make_pair(final_acc, list<unsigned int>::cons(y, ys));
+        _result = std::make_pair(std::move(_result.first),
+                                 list<unsigned int>::cons(y, ys));
       }
     }
     return _result;

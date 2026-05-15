@@ -20,7 +20,7 @@ struct FixCaptureFnArg {
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-  make_transform(F0 &&f, const unsigned int base) {
+  make_transform(F0 &&f, unsigned int base) {
     auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return f(base);

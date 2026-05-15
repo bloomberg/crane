@@ -127,7 +127,7 @@ struct UnitVoidStress {
   static void consume(const unsigned int n);
   static void discard(const unsigned int _x);
   static std::pair<unsigned int, std::monostate>
-  pair_with_void_call(const unsigned int n);
+  pair_with_void_call(unsigned int n);
   static std::optional<std::monostate> some_void_call(const unsigned int n);
   static inline const List<std::monostate> list_void_calls =
       List<std::monostate>::cons(
@@ -143,10 +143,9 @@ struct UnitVoidStress {
               List<std::monostate>::nil()));
   static void id_void_call(const unsigned int _x0);
   static std::pair<unsigned int, std::monostate>
-  pair_with_discard(const unsigned int n);
+  pair_with_discard(unsigned int n);
   static void store_and_call(const unsigned int _x0);
-  static std::pair<unsigned int, std::monostate>
-  pair_via_let(const unsigned int n);
+  static std::pair<unsigned int, std::monostate> pair_via_let(unsigned int n);
   static void cond_void(const bool b, const unsigned int n);
   static void match_nat_void(const unsigned int n);
   static std::pair<std::pair<unsigned int, std::monostate>, unsigned int>
@@ -154,7 +153,7 @@ struct UnitVoidStress {
   static std::optional<std::pair<unsigned int, std::monostate>>
   option_pair_void(const unsigned int n);
   static std::pair<unsigned int, unsigned int>
-  let_void_then_pair(const unsigned int n);
+  let_void_then_pair(unsigned int n);
   static unsigned int seq_voids_value(const unsigned int _x);
   static unsigned int void_in_one_branch(const bool b, const unsigned int n);
 
@@ -219,9 +218,8 @@ struct UnitVoidStress {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-  static std::pair<unsigned int, T1> apply_in_pair(F0 &&f,
-                                                   const unsigned int n) {
-    return std::make_pair(n, f(n));
+  static std::pair<unsigned int, T1> apply_in_pair(F0 &&f, unsigned int n) {
+    return std::make_pair(std::move(n), f(n));
   }
 
   static inline const std::pair<unsigned int, std::monostate>

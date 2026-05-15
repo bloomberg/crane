@@ -278,7 +278,7 @@ struct ConstructorBugs {
   static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
   multi_call_tuple(const unsigned int n);
   static std::pair<unsigned int, std::pair<state, unsigned int>>
-  pair_test(const unsigned int n);
+  pair_test(unsigned int n);
   static std::optional<std::pair<state, unsigned int>>
   match_test(const std::optional<state> &o);
   static List<state> list_test(state s);

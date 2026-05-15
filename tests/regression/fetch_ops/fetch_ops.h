@@ -166,7 +166,7 @@ struct FetchOps {
   }
 
   static std::pair<unsigned int, unsigned int>
-  fetch_pair(const List<unsigned int> &rom_data, const unsigned int addr);
+  fetch_pair(const List<unsigned int> &rom_data, unsigned int addr);
   static inline const unsigned int fetch_pair_test = []() {
     std::pair<unsigned int, unsigned int> p = fetch_pair(
         List<unsigned int>::cons(

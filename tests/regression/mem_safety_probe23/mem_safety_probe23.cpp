@@ -123,7 +123,7 @@ MemSafetyProbe23::sum_with_original(MemSafetyProbe23::tree t) {
         sum_with_original(*(d_a0));
     std::pair<MemSafetyProbe23::tree, unsigned int> pr =
         sum_with_original(*(d_a2));
-    return std::make_pair(t, ((pl.second + d_a1) + pr.second));
+    return std::make_pair(std::move(t), ((pl.second + d_a1) + pr.second));
   }
 }
 
@@ -141,7 +141,8 @@ MemSafetyProbe23::dup_and_double(MemSafetyProbe23::tree t) {
         dup_and_double(*(d_a0));
     std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pr =
         dup_and_double(*(d_a2));
-    return std::make_pair(t, tree::node(pl.second, (d_a1 * 2u), pr.second));
+    return std::make_pair(std::move(t),
+                          tree::node(pl.second, (d_a1 * 2u), pr.second));
   }
 }
 

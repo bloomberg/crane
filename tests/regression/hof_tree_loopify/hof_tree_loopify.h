@@ -1046,19 +1046,19 @@ struct HofTreeLoopify {
   static std::pair<T3, tree<T2>> tree_map_accum(F0 &&f, T3 acc,
                                                 const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-      return std::make_pair(acc, tree<T2>::leaf());
+      return std::make_pair(std::move(acc), tree<T2>::leaf());
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      auto _cs = tree_map_accum<T1, T2, T3>(f, acc, *(d_a0));
+      auto _cs = tree_map_accum<T1, T2, T3>(f, std::move(acc), *(d_a0));
       const T3 &acc1 = _cs.first;
       const tree<T2> &l_ = _cs.second;
       auto _cs1 = f(acc1, d_a1);
       const T3 &acc2 = _cs1.first;
       const T2 &x_ = _cs1.second;
-      auto _cs2 = tree_map_accum<T1, T2, T3>(f, acc2, *(d_a2));
+      auto _cs2 = tree_map_accum<T1, T2, T3>(f, std::move(_cs1.first), *(d_a2));
       const T3 &acc3 = _cs2.first;
       const tree<T2> &r_ = _cs2.second;
-      return std::make_pair(acc3, tree<T2>::node(l_, x_, r_));
+      return std::make_pair(std::move(_cs2.first), tree<T2>::node(l_, x_, r_));
     }
   }
 

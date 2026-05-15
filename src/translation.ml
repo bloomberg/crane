@@ -942,6 +942,138 @@ let is_prod_global g =
   let n = Common.pp_global_name Type g in
   String.equal n "prod" || String.equal n "Prod"
 
+(** Structural equality on C++ types, ignoring [Tmod] const/static wrappers
+    and [Tvar] name annotations.  Used to match the state parameter type
+    against the state component of a [pair<S,R>] return type. *)
+let rec cpp_ty_eq t1 t2 =
+  let strip = function Tmod (_, t) | Tnamespace (_, t) -> t | t -> t in
+  match (strip t1, strip t2) with
+  | Tglob (g1, ts1, _), Tglob (g2, ts2, _) ->
+    GlobRef.CanOrd.equal g1 g2
+    && List.length ts1 = List.length ts2
+    && List.for_all2 cpp_ty_eq ts1 ts2
+  | Tvar (i1, _), Tvar (i2, _) -> i1 = i2
+  | Tref t1', Tref t2' -> cpp_ty_eq t1' t2'
+  | Tshared_ptr t1', Tshared_ptr t2' -> cpp_ty_eq t1' t2'
+  | Tunique_ptr t1', Tunique_ptr t2' -> cpp_ty_eq t1' t2'
+  | Tfun (d1, c1), Tfun (d2, c2) ->
+    List.length d1 = List.length d2
+    && List.for_all2 cpp_ty_eq d1 d2
+    && cpp_ty_eq c1 c2
+  | Tvoid, Tvoid -> true
+  | Tauto, Tauto -> true
+  | Tany, Tany -> true
+  | _ -> false
+
+(** Post-processing pass: insert [std::move] for state-threading pattern.
+
+    When a fixpoint's return type is [pair<S,R>] and it has a value parameter
+    of type [S], each recursive call copies the whole state value.  This pass:
+    1. Removes [const] from the state param (allows move-from at call sites).
+    2. Wraps the state argument with [std::move] in every recursive self-call.
+    3. Wraps the state component with [std::move] in every [make_pair] call
+       that is in a terminal position (direct state var or state alias from
+       a pair-match scrutinee).
+
+    This reduces O(N) copies per recursion level to O(1) moves, making deep
+    state-threaded recursions O(L) instead of O(L*N) total. *)
+let rewrite_state_threading_moves
+    (fn_ref : GlobRef.t) (state_id : Id.t) (s_ty : cpp_type)
+    (ids : (Id.t * cpp_type) list) (body : cpp_stmt list) =
+  let strip_const = function Tmod (TMconst, t) -> t | t -> t in
+  (* Remove const from state param in the parameter list. *)
+  let new_ids =
+    List.map
+      (fun (id, ty) ->
+        if Id.equal id state_id then (id, strip_const ty) else (id, ty))
+      ids
+  in
+  (* Check if a C++ type is pair<S, ?> where first component matches s_ty. *)
+  let is_state_pair_type ty =
+    match strip_const ty with
+    | Tglob (g, t1 :: _, _) when is_prod_global g ->
+      cpp_ty_eq (strip_const t1) (strip_const s_ty)
+    | _ -> false
+  in
+  (* Check if a function expression is an inline [make_pair] custom. *)
+  let is_make_pair_fn fn =
+    match fn with
+    | CPPglob (_, _, Some ci) -> (
+      match ci.ci_inline with
+      | Some s -> Common.contains_substring s "make_pair"
+      | None -> false )
+    | _ -> false
+  in
+  (* [subst] maps state-alias variable IDs to their source pair var + field.
+     [subst id = Some (scrut_id, first_id)] means [id] is bound to
+     [scrut_id.first] and can be replaced with [std::move(scrut_id.first)]. *)
+  let is_state_val e subst =
+    match e with
+    | CPPvar id -> Id.equal id state_id || subst id <> None
+    | _ -> false
+  in
+  let wrap_state e subst =
+    match e with
+    | CPPvar id when Id.equal id state_id ->
+      CPPmove (CPPvar id)
+    | CPPvar id -> (
+      match subst id with
+      | Some (scrut_id, first_id) ->
+        CPPmove (CPPmember (CPPvar scrut_id, first_id))
+      | None -> e )
+    | _ -> e
+  in
+  let rec rewrite_expr subst e =
+    match e with
+    | CPPfun_call (CPPglob (g, tys, ci) as fn, args)
+      when GlobRef.CanOrd.equal g fn_ref ->
+      (* Self-recursive call: move state_id (or its aliases) wherever they
+         appear within the argument expressions, including nested positions
+         like cons(x, acc) where acc is threaded as part of the new state. *)
+      let rec move_states e =
+        match e with
+        | CPPmove _ -> e  (* already moved, avoid double-wrap *)
+        | CPPvar id when Id.equal id state_id -> CPPmove (CPPvar id)
+        | CPPvar id when subst id <> None -> wrap_state (CPPvar id) subst
+        | _ -> map_expr move_states (rewrite_stmt subst) Fun.id e
+      in
+      CPPfun_call (fn, List.map move_states args)
+    | CPPfun_call (fn, [r_arg; s_arg]) when is_make_pair_fn fn ->
+      (* [make_pair(s, r)] with args reversed: [r_arg; s_arg].
+         [s_arg] is [%a0] = the first (state) component. *)
+      let s_arg' =
+        if is_state_val s_arg subst then wrap_state s_arg subst
+        else rewrite_expr subst s_arg
+      in
+      CPPfun_call (fn, [rewrite_expr subst r_arg; s_arg'])
+    | _ -> map_expr (rewrite_expr subst) (rewrite_stmt subst) Fun.id e
+  and rewrite_stmt subst s =
+    match s with
+    | Scustom_case (ty, CPPvar scrut_id, tyargs, branches, tmpl) when is_state_pair_type ty ->
+      (* Pair pattern match: the first bound var is the state alias.
+         Track it so occurrences in the body are rewritten to
+         [std::move(scrut_id.first)] in terminal positions. *)
+      let new_branches =
+        List.map
+          (fun (params, ret_ty, body_stmts) ->
+            match params with
+            | (alias_id, _) :: _ ->
+              let first_id = Id.of_string "first" in
+              let new_subst id =
+                if Id.equal id alias_id then Some (scrut_id, first_id)
+                else subst id
+              in
+              (params, ret_ty, List.map (rewrite_stmt new_subst) body_stmts)
+            | [] ->
+              (params, ret_ty, List.map (rewrite_stmt subst) body_stmts))
+          branches
+      in
+      Scustom_case (ty, CPPvar scrut_id, tyargs, new_branches, tmpl)
+    | _ -> map_stmt (rewrite_expr subst) (rewrite_stmt subst) Fun.id s
+  in
+  let new_body = List.map (rewrite_stmt (fun _ -> None)) body in
+  (new_ids, new_body)
+
 let is_list_global g =
   let n = Common.pp_global_name Type g in
   String.equal n "list"
@@ -11070,6 +11202,24 @@ let gen_dfun n b cty ty temps =
           in
           return_captures_by_value b
       in
+      (* State-threading optimization: when the return type is [pair<S, R>]
+         and there is a value parameter of type [S], insert [std::move] at
+         every recursive self-call and every [make_pair] return so that the
+         state value is moved rather than deep-copied at each recursion level.
+         This turns O(L * N) total copies into O(L) moves. *)
+      let ids, b =
+        match cod with
+        | Tglob (g, s_ty :: _, _) when is_prod_global g -> (
+          match
+            List.find_opt
+              (fun (_, ty) -> cpp_ty_eq (match ty with Tmod (TMconst, t) -> t | t -> t) s_ty)
+              ids
+          with
+          | Some (state_id, _) ->
+            rewrite_state_threading_moves n state_id s_ty ids b
+          | None -> (ids, b) )
+        | _ -> (ids, b)
+      in
       clear_current_type_vars ();
       clear_current_param_types ();
       Dfundef ([(n, [])], cod, ids, sigma_asserts @ b, no_pure) )
@@ -14789,3 +14939,4 @@ let gen_ind_header_v2
     method_candidates: list of (func_ref, body, type, this_position) tuples *)
 let gen_record_methods (name : GlobRef.t) (vars : Id.t list) method_candidates =
   List.map (gen_single_method name vars) method_candidates
+ 

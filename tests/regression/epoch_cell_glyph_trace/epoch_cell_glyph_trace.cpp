@@ -489,7 +489,7 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
       auto _cs = BinInt::pos_div_eucl(d_a0, Z::zpos(d_a00));
       const Z &q = _cs.first;
       const Z &r = _cs.second;
-      return std::make_pair(q, BinInt::opp(r));
+      return std::make_pair(std::move(_cs.first), BinInt::opp(r));
     }
   }
 }

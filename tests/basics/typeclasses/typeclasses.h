@@ -211,7 +211,7 @@ struct Typeclasses {
     if (_tcI0::leb(x, y)) {
       return std::make_pair(x, y);
     } else {
-      return std::make_pair(y, x);
+      return std::make_pair(std::move(y), x);
     }
   }
 

@@ -10,7 +10,7 @@ ComprehensivePatterns::syntactic_variation(ComprehensivePatterns::S s) {
 
 std::pair<ComprehensivePatterns::S, unsigned int>
 ComprehensivePatterns::with_magic(ComprehensivePatterns::S s) {
-  return std::make_pair(s, s.s_a);
+  return std::make_pair(std::move(s), s.s_a);
 }
 
 std::pair<
@@ -51,7 +51,7 @@ std::pair<ComprehensivePatterns::S, unsigned int>
 ComprehensivePatterns::compose(ComprehensivePatterns::S s) {
   std::function<unsigned int(ComprehensivePatterns::S)> f =
       [](const ComprehensivePatterns::S &x) { return x.s_a; };
-  return std::make_pair(s, f(s));
+  return std::make_pair(std::move(s), f(s));
 }
 
 std::pair<std::function<unsigned int(unsigned int)>, ComprehensivePatterns::S>
@@ -157,13 +157,13 @@ ComprehensivePatterns::match_three(const ComprehensivePatterns::Three t,
                                    ComprehensivePatterns::S s) {
   switch (t) {
   case Three::e_A: {
-    return std::make_pair(s, s.s_a);
+    return std::make_pair(std::move(s), s.s_a);
   }
   case Three::e_B: {
-    return std::make_pair(s, s.s_b);
+    return std::make_pair(std::move(s), s.s_b);
   }
   case Three::e_C: {
-    return std::make_pair(s, s.s_c);
+    return std::make_pair(std::move(s), s.s_c);
   }
   default:
     std::unreachable();
@@ -172,7 +172,7 @@ ComprehensivePatterns::match_three(const ComprehensivePatterns::Three t,
 
 std::pair<ComprehensivePatterns::S, unsigned int>
 ComprehensivePatterns::let_in_arg(ComprehensivePatterns::S s) {
-  return std::make_pair(s, s.s_a);
+  return std::make_pair(std::move(s), s.s_a);
 }
 
 std::pair<ComprehensivePatterns::S, unsigned int>
@@ -180,12 +180,12 @@ ComprehensivePatterns::match_record(ComprehensivePatterns::S s) {
   unsigned int a = s.s_a;
   std::any _x = s.s_b;
   std::any _x0 = s.s_c;
-  return std::make_pair(s, a);
+  return std::make_pair(std::move(s), a);
 }
 
 std::pair<ComprehensivePatterns::S, unsigned int>
 ComprehensivePatterns::rebind(ComprehensivePatterns::S s1) {
-  return std::make_pair(s1, s1.s_a);
+  return std::make_pair(std::move(s1), s1.s_a);
 }
 
 std::pair<std::function<unsigned int(std::monostate)>,
@@ -244,7 +244,7 @@ ComprehensivePatterns::extract_val(const ComprehensivePatterns::R1 &r1) {
 
 std::pair<ComprehensivePatterns::R2, unsigned int>
 ComprehensivePatterns::nested_call(ComprehensivePatterns::R2 r2) {
-  return std::make_pair(r2, extract_val(r2.r2_inner));
+  return std::make_pair(std::move(r2), extract_val(r2.r2_inner));
 }
 
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
@@ -298,9 +298,9 @@ ComprehensivePatterns::pair_of_pairs(ComprehensivePatterns::R2 r2) {
 std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>
 ComprehensivePatterns::cond_proj(const bool b, ComprehensivePatterns::R2 r2) {
   if (b) {
-    return std::make_pair(r2, r2.r2_inner);
+    return std::make_pair(std::move(r2), r2.r2_inner);
   } else {
-    return std::make_pair(r2, r2.r2_inner);
+    return std::make_pair(std::move(r2), r2.r2_inner);
   }
 }
 
@@ -364,7 +364,7 @@ ComprehensivePatterns::mixed_access(ComprehensivePatterns::R3 r3) {
 
 std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>
 ComprehensivePatterns::return_proj_h(ComprehensivePatterns::R2 r2) {
-  return std::make_pair(r2, r2.r2_inner);
+  return std::make_pair(std::move(r2), r2.r2_inner);
 }
 
 std::pair<
@@ -406,7 +406,7 @@ ComprehensivePatterns::option_proj(
 
 std::pair<ComprehensivePatterns::R, unsigned int>
 ComprehensivePatterns::pair_inline_proj(ComprehensivePatterns::R r) {
-  return std::make_pair(r, r.val);
+  return std::make_pair(std::move(r), r.val);
 }
 
 std::pair<std::pair<ComprehensivePatterns::R, unsigned int>, unsigned int>
@@ -469,7 +469,7 @@ ComprehensivePatterns::tuple_proj(ComprehensivePatterns::R r) {
 
 std::pair<ComprehensivePatterns::R, unsigned int>
 ComprehensivePatterns::chain_to_pair(ComprehensivePatterns::R r1) {
-  return std::make_pair(r1, r1.val);
+  return std::make_pair(std::move(r1), r1.val);
 }
 
 List<std::pair<ComprehensivePatterns::R, unsigned int>>
@@ -507,9 +507,9 @@ ComprehensivePatterns::repeat_pair(const unsigned int n,
 std::pair<ComprehensivePatterns::R, unsigned int>
 ComprehensivePatterns::cond_pair(const bool b, ComprehensivePatterns::R r) {
   if (b) {
-    return std::make_pair(r, r.val);
+    return std::make_pair(std::move(r), r.val);
   } else {
-    return std::make_pair(r, r.dat);
+    return std::make_pair(std::move(r), r.dat);
   }
 }
 
@@ -1017,7 +1017,7 @@ std::pair<ComprehensivePatterns::RCF, unsigned int>
 ComprehensivePatterns::branch_different(const bool b,
                                         ComprehensivePatterns::RCF r) {
   if (b) {
-    return std::make_pair(r, r.cf_val);
+    return std::make_pair(std::move(r), r.cf_val);
   } else {
     return std::make_pair(std::move(r), 0u);
   }
