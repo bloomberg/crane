@@ -2,7 +2,7 @@
 
 std::pair<UseAfterMove::State, unsigned int>
 UseAfterMove::pattern1(UseAfterMove::State s) {
-  return std::make_pair(std::move(s), s.value);
+  return std::make_pair(s, s.value);
 }
 
 std::pair<std::pair<UseAfterMove::State, unsigned int>, unsigned int>
@@ -17,20 +17,20 @@ UseAfterMove::pattern3(UseAfterMove::State s) {
 
 std::pair<UseAfterMove::State, unsigned int>
 UseAfterMove::pattern4(UseAfterMove::State s1) {
-  return std::make_pair(std::move(s1), s1.value);
+  return std::make_pair(s1, s1.value);
 }
 
 std::pair<UseAfterMove::State, unsigned int>
 UseAfterMove::pattern5(UseAfterMove::State s1) {
-  return std::make_pair(std::move(s1), s1.value);
+  return std::make_pair(s1, s1.value);
 }
 
 std::pair<UseAfterMove::State, unsigned int>
 UseAfterMove::pattern6(UseAfterMove::State s) {
   if (s.flag == 0u) {
-    return std::make_pair(std::move(s), s.value);
+    return std::make_pair(s, s.value);
   } else {
-    return std::make_pair(std::move(s), s.data);
+    return std::make_pair(s, s.data);
   }
 }
 

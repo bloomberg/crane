@@ -1023,6 +1023,20 @@ let rewrite_state_threading_moves
       | None -> e )
     | _ -> e
   in
+  (* Count the number of times state_id (or an alias in subst) appears in an
+     expression.  Used to guard std::move: we only move if the state appears
+     exactly once in the whole make_pair call, so we don't invalidate a second
+     use of the same value (e.g. dup_a x = (x, x)). *)
+  let rec count_state_uses subst e =
+    match e with
+    | CPPvar id when Id.equal id state_id -> 1
+    | CPPvar id when subst id <> None -> 1
+    | CPPmove inner -> count_state_uses subst inner
+    | _ ->
+      fold_expr_children
+        (fun acc child -> acc + count_state_uses subst child)
+        0 e
+  in
   let rec rewrite_expr subst e =
     match e with
     | CPPfun_call (CPPglob (g, tys, ci) as fn, args)
@@ -1040,9 +1054,13 @@ let rewrite_state_threading_moves
       CPPfun_call (fn, List.map move_states args)
     | CPPfun_call (fn, [r_arg; s_arg]) when is_make_pair_fn fn ->
       (* [make_pair(s, r)] with args reversed: [r_arg; s_arg].
-         [s_arg] is [%a0] = the first (state) component. *)
+         [s_arg] is [%a0] = the first (state) component.
+         Only move the state if it appears exactly once in the whole call
+         (i.e. not also in r_arg), to avoid use-after-move bugs like
+         dup_a x = (x, x) → make_pair(std::move(x), x). *)
+      let total_uses = count_state_uses subst r_arg + count_state_uses subst s_arg in
       let s_arg' =
-        if is_state_val s_arg subst then wrap_state s_arg subst
+        if is_state_val s_arg subst && total_uses = 1 then wrap_state s_arg subst
         else rewrite_expr subst s_arg
       in
       CPPfun_call (fn, [rewrite_expr subst r_arg; s_arg'])

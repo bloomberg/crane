@@ -219,7 +219,7 @@ struct UnitVoidStress {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static std::pair<unsigned int, T1> apply_in_pair(F0 &&f, unsigned int n) {
-    return std::make_pair(std::move(n), f(n));
+    return std::make_pair(n, f(n));
   }
 
   static inline const std::pair<unsigned int, std::monostate>
