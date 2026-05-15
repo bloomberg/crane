@@ -946,7 +946,7 @@ let is_prod_global g =
     and [Tvar] name annotations.  Used to match the state parameter type
     against the state component of a [pair<S,R>] return type. *)
 let rec cpp_ty_eq t1 t2 =
-  let strip = function Tmod (_, t) | Tnamespace (_, t) -> t | t -> t in
+  let rec strip = function Tmod (_, t) | Tnamespace (_, t) -> strip t | t -> t in
   match (strip t1, strip t2) with
   | Tglob (g1, ts1, _), Tglob (g2, ts2, _) ->
     GlobRef.CanOrd.equal g1 g2
@@ -11208,7 +11208,8 @@ let gen_dfun n b cty ty temps =
          state value is moved rather than deep-copied at each recursion level.
          This turns O(L * N) total copies into O(L) moves. *)
       let ids, b =
-        match cod with
+        let rec strip_ns = function Tmod (_, t) | Tnamespace (_, t) -> strip_ns t | t -> t in
+        match strip_ns cod with
         | Tglob (g, s_ty :: _, _) when is_prod_global g -> (
           match
             List.find_opt

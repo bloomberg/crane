@@ -134,7 +134,7 @@ struct FixStateThreading {
   collect_odds_evens(const List<unsigned int> &l, List<unsigned int> odds,
                      List<unsigned int> evens);
   static std::pair<unsigned int, unsigned int>
-  sum_with_acc(const List<unsigned int> &l, const unsigned int acc);
+  sum_with_acc(const List<unsigned int> &l, unsigned int acc);
   static inline const std::pair<List<unsigned int>, unsigned int> test_rev =
       reverse_count(List<unsigned int>::cons(
                         1u, List<unsigned int>::cons(
