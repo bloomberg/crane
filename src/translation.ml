@@ -6990,22 +6990,24 @@ and fixpoint_escapes_in_stmts target_id stmts =
     lightweight (no heap allocation, no indirection) but creates dangling
     references if the closure outlives the enclosing scope.
 
+    Uses a Y-combinator pattern to avoid [std::function] type erasure
+    overhead (heap allocation, virtual dispatch).  Parameters are passed
+    by value (same as the old pattern) to preserve move/mutation semantics.
+
     Generated C++:
     {v
-      std::function<R(A...)> f;
-      f = [&](A... args) { ... f(args) ... };
+      auto f_impl = [&](auto& _self_f, A a, B b) -> R {
+        ... _self_f(_self_f, a', b') ...
+      };
+      auto f = [&](A a, B b) -> R {
+        return f_impl(f_impl, a, b);
+      };
     v}
 
     @return [(decls, defs)] — declaration and definition statement lists.
     @see gen_local_fix_shared_ptr for the escaping-fixpoint alternative. *)
 and gen_local_fix_by_ref env renamed_ids funs_with_params =
   let tvars = get_current_type_vars () in
-  let fix_func_type ty =
-    match ty with
-    | Minicpp.Tfun (params, Minicpp.Tvar (_, None)) ->
-      Minicpp.Tfun (params, Minicpp.Tvoid)
-    | _ -> ty
-  in
   let ret_ty ty =
     match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
     | Tfun (_, t) ->
@@ -7014,33 +7016,100 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params =
       | _ -> Some t )
     | _ -> None
   in
-  let decls =
+  let self_ids =
     List.map
-      (fun (id, ty) ->
-        Sdecl
-          ( id,
-            fix_func_type
-              (convert_ml_type_to_cpp_type env Refset'.empty tvars ty) ) )
+      (fun (id, _) -> Id.of_string ("_self_" ^ Id.to_string id))
       renamed_ids
   in
-  let defs =
-    List.map2
-      (fun (id, _fty) (args, body) ->
-        Sasgn
-          ( id,
-            None,
-            CPPlambda
-              ( List.map
-                  (fun (id, ty) ->
-                    ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
-                      Some id ) )
-                  args,
-                ret_ty _fty,
-                body,
-                false ) ) )
-      renamed_ids funs_with_params
+  let impl_ids =
+    List.map
+      (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
+      renamed_ids
   in
-  (decls, defs)
+  let self_vars_rev = List.rev_map (fun id -> CPPvar id) self_ids in
+  let find_self_id id =
+    let rec aux ids sids =
+      match (ids, sids) with
+      | (fix_id, _) :: _, sid :: _ when Id.equal id fix_id -> Some sid
+      | _ :: ids', _ :: sids' -> aux ids' sids'
+      | _ -> None
+    in
+    aux renamed_ids self_ids
+  in
+  let rec rewrite_expr e =
+    match e with
+    | CPPfun_call (CPPvar id, args) -> (
+      match find_self_id id with
+      | Some self_id ->
+        CPPfun_call
+          (CPPvar self_id, List.map rewrite_expr args @ self_vars_rev)
+      | None -> CPPfun_call (CPPvar id, List.map rewrite_expr args) )
+    | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
+  and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
+  let impl_stmts =
+    List.map2
+      (fun ((_fix_id, fty), impl_id) (args, body) ->
+        let self_params =
+          List.rev_map (fun sid -> (Tref Tauto, Some sid)) self_ids
+        in
+        let orig_params =
+          List.map
+            (fun (id, ty) ->
+              ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
+                Some id ))
+            args
+        in
+        Sasgn
+          ( impl_id,
+            Some Tauto,
+            CPPlambda
+              ( orig_params @ self_params,
+                ret_ty fty,
+                List.map rewrite_stmt body,
+                false ) ))
+      (List.combine renamed_ids impl_ids)
+      funs_with_params
+  in
+  let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
+  let wrapper_stmts =
+    List.map2
+      (fun ((fix_id, fty), _impl_id) (args, _body) ->
+        let orig_params =
+          List.map
+            (fun (id, ty) ->
+              ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
+                Some id ))
+            args
+        in
+        let fwd_args =
+          List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
+        in
+        let rty = ret_ty fty in
+        let call = CPPfun_call (CPPvar _impl_id, fwd_args) in
+        let wrapper_body =
+          match rty with
+          | None -> [Sexpr call]
+          | _ -> [Sreturn (Some call)]
+        in
+        let wrapper_ty =
+          let param_tys =
+            List.map
+              (fun (id, ty) ->
+                convert_ml_type_to_cpp_type env Refset'.empty tvars ty)
+              args
+          in
+          match rty with
+          | Some r -> Tfun (List.rev param_tys, r)
+          | None -> Tauto
+        in
+        Sasgn
+          ( fix_id,
+            Some wrapper_ty,
+            CPPlambda (orig_params, rty, wrapper_body, false) ))
+      (List.combine renamed_ids impl_ids)
+      funs_with_params
+  in
+  (impl_stmts @ wrapper_stmts, [])
 
 (** Generate local fixpoint declarations using the shared_ptr fixpoint
     pattern for escaping fixpoints.
@@ -7232,7 +7301,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
             args
         in
         let fwd_args =
-          List.rev_map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
+          List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
         in
         let rty = ret_ty fty in
         let call = CPPfun_call (CPPvar impl_id, fwd_args) in

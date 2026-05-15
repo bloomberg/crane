@@ -1,5 +1,5 @@
-#ifndef INCLUDED_TAIL_REC_MAP
-#define INCLUDED_TAIL_REC_MAP
+#ifndef INCLUDED_LET_FIX_YCOMB_BYREF
+#define INCLUDED_LET_FIX_YCOMB_BYREF
 
 #include <functional>
 #include <memory>
@@ -122,45 +122,28 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
-
-  List<t_A> rev() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-      return List<t_A>::nil();
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
-    }
-  }
-
-  List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-      return m;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
-    }
-  }
 };
 
-template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
-List<T2> better_map(F0 &&f, const List<T1> &l) {
-  auto go_impl = [&](auto &_self_go, List<T1> l0, List<T2> acc) -> List<T2> {
-    if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
-      return std::move(acc).rev();
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0.v());
-      return _self_go(_self_go, *(d_a1),
-                      List<T2>::cons(f(d_a0), std::move(acc)));
-    }
-  };
-  std::function<List<T2>(List<T1>, List<T2>)> go =
-      [&](List<T1> l0, List<T2> acc) -> List<T2> {
-    return go_impl(go_impl, l0, acc);
-  };
-  return go(l, List<T2>::nil());
-}
+struct LetFixYcombByref {
+  static unsigned int sum_list(const List<unsigned int> &l);
+  static List<unsigned int> zip_sum(const List<unsigned int> &xs,
+                                    const List<unsigned int> &ys);
+  static List<unsigned int> countdown(const unsigned int k);
+  static inline const unsigned int test_sum = sum_list(List<unsigned int>::cons(
+      1u, List<unsigned int>::cons(
+              2u, List<unsigned int>::cons(
+                      3u, List<unsigned int>::cons(
+                              4u, List<unsigned int>::cons(
+                                      5u, List<unsigned int>::nil()))))));
+  static inline const List<unsigned int> test_zip = zip_sum(
+      List<unsigned int>::cons(
+          1u, List<unsigned int>::cons(
+                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
+      List<unsigned int>::cons(
+          10u,
+          List<unsigned int>::cons(
+              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
+  static inline const List<unsigned int> test_countdown = countdown(3u);
+};
 
-#endif // INCLUDED_TAIL_REC_MAP
+#endif // INCLUDED_LET_FIX_YCOMB_BYREF

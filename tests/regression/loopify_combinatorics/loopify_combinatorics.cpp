@@ -295,49 +295,24 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<List<unsigned int>> rest = _result;
-      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
-          map_prepend;
-      map_prepend =
-          [&](List<List<unsigned int>> lst) -> List<List<unsigned int>> {
-        /// _Enter: captures varying parameters for each recursive call.
-        struct _Enter {
-          List<List<unsigned int>> lst;
-        };
-        /// _Resume_Cons: saves [_s0], resumes after recursive call with
-        /// _result.
-        struct _Resume_Cons {
-          decltype(List<unsigned int>::cons(
-              d_a0, std::declval<List<unsigned int> &>())) _s0;
-        };
-        using _Frame = std::variant<_Enter, _Resume_Cons>;
-        List<List<unsigned int>> _result{};
-        std::vector<_Frame> _stack;
-        _stack.reserve(8);
-        _stack.emplace_back(_Enter{lst});
-        /// Loopified map_prepend: _Enter -> _Resume_Cons.
-        while (!_stack.empty()) {
-          _Frame _frame = std::move(_stack.back());
-          _stack.pop_back();
-          if (std::holds_alternative<_Enter>(_frame)) {
-            auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lst = std::move(_f.lst);
-            if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-                    lst.v_mut())) {
-              _result = List<List<unsigned int>>::nil();
-            } else {
-              auto &[d_a00, d_a10] =
-                  std::get<typename List<List<unsigned int>>::Cons>(
-                      lst.v_mut());
-              _stack.emplace_back(
-                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
-              _stack.emplace_back(_Enter{std::move(*(d_a10))});
-            }
-          } else {
-            auto _f = std::move(std::get<_Resume_Cons>(_frame));
-            _result = List<List<unsigned int>>::cons(_f._s0, _result);
-          }
+      auto map_prepend_impl =
+          [&](auto &_self_map_prepend,
+              List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+        if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+                lst.v())) {
+          return List<List<unsigned int>>::nil();
+        } else {
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<List<unsigned int>>::Cons>(lst.v());
+          return List<List<unsigned int>>::cons(
+              List<unsigned int>::cons(d_a0, d_a00),
+              _self_map_prepend(_self_map_prepend, *(d_a10)));
         }
-        return _result;
+      };
+      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
+          map_prepend =
+              [&](List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+        return map_prepend_impl(map_prepend_impl, lst);
       };
       _result = rest.app(map_prepend(rest));
     }
@@ -461,49 +436,24 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<List<unsigned int>> rest = _result;
-      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
-          map_add_x;
-      map_add_x =
-          [&](List<List<unsigned int>> lst) -> List<List<unsigned int>> {
-        /// _Enter: captures varying parameters for each recursive call.
-        struct _Enter {
-          List<List<unsigned int>> lst;
-        };
-        /// _Resume_Cons: saves [_s0], resumes after recursive call with
-        /// _result.
-        struct _Resume_Cons {
-          decltype(List<unsigned int>::cons(
-              d_a0, std::declval<List<unsigned int> &>())) _s0;
-        };
-        using _Frame = std::variant<_Enter, _Resume_Cons>;
-        List<List<unsigned int>> _result{};
-        std::vector<_Frame> _stack;
-        _stack.reserve(8);
-        _stack.emplace_back(_Enter{lst});
-        /// Loopified map_add_x: _Enter -> _Resume_Cons.
-        while (!_stack.empty()) {
-          _Frame _frame = std::move(_stack.back());
-          _stack.pop_back();
-          if (std::holds_alternative<_Enter>(_frame)) {
-            auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lst = std::move(_f.lst);
-            if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-                    lst.v_mut())) {
-              _result = List<List<unsigned int>>::nil();
-            } else {
-              auto &[d_a00, d_a10] =
-                  std::get<typename List<List<unsigned int>>::Cons>(
-                      lst.v_mut());
-              _stack.emplace_back(
-                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
-              _stack.emplace_back(_Enter{std::move(*(d_a10))});
-            }
-          } else {
-            auto _f = std::move(std::get<_Resume_Cons>(_frame));
-            _result = List<List<unsigned int>>::cons(_f._s0, _result);
-          }
+      auto map_add_x_impl =
+          [&](auto &_self_map_add_x,
+              List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+        if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+                lst.v())) {
+          return List<List<unsigned int>>::nil();
+        } else {
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<List<unsigned int>>::Cons>(lst.v());
+          return List<List<unsigned int>>::cons(
+              List<unsigned int>::cons(d_a0, d_a00),
+              _self_map_add_x(_self_map_add_x, *(d_a10)));
         }
-        return _result;
+      };
+      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
+          map_add_x =
+              [&](List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+        return map_add_x_impl(map_add_x_impl, lst);
       };
       _result = rest.app(map_add_x(rest));
     }
@@ -557,49 +507,24 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
       List<unsigned int> l = std::move(_f.l);
       const unsigned int x = _f.x;
       List<List<unsigned int>> rest = _result;
-      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
-          prepend_y;
-      prepend_y =
-          [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
-        /// _Enter: captures varying parameters for each recursive call.
-        struct _Enter {
-          List<List<unsigned int>> lsts;
-        };
-        /// _Resume_Cons: saves [_s0], resumes after recursive call with
-        /// _result.
-        struct _Resume_Cons {
-          decltype(List<unsigned int>::cons(
-              d_a0, std::declval<List<unsigned int> &>())) _s0;
-        };
-        using _Frame = std::variant<_Enter, _Resume_Cons>;
-        List<List<unsigned int>> _result{};
-        std::vector<_Frame> _stack;
-        _stack.reserve(8);
-        _stack.emplace_back(_Enter{lsts});
-        /// Loopified prepend_y: _Enter -> _Resume_Cons.
-        while (!_stack.empty()) {
-          _Frame _frame = std::move(_stack.back());
-          _stack.pop_back();
-          if (std::holds_alternative<_Enter>(_frame)) {
-            auto _f = std::move(std::get<_Enter>(_frame));
-            List<List<unsigned int>> lsts = std::move(_f.lsts);
-            if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-                    lsts.v_mut())) {
-              _result = List<List<unsigned int>>::nil();
-            } else {
-              auto &[d_a00, d_a10] =
-                  std::get<typename List<List<unsigned int>>::Cons>(
-                      lsts.v_mut());
-              _stack.emplace_back(
-                  _Resume_Cons{List<unsigned int>::cons(d_a0, d_a00)});
-              _stack.emplace_back(_Enter{std::move(*(d_a10))});
-            }
-          } else {
-            auto _f = std::move(std::get<_Resume_Cons>(_frame));
-            _result = List<List<unsigned int>>::cons(_f._s0, _result);
-          }
+      auto prepend_y_impl =
+          [&](auto &_self_prepend_y,
+              List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+        if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+                lsts.v())) {
+          return List<List<unsigned int>>::nil();
+        } else {
+          const auto &[d_a00, d_a10] =
+              std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
+          return List<List<unsigned int>>::cons(
+              List<unsigned int>::cons(d_a0, d_a00),
+              _self_prepend_y(_self_prepend_y, *(d_a10)));
         }
-        return _result;
+      };
+      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
+          prepend_y =
+              [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+        return prepend_y_impl(prepend_y_impl, lsts);
       };
       _result = List<List<unsigned int>>::cons(List<unsigned int>::cons(x, l),
                                                prepend_y(std::move(rest)));

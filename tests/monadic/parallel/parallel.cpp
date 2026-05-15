@@ -1,23 +1,30 @@
 #include "parallel.h"
 
 unsigned int ParallelTest::ack(const std::pair<unsigned int, unsigned int> &p) {
-  std::function<unsigned int(unsigned int, unsigned int)> f;
-  f = [&](unsigned int m, unsigned int n) -> unsigned int {
-    std::function<unsigned int(unsigned int)> ack_m;
-    ack_m = [&](unsigned int n0) -> unsigned int {
+  auto f_impl = [](auto &_self_f, unsigned int m,
+                   unsigned int n) -> unsigned int {
+    auto ack_m_impl = [&](auto &_self_ack_m, unsigned int n0) -> unsigned int {
       if (m <= 0) {
         return (n0 + 1);
       } else {
         unsigned int pm = m - 1;
         if (n0 <= 0) {
-          return f(pm, Nat::one);
+          return _self_f(_self_f, pm, Nat::one);
         } else {
           unsigned int pn = n0 - 1;
-          return f(pm, ack_m(pn));
+          return _self_f(_self_f, pm, _self_ack_m(_self_ack_m, pn));
         }
       }
     };
+    std::function<unsigned int(unsigned int)> ack_m =
+        [&](unsigned int n0) -> unsigned int {
+      return ack_m_impl(ack_m_impl, n0);
+    };
     return ack_m(n);
+  };
+  std::function<unsigned int(unsigned int, unsigned int)> f =
+      [&](unsigned int m, unsigned int n) -> unsigned int {
+    return f_impl(f_impl, m, n);
   };
   return f(p.first, p.second);
 }

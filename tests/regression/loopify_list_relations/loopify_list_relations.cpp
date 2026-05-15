@@ -60,69 +60,54 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
   } else {
     unsigned int diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<unsigned int> suffix;
-    std::function<List<unsigned int>(unsigned int, List<unsigned int>)> drop;
-    drop = [](unsigned int n, List<unsigned int> xs) -> List<unsigned int> {
-      List<unsigned int> _result;
-      List<unsigned int> _loop_xs = std::move(xs);
-      unsigned int _loop_n = std::move(n);
-      while (true) {
-        if (_loop_n <= 0) {
-          _result = _loop_xs;
-          break;
+    auto drop_impl = [](auto &_self_drop, unsigned int n,
+                        List<unsigned int> xs) -> List<unsigned int> {
+      if (n <= 0) {
+        return xs;
+      } else {
+        unsigned int n_ = n - 1;
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                xs.v_mut())) {
+          return List<unsigned int>::nil();
         } else {
-          unsigned int n_ = _loop_n - 1;
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _loop_xs.v_mut())) {
-            _result = List<unsigned int>::nil();
-            break;
-          } else {
-            auto &[d_a0, d_a1] =
-                std::get<typename List<unsigned int>::Cons>(_loop_xs.v_mut());
-            _loop_xs = std::move(*(d_a1));
-            _loop_n = n_;
-          }
+          auto &[d_a0, d_a1] =
+              std::get<typename List<unsigned int>::Cons>(xs.v_mut());
+          return _self_drop(_self_drop, n_, *(d_a1));
         }
       }
-      return _result;
+    };
+    std::function<List<unsigned int>(unsigned int, List<unsigned int>)> drop =
+        [&](unsigned int n, List<unsigned int> xs) -> List<unsigned int> {
+      return drop_impl(drop_impl, n, xs);
     };
     suffix = drop(diff, l2);
-    std::function<bool(List<unsigned int>, List<unsigned int>)> eq;
-    eq = [](List<unsigned int> a, List<unsigned int> b) -> bool {
-      bool _result;
-      List<unsigned int> _loop_b = std::move(b);
-      List<unsigned int> _loop_a = std::move(a);
-      while (true) {
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _loop_a.v())) {
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _loop_b.v())) {
-            _result = true;
-            break;
-          } else {
-            _result = false;
-            break;
-          }
+    auto eq_impl = [](auto &_self_eq, List<unsigned int> a,
+                      List<unsigned int> b) -> bool {
+      if (std::holds_alternative<typename List<unsigned int>::Nil>(a.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(b.v())) {
+          return true;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_loop_a.v());
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _loop_b.v())) {
-            _result = false;
-            break;
+          return false;
+        }
+      } else {
+        const auto &[d_a00, d_a10] =
+            std::get<typename List<unsigned int>::Cons>(a.v());
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(b.v())) {
+          return false;
+        } else {
+          const auto &[d_a01, d_a11] =
+              std::get<typename List<unsigned int>::Cons>(b.v());
+          if (d_a00 == d_a01) {
+            return _self_eq(_self_eq, *(d_a10), *(d_a11));
           } else {
-            const auto &[d_a01, d_a11] =
-                std::get<typename List<unsigned int>::Cons>(_loop_b.v());
-            if (d_a00 == d_a01) {
-              _loop_b = std::move(*(d_a11));
-              _loop_a = std::move(*(d_a10));
-            } else {
-              _result = false;
-              break;
-            }
+            return false;
           }
         }
       }
-      return _result;
+    };
+    std::function<bool(List<unsigned int>, List<unsigned int>)> eq =
+        [&](List<unsigned int> a, List<unsigned int> b) -> bool {
+      return eq_impl(eq_impl, a, b);
     };
     return eq(l1, suffix);
   }
@@ -535,45 +520,20 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if ([&]() {
-            std::function<bool(unsigned int, List<unsigned int>)> member;
-            member = [&](unsigned int y, List<unsigned int> ys) -> bool {
-              /// _Enter: captures varying parameters for each recursive call.
-              struct _Enter {
-                List<unsigned int> ys;
-              };
-              /// _Resume_Cons: saves [_s0], resumes after recursive call with
-              /// _result.
-              struct _Resume_Cons {
-                decltype(std::declval<unsigned int &>() ==
-                         std::declval<unsigned int &>()) _s0;
-              };
-              using _Frame = std::variant<_Enter, _Resume_Cons>;
-              bool _result{};
-              std::vector<_Frame> _stack;
-              _stack.reserve(8);
-              _stack.emplace_back(_Enter{ys});
-              /// Loopified member: _Enter -> _Resume_Cons.
-              while (!_stack.empty()) {
-                _Frame _frame = std::move(_stack.back());
-                _stack.pop_back();
-                if (std::holds_alternative<_Enter>(_frame)) {
-                  auto _f = std::move(std::get<_Enter>(_frame));
-                  List<unsigned int> ys = std::move(_f.ys);
-                  if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                          ys.v_mut())) {
-                    _result = false;
-                  } else {
-                    auto &[d_a0, d_a1] =
-                        std::get<typename List<unsigned int>::Cons>(ys.v_mut());
-                    _stack.emplace_back(_Resume_Cons{y == d_a0});
-                    _stack.emplace_back(_Enter{std::move(*(d_a1))});
-                  }
-                } else {
-                  auto _f = std::move(std::get<_Resume_Cons>(_frame));
-                  _result = (_f._s0 || _result);
-                }
+            auto member_impl = [](auto &_self_member, unsigned int y,
+                                  List<unsigned int> ys) -> bool {
+              if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                      ys.v())) {
+                return false;
+              } else {
+                const auto &[d_a0, d_a1] =
+                    std::get<typename List<unsigned int>::Cons>(ys.v());
+                return (y == d_a0 || _self_member(_self_member, y, *(d_a1)));
               }
-              return _result;
+            };
+            std::function<bool(unsigned int, List<unsigned int>)> member =
+                [&](unsigned int y, List<unsigned int> ys) -> bool {
+              return member_impl(member_impl, y, ys);
             };
             return member(d_a0, _loop_l2);
           }()) {
@@ -610,45 +570,20 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if ([&]() {
-            std::function<bool(unsigned int, List<unsigned int>)> member;
-            member = [&](unsigned int y, List<unsigned int> ys) -> bool {
-              /// _Enter: captures varying parameters for each recursive call.
-              struct _Enter {
-                List<unsigned int> ys;
-              };
-              /// _Resume_Cons: saves [_s0], resumes after recursive call with
-              /// _result.
-              struct _Resume_Cons {
-                decltype(std::declval<unsigned int &>() ==
-                         std::declval<unsigned int &>()) _s0;
-              };
-              using _Frame = std::variant<_Enter, _Resume_Cons>;
-              bool _result{};
-              std::vector<_Frame> _stack;
-              _stack.reserve(8);
-              _stack.emplace_back(_Enter{ys});
-              /// Loopified member: _Enter -> _Resume_Cons.
-              while (!_stack.empty()) {
-                _Frame _frame = std::move(_stack.back());
-                _stack.pop_back();
-                if (std::holds_alternative<_Enter>(_frame)) {
-                  auto _f = std::move(std::get<_Enter>(_frame));
-                  List<unsigned int> ys = std::move(_f.ys);
-                  if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                          ys.v_mut())) {
-                    _result = false;
-                  } else {
-                    auto &[d_a0, d_a1] =
-                        std::get<typename List<unsigned int>::Cons>(ys.v_mut());
-                    _stack.emplace_back(_Resume_Cons{y == d_a0});
-                    _stack.emplace_back(_Enter{std::move(*(d_a1))});
-                  }
-                } else {
-                  auto _f = std::move(std::get<_Resume_Cons>(_frame));
-                  _result = (_f._s0 || _result);
-                }
+            auto member_impl = [](auto &_self_member, unsigned int y,
+                                  List<unsigned int> ys) -> bool {
+              if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                      ys.v())) {
+                return false;
+              } else {
+                const auto &[d_a0, d_a1] =
+                    std::get<typename List<unsigned int>::Cons>(ys.v());
+                return (y == d_a0 || _self_member(_self_member, y, *(d_a1)));
               }
-              return _result;
+            };
+            std::function<bool(unsigned int, List<unsigned int>)> member =
+                [&](unsigned int y, List<unsigned int> ys) -> bool {
+              return member_impl(member_impl, y, ys);
             };
             return member(d_a0, l2);
           }()) {

@@ -298,9 +298,9 @@ template <typename K, typename V> struct CHT {
   static std::vector<stm::TVar<List<std::pair<T1, T2>>>>
   mk_buckets(const int64_t num) {
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> buckets = {};
-    std::function<std::vector<stm::TVar<List<std::pair<T1, T2>>>>(unsigned int)>
-        f;
-    f = [&](unsigned int n) -> std::vector<stm::TVar<List<std::pair<T1, T2>>>> {
+    auto f_impl =
+        [&](auto &_self_f,
+            unsigned int n) -> std::vector<stm::TVar<List<std::pair<T1, T2>>>> {
       if (n <= 0) {
         return buckets;
       } else {
@@ -308,8 +308,13 @@ template <typename K, typename V> struct CHT {
         stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically(
             [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
         buckets.push_back(b);
-        return f(n_);
+        return _self_f(_self_f, n_);
       }
+    };
+    std::function<std::vector<stm::TVar<List<std::pair<T1, T2>>>>(unsigned int)>
+        f = [&](unsigned int n)
+        -> std::vector<stm::TVar<List<std::pair<T1, T2>>>> {
+      return f_impl(f_impl, n);
     };
     return f(static_cast<unsigned int>(num));
   }

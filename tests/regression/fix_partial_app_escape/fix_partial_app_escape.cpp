@@ -17,7 +17,7 @@ unsigned int FixPartialAppEscape::count_bits(const unsigned int _x0) {
       }
     };
     auto go = [=](unsigned int depth, unsigned int n) mutable -> unsigned int {
-      return go_impl(go_impl, n, depth);
+      return go_impl(go_impl, depth, n);
     };
     return [=](unsigned int _pa0) mutable { return go(32u, _pa0); };
   }()(_x0);

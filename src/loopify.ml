@@ -5922,11 +5922,11 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
           Tptr (Tmod (TMconst, strip_ref_and_const_type ty))
         else
           match ty with
-          | Tunknown ->
+          | Tunknown | Tauto ->
             let expr = List.nth cf.cf_saved_exprs j in
             let inferred = infer_saved_type tparams cf.cf_env expr in
             (match inferred with
-            | Tunknown -> make_decltype_ty pp_type cf.cf_env expr
+            | Tunknown | Tauto -> make_decltype_ty pp_type cf.cf_env expr
             | ty -> ty)
           | _ -> strip_ref_and_const_type ty)
       cf.cf_saved_types

@@ -266,45 +266,19 @@ struct LoopifyListGenerators {
     } else {
       unsigned int n_ = n - 1;
       return List<unsigned int>::cons(f(0u), [&]() {
-        std::function<List<unsigned int>(unsigned int)> go;
-        go = [&](unsigned int i) -> List<unsigned int> {
-          /// _Enter: captures varying parameters for each recursive call.
-          struct _Enter {
-            unsigned int i;
-          };
-          /// _Resume_i_: saves [_s0], resumes after recursive call with
-          /// _result.
-          struct _Resume_i_ {
-            decltype(f((((n - std::declval<unsigned int &>()) > n
-                             ? 0
-                             : (n - std::declval<unsigned int &>()))))) _s0;
-          };
-          using _Frame = std::variant<_Enter, _Resume_i_>;
-          List<unsigned int> _result{};
-          std::vector<_Frame> _stack;
-          _stack.reserve(8);
-          _stack.emplace_back(_Enter{i});
-          /// Loopified go: _Enter -> _Resume_i_.
-          while (!_stack.empty()) {
-            _Frame _frame = std::move(_stack.back());
-            _stack.pop_back();
-            if (std::holds_alternative<_Enter>(_frame)) {
-              auto _f = std::move(std::get<_Enter>(_frame));
-              unsigned int i = _f.i;
-              if (i <= 0) {
-                _result = List<unsigned int>::nil();
-              } else {
-                unsigned int i_ = i - 1;
-                _stack.emplace_back(
-                    _Resume_i_{f((((n - i) > n ? 0 : (n - i))))});
-                _stack.emplace_back(_Enter{i_});
-              }
-            } else {
-              auto _f = std::move(std::get<_Resume_i_>(_frame));
-              _result = List<unsigned int>::cons(_f._s0, _result);
-            }
+        auto go_impl = [&](auto &_self_go,
+                           unsigned int i) -> List<unsigned int> {
+          if (i <= 0) {
+            return List<unsigned int>::nil();
+          } else {
+            unsigned int i_ = i - 1;
+            return List<unsigned int>::cons(f((((n - i) > n ? 0 : (n - i)))),
+                                            _self_go(_self_go, i_));
           }
-          return _result;
+        };
+        std::function<List<unsigned int>(unsigned int)> go =
+            [&](unsigned int i) -> List<unsigned int> {
+          return go_impl(go_impl, i);
         };
         return go(n_);
       }());
@@ -325,45 +299,19 @@ struct LoopifyListGenerators {
       return List<unsigned int>::nil();
     } else {
       unsigned int n_ = n - 1;
-      std::function<List<unsigned int>(unsigned int)> aux;
-      aux = [&](unsigned int idx) -> List<unsigned int> {
-        /// _Enter: captures varying parameters for each recursive call.
-        struct _Enter {
-          unsigned int idx;
-        };
-        /// _Resume_idx_: saves [_s0], resumes after recursive call with
-        /// _result.
-        struct _Resume_idx_ {
-          decltype(List<unsigned int>::cons(f(std::declval<unsigned int &>()),
-                                            List<unsigned int>::nil())) _s0;
-        };
-        using _Frame = std::variant<_Enter, _Resume_idx_>;
-        List<unsigned int> _result{};
-        std::vector<_Frame> _stack;
-        _stack.reserve(8);
-        _stack.emplace_back(_Enter{idx});
-        /// Loopified aux: _Enter -> _Resume_idx_.
-        while (!_stack.empty()) {
-          _Frame _frame = std::move(_stack.back());
-          _stack.pop_back();
-          if (std::holds_alternative<_Enter>(_frame)) {
-            auto _f = std::move(std::get<_Enter>(_frame));
-            unsigned int idx = _f.idx;
-            if (idx <= 0) {
-              _result =
-                  List<unsigned int>::cons(f(0u), List<unsigned int>::nil());
-            } else {
-              unsigned int idx_ = idx - 1;
-              _stack.emplace_back(_Resume_idx_{
-                  List<unsigned int>::cons(f(idx), List<unsigned int>::nil())});
-              _stack.emplace_back(_Enter{idx_});
-            }
-          } else {
-            auto _f = std::move(std::get<_Resume_idx_>(_frame));
-            _result = _result.app(_f._s0);
-          }
+      auto aux_impl = [&](auto &_self_aux,
+                          unsigned int idx) -> List<unsigned int> {
+        if (idx <= 0) {
+          return List<unsigned int>::cons(f(0u), List<unsigned int>::nil());
+        } else {
+          unsigned int idx_ = idx - 1;
+          return _self_aux(_self_aux, idx_)
+              .app(List<unsigned int>::cons(f(idx), List<unsigned int>::nil()));
         }
-        return _result;
+      };
+      std::function<List<unsigned int>(unsigned int)> aux =
+          [&](unsigned int idx) -> List<unsigned int> {
+        return aux_impl(aux_impl, idx);
       };
       return aux(n_);
     }

@@ -613,31 +613,35 @@ struct NestedInd {
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
         return expr::add([&]() {
-          std::function<List<expr>(List<expr>)> aux;
-          aux = [&](List<expr> l) -> List<expr> {
+          auto aux_impl = [&](auto &_self_aux, List<expr> l) -> List<expr> {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return List<expr>::nil();
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
+              return List<expr>::cons(d_a0.lit_map(f),
+                                      _self_aux(_self_aux, *(d_a1)));
             }
           };
+          std::function<List<expr>(List<expr>)> aux =
+              [&](List<expr> l) -> List<expr> { return aux_impl(aux_impl, l); };
           return aux(*(d_a0));
         }());
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
         return expr::mul([&]() {
-          std::function<List<expr>(List<expr>)> aux;
-          aux = [&](List<expr> l) -> List<expr> {
+          auto aux_impl = [&](auto &_self_aux, List<expr> l) -> List<expr> {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return List<expr>::nil();
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(d_a0.lit_map(f), aux(*(d_a1)));
+              return List<expr>::cons(d_a0.lit_map(f),
+                                      _self_aux(_self_aux, *(d_a1)));
             }
           };
+          std::function<List<expr>(List<expr>)> aux =
+              [&](List<expr> l) -> List<expr> { return aux_impl(aux_impl, l); };
           return aux(*(d_a0));
         }());
       }
@@ -650,28 +654,36 @@ struct NestedInd {
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        std::function<List<unsigned int>(List<expr>)> aux;
-        aux = [&](List<expr> l) -> List<unsigned int> {
+        auto aux_impl = [](auto &_self_aux,
+                           List<expr> l) -> List<unsigned int> {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
             return List<unsigned int>::nil();
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<expr>::Cons>(l.v());
-            return d_a00.literals().app(aux(*(d_a10)));
+            return d_a00.literals().app(_self_aux(_self_aux, *(d_a10)));
           }
+        };
+        std::function<List<unsigned int>(List<expr>)> aux =
+            [&](List<expr> l) -> List<unsigned int> {
+          return aux_impl(aux_impl, l);
         };
         return aux(*(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        std::function<List<unsigned int>(List<expr>)> aux;
-        aux = [&](List<expr> l) -> List<unsigned int> {
+        auto aux_impl = [](auto &_self_aux,
+                           List<expr> l) -> List<unsigned int> {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
             return List<unsigned int>::nil();
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<expr>::Cons>(l.v());
-            return d_a00.literals().app(aux(*(d_a10)));
+            return d_a00.literals().app(_self_aux(_self_aux, *(d_a10)));
           }
+        };
+        std::function<List<unsigned int>(List<expr>)> aux =
+            [&](List<expr> l) -> List<unsigned int> {
+          return aux_impl(aux_impl, l);
         };
         return aux(*(d_a0));
       }
@@ -684,30 +696,36 @@ struct NestedInd {
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
         return ([&]() {
-          std::function<unsigned int(List<expr>)> aux;
-          aux = [&](List<expr> l) -> unsigned int {
+          auto aux_impl = [](auto &_self_aux, List<expr> l) -> unsigned int {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return 0u;
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<expr>::Cons>(l.v());
-              return std::max(d_a0.expr_depth(), aux(*(d_a1)));
+              return std::max(d_a0.expr_depth(), _self_aux(_self_aux, *(d_a1)));
             }
+          };
+          std::function<unsigned int(List<expr>)> aux =
+              [&](List<expr> l) -> unsigned int {
+            return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
         return ([&]() {
-          std::function<unsigned int(List<expr>)> aux;
-          aux = [&](List<expr> l) -> unsigned int {
+          auto aux_impl = [](auto &_self_aux, List<expr> l) -> unsigned int {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return 0u;
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<expr>::Cons>(l.v());
-              return std::max(d_a0.expr_depth(), aux(*(d_a1)));
+              return std::max(d_a0.expr_depth(), _self_aux(_self_aux, *(d_a1)));
             }
+          };
+          std::function<unsigned int(List<expr>)> aux =
+              [&](List<expr> l) -> unsigned int {
+            return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
         }() + 1);
@@ -721,30 +739,36 @@ struct NestedInd {
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
         return ([&]() {
-          std::function<unsigned int(List<expr>)> aux;
-          aux = [&](List<expr> l) -> unsigned int {
+          auto aux_impl = [](auto &_self_aux, List<expr> l) -> unsigned int {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return 0u;
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<expr>::Cons>(l.v());
-              return (d_a0.expr_size() + aux(*(d_a1)));
+              return (d_a0.expr_size() + _self_aux(_self_aux, *(d_a1)));
             }
+          };
+          std::function<unsigned int(List<expr>)> aux =
+              [&](List<expr> l) -> unsigned int {
+            return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
         }() + 1);
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
         return ([&]() {
-          std::function<unsigned int(List<expr>)> aux;
-          aux = [&](List<expr> l) -> unsigned int {
+          auto aux_impl = [](auto &_self_aux, List<expr> l) -> unsigned int {
             if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
               return 0u;
             } else {
               const auto &[d_a0, d_a1] =
                   std::get<typename List<expr>::Cons>(l.v());
-              return (d_a0.expr_size() + aux(*(d_a1)));
+              return (d_a0.expr_size() + _self_aux(_self_aux, *(d_a1)));
             }
+          };
+          std::function<unsigned int(List<expr>)> aux =
+              [&](List<expr> l) -> unsigned int {
+            return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
         }() + 1);
@@ -758,28 +782,36 @@ struct NestedInd {
         return d_a0;
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[d_a0] = std::get<typename expr::Add>(_sv.v());
-        std::function<unsigned int(List<expr>)> sum_all;
-        sum_all = [&](List<expr> l) -> unsigned int {
+        auto sum_all_impl = [](auto &_self_sum_all,
+                               List<expr> l) -> unsigned int {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
             return 0u;
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<expr>::Cons>(l.v());
-            return (d_a00.eval() + sum_all(*(d_a10)));
+            return (d_a00.eval() + _self_sum_all(_self_sum_all, *(d_a10)));
           }
+        };
+        std::function<unsigned int(List<expr>)> sum_all =
+            [&](List<expr> l) -> unsigned int {
+          return sum_all_impl(sum_all_impl, l);
         };
         return sum_all(*(d_a0));
       } else {
         const auto &[d_a0] = std::get<typename expr::Mul>(_sv.v());
-        std::function<unsigned int(List<expr>)> prod_all;
-        prod_all = [&](List<expr> l) -> unsigned int {
+        auto prod_all_impl = [](auto &_self_prod_all,
+                                List<expr> l) -> unsigned int {
           if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
             return 1u;
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<expr>::Cons>(l.v());
-            return (d_a00.eval() * prod_all(*(d_a10)));
+            return (d_a00.eval() * _self_prod_all(_self_prod_all, *(d_a10)));
           }
+        };
+        std::function<unsigned int(List<expr>)> prod_all =
+            [&](List<expr> l) -> unsigned int {
+          return prod_all_impl(prod_all_impl, l);
         };
         return prod_all(*(d_a0));
       }

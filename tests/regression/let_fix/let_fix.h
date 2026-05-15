@@ -128,14 +128,18 @@ struct LetFix {
   static unsigned int local_sum(const List<unsigned int> &l);
 
   template <typename T1> static List<T1> local_rev(const List<T1> &l) {
-    std::function<List<T1>(List<T1>, List<T1>)> go;
-    go = [&](List<T1> acc, List<T1> xs) -> List<T1> {
+    auto go_impl = [](auto &_self_go, List<T1> acc, List<T1> xs) -> List<T1> {
       if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
         return acc;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-        return go(List<T1>::cons(d_a0, std::move(acc)), *(d_a1));
+        return _self_go(_self_go, List<T1>::cons(d_a0, std::move(acc)),
+                        *(d_a1));
       }
+    };
+    std::function<List<T1>(List<T1>, List<T1>)> go =
+        [&](List<T1> acc, List<T1> xs) -> List<T1> {
+      return go_impl(go_impl, acc, xs);
     };
     return go(List<T1>::nil(), l);
   }

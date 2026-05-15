@@ -290,8 +290,9 @@ struct TopologicalSort {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1> get_elems(F0 &&eqb_node, const List<std::pair<T1, T1>> &l) {
-    std::function<List<T1>(List<std::pair<T1, T1>>, List<T1>)> get_elems_aux;
-    get_elems_aux = [&](List<std::pair<T1, T1>> l0, List<T1> h) -> List<T1> {
+    auto get_elems_aux_impl = [&](auto &_self_get_elems_aux,
+                                  List<std::pair<T1, T1>> l0,
+                                  List<T1> h) -> List<T1> {
       if (std::holds_alternative<typename List<std::pair<T1, T1>>::Nil>(
               l0.v())) {
         return h;
@@ -309,26 +310,33 @@ struct TopologicalSort {
           const T1 &_x = *f1;
           if (f2.has_value()) {
             const T1 &_x0 = *f2;
-            return get_elems_aux(d_a1_value, std::move(h));
+            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                       std::move(h));
           } else {
-            return get_elems_aux(d_a1_value, List<T1>::cons(e2, std::move(h)));
+            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                       List<T1>::cons(e2, std::move(h)));
           }
         } else {
           if (f2.has_value()) {
             const T1 &_x = *f2;
-            return get_elems_aux(d_a1_value, List<T1>::cons(e1, std::move(h)));
+            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                       List<T1>::cons(e1, std::move(h)));
           } else {
             if (eqb_node(e1, e2)) {
-              return get_elems_aux(d_a1_value,
-                                   List<T1>::cons(e1, std::move(h)));
+              return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                         List<T1>::cons(e1, std::move(h)));
             } else {
-              return get_elems_aux(
-                  d_a1_value,
+              return _self_get_elems_aux(
+                  _self_get_elems_aux, d_a1_value,
                   List<T1>::cons(e1, List<T1>::cons(e2, std::move(h))));
             }
           }
         }
       }
+    };
+    std::function<List<T1>(List<std::pair<T1, T1>>, List<T1>)> get_elems_aux =
+        [&](List<std::pair<T1, T1>> l0, List<T1> h) -> List<T1> {
+      return get_elems_aux_impl(get_elems_aux_impl, l0, h);
     };
     return get_elems_aux(l, List<T1>::nil());
   }

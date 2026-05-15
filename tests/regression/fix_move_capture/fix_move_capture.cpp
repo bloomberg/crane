@@ -41,15 +41,16 @@ FixMoveCapture::mylist FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
 /// - l is now null in caller scope
 /// - g(3) calls fixpoint, which accesses l via & → null → CRASH
 unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
-  std::function<unsigned int(unsigned int)> go;
-  go = [&](unsigned int n) -> unsigned int {
+  auto go_impl = [&](auto &_self_go, unsigned int n) -> unsigned int {
     if (n <= 0) {
       return sum(l);
     } else {
       unsigned int m = n - 1;
-      return (1u + go(m));
+      return (1u + _self_go(_self_go, m));
     }
   };
+  std::function<unsigned int(unsigned int)> go =
+      [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
   FixMoveCapture::mylist t = dup_head(l);
   return (go(3u) + length(std::move(t)));
 }
@@ -58,15 +59,16 @@ unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
 /// function. The addition's evaluation order is unspecified in C++,
 /// so we use a let-binding to force the order.
 unsigned int FixMoveCapture::f2(FixMoveCapture::mylist l) {
-  std::function<unsigned int(unsigned int)> go;
-  go = [&](unsigned int n) -> unsigned int {
+  auto go_impl = [&](auto &_self_go, unsigned int n) -> unsigned int {
     if (n <= 0) {
       return sum(l);
     } else {
       unsigned int m = n - 1;
-      return (1u + go(m));
+      return (1u + _self_go(_self_go, m));
     }
   };
+  std::function<unsigned int(unsigned int)> go =
+      [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
   unsigned int result_g = go(3u);
   FixMoveCapture::mylist t = dup_head(l);
   return (result_g + length(std::move(t)));

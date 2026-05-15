@@ -205,9 +205,8 @@ public:
 
 template <typename T1, typename T2>
 List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
-  std::function<List<Prod<T1, T2>>(List<T1>, List<T2>, List<Prod<T1, T2>>)> go;
-  go = [&](List<T1> la0, List<T2> lb0,
-           List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
+  auto go_impl = [](auto &_self_go, List<T1> la0, List<T2> lb0,
+                    List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
     if (std::holds_alternative<typename List<T1>::Nil>(la0.v())) {
       return std::move(acc).rev();
     } else {
@@ -216,11 +215,16 @@ List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
         return std::move(acc).rev();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T2>::Cons>(lb0.v());
-        return go(*(d_a1), *(d_a10),
-                  List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(d_a0, d_a00),
-                                           std::move(acc)));
+        return _self_go(_self_go, *(d_a1), *(d_a10),
+                        List<Prod<T1, T2>>::cons(
+                            Prod<T1, T2>::pair(d_a0, d_a00), std::move(acc)));
       }
     }
+  };
+  std::function<List<Prod<T1, T2>>(List<T1>, List<T2>, List<Prod<T1, T2>>)> go =
+      [&](List<T1> la0, List<T2> lb0,
+          List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
+    return go_impl(go_impl, la0, lb0, acc);
   };
   return go(la, lb, List<Prod<T1, T2>>::nil());
 }

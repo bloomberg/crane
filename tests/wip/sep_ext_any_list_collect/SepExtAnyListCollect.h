@@ -27,19 +27,24 @@ template <SymTypes Ty> struct ListCollect {
   collect(const typename Ty::sym,
           const typename Datatypes::template List<typename Ty::sym> &,
           const typename Datatypes::Nat &n, const symbols_semty default0) {
-    std::function<typename Datatypes::template List<std::any>(
-        typename Datatypes::Nat, typename Datatypes::template List<std::any>)>
-        go;
-    go = [&](typename Datatypes::Nat n0,
-             typename Datatypes::template List<std::any> acc) ->
+    auto go_impl = [&](auto &_self_go, typename Datatypes::Nat n0,
+                       typename Datatypes::template List<std::any> acc) ->
         typename Datatypes::template List<std::any> {
           if (std::holds_alternative<typename Datatypes::Nat::O>(n0.v())) {
             return acc;
           } else {
             const auto &[d_a0] = std::get<typename Datatypes::Nat::S>(n0.v());
-            return go(*(d_a0), Datatypes::template List<std::any>::cons(
-                                   default0, std::move(acc)));
+            return _self_go(_self_go, *(d_a0),
+                            Datatypes::template List<std::any>::cons(
+                                default0, std::move(acc)));
           }
+        };
+    std::function<typename Datatypes::template List<std::any>(
+        typename Datatypes::Nat, typename Datatypes::template List<std::any>)>
+        go = [&](typename Datatypes::Nat n0,
+                 typename Datatypes::template List<std::any> acc) ->
+        typename Datatypes::template List<std::any> {
+          return go_impl(go_impl, n0, acc);
         };
     return go(n, Datatypes::template List<std::any>::nil());
   }

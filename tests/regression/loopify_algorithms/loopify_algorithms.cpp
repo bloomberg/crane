@@ -61,50 +61,30 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-            filter_multiples;
-        filter_multiples = [&](unsigned int p,
-                               List<unsigned int> rest) -> List<unsigned int> {
-          /// _Enter: captures varying parameters for each recursive call.
-          struct _Enter {
-            List<unsigned int> rest;
-          };
-          /// _Resume1: saves [d_a00], resumes after recursive call with
-          /// _result.
-          struct _Resume1 {
-            unsigned int d_a00;
-          };
-          using _Frame = std::variant<_Enter, _Resume1>;
-          List<unsigned int> _result{};
-          std::vector<_Frame> _stack;
-          _stack.reserve(8);
-          _stack.emplace_back(_Enter{rest});
-          /// Loopified filter_multiples: _Enter -> _Resume1.
-          while (!_stack.empty()) {
-            _Frame _frame = std::move(_stack.back());
-            _stack.pop_back();
-            if (std::holds_alternative<_Enter>(_frame)) {
-              auto _f = std::move(std::get<_Enter>(_frame));
-              List<unsigned int> rest = std::move(_f.rest);
-              if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                      rest.v_mut())) {
-                _result = List<unsigned int>::nil();
-              } else {
-                auto &[d_a00, d_a10] =
-                    std::get<typename List<unsigned int>::Cons>(rest.v_mut());
-                if ((p ? d_a00 % p : d_a00) == 0u) {
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
-                } else {
-                  _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
-                }
-              }
+        auto filter_multiples_impl =
+            [](auto &_self_filter_multiples, unsigned int p,
+               List<unsigned int> rest) -> List<unsigned int> {
+          if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                  rest.v())) {
+            return List<unsigned int>::nil();
+          } else {
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<unsigned int>::Cons>(rest.v());
+            if ((p ? d_a00 % p : d_a00) == 0u) {
+              return _self_filter_multiples(_self_filter_multiples, p,
+                                            *(d_a10));
             } else {
-              auto _f = std::move(std::get<_Resume1>(_frame));
-              _result = List<unsigned int>::cons(_f.d_a00, _result);
+              return List<unsigned int>::cons(
+                  d_a00,
+                  _self_filter_multiples(_self_filter_multiples, p, *(d_a10)));
             }
           }
-          return _result;
+        };
+        std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
+            filter_multiples =
+                [&](unsigned int p,
+                    List<unsigned int> rest) -> List<unsigned int> {
+          return filter_multiples_impl(filter_multiples_impl, p, rest);
         };
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
@@ -289,50 +269,27 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-            filter_out;
-        filter_out = [&](unsigned int val,
-                         List<unsigned int> rest) -> List<unsigned int> {
-          /// _Enter: captures varying parameters for each recursive call.
-          struct _Enter {
-            List<unsigned int> rest;
-          };
-          /// _Resume1: saves [d_a00], resumes after recursive call with
-          /// _result.
-          struct _Resume1 {
-            unsigned int d_a00;
-          };
-          using _Frame = std::variant<_Enter, _Resume1>;
-          List<unsigned int> _result{};
-          std::vector<_Frame> _stack;
-          _stack.reserve(8);
-          _stack.emplace_back(_Enter{rest});
-          /// Loopified filter_out: _Enter -> _Resume1.
-          while (!_stack.empty()) {
-            _Frame _frame = std::move(_stack.back());
-            _stack.pop_back();
-            if (std::holds_alternative<_Enter>(_frame)) {
-              auto _f = std::move(std::get<_Enter>(_frame));
-              List<unsigned int> rest = std::move(_f.rest);
-              if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                      rest.v_mut())) {
-                _result = List<unsigned int>::nil();
-              } else {
-                auto &[d_a00, d_a10] =
-                    std::get<typename List<unsigned int>::Cons>(rest.v_mut());
-                if (val == d_a00) {
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
-                } else {
-                  _stack.emplace_back(_Resume1{d_a00});
-                  _stack.emplace_back(_Enter{std::move(*(d_a10))});
-                }
-              }
+        auto filter_out_impl =
+            [](auto &_self_filter_out, unsigned int val,
+               List<unsigned int> rest) -> List<unsigned int> {
+          if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                  rest.v())) {
+            return List<unsigned int>::nil();
+          } else {
+            const auto &[d_a00, d_a10] =
+                std::get<typename List<unsigned int>::Cons>(rest.v());
+            if (val == d_a00) {
+              return _self_filter_out(_self_filter_out, val, *(d_a10));
             } else {
-              auto _f = std::move(std::get<_Resume1>(_frame));
-              _result = List<unsigned int>::cons(_f.d_a00, _result);
+              return List<unsigned int>::cons(
+                  d_a00, _self_filter_out(_self_filter_out, val, *(d_a10)));
             }
           }
-          return _result;
+        };
+        std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
+            filter_out = [&](unsigned int val,
+                             List<unsigned int> rest) -> List<unsigned int> {
+          return filter_out_impl(filter_out_impl, val, rest);
         };
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));

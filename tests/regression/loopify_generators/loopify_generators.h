@@ -299,43 +299,18 @@ struct LoopifyGenerators {
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
-    std::function<List<unsigned int>(unsigned int)> go;
-    go = [&](unsigned int i) -> List<unsigned int> {
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        unsigned int i;
-      };
-      /// _Resume_j: saves [_s0], resumes after recursive call with _result.
-      struct _Resume_j {
-        decltype(f((((n - std::declval<unsigned int &>()) > n
-                         ? 0
-                         : (n - std::declval<unsigned int &>()))))) _s0;
-      };
-      using _Frame = std::variant<_Enter, _Resume_j>;
-      List<unsigned int> _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{i});
-      /// Loopified go: _Enter -> _Resume_j.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          unsigned int i = _f.i;
-          if (i <= 0) {
-            _result = List<unsigned int>::nil();
-          } else {
-            unsigned int j = i - 1;
-            _stack.emplace_back(_Resume_j{f((((n - i) > n ? 0 : (n - i))))});
-            _stack.emplace_back(_Enter{j});
-          }
-        } else {
-          auto _f = std::move(std::get<_Resume_j>(_frame));
-          _result = List<unsigned int>::cons(_f._s0, _result);
-        }
+    auto go_impl = [&](auto &_self_go, unsigned int i) -> List<unsigned int> {
+      if (i <= 0) {
+        return List<unsigned int>::nil();
+      } else {
+        unsigned int j = i - 1;
+        return List<unsigned int>::cons(f((((n - i) > n ? 0 : (n - i)))),
+                                        _self_go(_self_go, j));
       }
-      return _result;
+    };
+    std::function<List<unsigned int>(unsigned int)> go =
+        [&](unsigned int i) -> List<unsigned int> {
+      return go_impl(go_impl, i);
     };
     return go(n);
   }

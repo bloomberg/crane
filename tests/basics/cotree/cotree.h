@@ -469,15 +469,18 @@ struct Cotree {
   template <typename T1> static unsigned int tree_size(const tree<T1> &t) {
     const auto &[d_a0, d_a1] = std::get<typename tree<T1>::Node>(t.v());
     return ([&]() {
-      std::function<unsigned int(List<tree<T1>>)> aux;
-      aux = [&](List<tree<T1>> l) -> unsigned int {
+      auto aux_impl = [](auto &_self_aux, List<tree<T1>> l) -> unsigned int {
         if (std::holds_alternative<typename List<tree<T1>>::Nil>(l.v())) {
           return 0u;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<tree<T1>>::Cons>(l.v());
-          return (tree_size<T1>(d_a0) + aux(*(d_a1)));
+          return (tree_size<T1>(d_a0) + _self_aux(_self_aux, *(d_a1)));
         }
+      };
+      std::function<unsigned int(List<tree<T1>>)> aux =
+          [&](List<tree<T1>> l) -> unsigned int {
+        return aux_impl(aux_impl, l);
       };
       return aux(*(d_a1));
     }() + 1);

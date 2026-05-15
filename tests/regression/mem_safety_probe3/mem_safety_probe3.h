@@ -680,14 +680,18 @@ struct MemSafetyProbe3 {
   static inline const unsigned int local_fix_capture = []() {
     return []() {
       tree t = tree::node(tree::leaf(), 42u, tree::leaf());
-      std::function<unsigned int(unsigned int)> helper;
-      helper = [&](unsigned int n) -> unsigned int {
+      auto helper_impl = [&](auto &_self_helper,
+                             unsigned int n) -> unsigned int {
         if (n <= 0) {
           return t.sum_values(0u);
         } else {
           unsigned int n_ = n - 1;
-          return (t.sum_values(1u) + helper(n_));
+          return (t.sum_values(1u) + _self_helper(_self_helper, n_));
         }
+      };
+      std::function<unsigned int(unsigned int)> helper =
+          [&](unsigned int n) -> unsigned int {
+        return helper_impl(helper_impl, n);
       };
       return helper(3u);
     }();

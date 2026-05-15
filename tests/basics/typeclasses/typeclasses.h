@@ -170,15 +170,16 @@ struct Typeclasses {
 
   template <typename _tcI0, typename T1> struct numList {
     static unsigned int to_nat(List<T1> a0) {
-      std::function<unsigned int(List<T1>)> sum;
-      sum = [&](List<T1> l) -> unsigned int {
+      auto sum_impl = [&](auto &_self_sum, List<T1> l) -> unsigned int {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           return 0u;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          return (_tcI0::to_nat(d_a0) + sum(*(d_a1)));
+          return (_tcI0::to_nat(d_a0) + _self_sum(_self_sum, *(d_a1)));
         }
       };
+      std::function<unsigned int(List<T1>)> sum =
+          [&](List<T1> l) -> unsigned int { return sum_impl(sum_impl, l); };
       return sum(a0);
     }
   };

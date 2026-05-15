@@ -125,14 +125,17 @@ public:
 };
 
 template <typename T1> List<T1> better_rev(const List<T1> &l) {
-  std::function<List<T1>(List<T1>, List<T1>)> go;
-  go = [&](List<T1> l0, List<T1> acc) -> List<T1> {
+  auto go_impl = [](auto &_self_go, List<T1> l0, List<T1> acc) -> List<T1> {
     if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
       return acc;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0.v());
-      return go(*(d_a1), List<T1>::cons(d_a0, std::move(acc)));
+      return _self_go(_self_go, *(d_a1), List<T1>::cons(d_a0, std::move(acc)));
     }
+  };
+  std::function<List<T1>(List<T1>, List<T1>)> go =
+      [&](List<T1> l0, List<T1> acc) -> List<T1> {
+    return go_impl(go_impl, l0, acc);
   };
   return go(l, List<T1>::nil());
 }

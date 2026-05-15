@@ -962,14 +962,20 @@ std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
 
 template <typename T1>
 List<T1> Vector::to_list(const unsigned int n, const T0<T1> &v) {
-  std::function<List<T1>(unsigned int, T0<T1>, List<T1>)> fold_right_fix;
-  fold_right_fix = [&](unsigned int, T0<T1> v0, List<T1> b) -> List<T1> {
+  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, unsigned int,
+                                T0<T1> v0, List<T1> b) -> List<T1> {
     if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
       return b;
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<typename T0<T1>::Cons>(v0.v());
-      return List<T1>::cons0(d_h, fold_right_fix(d_n, *(d_a2), std::move(b)));
+      return List<T1>::cons0(d_h,
+                             _self_fold_right_fix(_self_fold_right_fix, d_n,
+                                                  *(d_a2), std::move(b)));
     }
+  };
+  std::function<List<T1>(unsigned int, T0<T1>, List<T1>)> fold_right_fix =
+      [&](unsigned int _x, T0<T1> v0, List<T1> b) -> List<T1> {
+    return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
   };
   return fold_right_fix(n, v, List<T1>::nil0());
 }

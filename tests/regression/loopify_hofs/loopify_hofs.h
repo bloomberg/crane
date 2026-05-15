@@ -395,44 +395,20 @@ struct LoopifyHofs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<T1> &l1 = *(_f.l1);
-        std::function<List<std::pair<T1, T2>>(T1, List<T2>)> pair_with;
-        pair_with = [&](T1 x, List<T2> l) -> List<std::pair<T1, T2>> {
-          /// _Enter: captures varying parameters for each recursive call.
-          struct _Enter {
-            List<T2> l;
-          };
-          /// _Resume_Cons: saves [_s0], resumes after recursive call with
-          /// _result.
-          struct _Resume_Cons {
-            decltype(std::make_pair(std::declval<T1 &>(),
-                                    std::declval<T2 &>())) _s0;
-          };
-          using _Frame = std::variant<_Enter, _Resume_Cons>;
-          List<std::pair<T1, T2>> _result{};
-          std::vector<_Frame> _stack;
-          _stack.reserve(8);
-          _stack.emplace_back(_Enter{l});
-          /// Loopified pair_with: _Enter -> _Resume_Cons.
-          while (!_stack.empty()) {
-            _Frame _frame = std::move(_stack.back());
-            _stack.pop_back();
-            if (std::holds_alternative<_Enter>(_frame)) {
-              auto _f = std::move(std::get<_Enter>(_frame));
-              List<T2> l = std::move(_f.l);
-              if (std::holds_alternative<typename List<T2>::Nil>(l.v_mut())) {
-                _result = List<std::pair<T1, T2>>::nil();
-              } else {
-                auto &[d_a0, d_a1] =
-                    std::get<typename List<T2>::Cons>(l.v_mut());
-                _stack.emplace_back(_Resume_Cons{std::make_pair(x, d_a0)});
-                _stack.emplace_back(_Enter{std::move(*(d_a1))});
-              }
-            } else {
-              auto _f = std::move(std::get<_Resume_Cons>(_frame));
-              _result = List<std::pair<T1, T2>>::cons(_f._s0, _result);
-            }
+        auto pair_with_impl = [](auto &_self_pair_with, T1 x,
+                                 List<T2> l) -> List<std::pair<T1, T2>> {
+          if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+            return List<std::pair<T1, T2>>::nil();
+          } else {
+            const auto &[d_a0, d_a1] = std::get<typename List<T2>::Cons>(l.v());
+            return List<std::pair<T1, T2>>::cons(
+                std::make_pair(x, d_a0),
+                _self_pair_with(_self_pair_with, x, *(d_a1)));
           }
-          return _result;
+        };
+        std::function<List<std::pair<T1, T2>>(T1, List<T2>)> pair_with =
+            [&](T1 x, List<T2> l) -> List<std::pair<T1, T2>> {
+          return pair_with_impl(pair_with_impl, x, l);
         };
         if (std::holds_alternative<typename List<T1>::Nil>(l1.v())) {
           _result = List<std::pair<T1, T2>>::nil();

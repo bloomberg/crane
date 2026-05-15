@@ -1,15 +1,19 @@
 #include "let_fix.h"
 
 unsigned int LetFix::local_sum(const List<unsigned int> &l) {
-  std::function<unsigned int(unsigned int, List<unsigned int>)> go;
-  go = [&](unsigned int acc, List<unsigned int> xs) -> unsigned int {
+  auto go_impl = [](auto &_self_go, unsigned int acc,
+                    List<unsigned int> xs) -> unsigned int {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
       return acc;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(xs.v());
-      return go((acc + d_a0), *(d_a1));
+      return _self_go(_self_go, (acc + d_a0), *(d_a1));
     }
+  };
+  std::function<unsigned int(unsigned int, List<unsigned int>)> go =
+      [&](unsigned int acc, List<unsigned int> xs) -> unsigned int {
+    return go_impl(go_impl, acc, xs);
   };
   return go(0u, l);
 }
@@ -20,15 +24,20 @@ List<unsigned int> LetFix::local_flatten(const List<List<unsigned int>> &xss) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<List<unsigned int>>::Cons>(xss.v());
-    std::function<List<unsigned int>(List<unsigned int>)> inner;
-    inner = [&](List<unsigned int> ys) -> List<unsigned int> {
+    auto inner_impl = [&](auto &_self_inner,
+                          List<unsigned int> ys) -> List<unsigned int> {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {
         return local_flatten(*(d_a1));
       } else {
         const auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(ys.v());
-        return List<unsigned int>::cons(d_a00, inner(*(d_a10)));
+        return List<unsigned int>::cons(d_a00,
+                                        _self_inner(_self_inner, *(d_a10)));
       }
+    };
+    std::function<List<unsigned int>(List<unsigned int>)> inner =
+        [&](List<unsigned int> ys) -> List<unsigned int> {
+      return inner_impl(inner_impl, ys);
     };
     return inner(d_a0);
   }

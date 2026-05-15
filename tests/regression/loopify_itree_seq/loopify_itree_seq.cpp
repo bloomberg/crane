@@ -4,45 +4,36 @@
 /// erased so this becomes a plain tail-recursive C++ function. Loopify should
 /// convert it to a while loop.
 unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
-  std::function<unsigned int(unsigned int, unsigned int)> go;
-  go = [](unsigned int k, unsigned int acc) -> unsigned int {
-    unsigned int _result;
-    unsigned int _loop_acc = std::move(acc);
-    unsigned int _loop_k = std::move(k);
-    while (true) {
-      if (_loop_k <= 0) {
-        _result = _loop_acc;
-        break;
-      } else {
-        unsigned int k_ = _loop_k - 1;
-        _loop_acc = (_loop_acc + 1u);
-        _loop_k = k_;
-      }
+  auto go_impl = [](auto &_self_go, unsigned int k,
+                    unsigned int acc) -> unsigned int {
+    if (k <= 0) {
+      return acc;
+    } else {
+      unsigned int k_ = k - 1;
+      return _self_go(_self_go, k_, (acc + 1u));
     }
-    return _result;
+  };
+  std::function<unsigned int(unsigned int, unsigned int)> go =
+      [&](unsigned int k, unsigned int acc) -> unsigned int {
+    return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);
 }
 
 /// Sum 1..n via tail recursion with accumulator.
 unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
-  std::function<unsigned int(unsigned int, unsigned int)> go;
-  go = [](unsigned int k, unsigned int acc) -> unsigned int {
-    unsigned int _result;
-    unsigned int _loop_acc = std::move(acc);
-    unsigned int _loop_k = std::move(k);
-    while (true) {
-      if (_loop_k <= 0) {
-        _result = _loop_acc;
-        break;
-      } else {
-        unsigned int k_ = _loop_k - 1;
-        unsigned int _next_k = k_;
-        _loop_acc = (_loop_acc + _loop_k);
-        _loop_k = _next_k;
-      }
+  auto go_impl = [](auto &_self_go, unsigned int k,
+                    unsigned int acc) -> unsigned int {
+    if (k <= 0) {
+      return acc;
+    } else {
+      unsigned int k_ = k - 1;
+      return _self_go(_self_go, k_, (acc + k));
     }
-    return _result;
+  };
+  std::function<unsigned int(unsigned int, unsigned int)> go =
+      [&](unsigned int k, unsigned int acc) -> unsigned int {
+    return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);
 }

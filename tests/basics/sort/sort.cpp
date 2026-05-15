@@ -37,8 +37,8 @@ Sig<List<unsigned int>> Sort::isort(const List<unsigned int> &l) {
 
 List<unsigned int> Sort::merge(List<unsigned int> l1,
                                const List<unsigned int> &l2) {
-  std::function<List<unsigned int>(List<unsigned int>)> merge_aux;
-  merge_aux = [&](List<unsigned int> l3) -> List<unsigned int> {
+  auto merge_aux_impl = [&](auto &_self_merge_aux,
+                            List<unsigned int> l3) -> List<unsigned int> {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
       return l3;
     } else {
@@ -53,10 +53,15 @@ List<unsigned int> Sort::merge(List<unsigned int> l1,
         if (Compare_dec::le_lt_dec(d_a0, d_a00)) {
           return List<unsigned int>::cons(d_a0, merge(*(d_a1), l3));
         } else {
-          return List<unsigned int>::cons(d_a00, merge_aux(*(d_a10)));
+          return List<unsigned int>::cons(
+              d_a00, _self_merge_aux(_self_merge_aux, *(d_a10)));
         }
       }
     }
+  };
+  std::function<List<unsigned int>(List<unsigned int>)> merge_aux =
+      [&](List<unsigned int> l3) -> List<unsigned int> {
+    return merge_aux_impl(merge_aux_impl, l3);
   };
   return merge_aux(l2);
 }

@@ -269,8 +269,9 @@ struct TopologicalSort {
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1> get_elems(F0 &&eqb_node, const List<bsl::pair<T1, T1>> &l) {
-    bsl::function<List<T1>(List<bsl::pair<T1, T1>>, List<T1>)> get_elems_aux;
-    get_elems_aux = [&](List<bsl::pair<T1, T1>> l0, List<T1> h) -> List<T1> {
+    auto get_elems_aux_impl = [&](auto &_self_get_elems_aux,
+                                  List<bsl::pair<T1, T1>> l0,
+                                  List<T1> h) -> List<T1> {
       if (bsl::holds_alternative<typename List<bsl::pair<T1, T1>>::Nil>(
               l0.v())) {
         return h;
@@ -288,26 +289,33 @@ struct TopologicalSort {
           T1 _x = *f1;
           if (f2.has_value()) {
             T1 _x0 = *f2;
-            return get_elems_aux(d_a1_value, bsl::move(h));
+            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                       bsl::move(h));
           } else {
-            return get_elems_aux(d_a1_value, List<T1>::cons(e2, bsl::move(h)));
+            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                       List<T1>::cons(e2, bsl::move(h)));
           }
         } else {
           if (f2.has_value()) {
             T1 _x = *f2;
-            return get_elems_aux(d_a1_value, List<T1>::cons(e1, bsl::move(h)));
+            return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                       List<T1>::cons(e1, bsl::move(h)));
           } else {
             if (eqb_node(e1, e2)) {
-              return get_elems_aux(d_a1_value,
-                                   List<T1>::cons(e1, bsl::move(h)));
+              return _self_get_elems_aux(_self_get_elems_aux, d_a1_value,
+                                         List<T1>::cons(e1, bsl::move(h)));
             } else {
-              return get_elems_aux(
-                  d_a1_value,
+              return _self_get_elems_aux(
+                  _self_get_elems_aux, d_a1_value,
                   List<T1>::cons(e1, List<T1>::cons(e2, bsl::move(h))));
             }
           }
         }
       }
+    };
+    bsl::function<List<T1>(List<bsl::pair<T1, T1>>, List<T1>)> get_elems_aux =
+        [&](List<bsl::pair<T1, T1>> l0, List<T1> h) -> List<T1> {
+      return get_elems_aux_impl(get_elems_aux_impl, l0, h);
     };
     return get_elems_aux(l, List<T1>::nil());
   }

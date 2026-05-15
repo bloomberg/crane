@@ -360,118 +360,79 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
         } else {
           unsigned int mid = (2u ? len / 2u : 0);
           unsigned int mid_val;
-          std::function<unsigned int(unsigned int, List<unsigned int>)> nth;
-          nth = [](unsigned int n, List<unsigned int> xs) -> unsigned int {
-            unsigned int _result;
-            List<unsigned int> _loop_xs = std::move(xs);
-            unsigned int _loop_n = std::move(n);
-            while (true) {
-              if (_loop_n <= 0) {
-                if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                        _loop_xs.v())) {
-                  _result = 0u;
-                  break;
-                } else {
-                  const auto &[d_a01, d_a11] =
-                      std::get<typename List<unsigned int>::Cons>(_loop_xs.v());
-                  _result = d_a01;
-                  break;
-                }
+          auto nth_impl = [](auto &_self_nth, unsigned int n,
+                             List<unsigned int> xs) -> unsigned int {
+            if (n <= 0) {
+              if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                      xs.v())) {
+                return 0u;
               } else {
-                unsigned int n_ = _loop_n - 1;
-                if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                        _loop_xs.v())) {
-                  _result = 0u;
-                  break;
-                } else {
-                  const auto &[d_a02, d_a12] =
-                      std::get<typename List<unsigned int>::Cons>(_loop_xs.v());
-                  _loop_xs = std::move(*(d_a12));
-                  _loop_n = n_;
-                }
+                const auto &[d_a01, d_a11] =
+                    std::get<typename List<unsigned int>::Cons>(xs.v());
+                return d_a01;
+              }
+            } else {
+              unsigned int n_ = n - 1;
+              if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                      xs.v())) {
+                return 0u;
+              } else {
+                const auto &[d_a02, d_a12] =
+                    std::get<typename List<unsigned int>::Cons>(xs.v());
+                return _self_nth(_self_nth, n_, *(d_a12));
               }
             }
-            return _result;
+          };
+          std::function<unsigned int(unsigned int, List<unsigned int>)> nth =
+              [&](unsigned int n, List<unsigned int> xs) -> unsigned int {
+            return nth_impl(nth_impl, n, xs);
           };
           mid_val = nth(mid, _loop_l);
           List<unsigned int> left;
-          std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-              take;
-          take = [&](unsigned int n,
-                     List<unsigned int> xs) -> List<unsigned int> {
-            /// _Enter: captures varying parameters for each recursive call.
-            struct _Enter {
-              List<unsigned int> xs;
-              unsigned int n;
-            };
-            /// _Resume_Cons: saves [d_a03], resumes after recursive call with
-            /// _result.
-            struct _Resume_Cons {
-              unsigned int d_a03;
-            };
-            using _Frame = std::variant<_Enter, _Resume_Cons>;
-            List<unsigned int> _result{};
-            std::vector<_Frame> _stack;
-            _stack.reserve(8);
-            _stack.emplace_back(_Enter{xs, n});
-            /// Loopified take: _Enter -> _Resume_Cons.
-            while (!_stack.empty()) {
-              _Frame _frame = std::move(_stack.back());
-              _stack.pop_back();
-              if (std::holds_alternative<_Enter>(_frame)) {
-                auto _f = std::move(std::get<_Enter>(_frame));
-                List<unsigned int> xs = std::move(_f.xs);
-                unsigned int n = _f.n;
-                if (n <= 0) {
-                  _result = List<unsigned int>::nil();
-                } else {
-                  unsigned int n_ = n - 1;
-                  if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                          xs.v_mut())) {
-                    _result = List<unsigned int>::nil();
-                  } else {
-                    auto &[d_a03, d_a13] =
-                        std::get<typename List<unsigned int>::Cons>(xs.v_mut());
-                    _stack.emplace_back(_Resume_Cons{d_a03});
-                    _stack.emplace_back(_Enter{std::move(*(d_a13)), n_});
-                  }
-                }
+          auto take_impl = [](auto &_self_take, unsigned int n,
+                              List<unsigned int> xs) -> List<unsigned int> {
+            if (n <= 0) {
+              return List<unsigned int>::nil();
+            } else {
+              unsigned int n_ = n - 1;
+              if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                      xs.v())) {
+                return List<unsigned int>::nil();
               } else {
-                auto _f = std::move(std::get<_Resume_Cons>(_frame));
-                _result = List<unsigned int>::cons(_f.d_a03, _result);
+                const auto &[d_a03, d_a13] =
+                    std::get<typename List<unsigned int>::Cons>(xs.v());
+                return List<unsigned int>::cons(
+                    d_a03, _self_take(_self_take, n_, *(d_a13)));
               }
             }
-            return _result;
+          };
+          std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
+              take = [&](unsigned int n,
+                         List<unsigned int> xs) -> List<unsigned int> {
+            return take_impl(take_impl, n, xs);
           };
           left = take(mid, _loop_l);
           List<unsigned int> right;
-          std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-              drop;
-          drop = [](unsigned int n,
-                    List<unsigned int> xs) -> List<unsigned int> {
-            List<unsigned int> _result;
-            List<unsigned int> _loop_xs = std::move(xs);
-            unsigned int _loop_n = std::move(n);
-            while (true) {
-              if (_loop_n <= 0) {
-                _result = _loop_xs;
-                break;
+          auto drop_impl = [](auto &_self_drop, unsigned int n,
+                              List<unsigned int> xs) -> List<unsigned int> {
+            if (n <= 0) {
+              return xs;
+            } else {
+              unsigned int n_ = n - 1;
+              if (std::holds_alternative<typename List<unsigned int>::Nil>(
+                      xs.v_mut())) {
+                return List<unsigned int>::nil();
               } else {
-                unsigned int n_ = _loop_n - 1;
-                if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                        _loop_xs.v_mut())) {
-                  _result = List<unsigned int>::nil();
-                  break;
-                } else {
-                  auto &[d_a04, d_a14] =
-                      std::get<typename List<unsigned int>::Cons>(
-                          _loop_xs.v_mut());
-                  _loop_xs = std::move(*(d_a14));
-                  _loop_n = n_;
-                }
+                auto &[d_a04, d_a14] =
+                    std::get<typename List<unsigned int>::Cons>(xs.v_mut());
+                return _self_drop(_self_drop, n_, *(d_a14));
               }
             }
-            return _result;
+          };
+          std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
+              drop = [&](unsigned int n,
+                         List<unsigned int> xs) -> List<unsigned int> {
+            return drop_impl(drop_impl, n, xs);
           };
           right = drop((mid + 1u), _loop_l);
           if (target < mid_val) {

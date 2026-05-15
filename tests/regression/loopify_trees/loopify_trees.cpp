@@ -1034,60 +1034,25 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<unsigned int> &t) {
 /// all_paths_sum t sums all root-to-leaf path sums.
 unsigned int
 LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
-  std::function<unsigned int(unsigned int, LoopifyTrees::tree<unsigned int>)>
-      sum_with_acc;
-  sum_with_acc = [&](unsigned int acc,
-                     LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
-      LoopifyTrees::tree<unsigned int> tree0;
-      unsigned int acc;
-    };
-    /// _After_Node: saves [d_a0, new_acc], dispatches next recursive call.
-    struct _After_Node {
-      LoopifyTrees::tree<unsigned int> d_a0;
-      unsigned int new_acc;
-    };
-    /// _Combine_Node: receives partial results, combines with _result from
-    /// final call.
-    struct _Combine_Node {
-      unsigned int _result;
-    };
-    using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-    unsigned int _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{tree0, acc});
-    /// Loopified sum_with_acc: _Enter -> _After_Node -> _Combine_Node.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        LoopifyTrees::tree<unsigned int> tree0 = std::move(_f.tree0);
-        unsigned int acc = _f.acc;
-        if (std::holds_alternative<
-                typename LoopifyTrees::tree<unsigned int>::Leaf>(
-                tree0.v_mut())) {
-          _result = acc;
-        } else {
-          auto &[d_a0, d_a1, d_a2] =
-              std::get<typename LoopifyTrees::tree<unsigned int>::Node>(
-                  tree0.v_mut());
-          unsigned int new_acc = (acc + d_a1);
-          _stack.emplace_back(_After_Node{*(d_a0), new_acc});
-          _stack.emplace_back(_Enter{std::move(*(d_a2)), new_acc});
-        }
-      } else if (std::holds_alternative<_After_Node>(_frame)) {
-        auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{_result});
-        _stack.emplace_back(_Enter{std::move(_f.d_a0), _f.new_acc});
-      } else {
-        auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result = (_result + _f._result);
-      }
+  auto sum_with_acc_impl =
+      [](auto &_self_sum_with_acc, unsigned int acc,
+         LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
+    if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
+            tree0.v())) {
+      return acc;
+    } else {
+      const auto &[d_a0, d_a1, d_a2] =
+          std::get<typename LoopifyTrees::tree<unsigned int>::Node>(tree0.v());
+      unsigned int new_acc = (acc + d_a1);
+      return (_self_sum_with_acc(_self_sum_with_acc, new_acc, *(d_a0)) +
+              _self_sum_with_acc(_self_sum_with_acc, new_acc, *(d_a2)));
     }
-    return _result;
+  };
+  std::function<unsigned int(unsigned int, LoopifyTrees::tree<unsigned int>)>
+      sum_with_acc =
+          [&](unsigned int acc,
+              LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
+    return sum_with_acc_impl(sum_with_acc_impl, acc, tree0);
   };
   return sum_with_acc(0u, t);
 }

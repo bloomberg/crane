@@ -57,8 +57,9 @@ Levenshtein::chain Levenshtein::aux_both_empty(const String &, const String &) {
 
 SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
                                                              String _x0) {
-  std::function<SigT<Nat, Levenshtein::chain>(String)> levenshtein_chain1;
-  levenshtein_chain1 = [&](String t) -> SigT<Nat, Levenshtein::chain> {
+  auto levenshtein_chain1_impl =
+      [&](auto &_self_levenshtein_chain1,
+          String t) -> SigT<Nat, Levenshtein::chain> {
     if (std::holds_alternative<typename String::EmptyString>(s.v())) {
       if (std::holds_alternative<typename String::EmptyString>(t.v())) {
         return SigT<Nat, Levenshtein::chain>::existt(Nat::o(),
@@ -85,7 +86,8 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
               d_a11.aux_eq_char(s, t, d_a0, *(d_a1), d_a00, *(d_a10), d_x1));
         }
         case Sumbool::e_RIGHT: {
-          auto &&_sv2 = levenshtein_chain1(*(d_a10));
+          auto &&_sv2 =
+              _self_levenshtein_chain1(_self_levenshtein_chain1, *(d_a10));
           const auto &[d_x2, d_a12] =
               std::get<typename SigT<Nat, Levenshtein::chain>::ExistT>(
                   _sv2.v());
@@ -118,6 +120,10 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
         }
       }
     }
+  };
+  std::function<SigT<Nat, Levenshtein::chain>(String)> levenshtein_chain1 =
+      [&](String t) -> SigT<Nat, Levenshtein::chain> {
+    return levenshtein_chain1_impl(levenshtein_chain1_impl, t);
   };
   return levenshtein_chain1(_x0);
 }
