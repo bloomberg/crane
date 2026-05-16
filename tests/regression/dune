@@ -400,6 +400,50 @@
   (deps let_fix_byref_list_param.t.exe)
   (action (run ./let_fix_byref_list_param.t.exe))))
 
+(subdir let_fix_tail_loop
+ (rule
+  (targets let_fix_tail_loop.t.exe)
+  (deps LetFixTailLoop.vo let_fix_tail_loop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_tail_loop.t.exe let_fix_tail_loop.cpp let_fix_tail_loop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_tail_loop.t.exe)
+  (action (run ./let_fix_tail_loop.t.exe))))
+
+(subdir let_fix_move_acc
+ (rule
+  (targets let_fix_move_acc.t.exe)
+  (deps LetFixMoveAcc.vo let_fix_move_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_move_acc.t.exe let_fix_move_acc.cpp let_fix_move_acc.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_move_acc.t.exe)
+  (action (run ./let_fix_move_acc.t.exe))))
+
+(subdir let_fix_nested_clone
+ (rule
+  (targets let_fix_nested_clone.t.exe)
+  (deps LetFixNestedClone.vo let_fix_nested_clone.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_nested_clone.t.exe let_fix_nested_clone.cpp let_fix_nested_clone.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_nested_clone.t.exe)
+  (action (run ./let_fix_nested_clone.t.exe))))
+
+(subdir let_fix_intermediate_ref
+ (rule
+  (targets let_fix_intermediate_ref.t.exe)
+  (deps LetFixIntermediateRef.vo let_fix_intermediate_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_intermediate_ref.t.exe let_fix_intermediate_ref.cpp let_fix_intermediate_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_intermediate_ref.t.exe)
+  (action (run ./let_fix_intermediate_ref.t.exe))))
+
 (subdir rec_record
  (rule
   (targets rec_record.t.exe)
