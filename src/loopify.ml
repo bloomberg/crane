@@ -269,7 +269,14 @@ let ref_matches fn_refs r =
 
 (** Build a call checker for top-level function definitions. Matches both
     [CPPglob]-based calls (from Rocq extraction) and [CPPvar]-based calls (local
-    references by name). *)
+    references by name).
+
+    @param fn_refs List of [(GlobRef.t, type_args)] pairs identifying the
+                   function being loopified. Multiple refs arise when a single
+                   Rocq definition is known by several global references (e.g.
+                   mutual fixpoints registered together).
+    @return A {!call_checker} that returns [Some cs] when [e] is a direct call
+            to any function in [fn_refs], [None] otherwise. *)
 let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
  fun e ->
    match e with
@@ -299,7 +306,20 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
 (** Build a call checker for struct methods. Matches [CPPmethod_call] on
     [method_name] and, when [has_self_param] is true, includes the receiver
     pointer as the first argument. Also matches [CPPglob] calls that resolve to
-    the same method name. *)
+    the same method name.
+
+    @param n_params     Number of formal parameters of the method (excluding
+                        the implicit [this] pointer). Used to detect when an
+                        argument list is longer than expected (curried / extra
+                        receiver argument) so the receiver can be stripped.
+    @param has_self_param [true] when the [_self] receiver has been added as
+                        an explicit first parameter (nontail / method
+                        loopification context). Causes the receiver expression
+                        to be prepended as the first call argument.
+    @param this_pos     Index of the [this]/receiver argument in the argument
+                        list of [CPPfun_call] forms. Used to extract and remove
+                        the receiver from over-long argument lists.
+    @param method_name  The method name to match on. *)
 let method_checker
     ~(n_params : int)
     ~(has_self_param : bool)
@@ -790,7 +810,14 @@ let rec is_reuse_optimization_cond = function
 (** Apply reuse-optimization bypass to a rewritten [Sif].
     If [cond] is a use-count guard and the then-branch still contains
     un-decomposed recursive calls while the else-branch is clean,
-    drops the then-branch entirely and returns only the else-branch. *)
+    drops the then-branch entirely and returns only the else-branch.
+
+    @param check    Call checker used to count residual recursive calls
+    @param cond     The [Sif] condition expression
+    @param rw_then  Already-rewritten then-branch statement list
+    @param rw_else  Already-rewritten else-branch statement list
+    @return [[Sif(cond, rw_then, rw_else)]] normally, or [rw_else] when the
+            reuse-optimization fast path cannot be loopified *)
 let rewrite_if_with_reuse_bypass check cond rw_then rw_else =
   if is_reuse_optimization_cond cond
      && count_calls_stmts check rw_then > 0
@@ -800,7 +827,11 @@ let rewrite_if_with_reuse_bypass check cond rw_then rw_else =
 
 (** Classify a function body's recursion pattern. Collects all recursive call
     sites and checks whether they are all in tail position, some non-tail, or
-    none at all. *)
+    none at all.
+
+    @param check Call checker identifying recursive calls
+    @param body  Function body statements to classify
+    @return {!No_recursion}, {!Tail_recursion}, or {!Nontail_recursion} *)
 let classify check body =
   let calls = collect_stmts check ~in_visitor:false body in
   match calls with
@@ -818,8 +849,19 @@ let classify check body =
     parameter name). Invariant parameters need not appear in frame structs or
     shadow variables — they can be referenced directly from function scope. *)
 
-(** Returns a bool list parallel to [params]: [true] = varying, [false] =
-    invariant. *)
+(** Determine which parameters vary across recursive calls.
+
+    A parameter is considered invariant when every recursive call site passes
+    exactly the same variable back (i.e. the argument at that position is
+    [CPPvar id] where [id] is the parameter name). Invariant parameters can be
+    referenced directly from function scope and need not appear in shadow
+    variables or frame structs.
+
+    @param check  Call checker identifying recursive calls
+    @param params Function parameters [(id, type)]
+    @param body   Function body statements
+    @return A bool list parallel to [params]: [true] = varying (changes across
+            calls), [false] = invariant (always passed unchanged) *)
 let find_varying_params check params body =
   let calls = collect_stmts check ~in_visitor:false body in
   if calls = [] then
@@ -5698,7 +5740,16 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
     to use std::declval, so that decltype expressions are valid at struct
     definition scope.  E.g., [_args.d_a0] becomes
     [std::declval<CtorType&>().d_a0] and plain [b] becomes
-    [std::declval<unsigned int&>()]. *)
+    [std::declval<unsigned int&>()].
+
+    @param pp_type  Type pretty-printer, used to render struct types in the
+                    [std::declval<T&>()] expression (unused in this function but
+                    threaded through for interface consistency)
+    @param env      Type environment mapping variable [Id.t]s to their types,
+                    used to resolve the concrete type for [std::declval]
+    @param expr     Expression to rewrite
+    @return [expr] with in-scope variable and field-access references replaced
+            by [std::declval]-based equivalents safe at struct scope *)
 let rec rewrite_field_access_for_decltype pp_type env expr =
   match expr with
   | CPPvar id ->
@@ -5738,65 +5789,18 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
 
 (** Build a [Tdecltype(expr)] type, suitable for struct field type annotations
     when the actual type is unknown. Rewrites variable references to use
-    std::declval so that decltype is valid at struct definition scope. *)
+    std::declval so that decltype is valid at struct definition scope.
+
+    @param pp_type  Type pretty-printer, forwarded to
+                    {!rewrite_field_access_for_decltype}
+    @param env      Type environment for resolving variable types in the
+                    [decltype] expression
+    @param expr     The expression whose type to capture via [decltype]
+    @return [Tdecltype(rewritten_expr)] where [rewritten_expr] uses
+            [std::declval] for any in-scope variables *)
 let make_decltype_ty pp_type env expr =
   let expr = rewrite_field_access_for_decltype pp_type env expr in
   Tdecltype expr
-
-(** Transform a non-tail recursive function body using an explicit frame-based stack.
-
-    Non-tail recursion requires saving continuation context. We use typed frames
-    stored in a [std::variant] stack. Each frame captures the state needed to
-    resume after a recursive call returns.
-
-    {v
-    let rec f x = if base(x) then result else combine(x, f(next(x)))
-
-    becomes:
-
-    struct _Enter { T x; };
-    struct _Call1 { T _s0; };  // saves 'x' for combine step
-    using _Frame = std::variant<_Enter, _Call1>;
-
-    let f x_init =
-      std::vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{x_init});
-      T _result;
-      while (!_stack.empty()) {
-        std::visit(Overloaded{
-          [&](_Enter _f) {
-            if (base(_f.x)) { _result = result; }
-            else {
-              _stack.emplace_back(_Call1{_f.x});      // save x
-              _stack.emplace_back(_Enter{next(_f.x)});  // recurse
-            }
-          },
-          [&](_Call1 _f) { _result = combine(_f._s0, _result); }
-        }, _stack.back());
-        _stack.pop_back();
-      }
-      return _result;
-    v}
-
-    Frame types:
-    - [_Enter]: Captures function arguments (the "call" part of a recursive call)
-    - [_CallN]: Captures continuation context (values needed after a call returns)
-
-    The transformation:
-    1. Identifies varying vs invariant parameters
-    2. Rewrites [_Enter] handler: returns → frame pushes
-    3. Collects [_CallN] frame info during rewriting
-    4. Generates frame struct definitions
-    5. Generates dispatch loop with [std::visit]
-
-    @param check Call checker for identifying recursive calls
-    @param pp_type Type pretty-printer
-    @param pp_expr Expression pretty-printer
-    @param tparams Template parameter context
-    @param params Function parameters
-    @param ret_ty Return type
-    @param body Function body
-    @return Transformed body with frame-based stack structure *)
 
 (** Fix bindings in a continuation frame handler for fields that became
     pointer-safe after [compute_frame_pointer_safe].
@@ -5853,6 +5857,64 @@ let fix_handler_bindings field_names cf_ps handler =
         | s -> s)
       handler
 
+(** Transform a non-tail recursive function body using an explicit frame-based stack.
+
+    Non-tail recursion requires saving continuation context. We use typed frames
+    stored in a [std::variant] stack. Each frame captures the state needed to
+    resume after a recursive call returns.
+
+    {v
+    let rec f x = if base(x) then result else combine(x, f(next(x)))
+
+    becomes:
+
+    struct _Enter { T x; };
+    struct _Call1 { T _s0; };  // saves 'x' for combine step
+    using _Frame = std::variant<_Enter, _Call1>;
+
+    let f x_init =
+      std::vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{x_init});
+      T _result;
+      while (!_stack.empty()) {
+        std::visit(Overloaded{
+          [&](_Enter _f) {
+            if (base(_f.x)) { _result = result; }
+            else {
+              _stack.emplace_back(_Call1{_f.x});      // save x
+              _stack.emplace_back(_Enter{next(_f.x)});  // recurse
+            }
+          },
+          [&](_Call1 _f) { _result = combine(_f._s0, _result); }
+        }, _stack.back());
+        _stack.pop_back();
+      }
+      return _result;
+    v}
+
+    Frame types:
+    - [_Enter]: Captures function arguments (the "call" part of a recursive call)
+    - [_CallN]: Captures continuation context (values needed after a call returns)
+
+    The transformation:
+    1. Identifies varying vs invariant parameters
+    2. Rewrites [_Enter] handler: returns → frame pushes
+    3. Collects [_CallN] frame info during rewriting
+    4. Generates frame struct definitions
+    5. Generates dispatch loop with [std::visit]
+
+    @param fn_name  Optional function name used to annotate the generated
+                    [while] loop comment (aids readability of the emitted C++)
+    @param check    Call checker for identifying recursive calls
+    @param pp_type  Type pretty-printer (used for [decltype] fallback types
+                    in frame struct fields)
+    @param tparams  Template parameter context of the enclosing function
+    @param params   Function parameters [(id, type)]
+    @param ret_ty   Return type of the function
+    @param body     Function body statements
+    @return Transformed body with frame-based stack structure, or the original
+            [body] unchanged when the transformation is unsafe (unique_ptr
+            owners, branch dependencies) *)
 let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams params ret_ty body =
   let varying = find_varying_params check params body in
   let binding_env = collect_binding_env body in
@@ -6694,6 +6756,47 @@ let is_lazy_factory_call = function
 let body_contains_lazy_factory body =
   body_exists is_lazy_factory_call body
 
+(** Apply nontail-recursion loopification, trying strategies in priority order:
+    {ol
+      {- {b Branch dependency} — bail out if any return expression depends on a
+         destructured match binding that is also passed to a recursive call
+         (the frame-based rewriter can't handle this yet).}
+      {- {b TMC} ({!transform_tmc}) — if the recursion is "tail modulo cons"
+         (exactly one recursive call wrapped in a single constructor).}
+      {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
+         other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
+
+    @param param_inits Optional custom initialisers for shadow / [_self]
+                       variables. Forwarded to {!transform_tmc} and
+                       {!transform_nontail} so that method receivers can be
+                       initialised directly from [this].
+    @param fn_name     Optional function name for loop-comment annotations
+                       (forwarded to {!transform_nontail}).
+    @param check       Call checker for identifying recursive calls
+    @param pp_type     Type pretty-printer
+    @param pp_expr     Expression pretty-printer
+    @param tparams     Template parameter context
+    @param params      Function parameters [(id, type)]
+    @param ret_ty      Return type
+    @param body        Function body statements
+    @return [(body', used_param_inits)] where [used_param_inits] is [true]
+    when [param_inits] were consumed by the transform (TMC uses them for
+    method-self initialisation), meaning the caller does not need a separate
+    initialiser statement. *)
+let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
+    tparams params ret_ty body =
+  if has_recursive_branch_dependency check body then
+    (body, false)
+  else
+  match try_tmc_classify check body with
+  | Some ti ->
+    (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
+  | None ->
+    let body' =
+        transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body
+    in
+    (body', false)
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfundef]. The transformation
@@ -6716,43 +6819,18 @@ let body_contains_lazy_factory body =
     [lazy_] pattern via {!has_lazy_body} and skip the main loopification
     pass.  See the {!has_lazy_body} section header for the full rationale.
 
-    @param pp_type  Type pretty-printer
-    @param pp_expr  Expression pretty-printer
-    @param tparams  Type parameters of the function
-    @param names    List of [(GlobRef.t, Id.t)] pairs identifying the function
-    @param ret_ty   Return type
-    @param params   Parameter list [(Id.t * cpp_type)]
-    @param body     Original function body (statement list)
+    @param pp_type   Type pretty-printer (forwarded to transformation passes)
+    @param pp_expr   Expression pretty-printer (forwarded to transformation
+                     passes and [decltype] generation)
+    @param tparams   Template parameters of the enclosing declaration
+    @param names     List of [(GlobRef.t, type_args)] pairs identifying this
+                     function — supports mutual fixpoint groups with multiple refs
+    @param ret_ty    Return type of the function
+    @param params    Parameter list [(Id.t * cpp_type)]
+    @param body      Original function body (statement list)
+    @param no_pure   Whether the function is marked [no_pure] (passed through
+                     to the [Dfundef] node unchanged)
     @return A [Dfundef] declaration with the loopified body *)
-
-(** Apply nontail-recursion loopification, trying strategies in priority order:
-    {ol
-      {- {b Branch dependency} — bail out if any return expression depends on a
-         destructured match binding that is also passed to a recursive call
-         (the frame-based rewriter can't handle this yet).}
-      {- {b TMC} ({!transform_tmc}) — if the recursion is "tail modulo cons"
-         (exactly one recursive call wrapped in a single constructor).}
-      {- {b General nontail} ({!transform_nontail}) — frame-based stack for all
-         other patterns, including multi-call (e.g. fibonacci, tree traversal).}}
-
-    @return [(body', used_param_inits)] where [used_param_inits] is [true]
-    when [param_inits] were consumed by the transform (TMC uses them for
-    method-self initialisation), meaning the caller does not need a separate
-    initialiser statement. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
-    tparams params ret_ty body =
-  if has_recursive_branch_dependency check body then
-    (body, false)
-  else
-  match try_tmc_classify check body with
-  | Some ti ->
-    (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
-  | None ->
-    let body' =
-        transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body
-    in
-    (body', false)
-
 let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure =
   (* Register this function for mutual recursion detection *)
   register_fundef names params body;

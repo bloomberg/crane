@@ -13,21 +13,18 @@ open Table
 open Str
 open Util
 
-(** Placeholder exception for unimplemented features *)
-exception TODO
+let globref_equal = Environ.QGlobRef.equal Environ.empty_env
 
 (** Compute the factory method name for a constructor.
-
-    Factory names are the lowercase of the constructor struct name (e.g.,
-    [Cons] → ["cons"]).  If the lowercased name collides with a C++ keyword
-    (reuses {!Cpp_state.keywords} via {!Common.get_keywords}) or with the
+    Factory names are the lowercase of the constructor struct name
+    (e.g. [Cons] -> ["cons"]). If the lowercased name collides with a C++
+    keyword, a generated name ([v], [v_mut], [clone], [variant_t]), or the
     enclosing type's own name (which C++ treats as a constructor declaration),
-    the original PascalCase is kept with a trailing underscore (e.g.,
-    [Char] → ["Char_"]).
+    the original PascalCase is kept with a trailing underscore
+    (e.g. [Char] -> ["Char_"]).
 
-    @param type_name the enclosing inductive type's C++ name, for same-name
-                     collision detection (default [""])
-    @return the factory method name as a string *)
+    @param type_name  the enclosing inductive type's C++ name, for same-name
+                      collision detection (default [""]) *)
 let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
   let lc = String.lowercase_ascii ctor_struct_name in
   let reserved_generated_names =
@@ -58,16 +55,12 @@ let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
       call {!Common.lookup_ctor_field_name} to resolve field names. *)
 
 (** Sanitize a Rocq binder name for use as a C++ struct field identifier.
-
-    Performs the following transformations:
-    - Lowercases the name (Rocq names are often CamelCase)
-    - Strips trailing primes ([a'] → [a], [x''] → [x])
-    - Replaces non-alphanumeric characters (except [_]) with underscores
-
+    Lowercases the name, strips trailing primes ([a'] -> [a], [x''] -> [x]),
+    and replaces non-alphanumeric characters (except [_]) with underscores.
     Returns [None] if the result is empty or starts with a digit, in which
     case the caller falls back to the generic positional name [d_aJ].
 
-    @param name  The raw Rocq binder name (e.g. ["left"], ["a'"], ["1st"]) *)
+    @param name  the raw Rocq binder name (e.g. ["left"], ["a'"], ["1st"]) *)
 let sanitize_binder_name name =
   let lc = String.lowercase_ascii name in
   let len = String.length lc in
@@ -96,14 +89,13 @@ let sanitize_binder_name name =
     else
       Some result
 
-(** Derive the C++ field name string for constructor argument [k] from the
-    binder name list [consarg_names].
-
+(** Derive the C++ field name string for constructor argument [k].
     Returns ["d_<sanitized_name>"] when a valid binder name exists and does
-    not collide with a C++ keyword, or the generic positional name
-    ["d_a<k>"] otherwise.  This helper is factored out of
-    {!compute_field_name} so that the deduplication check can call it for
-    both the current index and all prior indices. *)
+    not collide with a C++ keyword, or the positional name ["d_a<k>"]
+    otherwise.
+
+    @param consarg_names  binder names from {!Miniml.ml_ind_packet.ip_consarg_names}
+    @param k              0-based field index *)
 let field_name_str_of_idx consarg_names k =
   match List.nth_opt consarg_names k with
   | Some (Some id) -> (
@@ -116,18 +108,12 @@ let field_name_str_of_idx consarg_names k =
     | None -> field_param_name k )
   | _ -> field_param_name k
 
-(** Compute the C++ field name for field [j] of constructor struct
-    [ctor_struct_name], register it in {!Common.ctor_field_names}, and
-    return the resulting identifier.
-
-    Handles three cases:
-    - Named binder that is C++-safe → [d_<lowercase_name>] (e.g. [d_left])
-    - Anonymous binder or keyword collision → [d_a<j>] (e.g. [d_a0])
-    - Duplicate name within the same constructor → appends [_<j>] suffix
+(** Compute and register the C++ field name for constructor field [j].
+    Deduplicates by appending [_<j>] when an earlier field has the same name.
 
     @param ctor_struct_name  PascalCase name of the constructor struct
-    @param consarg_names     binder names from {!ml_ind_packet.ip_consarg_names}
-    @param n_fields          total field count (unused but kept for symmetry)
+    @param consarg_names     binder names from {!Miniml.ml_ind_packet.ip_consarg_names}
+    @param _n_fields         total field count (unused but kept for symmetry)
     @param j                 0-based field index *)
 let compute_field_name ctor_struct_name consarg_names _n_fields j =
   let base_str = field_name_str_of_idx consarg_names j in
@@ -150,23 +136,21 @@ let compute_field_name ctor_struct_name consarg_names _n_fields j =
   field_id
 
 (** Compute and register field names for all [n_fields] fields of a
-    constructor struct.  Returns the list of field identifiers in order.
-
-    This is the single entry point called from {!gen_ind_header_v2},
+    constructor struct. Entry point called from {!gen_ind_header_v2},
     {!gen_ind_header}, and {!gen_ind_cpp} at definition sites. *)
 let compute_and_register_field_names ctor_struct_name consarg_names n_fields =
   List.init n_fields (fun j ->
     compute_field_name ctor_struct_name consarg_names n_fields j)
 
 (** Derive the PascalCase C++ constructor struct name from a [GlobRef.t].
+    Constructor references (e.g. [ConstructRef ((kn,0), 1)] for [Cons]) are
+    rendered as capitalized versions of their Rocq name; other references
+    fall back to [Ctor<i>]. Used at both definition sites (struct generation)
+    and access sites (pattern matching, record reuse) to obtain the key for
+    {!Common.lookup_ctor_field_name}.
 
-    Constructor references (e.g. [ConstructRef ((kn,0), 1)] for [Cons])
-    are rendered as capitalized versions of their Rocq name; other references
-    fall back to [Ctor<i>].  This is used at both definition sites (struct
-    generation) and access sites (pattern matching, record reuse) to
-    obtain the key for {!Common.lookup_ctor_field_name}.
-
-    @param i  fallback index when the reference is not a [ConstructRef] *)
+    @param fallback_idx  index used when the reference is not a [ConstructRef]
+    @param c             the global reference to look up *)
 let ctor_struct_name_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : string =
   match c with
   | GlobRef.ConstructRef _ ->
@@ -177,32 +161,14 @@ let ctor_struct_name_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : string =
 let ctor_struct_id_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : Id.t =
   Id.of_string (ctor_struct_name_of_ref ~fallback_idx c)
 
-(** Safe version of [List.firstn] that returns [min(n, length lst)] elements
-    instead of raising [Failure "firstn"] when [n > length lst].
+(** Like [List.firstn] but returns [min(n, length lst)] elements instead of
+    raising when [n > length lst]. Needed because extraction sometimes produces
+    type argument lists shorter than expected (due to [Tdummy Ktype] erasure,
+    higher-kinded extraction failures, or universe polymorphism).
 
-    This is a critical safety wrapper for type argument extraction. When
-    [make_tyargs] in extraction.ml produces a type argument list that's
-    shorter than expected (e.g., due to Tdummy Ktype erasure or failed type
-    extraction), attempting to take the first N elements with [List.firstn]
-    would crash with [Failure "firstn"].
-
-    The shorter-than-expected list can occur when:
-    - Type constructors are erased in fallback logic (Tdummy Ktype)
-    - Higher-kinded type parameters fail extraction
-    - Universe polymorphism causes extraction failures
-
-    By using [safe_firstn], we gracefully handle these cases by taking as
-    many elements as are available, up to the requested count. This allows
-    the translation to proceed with partial type information rather than
-    crashing during extraction.
-
-    Example:
-    - [safe_firstn 3 [a; b]] returns [[a; b]] (not [Failure "firstn"])
-    - [safe_firstn 2 [a; b; c; d]] returns [[a; b]]
-
-    @param n   Number of elements to take from the list (must be >= 0)
-    @param lst Input list
-    @return Prefix of [lst] with length [min(n, length lst)] *)
+    @param n    number of elements to take (must be >= 0)
+    @param lst  input list
+    @return prefix of [lst] with length [min(n, length lst)] *)
 let safe_firstn n lst =
   let rec aux n lst acc =
     match n, lst with
@@ -244,69 +210,76 @@ let mk_cppglob_local (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
 let find_type_opt (r : GlobRef.t) : ml_type option =
   try Some (Table.find_type r) with Not_found -> None
 
-(* ========================================================================== *)
-(** Translation context — consolidated mutable state for expression compilation.
-    All fields except local_inductives (which has a different lifecycle and is
-    exported to cpp.ml) are grouped here in a single mutable record. *)
-(* ========================================================================== *)
-
+(** Consolidated mutable state for expression compilation.
+    All fields except {!local_inductives} (which has a different lifecycle
+    and is exported to [cpp.ml]) live here. *)
 type translation_ctx = {
+  (* Template type variables for the function currently being translated. *)
   mutable current_type_vars : Id.t list;
+  (* 1-indexed parameter types for the current function; used to recover
+     erased type info at call sites. *)
   mutable current_param_types : (int * ml_type) list;
+  (* Name of the enclosing function, for diagnostic messages. *)
   mutable current_outer_function_name : string option;
-  (* C++ return type of the enclosing function, set by gen_dfun. Used to recover
-     erased template type args at call sites where C++ can't deduce them from
-     lambda arguments. *)
+  (* C++ return type of the enclosing function, set by gen_dfun. Used to
+     recover erased template type args at call sites where C++ can't deduce
+     them from lambda arguments. *)
   mutable current_cpp_return_type : cpp_type option;
+  (* De Bruijn environment mapping variable indices to ML types. *)
   mutable env_types : (Id.t * ml_type) list;
+  (* Declarations to be lifted to the enclosing scope (hoisted fixpoints). *)
   mutable pending_lifted_decls : cpp_decl list;
+  (* Nesting depth of let ... in expressions; used for unique name
+     generation in nested scopes. *)
   mutable current_letin_depth : int;
+  (* Escape analysis results: variables whose values are consumed (moved)
+     exactly once, so they can be std::move'd. *)
   mutable move_owned_vars : Escape.IntSet.t;
+  (* Variables that are dead after this point (last use was in a move). *)
   mutable move_dead_after : Escape.IntSet.t;
+  (* When true, suppress tail-position moves (the caller handles them). *)
   mutable move_suppress_tail : bool;
+  (* Number of function parameters (offset for de Bruijn indices). *)
   mutable move_n_params : int;
+  (* Counter for generating unique match scrutinee variable names
+     (_mp0, _mp1, ...). Reset at function boundaries. *)
   mutable match_param_counter : int;
-  (* PROMOTED TYPE VARIABLES: Fields that were "promoted" from record values
-     to type parameters during concept generation (see table.ml for details).
-
-     [promoted_var_map] maps promoted field names to their C++ qualified types:
-       Example: "m_carrier" ↦ Tqualified(Tvar "_tcI0", "m_carrier")
-                prints as: typename _tcI0::m_carrier
-
-     Set by [gen_dfun] when generating template functions with typeclass params.
-     Used by [convert_ml_type_to_cpp_type] to resolve [Tvar(1000, name)] markers. *)
+  (* Maps promoted record fields to their C++ qualified types.
+     Example: "m_carrier" -> Tqualified(Tvar "_tcI0", "m_carrier")
+     (prints as: typename _tcI0::m_carrier).
+     Set by gen_dfun when generating template functions with typeclass
+     parameters. Used by convert_ml_type_to_cpp_type to resolve
+     Tvar(1000, name) markers. *)
   mutable promoted_var_map : (Id.t * cpp_type) list;
-  (* Context flag: are we inside a constructor expression (module-level static
-     initializer)? When true, promoted type vars that can't be resolved via
-     [promoted_var_map] fall back to [Tany] (std::any) instead of keeping
-     [Tvar(1000, name)] markers, because module-level aliases apply. *)
+  (* When true, we are inside a constructor expression (module-level static
+     initializer). Promoted type vars that can't be resolved via
+     promoted_var_map fall back to Tany (std::any) instead of keeping
+     Tvar(1000, name) markers, because module-level aliases apply. *)
   mutable in_constructor_expr : bool;
-  (* ITree extraction mode: controls whether itree types are erased (Sequential)
-     or preserved as std::shared_ptr<ITree<R>> (Reified) for observation. *)
+  (* ITree extraction mode: controls whether itree types are erased
+     (Sequential) or preserved as shared_ptr<ITree<R>> (Reified). *)
   mutable itree_mode : itree_extraction_mode;
-  (* When true, eta_fun keeps CPPmove wrappers on captured args and uses [&]
-     capture instead of [=]. Set by the MLletin handler when it detects the
-     bound variable is used at most once and does not escape. *)
+  (* When true, eta_fun keeps CPPmove wrappers on captured args and uses
+     [&] capture instead of [=]. Set by the MLletin handler when the bound
+     variable is used at most once and does not escape. *)
   mutable eta_keep_moves : bool;
-  (* Counter for generating unique [_cs] / [_cs1] / [_cs2] cache variable
-     names when [Scustom_case] scrutinee caching is needed.  Reset at
-     function boundaries, same pattern as [match_param_counter]. *)
+  (* Counter for generating unique _cs / _cs1 / _cs2 cache variable names
+     for Scustom_case scrutinee caching. Reset at function boundaries. *)
   mutable cs_counter : int;
   (* When generating a method body, holds the set of self-references
-     (the inductive type(s) this method belongs to).  Merged into the
-     [ns] argument of [convert_ml_type_to_cpp_type] so that self-refs
-     inside container types (e.g. [List<tree>]) get [shared_ptr] wrapping,
-     matching the struct definition.  Empty outside method bodies. *)
+     (the inductive type(s) this method belongs to). Merged into the ns
+     argument of convert_ml_type_to_cpp_type so that self-refs inside
+     container types (e.g. List<tree>) get shared_ptr wrapping, matching
+     the struct definition. Empty outside method bodies. *)
   mutable method_self_ns : Refset'.t;
-  (* When generating a custom constructor arg, holds the expected ML type for
-     the argument being generated (from the enclosing constructor's type params).
-     Used by gen_ctor_call to recover concrete element types for nil lists when
-     the ML type annotation has unresolved metas (Tmeta{contents=None}). *)
+  (* When generating a custom constructor arg, holds the expected ML type
+     for the argument (from the enclosing constructor's type params). Used
+     by gen_ctor_call to recover concrete element types for nil lists when
+     the ML type annotation has unresolved metas. *)
   mutable expected_ml_type_for_arg : ml_type option;
-  (* Track which lifted function refs have already been added so that the same
-     helper (e.g. _index_eq_dec_F) is emitted only once per file even when
-     multiple functions in the same module all use it. Reset per-file via
-     clear_seen_lifted_refs. *)
+  (* Tracks which lifted function refs have already been emitted so that
+     the same helper (e.g. _index_eq_dec_F) appears only once per file.
+     Reset per-file via clear_seen_lifted_refs. *)
   mutable seen_lifted_refs : GlobRef.t list;
 }
 
@@ -341,27 +314,16 @@ let tctx =
     seen_lifted_refs = [];
   }
 
-(** {3 Accessor wrappers} --- thin layer over {!tctx} fields. *)
-
-(** Set the template type variables for the function currently being translated. *)
 let set_current_type_vars (tvars : Id.t list) = tctx.current_type_vars <- tvars
-
-(** Return the template type variables of the current function. *)
 let get_current_type_vars () = tctx.current_type_vars
-
-(** Reset the current type variables to the empty list. *)
 let clear_current_type_vars () = tctx.current_type_vars <- []
 
-(** Store 1-indexed parameter types for the current function.
-    Used to recover erased type info at call sites. *)
 let set_current_param_types (params : (Id.t * ml_type) list) =
   tctx.current_param_types <- List.mapi (fun i (_, ty) -> (i + 1, ty)) params
 
-(** Look up an ML parameter type by its 1-based index. *)
 let get_param_type_by_index (idx : int) : ml_type option =
   List.assoc_opt idx tctx.current_param_types
 
-(** Reset the current parameter types to the empty list. *)
 let clear_current_param_types () = tctx.current_param_types <- []
 
 let lifted_decl_ref = function
@@ -370,15 +332,15 @@ let lifted_decl_ref = function
   | _ -> None
 
 (** Enqueue a declaration to be lifted to the enclosing scope.
-    Skips duplicate declarations (same GlobRef) so identical helpers like
-    _index_eq_dec_F are only emitted once per file even when multiple
-    functions use them. *)
+    Skips duplicate declarations (same GlobRef) so that identical helpers
+    (e.g. [_index_eq_dec_F]) are only emitted once per file even when
+    multiple functions in the same module use them. *)
 let add_lifted_decl (d : cpp_decl) =
   let is_dup =
     match lifted_decl_ref d with
     | None -> false
     | Some r ->
-      List.exists (Environ.QGlobRef.equal Environ.empty_env r) tctx.seen_lifted_refs
+      List.exists (globref_equal r) tctx.seen_lifted_refs
   in
   if not is_dup then begin
     ( match lifted_decl_ref d with
@@ -394,8 +356,7 @@ let take_lifted_decls () =
   ds
 
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
-    new output file so that identical helpers in different files are not
-    suppressed. *)
+    new output file so identical helpers in different files are not suppressed. *)
 let clear_seen_lifted_refs () = tctx.seen_lifted_refs <- []
 
 (** Prepend bindings to the de Bruijn environment type stack. *)
@@ -412,6 +373,43 @@ let reset_env_types () = tctx.env_types <- []
 let rec resolve_tmeta = function
   | Miniml.Tmeta {contents = Some t} -> resolve_tmeta t
   | t -> t
+
+(** Unify a template [cpp_type] with a concrete [cpp_type] to extract type
+    variable bindings. Recursively walks matching type constructors ([Tglob],
+    [Tfun], [Tref], [Tmod], [Tnamespace]) and collects [(id, concrete_ty)]
+    pairs wherever [tmpl] has a [Tvar].
+
+    @param tmpl  the template type (may contain [Tvar] holes)
+    @param conc  the concrete type to unify against
+    @return association list of type variable bindings *)
+let rec extract_tvar_map tmpl conc =
+  match (tmpl, conc) with
+  | Tvar (_, Some id), _ -> [(id, conc)]
+  | Tglob (g1, tys1, _), Tglob (g2, tys2, _)
+    when globref_equal g1 g2
+         && List.length tys1 = List.length tys2 ->
+    List.concat (List.map2 extract_tvar_map tys1 tys2)
+  | Tfun (args1, ret1), Tfun (args2, ret2)
+    when List.length args1 = List.length args2 ->
+    List.concat (List.map2 extract_tvar_map args1 args2)
+    @ extract_tvar_map ret1 ret2
+  | Tref t1, Tref t2 -> extract_tvar_map t1 t2
+  | Tmod (_, t1), Tmod (_, t2) -> extract_tvar_map t1 t2
+  | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
+  | _ -> []
+
+(** Search an ML type for the first self-referential or mutually-recursive
+    subtype, returning its type arguments. Recurses into [Tglob] type
+    arguments and resolves [Tmeta] indirections.
+
+    @param is_self_or_mutual  predicate identifying self/mutual references
+    @return [Some args] for the first matching [Tglob], or [None] *)
+let rec find_self_ref_args ~is_self_or_mutual = function
+  | Miniml.Tglob (r, args, _) when is_self_or_mutual r -> Some args
+  | Miniml.Tglob (_, args, _) ->
+    List.find_map (find_self_ref_args ~is_self_or_mutual) args
+  | Miniml.Tmeta {contents = Some t} -> find_self_ref_args ~is_self_or_mutual t
+  | _ -> None
 
 (** Check if an ML type is directly erased (non-recursive, top-level only).
     Matches unresolved [Tmeta], [Tdummy], and [Tvar]. *)
@@ -732,7 +730,7 @@ let resolve_indref_base ?(no_custom_inductives = Refset'.empty)
     else if parent_is_cap || String.equal base "nat" then cap
     else if
       List.exists
-        (Environ.QGlobRef.equal Environ.empty_env r)
+        (globref_equal r)
         (get_local_inductives ())
     then
       if Common.get_force_qualified_capitalization ()
@@ -784,7 +782,7 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
       let enum_name = Common.capitalize_last_component base in
       if
         List.exists
-          (Environ.QGlobRef.equal Environ.empty_env g)
+          (globref_equal g)
           (get_local_inductives ())
       then enum_name
       else (
@@ -827,7 +825,7 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
              needed — matching the old behaviour of the catch-all [_ -> ""]
              branch. *)
           if List.exists
-               (Environ.QGlobRef.equal Environ.empty_env g)
+               (globref_equal g)
                (get_local_inductives ())
           then ""
           else if not (Common.get_force_qualified_capitalization ())
@@ -1138,22 +1136,28 @@ let rec render_cpp_expr_simple = function
   | CPPraw s -> Some s
   | _ -> None
 
-(** Generate inline C++ clone code for a constructor field, converting
-    from [src_ty] to [dst_ty].
+(** Generate inline C++ clone code for a constructor field, converting from
+    [src_ty] to [dst_ty].
 
-    Type conversion matrix (rows = source, columns = destination):
+    Type conversion cases handled:
     - [unique_ptr<S> -> unique_ptr<T>]: null-check, dereference, make_unique
     - [unique_ptr<T> -> T]: dereference (converting ctor if types differ)
     - [shared_ptr<T> -> T]: dereference (converting ctor if types differ)
     - [T -> unique_ptr<T>]: wrap in make_unique
     - [optional<ptr<T>> -> optional<T>]: null-check + unwrap inner ptr
     - [optional<T> -> optional<ptr<T>>]: value-check + wrap in ptr
-    - [Tglob(g, ts1) -> Tglob(g, ts2)]: same container, different elems
-    - Everything else (including type variables): converting constructor
+    - [Tglob(g, ts1) -> Tglob(g, ts2)]: same container, different elements
+    - Everything else (type variables, scalars): converting constructor
 
     Uses [render_cpp_type_for_raw_template] to produce type strings for
     [CPPraw]-based converting constructors, since [pp_cpp_type] renders
-    custom-extracted types differently (e.g. namespace qualification). *)
+    custom-extracted types with different namespace qualification.
+
+    @param skip    predicate for GlobRefs to skip during qualification
+    @param src_ty  the source C++ type (storage representation)
+    @param dst_ty  the destination C++ type (API representation)
+    @param expr    the C++ expression to clone/convert
+    @return a [cpp_expr] that produces a value of type [dst_ty] *)
 let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   let render ty =
     render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
@@ -2755,7 +2759,7 @@ let rec convert_ml_type_to_cpp_type
           let is_local =
             Refset'.mem g ns
             || List.exists
-                 (Environ.QGlobRef.equal Environ.empty_env g)
+                 (globref_equal g)
                  !local_inductives
           in
           if is_local && tvars <> [] then
@@ -2798,7 +2802,7 @@ let rec convert_ml_type_to_cpp_type
         let is_local =
           Refset'.mem g ns
           || List.exists
-               (Environ.QGlobRef.equal Environ.empty_env g)
+               (globref_equal g)
                !local_inductives
         in
         if is_local then
@@ -2826,7 +2830,7 @@ let rec convert_ml_type_to_cpp_type
         let is_local =
           is_self_ref
           || List.exists
-               (Environ.QGlobRef.equal Environ.empty_env g)
+               (globref_equal g)
                !local_inductives
         in
         let is_uniform_self_ref =
@@ -2897,8 +2901,6 @@ let rec convert_ml_type_to_cpp_type
     Tid_external (Id.of_string_soft "std::string", [])
   | Tunknown -> Tany
   | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string "axiom"), [], [])
-(* let _ = print_endline "TODO: TMETA OR TDUMMY OR TUNKNOWN OR TAXIOM" in assert
-   false *)
 
 (** Convert ML type arguments to C++ template parameters, applying type
     simplification and handling out-of-scope type variables.
@@ -3541,7 +3543,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               let body_subst =
                 match (bare_cpp_ty, stored_cpp_ty) with
                 | Tglob (g1, [], _), Tshared_ptr (Tglob (g2, [], _))
-                  when Environ.QGlobRef.equal Environ.empty_env g1 g2 ->
+                  when globref_equal g1 g2 ->
                   Some (id, CPPderef (CPPvar id))
                 | _ -> None
               in
@@ -3936,7 +3938,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ty in
     ( match ty with
     | Tfun (dom, cod) ->
-      eta_fun env (MLglob (x, tys)) [] (* TODO: could be only if contains '%' *)
+      eta_fun env (MLglob (x, tys)) []
     | _ -> mk_cppglob x (build_template_params env tvars tys) )
   | MLglob (x, tys) ->
     let tvars = get_current_type_vars () in
@@ -4763,7 +4765,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     (* Unreachable/absurd case - e.g., match on empty type *)
     CPPabort msg
   | MLaxiom s -> CPPabort ("unrealized axiom: " ^ s)
-  | _ -> raise TODO
+  | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
 (** Handle eta expansion, curried function application, and promoted type arg
     resolution. Recovers erased template type args at call sites where C++ can't
@@ -5869,7 +5871,7 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     let temps = build_template_params env tvars tys in
     let is_local_ind =
       List.exists
-        (Environ.QGlobRef.equal Environ.empty_env r)
+        (globref_equal r)
         (get_local_inductives ())
     in
     let ind_type =
@@ -5986,7 +5988,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     | _ -> None
   in
   let is_self_or_mutual r =
-    Environ.QGlobRef.equal Environ.empty_env r ind_ref
+    globref_equal r ind_ref
     || match r, ind_kn_opt with
        | GlobRef.IndRef (kn2, _), Some kn ->
          MutInd.CanOrd.equal kn2 kn
@@ -6055,16 +6057,9 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
            nested in type args) and check if its type arguments match the
            parent's params uniformly. *)
         let is_uniform_self_ref_at_def i =
-          let rec find_self_ref_args = function
-            | Miniml.Tglob (r, args, _) when is_self_or_mutual r -> Some args
-            | Miniml.Tglob (_, args, _) ->
-              List.find_map find_self_ref_args args
-            | Miniml.Tmeta {contents = Some t} -> find_self_ref_args t
-            | _ -> None
-          in
           match List.nth_opt non_erased_def_site_field_tys i with
           | Some ty -> begin
-            match find_self_ref_args ty with
+            match find_self_ref_args ~is_self_or_mutual ty with
             | Some args ->
               let n_params = Table.get_ctor_num_param_vars cname in
               List.length args = n_params
@@ -6317,7 +6312,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
   let resolve_tvar_type typ candidate =
     match (typ, candidate) with
     | Miniml.Tglob (r1, _, _), Miniml.Tglob (r2, _, _)
-      when Environ.QGlobRef.equal Environ.empty_env r1 r2
+      when globref_equal r1 r2
            && has_tvar typ
            && not (has_tvar candidate) -> candidate
     | _ -> typ
@@ -7587,22 +7582,6 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             | t -> t
           in
           let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
-          let rec extract_tvar_map tmpl conc =
-            match (tmpl, conc) with
-            | Tvar (_, Some id), _ -> [(id, conc)]
-            | Tglob (g1, tys1, _), Tglob (g2, tys2, _)
-              when Environ.QGlobRef.equal Environ.empty_env g1 g2
-                   && List.length tys1 = List.length tys2 ->
-              List.concat (List.map2 extract_tvar_map tys1 tys2)
-            | Tfun (args1, ret1), Tfun (args2, ret2)
-              when List.length args1 = List.length args2 ->
-              List.concat (List.map2 extract_tvar_map args1 args2)
-              @ extract_tvar_map ret1 ret2
-            | Tref t1, Tref t2 -> extract_tvar_map t1 t2
-            | Tmod (_, t1), Tmod (_, t2) -> extract_tvar_map t1 t2
-            | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
-            | _ -> []
-          in
           let tvar_map =
             match tctx.current_cpp_return_type with
             | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
@@ -8569,22 +8548,6 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             | t -> t
           in
           let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
-          let rec extract_tvar_map tmpl conc =
-            match (tmpl, conc) with
-            | Tvar (_, Some id), _ -> [(id, conc)]
-            | Tglob (g1, tys1, _), Tglob (g2, tys2, _)
-              when Environ.QGlobRef.equal Environ.empty_env g1 g2
-                   && List.length tys1 = List.length tys2 ->
-              List.concat (List.map2 extract_tvar_map tys1 tys2)
-            | Tfun (args1, ret1), Tfun (args2, ret2)
-              when List.length args1 = List.length args2 ->
-              List.concat (List.map2 extract_tvar_map args1 args2)
-              @ extract_tvar_map ret1 ret2
-            | Tref t1, Tref t2 -> extract_tvar_map t1 t2
-            | Tmod (_, t1), Tmod (_, t2) -> extract_tvar_map t1 t2
-            | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
-            | _ -> []
-          in
           let tvar_map =
             match tctx.current_cpp_return_type with
             | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
@@ -10454,7 +10417,7 @@ let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
     generic AST visitors for structural recursion. *)
 let rec glob_subst_expr (id : GlobRef.t) (repl : cpp_expr) (e : cpp_expr) =
   match e with
-  | CPPglob (id', _, _) when Environ.QGlobRef.equal Environ.empty_env id id' ->
+  | CPPglob (id', _, _) when globref_equal id id' ->
     repl
   | _ -> map_expr (glob_subst_expr id repl) (glob_subst_stmt id repl) Fun.id e
 
@@ -10524,7 +10487,7 @@ let detect_non_forwarded_params (self_ref : GlobRef.t) (n_params : int)
     (body : ml_ast) : int list =
   detect_non_forwarded_params_generic
     ~is_self_call:(fun _depth -> function
-      | MLglob (r, _) -> Environ.QGlobRef.equal Environ.empty_env r self_ref
+      | MLglob (r, _) -> globref_equal r self_ref
       | _ -> false )
     n_params body
 
@@ -11097,12 +11060,6 @@ let gen_dfun n b cty ty temps =
         | _ -> (x, ty) )
       ids
   in
-  (* TODO: below is needed for lambdas in recursive positions, but is badddddd. *)
-  (* let rec_fun_tys = List.map (fun (_,t, _) ->
-    match t with
-    | TTfun (dom, cod) -> Tref (Tmod (TMconst, Tfun (dom, cod)))
-    | _ -> CErrors.anomaly (Pp.str "gen_decl: recursive function type expected to be TTfun")) fun_tys in
-  let rec_call = CPPglob (n, List.map (fun (_, id) -> Tvar (0, Some id)) temps @ rec_fun_tys) in *)
   (* Add type class instance template parameters - instance types come first *)
   let typeclass_temps_basic =
     List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
@@ -11118,12 +11075,7 @@ let gen_dfun n b cty ty temps =
      type params for Tvar index resolution below. *)
   let regular_temps = temps @ List.map (fun (_, t, n) -> (t, n)) fun_tys in
   let temps = typeclass_temps_basic @ regular_temps in
-  (* TODO: Build requires clause for type class constraints
-     For now, type class constraints are not enforced at compile time.
-     The constraints would use the typeclass_temps info to generate
-     requires clauses like: requires Eq<I, T1> *)
-  (* let forward_fun_args stmt = List.fold_left (fun s (x, _, fid) ->
-    var_subst_stmt x (CPPforward (Tvar (0, Some fid), CPPvar x)) s) stmt fun_tys in *)
+  (* Requires clause for typeclass constraints not yet implemented. *)
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
      Exclude typeclass instance params — they are not ML type variables
@@ -11442,7 +11394,6 @@ let gen_dfun n b cty ty temps =
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
 
-(** TODO: is this used? Likely, but the template stuff shouldn't be. *)
 let gen_sfun n b dom cod temps =
   let all_params, b = collect_lams b in
   let n_params = List.length all_params in
@@ -12970,7 +12921,7 @@ let ml_type_has_nested_self_ref ~ind_ref ml_ty =
     | _ -> None
   in
   let is_self_or_mutual r =
-    Environ.QGlobRef.equal Environ.empty_env r ind_ref
+    globref_equal r ind_ref
     || match r, ind_kn_opt with
        | GlobRef.IndRef (kn2, _), Some kn ->
          MutInd.CanOrd.equal kn2 kn
@@ -13002,20 +12953,13 @@ let ml_self_ref_is_uniform ~ind_ref ~cname ml_ty =
     | _ -> None
   in
   let is_self_or_mutual r =
-    Environ.QGlobRef.equal Environ.empty_env r ind_ref
+    globref_equal r ind_ref
     || match r, ind_kn_opt with
        | GlobRef.IndRef (kn2, _), Some kn ->
          MutInd.CanOrd.equal kn2 kn
        | _ -> false
   in
-  let rec find_self_ref_args = function
-    | Miniml.Tglob (r, args, _) when is_self_or_mutual r -> Some args
-    | Miniml.Tglob (_, args, _) ->
-      List.find_map find_self_ref_args args
-    | Miniml.Tmeta {contents = Some t} -> find_self_ref_args t
-    | _ -> None
-  in
-  match find_self_ref_args ml_ty with
+  match find_self_ref_args ~is_self_or_mutual ml_ty with
   | Some args ->
     let n_params = Table.get_ctor_num_param_vars cname in
     List.length args = n_params
@@ -13283,7 +13227,7 @@ let gen_ind_header_v2
          — use classify_ml_self_ref for that. *)
       let rec is_direct_self_ref = function
         | Miniml.Tglob (r, args, _) ->
-          Environ.QGlobRef.equal Environ.empty_env r name
+          globref_equal r name
           && List.length args = List.length vars
           && List.for_all
                (fun (j, arg) ->
@@ -13331,7 +13275,7 @@ let gen_ind_header_v2
          that reach through mutual partners to extract self-refs. *)
       let is_direct_ref_to partner_name = function
         | Miniml.Tglob (r, _, _) ->
-          Environ.QGlobRef.equal Environ.empty_env r partner_name
+          globref_equal r partner_name
         | _ -> false
       in
       let rec is_direct_ref_to_any partners ml_ty =
@@ -13355,7 +13299,7 @@ let gen_ind_header_v2
         else
           let render_q_destr ty =
             let skip g =
-              Environ.QGlobRef.equal Environ.empty_env g name
+              globref_equal g name
             in
             render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
           in
@@ -14176,7 +14120,7 @@ let gen_ind_header_v2
                        in
                        let render_q ty =
                          let skip g =
-                           Environ.QGlobRef.equal Environ.empty_env g name
+                           globref_equal g name
                          in
                          render_cpp_type_for_raw_template
                            (qualify_inductives ~skip ty)

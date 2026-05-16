@@ -47,7 +47,11 @@ let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
 
 (** Check if an identifier is referenced in a list of statements.
     Used to decide whether a parameter name should be emitted or omitted
-    (idiomatic C++ convention for intentionally unused parameters). *)
+    (idiomatic C++ convention for intentionally unused parameters).
+
+    @param target_id  the identifier to search for
+    @param body       the statement list to search through
+    @return [true] if [target_id] appears as a [CPPvar] anywhere in [body] *)
 let stmts_reference_id target_id body =
   let exception Found in
   let rec check_expr e =
@@ -69,7 +73,11 @@ let stmts_reference_id target_id body =
 
 (** Collect all [CPPvar] identifiers referenced in a statement list.
     Single traversal alternative to calling [stmts_reference_id] per
-    parameter — O(body) instead of O(n * body) for n parameters. *)
+    parameter — O(body) instead of O(n * body) for n parameters.
+
+    @param body  the statement list to scan
+    @return the set of all identifiers that appear as [CPPvar] nodes (or
+            as C identifier tokens inside [CPPraw] strings) in [body] *)
 let collect_referenced_ids body =
   let ids = ref Id.Set.empty in
   let rec check_expr e =
@@ -125,7 +133,13 @@ let collect_referenced_ids body =
 
     Returns [(needs_capture, uses_this)].  Also recurses into nested lambdas:
     if a nested lambda captures from the outer lambda's scope, that counts
-    as the outer lambda needing capture. *)
+    as the outer lambda needing capture.
+
+    @param params  the lambda's formal parameters as [(type, optional_name)] pairs
+    @param body    the lambda's statement body
+    @return [(needs_capture, uses_this)] where [needs_capture] is [true] when
+            the lambda has free variables (so it must use [[&]] or [[=]]) and
+            [uses_this] is [true] when the body references the enclosing [this] *)
 let lambda_needs_capture
     (params : (Minicpp.cpp_type * Names.Id.t option) list)
     (body : Minicpp.cpp_stmt list) : bool * bool =
@@ -282,21 +296,23 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
 
 (** {2 Pretty-printing C++ syntax.} *)
 
-(** Try evaluating a C++ code-generation thunk; on [TODO] exception, return
-    fallback [o]. *)
-let try_cpp c o = try c with TODO -> o
-
 (** Print a C++ type modifier keyword (const, static, extern). *)
 let pp_tymod = function
   | TMconst -> str "const "
   | TMstatic -> str "static "
   | TMextern -> str "extern "
 
-(** Print a qualified standard-library angle-bracket type: [std::label<s>]. *)
+(** Print a qualified standard-library angle-bracket type: [std::label<s>].
+
+    @param label  the identifier after [std::] (e.g. ["variant"], ["function"])
+    @param s      the pre-rendered type argument list *)
 let std_angle label s =
   str (sn ()).ns ++ str "::" ++ str label ++ str "<" ++ s ++ str ">"
 
-(** Print an unqualified angle-bracket type: [label<s>]. *)
+(** Print an unqualified angle-bracket type: [label<s>].
+
+    @param label  the type name (e.g. a typedef or BDE name)
+    @param s      the pre-rendered type argument list *)
 let cpp_angle label s = str label ++ str "<" ++ s ++ str ">"
 
 (** Split a rendered C++ string on semicolons while respecting string
@@ -357,7 +373,12 @@ type custom_case =
 (** Test whether a character is an ASCII digit. *)
 let is_digit c = c >= '0' && c <= '9'
 
-(** Parses an integer starting at [i], returns (value, next_index) *)
+(** Parses an integer starting at [i], returns [(value, next_index)] or [None]
+    if no digit is found at [i].
+
+    @param s  the string being scanned
+    @param i  starting position in [s]
+    @param n  length of [s] (upper bound for the scan) *)
 let parse_number s i n =
   let rec aux j = if j < n && is_digit s.[j] then aux (j + 1) else j in
   let j = aux i in
@@ -374,7 +395,11 @@ let parse_number s i n =
    arguments) *)
 
 (** Parses fixed custom placeholders like [%scrut] or [%ty] in a custom
-    extraction syntax string. Returns a list of {!custom_case} chunks. *)
+    extraction syntax string. Returns a list of {!custom_case} chunks.
+
+    @param esc  the fixed keyword after [%] (e.g. ["scrut"] or ["ty"])
+    @param cc   the {!custom_case} token to emit when the placeholder is found
+    @param s    the raw template string to scan *)
 let parse_custom_fixed esc cc s =
   let n = String.length s in
   let esc_len = String.length esc in
@@ -399,7 +424,11 @@ let parse_custom_fixed esc cc s =
   in
   aux 0 0 []
 
-(** Parses single-argument custom placeholders like %a0, %t12 *)
+(** Parses single-argument custom placeholders like [%a0], [%t12].
+
+    @param esc  the letter immediately after [%] (e.g. ["a"] or ["t"])
+    @param f    maps the parsed integer index to a {!custom_case} token
+    @param s    the raw template string to scan *)
 let parse_numbered_args esc f s =
   let n = String.length s in
   let esc_len = String.length esc in
@@ -424,7 +453,12 @@ let parse_numbered_args esc f s =
   in
   aux 0 0 []
 
-(** Parses double-argument custom placeholders like %b0a1, %b10a20 *)
+(** Parses double-argument custom placeholders like [%b0a1], [%b10a20].
+
+    @param esc1  the letter after [%] for the first index (e.g. ["b"])
+    @param esc2  the letter after the first index for the second (e.g. ["a"])
+    @param f     maps [(idx1, idx2)] to a {!custom_case} token
+    @param s     the raw template string to scan *)
 let parse_custom_numbered_binders esc1 esc2 f s =
   let n = String.length s in
   let len1 = String.length esc1 in
@@ -454,7 +488,10 @@ let parse_custom_numbered_binders esc1 esc2 f s =
 
 (** Expand placeholders in a command list using a parser function.
     For each [CCstring] chunk, apply [parser] to produce new chunks.
-    Non-string chunks are passed through unchanged. *)
+    Non-string chunks are passed through unchanged.
+
+    @param parser  function that splits a raw string into {!custom_case} chunks
+    @param cmds    existing command list to expand *)
 let expand_custom_chunks parser cmds =
   List.fold_left
     (fun prev curr ->
@@ -495,7 +532,10 @@ let gen_placeholder_args n =
 
 (** Insert ["template "] before the last [::]-separated component of a
     qualified name.  E.g. ["C::foo"] becomes ["C::template foo"].
-    Returns [name_pp] unchanged if the string contains no [:]. *)
+    Returns [name_pp] unchanged if the string contains no [:].
+
+    @param name_pp   the pretty-printed form of the name (returned or modified)
+    @param name_str  the string form of [name_pp] used for position arithmetic *)
 let insert_template_keyword name_pp name_str =
   if String.contains name_str ':' then
     let last_colon_pos = String.rindex name_str ':' in
@@ -509,7 +549,10 @@ let insert_template_keyword name_pp name_str =
     name_pp
 
 (** Print a type variable by de Bruijn index, looking up in [vl]. Falls back to
-    [T<n>] if index is out of range. *)
+    [T<n>] if index is out of range.
+
+    @param vl  list of type variable names (de Bruijn, 1-indexed from the right)
+    @param i   1-based de Bruijn index into [vl] *)
 let print_cpp_type_var vl i =
   try pp_tvar (List.nth vl (pred i)) with Failure _ -> str "T" ++ int i
 
@@ -632,7 +675,7 @@ let rec pp_cpp_type par vl t =
           cmds
       | _ ->
         (* Non-custom cases *)
-        let type_name = pp_inductive_type_name_cached r in
+        let type_name = pp_inductive_type_name r in
         let name_str = Pp.string_of_ppcmds type_name in
         ( match tys with
         | [] ->
@@ -668,7 +711,7 @@ let rec pp_cpp_type par vl t =
          get the prefix. EXCEPTION: Eponymous records are merged into the module
          struct, so we use just the capitalized name without namespace
          qualification (CHT, not CHT::cHT). *)
-      let name, _needs_ns = inductive_name_info_cached r in
+      let name, _needs_ns = inductive_name_info r in
       ( match (r, t) with
       | GlobRef.IndRef _, Tglob (r', args, _)
         when Environ.QGlobRef.equal Environ.empty_env r r' ->
@@ -769,7 +812,7 @@ let rec pp_cpp_type par vl t =
               else str cap in
             cap_pp ++ templates
           else
-            let ns_name, needs_ns = inductive_name_info_cached r in
+            let ns_name, needs_ns = inductive_name_info r in
             if is_merged_inductive_cached r then
               ns_name ++ templates
             else if needs_ns then
@@ -781,7 +824,7 @@ let rec pp_cpp_type par vl t =
           if is_qualified_name type_name_str then
             pp_rec false ty
           else
-            let ns_name, needs_ns = inductive_name_info_cached r in
+            let ns_name, needs_ns = inductive_name_info r in
             if needs_ns && not (is_merged_inductive_cached r) then
               ns_name ++ str "::" ++ pp_rec false ty
             else
@@ -834,9 +877,14 @@ and expr_contains_string e =
 and pp_typename_member ty id =
   pp_cpp_type false [] (Tqualified (ty, id))
 
-(** Pretty-print a MiniCpp expression as C++ source. [env] is the de Bruijn
-    variable name environment. [args] is the list of accumulated arguments (for
-    partial application). *)
+(** Pretty-print a MiniCpp expression as C++ source.
+
+    @param env   pair [(vl, any_ids)] where [vl] is the list of type-variable
+                 names and [any_ids] is the set of identifiers whose C++ type
+                 is [std::any] in the current scope
+    @param args  accumulated argument expressions for partial application
+                 (in reverse order; applied via {!pp_apply_cpp})
+    @param t     the MiniCpp expression to render *)
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
@@ -954,7 +1002,7 @@ and pp_cpp_expr env args t =
     let base_name =
       match x with
       | GlobRef.IndRef _ ->
-        let ns_name, needs_ns = inductive_name_info_cached x in
+        let ns_name, needs_ns = inductive_name_info x in
         let type_name_str = str_global Type x in
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_cached x then
@@ -1023,7 +1071,7 @@ and pp_cpp_expr env args t =
       | None, _ ->
         (* Normal case: function not in eponymous struct *)
         let name = str_global Term x in
-        let qualified_name = wrapper_qualify_name_cached x name in
+        let qualified_name = wrapper_qualify_name x name in
         if qualified_name <> name then
           str qualified_name
         else if needs_global_qualifier x then
@@ -1094,7 +1142,7 @@ and pp_cpp_expr env args t =
     let full_name = if is_accessor then full_name ++ str "()" else full_name in
     apply full_name
   | CPPnamespace (r, t) ->
-    let name, _ = inductive_name_info_cached r in
+    let name, _ = inductive_name_info r in
     h (name ++ str "::" ++ pp_cpp_expr env args t)
   | CPPfun_call (CPPglob (n, tys, Some ci), ts) when ci.ci_inline <> None ->
     let s = Option.get ci.ci_inline in
@@ -1682,7 +1730,10 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args e
     ++ str ")"
 
-(** Pretty-print a MiniCpp statement as C++ source. *)
+(** Pretty-print a MiniCpp statement as C++ source.
+
+    @param env   name environment (see {!pp_cpp_expr})
+    @param args  accumulated argument list forwarded to sub-expression printers *)
 and pp_cpp_stmt env args = function
   | Sreturn None -> str "return;"
   | Sreturn (Some (CPPabort msg)) ->
@@ -1729,7 +1780,7 @@ and pp_cpp_stmt env args = function
     (* Generate switch statement for enum class matching. Use pp_global_name to
        get the unqualified base name, capitalize to match enum class
        definition. *)
-    let type_name = pp_inductive_type_name_cached ind in
+    let type_name = pp_inductive_type_name ind in
     let pp_branch (ctor, stmts) =
       str "case "
       ++ type_name
@@ -2189,7 +2240,10 @@ and is_constexpr_type = function
   | Tqualified (t, _) -> is_constexpr_type t
 
 (** Check if a function is constexpr-eligible: all param types AND return
-    type must be constexpr-eligible literal types. *)
+    type must be constexpr-eligible literal types.
+
+    @param ret_ty  the C++ return type to test
+    @param params  list of [(name, type)] pairs for all formal parameters *)
 and is_constexpr_eligible ret_ty params =
   is_constexpr_type ret_ty
   && List.for_all (fun (_, ty) -> is_constexpr_type ty) params
@@ -2208,6 +2262,9 @@ and body_is_throw = function
 
     @param can_constexpr  whether this call site may use [constexpr]
     @param throws         whether the body unconditionally throws
+    @param no_pure        when [true], suppress [constexpr] even if the
+                          function would otherwise qualify (used for functions
+                          that operate on [std::any] or axiom types)
     @param ret_ty         the C++ return type
     @param params         [(name, type)] pairs for all formal parameters *)
 and fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
@@ -2255,7 +2312,13 @@ and resolve_tvars_to_any = function
 
 (** Wrap a pretty-printed expression in [std::any_cast<T>(...)] when it
     returns [std::any] but the context expects a concrete type [T].
-    Unresolved type variables in [T] are replaced with [std::any]. *)
+    Unresolved type variables in [T] are replaced with [std::any].
+
+    @param expr         the original MiniCpp expression (used for type checks)
+    @param expr_printed the already pretty-printed form of [expr]
+    @param expected_ty  the C++ type expected by the surrounding context
+    @param vl           type variable names in scope for rendering [expected_ty]
+    @return [expr_printed] unchanged, or wrapped in [any_cast<expected_ty>(...)] *)
 and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
   if (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
      && is_concrete_cpp_type expected_ty
@@ -2423,7 +2486,12 @@ let pp_template_param (tt, id) =
     constraints.  Each [TTfun(dom, cod)] with parameter name [F] becomes
     [std::is_invocable_r_v<cod, F &, dom1 &, dom2 &, ...>].  Returns [None]
     when no [TTfun] parameters are present.  In BDE mode, uses
-    [bsl::is_invocable_r_v] instead. *)
+    [bsl::is_invocable_r_v] instead.
+
+    @param tparams  list of [(template_type, id)] pairs from the surrounding
+                    template parameter declaration
+    @return [Some pp] where [pp] is the full [requires ...] clause, or [None]
+            if no [TTfun] constraints are present *)
 let pp_requires_of_tparams tparams =
   let invocable_r =
     if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
@@ -2472,7 +2540,11 @@ let pp_doc_comment_for_name ?(indent = "") name =
     let lines = Doc_comments.format_as_cpp_lines text in
     prlist_with_sep fnl (fun l -> str (indent ^ l)) lines ++ fnl ()
 
-(** pp_cpp_field takes optional struct_name for printing constructors *)
+(** Pretty-print a single MiniCpp struct field as C++ source.
+
+    @param struct_name  the enclosing struct's pretty-printed name, forwarded
+                        to constructor and destructor printers that need it
+    @param env          name environment for sub-expression pretty-printing *)
 let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
   | Fvar (id, ty) ->
     (* Strip d_ prefix for doc comment lookup (C++ fields are d_fst, Rocq
@@ -2706,7 +2778,13 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     str s
 
-(** Helper to print fields with visibility and section tag grouping *)
+(** Print the body of a struct: groups fields by [(visibility, section_tag)],
+    emits [public:]/[private:] labels only when necessary, and inserts
+    section-tag comments (e.g. [// TYPES], [// DATA]).
+
+    @param struct_name  forwarded to {!pp_cpp_field} for constructor/destructor
+    @param env          name environment for sub-expression pretty-printing
+    @param fields       list of [(field, visibility, section_tag)] triples *)
 and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
   (* Group consecutive fields by (visibility, section_tag) *)
   let rec group_fields current_vis current_tag acc result = function
@@ -2797,7 +2875,14 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
     relative to other inline variables is unspecified.
 
     Registers the accessor in {!template_static_accessors} so that call sites
-    append [()] after the template arguments (see {!pp_cpp_expr}). *)
+    append [()] after the template arguments (see {!pp_cpp_expr}).
+
+    @param env      name environment (passed through for sub-expression use)
+    @param id       global reference identifying the data member (used for the
+                    function name and to register in [template_static_accessors])
+    @param ty       C++ type of the data member; [const] modifier is stripped
+                    before use inside the function body
+    @param expr_pp  already pretty-printed initializer expression *)
 let pp_meyers_singleton env id ty expr_pp =
   (let mp = modpath_of_r id in
    let lbl = label_of_r id in
@@ -2847,10 +2932,18 @@ let maybe_loopify decl =
     decl
 
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
-    namespaces/structs, functions, assignments, enums, etc. *)
+    namespaces/structs, functions, assignments, enums, etc.
+
+    Applies {!maybe_loopify} before rendering; use {!pp_cpp_decl_raw} directly
+    to skip that step.
+
+    @param env   name environment for sub-expression and sub-type printers
+    @param decl  the MiniCpp declaration to render *)
 let rec pp_cpp_decl env decl = pp_cpp_decl_raw env (maybe_loopify decl)
 
-(** Inner declaration printer, called after loopification has been applied. *)
+(** Inner declaration printer, called after loopification has been applied.
+
+    @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
@@ -3300,7 +3393,7 @@ and pp_cpp_decl_raw env = function
     ->
     let struct_name =
       match name with
-      | GlobRef.IndRef _ -> pp_inductive_type_name_cached name
+      | GlobRef.IndRef _ -> pp_inductive_type_name name
       | _ -> pp_global Type name
     in
     (* Emit each enum value, preceded by its doc comment if one exists.
@@ -3325,7 +3418,11 @@ and pp_cpp_decl_raw env = function
 (** {2 Pretty-printing of types. [par] is a boolean indicating whether
     parentheses are needed or not.} *)
 
-(** Convert a MiniML type to MiniCpp and pretty-print it as C++ source. *)
+(** Convert a MiniML type to MiniCpp and pretty-print it as C++ source.
+
+    @param par  whether to parenthesize the result (see {!pp_cpp_type})
+    @param vl   type variable names for de Bruijn index lookup
+    @param t    the MiniML type to convert and render *)
 let pp_type par vl t =
   let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] t in
   pp_cpp_type par vl cty

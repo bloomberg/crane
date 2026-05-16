@@ -33,7 +33,14 @@ val transform_decl :
 (** Pre-register a function definition for mutual recursion detection.
     Call this for all functions in a mutual fixpoint group before any of
     them are individually transformed, so that [transform_decl] can
-    detect and inline mutual calls. *)
+    detect and inline mutual calls.
+
+    @param refs   List of [(GlobRef.t, type_args)] pairs identifying the
+                  function — a single definition may be known under several
+                  global references in a mutual fixpoint group.
+    @param params Function parameters [(id, type)] used to reconstruct the
+                  callee's signature when inlining it into a caller.
+    @param body   Function body statements, stored verbatim for inlining. *)
 val register_fundef :
   (GlobRef.t * cpp_type list) list ->
   (Id.t * cpp_type) list ->

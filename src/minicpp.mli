@@ -390,11 +390,16 @@ type cpp_schema = int * cpp_type
 
 (** {2 Helper constructors} *)
 
-(** Construct a shared_ptr type wrapping an inductive type. *)
+(** Construct a shared_ptr type wrapping an inductive type.
+    @param id the global reference of the inductive type
+    @param vars type arguments to instantiate the inductive
+    @return [Tshared_ptr (Tglob (id, vars, []))] *)
 val ind_ty_ptr : GlobRef.t -> cpp_type list -> cpp_type
 
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
-    pretty-printer already handles: [Tref(Tref(t))] prints as [t&&]. *)
+    pretty-printer already handles: [Tref(Tref(t))] prints as [t&&].
+    @param ty the base type to wrap as an rvalue reference
+    @return [Tref (Tref ty)] *)
 val rval_ref : cpp_type -> cpp_type
 
 (** {2 Generic AST traversal combinators}
@@ -405,12 +410,19 @@ val rval_ref : cpp_type -> cpp_type
 
 (** [map_cpp_type f ty] applies [f] to every sub-type in [ty]. Use this to build
     type transformations: pass a function that handles your custom case and
-    delegates to [map_cpp_type f] for the recursive case. *)
+    delegates to [map_cpp_type f] for the recursive case.
+    @param f the transformation to apply at each node
+    @param ty the type to transform
+    @return the structurally-transformed type *)
 val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
-    descent. *)
+    descent.
+    @param fe transformation for immediate child expressions
+    @param fs transformation for immediate child statements
+    @param ft transformation for immediate child types
+    @return the structurally-transformed expression *)
 val map_expr :
   (cpp_expr -> cpp_expr) ->
   (cpp_stmt -> cpp_stmt) ->
@@ -420,7 +432,11 @@ val map_expr :
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
-    descent. *)
+    descent.
+    @param fe transformation for immediate child expressions
+    @param fs transformation for immediate child statements
+    @param ft transformation for immediate child types
+    @return the structurally-transformed statement *)
 val map_stmt :
   (cpp_expr -> cpp_expr) ->
   (cpp_stmt -> cpp_stmt) ->
@@ -431,7 +447,9 @@ val map_stmt :
 (** [iter_expr_children ~on_expr ~on_stmts e] calls [on_expr] on each
     immediate child expression and [on_stmts] on each immediate child
     statement list of [e]. Does not recurse — the caller controls recursion
-    depth through the callbacks. *)
+    depth through the callbacks.
+    @param on_expr callback for each immediate child expression
+    @param on_stmts callback for each immediate child statement list *)
 val iter_expr_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_expr -> unit
@@ -441,18 +459,27 @@ val iter_expr_children :
     statement list of [s]. Does not recurse. For [Smatch], visits the
     scrutinee, extra conditions, reuse condition and statements, and body
     for each branch. For [Scustom_case], visits the scrutinee and branch
-    bodies. *)
+    bodies.
+    @param on_expr callback for each immediate child expression
+    @param on_stmts callback for each immediate child statement list *)
 val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
 
 (** [fold_expr_children f acc e] folds [f] over the immediate child
-    expressions of [e], threading [acc].  Mirrors {!iter_expr_children}. *)
+    expressions of [e], threading [acc].  Mirrors {!iter_expr_children}.
+    @param f the folding function applied to each child expression
+    @param acc the initial accumulator value
+    @return the final accumulator after visiting all child expressions *)
 val fold_expr_children :
   ('a -> cpp_expr -> 'a) -> 'a -> cpp_expr -> 'a
 
 (** [fold_stmt_children ~on_expr ~on_stmts acc s] folds over the immediate
-    children of [s], threading [acc].  Mirrors {!iter_stmt_children}. *)
+    children of [s], threading [acc].  Mirrors {!iter_stmt_children}.
+    @param on_expr fold step for each immediate child expression
+    @param on_stmts fold step for each immediate child statement list
+    @param acc the initial accumulator value
+    @return the final accumulator after visiting all children *)
 val fold_stmt_children :
   on_expr:('a -> cpp_expr -> 'a) -> on_stmts:('a -> cpp_stmt list -> 'a) ->
   'a -> cpp_stmt -> 'a

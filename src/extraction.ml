@@ -192,7 +192,9 @@ let _ = Hook.set type_scheme_nb_args_hook type_scheme_nb_args'
    a matter of taste... See also Bug #3227 *)
 
 (** Generates a unique type variable name from a binder name, avoiding lexer
-    conflicts and unicode. *)
+    conflicts and unicode.
+    @param n Binder name from the Rocq term (may be anonymous or contain unicode)
+    @param vl List of already-used type variable names; the result is guaranteed fresh *)
 let make_typvar n vl =
   let id = id_of_name n in
   let id' =
@@ -224,7 +226,10 @@ let rec nb_default_params env sg c =
   | _ -> 0
 
 (** Enriches a type signature by marking implicit arguments as [Kill Kimplicit],
-    skipping the first [nb_params] parameters. *)
+    skipping the first [nb_params] parameters.
+    @param r Global reference whose declared implicits are looked up
+    @param s Type signature to enrich (list of [Keep]/[Kill] entries)
+    @param nb_params Number of leading parameters to skip before applying implicits *)
 let sign_with_implicits r s nb_params =
   let implicits = implicits_of_global r in
   let rec add_impl i = function
@@ -254,7 +259,9 @@ let db_from_sign s =
 (** {2 Create a type variable context from indications taken from an inductive
     type (see just below)} *)
 
-(** Builds a de Bruijn context for an inductive type from a position mapping. *)
+(** Builds a de Bruijn context for an inductive type from a position mapping.
+    @param dbmap Map from constructor argument positions to ML type variable indices
+    @param i Countdown index: counts down from [ndecls] to [1], building the list in reverse *)
 let rec db_from_ind dbmap i =
   if Int.equal i 0 then
     []
@@ -269,7 +276,10 @@ let rec db_from_ind dbmap i =
    [relmax] : total args number of the constructor \end{itemize} *)
 
 (** Parses inductive type arguments into parameter/real argument lists, mapping
-    Rocq args to ML type vars. *)
+    Rocq args to ML type vars.
+    @param si Signature of the inductive type ([Keep]/[Kill] list)
+    @param args Array of concrete arguments from a constructor head [(I args)]
+    @param relmax Total number of arguments of the constructor (used to convert de Bruijn levels) *)
 let parse_ind_args si args relmax =
   let rec parse i j = function
     | [] -> Int.Map.empty
@@ -282,7 +292,10 @@ let parse_ind_args si args relmax =
   parse 1 1 si
 
 (** Validates sort polymorphism compatibility, rejecting extractions that use
-    Prop/SProp instantiation. *)
+    Prop/SProp instantiation.
+    @param sigma Evar map used to resolve the universe instance [u]
+    @param gr Global reference being checked (used in the error message)
+    @param u Universe instance to validate *)
 let check_sort_poly sigma gr u =
   let u = EConstr.EInstance.kind sigma u in
   let qs, _ = UVars.Instance.to_array u in
@@ -409,7 +422,13 @@ let fake_match_projection env p =
    var anymore (in subterms for example). *)
 
 (** Extracts a Rocq CIC type into an ML type. The [db] context translates [Rel]
-    to [Tvar], and [j] is the next type var. *)
+    to [Tvar], and [j] is the next type var.
+    @param env Rocq environment for reduction and sort checking
+    @param sg Evar map for universe operations
+    @param db De Bruijn variable context mapping Rocq [Rel] indices to ML [Tvar] indices; [0] means the Rel is not a type var
+    @param j Next available ML type variable index; [0] means no new type vars are generated
+    @param c The Rocq term to extract as a type (possibly a type-level function)
+    @param args Arguments accumulated during [App] spine traversal *)
 let rec extract_type env sg db j c args =
   match EConstr.kind sg (whd_betaiotazeta env sg c) with
   | App (d, args') ->
@@ -583,7 +602,12 @@ and extract_type_app env sg db (r, s) args =
 (** {1 Extraction of a type scheme} *)
 
 (** Extracts a type scheme (universally quantified type) by decomposing [p]
-    lambdas with eta-expansion if needed. *)
+    lambdas with eta-expansion if needed.
+    @param env Rocq environment, extended with binders as lambdas are peeled
+    @param sg Evar map for universe operations
+    @param db De Bruijn variable context (see {!extract_type})
+    @param c The informative type-scheme term; must become a type after [p] more applications
+    @param p Number of remaining type arguments to strip (eta-expanded if fewer lambdas exist) *)
 and extract_type_scheme env sg db c p =
   if Int.equal p 0 then
     extract_type env sg db 0 c []
@@ -978,7 +1002,13 @@ and extract_really_ind env kn mib =
    - [dbmap] is a translation map (produced by a call to [parse_in_args])
    - [i] is the rank of the current product (initially [params_nb+1])} *)
 
-(** Extracts a constructor's type signature into a list of ML types. *)
+(** Extracts a constructor's type signature into a list of ML types.
+    @param env Rocq environment, extended as each product binder is consumed
+    @param sg Evar map for universe operations
+    @param db De Bruijn variable context for [Rel]→[Tvar] translation
+    @param dbmap Position-to-type-var map produced by {!parse_ind_args}
+    @param c Constructor type (starting after inductive parameters have been stripped)
+    @param i Rank of the current product (initially [params_nb + 1]) *)
 and extract_type_cons env sg db dbmap c i =
   match EConstr.kind sg (whd_all env sg c) with
   | Prod (n, t, d) ->
@@ -1029,7 +1059,12 @@ and type2sign env = type_to_sign (mlt_env env)
 
 (** {2 Extraction of the type of a constant} *)
 
-(** Computes and caches the ML type of a Rocq constant. *)
+(** Computes and caches the ML type of a Rocq constant.
+    @param env Rocq environment used for type extraction and expansion
+    @param sg Evar map for universe and sort operations
+    @param kn The constant whose ML type is computed
+    @param opt_typ Optional pre-computed Rocq type of [kn]; if [None], the type is read from [env]
+    @return A pair [(n, mlt)] where [n] is the number of type variables and [mlt] is the ML type *)
 and record_constant_type env sg kn opt_typ =
   let cb = lookup_constant kn env in
   match lookup_cst_type kn cb with
@@ -1056,7 +1091,13 @@ and record_constant_type env sg kn opt_typ =
 (** {1 Extraction of a term} *)
 
 (** Extracts a Rocq CIC term into an ML AST expression. Precondition: term is
-    informative and not a type scheme. *)
+    informative and not a type scheme.
+    @param env Rocq environment, extended as lambdas and let-ins are entered
+    @param sg Evar map for type-of and sort queries
+    @param mle ML environment tracking types of bound variables (de Bruijn context for ML)
+    @param mlt Expected ML type of [(c args)]; used to drive unification and insert magic coercions
+    @param c The Rocq term being extracted (head of the application spine)
+    @param args Arguments accumulated during [App] traversal (outermost first) *)
 and extract_term env sg mle mlt c args =
   match EConstr.kind sg c with
   | App (f, a) -> extract_term env sg mle mlt f (Array.to_list a @ args)
@@ -1199,7 +1240,13 @@ and extract_maybe_term env sg mle mlt c =
 (** {2 Generic way to deal with an application} *)
 
 (** Extracts a function application by typing arguments first, then building the
-    head. *)
+    head.
+    @param env Rocq environment for term extraction
+    @param sg Evar map for type-of queries
+    @param mle ML environment for bound variables
+    @param mlt Expected ML type of the whole application
+    @param mk_head Function that, given the inferred type of the head, produces the ML head expression
+    @param args Rocq argument terms *)
 and extract_app env sg mle mlt mk_head args =
   let metas = List.map new_meta args in
   let type_head = type_recomp (metas, mlt) in
@@ -1210,7 +1257,13 @@ and extract_app env sg mle mlt mk_head args =
 *)
 
 (** Builds ML argument list from raw arguments, inserting dummies for erased
-    positions per signature. *)
+    positions per signature.
+    @param env Rocq environment for type checking
+    @param sg Evar map for reduction
+    @param e ML environment for bound variables
+    @param s Type signature ([Keep]/[Kill] list) driving which positions are kept
+    @param args Rocq terms to extract (parallel to [typs] and [s])
+    @param typs Expected ML types for each argument after unification *)
 and make_mlargs env sg e s args typs =
   let rec f = function
     | [], [], _ -> []
@@ -1500,7 +1553,13 @@ and make_tyargs env sg mle args typs ~orig_typs =
 (** {2 Extraction of a constant applied to arguments} *)
 
 (** Extracts a constant application (function call), handling type instantiation
-    and partial application. *)
+    and partial application.
+    @param env Rocq environment for schema lookup and argument extraction
+    @param sg Evar map for universe and sort operations
+    @param mle ML environment for bound variables
+    @param mlt Expected ML type of the result; drives magic insertion
+    @param kn The constant being applied
+    @param args Rocq arguments (may be fewer than the full arity — partial application) *)
 and extract_cst_app env sg mle mlt kn args =
   (* First, the [ml_schema] of the constant, in expanded version. *)
   let nb, t = record_constant_type env sg kn None in
@@ -1581,7 +1640,13 @@ and extract_cst_app env sg mle mlt kn args =
 (** {2 Extraction of an inductive constructor applied to arguments} *)
 
 (** Extracts a constructor application, handling uncurrying, logical parameter
-    suppression, and partial application. *)
+    suppression, and partial application.
+    @param env Rocq environment for inductive lookup and argument extraction
+    @param sg Evar map for sort and type operations
+    @param mle ML environment for bound variables
+    @param mlt Expected ML type of the result; drives magic insertion
+    @param cp Constructor path [((kn, i), j)] — mutual inductive [kn], packet [i], constructor [j]
+    @param args Rocq arguments, including inductive type parameters *)
 and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   (* First, we build the type of the constructor, stored in small pieces. *)
   let mi = extract_ind env kn in
@@ -1764,7 +1829,14 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
 (** {1 Extraction of a case} *)
 
 (** Extracts a match/case expression, handling logical singleton elimination and
-    branch extraction. *)
+    branch extraction.
+    @param env Rocq environment for inductive lookup and branch extraction
+    @param sg Evar map for type-of and sort queries
+    @param mle ML environment for bound variables
+    @param ip Inductive name and packet index being matched
+    @param c The scrutinee term
+    @param br Array of branch bodies (in functional form, one per constructor)
+    @param mlt Expected ML type of the whole case expression *)
 and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
   (* EDIT HERE: Add type information into branches *)
   (* [br]: bodies of each branch (in functional form) *)
@@ -1828,6 +1900,14 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
 
 (** {2 Extraction of a (co)-fixpoint} *)
 
+(** Extracts a single component of a (co-)fixpoint group into an ML fix expression.
+    @param env Rocq environment (extended with recursive binders inside)
+    @param sg Evar map for type-of queries
+    @param mle ML environment for outer bound variables
+    @param i Index of the main fixpoint component to extract (the one whose type unifies with [mlt])
+    @param recd The raw recursive declaration: binder names [fi], types [ti], bodies [ci]
+    @param is_cofix [true] for a cofixpoint, [false] for a regular fixpoint
+    @param mlt Expected ML type of fixpoint component [i] *)
 and extract_fix env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
   let env = push_rec_types recd env in
   let metas = Array.map new_meta fi in
@@ -1846,7 +1926,13 @@ and extract_fix env sg mle i ((fi, ti, ci) as recd) is_cofix mlt =
    and decompose the term [c] in [n] lambdas, with eta-expansion if needed. *)
 
 (** Decomposes lambdas with eta-expansion to reach [n] binders, given [m]
-    existing lambdas. *)
+    existing lambdas.
+    @param n Total number of binders required (from the type [t])
+    @param m Number of lambdas already present in [c]
+    @param env Rocq environment used to decompose the product type [t]
+    @param sg Evar map for [whd_decompose_prod_n]
+    @param c The term to decompose and possibly eta-expand
+    @param t The product type of [c], used to supply the missing binder types *)
 let decomp_lams_eta_n n m env sg c t =
   let rels = fst (whd_decompose_prod_n env sg n t) in
   let rels', c = EConstr.decompose_lambda sg c in
@@ -1922,7 +2008,11 @@ let rec try_peano_nat env sg t =
    AssertComment. *)
 
 (** Translates assertion predicates into C++ assertion format strings for sigma
-    type preconditions. *)
+    type preconditions.
+    @param env Rocq environment with the sigma witness variable bound as [Rel 1]
+    @param sg Evar map for reduction and pretty-printing
+    @param body The predicate body under a lambda (witness is [Rel 1])
+    @return An [AssertExpr] with a [%N] format string, or [AssertComment] for unrecognized patterns *)
 let translate_predicate_body env sg body =
   let open Table in
   let body = whd_all env sg body in
@@ -2027,7 +2117,11 @@ let translate_predicate_body env sg body =
    indices. *)
 
 (** Detects sigma type assertions (dependent pair projections) in function
-    parameters and registers them. *)
+    parameters and registers them.
+    @param env Rocq environment, extended with each parameter binder as the walk proceeds
+    @param sg Evar map for reduction and predicate body translation
+    @param kn Constant name of the function being analyzed (used as key in [Table.add_sigma_assertion])
+    @param typ The full Rocq type of [kn]; sigma-typed parameters are detected in the products *)
 let detect_sigma_assertions env sg kn typ =
   let func_ref = GlobRef.ConstRef kn in
   let rec walk env info_idx typ =
@@ -2066,7 +2160,13 @@ let detect_sigma_assertions env sg kn typ =
   walk env 0 typ
 
 (** Extracts a standard (non-record) constant definition, handling lambda
-    decomposition and type expunging. *)
+    decomposition and type expunging.
+    @param env Rocq environment for type and term extraction
+    @param sg Evar map for sort and type-of queries
+    @param kn The constant name (used for schema caching and implicit lookup)
+    @param body The definition body as an [EConstr.t] (pre-substituted for mutual fixpoints)
+    @param typ The Rocq type of the constant
+    @return A pair [(ml_ast, ml_type)] of the extracted term and its ML type *)
 let extract_std_constant env sg kn body typ =
   reset_meta_count ();
   (* The short type [t] (i.e. possibly with abbreviations). *)
@@ -2131,7 +2231,11 @@ let extract_std_constant env sg kn body typ =
 (* Extracts the type of an axiom, honors the Extraction Implicit declaration. *)
 
 (** Extracts an axiom declaration, honoring the Extraction Implicit declaration.
-*)
+    @param env Rocq environment for schema recording and expansion
+    @param sg Evar map for sort and type-of queries
+    @param kn The axiom constant name
+    @param typ The Rocq type of the axiom
+    @return The ML type of the axiom, with erased arguments removed *)
 let extract_axiom env sg kn typ =
   reset_meta_count ();
   (* The short type [t] (i.e. possibly with abbreviations). *)
@@ -2145,7 +2249,12 @@ let extract_axiom env sg kn typ =
   type_expunge_from_sign env s t
 
 (** Extracts a fixpoint (recursive function) definition, handling mutual
-    recursion. *)
+    recursion.
+    @param env Rocq environment for sort checking and term extraction
+    @param sg Evar map for [fresh_global] and sort operations
+    @param vkn Array of constant names for each mutually recursive function
+    @param is_fix [true] for a regular fixpoint, [false] for a cofixpoint
+    @param fi, ti, ci Binder names, types, and bodies of the fixpoint group *)
 let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
   let n = Array.length vkn in
   let types = Array.make n (Tdummy Kprop)

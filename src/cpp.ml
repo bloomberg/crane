@@ -41,7 +41,19 @@ open Cpp_ind
 
     This allows any parametric custom type to have its inner type arguments
     properly qualified with "typename M::" when used in module signature
-    requires clauses. *)
+    requires clauses.
+
+    @param custom_str  The raw custom-type annotation string; [%t0], [%t1], …
+                       are placeholder tokens replaced by the corresponding
+                       elements of [args].
+    @param args        The ML type arguments to substitute for the [%tN]
+                       placeholders, in order.
+    @param qualify_type  Recursive callback that qualifies a single ML type
+                         (e.g. prepending ["typename M::"]) before splicing it
+                         into the output.
+    @return Pretty-printer document with all [%tN] placeholders replaced by
+            their qualified type renderings and surrounding literal text
+            preserved verbatim. *)
 let qualify_custom_template custom_str args qualify_type =
   let len = String.length custom_str in
   let rec parse i result =
@@ -133,7 +145,18 @@ and ml_type_has_tvar = function
       — validates a template alias member (higher-kinded type parameter
       such as [Parameter F : Type -> Type]).  The dummy [void] arguments
       serve only to check that the template exists with the correct arity;
-      no semantic meaning is attached to the instantiation. *)
+      no semantic meaning is attached to the instantiation.
+
+    @param modtype_mp    Module path of the enclosing module type; used to
+                         decide whether a type reference is a member of [M]
+                         (and should be qualified ["typename M::"]) or an
+                         external type.
+    @param modtype_refs  All type/inductive global refs declared directly in
+                         the module-type signature; used to detect self-referential
+                         member types without recursing into [modtype_mp].
+    @return Pretty-printer document for the single requirement line, or [mt ()]
+            if the spec should be suppressed (e.g. inline-custom, polymorphic
+            value). *)
 and pp_spec_as_requirement modtype_mp modtype_refs = function
   | Sval (r, _, _) when is_inline_custom r -> mt ()
   | Stype (r, _, _) when is_inline_custom r -> mt ()
@@ -336,7 +359,15 @@ and pp_concept_ref kn =
 
 (** Convert a module type to a C++20 concept. MTsig generates requires clauses,
     MTfunsig is handled by param tracking, MTident references an existing
-    concept by name. *)
+    concept by name.
+
+    @param params  Accumulated list of bound module-path parameters introduced
+                   by enclosing [MTfunsig] binders.  These are pushed onto the
+                   visibility stack when an [MTsig] body is entered so that
+                   functor-parameter references resolve correctly.
+    @return Pretty-printer document containing the [requires { … }] body, a
+            bare concept name (for [MTident]), or [mt ()] when the module type
+            carries no extractable constraints. *)
 and pp_module_type params = function
   | MTident kn -> pp_modname kn
   | MTfunsig (mbid, mt, mt') -> pp_module_type (MPbound mbid :: params) mt'
@@ -415,7 +446,16 @@ let pp_doc_comment_for_name name =
 let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
 
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
-    types, and declarations. *)
+    types, and declarations.
+
+    @param is_header  When [true], emit header-mode output (struct definitions,
+                      concept declarations, [using] aliases).  When [false],
+                      emit implementation-mode output (out-of-line function
+                      bodies, skipping header-only constructs).
+    @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
+                      nodes; typically [pp_decl] or [pp_hdecl].
+    @return Pretty-printer document for the element, or [mt ()] if the element
+            produces no output in the current pass. *)
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
     let body = f d in
@@ -1300,7 +1340,18 @@ let rec pp_structure_elem ~is_header f = function
         ++ name
         ++ str "<M>;" )
 
-(** Pretty-print a module expression (MEident, MEapply, MEfunctor, MEstruct). *)
+(** Pretty-print a module expression (MEident, MEapply, MEfunctor, MEstruct).
+
+    @param is_header  Controls header vs. implementation rendering (see
+                      {!pp_structure_elem}).
+    @param f          Callback for rendering individual declarations inside an
+                      [MEstruct] body.
+    @param params     Bound module paths accumulated from enclosing [MEfunctor]
+                      binders; pushed onto the visibility stack when the
+                      [MEstruct] body is entered.
+    @return Pretty-printer document for the module expression. For [MEident]
+            this is the qualified module name; for [MEapply] a template
+            instantiation; for [MEstruct] the indented body of declarations. *)
 and pp_module_expr ~is_header f params = function
   | MEident mp -> pp_modname mp
   | MEapply (me, me') ->
@@ -1370,7 +1421,13 @@ and pp_module_expr ~is_header f params = function
     else
       v 1 (prlist_with_sep cut2 identity l) ++ fnl ()
 
-(** Like prlist_with_sep but skips empty elements. *)
+(** Like [prlist_with_sep] but skips empty ([mt ()]) elements.
+
+    @param sep  Thunk producing the separator document inserted between
+                consecutive non-empty rendered elements.
+    @param f    Function applied to each list element to produce its document.
+    @return Concatenation of all non-empty documents separated by [sep ()],
+            or [mt ()] if every element renders empty. *)
 let rec prlist_sep_nonempty sep f = function
   | [] -> mt ()
   | [h] -> f h
@@ -1385,7 +1442,21 @@ let rec prlist_sep_nonempty sep f = function
     PASS 2 (is_header=false): Emit full definitions (defs) for functions.
 
     The is_header parameter controls which definitions are generated via
-    gen_dfuns_dual/gen_decl_for_pp_dual. *)
+    gen_dfuns_dual/gen_decl_for_pp_dual.
+
+    @param is_header   When [true] produce declaration specs; when [false]
+                       produce out-of-line definitions.
+    @param wrapper_mp  The module path of the wrapper module being rendered;
+                       used to set [rc_struct_mp] so that out-of-line
+                       definitions are correctly qualified.
+    @param wrapper_name  The C++ struct name of the wrapper (e.g. ["Facts"]);
+                         used to set [rc_struct_name] in the definition pass.
+    @param func_sels   The [(label, structure_elem)] pairs from the wrapper
+                       that contain function declarations ([Dterm], [Dfix]).
+    @return A triple [(specs_pp, defs_pp, lifted_pp)] where [specs_pp] is the
+            header-pass declaration block, [defs_pp] the implementation-pass
+            definition block, and [lifted_pp] any top-level declarations that
+            were lifted out of local function bodies during translation. *)
 let lifted_decl_key = function
   | Dtemplate (_, _, Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _)) ->
     Some (Id.to_string v)
@@ -1537,7 +1608,20 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     deferred function definitions.
 
     This three-pass approach resolves forward reference issues while maintaining
-    proper C++ declaration order. *)
+    proper C++ declaration order.
+
+    @param is_header  When [true] render the header pass (struct definitions,
+                      concept declarations, inline specs); when [false] render
+                      the implementation pass (out-of-line function bodies).
+    @param f          Structure-element callback, typically
+                      [pp_structure_elem ~is_header pp_decl] or the [pp_hdecl]
+                      variant; called for each [(label, ml_structure_elem)] pair.
+    @param s          The flat extraction structure: a list of
+                      [(module_path, structure_elem list)] pairs produced by the
+                      extraction pipeline.
+    @return Pretty-printer document for the complete output file (header or
+            implementation), including lifted declarations and deferred
+            out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
   Translation.clear_seen_lifted_refs ();
@@ -1969,7 +2053,12 @@ let do_struct_with_decl_tracking ~is_header f s =
   v 0 (p ++ pass2_post_pp ++ deferred_lifted ++ deferred_defs) ++ fnl ()
 
 (** Simple structure renderer without wrapper module handling. Used for
-    signature rendering. *)
+    signature rendering.
+
+    @param f  Callback applied to each [(label, structure_elem)] pair to
+              produce its pretty-printer document.
+    @param s  Extraction structure (list of [(module_path, elem list)] pairs).
+    @return Pretty-printer document for the rendered signature. *)
 let do_struct f s =
   let ppl (mp, sel) =
     push_visible mp [];

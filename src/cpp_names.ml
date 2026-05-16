@@ -32,7 +32,11 @@ open Cpp_state
     since they force evaluation order. *)
 
 (** Print a global reference as a C++ name string, respecting custom mappings
-    and inline extraction. *)
+    and inline extraction.
+    @param k  the extraction key category (e.g. [Type] or [Term])
+    @param key the [KerName] used as the lookup key in the name table
+    @param r  the global reference to print
+    @return the C++ name string for [r] *)
 let str_global_with_key k key r =
   match find_custom_opt r with
   | Some custom_str when to_inline r -> custom_str
@@ -41,7 +45,11 @@ let str_global_with_key k key r =
 (** Print a global reference as a C++ name string using the default key. *)
 let str_global k r = str_global_with_key k (repr_of_r r) r
 
-(** Pretty-print a global reference as a Pp.t, with explicit key. *)
+(** Pretty-print a global reference as a Pp.t, with explicit key.
+    @param k  the extraction key category (e.g. [Type] or [Term])
+    @param key the [KerName] used as the lookup key in the name table
+    @param r  the global reference to pretty-print
+    @return a [Pp.t] rendering of the C++ name for [r] *)
 let pp_global_with_key k key r = str (str_global_with_key k key r)
 
 (** Pretty-print a global reference as a Pp.t. *)
@@ -101,7 +109,12 @@ let operator_chars =
 (** OCaml built-in infix operators not covered by the operator grammar. *)
 let builtin_infixes = ["::"; ","]
 
-(** Check that all characters in [s[start..stop)] are operator characters. *)
+(** Check that all characters in [s[start..stop)] are operator characters.
+    @param s     the string to inspect
+    @param start the index of the first character to check (inclusive)
+    @param stop  one past the last character to check (exclusive)
+    @return [true] iff every character in the half-open interval is in
+            [operator_chars] *)
 let substring_all_opchars s start stop =
   let rec check_char i =
     if i >= stop then
@@ -155,15 +168,26 @@ let kn_of_ind =
     | IndRef (kn, _) -> MutInd.user kn
     | _ -> CErrors.anomaly (Pp.str "kn_of_ind: expected IndRef")
 
-(** Pretty-print a single record field, using the field ref if available. *)
+(** Pretty-print a single record field, using the field ref if available.
+    @param r  the inductive (or constructor) reference owning the record
+    @param i  zero-based field index, used as a fallback suffix when no named
+              field ref exists
+    @return a [Pp.t] for the field name, either from its [GlobRef] or as
+            [<type>__<i>] *)
 let pp_one_field r i = function
   | Some r' -> pp_global_with_key Term (kn_of_ind (get_ind r)) r'
   | None -> pp_global Type (get_ind r) ++ str "__" ++ int i
 
-(** Pretty-print the [i]-th record field. *)
+(** Pretty-print the [i]-th record field.
+    @param r      the inductive reference owning the record
+    @param fields the list of optional field [GlobRef]s for the record
+    @param i      zero-based index of the field to print *)
 let pp_field r fields i = pp_one_field r i (List.nth fields i)
 
-(** Pretty-print all record fields. *)
+(** Pretty-print all record fields.
+    @param r      the inductive reference owning the record
+    @param fields the list of optional field [GlobRef]s for the record
+    @return a list of [Pp.t] values, one per field, in order *)
 let pp_fields r fields = List.mapi (pp_one_field r) fields
 
 (* ============================================================================
@@ -233,7 +257,11 @@ let enum_name_collides_with_parent r =
     | _ -> false )
   | _ -> false
 
-(** Capitalize an enum type name, avoiding collision with parent module. *)
+(** Capitalize an enum type name, avoiding collision with parent module.
+    @param s the base (unqualified) name string of the enum type
+    @param r the [GlobRef] of the enum inductive, used for collision detection
+    @return [s] unchanged if capitalization would collide with the parent
+            module's struct name; otherwise [String.capitalize_ascii s] *)
 let capitalize_enum_name s r =
   if enum_name_collides_with_parent r then
     s
@@ -241,7 +269,11 @@ let capitalize_enum_name s r =
     String.capitalize_ascii s
 
 (** Same as capitalize_enum_name but for qualified names (capitalize last
-    component). *)
+    component).
+    @param s the fully-qualified C++ name string (may contain [::])
+    @param r the [GlobRef] of the enum inductive, used for collision detection
+    @return [s] unchanged on collision; otherwise the name with its last
+            [::]-separated component capitalized *)
 let capitalize_enum_qualified s r =
   if enum_name_collides_with_parent r then
     s
@@ -310,7 +342,11 @@ let typename_prefix_for name_str =
     "::" components are equal and [allow_bare] is false, collapse only if
     there is an outer prefix (e.g. "X::A::A" → "X::A").  When [allow_bare]
     is true, also collapse bare "A::A" → "A".  Returns the (possibly
-    shortened) string unchanged if no dedup applies. *)
+    shortened) string unchanged if no dedup applies.
+    @param allow_bare when [true], also deduplicate names with no outer
+                      prefix (e.g. ["A::A"] → ["A"]); defaults to [false]
+    @param cap        the fully-qualified C++ name to deduplicate
+    @return the deduplicated name, or [cap] if no deduplication applied *)
 let dedup_qualified_tail ?(allow_bare = false) cap =
   match String.rindex_opt cap ':' with
   | Some last_colon when last_colon < String.length cap - 1 ->
@@ -352,7 +388,11 @@ let rocq_to_cpp_path s =
     The check converts C++ [::] separators in [struct_name_str] to Rocq [.]
     separators, then tests whether the result is a substring of the global
     reference path.  This tells us the type is nested inside the current
-    struct and therefore needs a struct qualifier in the [.cpp] file. *)
+    struct and therefore needs a struct qualifier in the [.cpp] file.
+    @param r               the global reference whose location is being tested
+    @param struct_name_str the C++ struct name (using [::] separators) of the
+                           enclosing struct context
+    @return [true] iff [r]'s Rocq path is nested under [struct_name_str] *)
 let is_nested_in_struct r struct_name_str =
   let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
   Common.contains_substring full_path (cpp_to_rocq_path struct_name_str)
@@ -367,7 +407,13 @@ let is_nested_in_struct r struct_name_str =
     Walks up the [.]-separated components of [struct_name_dotted] (the Rocq
     form of the struct name), checking whether the type's Rocq path contains
     each prefix.  Returns the first matching ancestor as a C++ qualifier, or
-    [mt ()] if none matches. *)
+    [mt ()] if none matches.
+    @param full_path          the Rocq fully-qualified path of the type being
+                              rendered (as returned by [GlobRef.print])
+    @param struct_name_dotted the Rocq-dotted form (using [.] separators) of
+                              the current C++ struct name
+    @return a [Pp.t] C++ qualifier ending with [::] for the nearest ancestor
+            module that contains [full_path], or [mt ()] if none found *)
 let find_ancestor_qualifier_from full_path struct_name_dotted =
   let rec find s =
     match String.rindex_opt s '.' with
@@ -383,7 +429,11 @@ let find_ancestor_qualifier_from full_path struct_name_dotted =
 
 (** Convenience wrapper: compute [full_path] and [struct_name_dotted] from a
     global reference and a C++ struct name, then delegate to
-    {!find_ancestor_qualifier_from}. *)
+    {!find_ancestor_qualifier_from}.
+    @param r               the global reference whose ancestor qualifier is
+                           sought
+    @param struct_name_str the current C++ struct name (using [::] separators)
+    @return a [Pp.t] C++ qualifier ending with [::], or [mt ()] if none found *)
 let find_ancestor_qualifier r struct_name_str =
   let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
   find_ancestor_qualifier_from full_path (cpp_to_rocq_path struct_name_str)
@@ -394,7 +444,12 @@ let find_ancestor_qualifier r struct_name_str =
     qualified (e.g. [MyStruct::NestedType]) because the return-type position
     is outside the class scope.  This function decides whether to prepend
     [struct_name::] for a given global reference [r] whose printed name is
-    [name_str]. *)
+    [name_str].
+    @param r        the global reference whose C++ type name may need a
+                    struct qualifier
+    @param name_str the already-rendered C++ name string for [r]
+    @return a [Pp.t] prefix of the form [StructName::] when qualification is
+            required, or [mt ()] otherwise *)
 let struct_qualifier_for r name_str =
   match render_ctx.rc_struct_name with
   | Some struct_name when not render_ctx.rc_in_struct ->
@@ -516,7 +571,15 @@ let needs_global_qualifier x =
    HOW to render a name, while the original functions produce the actual
    name. *)
 
-(** Higher-order helper to reduce cache-fallback pattern duplication. *)
+(** Higher-order helper to reduce cache-fallback pattern duplication.
+    Queries [cached_lookup] when [name_cache] is populated; otherwise falls
+    back to [fallback].
+    @param cached_lookup function applied to the [Name_resolution.t] cache and
+                         [r] when the cache is available
+    @param fallback      function applied to [r] when no cache is present
+    @param r             the global reference to classify
+    @return the result of [cached_lookup] or [fallback], depending on cache
+            availability *)
 let with_cache
     (cached_lookup : Name_resolution.t -> GlobRef.t -> 'a)
     (fallback : GlobRef.t -> 'a)
@@ -565,18 +628,6 @@ let is_record_cached (r : GlobRef.t) : bool =
   | Some _ -> false
   | None -> is_record_inductive r
 
-(** For display names, delegate to original functions — they need visibility
-    context. These are thin wrappers for now; they become useful when we have
-    more context. *)
-(** Cache-backed wrapper for {!pp_inductive_type_name}. *)
-let pp_inductive_type_name_cached r = pp_inductive_type_name r
-
-(** Cache-backed wrapper for {!inductive_name_info}. *)
-let inductive_name_info_cached r = inductive_name_info r
-
-(** Cache-backed wrapper for {!wrapper_qualify_name}. *)
-let wrapper_qualify_name_cached r name = wrapper_qualify_name r name
-
 (** Look up method info for a function reference. Checks both local
     method_candidates and global method_registry. Returns Some this_pos if the
     function is a method, None otherwise. *)
@@ -602,6 +653,4 @@ let lookup_method_this_pos n =
     are value types, so this always returns false. *)
 let method_receiver_is_ptr _n = false
 
-(** Helper module for tracking variable names *)
-(** Set of [Id.t] names for tracking variable identifiers. *)
 module IdSet = Set.Make (Names.Id)

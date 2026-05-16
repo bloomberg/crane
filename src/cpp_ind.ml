@@ -33,7 +33,11 @@ open Cpp_names
 open Cpp_print
 
 (** Render inductive type implementation (.cpp file). Records and TypeClasses
-    have no .cpp body. Enums are skipped as well. *)
+    have no .cpp body. Enums are skipped as well.
+    @param kn mutual inductive kernel name identifying the inductive block
+    @param ind miniml representation of the mutual inductive type block
+    @return pretty-printed C++ implementation fragment, or [mt ()] when nothing
+            needs to be emitted for this block *)
 let pp_cpp_ind kn ind =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
   let cnames =
@@ -98,7 +102,10 @@ let pp_tydef ids name def =
 
 (** Dispatch for .cpp file rendering. Filters out inline customs, eponymous
     record projections, suppressed projections, method candidates, registered
-    methods, and typeclass instances. *)
+    methods, and typeclass instances.
+    @param d miniml declaration to render
+    @return pretty-printed C++ implementation fragment, or [mt ()] when the
+            declaration is handled in headers or suppressed *)
 let pp_decl = function
   | Dtype (r, _, _) when is_any_inline_custom r -> mt ()
   | Dterm (r, _, _) when is_any_inline_custom r -> mt ()
@@ -164,6 +171,11 @@ let pp_decl = function
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
     other inductives become variant-like structs with constructors.
+    @param kn mutual inductive kernel name identifying the inductive block
+    @param ind miniml representation of the mutual inductive type block
+    @return pretty-printed C++ header fragment (forward declarations followed
+            by full struct/concept/enum definitions), or [mt ()] when all
+            packets in the block are custom or suppressed
 
     DESIGN: Mutual inductive support with forward declarations
     Rocq supports mutually recursive inductive types. In C++, this requires:
@@ -595,7 +607,10 @@ let pp_cpp_ind_header kn ind =
 (** Dispatch for .h file rendering. Similar to pp_decl but generates header
     declarations instead of implementations. For template functions, generates
     full definitions inline (required by C++). For non-template functions,
-    generates forward declarations. *)
+    generates forward declarations.
+    @param d miniml declaration to render as a header entry
+    @return pretty-printed C++ header fragment, or [mt ()] when the
+            declaration is suppressed *)
 let pp_hdecl d =
   match d with
   | Dtype (r, _, _) when is_any_inline_custom r -> mt ()
@@ -738,7 +753,10 @@ let pp_hdecl d =
 (** Like pp_hdecl but always generates forward declarations (specs), even for
     template functions. Used for wrapper struct injection into Dnspace structs
     where the full definitions are emitted later to avoid forward reference
-    issues. *)
+    issues.
+    @param d miniml declaration to render as a forward declaration only
+    @return pretty-printed C++ forward-declaration fragment, or [mt ()] when
+            the declaration is suppressed or does not require a spec *)
 let pp_hdecl_spec_only = function
   | Dtype (r, _, _) when is_any_inline_custom r -> mt ()
   | Dterm (r, _, _) when is_any_inline_custom r -> mt ()
@@ -799,7 +817,10 @@ let pp_hdecl_spec_only = function
         (gen_dfuns_spec (rv, defs, typs))
 
 (** Render a module signature element (spec). Module signatures become C++
-    concepts (for module types) or struct declarations. *)
+    concepts (for module types) or struct declarations.
+    @param s miniml module signature element to render
+    @return pretty-printed C++ declaration fragment, or [mt ()] when the
+            element is an inline custom or an erased type alias *)
 let pp_spec = function
   | Sval (r, _, _) when is_inline_custom r -> mt ()
   | Stype (r, _, _) when is_inline_custom r -> mt ()

@@ -76,7 +76,10 @@ let rec skip_whitespace_and_comments s i =
     | _ -> i
 
 (** Skip over a nested comment starting after the opening [(*]. [depth] tracks
-    nesting level. Returns the index after the closing [*)]. *)
+    nesting level. Returns the index after the closing [*)].
+    @param s The source string being scanned.
+    @param i The current index into [s].
+    @param depth The current comment nesting depth (1 when entering a fresh comment). *)
 and skip_nested_comment s i depth =
   let len = String.length s in
   if i >= len then
@@ -96,7 +99,11 @@ and skip_nested_comment s i depth =
 (** Extract the body of a doc comment starting at index [i] (pointing to the
     opening paren). Returns [(body, end_index)] where [body] is the comment text
     with the doc-comment delimiters stripped, and [end_index] is the index after
-    the closing delimiter. *)
+    the closing delimiter.
+    @param s The source string being scanned.
+    @param i Index of the opening ['('] of the doc comment.
+    @return A pair [(body, end_index)]: [body] is the trimmed comment text and
+            [end_index] is the index of the first character after the closing star-paren. *)
 let extract_doc_comment s i =
   let len = String.length s in
   let start = i + 3 in
@@ -153,7 +160,11 @@ let is_ident_delim c =
 (** Collect a contiguous identifier starting at position [i] in [s], stopping
     at any {!is_ident_delim} character.  Returns [Some (name, end_pos)] where
     [end_pos] is one past the last character of the identifier, or [None] if
-    [i] is already at a delimiter or past the end of [s]. *)
+    [i] is already at a delimiter or past the end of [s].
+    @param s The source string being scanned.
+    @param i The index at which to begin collecting the identifier.
+    @return [Some (name, end_pos)] on success, where [end_pos] is one past the
+            last character of [name]; [None] if no identifier characters are found. *)
 let collect_identifier s i =
   let len = String.length s in
   let j = ref i in
@@ -192,7 +203,11 @@ let skip_all_whitespace s i =
     definition keyword, then constructor bar, then record field. *)
 
 (** Try to match a definition keyword at position [i] and extract the
-    definition name that follows it.  Returns [Some name] or [None]. *)
+    definition name that follows it.  Returns [Some name] or [None].
+    @param s The source string being scanned.
+    @param i The index at which to attempt the keyword match.
+    @return [Some name] if a recognised keyword and the identifier following it
+            are found at [i]; [None] otherwise. *)
 let try_match_definition s i =
   let len = String.length s in
   let try_keyword kw =
@@ -222,7 +237,10 @@ let try_match_definition s i =
 
 (** Try to match a constructor line at position [i]: [| CtorName].
     Matches the ['|'] separator, skips horizontal whitespace, then collects the
-    constructor identifier.  Returns [Some name] or [None]. *)
+    constructor identifier.  Returns [Some name] or [None].
+    @param s The source string being scanned.
+    @param i The index at which to attempt the constructor match.
+    @return [Some name] if a ['|'] followed by an identifier is found; [None] otherwise. *)
 let try_match_constructor s i =
   let len = String.length s in
   if i < len && s.[i] = '|' then
@@ -232,7 +250,11 @@ let try_match_constructor s i =
 
 (** Try to match a record field at position [i]: [fieldname : Type].
     Collects an identifier, then verifies it is followed by (optional
-    whitespace and) a colon.  Returns [Some name] or [None]. *)
+    whitespace and) a colon.  Returns [Some name] or [None].
+    @param s The source string being scanned.
+    @param i The index at which to attempt the field match.
+    @return [Some name] if an identifier immediately followed by [':'] is found;
+            [None] otherwise. *)
 let try_match_field s i =
   let len = String.length s in
   match collect_identifier s i with
@@ -243,7 +265,12 @@ let try_match_field s i =
 
 (** Try each name matcher in order until one succeeds.  Returns [Some name]
     from the first matcher that recognises the text at position [i], or [None]
-    if none match. *)
+    if none match.
+    @param s The source string being scanned.
+    @param i The index at which to attempt matching.
+    @return [Some name] from the first successful matcher
+            ({!try_match_definition}, then {!try_match_constructor}, then
+            {!try_match_field}); [None] if none match. *)
 let try_match_name s i =
   match try_match_definition s i with
   | Some _ as hit -> hit
@@ -301,7 +328,12 @@ let parse_file path =
 
 (** Translate bracket references [[name]] in a doc comment string. The
     [translate] function maps a Rocq name to its C++ equivalent (or returns the
-    name unchanged if no translation is found). *)
+    name unchanged if no translation is found).
+    @param translate A function from a Rocq identifier string to its C++ name;
+                     called for each bracketed token found in [text].
+    @param text The raw doc comment string whose bracket references are rewritten.
+    @return A copy of [text] with every [[name]] token replaced by the result of
+            [translate name]. *)
 let translate_brackets ~translate text =
   let len = String.length text in
   let buf = Buffer.create len in

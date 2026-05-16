@@ -205,6 +205,9 @@ let keywords =
     When non-empty, pp_open skips modules not in this set. *)
 let valid_output_modules : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
 
+(** Set the modules that are allowed to produce output in this extraction run.
+    Only modules in [mps] will emit #include directives via [pp_open].
+    @param mps list of module paths that should produce output files *)
 let set_valid_output_modules mps =
   Hashtbl.clear valid_output_modules;
   List.iter (fun mp -> Hashtbl.replace valid_output_modules mp ()) mps
@@ -213,9 +216,16 @@ let clear_valid_output_modules () = Hashtbl.clear valid_output_modules
 
 let global_unmerged_wrappers : (string, unit) Hashtbl.t = Hashtbl.create 16
 
+(** Record that wrapper [name] must remain unmerged across extraction passes.
+    Used in separate extraction so that inter-module references use the
+    unmerged (qualified) form even for modules processed in a prior pass.
+    @param name the C++ wrapper struct name to mark as unmerged *)
 let mark_global_unmerged name =
   Hashtbl.replace global_unmerged_wrappers name ()
 
+(** Check whether wrapper [name] was recorded as globally unmerged.
+    @param name the C++ wrapper struct name to query
+    @return [true] if [name] must use the unmerged (qualified) name form *)
 let is_global_unmerged name =
   Hashtbl.mem global_unmerged_wrappers name
 
@@ -241,11 +251,17 @@ let pp_header_comment = function
 (** Add a newline after pp if it's non-empty. *)
 let then_nl pp = if Pp.ismt pp then mt () else pp ++ fnl ()
 
-(** Generate preamble for implementation files. *)
+(** Generate preamble for implementation files.
+    @param comment optional header comment to emit at the top of the file
+    @param used_modules list of module paths whose headers must be #included
+    @return pretty-printed preamble consisting of the comment and #include lines *)
 let preamble _ comment used_modules _usf =
   pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
-(** Generate preamble for signature/header files. *)
+(** Generate preamble for signature/header files.
+    @param comment optional header comment to emit at the top of the file
+    @param used_modules list of module paths whose headers must be #included
+    @return pretty-printed preamble consisting of the comment and #include lines *)
 let sig_preamble _ comment used_modules _usf =
   pp_header_comment comment ++ then_nl (prlist pp_open used_modules)
 
@@ -325,7 +341,10 @@ let restore_render_ctx s =
 
 (** Execute [f] with modified render context, restoring the snapshot afterward.
     This replaces the error-prone pattern of manually saving/restoring
-    individual refs. *)
+    individual refs.
+    @param setup function that mutates [render_ctx] to the desired state before [f] runs
+    @param f the rendering computation to run inside the modified context
+    @return the value produced by [f] *)
 let with_render_ctx ~(setup : unit -> unit) (f : unit -> 'a) : 'a =
   let saved = save_render_ctx () in
   setup ();
@@ -343,6 +362,11 @@ let template_static_accessors : (ModPath.t * Label.t) list ref = ref []
 let template_static_accessor_kns : (KerName.t, unit) Hashtbl.t = Hashtbl.create 16
 let non_accessor_labels : (Label.t, unit) Hashtbl.t = Hashtbl.create 16
 
+(** Record a definition as a template static accessor (Meyers singleton).
+    Definitions rendered this way are emitted as inline functions rather than
+    static inline variables to avoid template static init ordering issues.
+    @param mp module path containing the definition
+    @param lbl label (name) of the definition within the module *)
 let register_template_static_accessor mp lbl =
   template_static_accessors := (mp, lbl) :: !template_static_accessors
 
@@ -437,7 +461,12 @@ let std_names : std_names ref =
       get = "std::get";
     }
 
-(** Create a std_names record with the given prefix. *)
+(** Create a std_names record with the given prefix.
+    @param prefix the namespace prefix to apply, either ["bsl::"] for BDE or
+      any other string to get the default ["std::"] names
+    @return a fully populated [std_names] record with all identifiers prefixed
+      appropriately (e.g., [prefix ^ "shared_ptr"], ["bdlf::Overloaded"] for
+      BDE, etc.) *)
 let mk_std_names prefix =
   match prefix with
   | "bsl::" ->
@@ -496,7 +525,10 @@ let sn () = !std_names
 
 (** Inline check: is a term a typeclass instance? Replaces
     is_typeclass_instance. A term is a typeclass instance if its return type is
-    a Tglob referencing a typeclass. *)
+    a Tglob referencing a typeclass.
+    @param _body the function body (unused; retained for API symmetry)
+    @param ty the Miniml type of the term being tested
+    @return [true] if the ultimate return type of [ty] is a registered typeclass *)
 let is_typeclass_instance _body ty =
   let rec return_type = function
     | Miniml.Tarr (_, rest) -> return_type rest
@@ -567,7 +599,12 @@ let global_inductive_names : (string, ModPath.t) Hashtbl.t = Hashtbl.create 16
     struct name. Only qualify ConstRef globals (actual Rocq constants from
     modules). VarRef globals are lifted declarations (like _foo_aux) that should
     not be qualified with a wrapper struct name — their modpath comes from
-    Lib.make_kn which reflects the current library, not the wrapper module. *)
+    Lib.make_kn which reflects the current library, not the wrapper module.
+    @param r the global reference whose module path is checked
+    @param name the unqualified (or partially qualified) C++ name string
+    @return [name] unchanged if [r] is not in a wrapper module; otherwise
+      ["StructName::name"] (or the collision-stripped variant for
+      collision-wrapped modules) *)
 let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
   match r with
   | GlobRef.VarRef _ -> name (* Lifted declarations: never qualify *)
@@ -598,7 +635,14 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
         name
     | _ -> name )
 
-(** Register a method with the method registry. *)
+(** Register a method with the method registry.
+    @param func_ref the global reference of the function being registered as a method
+    @param epon_ref the global reference of the eponymous inductive type on which
+      the method is defined (i.e., the C++ [this] type)
+    @param this_pos 0-based index of the argument whose type is [epon_ref]
+    @param ind_tvar_positions 0-based indices into the function's type variable
+      list that correspond to the inductive's own template parameters; these are
+      deducible from the receiver and omitted from explicit template arguments *)
 let register_method
     (func_ref : GlobRef.t)
     (epon_ref : GlobRef.t)
@@ -615,7 +659,11 @@ let register_method
 (** Check if a function qualifies as a method on [epon_ref] and register it
     if so.  Single entry point replacing the manual
     [find_epon_arg_pos] + [body_safe_for_method] + [register_method] +
-    [add_candidate] sequence. *)
+    [add_candidate] sequence.
+    @param epon_ref the eponymous inductive type that [func_ref] might become a method on
+    @param func_ref the global reference of the function being tested
+    @param body the Miniml AST body of the function
+    @param ty the Miniml type of the function *)
 let try_register_method epon_ref func_ref body ty =
   Method_registry.try_register_method
     (get_method_registry ()) epon_ref func_ref body ty
@@ -771,7 +819,12 @@ let is_suppressed_projection r =
 (** Filter a Dfix group, removing entries that are inline customs, method
     candidates (local or globally registered), eponymous record projections, or
     suppressed projections. Returns the three filtered arrays (refs, bodies,
-    types). *)
+    types).
+    @param rv array of global references for each definition in the Dfix group
+    @param defs array of Miniml AST bodies parallel to [rv]
+    @param typs array of Miniml types parallel to [rv]
+    @return a triple [(rv', defs', typs')] containing only the entries that
+      should be rendered directly *)
 let filter_dfix rv defs typs =
   let is_method_candidate x =
     List.exists

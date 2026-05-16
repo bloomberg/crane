@@ -16,9 +16,6 @@ open Minicpp
 open Names
 open Table
 
-(** Raised when a translation feature is not yet implemented. *)
-exception TODO
-
 (** {2 Local Inductive Context}
     Tracks inductives defined in the current module scope. When set, references
     to these inductives won't be wrapped in Tnamespace, so they appear as
