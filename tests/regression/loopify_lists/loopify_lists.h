@@ -363,7 +363,7 @@ struct LoopifyLists {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const unsigned int n = _f.n;
-        auto app_impl = [](auto &_self_app, list<T1> l1,
+        auto app_impl = [](auto &_self_app, const list<T1> &l1,
                            list<T1> l2) -> list<T1> {
           if (std::holds_alternative<typename list<T1>::Nil>(l1.v())) {
             return l2;
@@ -374,7 +374,7 @@ struct LoopifyLists {
                                   _self_app(_self_app, *(d_a1), std::move(l2)));
           }
         };
-        auto app = [&](list<T1> l1, list<T1> l2) -> list<T1> {
+        auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
           return app_impl(app_impl, l1, l2);
         };
         if (n <= 0) {
@@ -396,7 +396,7 @@ struct LoopifyLists {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static list<T1> init_list(const unsigned int n, F1 &&f) {
-    auto go_impl = [&](auto &_self_go, unsigned int i) -> list<T1> {
+    auto go_impl = [&](auto &_self_go, const unsigned int i) -> list<T1> {
       if (i <= 0) {
         return list<T1>::nil();
       } else {
@@ -405,7 +405,9 @@ struct LoopifyLists {
                               _self_go(_self_go, j));
       }
     };
-    auto go = [&](unsigned int i) -> list<T1> { return go_impl(go_impl, i); };
+    auto go = [&](const unsigned int i) -> list<T1> {
+      return go_impl(go_impl, i);
+    };
     return go(n);
   }
 
@@ -472,7 +474,7 @@ struct LoopifyLists {
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
           auto map_cons_impl = [](auto &_self_map_cons,
-                                  list<list<T1>> ys) -> list<list<T1>> {
+                                  const list<list<T1>> &ys) -> list<list<T1>> {
             if (std::holds_alternative<typename list<list<T1>>::Nil>(ys.v())) {
               return list<list<T1>>::nil();
             } else {
@@ -483,7 +485,7 @@ struct LoopifyLists {
                   _self_map_cons(_self_map_cons, *(d_a1)));
             }
           };
-          auto map_cons = [&](list<list<T1>> ys) -> list<list<T1>> {
+          auto map_cons = [&](const list<list<T1>> &ys) -> list<list<T1>> {
             return map_cons_impl(map_cons_impl, ys);
           };
           _stack.emplace_back(
@@ -573,8 +575,8 @@ struct LoopifyLists {
         break;
       } else {
         unsigned int f = _loop_fuel - 1;
-        auto take_impl = [](auto &_self_take, unsigned int k,
-                            list<T1> lst) -> list<T1> {
+        auto take_impl = [](auto &_self_take, const unsigned int k,
+                            const list<T1> &lst) -> list<T1> {
           if (k <= 0) {
             return list<T1>::nil();
           } else {
@@ -588,10 +590,10 @@ struct LoopifyLists {
             }
           }
         };
-        auto take = [&](unsigned int k, list<T1> lst) -> list<T1> {
+        auto take = [&](const unsigned int k, const list<T1> &lst) -> list<T1> {
           return take_impl(take_impl, k, lst);
         };
-        auto drop0_impl = [](auto &_self_drop0, unsigned int k,
+        auto drop0_impl = [](auto &_self_drop0, const unsigned int k,
                              list<T1> lst) -> list<T1> {
           if (k <= 0) {
             return lst;
@@ -606,7 +608,7 @@ struct LoopifyLists {
             }
           }
         };
-        auto drop0 = [&](unsigned int k, list<T1> lst) -> list<T1> {
+        auto drop0 = [&](const unsigned int k, list<T1> lst) -> list<T1> {
           return drop0_impl(drop0_impl, k, lst);
         };
         if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
@@ -637,7 +639,8 @@ struct LoopifyLists {
 
   template <typename T1>
   static list<list<T1>> chunks_of(const unsigned int n, const list<T1> &l) {
-    auto length_impl = [](auto &_self_length, list<T1> l0) -> unsigned int {
+    auto length_impl = [](auto &_self_length,
+                          const list<T1> &l0) -> unsigned int {
       if (std::holds_alternative<typename list<T1>::Nil>(l0.v())) {
         return 0u;
       } else {
@@ -645,7 +648,7 @@ struct LoopifyLists {
         return (_self_length(_self_length, *(d_a1)) + 1);
       }
     };
-    auto length = [&](list<T1> l0) -> unsigned int {
+    auto length = [&](const list<T1> &l0) -> unsigned int {
       return length_impl(length_impl, l0);
     };
     return chunks_of_aux<T1>(n, l, (length(l) + 1));
@@ -802,7 +805,8 @@ struct LoopifyLists {
   template <typename T1>
   static list<std::pair<T1, T1>>
   zip_longest(const list<T1> &l1, const list<T1> &l2, const T1 &default0) {
-    auto length_impl = [](auto &_self_length, list<T1> l) -> unsigned int {
+    auto length_impl = [](auto &_self_length,
+                          const list<T1> &l) -> unsigned int {
       if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
         return 0u;
       } else {
@@ -810,7 +814,7 @@ struct LoopifyLists {
         return (_self_length(_self_length, *(d_a1)) + 1);
       }
     };
-    auto length = [&](list<T1> l) -> unsigned int {
+    auto length = [&](const list<T1> &l) -> unsigned int {
       return length_impl(length_impl, l);
     };
     unsigned int len = (length(l1) + length(l2));
@@ -943,7 +947,7 @@ struct LoopifyLists {
       } else {
         unsigned int f = _loop_fuel - 1;
         auto map_head_impl = [](auto &_self_map_head,
-                                list<list<T1>> l) -> list<T1> {
+                                const list<list<T1>> &l) -> list<T1> {
           if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
             return list<T1>::nil();
           } else {
@@ -959,11 +963,11 @@ struct LoopifyLists {
             }
           }
         };
-        auto map_head = [&](list<list<T1>> l) -> list<T1> {
+        auto map_head = [&](const list<list<T1>> &l) -> list<T1> {
           return map_head_impl(map_head_impl, l);
         };
         auto map_tail_impl = [](auto &_self_map_tail,
-                                list<list<T1>> l) -> list<list<T1>> {
+                                const list<list<T1>> &l) -> list<list<T1>> {
           if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
             return list<list<T1>>::nil();
           } else {
@@ -979,7 +983,7 @@ struct LoopifyLists {
             }
           }
         };
-        auto map_tail = [&](list<list<T1>> l) -> list<list<T1>> {
+        auto map_tail = [&](const list<list<T1>> &l) -> list<list<T1>> {
           return map_tail_impl(map_tail_impl, l);
         };
         if (std::holds_alternative<typename list<list<T1>>::Nil>(_loop_m.v())) {
@@ -1200,7 +1204,7 @@ struct LoopifyLists {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename list<list<T1>>::Cons>(l.v());
-          auto app_impl = [](auto &_self_app, list<T1> l1,
+          auto app_impl = [](auto &_self_app, const list<T1> &l1,
                              list<T1> l2) -> list<T1> {
             if (std::holds_alternative<typename list<T1>::Nil>(l1.v())) {
               return l2;
@@ -1211,7 +1215,7 @@ struct LoopifyLists {
                   d_a00, _self_app(_self_app, *(d_a10), std::move(l2)));
             }
           };
-          auto app = [&](list<T1> l1, list<T1> l2) -> list<T1> {
+          auto app = [&](const list<T1> &l1, list<T1> l2) -> list<T1> {
             return app_impl(app_impl, l1, l2);
           };
           _stack.emplace_back(_Resume_Cons{std::move(app), d_a0});

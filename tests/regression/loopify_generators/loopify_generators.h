@@ -298,7 +298,8 @@ struct LoopifyGenerators {
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
-    auto go_impl = [&](auto &_self_go, unsigned int i) -> List<unsigned int> {
+    auto go_impl = [&](auto &_self_go,
+                       const unsigned int i) -> List<unsigned int> {
       if (i <= 0) {
         return List<unsigned int>::nil();
       } else {
@@ -307,7 +308,7 @@ struct LoopifyGenerators {
                                         _self_go(_self_go, j));
       }
     };
-    auto go = [&](unsigned int i) -> List<unsigned int> {
+    auto go = [&](const unsigned int i) -> List<unsigned int> {
       return go_impl(go_impl, i);
     };
     return go(n);

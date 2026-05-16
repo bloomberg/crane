@@ -266,7 +266,7 @@ struct LoopifyListGenerators {
       unsigned int n_ = n - 1;
       return List<unsigned int>::cons(f(0u), [&]() {
         auto go_impl = [&](auto &_self_go,
-                           unsigned int i) -> List<unsigned int> {
+                           const unsigned int i) -> List<unsigned int> {
           if (i <= 0) {
             return List<unsigned int>::nil();
           } else {
@@ -275,7 +275,7 @@ struct LoopifyListGenerators {
                                             _self_go(_self_go, i_));
           }
         };
-        auto go = [&](unsigned int i) -> List<unsigned int> {
+        auto go = [&](const unsigned int i) -> List<unsigned int> {
           return go_impl(go_impl, i);
         };
         return go(n_);
@@ -298,7 +298,7 @@ struct LoopifyListGenerators {
     } else {
       unsigned int n_ = n - 1;
       auto aux_impl = [&](auto &_self_aux,
-                          unsigned int idx) -> List<unsigned int> {
+                          const unsigned int idx) -> List<unsigned int> {
         if (idx <= 0) {
           return List<unsigned int>::cons(f(0u), List<unsigned int>::nil());
         } else {
@@ -307,7 +307,7 @@ struct LoopifyListGenerators {
               .app(List<unsigned int>::cons(f(idx), List<unsigned int>::nil()));
         }
       };
-      auto aux = [&](unsigned int idx) -> List<unsigned int> {
+      auto aux = [&](const unsigned int idx) -> List<unsigned int> {
         return aux_impl(aux_impl, idx);
       };
       return aux(n_);

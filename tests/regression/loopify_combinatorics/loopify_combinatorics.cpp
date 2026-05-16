@@ -297,7 +297,7 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
       List<List<unsigned int>> rest = _result;
       auto map_prepend_impl =
           [&](auto &_self_map_prepend,
-              List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+              const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 lst.v())) {
           return List<List<unsigned int>>::nil();
@@ -310,7 +310,7 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
         }
       };
       auto map_prepend =
-          [&](List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+          [&](const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
         return map_prepend_impl(map_prepend_impl, lst);
       };
       _result = rest.app(map_prepend(rest));
@@ -437,7 +437,7 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
       List<List<unsigned int>> rest = _result;
       auto map_add_x_impl =
           [&](auto &_self_map_add_x,
-              List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+              const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 lst.v())) {
           return List<List<unsigned int>>::nil();
@@ -450,7 +450,7 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
         }
       };
       auto map_add_x =
-          [&](List<List<unsigned int>> lst) -> List<List<unsigned int>> {
+          [&](const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
         return map_add_x_impl(map_add_x_impl, lst);
       };
       _result = rest.app(map_add_x(rest));
@@ -505,9 +505,9 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
       List<unsigned int> l = std::move(_f.l);
       const unsigned int x = _f.x;
       List<List<unsigned int>> rest = _result;
-      auto prepend_y_impl =
-          [&](auto &_self_prepend_y,
-              List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto prepend_y_impl = [&](auto &_self_prepend_y,
+                                const List<List<unsigned int>> &lsts)
+          -> List<List<unsigned int>> {
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 lsts.v())) {
           return List<List<unsigned int>>::nil();
@@ -519,8 +519,8 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
               _self_prepend_y(_self_prepend_y, *(d_a10)));
         }
       };
-      auto prepend_y =
-          [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto prepend_y = [&](const List<List<unsigned int>> &lsts)
+          -> List<List<unsigned int>> {
         return prepend_y_impl(prepend_y_impl, lsts);
       };
       _result = List<List<unsigned int>>::cons(List<unsigned int>::cons(x, l),

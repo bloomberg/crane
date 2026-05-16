@@ -290,7 +290,7 @@ struct TopologicalSort {
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1> get_elems(F0 &&eqb_node, const List<std::pair<T1, T1>> &l) {
     auto get_elems_aux_impl = [&](auto &_self_get_elems_aux,
-                                  List<std::pair<T1, T1>> l0,
+                                  const List<std::pair<T1, T1>> &l0,
                                   List<T1> h) -> List<T1> {
       if (std::holds_alternative<typename List<std::pair<T1, T1>>::Nil>(
               l0.v())) {
@@ -333,7 +333,7 @@ struct TopologicalSort {
         }
       }
     };
-    auto get_elems_aux = [&](List<std::pair<T1, T1>> l0,
+    auto get_elems_aux = [&](const List<std::pair<T1, T1>> &l0,
                              List<T1> h) -> List<T1> {
       return get_elems_aux_impl(get_elems_aux_impl, l0, h);
     };

@@ -26,7 +26,7 @@ template <SymTypes Ty> struct ListCollect {
   collect(const typename Ty::sym,
           const typename Datatypes::template List<typename Ty::sym> &,
           const typename Datatypes::Nat &n, const symbols_semty default0) {
-    auto go_impl = [&](auto &_self_go, typename Datatypes::Nat n0,
+    auto go_impl = [&](auto &_self_go, const typename Datatypes::Nat &n0,
                        typename Datatypes::template List<std::any> acc) ->
         typename Datatypes::template List<std::any> {
           if (std::holds_alternative<typename Datatypes::Nat::O>(n0.v())) {
@@ -38,7 +38,7 @@ template <SymTypes Ty> struct ListCollect {
                                 default0, std::move(acc)));
           }
         };
-    auto go = [&](typename Datatypes::Nat n0,
+    auto go = [&](const typename Datatypes::Nat &n0,
                   typename Datatypes::template List<std::any> acc) ->
         typename Datatypes::template List<std::any> {
           return go_impl(go_impl, n0, acc);

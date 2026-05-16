@@ -389,6 +389,17 @@
   (deps let_fix_no_stdfun.t.exe)
   (action (run ./let_fix_no_stdfun.t.exe))))
 
+(subdir let_fix_byref_list_param
+ (rule
+  (targets let_fix_byref_list_param.t.exe)
+  (deps LetFixByrefListParam.vo let_fix_byref_list_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_byref_list_param.t.exe let_fix_byref_list_param.cpp let_fix_byref_list_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_byref_list_param.t.exe)
+  (action (run ./let_fix_byref_list_param.t.exe))))
+
 (subdir rec_record
  (rule
   (targets rec_record.t.exe)

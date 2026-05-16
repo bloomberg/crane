@@ -62,8 +62,8 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         auto filter_multiples_impl =
-            [](auto &_self_filter_multiples, unsigned int p,
-               List<unsigned int> rest) -> List<unsigned int> {
+            [](auto &_self_filter_multiples, const unsigned int p,
+               const List<unsigned int> &rest) -> List<unsigned int> {
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   rest.v())) {
             return List<unsigned int>::nil();
@@ -81,7 +81,8 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
           }
         };
         auto filter_multiples =
-            [&](unsigned int p, List<unsigned int> rest) -> List<unsigned int> {
+            [&](const unsigned int p,
+                const List<unsigned int> &rest) -> List<unsigned int> {
           return filter_multiples_impl(filter_multiples_impl, p, rest);
         };
         auto _cell = std::make_unique<List<unsigned int>>(
@@ -268,8 +269,8 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         auto filter_out_impl =
-            [](auto &_self_filter_out, unsigned int val,
-               List<unsigned int> rest) -> List<unsigned int> {
+            [](auto &_self_filter_out, const unsigned int val,
+               const List<unsigned int> &rest) -> List<unsigned int> {
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   rest.v())) {
             return List<unsigned int>::nil();
@@ -284,8 +285,9 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
             }
           }
         };
-        auto filter_out = [&](unsigned int val,
-                              List<unsigned int> rest) -> List<unsigned int> {
+        auto filter_out =
+            [&](const unsigned int val,
+                const List<unsigned int> &rest) -> List<unsigned int> {
           return filter_out_impl(filter_out_impl, val, rest);
         };
         auto _cell = std::make_unique<List<unsigned int>>(

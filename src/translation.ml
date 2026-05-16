@@ -7156,7 +7156,7 @@ and fixpoint_escapes_in_stmts target_id stmts =
 
     @return [(decls, defs)] — declaration and definition statement lists.
     @see gen_local_fix_shared_ptr for the escaping-fixpoint alternative. *)
-and gen_local_fix_by_ref env renamed_ids funs_with_params =
+and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
   let tvars = get_current_type_vars () in
   let ret_ty ty =
     match convert_ml_type_to_cpp_type env Refset'.empty tvars ty with
@@ -7198,16 +7198,19 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params =
   and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
   let impl_stmts =
     List.map2
-      (fun ((_fix_id, fty), impl_id) (args, body) ->
+      (fun (((_fix_id, fty), impl_id), owned_flags) (args, body) ->
         let self_params =
           List.rev_map (fun sid -> (Tref Tauto, Some sid)) self_ids
         in
         let orig_params =
-          List.map
-            (fun (id, ty) ->
-              ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
+          List.map2
+            (fun (id, ty) owned ->
+              let cpp_ty =
+                convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+              in
+              ( wrap_param_by_ownership ~is_owned:owned cpp_ty,
                 Some id ))
-            args
+            args owned_flags
         in
         Sasgn
           ( impl_id,
@@ -7217,19 +7220,22 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params =
                 ret_ty fty,
                 List.map rewrite_stmt body,
                 false ) ))
-      (List.combine renamed_ids impl_ids)
+      (List.combine (List.combine renamed_ids impl_ids) owned_flags_per_fun)
       funs_with_params
   in
   let impl_vars_rev = List.rev_map (fun id -> CPPvar id) impl_ids in
   let wrapper_stmts =
     List.map2
-      (fun ((fix_id, fty), _impl_id) (args, _body) ->
+      (fun (((fix_id, fty), _impl_id), owned_flags) (args, _body) ->
         let orig_params =
-          List.map
-            (fun (id, ty) ->
-              ( convert_ml_type_to_cpp_type env Refset'.empty tvars ty,
+          List.map2
+            (fun (id, ty) owned ->
+              let cpp_ty =
+                convert_ml_type_to_cpp_type env Refset'.empty tvars ty
+              in
+              ( wrap_param_by_ownership ~is_owned:owned cpp_ty,
                 Some id ))
-            args
+            args owned_flags
         in
         let fwd_args =
           List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
@@ -7245,7 +7251,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params =
           ( fix_id,
             Some Tauto,
             CPPlambda (orig_params, rty, wrapper_body, false) ))
-      (List.combine renamed_ids impl_ids)
+      (List.combine (List.combine renamed_ids impl_ids) owned_flags_per_fun)
       funs_with_params
   in
   (impl_stmts @ wrapper_stmts, [])
@@ -7704,8 +7710,25 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         in
         decls @ defs @ deref_subst cont
       else
+        let owned_flags_per_fun =
+          Array.to_list (Array.map (fun f ->
+            let lam_ids, inner_body = Mlutil.collect_lams f in
+            let n_params =
+              List.length
+                (List.filter
+                   (fun (_, ty) -> not (ml_type_is_void ty))
+                   lam_ids)
+            in
+            let n_fix = Array.length funs in
+            let all_flags =
+              Escape.infer_owned_params (n_params + n_fix) inner_body
+            in
+            List.init n_params (fun i -> List.nth all_flags i)
+          ) funs)
+        in
         let decls, defs =
           gen_local_fix_by_ref env renamed_ids funs_with_params
+            owned_flags_per_fun
         in
         decls @ defs @ cont
   | MLletin (x, t, (MLlam _ as a), b) ->
@@ -8601,8 +8624,25 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         decls @ defs
         @ deref_subst [k (CPPlambda (List.rev pa_params, None, [Sreturn (Some full_call)], true))]
       end else begin
+        let owned_flags_per_fun =
+          Array.to_list (Array.map (fun f ->
+            let lam_ids, inner_body = Mlutil.collect_lams f in
+            let n_params =
+              List.length
+                (List.filter
+                   (fun (_, ty) -> not (ml_type_is_void ty))
+                   lam_ids)
+            in
+            let n_fix = Array.length funs in
+            let all_flags =
+              Escape.infer_owned_params (n_params + n_fix) inner_body
+            in
+            List.init n_params (fun i -> List.nth all_flags i)
+          ) funs)
+        in
         let decls, defs =
           gen_local_fix_by_ref env renamed_ids funs_with_params
+            owned_flags_per_fun
         in
         decls @ defs
         @ [k (CPPfun_call (CPPvar (fst (List.nth renamed_ids x)), args))]

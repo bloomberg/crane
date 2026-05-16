@@ -146,7 +146,8 @@ public:
 template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T2, F0 &, T1 &>
 List<T2> better_map(F0 &&f, const List<T1> &l) {
-  auto go_impl = [&](auto &_self_go, List<T1> l0, List<T2> acc) -> List<T2> {
+  auto go_impl = [&](auto &_self_go, const List<T1> &l0,
+                     List<T2> acc) -> List<T2> {
     if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
       return std::move(acc).rev();
     } else {
@@ -155,7 +156,7 @@ List<T2> better_map(F0 &&f, const List<T1> &l) {
                       List<T2>::cons(f(d_a0), std::move(acc)));
     }
   };
-  auto go = [&](List<T1> l0, List<T2> acc) -> List<T2> {
+  auto go = [&](const List<T1> &l0, List<T2> acc) -> List<T2> {
     return go_impl(go_impl, l0, acc);
   };
   return go(l, List<T2>::nil());

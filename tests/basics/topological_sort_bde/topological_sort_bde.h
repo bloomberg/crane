@@ -270,7 +270,7 @@ struct TopologicalSort {
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1> get_elems(F0 &&eqb_node, const List<bsl::pair<T1, T1>> &l) {
     auto get_elems_aux_impl = [&](auto &_self_get_elems_aux,
-                                  List<bsl::pair<T1, T1>> l0,
+                                  const List<bsl::pair<T1, T1>> &l0,
                                   List<T1> h) -> List<T1> {
       if (bsl::holds_alternative<typename List<bsl::pair<T1, T1>>::Nil>(
               l0.v())) {
@@ -313,7 +313,7 @@ struct TopologicalSort {
         }
       }
     };
-    auto get_elems_aux = [&](List<bsl::pair<T1, T1>> l0,
+    auto get_elems_aux = [&](const List<bsl::pair<T1, T1>> &l0,
                              List<T1> h) -> List<T1> {
       return get_elems_aux_impl(get_elems_aux_impl, l0, h);
     };

@@ -395,7 +395,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<T1> &l1 = *(_f.l1);
         auto pair_with_impl = [](auto &_self_pair_with, T1 x,
-                                 List<T2> l) -> List<std::pair<T1, T2>> {
+                                 const List<T2> &l) -> List<std::pair<T1, T2>> {
           if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
             return List<std::pair<T1, T2>>::nil();
           } else {
@@ -405,7 +405,8 @@ struct LoopifyHofs {
                 _self_pair_with(_self_pair_with, x, *(d_a1)));
           }
         };
-        auto pair_with = [&](T1 x, List<T2> l) -> List<std::pair<T1, T2>> {
+        auto pair_with = [&](T1 x,
+                             const List<T2> &l) -> List<std::pair<T1, T2>> {
           return pair_with_impl(pair_with_impl, x, l);
         };
         if (std::holds_alternative<typename List<T1>::Nil>(l1.v())) {

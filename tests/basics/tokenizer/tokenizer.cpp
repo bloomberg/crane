@@ -5,8 +5,8 @@ std::pair<std::optional<std::basic_string_view<char>>,
 Tokenizer::next_token(const std::basic_string_view<char> input,
                       const std::basic_string_view<char> soft,
                       const std::basic_string_view<char> hard) {
-  auto aux_impl = [&](auto &_self_aux, unsigned int fuel, int64_t index,
-                      std::basic_string_view<char> s)
+  auto aux_impl = [&](auto &_self_aux, const unsigned int fuel,
+                      const int64_t index, const std::basic_string_view<char> s)
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
     if (s.length() == int64_t(0)) {
@@ -52,8 +52,8 @@ Tokenizer::next_token(const std::basic_string_view<char> input,
       }
     }
   };
-  auto aux = [&](unsigned int fuel, int64_t index,
-                 std::basic_string_view<char> s)
+  auto aux = [&](const unsigned int fuel, const int64_t index,
+                 const std::basic_string_view<char> s)
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
     return aux_impl(aux_impl, fuel, index, s);
@@ -65,8 +65,8 @@ List<std::basic_string_view<char>>
 Tokenizer::list_tokens(const std::basic_string_view<char> input,
                        const std::basic_string_view<char> soft,
                        const std::basic_string_view<char> hard) {
-  auto aux_impl = [&](auto &_self_aux, unsigned int fuel,
-                      std::basic_string_view<char> rest)
+  auto aux_impl = [&](auto &_self_aux, const unsigned int fuel,
+                      const std::basic_string_view<char> rest)
       -> List<std::basic_string_view<char>> {
     if (fuel <= 0) {
       return List<std::basic_string_view<char>>::nil();
@@ -85,7 +85,8 @@ Tokenizer::list_tokens(const std::basic_string_view<char> input,
       }
     }
   };
-  auto aux = [&](unsigned int fuel, std::basic_string_view<char> rest)
+  auto aux = [&](const unsigned int fuel,
+                 const std::basic_string_view<char> rest)
       -> List<std::basic_string_view<char>> {
     return aux_impl(aux_impl, fuel, rest);
   };

@@ -367,8 +367,9 @@ struct LoopifyPatterns {
                                          list<list<T1>>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          auto map_cons_h_impl = [&](auto &_self_map_cons_h,
-                                     list<list<T1>> lsts) -> list<list<T1>> {
+          auto map_cons_h_impl =
+              [&](auto &_self_map_cons_h,
+                  const list<list<T1>> &lsts) -> list<list<T1>> {
             if (std::holds_alternative<typename list<list<T1>>::Nil>(
                     lsts.v())) {
               return list<list<T1>>::nil();
@@ -380,7 +381,7 @@ struct LoopifyPatterns {
                   _self_map_cons_h(_self_map_cons_h, *(d_a10)));
             }
           };
-          auto map_cons_h = [&](list<list<T1>> lsts) -> list<list<T1>> {
+          auto map_cons_h = [&](const list<list<T1>> &lsts) -> list<list<T1>> {
             return map_cons_h_impl(map_cons_h_impl, lsts);
           };
           _stack.emplace_back(

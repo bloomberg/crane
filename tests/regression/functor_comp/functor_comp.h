@@ -218,9 +218,9 @@ struct FunctorComp {
     }
 
     static List<unsigned int> to_list(const typename C::t c) {
-      auto go_impl = [](auto &_self_go, unsigned int fuel,
+      auto go_impl = [](auto &_self_go, const unsigned int fuel,
                         List<unsigned int> acc,
-                        typename C::t c0) -> List<unsigned int> {
+                        const typename C::t c0) -> List<unsigned int> {
         if (fuel <= 0) {
           return std::move(acc).rev();
         } else {
@@ -237,8 +237,8 @@ struct FunctorComp {
           }
         }
       };
-      auto go = [&](unsigned int fuel, List<unsigned int> acc,
-                    typename C::t c0) -> List<unsigned int> {
+      auto go = [&](const unsigned int fuel, List<unsigned int> acc,
+                    const typename C::t c0) -> List<unsigned int> {
         return go_impl(go_impl, fuel, acc, c0);
       };
       return go(C::size(c), List<unsigned int>::nil(), c);

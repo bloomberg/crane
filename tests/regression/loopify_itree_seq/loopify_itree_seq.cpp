@@ -4,8 +4,8 @@
 /// erased so this becomes a plain tail-recursive C++ function. Loopify should
 /// convert it to a while loop.
 unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
-  auto go_impl = [](auto &_self_go, unsigned int k,
-                    unsigned int acc) -> unsigned int {
+  auto go_impl = [](auto &_self_go, const unsigned int k,
+                    const unsigned int acc) -> unsigned int {
     if (k <= 0) {
       return acc;
     } else {
@@ -13,7 +13,7 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
       return _self_go(_self_go, k_, (acc + 1u));
     }
   };
-  auto go = [&](unsigned int k, unsigned int acc) -> unsigned int {
+  auto go = [&](const unsigned int k, const unsigned int acc) -> unsigned int {
     return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);
@@ -21,8 +21,8 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
 
 /// Sum 1..n via tail recursion with accumulator.
 unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
-  auto go_impl = [](auto &_self_go, unsigned int k,
-                    unsigned int acc) -> unsigned int {
+  auto go_impl = [](auto &_self_go, const unsigned int k,
+                    const unsigned int acc) -> unsigned int {
     if (k <= 0) {
       return acc;
     } else {
@@ -30,7 +30,7 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
       return _self_go(_self_go, k_, (acc + k));
     }
   };
-  auto go = [&](unsigned int k, unsigned int acc) -> unsigned int {
+  auto go = [&](const unsigned int k, const unsigned int acc) -> unsigned int {
     return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);

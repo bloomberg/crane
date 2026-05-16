@@ -681,7 +681,7 @@ struct MemSafetyProbe3 {
     return []() {
       tree t = tree::node(tree::leaf(), 42u, tree::leaf());
       auto helper_impl = [&](auto &_self_helper,
-                             unsigned int n) -> unsigned int {
+                             const unsigned int n) -> unsigned int {
         if (n <= 0) {
           return t.sum_values(0u);
         } else {
@@ -689,7 +689,7 @@ struct MemSafetyProbe3 {
           return (t.sum_values(1u) + _self_helper(_self_helper, n_));
         }
       };
-      auto helper = [&](unsigned int n) -> unsigned int {
+      auto helper = [&](const unsigned int n) -> unsigned int {
         return helper_impl(helper_impl, n);
       };
       return helper(3u);

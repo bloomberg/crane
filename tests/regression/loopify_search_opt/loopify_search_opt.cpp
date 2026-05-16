@@ -360,8 +360,8 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
         } else {
           unsigned int mid = (2u ? len / 2u : 0);
           unsigned int mid_val;
-          auto nth_impl = [](auto &_self_nth, unsigned int n,
-                             List<unsigned int> xs) -> unsigned int {
+          auto nth_impl = [](auto &_self_nth, const unsigned int n,
+                             const List<unsigned int> &xs) -> unsigned int {
             if (n <= 0) {
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
                       xs.v())) {
@@ -383,14 +383,15 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
               }
             }
           };
-          auto nth = [&](unsigned int n,
-                         List<unsigned int> xs) -> unsigned int {
+          auto nth = [&](const unsigned int n,
+                         const List<unsigned int> &xs) -> unsigned int {
             return nth_impl(nth_impl, n, xs);
           };
           mid_val = nth(mid, _loop_l);
           List<unsigned int> left;
-          auto take_impl = [](auto &_self_take, unsigned int n,
-                              List<unsigned int> xs) -> List<unsigned int> {
+          auto take_impl =
+              [](auto &_self_take, const unsigned int n,
+                 const List<unsigned int> &xs) -> List<unsigned int> {
             if (n <= 0) {
               return List<unsigned int>::nil();
             } else {
@@ -406,13 +407,13 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
               }
             }
           };
-          auto take = [&](unsigned int n,
-                          List<unsigned int> xs) -> List<unsigned int> {
+          auto take = [&](const unsigned int n,
+                          const List<unsigned int> &xs) -> List<unsigned int> {
             return take_impl(take_impl, n, xs);
           };
           left = take(mid, _loop_l);
           List<unsigned int> right;
-          auto drop_impl = [](auto &_self_drop, unsigned int n,
+          auto drop_impl = [](auto &_self_drop, const unsigned int n,
                               List<unsigned int> xs) -> List<unsigned int> {
             if (n <= 0) {
               return xs;
@@ -428,7 +429,7 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
               }
             }
           };
-          auto drop = [&](unsigned int n,
+          auto drop = [&](const unsigned int n,
                           List<unsigned int> xs) -> List<unsigned int> {
             return drop_impl(drop_impl, n, xs);
           };

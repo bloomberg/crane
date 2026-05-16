@@ -345,8 +345,8 @@ struct Equations {
                           std::pair<unsigned int, unsigned int> _x0,
                           const unsigned int _x1, gcd_graph _x2) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
-                       std::pair<unsigned int, unsigned int>, unsigned int,
-                       gcd_graph g) -> T1 {
+                       const std::pair<unsigned int, unsigned int> &,
+                       const unsigned int, const gcd_graph &g) -> T1 {
       if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
               g.v())) {
         const auto &[d_y] =
@@ -367,9 +367,9 @@ struct Equations {
                      *(d_hind)));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
-                       unsigned int, bool, unsigned int,
-                       gcd_clause_3_graph g) -> T2 {
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
+                       const unsigned int, const bool, const unsigned int,
+                       const gcd_clause_3_graph &g) -> T2 {
       if (std::holds_alternative<
               typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
               g.v())) {
@@ -405,12 +405,12 @@ struct Equations {
                 *(d_hind0)));
       }
     };
-    auto f4 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x3,
-                  gcd_graph g) -> T1 {
+    auto f4 = [&](const std::pair<unsigned int, unsigned int> &_x,
+                  const unsigned int _x3, const gcd_graph &g) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x3, g);
     };
-    auto f5 = [&](unsigned int _x, unsigned int _x3, bool _x4, unsigned int _x5,
-                  gcd_clause_3_graph g) -> T2 {
+    auto f5 = [&](const unsigned int _x, const unsigned int _x3, const bool _x4,
+                  const unsigned int _x5, const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, _x5, g);
     };
     return f4(_x0, _x1, _x2);
@@ -424,8 +424,8 @@ struct Equations {
                                    const unsigned int _x3,
                                    gcd_clause_3_graph _x4) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
-                       std::pair<unsigned int, unsigned int>, unsigned int,
-                       gcd_graph g) -> T1 {
+                       const std::pair<unsigned int, unsigned int> &,
+                       const unsigned int, const gcd_graph &g) -> T1 {
       if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
               g.v())) {
         const auto &[d_y] =
@@ -446,9 +446,9 @@ struct Equations {
                      *(d_hind)));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
-                       unsigned int, bool, unsigned int,
-                       gcd_clause_3_graph g) -> T2 {
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
+                       const unsigned int, const bool, const unsigned int,
+                       const gcd_clause_3_graph &g) -> T2 {
       if (std::holds_alternative<
               typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
               g.v())) {
@@ -484,12 +484,12 @@ struct Equations {
                 *(d_hind0)));
       }
     };
-    auto f4 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x5,
-                  gcd_graph g) -> T1 {
+    auto f4 = [&](const std::pair<unsigned int, unsigned int> &_x,
+                  const unsigned int _x5, const gcd_graph &g) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x5, g);
     };
-    auto f5 = [&](unsigned int _x, unsigned int _x5, bool _x6, unsigned int _x7,
-                  gcd_clause_3_graph g) -> T2 {
+    auto f5 = [&](const unsigned int _x, const unsigned int _x5, const bool _x6,
+                  const unsigned int _x7, const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x5, _x6, _x7, g);
     };
     return f5(_x0, _x1, _x2, _x3, _x4);
@@ -887,8 +887,8 @@ struct Equations {
                                     F4 &&f3, const unsigned int _x0,
                                     const unsigned int _x1,
                                     collatz_steps_graph _x2) {
-    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
-                       unsigned int, collatz_steps_graph c) -> T1 {
+    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
+                       const unsigned int, const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
               typename collatz_steps_graph::Collatz_steps_graph_equation_1>(
               c.v())) {
@@ -909,8 +909,9 @@ struct Equations {
                            *(d_hind)));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int, bool,
-                       unsigned int, collatz_steps_clause_3_graph c) -> T2 {
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
+                       const bool, const unsigned int,
+                       const collatz_steps_clause_3_graph &c) -> T2 {
       if (std::holds_alternative<typename collatz_steps_clause_3_graph::
                                      Collatz_steps_clause_3_graph_equation_1>(
               c.v())) {
@@ -929,12 +930,12 @@ struct Equations {
                            collatz_steps(((3u * d_n0) + 1u)), *(d_hind0)));
       }
     };
-    auto f4 = [&](unsigned int _x, unsigned int _x3,
-                  collatz_steps_graph c) -> T1 {
+    auto f4 = [&](const unsigned int _x, const unsigned int _x3,
+                  const collatz_steps_graph &c) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x3, c);
     };
-    auto f5 = [&](unsigned int _x, bool _x3, unsigned int _x4,
-                  collatz_steps_clause_3_graph c) -> T2 {
+    auto f5 = [&](const unsigned int _x, const bool _x3, const unsigned int _x4,
+                  const collatz_steps_clause_3_graph &c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, c);
     };
     return f4(_x0, _x1, _x2);
@@ -952,8 +953,8 @@ struct Equations {
                                    F4 &&f3, const unsigned int _x0,
                                    const bool _x1, const unsigned int _x2,
                                    collatz_steps_clause_3_graph _x3) {
-    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
-                       unsigned int, collatz_steps_graph c) -> T1 {
+    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
+                       const unsigned int, const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
               typename collatz_steps_graph::Collatz_steps_graph_equation_1>(
               c.v())) {
@@ -974,8 +975,9 @@ struct Equations {
                            *(d_hind)));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int, bool,
-                       unsigned int, collatz_steps_clause_3_graph c) -> T2 {
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
+                       const bool, const unsigned int,
+                       const collatz_steps_clause_3_graph &c) -> T2 {
       if (std::holds_alternative<typename collatz_steps_clause_3_graph::
                                      Collatz_steps_clause_3_graph_equation_1>(
               c.v())) {
@@ -994,12 +996,12 @@ struct Equations {
                            collatz_steps(((3u * d_n0) + 1u)), *(d_hind0)));
       }
     };
-    auto f4 = [&](unsigned int _x, unsigned int _x4,
-                  collatz_steps_graph c) -> T1 {
+    auto f4 = [&](const unsigned int _x, const unsigned int _x4,
+                  const collatz_steps_graph &c) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x4, c);
     };
-    auto f5 = [&](unsigned int _x, bool _x4, unsigned int _x5,
-                  collatz_steps_clause_3_graph c) -> T2 {
+    auto f5 = [&](const unsigned int _x, const bool _x4, const unsigned int _x5,
+                  const collatz_steps_clause_3_graph &c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x4, _x5, c);
     };
     return f5(_x0, _x1, _x2, _x3);

@@ -124,9 +124,9 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<List<unsigned int>> rest = _result;
-      auto map_cons_x_impl =
-          [&](auto &_self_map_cons_x,
-              List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto map_cons_x_impl = [&](auto &_self_map_cons_x,
+                                 const List<List<unsigned int>> &lsts)
+          -> List<List<unsigned int>> {
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 lsts.v())) {
           return List<List<unsigned int>>::nil();
@@ -138,8 +138,8 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
               _self_map_cons_x(_self_map_cons_x, *(d_a10)));
         }
       };
-      auto map_cons_x =
-          [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto map_cons_x = [&](const List<List<unsigned int>> &lsts)
+          -> List<List<unsigned int>> {
         return map_cons_x_impl(map_cons_x_impl, lsts);
       };
       _result = rest.app(map_cons_x(rest));
@@ -336,9 +336,9 @@ List<List<unsigned int>> LoopifyHofs::power_set(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
       List<List<unsigned int>> sub = _result;
-      auto map_cons_x_impl =
-          [&](auto &_self_map_cons_x,
-              List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto map_cons_x_impl = [&](auto &_self_map_cons_x,
+                                 const List<List<unsigned int>> &lsts)
+          -> List<List<unsigned int>> {
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 lsts.v())) {
           return List<List<unsigned int>>::nil();
@@ -350,8 +350,8 @@ List<List<unsigned int>> LoopifyHofs::power_set(
               _self_map_cons_x(_self_map_cons_x, *(d_a10)));
         }
       };
-      auto map_cons_x =
-          [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto map_cons_x = [&](const List<List<unsigned int>> &lsts)
+          -> List<List<unsigned int>> {
         return map_cons_x_impl(map_cons_x_impl, lsts);
       };
       _result = sub.app(map_cons_x(sub));

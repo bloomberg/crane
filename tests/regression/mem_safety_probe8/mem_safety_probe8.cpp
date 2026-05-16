@@ -225,8 +225,8 @@ unsigned int MemSafetyProbe8::tree_flatten(
 /// to prevent methodification completely.
 unsigned int
 MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
-  auto go_impl = [](auto &_self_go, unsigned int,
-                    MemSafetyProbe8::tree t0) -> unsigned int {
+  auto go_impl = [](auto &_self_go, const unsigned int,
+                    const MemSafetyProbe8::tree &t0) -> unsigned int {
     if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t0.v())) {
       return 0u;
     } else {
@@ -236,7 +236,8 @@ MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
               _self_go(_self_go, 0u, *(d_a2)));
     }
   };
-  auto go = [&](unsigned int _x, MemSafetyProbe8::tree t0) -> unsigned int {
+  auto go = [&](const unsigned int _x,
+                const MemSafetyProbe8::tree &t0) -> unsigned int {
     return go_impl(go_impl, _x, t0);
   };
   return go(0u, t);

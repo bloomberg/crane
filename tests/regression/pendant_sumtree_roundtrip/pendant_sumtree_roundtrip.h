@@ -961,8 +961,8 @@ std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
 
 template <typename T1>
 List<T1> Vector::to_list(const unsigned int n, const T0<T1> &v) {
-  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, unsigned int,
-                                T0<T1> v0, List<T1> b) -> List<T1> {
+  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, const unsigned int,
+                                const T0<T1> &v0, List<T1> b) -> List<T1> {
     if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
       return b;
     } else {
@@ -972,7 +972,7 @@ List<T1> Vector::to_list(const unsigned int n, const T0<T1> &v) {
                                                   *(d_a2), std::move(b)));
     }
   };
-  auto fold_right_fix = [&](unsigned int _x, T0<T1> v0,
+  auto fold_right_fix = [&](const unsigned int _x, const T0<T1> &v0,
                             List<T1> b) -> List<T1> {
     return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
   };

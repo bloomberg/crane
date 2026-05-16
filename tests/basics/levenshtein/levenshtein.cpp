@@ -59,7 +59,7 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
                                                              String _x0) {
   auto levenshtein_chain1_impl =
       [&](auto &_self_levenshtein_chain1,
-          String t) -> SigT<Nat, Levenshtein::chain> {
+          const String &t) -> SigT<Nat, Levenshtein::chain> {
     if (std::holds_alternative<typename String::EmptyString>(s.v())) {
       if (std::holds_alternative<typename String::EmptyString>(t.v())) {
         return SigT<Nat, Levenshtein::chain>::existt(Nat::o(),
@@ -121,7 +121,8 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
       }
     }
   };
-  auto levenshtein_chain1 = [&](String t) -> SigT<Nat, Levenshtein::chain> {
+  auto levenshtein_chain1 =
+      [&](const String &t) -> SigT<Nat, Levenshtein::chain> {
     return levenshtein_chain1_impl(levenshtein_chain1_impl, t);
   };
   return levenshtein_chain1(_x0);

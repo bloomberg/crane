@@ -249,7 +249,7 @@ struct LoopifySequences {
       return List<T1>::nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto go_impl = [&](auto &_self_go, List<T1> rest) -> List<T1> {
+      auto go_impl = [&](auto &_self_go, const List<T1> &rest) -> List<T1> {
         if (std::holds_alternative<typename List<T1>::Nil>(rest.v())) {
           return List<T1>::nil();
         } else {
@@ -259,7 +259,7 @@ struct LoopifySequences {
               sep, List<T1>::cons(d_a00, _self_go(_self_go, *(d_a10))));
         }
       };
-      auto go = [&](List<T1> rest) -> List<T1> {
+      auto go = [&](const List<T1> &rest) -> List<T1> {
         return go_impl(go_impl, rest);
       };
       return List<T1>::cons(d_a0, go(*(d_a1)));
@@ -279,7 +279,8 @@ struct LoopifySequences {
         break;
       } else {
         unsigned int f = _loop_fuel - 1;
-        auto all_nil_impl = [](auto &_self_all_nil, List<List<T1>> l) -> bool {
+        auto all_nil_impl = [](auto &_self_all_nil,
+                               const List<List<T1>> &l) -> bool {
           if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
             return true;
           } else {
@@ -292,7 +293,7 @@ struct LoopifySequences {
             }
           }
         };
-        auto all_nil = [&](List<List<T1>> l) -> bool {
+        auto all_nil = [&](const List<List<T1>> &l) -> bool {
           return all_nil_impl(all_nil_impl, l);
         };
         if (all_nil(_loop_ll)) {
@@ -300,7 +301,7 @@ struct LoopifySequences {
           break;
         } else {
           auto heads_impl = [](auto &_self_heads,
-                               List<List<T1>> l) -> List<T1> {
+                               const List<List<T1>> &l) -> List<T1> {
             if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
               return List<T1>::nil();
             } else {
@@ -316,11 +317,11 @@ struct LoopifySequences {
               }
             }
           };
-          auto heads = [&](List<List<T1>> l) -> List<T1> {
+          auto heads = [&](const List<List<T1>> &l) -> List<T1> {
             return heads_impl(heads_impl, l);
           };
           auto tails_impl = [](auto &_self_tails,
-                               List<List<T1>> l) -> List<List<T1>> {
+                               const List<List<T1>> &l) -> List<List<T1>> {
             if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
               return List<List<T1>>::nil();
             } else {
@@ -336,7 +337,7 @@ struct LoopifySequences {
               }
             }
           };
-          auto tails = [&](List<List<T1>> l) -> List<List<T1>> {
+          auto tails = [&](const List<List<T1>> &l) -> List<List<T1>> {
             return tails_impl(tails_impl, l);
           };
           auto _cell = std::make_unique<List<List<T1>>>(

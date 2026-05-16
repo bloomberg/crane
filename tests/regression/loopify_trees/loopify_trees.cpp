@@ -1035,8 +1035,8 @@ LoopifyTrees::tree_min_max(const LoopifyTrees::tree<unsigned int> &t) {
 unsigned int
 LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
   auto sum_with_acc_impl =
-      [](auto &_self_sum_with_acc, unsigned int acc,
-         LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
+      [](auto &_self_sum_with_acc, const unsigned int acc,
+         const LoopifyTrees::tree<unsigned int> &tree0) -> unsigned int {
     if (std::holds_alternative<typename LoopifyTrees::tree<unsigned int>::Leaf>(
             tree0.v())) {
       return acc;
@@ -1049,8 +1049,8 @@ LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
     }
   };
   auto sum_with_acc =
-      [&](unsigned int acc,
-          LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
+      [&](const unsigned int acc,
+          const LoopifyTrees::tree<unsigned int> &tree0) -> unsigned int {
     return sum_with_acc_impl(sum_with_acc_impl, acc, tree0);
   };
   return sum_with_acc(0u, t);

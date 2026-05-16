@@ -1,5 +1,5 @@
-#ifndef INCLUDED_LET_FIX
-#define INCLUDED_LET_FIX
+#ifndef INCLUDED_LET_FIX_BYREF_LIST_PARAM
+#define INCLUDED_LET_FIX_BYREF_LIST_PARAM
 
 #include <memory>
 #include <optional>
@@ -123,80 +123,21 @@ public:
   const variant_t &v() const { return d_v_; }
 };
 
-struct LetFix {
-  static unsigned int local_sum(const List<unsigned int> &l);
-
-  template <typename T1> static List<T1> local_rev(const List<T1> &l) {
-    auto go_impl = [](auto &_self_go, List<T1> acc,
-                      const List<T1> &xs) -> List<T1> {
-      if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
-        return acc;
-      } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-        return _self_go(_self_go, List<T1>::cons(d_a0, std::move(acc)),
-                        *(d_a1));
-      }
-    };
-    auto go = [&](List<T1> acc, const List<T1> &xs) -> List<T1> {
-      return go_impl(go_impl, acc, xs);
-    };
-    return go(List<T1>::nil(), l);
-  }
-
-  static List<unsigned int> local_flatten(const List<List<unsigned int>> &xss);
-  static bool local_mem(const unsigned int n, const List<unsigned int> &l);
-
-  template <typename T1> static unsigned int local_length(const List<T1> &xs) {
-    if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
-      return 0u;
-    } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-      return (local_length<T1>(*(d_a1)) + 1);
-    }
-  }
-
-  static inline const unsigned int test_sum =
-      local_sum(List<unsigned int>::cons(
+struct LetFixByrefListParam {
+  static unsigned int count_elements(const List<unsigned int> &xs);
+  static unsigned int sum_with_acc(const List<unsigned int> &l);
+  static inline const unsigned int test_count =
+      count_elements(List<unsigned int>::cons(
           1u, List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(
                           3u, List<unsigned int>::cons(
                                   4u, List<unsigned int>::cons(
                                           5u, List<unsigned int>::nil()))))));
-  static inline const List<unsigned int> test_rev =
-      local_rev<unsigned int>(List<unsigned int>::cons(
-          1u,
+  static inline const unsigned int test_sum =
+      sum_with_acc(List<unsigned int>::cons(
+          10u,
           List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
-  static inline const List<unsigned int> test_flatten =
-      local_flatten(List<List<unsigned int>>::cons(
-          List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
-          List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(3u, List<unsigned int>::nil()),
-              List<List<unsigned int>>::cons(
-                  List<unsigned int>::cons(
-                      4u, List<unsigned int>::cons(
-                              5u, List<unsigned int>::cons(
-                                      6u, List<unsigned int>::nil()))),
-                  List<List<unsigned int>>::nil()))));
-  static inline const bool test_mem_found = local_mem(
-      3u, List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(
-                      2u, List<unsigned int>::cons(
-                              3u, List<unsigned int>::cons(
-                                      4u, List<unsigned int>::nil())))));
-  static inline const bool test_mem_missing = local_mem(
-      9u, List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(
-                      2u, List<unsigned int>::cons(
-                              3u, List<unsigned int>::cons(
-                                      4u, List<unsigned int>::nil())))));
-  static inline const unsigned int test_length =
-      local_length<unsigned int>(List<unsigned int>::cons(
-          10u, List<unsigned int>::cons(
-                   20u, List<unsigned int>::cons(
-                            30u, List<unsigned int>::cons(
-                                     40u, List<unsigned int>::nil())))));
+              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
 };
 
-#endif // INCLUDED_LET_FIX
+#endif // INCLUDED_LET_FIX_BYREF_LIST_PARAM

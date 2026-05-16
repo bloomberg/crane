@@ -204,7 +204,7 @@ public:
 
 template <typename T1, typename T2>
 List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
-  auto go_impl = [](auto &_self_go, List<T1> la0, List<T2> lb0,
+  auto go_impl = [](auto &_self_go, const List<T1> &la0, const List<T2> &lb0,
                     List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
     if (std::holds_alternative<typename List<T1>::Nil>(la0.v())) {
       return std::move(acc).rev();
@@ -220,7 +220,7 @@ List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
       }
     }
   };
-  auto go = [&](List<T1> la0, List<T2> lb0,
+  auto go = [&](const List<T1> &la0, const List<T2> &lb0,
                 List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
     return go_impl(go_impl, la0, lb0, acc);
   };

@@ -60,7 +60,7 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
   } else {
     unsigned int diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<unsigned int> suffix;
-    auto drop_impl = [](auto &_self_drop, unsigned int n,
+    auto drop_impl = [](auto &_self_drop, const unsigned int n,
                         List<unsigned int> xs) -> List<unsigned int> {
       if (n <= 0) {
         return xs;
@@ -76,13 +76,13 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
         }
       }
     };
-    auto drop = [&](unsigned int n,
+    auto drop = [&](const unsigned int n,
                     List<unsigned int> xs) -> List<unsigned int> {
       return drop_impl(drop_impl, n, xs);
     };
     suffix = drop(diff, l2);
-    auto eq_impl = [](auto &_self_eq, List<unsigned int> a,
-                      List<unsigned int> b) -> bool {
+    auto eq_impl = [](auto &_self_eq, const List<unsigned int> &a,
+                      const List<unsigned int> &b) -> bool {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(a.v())) {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(b.v())) {
           return true;
@@ -105,7 +105,8 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
         }
       }
     };
-    auto eq = [&](List<unsigned int> a, List<unsigned int> b) -> bool {
+    auto eq = [&](const List<unsigned int> &a,
+                  const List<unsigned int> &b) -> bool {
       return eq_impl(eq_impl, a, b);
     };
     return eq(l1, suffix);
@@ -519,8 +520,8 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if ([&]() {
-            auto member_impl = [](auto &_self_member, unsigned int y,
-                                  List<unsigned int> ys) -> bool {
+            auto member_impl = [](auto &_self_member, const unsigned int y,
+                                  const List<unsigned int> &ys) -> bool {
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
                       ys.v())) {
                 return false;
@@ -530,7 +531,8 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
                 return (y == d_a0 || _self_member(_self_member, y, *(d_a1)));
               }
             };
-            auto member = [&](unsigned int y, List<unsigned int> ys) -> bool {
+            auto member = [&](const unsigned int y,
+                              const List<unsigned int> &ys) -> bool {
               return member_impl(member_impl, y, ys);
             };
             return member(d_a0, _loop_l2);
@@ -568,8 +570,8 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if ([&]() {
-            auto member_impl = [](auto &_self_member, unsigned int y,
-                                  List<unsigned int> ys) -> bool {
+            auto member_impl = [](auto &_self_member, const unsigned int y,
+                                  const List<unsigned int> &ys) -> bool {
               if (std::holds_alternative<typename List<unsigned int>::Nil>(
                       ys.v())) {
                 return false;
@@ -579,7 +581,8 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
                 return (y == d_a0 || _self_member(_self_member, y, *(d_a1)));
               }
             };
-            auto member = [&](unsigned int y, List<unsigned int> ys) -> bool {
+            auto member = [&](const unsigned int y,
+                              const List<unsigned int> &ys) -> bool {
               return member_impl(member_impl, y, ys);
             };
             return member(d_a0, l2);
