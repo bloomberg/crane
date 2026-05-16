@@ -7587,18 +7587,38 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             | t -> t
           in
           let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
+          let rec extract_tvar_map tmpl conc =
+            match (tmpl, conc) with
+            | Tvar (_, Some id), _ -> [(id, conc)]
+            | Tglob (g1, tys1, _), Tglob (g2, tys2, _)
+              when Environ.QGlobRef.equal Environ.empty_env g1 g2
+                   && List.length tys1 = List.length tys2 ->
+              List.concat (List.map2 extract_tvar_map tys1 tys2)
+            | Tfun (args1, ret1), Tfun (args2, ret2)
+              when List.length args1 = List.length args2 ->
+              List.concat (List.map2 extract_tvar_map args1 args2)
+              @ extract_tvar_map ret1 ret2
+            | Tref t1, Tref t2 -> extract_tvar_map t1 t2
+            | Tmod (_, t1), Tmod (_, t2) -> extract_tvar_map t1 t2
+            | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
+            | _ -> []
+          in
+          let tvar_map =
+            match tctx.current_cpp_return_type with
+            | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
+            | None -> []
+          in
           let extra_args =
             List.map
               (fun tvar_name ->
-                match tmpl_cod with
-                | Tvar (_, Some id) when Id.equal id tvar_name ->
-                  ( match tctx.current_cpp_return_type with
+                match List.find_opt
+                        (fun (id, _) -> Id.equal id tvar_name)
+                        tvar_map with
+                | Some (_, ty) -> ty
+                | None ->
+                  match tctx.current_cpp_return_type with
                   | Some ret_ty -> ret_ty
                   | None -> Tvar (0, Some tvar_name) )
-                | _ ->
-                match tctx.current_cpp_return_type with
-                | Some ret_ty -> ret_ty
-                | None -> Tvar (0, Some tvar_name) )
               extra_tvar_names
           in
           outer_args @ extra_args
@@ -8549,24 +8569,38 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             | t -> t
           in
           let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
+          let rec extract_tvar_map tmpl conc =
+            match (tmpl, conc) with
+            | Tvar (_, Some id), _ -> [(id, conc)]
+            | Tglob (g1, tys1, _), Tglob (g2, tys2, _)
+              when Environ.QGlobRef.equal Environ.empty_env g1 g2
+                   && List.length tys1 = List.length tys2 ->
+              List.concat (List.map2 extract_tvar_map tys1 tys2)
+            | Tfun (args1, ret1), Tfun (args2, ret2)
+              when List.length args1 = List.length args2 ->
+              List.concat (List.map2 extract_tvar_map args1 args2)
+              @ extract_tvar_map ret1 ret2
+            | Tref t1, Tref t2 -> extract_tvar_map t1 t2
+            | Tmod (_, t1), Tmod (_, t2) -> extract_tvar_map t1 t2
+            | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
+            | _ -> []
+          in
+          let tvar_map =
+            match tctx.current_cpp_return_type with
+            | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
+            | None -> []
+          in
           let extra_args =
             List.map
               (fun tvar_name ->
-                (* If this extra tvar IS the template return type, use the
-                   enclosing function's concrete return type as the
-                   instantiation. *)
-                match tmpl_cod with
-                | Tvar (_, Some id) when Id.equal id tvar_name ->
-                  ( match tctx.current_cpp_return_type with
+                match List.find_opt
+                        (fun (id, _) -> Id.equal id tvar_name)
+                        tvar_map with
+                | Some (_, ty) -> ty
+                | None ->
+                  match tctx.current_cpp_return_type with
                   | Some ret_ty -> ret_ty
                   | None -> Tvar (0, Some tvar_name) )
-                | _ ->
-                (* For non-return-type extra tvars, keep as Tvar — C++ may
-                   deduce them from arguments, or further analysis is needed. *)
-                match tctx.current_cpp_return_type with
-                | Some ret_ty ->
-                  ret_ty (* Best guess: use enclosing return type *)
-                | None -> Tvar (0, Some tvar_name) )
               extra_tvar_names
           in
           outer_args @ extra_args

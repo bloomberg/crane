@@ -444,6 +444,17 @@
   (deps let_fix_intermediate_ref.t.exe)
   (action (run ./let_fix_intermediate_ref.t.exe))))
 
+(subdir let_fix_hoisted_template
+ (rule
+  (targets let_fix_hoisted_template.t.exe)
+  (deps LetFixHoistedTemplate.vo let_fix_hoisted_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_hoisted_template.t.exe let_fix_hoisted_template.cpp let_fix_hoisted_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_hoisted_template.t.exe)
+  (action (run ./let_fix_hoisted_template.t.exe))))
+
 (subdir rec_record
  (rule
   (targets rec_record.t.exe)

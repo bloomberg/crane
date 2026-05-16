@@ -358,7 +358,7 @@ struct NestedTree {
   }
 
   template <typename T1> static List<List<T1>> flatten_tree(const tree<T1> &t) {
-    return _flatten_tree_go<T1, List<List<T1>>>(
+    return _flatten_tree_go<T1, T1>(
         [](T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };
