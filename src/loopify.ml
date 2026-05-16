@@ -109,7 +109,6 @@ let id_head         = Id.of_string "_head"
 let id_write        = Id.of_string "_write"
 let id_frame        = Id.of_string "_frame"
 let id_self         = Id.of_string "_self"
-let id_last         = Id.of_string "_last"
 
 (* Method names used with CPPmethod_call / CPPmember *)
 let id_get          = Id.of_string "get"
@@ -1833,31 +1832,6 @@ type double_decomp = {
   dd_combine : cpp_expr list -> cpp_expr -> cpp_expr -> cpp_expr;
       (** [dd_combine saved_vars left_result right_result] *)
 }
-
-(** Check whether any return expression in [body] has at least [n] recursive
-    calls. Used to distinguish single-call, double-call, and triple-call patterns.
-
-    @param n Minimum number of recursive calls to look for
-    @param check The call checker to identify recursive calls
-    @param body The function body to search *)
-let has_n_call_expr n check body =
-  (* Do NOT recurse into [Smatch] (or [Scustom_case]) branches: they represent
-     type dispatch (pattern matching on an inductive), where each branch's
-     recursive calls are independent.  The old [CPPvisit] code didn't count
-     calls inside visit lambdas, so [Smatch] must be treated the same way.
-     Without this, functions with 2 recursive calls in a single match branch
-     (e.g. tree map) are incorrectly classified as multi-recursive instead of
-     being handled by [transform_nontail]. *)
-  let rec check_stmt = function
-    | Sreturn (Some e) -> count_calls_expr check e >= n
-    | Sif (_, then_br, else_br) ->
-      List.exists check_stmt then_br || List.exists check_stmt else_br
-    | Sblock stmts -> List.exists check_stmt stmts
-    | Sswitch (_, _, branches, _) ->
-      List.exists (fun (_, body) -> List.exists check_stmt body) branches
-    | _ -> false
-  in
-  List.exists check_stmt body
 
 (** True if any template parameter is higher-order (a function type or
     concept constraint).  Such parameters prevent TMC because the loopified

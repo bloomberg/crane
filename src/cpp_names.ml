@@ -75,84 +75,6 @@ let is_merged_inductive (r : GlobRef.t) : bool =
     else String.capitalize_ascii base in
   not (Hashtbl.mem unmerged_wrappers wrapper_name)
 
-(** grammar from OCaml 4.06 manual, "Prefix and infix symbols" *)
-
-(** Characters that can begin an infix operator in OCaml. *)
-let infix_symbols =
-  ['='; '<'; '>'; '@'; '^'; ';'; '&'; '+'; '-'; '*'; '/'; '$'; '%']
-
-(** Characters that can appear anywhere in an OCaml operator symbol. *)
-let operator_chars =
-  [
-    '!';
-    '$';
-    '%';
-    '&';
-    '*';
-    '+';
-    '-';
-    '.';
-    '/';
-    ':';
-    '<';
-    '=';
-    '>';
-    '?';
-    '@';
-    '^';
-    '|';
-    '~';
-  ]
-
-(** infix ops in OCaml, but disallowed by preceding grammar *)
-
-(** OCaml built-in infix operators not covered by the operator grammar. *)
-let builtin_infixes = ["::"; ","]
-
-(** Check that all characters in [s[start..stop)] are operator characters.
-    @param s     the string to inspect
-    @param start the index of the first character to check (inclusive)
-    @param stop  one past the last character to check (exclusive)
-    @return [true] iff every character in the half-open interval is in
-            [operator_chars] *)
-let substring_all_opchars s start stop =
-  let rec check_char i =
-    if i >= stop then
-      true
-    else
-      List.mem s.[i] operator_chars && check_char (i + 1)
-  in
-  check_char start
-
-(** Check if a custom extraction for [r] defines an infix operator. *)
-let is_infix r =
-  match find_custom_opt r with
-  | Some s when to_inline r ->
-    let len = String.length s in
-    len >= 3
-    (* parenthesized *)
-    && s.[0] == '('
-    && s.[len - 1] == ')'
-    &&
-    let inparens = String.trim (String.sub s 1 (len - 2)) in
-    let inparens_len = String.length inparens in
-    (* either, begins with infix symbol, any remainder is all operator chars *)
-    List.mem inparens.[0] infix_symbols
-    && substring_all_opchars inparens 1 inparens_len
-    (* or, starts with #, at least one more char, all are operator chars *)
-    || inparens.[0] == '#'
-       && inparens_len >= 2
-       && substring_all_opchars inparens 1 inparens_len
-    ||
-    (* or, is an OCaml built-in infix *)
-    List.mem inparens builtin_infixes
-  | _ -> false
-
-(** Extract the operator symbol from a parenthesized infix custom extraction. *)
-let get_infix r =
-  let s = find_custom r in
-  String.sub s 1 (String.length s - 2)
-
 (** Extract the [IndRef] from an [IndRef] or [ConstructRef]. *)
 let get_ind =
   let open GlobRef in
@@ -183,12 +105,6 @@ let pp_one_field r i = function
     @param fields the list of optional field [GlobRef]s for the record
     @param i      zero-based index of the field to print *)
 let pp_field r fields i = pp_one_field r i (List.nth fields i)
-
-(** Pretty-print all record fields.
-    @param r      the inductive reference owning the record
-    @param fields the list of optional field [GlobRef]s for the record
-    @return a list of [Pp.t] values, one per field, in order *)
-let pp_fields r fields = List.mapi (pp_one_field r) fields
 
 (* ============================================================================
    Helper functions to reduce code duplication
@@ -426,17 +342,6 @@ let find_ancestor_qualifier_from full_path struct_name_dotted =
     | None -> mt ()
   in
   find struct_name_dotted
-
-(** Convenience wrapper: compute [full_path] and [struct_name_dotted] from a
-    global reference and a C++ struct name, then delegate to
-    {!find_ancestor_qualifier_from}.
-    @param r               the global reference whose ancestor qualifier is
-                           sought
-    @param struct_name_str the current C++ struct name (using [::] separators)
-    @return a [Pp.t] C++ qualifier ending with [::], or [mt ()] if none found *)
-let find_ancestor_qualifier r struct_name_str =
-  let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
-  find_ancestor_qualifier_from full_path (cpp_to_rocq_path struct_name_str)
 
 (** Add struct qualification prefix when generating out-of-struct definitions.
 

@@ -665,18 +665,6 @@ let extract_itree_result_ml (ml_ty : ml_type) : ml_type =
 let mk_itree_type (r_cpp : cpp_type) : cpp_type =
   Tshared_ptr (Tid_external (Id.of_string "ITree", [r_cpp]))
 
-(** True if [base] ends with ["Tree"] (possibly namespace-qualified). *)
-let cpp_name_is_tree base =
-  String.equal base "tree"
-  || String.equal base "Tree"
-  ||
-  match String.rindex_opt base ':' with
-  | Some i when i > 0 && i < String.length base - 1 && base.[i - 1] = ':' ->
-    String.equal
-      (String.sub base (i + 1) (String.length base - i - 1))
-      "Tree"
-  | _ -> false
-
 (** Map well-known identifier names to their C++ equivalents.
     Returns [None] for ordinary (non-special) identifiers. *)
 let resolve_special_id s =

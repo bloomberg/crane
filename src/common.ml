@@ -209,13 +209,6 @@ let space_if = function
   | true -> str " "
   | false -> mt ()
 
-(** Test if string starts with prefix.
-    @param s      The string to test
-    @param prefix The prefix to look for at the start of [s] *)
-let begins_with s prefix =
-  let len = String.length prefix in
-  String.length s >= len && String.equal (String.sub s 0 len) prefix
-
 (** Test if string matches the pattern "CoqNNN" (legacy naming). *)
 let begins_with_CoqXX s =
   let n = String.length s in
@@ -251,12 +244,6 @@ let rec qualify delim = function
 let dottify = qualify "::"
 
 (** {2 Uppercase/lowercase renamings} *)
-
-(** Test if string starts with uppercase. *)
-let is_upper s =
-  match s.[0] with
-  | 'A' .. 'Z' -> true
-  | _ -> false
 
 (** Test if string starts with lowercase. *)
 let is_lower s =
