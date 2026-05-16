@@ -2917,6 +2917,15 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
   List.concat_map
     (fun s ->
       match s with
+      | Sasgn (id, Some Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
+        let param_types =
+          List.map (fun (t, _) -> strip_ref_and_const_type t) params
+        in
+        let ret_ty = match ret_ty_opt with
+          | Some t when t <> Tvoid -> t
+          | _ -> Tvoid
+        in
+        [(id, Tfun (param_types, ret_ty))]
       | Sasgn (id, Some ty, _) -> [(id, ty)]
       | Sdecl (id, ty) -> [(id, ty)]
       | Scustom_case (_, _, _, branches, _) ->
@@ -5206,6 +5215,15 @@ and rewrite_enter_stmts ctx stmts =
        is defined here and then used as the callee in a continuation. *)
     let updated_env =
       match stmt with
+      | Sasgn (id, Some Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
+        let param_types =
+          List.map (fun (t, _) -> strip_ref_and_const_type t) params
+        in
+        let ret_ty = match ret_ty_opt with
+          | Some t when t <> Tvoid -> t
+          | _ -> Tvoid
+        in
+        (id, Tfun (param_types, ret_ty)) :: ctx.er_env
       | Sasgn (id, Some ty, _) -> (id, ty) :: ctx.er_env
       | Sdecl (id, ty) -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env

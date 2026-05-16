@@ -405,16 +405,12 @@ struct Equations {
                 *(d_hind0)));
       }
     };
-    std::function<T1(std::pair<unsigned int, unsigned int>, unsigned int,
-                     gcd_graph)>
-        f4 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x3,
-                 gcd_graph g) -> T1 {
+    auto f4 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x3,
+                  gcd_graph g) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x3, g);
     };
-    std::function<T2(unsigned int, unsigned int, bool, unsigned int,
-                     gcd_clause_3_graph)>
-        f5 = [&](unsigned int _x, unsigned int _x3, bool _x4, unsigned int _x5,
-                 gcd_clause_3_graph g) -> T2 {
+    auto f5 = [&](unsigned int _x, unsigned int _x3, bool _x4, unsigned int _x5,
+                  gcd_clause_3_graph g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, _x5, g);
     };
     return f4(_x0, _x1, _x2);
@@ -488,16 +484,12 @@ struct Equations {
                 *(d_hind0)));
       }
     };
-    std::function<T1(std::pair<unsigned int, unsigned int>, unsigned int,
-                     gcd_graph)>
-        f4 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x5,
-                 gcd_graph g) -> T1 {
+    auto f4 = [&](std::pair<unsigned int, unsigned int> _x, unsigned int _x5,
+                  gcd_graph g) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x5, g);
     };
-    std::function<T2(unsigned int, unsigned int, bool, unsigned int,
-                     gcd_clause_3_graph)>
-        f5 = [&](unsigned int _x, unsigned int _x5, bool _x6, unsigned int _x7,
-                 gcd_clause_3_graph g) -> T2 {
+    auto f5 = [&](unsigned int _x, unsigned int _x5, bool _x6, unsigned int _x7,
+                  gcd_clause_3_graph g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x5, _x6, _x7, g);
     };
     return f5(_x0, _x1, _x2, _x3, _x4);
@@ -937,14 +929,12 @@ struct Equations {
                            collatz_steps(((3u * d_n0) + 1u)), *(d_hind0)));
       }
     };
-    std::function<T1(unsigned int, unsigned int, collatz_steps_graph)> f4 =
-        [&](unsigned int _x, unsigned int _x3, collatz_steps_graph c) -> T1 {
+    auto f4 = [&](unsigned int _x, unsigned int _x3,
+                  collatz_steps_graph c) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x3, c);
     };
-    std::function<T2(unsigned int, bool, unsigned int,
-                     collatz_steps_clause_3_graph)>
-        f5 = [&](unsigned int _x, bool _x3, unsigned int _x4,
-                 collatz_steps_clause_3_graph c) -> T2 {
+    auto f5 = [&](unsigned int _x, bool _x3, unsigned int _x4,
+                  collatz_steps_clause_3_graph c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, c);
     };
     return f4(_x0, _x1, _x2);
@@ -1004,14 +994,12 @@ struct Equations {
                            collatz_steps(((3u * d_n0) + 1u)), *(d_hind0)));
       }
     };
-    std::function<T1(unsigned int, unsigned int, collatz_steps_graph)> f4 =
-        [&](unsigned int _x, unsigned int _x4, collatz_steps_graph c) -> T1 {
+    auto f4 = [&](unsigned int _x, unsigned int _x4,
+                  collatz_steps_graph c) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x4, c);
     };
-    std::function<T2(unsigned int, bool, unsigned int,
-                     collatz_steps_clause_3_graph)>
-        f5 = [&](unsigned int _x, bool _x4, unsigned int _x5,
-                 collatz_steps_clause_3_graph c) -> T2 {
+    auto f5 = [&](unsigned int _x, bool _x4, unsigned int _x5,
+                  collatz_steps_clause_3_graph c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x4, _x5, c);
     };
     return f5(_x0, _x1, _x2, _x3);

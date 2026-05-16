@@ -1,7 +1,6 @@
 #ifndef INCLUDED_MERGESORT_FUEL
 #define INCLUDED_MERGESORT_FUEL
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

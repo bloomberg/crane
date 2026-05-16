@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTANYLISTCOLLECT
 
 #include <any>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -39,10 +38,8 @@ template <SymTypes Ty> struct ListCollect {
                                 default0, std::move(acc)));
           }
         };
-    std::function<typename Datatypes::template List<std::any>(
-        typename Datatypes::Nat, typename Datatypes::template List<std::any>)>
-        go = [&](typename Datatypes::Nat n0,
-                 typename Datatypes::template List<std::any> acc) ->
+    auto go = [&](typename Datatypes::Nat n0,
+                  typename Datatypes::template List<std::any> acc) ->
         typename Datatypes::template List<std::any> {
           return go_impl(go_impl, n0, acc);
         };

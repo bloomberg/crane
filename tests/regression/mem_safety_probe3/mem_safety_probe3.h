@@ -689,8 +689,7 @@ struct MemSafetyProbe3 {
           return (t.sum_values(1u) + _self_helper(_self_helper, n_));
         }
       };
-      std::function<unsigned int(unsigned int)> helper =
-          [&](unsigned int n) -> unsigned int {
+      auto helper = [&](unsigned int n) -> unsigned int {
         return helper_impl(helper_impl, n);
       };
       return helper(3u);

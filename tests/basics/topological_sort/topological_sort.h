@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TOPOLOGICAL_SORT
 #define INCLUDED_TOPOLOGICAL_SORT
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -334,8 +333,8 @@ struct TopologicalSort {
         }
       }
     };
-    std::function<List<T1>(List<std::pair<T1, T1>>, List<T1>)> get_elems_aux =
-        [&](List<std::pair<T1, T1>> l0, List<T1> h) -> List<T1> {
+    auto get_elems_aux = [&](List<std::pair<T1, T1>> l0,
+                             List<T1> h) -> List<T1> {
       return get_elems_aux_impl(get_elems_aux_impl, l0, h);
     };
     return get_elems_aux(l, List<T1>::nil());

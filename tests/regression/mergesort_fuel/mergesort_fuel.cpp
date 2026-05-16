@@ -49,8 +49,7 @@ List<unsigned int> MergesortFuel::merge(List<unsigned int> l1,
       }
     }
   };
-  std::function<List<unsigned int>(List<unsigned int>)> merge_aux =
-      [&](List<unsigned int> l3) -> List<unsigned int> {
+  auto merge_aux = [&](List<unsigned int> l3) -> List<unsigned int> {
     return merge_aux_impl(merge_aux_impl, l3);
   };
   return merge_aux(l2);

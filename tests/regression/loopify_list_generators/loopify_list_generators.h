@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_LIST_GENERATORS
 #define INCLUDED_LOOPIFY_LIST_GENERATORS
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -276,8 +275,7 @@ struct LoopifyListGenerators {
                                             _self_go(_self_go, i_));
           }
         };
-        std::function<List<unsigned int>(unsigned int)> go =
-            [&](unsigned int i) -> List<unsigned int> {
+        auto go = [&](unsigned int i) -> List<unsigned int> {
           return go_impl(go_impl, i);
         };
         return go(n_);
@@ -309,8 +307,7 @@ struct LoopifyListGenerators {
               .app(List<unsigned int>::cons(f(idx), List<unsigned int>::nil()));
         }
       };
-      std::function<List<unsigned int>(unsigned int)> aux =
-          [&](unsigned int idx) -> List<unsigned int> {
+      auto aux = [&](unsigned int idx) -> List<unsigned int> {
         return aux_impl(aux_impl, idx);
       };
       return aux(n_);

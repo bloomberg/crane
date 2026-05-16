@@ -143,7 +143,7 @@ ConstructorBugs::triple_proj(ConstructorBugs::state s) {
 
 std::pair<ConstructorBugs::state, unsigned int>
 ConstructorBugs::inner_pair(ConstructorBugs::state s) {
-  return std::make_pair(std::move(s), s.value);
+  return std::make_pair(s, s.value);
 }
 
 std::pair<ConstructorBugs::state, unsigned int>
@@ -175,7 +175,7 @@ ConstructorBugs::self_referential(const ConstructorBugs::Outer &o) {
 
 std::pair<ConstructorBugs::Inner, unsigned int>
 ConstructorBugs::pair_with_proj(ConstructorBugs::Inner i) {
-  return std::make_pair(std::move(i), i.inner_val);
+  return std::make_pair(i, i.inner_val);
 }
 
 std::pair<std::pair<ConstructorBugs::Inner, unsigned int>,
@@ -187,7 +187,7 @@ ConstructorBugs::nested_pairs(ConstructorBugs::Inner i) {
 
 std::pair<ConstructorBugs::Inner, ConstructorBugs::Inner>
 ConstructorBugs::pair_duplicate(ConstructorBugs::Inner i) {
-  return std::make_pair(std::move(i), i);
+  return std::make_pair(i, i);
 }
 
 ConstructorBugs::Inner ConstructorBugs::mk_inner(const unsigned int n) {
@@ -226,7 +226,7 @@ ConstructorBugs::match_sum(const ConstructorBugs::MySum &s) {
 
 std::pair<ConstructorBugs::Inner, unsigned int>
 ConstructorBugs::with_cast(ConstructorBugs::Inner i) {
-  return std::make_pair(std::move(i), i.inner_val);
+  return std::make_pair(i, i.inner_val);
 }
 
 std::pair<std::pair<ConstructorBugs::Inner, unsigned int>,
@@ -259,7 +259,7 @@ ConstructorBugs::list_with_proj(ConstructorBugs::Inner i) {
 std::pair<ConstructorBugs::Inner, unsigned int>
 ConstructorBugs::tail_pair(ConstructorBugs::Inner i, const bool b) {
   if (b) {
-    return std::make_pair(std::move(i), i.inner_val);
+    return std::make_pair(i, i.inner_val);
   } else {
     return std::make_pair(std::move(i), 0u);
   }
@@ -295,7 +295,7 @@ unsigned int ConstructorBugs::extract(const ConstructorBugs::Inner &i) {
 
 std::pair<ConstructorBugs::Inner, unsigned int>
 ConstructorBugs::nested_extract(ConstructorBugs::Inner i) {
-  return std::make_pair(std::move(i), extract(i));
+  return std::make_pair(i, extract(i));
 }
 
 std::pair<ConstructorBugs::Outer, unsigned int>
@@ -306,7 +306,7 @@ ConstructorBugs::update_test(const ConstructorBugs::Outer &o) {
 
 std::pair<ConstructorBugs::State, unsigned int>
 ConstructorBugs::inline_pair(ConstructorBugs::State s) {
-  return std::make_pair(std::move(s), s.value_inline);
+  return std::make_pair(s, s.value_inline);
 }
 
 std::pair<std::pair<ConstructorBugs::State, unsigned int>, unsigned int>
@@ -349,7 +349,7 @@ ConstructorBugs::inline_match(const std::optional<ConstructorBugs::State> &o) {
 std::pair<ConstructorBugs::State, unsigned int>
 ConstructorBugs::inline_if(const bool b, ConstructorBugs::State s) {
   if (b) {
-    return std::make_pair(std::move(s), s.value_inline);
+    return std::make_pair(s, s.value_inline);
   } else {
     return std::make_pair(std::move(s), 0u);
   }
@@ -413,9 +413,9 @@ ConstructorBugs::inline_quad(ConstructorBugs::State s) {
 std::pair<ConstructorBugs::State, unsigned int>
 ConstructorBugs::inline_both_branches(const bool b, ConstructorBugs::State s) {
   if (b) {
-    return std::make_pair(std::move(s), s.value_inline);
+    return std::make_pair(s, s.value_inline);
   } else {
-    return std::make_pair(std::move(s), s.value_inline);
+    return std::make_pair(s, s.value_inline);
   }
 }
 

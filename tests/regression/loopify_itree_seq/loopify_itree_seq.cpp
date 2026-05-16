@@ -13,8 +13,7 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
       return _self_go(_self_go, k_, (acc + 1u));
     }
   };
-  std::function<unsigned int(unsigned int, unsigned int)> go =
-      [&](unsigned int k, unsigned int acc) -> unsigned int {
+  auto go = [&](unsigned int k, unsigned int acc) -> unsigned int {
     return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);
@@ -31,8 +30,7 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
       return _self_go(_self_go, k_, (acc + k));
     }
   };
-  std::function<unsigned int(unsigned int, unsigned int)> go =
-      [&](unsigned int k, unsigned int acc) -> unsigned int {
+  auto go = [&](unsigned int k, unsigned int acc) -> unsigned int {
     return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);

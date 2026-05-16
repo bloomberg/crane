@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_LIST_RELATIONS
 #define INCLUDED_LOOPIFY_LIST_RELATIONS
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

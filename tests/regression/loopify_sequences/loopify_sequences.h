@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_SEQUENCES
 #define INCLUDED_LOOPIFY_SEQUENCES
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -260,7 +259,7 @@ struct LoopifySequences {
               sep, List<T1>::cons(d_a00, _self_go(_self_go, *(d_a10))));
         }
       };
-      std::function<List<T1>(List<T1>)> go = [&](List<T1> rest) -> List<T1> {
+      auto go = [&](List<T1> rest) -> List<T1> {
         return go_impl(go_impl, rest);
       };
       return List<T1>::cons(d_a0, go(*(d_a1)));
@@ -293,8 +292,7 @@ struct LoopifySequences {
             }
           }
         };
-        std::function<bool(List<List<T1>>)> all_nil =
-            [&](List<List<T1>> l) -> bool {
+        auto all_nil = [&](List<List<T1>> l) -> bool {
           return all_nil_impl(all_nil_impl, l);
         };
         if (all_nil(_loop_ll)) {
@@ -318,8 +316,7 @@ struct LoopifySequences {
               }
             }
           };
-          std::function<List<T1>(List<List<T1>>)> heads =
-              [&](List<List<T1>> l) -> List<T1> {
+          auto heads = [&](List<List<T1>> l) -> List<T1> {
             return heads_impl(heads_impl, l);
           };
           auto tails_impl = [](auto &_self_tails,
@@ -339,8 +336,7 @@ struct LoopifySequences {
               }
             }
           };
-          std::function<List<List<T1>>(List<List<T1>>)> tails =
-              [&](List<List<T1>> l) -> List<List<T1>> {
+          auto tails = [&](List<List<T1>> l) -> List<List<T1>> {
             return tails_impl(tails_impl, l);
           };
           auto _cell = std::make_unique<List<List<T1>>>(

@@ -650,9 +650,8 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
               _self_map_prepend_c(_self_map_prepend_c, *(d_a10)));
         }
       };
-      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
-          map_prepend_c =
-              [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto map_prepend_c =
+          [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
         return map_prepend_c_impl(map_prepend_c_impl, lsts);
       };
       _result = sub_rest.app(map_prepend_c(sub_rest));

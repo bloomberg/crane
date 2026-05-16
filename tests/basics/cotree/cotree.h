@@ -478,8 +478,7 @@ struct Cotree {
           return (tree_size<T1>(d_a0) + _self_aux(_self_aux, *(d_a1)));
         }
       };
-      std::function<unsigned int(List<tree<T1>>)> aux =
-          [&](List<tree<T1>> l) -> unsigned int {
+      auto aux = [&](List<tree<T1>> l) -> unsigned int {
         return aux_impl(aux_impl, l);
       };
       return aux(*(d_a1));

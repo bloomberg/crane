@@ -11,8 +11,7 @@ unsigned int LetFixYcombByref::sum_list(const List<unsigned int> &l) {
       return _self_go(_self_go, *(d_a1), (acc + d_a0));
     }
   };
-  std::function<unsigned int(List<unsigned int>, unsigned int)> go =
-      [&](List<unsigned int> xs, unsigned int acc) -> unsigned int {
+  auto go = [&](List<unsigned int> xs, unsigned int acc) -> unsigned int {
     return go_impl(go_impl, xs, acc);
   };
   return go(l, 0u);

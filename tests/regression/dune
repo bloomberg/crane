@@ -378,6 +378,17 @@
   (deps let_fix_ycomb_byref.t.exe)
   (action (run ./let_fix_ycomb_byref.t.exe))))
 
+(subdir let_fix_no_stdfun
+ (rule
+  (targets let_fix_no_stdfun.t.exe)
+  (deps LetFixNoStdfun.vo let_fix_no_stdfun.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_no_stdfun.t.exe let_fix_no_stdfun.cpp let_fix_no_stdfun.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_no_stdfun.t.exe)
+  (action (run ./let_fix_no_stdfun.t.exe))))
+
 (subdir rec_record
  (rule
   (targets rec_record.t.exe)

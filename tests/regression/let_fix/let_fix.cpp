@@ -11,8 +11,7 @@ unsigned int LetFix::local_sum(const List<unsigned int> &l) {
       return _self_go(_self_go, (acc + d_a0), *(d_a1));
     }
   };
-  std::function<unsigned int(unsigned int, List<unsigned int>)> go =
-      [&](unsigned int acc, List<unsigned int> xs) -> unsigned int {
+  auto go = [&](unsigned int acc, List<unsigned int> xs) -> unsigned int {
     return go_impl(go_impl, acc, xs);
   };
   return go(0u, l);
@@ -35,8 +34,7 @@ List<unsigned int> LetFix::local_flatten(const List<List<unsigned int>> &xss) {
                                         _self_inner(_self_inner, *(d_a10)));
       }
     };
-    std::function<List<unsigned int>(List<unsigned int>)> inner =
-        [&](List<unsigned int> ys) -> List<unsigned int> {
+    auto inner = [&](List<unsigned int> ys) -> List<unsigned int> {
       return inner_impl(inner_impl, ys);
     };
     return inner(d_a0);

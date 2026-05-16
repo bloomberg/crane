@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_SEARCH_OPT
 
 #include <algorithm>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

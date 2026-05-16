@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_TREES
 #define INCLUDED_LOOPIFY_TREES
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

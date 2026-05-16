@@ -9,7 +9,8 @@ unsigned int SignatureParityFix::f(const unsigned int seed) {
       return _self_aux(_self_aux, n_);
     }
   };
-  std::function<unsigned int(unsigned int)> aux =
-      [&](unsigned int n) -> unsigned int { return aux_impl(aux_impl, n); };
+  auto aux = [&](unsigned int n) -> unsigned int {
+    return aux_impl(aux_impl, n);
+  };
   return aux((seed + 1));
 }

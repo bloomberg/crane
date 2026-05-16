@@ -121,8 +121,7 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
       }
     }
   };
-  std::function<SigT<Nat, Levenshtein::chain>(String)> levenshtein_chain1 =
-      [&](String t) -> SigT<Nat, Levenshtein::chain> {
+  auto levenshtein_chain1 = [&](String t) -> SigT<Nat, Levenshtein::chain> {
     return levenshtein_chain1_impl(levenshtein_chain1_impl, t);
   };
   return levenshtein_chain1(_x0);

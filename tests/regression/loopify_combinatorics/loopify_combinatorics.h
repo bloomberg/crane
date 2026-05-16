@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_COMBINATORICS
 #define INCLUDED_LOOPIFY_COMBINATORICS
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

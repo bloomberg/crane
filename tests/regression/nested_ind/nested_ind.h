@@ -2,7 +2,6 @@
 #define INCLUDED_NESTED_IND
 
 #include <algorithm>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -623,8 +622,9 @@ struct NestedInd {
                                       _self_aux(_self_aux, *(d_a1)));
             }
           };
-          std::function<List<expr>(List<expr>)> aux =
-              [&](List<expr> l) -> List<expr> { return aux_impl(aux_impl, l); };
+          auto aux = [&](List<expr> l) -> List<expr> {
+            return aux_impl(aux_impl, l);
+          };
           return aux(*(d_a0));
         }());
       } else {
@@ -640,8 +640,9 @@ struct NestedInd {
                                       _self_aux(_self_aux, *(d_a1)));
             }
           };
-          std::function<List<expr>(List<expr>)> aux =
-              [&](List<expr> l) -> List<expr> { return aux_impl(aux_impl, l); };
+          auto aux = [&](List<expr> l) -> List<expr> {
+            return aux_impl(aux_impl, l);
+          };
           return aux(*(d_a0));
         }());
       }
@@ -664,8 +665,7 @@ struct NestedInd {
             return d_a00.literals().app(_self_aux(_self_aux, *(d_a10)));
           }
         };
-        std::function<List<unsigned int>(List<expr>)> aux =
-            [&](List<expr> l) -> List<unsigned int> {
+        auto aux = [&](List<expr> l) -> List<unsigned int> {
           return aux_impl(aux_impl, l);
         };
         return aux(*(d_a0));
@@ -681,8 +681,7 @@ struct NestedInd {
             return d_a00.literals().app(_self_aux(_self_aux, *(d_a10)));
           }
         };
-        std::function<List<unsigned int>(List<expr>)> aux =
-            [&](List<expr> l) -> List<unsigned int> {
+        auto aux = [&](List<expr> l) -> List<unsigned int> {
           return aux_impl(aux_impl, l);
         };
         return aux(*(d_a0));
@@ -705,8 +704,7 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), _self_aux(_self_aux, *(d_a1)));
             }
           };
-          std::function<unsigned int(List<expr>)> aux =
-              [&](List<expr> l) -> unsigned int {
+          auto aux = [&](List<expr> l) -> unsigned int {
             return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
@@ -723,8 +721,7 @@ struct NestedInd {
               return std::max(d_a0.expr_depth(), _self_aux(_self_aux, *(d_a1)));
             }
           };
-          std::function<unsigned int(List<expr>)> aux =
-              [&](List<expr> l) -> unsigned int {
+          auto aux = [&](List<expr> l) -> unsigned int {
             return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
@@ -748,8 +745,7 @@ struct NestedInd {
               return (d_a0.expr_size() + _self_aux(_self_aux, *(d_a1)));
             }
           };
-          std::function<unsigned int(List<expr>)> aux =
-              [&](List<expr> l) -> unsigned int {
+          auto aux = [&](List<expr> l) -> unsigned int {
             return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
@@ -766,8 +762,7 @@ struct NestedInd {
               return (d_a0.expr_size() + _self_aux(_self_aux, *(d_a1)));
             }
           };
-          std::function<unsigned int(List<expr>)> aux =
-              [&](List<expr> l) -> unsigned int {
+          auto aux = [&](List<expr> l) -> unsigned int {
             return aux_impl(aux_impl, l);
           };
           return aux(*(d_a0));
@@ -792,8 +787,7 @@ struct NestedInd {
             return (d_a00.eval() + _self_sum_all(_self_sum_all, *(d_a10)));
           }
         };
-        std::function<unsigned int(List<expr>)> sum_all =
-            [&](List<expr> l) -> unsigned int {
+        auto sum_all = [&](List<expr> l) -> unsigned int {
           return sum_all_impl(sum_all_impl, l);
         };
         return sum_all(*(d_a0));
@@ -809,8 +803,7 @@ struct NestedInd {
             return (d_a00.eval() * _self_prod_all(_self_prod_all, *(d_a10)));
           }
         };
-        std::function<unsigned int(List<expr>)> prod_all =
-            [&](List<expr> l) -> unsigned int {
+        auto prod_all = [&](List<expr> l) -> unsigned int {
           return prod_all_impl(prod_all_impl, l);
         };
         return prod_all(*(d_a0));

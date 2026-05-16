@@ -7,7 +7,7 @@ CustomInlineBug::bug_some_proj(const CustomInlineBug::State &s) {
 
 std::pair<CustomInlineBug::State, unsigned int>
 CustomInlineBug::bug_pair_proj(CustomInlineBug::State s) {
-  return std::make_pair(std::move(s), s.value);
+  return std::make_pair(s, s.value);
 }
 
 std::optional<std::optional<unsigned int>>
@@ -33,7 +33,7 @@ CustomInlineBug::bug_some_of_call(const unsigned int n) {
 
 std::pair<CustomInlineBug::State, unsigned int>
 CustomInlineBug::pair_simple(CustomInlineBug::State s) {
-  return std::make_pair(std::move(s), s.value);
+  return std::make_pair(s, s.value);
 }
 
 std::pair<CustomInlineBug::State, unsigned int>
@@ -52,7 +52,7 @@ CustomInlineBug::pair_nested(CustomInlineBug::State s) {
 std::pair<CustomInlineBug::State, unsigned int>
 CustomInlineBug::pair_if(const bool b, CustomInlineBug::State s) {
   if (b) {
-    return std::make_pair(std::move(s), s.value);
+    return std::make_pair(s, s.value);
   } else {
     return std::make_pair(std::move(s), 0u);
   }
@@ -89,7 +89,7 @@ CustomInlineBug::pair_extreme(CustomInlineBug::State s) {
 
 std::pair<CustomInlineBug::State, unsigned int>
 CustomInlineBug::make_pair(CustomInlineBug::State s) {
-  return std::make_pair(std::move(s), s.value);
+  return std::make_pair(s, s.value);
 }
 
 std::pair<CustomInlineBug::State, unsigned int>

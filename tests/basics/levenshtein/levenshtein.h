@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LEVENSHTEIN
 #define INCLUDED_LEVENSHTEIN
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

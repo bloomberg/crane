@@ -49,8 +49,7 @@ unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
       return (1u + _self_go(_self_go, m));
     }
   };
-  std::function<unsigned int(unsigned int)> go =
-      [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
+  auto go = [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
   FixMoveCapture::mylist t = dup_head(l);
   return (go(3u) + length(std::move(t)));
 }
@@ -67,8 +66,7 @@ unsigned int FixMoveCapture::f2(FixMoveCapture::mylist l) {
       return (1u + _self_go(_self_go, m));
     }
   };
-  std::function<unsigned int(unsigned int)> go =
-      [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
+  auto go = [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
   unsigned int result_g = go(3u);
   FixMoveCapture::mylist t = dup_head(l);
   return (result_g + length(std::move(t)));

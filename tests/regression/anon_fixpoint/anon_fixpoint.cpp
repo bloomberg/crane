@@ -10,8 +10,7 @@ unsigned int AnonFixpoint::sum_to(const unsigned int n) {
       return _self_go(_self_go, p, (m + acc));
     }
   };
-  std::function<unsigned int(unsigned int, unsigned int)> go =
-      [&](unsigned int m, unsigned int acc) -> unsigned int {
+  auto go = [&](unsigned int m, unsigned int acc) -> unsigned int {
     return go_impl(go_impl, m, acc);
   };
   return go(n, 0u);
@@ -39,8 +38,7 @@ unsigned int AnonFixpoint::double_sum(const unsigned int m) {
         return (1u + _self_inner(_self_inner, q));
       }
     };
-    std::function<unsigned int(unsigned int)> inner =
-        [&](unsigned int k) -> unsigned int {
+    auto inner = [&](unsigned int k) -> unsigned int {
       return inner_impl(inner_impl, k);
     };
     return (inner(m) + double_sum(p));
@@ -62,8 +60,8 @@ unsigned int AnonFixpoint::gcd(const unsigned int a, const unsigned int b) {
       }
     }
   };
-  std::function<unsigned int(unsigned int, unsigned int, unsigned int)> go =
-      [&](unsigned int fuel, unsigned int x, unsigned int y) -> unsigned int {
+  auto go = [&](unsigned int fuel, unsigned int x,
+                unsigned int y) -> unsigned int {
     return go_impl(go_impl, fuel, x, y);
   };
   return go((a + b), a, b);
@@ -79,7 +77,8 @@ unsigned int AnonFixpoint::test_shadow(const unsigned int n) {
       return (_self_foo0(_self_foo0, n_) + 1);
     }
   };
-  std::function<unsigned int(unsigned int)> foo0 =
-      [&](unsigned int n0) -> unsigned int { return foo0_impl(foo0_impl, n0); };
+  auto foo0 = [&](unsigned int n0) -> unsigned int {
+    return foo0_impl(foo0_impl, n0);
+  };
   return foo0(foo);
 }

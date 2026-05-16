@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SORT
 #define INCLUDED_SORT
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

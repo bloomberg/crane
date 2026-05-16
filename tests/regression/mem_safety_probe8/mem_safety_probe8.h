@@ -1,7 +1,6 @@
 #ifndef INCLUDED_MEM_SAFETY_PROBE8
 #define INCLUDED_MEM_SAFETY_PROBE8
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

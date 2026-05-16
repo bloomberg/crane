@@ -2,7 +2,6 @@
 #define INCLUDED_FUNCTOR_COMP
 
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -238,10 +237,8 @@ struct FunctorComp {
           }
         }
       };
-      std::function<List<unsigned int>(unsigned int, List<unsigned int>,
-                                       typename C::t)>
-          go = [&](unsigned int fuel, List<unsigned int> acc,
-                   typename C::t c0) -> List<unsigned int> {
+      auto go = [&](unsigned int fuel, List<unsigned int> acc,
+                    typename C::t c0) -> List<unsigned int> {
         return go_impl(go_impl, fuel, acc, c0);
       };
       return go(C::size(c), List<unsigned int>::nil(), c);

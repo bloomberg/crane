@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LET_FIX_YCOMB_BYREF
 #define INCLUDED_LET_FIX_YCOMB_BYREF
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

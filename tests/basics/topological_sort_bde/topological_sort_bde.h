@@ -313,8 +313,8 @@ struct TopologicalSort {
         }
       }
     };
-    bsl::function<List<T1>(List<bsl::pair<T1, T1>>, List<T1>)> get_elems_aux =
-        [&](List<bsl::pair<T1, T1>> l0, List<T1> h) -> List<T1> {
+    auto get_elems_aux = [&](List<bsl::pair<T1, T1>> l0,
+                             List<T1> h) -> List<T1> {
       return get_elems_aux_impl(get_elems_aux_impl, l0, h);
     };
     return get_elems_aux(l, List<T1>::nil());

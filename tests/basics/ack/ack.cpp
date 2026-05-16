@@ -14,8 +14,7 @@ unsigned int Ack::ack(const unsigned int m, const unsigned int n) {
       }
     }
   };
-  std::function<unsigned int(unsigned int)> ack_m =
-      [&](unsigned int n0) -> unsigned int {
+  auto ack_m = [&](unsigned int n0) -> unsigned int {
     return ack_m_impl(ack_m_impl, n0);
   };
   return ack_m(n);

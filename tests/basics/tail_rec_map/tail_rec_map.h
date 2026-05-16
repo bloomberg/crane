@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TAIL_REC_MAP
 #define INCLUDED_TAIL_REC_MAP
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -156,8 +155,7 @@ List<T2> better_map(F0 &&f, const List<T1> &l) {
                       List<T2>::cons(f(d_a0), std::move(acc)));
     }
   };
-  std::function<List<T2>(List<T1>, List<T2>)> go =
-      [&](List<T1> l0, List<T2> acc) -> List<T2> {
+  auto go = [&](List<T1> l0, List<T2> acc) -> List<T2> {
     return go_impl(go_impl, l0, acc);
   };
   return go(l, List<T2>::nil());

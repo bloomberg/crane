@@ -380,8 +380,7 @@ struct LoopifyPatterns {
                   _self_map_cons_h(_self_map_cons_h, *(d_a10)));
             }
           };
-          std::function<list<list<T1>>(list<list<T1>>)> map_cons_h =
-              [&](list<list<T1>> lsts) -> list<list<T1>> {
+          auto map_cons_h = [&](list<list<T1>> lsts) -> list<list<T1>> {
             return map_cons_h_impl(map_cons_h_impl, lsts);
           };
           _stack.emplace_back(

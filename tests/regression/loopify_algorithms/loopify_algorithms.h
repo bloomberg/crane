@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_ALGORITHMS
 #define INCLUDED_LOOPIFY_ALGORITHMS
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

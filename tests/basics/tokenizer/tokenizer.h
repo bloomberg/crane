@@ -2,7 +2,6 @@
 #define INCLUDED_TOKENIZER
 
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <string>

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TAIL_REC_ZIP
 #define INCLUDED_TAIL_REC_ZIP
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -221,9 +220,8 @@ List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
       }
     }
   };
-  std::function<List<Prod<T1, T2>>(List<T1>, List<T2>, List<Prod<T1, T2>>)> go =
-      [&](List<T1> la0, List<T2> lb0,
-          List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
+  auto go = [&](List<T1> la0, List<T2> lb0,
+                List<Prod<T1, T2>> acc) -> List<Prod<T1, T2>> {
     return go_impl(go_impl, la0, lb0, acc);
   };
   return go(la, lb, List<Prod<T1, T2>>::nil());

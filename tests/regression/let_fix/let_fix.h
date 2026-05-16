@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LET_FIX
 #define INCLUDED_LET_FIX
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -137,8 +136,7 @@ struct LetFix {
                         *(d_a1));
       }
     };
-    std::function<List<T1>(List<T1>, List<T1>)> go =
-        [&](List<T1> acc, List<T1> xs) -> List<T1> {
+    auto go = [&](List<T1> acc, List<T1> xs) -> List<T1> {
       return go_impl(go_impl, acc, xs);
     };
     return go(List<T1>::nil(), l);

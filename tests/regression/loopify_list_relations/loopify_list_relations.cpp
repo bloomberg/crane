@@ -76,8 +76,8 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
         }
       }
     };
-    std::function<List<unsigned int>(unsigned int, List<unsigned int>)> drop =
-        [&](unsigned int n, List<unsigned int> xs) -> List<unsigned int> {
+    auto drop = [&](unsigned int n,
+                    List<unsigned int> xs) -> List<unsigned int> {
       return drop_impl(drop_impl, n, xs);
     };
     suffix = drop(diff, l2);
@@ -105,8 +105,7 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
         }
       }
     };
-    std::function<bool(List<unsigned int>, List<unsigned int>)> eq =
-        [&](List<unsigned int> a, List<unsigned int> b) -> bool {
+    auto eq = [&](List<unsigned int> a, List<unsigned int> b) -> bool {
       return eq_impl(eq_impl, a, b);
     };
     return eq(l1, suffix);
@@ -531,8 +530,7 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
                 return (y == d_a0 || _self_member(_self_member, y, *(d_a1)));
               }
             };
-            std::function<bool(unsigned int, List<unsigned int>)> member =
-                [&](unsigned int y, List<unsigned int> ys) -> bool {
+            auto member = [&](unsigned int y, List<unsigned int> ys) -> bool {
               return member_impl(member_impl, y, ys);
             };
             return member(d_a0, _loop_l2);
@@ -581,8 +579,7 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
                 return (y == d_a0 || _self_member(_self_member, y, *(d_a1)));
               }
             };
-            std::function<bool(unsigned int, List<unsigned int>)> member =
-                [&](unsigned int y, List<unsigned int> ys) -> bool {
+            auto member = [&](unsigned int y, List<unsigned int> ys) -> bool {
               return member_impl(member_impl, y, ys);
             };
             return member(d_a0, l2);

@@ -2,7 +2,6 @@
 #define INCLUDED_TYPECLASSES
 
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -178,8 +177,9 @@ struct Typeclasses {
           return (_tcI0::to_nat(d_a0) + _self_sum(_self_sum, *(d_a1)));
         }
       };
-      std::function<unsigned int(List<T1>)> sum =
-          [&](List<T1> l) -> unsigned int { return sum_impl(sum_impl, l); };
+      auto sum = [&](List<T1> l) -> unsigned int {
+        return sum_impl(sum_impl, l);
+      };
       return sum(a0);
     }
   };

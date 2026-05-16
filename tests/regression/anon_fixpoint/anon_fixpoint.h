@@ -1,7 +1,6 @@
 #ifndef INCLUDED_ANON_FIXPOINT
 #define INCLUDED_ANON_FIXPOINT
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

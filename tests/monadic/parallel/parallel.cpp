@@ -16,14 +16,12 @@ unsigned int ParallelTest::ack(const std::pair<unsigned int, unsigned int> &p) {
         }
       }
     };
-    std::function<unsigned int(unsigned int)> ack_m =
-        [&](unsigned int n0) -> unsigned int {
+    auto ack_m = [&](unsigned int n0) -> unsigned int {
       return ack_m_impl(ack_m_impl, n0);
     };
     return ack_m(n);
   };
-  std::function<unsigned int(unsigned int, unsigned int)> f =
-      [&](unsigned int m, unsigned int n) -> unsigned int {
+  auto f = [&](unsigned int m, unsigned int n) -> unsigned int {
     return f_impl(f_impl, m, n);
   };
   return f(p.first, p.second);

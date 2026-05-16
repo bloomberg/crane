@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_HOFS
 #define INCLUDED_LOOPIFY_HOFS
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -406,8 +405,7 @@ struct LoopifyHofs {
                 _self_pair_with(_self_pair_with, x, *(d_a1)));
           }
         };
-        std::function<List<std::pair<T1, T2>>(T1, List<T2>)> pair_with =
-            [&](T1 x, List<T2> l) -> List<std::pair<T1, T2>> {
+        auto pair_with = [&](T1 x, List<T2> l) -> List<std::pair<T1, T2>> {
           return pair_with_impl(pair_with_impl, x, l);
         };
         if (std::holds_alternative<typename List<T1>::Nil>(l1.v())) {

@@ -7241,20 +7241,9 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params =
           | None -> [Sexpr call]
           | _ -> [Sreturn (Some call)]
         in
-        let wrapper_ty =
-          let param_tys =
-            List.map
-              (fun (id, ty) ->
-                convert_ml_type_to_cpp_type env Refset'.empty tvars ty)
-              args
-          in
-          match rty with
-          | Some r -> Tfun (List.rev param_tys, r)
-          | None -> Tauto
-        in
         Sasgn
           ( fix_id,
-            Some wrapper_ty,
+            Some Tauto,
             CPPlambda (orig_params, rty, wrapper_body, false) ))
       (List.combine renamed_ids impl_ids)
       funs_with_params

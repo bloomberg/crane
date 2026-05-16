@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SIGNATURE_PARITY_FIX
 #define INCLUDED_SIGNATURE_PARITY_FIX
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

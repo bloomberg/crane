@@ -138,9 +138,8 @@ List<List<unsigned int>> LoopifyHofs::subsequences(
               _self_map_cons_x(_self_map_cons_x, *(d_a10)));
         }
       };
-      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
-          map_cons_x =
-              [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto map_cons_x =
+          [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
         return map_cons_x_impl(map_cons_x_impl, lsts);
       };
       _result = rest.app(map_cons_x(rest));
@@ -351,9 +350,8 @@ List<List<unsigned int>> LoopifyHofs::power_set(
               _self_map_cons_x(_self_map_cons_x, *(d_a10)));
         }
       };
-      std::function<List<List<unsigned int>>(List<List<unsigned int>>)>
-          map_cons_x =
-              [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
+      auto map_cons_x =
+          [&](List<List<unsigned int>> lsts) -> List<List<unsigned int>> {
         return map_cons_x_impl(map_cons_x_impl, lsts);
       };
       _result = sub.app(map_cons_x(sub));

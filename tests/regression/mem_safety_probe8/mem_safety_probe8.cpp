@@ -236,8 +236,7 @@ MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
               _self_go(_self_go, 0u, *(d_a2)));
     }
   };
-  std::function<unsigned int(unsigned int, MemSafetyProbe8::tree)> go =
-      [&](unsigned int _x, MemSafetyProbe8::tree t0) -> unsigned int {
+  auto go = [&](unsigned int _x, MemSafetyProbe8::tree t0) -> unsigned int {
     return go_impl(go_impl, _x, t0);
   };
   return go(0u, t);

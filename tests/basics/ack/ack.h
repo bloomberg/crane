@@ -1,7 +1,6 @@
 #ifndef INCLUDED_ACK
 #define INCLUDED_ACK
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

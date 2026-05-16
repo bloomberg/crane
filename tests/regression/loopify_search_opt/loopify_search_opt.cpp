@@ -383,8 +383,8 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
               }
             }
           };
-          std::function<unsigned int(unsigned int, List<unsigned int>)> nth =
-              [&](unsigned int n, List<unsigned int> xs) -> unsigned int {
+          auto nth = [&](unsigned int n,
+                         List<unsigned int> xs) -> unsigned int {
             return nth_impl(nth_impl, n, xs);
           };
           mid_val = nth(mid, _loop_l);
@@ -406,9 +406,8 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
               }
             }
           };
-          std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-              take = [&](unsigned int n,
-                         List<unsigned int> xs) -> List<unsigned int> {
+          auto take = [&](unsigned int n,
+                          List<unsigned int> xs) -> List<unsigned int> {
             return take_impl(take_impl, n, xs);
           };
           left = take(mid, _loop_l);
@@ -429,9 +428,8 @@ bool LoopifySearchOpt::binary_search_fuel(const unsigned int fuel,
               }
             }
           };
-          std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-              drop = [&](unsigned int n,
-                         List<unsigned int> xs) -> List<unsigned int> {
+          auto drop = [&](unsigned int n,
+                          List<unsigned int> xs) -> List<unsigned int> {
             return drop_impl(drop_impl, n, xs);
           };
           right = drop((mid + 1u), _loop_l);

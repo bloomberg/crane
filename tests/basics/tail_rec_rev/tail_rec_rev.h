@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TAIL_REC_REV
 #define INCLUDED_TAIL_REC_REV
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -133,8 +132,7 @@ template <typename T1> List<T1> better_rev(const List<T1> &l) {
       return _self_go(_self_go, *(d_a1), List<T1>::cons(d_a0, std::move(acc)));
     }
   };
-  std::function<List<T1>(List<T1>, List<T1>)> go =
-      [&](List<T1> l0, List<T1> acc) -> List<T1> {
+  auto go = [&](List<T1> l0, List<T1> acc) -> List<T1> {
     return go_impl(go_impl, l0, acc);
   };
   return go(l, List<T1>::nil());

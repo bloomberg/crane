@@ -1,5 +1,5 @@
-#ifndef INCLUDED_LOOPIFY_ITREE_SEQ
-#define INCLUDED_LOOPIFY_ITREE_SEQ
+#ifndef INCLUDED_LET_FIX_NO_STDFUN
+#define INCLUDED_LET_FIX_NO_STDFUN
 
 #include <memory>
 #include <optional>
@@ -123,22 +123,39 @@ public:
   const variant_t &v() const { return d_v_; }
 };
 
-struct LoopifyItreeSeq {
-  /// Tail-recursive countdown using erased ITree. In sequential mode, itree is
-  /// erased so this becomes a plain tail-recursive C++ function. Loopify should
-  /// convert it to a while loop.
-  static unsigned int count_down(const unsigned int n);
-  /// Sum 1..n via tail recursion with accumulator.
-  static unsigned int sum_to(const unsigned int n);
-  /// Non-tail recursive: build a list counting down from n.
-  static List<unsigned int> countdown_list(const unsigned int n);
-  static unsigned int delay_ret(const unsigned int n, const unsigned int v);
-  static void spin();
-  static void forever(const unsigned int n);
-  static unsigned int test_count_5();
-  static unsigned int test_sum_10();
-  static List<unsigned int> test_clist_4();
-  static unsigned int test_delay();
+struct LetFixNoStdfun {
+  static unsigned int sum_list(const List<unsigned int> &l);
+  static unsigned int flat_map_sum(const List<List<unsigned int>> &xss);
+  static List<unsigned int> flatten(const List<List<unsigned int>> &xss);
+  static inline const unsigned int test_sum = sum_list(List<unsigned int>::cons(
+      1u, List<unsigned int>::cons(
+              2u, List<unsigned int>::cons(
+                      3u, List<unsigned int>::cons(
+                              4u, List<unsigned int>::cons(
+                                      5u, List<unsigned int>::nil()))))));
+  static inline const unsigned int test_flat_map_sum =
+      flat_map_sum(List<List<unsigned int>>::cons(
+          List<unsigned int>::cons(
+              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
+          List<List<unsigned int>>::cons(
+              List<unsigned int>::cons(3u, List<unsigned int>::nil()),
+              List<List<unsigned int>>::cons(
+                  List<unsigned int>::cons(
+                      4u, List<unsigned int>::cons(
+                              5u, List<unsigned int>::cons(
+                                      6u, List<unsigned int>::nil()))),
+                  List<List<unsigned int>>::nil()))));
+  static inline const List<unsigned int> test_flatten =
+      flatten(List<List<unsigned int>>::cons(
+          List<unsigned int>::cons(
+              10u, List<unsigned int>::cons(20u, List<unsigned int>::nil())),
+          List<List<unsigned int>>::cons(
+              List<unsigned int>::cons(30u, List<unsigned int>::nil()),
+              List<List<unsigned int>>::cons(
+                  List<unsigned int>::cons(
+                      40u,
+                      List<unsigned int>::cons(50u, List<unsigned int>::nil())),
+                  List<List<unsigned int>>::nil()))));
 };
 
-#endif // INCLUDED_LOOPIFY_ITREE_SEQ
+#endif // INCLUDED_LET_FIX_NO_STDFUN

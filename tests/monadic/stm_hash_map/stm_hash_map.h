@@ -311,9 +311,8 @@ template <typename K, typename V> struct CHT {
         return _self_f(_self_f, n_);
       }
     };
-    std::function<std::vector<stm::TVar<List<std::pair<T1, T2>>>>(unsigned int)>
-        f = [&](unsigned int n)
-        -> std::vector<stm::TVar<List<std::pair<T1, T2>>>> {
+    auto f =
+        [&](unsigned int n) -> std::vector<stm::TVar<List<std::pair<T1, T2>>>> {
       return f_impl(f_impl, n);
     };
     return f(static_cast<unsigned int>(num));

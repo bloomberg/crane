@@ -52,11 +52,8 @@ Tokenizer::next_token(const std::basic_string_view<char> input,
       }
     }
   };
-  std::function<std::pair<std::optional<std::basic_string_view<char>>,
-                          std::basic_string_view<char>>(
-      unsigned int, int64_t, std::basic_string_view<char>)>
-      aux =
-          [&](unsigned int fuel, int64_t index, std::basic_string_view<char> s)
+  auto aux = [&](unsigned int fuel, int64_t index,
+                 std::basic_string_view<char> s)
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
     return aux_impl(aux_impl, fuel, index, s);
@@ -88,9 +85,7 @@ Tokenizer::list_tokens(const std::basic_string_view<char> input,
       }
     }
   };
-  std::function<List<std::basic_string_view<char>>(
-      unsigned int, std::basic_string_view<char>)>
-      aux = [&](unsigned int fuel, std::basic_string_view<char> rest)
+  auto aux = [&](unsigned int fuel, std::basic_string_view<char> rest)
       -> List<std::basic_string_view<char>> {
     return aux_impl(aux_impl, fuel, rest);
   };

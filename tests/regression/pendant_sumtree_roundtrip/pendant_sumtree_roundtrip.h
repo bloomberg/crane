@@ -2,7 +2,6 @@
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
 #include <algorithm>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -973,8 +972,8 @@ List<T1> Vector::to_list(const unsigned int n, const T0<T1> &v) {
                                                   *(d_a2), std::move(b)));
     }
   };
-  std::function<List<T1>(unsigned int, T0<T1>, List<T1>)> fold_right_fix =
-      [&](unsigned int _x, T0<T1> v0, List<T1> b) -> List<T1> {
+  auto fold_right_fix = [&](unsigned int _x, T0<T1> v0,
+                            List<T1> b) -> List<T1> {
     return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
   };
   return fold_right_fix(n, v, List<T1>::nil0());

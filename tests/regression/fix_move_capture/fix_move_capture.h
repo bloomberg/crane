@@ -1,7 +1,6 @@
 #ifndef INCLUDED_FIX_MOVE_CAPTURE
 #define INCLUDED_FIX_MOVE_CAPTURE
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>

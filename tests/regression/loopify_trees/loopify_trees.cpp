@@ -1048,10 +1048,9 @@ LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<unsigned int> &t) {
               _self_sum_with_acc(_self_sum_with_acc, new_acc, *(d_a2)));
     }
   };
-  std::function<unsigned int(unsigned int, LoopifyTrees::tree<unsigned int>)>
-      sum_with_acc =
-          [&](unsigned int acc,
-              LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
+  auto sum_with_acc =
+      [&](unsigned int acc,
+          LoopifyTrees::tree<unsigned int> tree0) -> unsigned int {
     return sum_with_acc_impl(sum_with_acc_impl, acc, tree0);
   };
   return sum_with_acc(0u, t);

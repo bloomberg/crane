@@ -1,7 +1,6 @@
 #ifndef INCLUDED_PARALLEL
 #define INCLUDED_PARALLEL
 
-#include <functional>
 #include <future>
 #include <memory>
 #include <optional>

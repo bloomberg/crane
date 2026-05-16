@@ -80,10 +80,8 @@ List<unsigned int> LoopifyAlgorithms::sieve_fuel(const unsigned int fuel,
             }
           }
         };
-        std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-            filter_multiples =
-                [&](unsigned int p,
-                    List<unsigned int> rest) -> List<unsigned int> {
+        auto filter_multiples =
+            [&](unsigned int p, List<unsigned int> rest) -> List<unsigned int> {
           return filter_multiples_impl(filter_multiples_impl, p, rest);
         };
         auto _cell = std::make_unique<List<unsigned int>>(
@@ -286,9 +284,8 @@ List<unsigned int> LoopifyAlgorithms::nub_aux(const List<unsigned int> &l,
             }
           }
         };
-        std::function<List<unsigned int>(unsigned int, List<unsigned int>)>
-            filter_out = [&](unsigned int val,
-                             List<unsigned int> rest) -> List<unsigned int> {
+        auto filter_out = [&](unsigned int val,
+                              List<unsigned int> rest) -> List<unsigned int> {
           return filter_out_impl(filter_out_impl, val, rest);
         };
         auto _cell = std::make_unique<List<unsigned int>>(
