@@ -252,3 +252,58 @@
   (deps sep_ext_any_nested_match.t.exe)
   (action (run ./sep_ext_any_nested_match.t.exe))))
 
+(subdir todo_typeclass_requires
+ (rule
+  (targets todo_typeclass_requires.t.exe)
+  (deps TodoTypeclassRequires.vo todo_typeclass_requires.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_typeclass_requires.t.exe todo_typeclass_requires.cpp todo_typeclass_requires.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_typeclass_requires.t.exe)
+  (action (run ./todo_typeclass_requires.t.exe))))
+
+(subdir todo_modutil_poly_fix
+ (rule
+  (targets todo_modutil_poly_fix.t.exe)
+  (deps TodoModutilPolyFix.vo todo_modutil_poly_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_modutil_poly_fix.t.exe todo_modutil_poly_fix.cpp todo_modutil_poly_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_modutil_poly_fix.t.exe)
+  (action (run ./todo_modutil_poly_fix.t.exe))))
+
+(subdir todo_eta_expansion_taxiom
+ (rule
+  (targets todo_eta_expansion_taxiom.t.exe)
+  (deps TodoEtaExpansionTaxiom.vo todo_eta_expansion_taxiom.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_eta_expansion_taxiom.t.exe todo_eta_expansion_taxiom.cpp todo_eta_expansion_taxiom.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_eta_expansion_taxiom.t.exe)
+  (action (run ./todo_eta_expansion_taxiom.t.exe))))
+
+(subdir todo_generalizable_approx
+ (rule
+  (targets todo_generalizable_approx.t.exe)
+  (deps TodoGeneralizableApprox.vo todo_generalizable_approx.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_generalizable_approx.t.exe todo_generalizable_approx.cpp todo_generalizable_approx.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_generalizable_approx.t.exe)
+  (action (run ./todo_generalizable_approx.t.exe))))
+
+(subdir todo_iota_complex_pattern
+ (rule
+  (targets todo_iota_complex_pattern.t.exe)
+  (deps TodoIotaComplexPattern.vo todo_iota_complex_pattern.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_iota_complex_pattern.t.exe todo_iota_complex_pattern.cpp todo_iota_complex_pattern.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps todo_iota_complex_pattern.t.exe)
+  (action (run ./todo_iota_complex_pattern.t.exe))))
+

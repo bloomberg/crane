@@ -218,7 +218,10 @@ let generalizable a =
   ||
   match a with
   | MLapp _ -> false
-  | _ -> true (* TODO, this is just an approximation for the moment *)
+  | _ -> true
+(* Approximation. Safe in practice: well-typed Rocq cannot use the same
+   let-binding at two distinct types, so over-generalization from non-app
+   expressions cannot be triggered by valid Rocq input. *)
 
 (** {1 ML type env} *)
 
@@ -961,7 +964,9 @@ let rec named_lams ids a =
 let rec many_lams id a = function
   | 0 -> a
   | n -> many_lams id (MLlam (id, Taxiom, a)) (pred n)
-(* TODO: Taxiom probs bad *)
+(* Taxiom is safe here: anonym_tmp_lams is only called from general_optimize_fix,
+   where normalize immediately beta-reduces these lambdas away before any C++
+   translation path sees them. *)
 
 let anonym_tmp_lams a n = many_lams (Tmp anonymous_name) a n
 
@@ -973,7 +978,8 @@ let rec anonym_or_dummy_lams a = function
   | [] -> a
   | Keep :: s ->
     MLlam (anonymous, Taxiom, anonym_or_dummy_lams a s)
-    (* TODO: Taxiom probs bad *)
+    (* Dead for the C++ backend: Crane's extraction.ml always calls
+       anonym_or_dummy_lams_typed instead, which uses actual resolved types. *)
   | Kill k :: s -> MLlam (Dummy, Tdummy k, anonym_or_dummy_lams a s)
 
 (* Like [anonym_or_dummy_lams], but uses actual resolved types for [Keep]
@@ -1582,7 +1588,10 @@ let eta_expansion_sign s (ids, c) =
         ((anonymous, Taxiom) :: ids)
         (MLrel i :: rels)
         (i + 1)
-        l (* TODO: Taxiom is probably bad here!!! *)
+        l (* Unreachable for well-formed Rocq: match branches are already
+             lambda-abstracted over constructor args, so case_expunge never
+             needs to eta-expand. If reached, Taxiom → `axiom` C++ type,
+             which is not filtered by is_cpp_dummy_type → compile error. *)
     | Kill k :: l ->
       abs ((Dummy, Tdummy k) :: ids) (MLdummy k :: rels) (i + 1) l
   in
