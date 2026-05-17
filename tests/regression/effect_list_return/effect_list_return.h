@@ -6,9 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -130,16 +128,15 @@ public:
 
 struct EffectListReturn {
   /// 1. list_directory returns a list
-  static List<std::string> list_files(const std::string path);
+  static List<std::string> list_files(std::string path);
   /// 2. create dir and verify
-  static bool make_and_check(const std::string path);
+  static bool make_and_check(std::string path);
   /// 3. get_time result used in pair
   static std::pair<int64_t, std::string> timestamped_line();
   /// 4. current_path as a no-arg effect
   static std::string get_cwd();
   /// 5. Chain effects with different return types
-  static std::pair<bool, List<std::string>>
-  create_and_list(const std::string dir);
+  static std::pair<bool, List<std::string>> create_and_list(std::string dir);
 };
 
 #endif // INCLUDED_EFFECT_LIST_RETURN

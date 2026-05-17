@@ -124,7 +124,7 @@ public:
 };
 
 struct Nat {
-  static unsigned int pow(const unsigned int n, const unsigned int m);
+  static unsigned int pow(unsigned int n, unsigned int m);
 };
 
 struct PageOps {
@@ -132,18 +132,18 @@ struct PageOps {
     unsigned int pc;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).pc}; }
+    state clone() const { return state{(*this).pc}; }
   };
 
-  static unsigned int addr12_of_nat(const unsigned int n);
-  static unsigned int page_of(const unsigned int p);
-  static unsigned int page_base(const unsigned int p);
-  static unsigned int page_offset(const unsigned int p);
+  static unsigned int addr12_of_nat(unsigned int n);
+  static unsigned int page_of(unsigned int p);
+  static unsigned int page_base(unsigned int p);
+  static unsigned int page_offset(unsigned int p);
   static unsigned int pc_inc1(const state &s);
   static unsigned int pc_inc2(const state &s);
   static unsigned int base_for_next1(const state &s);
   static unsigned int base_for_next2(const state &s);
-  static unsigned int recompose(const unsigned int p);
+  static unsigned int recompose(unsigned int p);
   static inline const unsigned int max_addr = ((
       (Nat::pow(2u, 12u) - 1u) > Nat::pow(2u, 12u) ? 0
                                                    : (Nat::pow(2u, 12u) - 1u)));
@@ -187,11 +187,10 @@ struct PageOps {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP>(_sv.v())) {
+      if (std::holds_alternative<NOP>(this->v())) {
         return instruction(NOP{});
       } else {
-        const auto &[d_a0] = std::get<LDM>(_sv.v());
+        const auto &[d_a0] = std::get<LDM>(this->v());
         return instruction(LDM{d_a0});
       }
     }
@@ -199,9 +198,7 @@ struct PageOps {
     // CREATORS
     static instruction nop() { return instruction(NOP{}); }
 
-    static instruction ldm(unsigned int a0) {
-      return instruction(LDM{std::move(a0)});
-    }
+    static instruction ldm(unsigned int a0) { return instruction(LDM{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -232,10 +229,9 @@ struct PageOps {
     }
   }
 
-  static instruction decode(const unsigned int b1, const unsigned int b2);
+  static instruction decode(unsigned int b1, unsigned int b2);
 
-  template <typename T1>
-  static List<T1> drop(const unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> drop(unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -244,13 +240,13 @@ struct PageOps {
         return List<T1>::nil();
       } else {
         auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v_mut());
-        return drop<T1>(n_, *(d_a1));
+        return drop<T1>(n_, *d_a1);
       }
     }
   }
 
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble(const List<unsigned int> &rom, const unsigned int addr);
+  disassemble(const List<unsigned int> &rom, unsigned int addr);
   static inline const unsigned int test_page_base_alignment =
       (256u ? page_base(777u) % 256u : page_base(777u));
   static inline const unsigned int test_page_base_next_pc = []() {

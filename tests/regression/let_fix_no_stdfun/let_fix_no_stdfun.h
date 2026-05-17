@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_NO_STDFUN
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>

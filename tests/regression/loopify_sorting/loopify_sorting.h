@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_SORTING
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -128,21 +127,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -171,7 +170,7 @@ struct LoopifySorting {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = *(_f.l);
+        const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -187,7 +186,7 @@ struct LoopifySorting {
     return _result;
   }
 
-  static List<unsigned int> insert(const unsigned int x, List<unsigned int> l);
+  static List<unsigned int> insert(unsigned int x, List<unsigned int> l);
   static List<unsigned int> insertion_sort(const List<unsigned int> &l);
 
   template <typename T1>
@@ -217,12 +216,12 @@ struct LoopifySorting {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = *(_f.l);
+        const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          auto &&_sv0 = *(d_a1);
+          auto &&_sv0 = *d_a1;
           if (std::holds_alternative<typename List<T1>::Nil>(_sv0.v())) {
             _result = std::make_pair(List<T1>::cons(d_a0, List<T1>::nil()),
                                      List<T1>::nil());
@@ -246,27 +245,25 @@ struct LoopifySorting {
     return _result;
   }
 
-  static List<unsigned int> merge_fuel(const unsigned int fuel,
-                                       List<unsigned int> l1,
+  static List<unsigned int> merge_fuel(unsigned int fuel, List<unsigned int> l1,
                                        List<unsigned int> l2);
   static List<unsigned int> merge(const List<unsigned int> &l1,
                                   const List<unsigned int> &l2);
-  static List<unsigned int> merge_sort_fuel(const unsigned int fuel,
+  static List<unsigned int> merge_sort_fuel(unsigned int fuel,
                                             List<unsigned int> l);
   static List<unsigned int> merge_sort(const List<unsigned int> &l);
   static std::pair<List<unsigned int>, List<unsigned int>>
-  partition(const unsigned int pivot, const List<unsigned int> &l);
-  static List<unsigned int> quicksort_fuel(const unsigned int fuel,
+  partition(unsigned int pivot, const List<unsigned int> &l);
+  static List<unsigned int> quicksort_fuel(unsigned int fuel,
                                            List<unsigned int> l);
   static List<unsigned int> quicksort(const List<unsigned int> &l);
-  static bool is_sorted_aux(const unsigned int prev,
-                            const List<unsigned int> &l);
+  static bool is_sorted_aux(unsigned int prev, const List<unsigned int> &l);
   static bool is_sorted(const List<unsigned int> &l);
 
   /// merge_by cmp merges with custom comparator.
   template <typename F1>
     requires std::is_invocable_r_v<bool, F1 &, unsigned int &, unsigned int &>
-  static List<unsigned int> merge_by_fuel(const unsigned int fuel, F1 &&cmp,
+  static List<unsigned int> merge_by_fuel(unsigned int fuel, F1 &&cmp,
                                           List<unsigned int> l1,
                                           List<unsigned int> l2) {
     if (fuel <= 0) {
@@ -287,10 +284,10 @@ struct LoopifySorting {
               std::get<typename List<unsigned int>::Cons>(l2.v_mut());
           if (cmp(d_a0, d_a00)) {
             return List<unsigned int>::cons(d_a0,
-                                            merge_by_fuel(f, cmp, *(d_a1), l2));
+                                            merge_by_fuel(f, cmp, *d_a1, l2));
           } else {
-            return List<unsigned int>::cons(
-                d_a00, merge_by_fuel(f, cmp, l1, *(d_a10)));
+            return List<unsigned int>::cons(d_a00,
+                                            merge_by_fuel(f, cmp, l1, *d_a10));
           }
         }
       }
@@ -308,8 +305,7 @@ struct LoopifySorting {
   /// remove_duplicates removes consecutive duplicates from sorted list.
   static List<unsigned int> remove_duplicates(const List<unsigned int> &l);
   /// uniq_sorted variant that preserves order.
-  static List<unsigned int> uniq_sorted_aux(const unsigned int prev,
-                                            const bool seen,
+  static List<unsigned int> uniq_sorted_aux(unsigned int prev, bool seen,
                                             const List<unsigned int> &l);
   static List<unsigned int> uniq_sorted(const List<unsigned int> &l);
 };

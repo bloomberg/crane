@@ -1,7 +1,6 @@
 #include "pattern_impossible.h"
 
-unsigned int
-PatternImpossible::complex_match(const PatternImpossible::Three x) {
+unsigned int PatternImpossible::complex_match(PatternImpossible::Three x) {
   switch (x) {
   case Three::e_ONE: {
     return 1u;
@@ -26,12 +25,12 @@ PatternImpossible::nested_match(const PatternImpossible::nested &n) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename PatternImpossible::nested::Node>(n.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *d_a0;
     if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(
             _sv0.v())) {
       const auto &[d_a00] =
           std::get<typename PatternImpossible::nested::Leaf>(_sv0.v());
-      auto &&_sv1 = *(d_a1);
+      auto &&_sv1 = *d_a1;
       if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(
               _sv1.v())) {
         const auto &[d_a01] =
@@ -46,8 +45,8 @@ PatternImpossible::nested_match(const PatternImpossible::nested &n) {
   }
 }
 
-unsigned int PatternImpossible::double_match(const PatternImpossible::Three x,
-                                             const PatternImpossible::Three y) {
+unsigned int PatternImpossible::double_match(PatternImpossible::Three x,
+                                             PatternImpossible::Three y) {
   switch (x) {
   case Three::e_ONE: {
     switch (y) {
@@ -82,24 +81,24 @@ PatternImpossible::multi_arg_pattern(const PatternImpossible::nested &n) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename PatternImpossible::nested::Node>(n.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *d_a0;
     if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(
             _sv0.v())) {
       const auto &[d_a00] =
           std::get<typename PatternImpossible::nested::Leaf>(_sv0.v());
-      auto &&_sv1 = *(d_a1);
+      auto &&_sv1 = *d_a1;
       if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(
               _sv1.v())) {
         return 0u;
       } else {
         const auto &[d_a01, d_a11] =
             std::get<typename PatternImpossible::nested::Node>(_sv1.v());
-        auto &&_sv2 = *(d_a01);
+        auto &&_sv2 = *d_a01;
         if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(
                 _sv2.v())) {
           const auto &[d_a02] =
               std::get<typename PatternImpossible::nested::Leaf>(_sv2.v());
-          auto &&_sv3 = *(d_a11);
+          auto &&_sv3 = *d_a11;
           if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(
                   _sv3.v())) {
             const auto &[d_a03] =

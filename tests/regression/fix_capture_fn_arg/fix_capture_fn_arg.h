@@ -2,8 +2,6 @@
 #define INCLUDED_FIX_CAPTURE_FN_ARG
 
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -38,8 +36,7 @@ struct FixCaptureFnArg {
   /// test1: make_transform(x=>x*2, 5) = (10, go).
   /// go(3) = (5*2) + 3 = 13. Total = 10 + 13 = 23.
   static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs =
-        make_transform([](const unsigned int x) { return (x * 2u); }, 5u);
+    auto _cs = make_transform([](unsigned int x) { return (x * 2u); }, 5u);
     const unsigned int &n = _cs.first;
     const std::function<unsigned int(unsigned int)> &g = _cs.second;
     return (n + g(3u));
@@ -47,8 +44,7 @@ struct FixCaptureFnArg {
   /// test2: make_transform(S, 10) = (11, go).
   /// go(5) = S(10) + 5 = 16. Total = 11 + 16 = 27.
   static inline const unsigned int test2 = []() -> unsigned int {
-    auto _cs =
-        make_transform([](const unsigned int x) { return (x + 1); }, 10u);
+    auto _cs = make_transform([](unsigned int x) { return (x + 1); }, 10u);
     const unsigned int &n = _cs.first;
     const std::function<unsigned int(unsigned int)> &g = _cs.second;
     return (n + g(5u));

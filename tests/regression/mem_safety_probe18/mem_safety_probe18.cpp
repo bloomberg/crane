@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe18::sum_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe18::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe18::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe18::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -70,15 +70,14 @@ MemSafetyProbe18::tree MemSafetyProbe18::fold_left_tree(
 /// TEST 8: Nested constructor building: build a list of trees
 /// using the same tree in different positions.
 MemSafetyProbe18::mylist<MemSafetyProbe18::tree>
-MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t,
-                                  const unsigned int n) {
+MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t, unsigned int n) {
   std::unique_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _head{};
   std::unique_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> *_write =
       &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) =
+      *_write =
           std::make_unique<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
               mylist<MemSafetyProbe18::tree>::mynil());
       break;
@@ -88,7 +87,7 @@ MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t,
           std::make_unique<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
               typename mylist<MemSafetyProbe18::tree>::Mycons(
                   tree::node(t, _loop_n, tree::leaf()), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<MemSafetyProbe18::tree>::Mycons>(
                     (*_write)->v_mut())
                     .d_a1;
@@ -96,7 +95,7 @@ MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe18::sum_tree_list(
@@ -123,7 +122,7 @@ unsigned int MemSafetyProbe18::sum_tree_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe18::mylist<MemSafetyProbe18::tree> &l = *(_f.l);
+      const MemSafetyProbe18::mylist<MemSafetyProbe18::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mynil>(
               l.v())) {

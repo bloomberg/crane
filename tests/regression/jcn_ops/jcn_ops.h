@@ -1,9 +1,6 @@
 #ifndef INCLUDED_JCN_OPS
 #define INCLUDED_JCN_OPS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct JcnOps {
@@ -15,19 +12,18 @@ struct JcnOps {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).acc, (*(this)).carry, (*(this)).test_pin,
-                   (*(this)).pc};
+      return state{(*this).acc, (*this).carry, (*this).test_pin, (*this).pc};
     }
   };
 
-  static bool jcn_condition(const state &s, const unsigned int cond);
-  static unsigned int addr12_of_nat(const unsigned int n);
+  static bool jcn_condition(const state &s, unsigned int cond);
+  static unsigned int addr12_of_nat(unsigned int n);
   static unsigned int pc_inc2(const state &s);
-  static unsigned int page_of(const unsigned int p);
-  static unsigned int page_base(const unsigned int p);
+  static unsigned int page_of(unsigned int p);
+  static unsigned int page_base(unsigned int p);
   static unsigned int base_for_next2(const state &s);
-  static unsigned int branch_target(const state &s, const unsigned int cond,
-                                    const unsigned int off);
+  static unsigned int branch_target(const state &s, unsigned int cond,
+                                    unsigned int off);
   static inline const unsigned int test_branch_target =
       branch_target(state{0u, true, false, 300u}, 2u, 17u);
   static inline const bool check_carry_clear_gate =

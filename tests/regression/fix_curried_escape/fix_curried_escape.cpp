@@ -12,7 +12,7 @@
 /// After make_fn returns, base is destroyed, and calling
 /// the extracted function accesses freed memory.
 std::optional<std::function<unsigned int(unsigned int)>>
-FixCurriedEscape::make_fn(const unsigned int base) {
+FixCurriedEscape::make_fn(unsigned int base) {
   auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;

@@ -2,8 +2,6 @@
 #define INCLUDED_BANK_LOOKUP_DEFAULT
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,19 +121,18 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct BankLookupDefault {
@@ -143,26 +140,26 @@ struct BankLookupDefault {
     unsigned int chip_port;
 
     // ACCESSORS
-    ram_chip clone() const { return ram_chip{(*(this)).chip_port}; }
+    ram_chip clone() const { return ram_chip{(*this).chip_port}; }
   };
 
   struct ram_bank {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*(this)).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
   };
 
   struct state {
     List<ram_bank> ram_sys;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).ram_sys.clone()}; }
+    state clone() const { return state{(*this).ram_sys.clone()}; }
   };
 
   static inline const ram_chip empty_chip = ram_chip{0u};
   static inline const ram_bank empty_bank = ram_bank{List<ram_chip>::nil()};
-  static ram_bank get_bank(const state &s, const unsigned int b);
+  static ram_bank get_bank(const state &s, unsigned int b);
   static inline const state sample_state = state{List<ram_bank>::cons(
       ram_bank{List<ram_chip>::cons(empty_chip, List<ram_chip>::nil())},
       List<ram_bank>::nil())};
@@ -171,7 +168,7 @@ struct BankLookupDefault {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -185,7 +182,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

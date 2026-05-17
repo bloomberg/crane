@@ -3,7 +3,6 @@
 
 #include <concepts>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -163,7 +162,7 @@ struct TypeApp {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, list_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -174,7 +173,7 @@ struct TypeApp {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, list_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -185,13 +184,13 @@ struct TypeApp {
       return list<T2>::nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return list<T2>::cons(f(d_a0), map<T1, T2>(f, *(d_a1)));
+      return list<T2>::cons(f(d_a0), map<T1, T2>(f, *d_a1));
     }
   }
 
   static inline const list<unsigned int> test_map =
       map<unsigned int, unsigned int>(
-          [](const unsigned int x) { return (x + 1u); },
+          [](unsigned int x) { return (x + 1u); },
           list<unsigned int>::cons(
               1u, list<unsigned int>::cons(
                       2u, list<unsigned int>::cons(
@@ -208,12 +207,12 @@ struct TypeApp {
   }
 
   static inline const unsigned int test_twice =
-      twice<unsigned int>([](const unsigned int x) { return (x + 1u); }, 10u);
+      twice<unsigned int>([](unsigned int x) { return (x + 1u); }, 10u);
 
   struct NatMonoid {
     using T = unsigned int;
     static inline const unsigned int empty = 0u;
-    static unsigned int append(const unsigned int _x0, const unsigned int _x1);
+    static unsigned int append(unsigned int _x0, unsigned int _x1);
   };
 
   template <Monoid M> struct UseMonoid {
@@ -222,7 +221,7 @@ struct TypeApp {
       return v;
     }
 
-    constexpr static typename M::T triple(const typename M::T x) {
+    constexpr static typename M::T triple(typename M::T x) {
       return M::append(x, M::append(x, x));
     }
   };

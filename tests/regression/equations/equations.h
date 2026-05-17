@@ -5,15 +5,14 @@
 #include <concepts>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
 struct PeanoNat {
-  static bool even(const unsigned int n);
-  static unsigned int div2(const unsigned int n);
+  static bool even(unsigned int n);
+  static unsigned int div2(unsigned int n);
 };
 
 template <typename I, typename
@@ -29,8 +28,8 @@ struct Equations {
   template <typename F3>
     requires std::is_invocable_r_v<unsigned int, F3 &,
                                    std::pair<unsigned int, unsigned int> &>
-  static unsigned int gcd_clause_3(const unsigned int n, const unsigned int n0,
-                                   const bool refine, F3 &&gcd0) {
+  static unsigned int gcd_clause_3(unsigned int n, unsigned int n0, bool refine,
+                                   F3 &&gcd0) {
     if (refine) {
       return gcd0(std::make_pair(
           (n + 1),
@@ -63,9 +62,8 @@ struct Equations {
   }
 
   static unsigned int gcd(const std::pair<unsigned int, unsigned int> &x);
-  static unsigned int gcd_unfold_clause_3(const unsigned int n,
-                                          const unsigned int n0,
-                                          const bool refine);
+  static unsigned int gcd_unfold_clause_3(unsigned int n, unsigned int n0,
+                                          bool refine);
   static unsigned int
   gcd_unfold(const std::pair<unsigned int, unsigned int> &p);
   struct gcd_graph;
@@ -120,16 +118,15 @@ struct Equations {
 
     // ACCESSORS
     gcd_graph clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Gcd_graph_equation_1>(_sv.v())) {
-        const auto &[d_y] = std::get<Gcd_graph_equation_1>(_sv.v());
+      if (std::holds_alternative<Gcd_graph_equation_1>(this->v())) {
+        const auto &[d_y] = std::get<Gcd_graph_equation_1>(this->v());
         return gcd_graph(Gcd_graph_equation_1{d_y});
-      } else if (std::holds_alternative<Gcd_graph_equation_2>(_sv.v())) {
-        const auto &[d_n] = std::get<Gcd_graph_equation_2>(_sv.v());
+      } else if (std::holds_alternative<Gcd_graph_equation_2>(this->v())) {
+        const auto &[d_n] = std::get<Gcd_graph_equation_2>(this->v());
         return gcd_graph(Gcd_graph_equation_2{d_n});
       } else {
         const auto &[d_n, d_n0, d_hind] =
-            std::get<Gcd_graph_refinement_3>(_sv.v());
+            std::get<Gcd_graph_refinement_3>(this->v());
         return gcd_graph(Gcd_graph_refinement_3{
             d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_clause_3_graph>(
@@ -140,18 +137,17 @@ struct Equations {
 
     // CREATORS
     static gcd_graph gcd_graph_equation_1(unsigned int y) {
-      return gcd_graph(Gcd_graph_equation_1{std::move(y)});
+      return gcd_graph(Gcd_graph_equation_1{y});
     }
 
     static gcd_graph gcd_graph_equation_2(unsigned int n) {
-      return gcd_graph(Gcd_graph_equation_2{std::move(n)});
+      return gcd_graph(Gcd_graph_equation_2{n});
     }
 
     static gcd_graph gcd_graph_refinement_3(unsigned int n, unsigned int n0,
                                             gcd_clause_3_graph hind) {
       return gcd_graph(Gcd_graph_refinement_3{
-          std::move(n), std::move(n0),
-          std::make_unique<gcd_clause_3_graph>(std::move(hind))});
+          n, n0, std::make_unique<gcd_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -250,17 +246,16 @@ struct Equations {
 
     // ACCESSORS
     gcd_clause_3_graph clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_sv.v())) {
+      if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(this->v())) {
         const auto &[d_n, d_n0, d_hind] =
-            std::get<Gcd_clause_3_graph_equation_1>(_sv.v());
+            std::get<Gcd_clause_3_graph_equation_1>(this->v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
             d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_graph>(d_hind->clone())
                    : nullptr});
       } else {
         const auto &[d_n, d_n0, d_hind] =
-            std::get<Gcd_clause_3_graph_equation_2>(_sv.v());
+            std::get<Gcd_clause_3_graph_equation_2>(this->v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
             d_n, d_n0,
             d_hind ? std::make_unique<Equations::gcd_graph>(d_hind->clone())
@@ -273,16 +268,14 @@ struct Equations {
                                                             unsigned int n0,
                                                             gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
-          std::move(n), std::move(n0),
-          std::make_unique<gcd_graph>(std::move(hind))});
+          n, n0, std::make_unique<gcd_graph>(std::move(hind))});
     }
 
     static gcd_clause_3_graph gcd_clause_3_graph_equation_2(unsigned int n,
                                                             unsigned int n0,
                                                             gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
-          std::move(n), std::move(n0),
-          std::make_unique<gcd_graph>(std::move(hind))});
+          n, n0, std::make_unique<gcd_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -343,10 +336,10 @@ struct Equations {
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 gcd_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                           std::pair<unsigned int, unsigned int> _x0,
-                          const unsigned int _x1, gcd_graph _x2) {
+                          unsigned int _x1, gcd_graph _x2) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<unsigned int, unsigned int> &,
-                       const unsigned int, const gcd_graph &g) -> T1 {
+                       unsigned int, const gcd_graph &g) -> T1 {
       if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
               g.v())) {
         const auto &[d_y] =
@@ -361,14 +354,14 @@ struct Equations {
         const auto &[d_n, d_n0, d_hind] =
             std::get<typename gcd_graph::Gcd_graph_refinement_3>(g.v());
         return f1(
-            d_n, d_n0, *(d_hind),
+            d_n, d_n0, *d_hind,
             _self_f5(_self_f4, _self_f5, d_n, d_n0, (d_n + 1) < (d_n0 + 1),
                      gcd_unfold_clause_3(d_n, d_n0, (d_n + 1) < (d_n0 + 1)),
-                     *(d_hind)));
+                     *d_hind));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
-                       const unsigned int, const bool, const unsigned int,
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
+                       unsigned int, bool, unsigned int,
                        const gcd_clause_3_graph &g) -> T2 {
       if (std::holds_alternative<
               typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
@@ -376,7 +369,7 @@ struct Equations {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g.v());
         return f2(
-            d_n0, d_n00, *(d_hind0),
+            d_n0, d_n00, *d_hind0,
             _self_f4(_self_f4, _self_f5,
                      std::make_pair((d_n0 + 1),
                                     ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
@@ -386,12 +379,12 @@ struct Equations {
                          (d_n0 + 1), ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
                                            ? 0
                                            : ((d_n00 + 1) - (d_n0 + 1)))))),
-                     *(d_hind0)));
+                     *d_hind0));
       } else {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g.v());
         return f3(
-            d_n0, d_n00, *(d_hind0),
+            d_n0, d_n00, *d_hind0,
             _self_f4(
                 _self_f4, _self_f5,
                 std::make_pair(((((d_n0 + 1) - (d_n00 + 1)) > (d_n0 + 1)
@@ -402,15 +395,15 @@ struct Equations {
                                          ? 0
                                          : ((d_n0 + 1) - (d_n00 + 1)))),
                                    (d_n00 + 1))),
-                *(d_hind0)));
+                *d_hind0));
       }
     };
     auto f4 = [&](const std::pair<unsigned int, unsigned int> &_x,
-                  const unsigned int _x3, const gcd_graph &g) -> T1 {
+                  unsigned int _x3, const gcd_graph &g) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x3, g);
     };
-    auto f5 = [&](const unsigned int _x, const unsigned int _x3, const bool _x4,
-                  const unsigned int _x5, const gcd_clause_3_graph &g) -> T2 {
+    auto f5 = [&](unsigned int _x, unsigned int _x3, bool _x4, unsigned int _x5,
+                  const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, _x5, g);
     };
     return f4(_x0, _x1, _x2);
@@ -419,13 +412,11 @@ struct Equations {
   template <typename T1 = void, typename T2, typename F0, typename F1,
             typename F2, typename F3, typename F4>
   static T2 gcd_clause_3_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                                   const unsigned int _x0,
-                                   const unsigned int _x1, const bool _x2,
-                                   const unsigned int _x3,
-                                   gcd_clause_3_graph _x4) {
+                                   unsigned int _x0, unsigned int _x1, bool _x2,
+                                   unsigned int _x3, gcd_clause_3_graph _x4) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<unsigned int, unsigned int> &,
-                       const unsigned int, const gcd_graph &g) -> T1 {
+                       unsigned int, const gcd_graph &g) -> T1 {
       if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
               g.v())) {
         const auto &[d_y] =
@@ -440,14 +431,14 @@ struct Equations {
         const auto &[d_n, d_n0, d_hind] =
             std::get<typename gcd_graph::Gcd_graph_refinement_3>(g.v());
         return f1(
-            d_n, d_n0, *(d_hind),
+            d_n, d_n0, *d_hind,
             _self_f5(_self_f4, _self_f5, d_n, d_n0, (d_n + 1) < (d_n0 + 1),
                      gcd_unfold_clause_3(d_n, d_n0, (d_n + 1) < (d_n0 + 1)),
-                     *(d_hind)));
+                     *d_hind));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
-                       const unsigned int, const bool, const unsigned int,
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
+                       unsigned int, bool, unsigned int,
                        const gcd_clause_3_graph &g) -> T2 {
       if (std::holds_alternative<
               typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
@@ -455,7 +446,7 @@ struct Equations {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(g.v());
         return f2(
-            d_n0, d_n00, *(d_hind0),
+            d_n0, d_n00, *d_hind0,
             _self_f4(_self_f4, _self_f5,
                      std::make_pair((d_n0 + 1),
                                     ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
@@ -465,12 +456,12 @@ struct Equations {
                          (d_n0 + 1), ((((d_n00 + 1) - (d_n0 + 1)) > (d_n00 + 1)
                                            ? 0
                                            : ((d_n00 + 1) - (d_n0 + 1)))))),
-                     *(d_hind0)));
+                     *d_hind0));
       } else {
         const auto &[d_n0, d_n00, d_hind0] = std::get<
             typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(g.v());
         return f3(
-            d_n0, d_n00, *(d_hind0),
+            d_n0, d_n00, *d_hind0,
             _self_f4(
                 _self_f4, _self_f5,
                 std::make_pair(((((d_n0 + 1) - (d_n00 + 1)) > (d_n0 + 1)
@@ -481,15 +472,15 @@ struct Equations {
                                          ? 0
                                          : ((d_n0 + 1) - (d_n00 + 1)))),
                                    (d_n00 + 1))),
-                *(d_hind0)));
+                *d_hind0));
       }
     };
     auto f4 = [&](const std::pair<unsigned int, unsigned int> &_x,
-                  const unsigned int _x5, const gcd_graph &g) -> T1 {
+                  unsigned int _x5, const gcd_graph &g) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x5, g);
     };
-    auto f5 = [&](const unsigned int _x, const unsigned int _x5, const bool _x6,
-                  const unsigned int _x7, const gcd_clause_3_graph &g) -> T2 {
+    auto f5 = [&](unsigned int _x, unsigned int _x5, bool _x6, unsigned int _x7,
+                  const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x5, _x6, _x7, g);
     };
     return f5(_x0, _x1, _x2, _x3, _x4);
@@ -501,7 +492,7 @@ struct Equations {
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 gcd_graph_rect(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3, F4 &&_x4,
                            const std::pair<unsigned int, unsigned int> &_x5,
-                           const unsigned int _x6, const gcd_graph &_x7) {
+                           unsigned int _x6, const gcd_graph &_x7) {
     return gcd_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
@@ -519,20 +510,18 @@ struct Equations {
                      std::pair<unsigned int, unsigned int> p) {
     return gcd_graph_mut(
         f, f0,
-        [=](const unsigned int, const unsigned int, const gcd_clause_3_graph &,
+        [=](unsigned int, unsigned int, const gcd_clause_3_graph &,
             const T1 &x) mutable {
           const unsigned int &_x2 = p.first;
           const unsigned int &_x3 = p.second;
           return x;
         },
-        [=](const unsigned int n1, const unsigned int n2,
-            const gcd_graph &) mutable {
+        [=](unsigned int n1, unsigned int n2, const gcd_graph &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
-        [=](const unsigned int n1, const unsigned int n2,
-            const gcd_graph &) mutable {
+        [=](unsigned int n1, unsigned int n2, const gcd_graph &) mutable {
           const unsigned int &_x0 = p.first;
           const unsigned int &_x1 = p.second;
           return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
@@ -563,8 +552,7 @@ struct Equations {
 
   template <typename F2>
     requires std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
-  static unsigned int collatz_steps_clause_3(const unsigned int n,
-                                             const bool refine,
+  static unsigned int collatz_steps_clause_3(unsigned int n, bool refine,
                                              F2 &&collatz_steps0) {
     if (refine) {
       return (collatz_steps0(PeanoNat::div2(n)) + 1);
@@ -575,7 +563,7 @@ struct Equations {
 
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int collatz_steps_functional(const unsigned int n,
+  static unsigned int collatz_steps_functional(unsigned int n,
                                                F1 &&collatz_steps0) {
     if (n <= 0) {
       return 0u;
@@ -591,10 +579,10 @@ struct Equations {
     }
   }
 
-  static unsigned int collatz_steps(const unsigned int x);
-  static unsigned int collatz_steps_unfold_clause_3(const unsigned int n,
-                                                    const bool refine);
-  static unsigned int collatz_steps_unfold(const unsigned int n);
+  static unsigned int collatz_steps(unsigned int x);
+  static unsigned int collatz_steps_unfold_clause_3(unsigned int n,
+                                                    bool refine);
+  static unsigned int collatz_steps_unfold(unsigned int n);
   struct collatz_steps_graph;
   struct collatz_steps_clause_3_graph;
 
@@ -648,15 +636,14 @@ struct Equations {
 
     // ACCESSORS
     collatz_steps_graph clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Collatz_steps_graph_equation_1>(_sv.v())) {
+      if (std::holds_alternative<Collatz_steps_graph_equation_1>(this->v())) {
         return collatz_steps_graph(Collatz_steps_graph_equation_1{});
       } else if (std::holds_alternative<Collatz_steps_graph_equation_2>(
-                     _sv.v())) {
+                     this->v())) {
         return collatz_steps_graph(Collatz_steps_graph_equation_2{});
       } else {
         const auto &[d_n, d_hind] =
-            std::get<Collatz_steps_graph_refinement_3>(_sv.v());
+            std::get<Collatz_steps_graph_refinement_3>(this->v());
         return collatz_steps_graph(Collatz_steps_graph_refinement_3{
             d_n,
             d_hind ? std::make_unique<Equations::collatz_steps_clause_3_graph>(
@@ -678,8 +665,7 @@ struct Equations {
     collatz_steps_graph_refinement_3(unsigned int n,
                                      collatz_steps_clause_3_graph hind) {
       return collatz_steps_graph(Collatz_steps_graph_refinement_3{
-          std::move(n),
-          std::make_unique<collatz_steps_clause_3_graph>(std::move(hind))});
+          n, std::make_unique<collatz_steps_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -785,11 +771,10 @@ struct Equations {
 
     // ACCESSORS
     collatz_steps_clause_3_graph clone() const {
-      auto &&_sv = *(this);
       if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(
-              _sv.v())) {
+              this->v())) {
         const auto &[d_n, d_hind] =
-            std::get<Collatz_steps_clause_3_graph_equation_1>(_sv.v());
+            std::get<Collatz_steps_clause_3_graph_equation_1>(this->v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_1{
                 d_n, d_hind ? std::make_unique<Equations::collatz_steps_graph>(
@@ -797,7 +782,7 @@ struct Equations {
                             : nullptr});
       } else {
         const auto &[d_n, d_hind] =
-            std::get<Collatz_steps_clause_3_graph_equation_2>(_sv.v());
+            std::get<Collatz_steps_clause_3_graph_equation_2>(this->v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_2{
                 d_n, d_hind ? std::make_unique<Equations::collatz_steps_graph>(
@@ -812,8 +797,7 @@ struct Equations {
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
           Collatz_steps_clause_3_graph_equation_1{
-              std::move(n),
-              std::make_unique<collatz_steps_graph>(std::move(hind))});
+              n, std::make_unique<collatz_steps_graph>(std::move(hind))});
     }
 
     static collatz_steps_clause_3_graph
@@ -821,8 +805,7 @@ struct Equations {
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
           Collatz_steps_clause_3_graph_equation_2{
-              std::move(n),
-              std::make_unique<collatz_steps_graph>(std::move(hind))});
+              n, std::make_unique<collatz_steps_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -884,11 +867,10 @@ struct Equations {
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
   static T1 collatz_steps_graph_mut(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
-                                    F4 &&f3, const unsigned int _x0,
-                                    const unsigned int _x1,
+                                    F4 &&f3, unsigned int _x0, unsigned int _x1,
                                     collatz_steps_graph _x2) {
-    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
-                       const unsigned int, const collatz_steps_graph &c) -> T1 {
+    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
+                       unsigned int, const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
               typename collatz_steps_graph::Collatz_steps_graph_equation_1>(
               c.v())) {
@@ -901,16 +883,16 @@ struct Equations {
         const auto &[d_n, d_hind] = std::get<
             typename collatz_steps_graph::Collatz_steps_graph_refinement_3>(
             c.v());
-        return f1(d_n, *(d_hind),
+        return f1(d_n, *d_hind,
                   _self_f5(_self_f4, _self_f5, d_n,
                            PeanoNat::even(((d_n + 1) + 1)),
                            collatz_steps_unfold_clause_3(
                                d_n, PeanoNat::even(((d_n + 1) + 1))),
-                           *(d_hind)));
+                           *d_hind));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
-                       const bool, const unsigned int,
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int, bool,
+                       unsigned int,
                        const collatz_steps_clause_3_graph &c) -> T2 {
       if (std::holds_alternative<typename collatz_steps_clause_3_graph::
                                      Collatz_steps_clause_3_graph_equation_1>(
@@ -918,23 +900,23 @@ struct Equations {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
                          Collatz_steps_clause_3_graph_equation_1>(c.v());
-        return f2(d_n0, *(d_hind0),
+        return f2(d_n0, *d_hind0,
                   _self_f4(_self_f4, _self_f5, PeanoNat::div2(d_n0),
-                           collatz_steps(PeanoNat::div2(d_n0)), *(d_hind0)));
+                           collatz_steps(PeanoNat::div2(d_n0)), *d_hind0));
       } else {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
                          Collatz_steps_clause_3_graph_equation_2>(c.v());
-        return f3(d_n0, *(d_hind0),
+        return f3(d_n0, *d_hind0,
                   _self_f4(_self_f4, _self_f5, ((3u * d_n0) + 1u),
-                           collatz_steps(((3u * d_n0) + 1u)), *(d_hind0)));
+                           collatz_steps(((3u * d_n0) + 1u)), *d_hind0));
       }
     };
-    auto f4 = [&](const unsigned int _x, const unsigned int _x3,
+    auto f4 = [&](unsigned int _x, unsigned int _x3,
                   const collatz_steps_graph &c) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x3, c);
     };
-    auto f5 = [&](const unsigned int _x, const bool _x3, const unsigned int _x4,
+    auto f5 = [&](unsigned int _x, bool _x3, unsigned int _x4,
                   const collatz_steps_clause_3_graph &c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, c);
     };
@@ -948,13 +930,12 @@ struct Equations {
                                    collatz_steps_graph &, T1 &> &&
              std::is_invocable_r_v<T2, F4 &, unsigned int &,
                                    collatz_steps_graph &, T1 &>
-  static T2
-  collatz_steps_clause_3_graph_mut(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
-                                   F4 &&f3, const unsigned int _x0,
-                                   const bool _x1, const unsigned int _x2,
-                                   collatz_steps_clause_3_graph _x3) {
-    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
-                       const unsigned int, const collatz_steps_graph &c) -> T1 {
+  static T2 collatz_steps_clause_3_graph_mut(const T1 &f, const T1 &f0, F2 &&f1,
+                                             F3 &&f2, F4 &&f3, unsigned int _x0,
+                                             bool _x1, unsigned int _x2,
+                                             collatz_steps_clause_3_graph _x3) {
+    auto f4_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int,
+                       unsigned int, const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
               typename collatz_steps_graph::Collatz_steps_graph_equation_1>(
               c.v())) {
@@ -967,16 +948,16 @@ struct Equations {
         const auto &[d_n, d_hind] = std::get<
             typename collatz_steps_graph::Collatz_steps_graph_refinement_3>(
             c.v());
-        return f1(d_n, *(d_hind),
+        return f1(d_n, *d_hind,
                   _self_f5(_self_f4, _self_f5, d_n,
                            PeanoNat::even(((d_n + 1) + 1)),
                            collatz_steps_unfold_clause_3(
                                d_n, PeanoNat::even(((d_n + 1) + 1))),
-                           *(d_hind)));
+                           *d_hind));
       }
     };
-    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, const unsigned int,
-                       const bool, const unsigned int,
+    auto f5_impl = [&](auto &_self_f4, auto &_self_f5, unsigned int, bool,
+                       unsigned int,
                        const collatz_steps_clause_3_graph &c) -> T2 {
       if (std::holds_alternative<typename collatz_steps_clause_3_graph::
                                      Collatz_steps_clause_3_graph_equation_1>(
@@ -984,23 +965,23 @@ struct Equations {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
                          Collatz_steps_clause_3_graph_equation_1>(c.v());
-        return f2(d_n0, *(d_hind0),
+        return f2(d_n0, *d_hind0,
                   _self_f4(_self_f4, _self_f5, PeanoNat::div2(d_n0),
-                           collatz_steps(PeanoNat::div2(d_n0)), *(d_hind0)));
+                           collatz_steps(PeanoNat::div2(d_n0)), *d_hind0));
       } else {
         const auto &[d_n0, d_hind0] =
             std::get<typename collatz_steps_clause_3_graph::
                          Collatz_steps_clause_3_graph_equation_2>(c.v());
-        return f3(d_n0, *(d_hind0),
+        return f3(d_n0, *d_hind0,
                   _self_f4(_self_f4, _self_f5, ((3u * d_n0) + 1u),
-                           collatz_steps(((3u * d_n0) + 1u)), *(d_hind0)));
+                           collatz_steps(((3u * d_n0) + 1u)), *d_hind0));
       }
     };
-    auto f4 = [&](const unsigned int _x, const unsigned int _x4,
+    auto f4 = [&](unsigned int _x, unsigned int _x4,
                   const collatz_steps_graph &c) -> T1 {
       return f4_impl(f4_impl, f5_impl, _x, _x4, c);
     };
-    auto f5 = [&](const unsigned int _x, const bool _x4, const unsigned int _x5,
+    auto f5 = [&](unsigned int _x, bool _x4, unsigned int _x5,
                   const collatz_steps_clause_3_graph &c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x4, _x5, c);
     };
@@ -1010,38 +991,38 @@ struct Equations {
   template <typename T1, typename T2 = void, typename F2, typename F3,
             typename F4>
   static T1 collatz_steps_graph_rect(const T1 &_x0, const T1 &_x1, F2 &&_x2,
-                                     F3 &&_x3, F4 &&_x4, const unsigned int _x5,
-                                     const unsigned int _x6,
+                                     F3 &&_x3, F4 &&_x4, unsigned int _x5,
+                                     unsigned int _x6,
                                      const collatz_steps_graph &_x7) {
     return collatz_steps_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6,
                                            _x7);
   }
 
-  static collatz_steps_graph collatz_steps_graph_correct(const unsigned int x);
+  static collatz_steps_graph collatz_steps_graph_correct(unsigned int x);
 
   template <typename T1, typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F2 &, unsigned int &, T1 &> &&
              std::is_invocable_r_v<T1, F3 &, unsigned int &, T1 &>
   static T1 collatz_steps_elim(const T1 &f, const T1 &f0, F2 &&f2, F3 &&f3,
-                               const unsigned int n) {
+                               unsigned int n) {
     return collatz_steps_graph_mut(
         f, f0,
-        [](const unsigned int, const collatz_steps_clause_3_graph &,
-           const T1 &x) { return x; },
-        [=](const unsigned int n0, const collatz_steps_graph &) mutable {
+        [](unsigned int, const collatz_steps_clause_3_graph &, const T1 &x) {
+          return x;
+        },
+        [=](unsigned int n0, const collatz_steps_graph &) mutable {
           return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
         },
-        [=](const unsigned int n0, const collatz_steps_graph &) mutable {
+        [=](unsigned int n0, const collatz_steps_graph &) mutable {
           return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));
   }
 
   template <typename F2, typename F3>
-  static std::any FunctionalElimination_collatz_steps(const std::any _x0,
-                                                      const std::any _x1,
-                                                      F2 &&_x2, F3 &&_x3,
-                                                      const unsigned int _x4) {
+  static std::any
+  FunctionalElimination_collatz_steps(std::any _x0, std::any _x1, F2 &&_x2,
+                                      F3 &&_x3, unsigned int _x4) {
     return collatz_steps_elim<F2>(_x0, _x1, _x2, _x3, _x4);
   }
 

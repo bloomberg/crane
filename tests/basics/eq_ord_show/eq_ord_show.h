@@ -2,10 +2,7 @@
 #define INCLUDED_EQ_ORD_SHOW
 
 #include <concepts>
-#include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 
 using namespace std::string_literals;
 

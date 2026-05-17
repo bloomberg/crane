@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_STRINGS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -126,33 +124,32 @@ public:
 struct LoopifyStrings {
   static List<unsigned int> append(const List<unsigned int> &l1,
                                    List<unsigned int> l2);
-  static List<unsigned int> join_with(const unsigned int sep,
+  static List<unsigned int> join_with(unsigned int sep,
                                       const List<unsigned int> &l);
   static List<unsigned int> repeat_string(const List<unsigned int> &s,
-                                          const unsigned int n);
+                                          unsigned int n);
   static List<unsigned int> repeat_with_sep(List<unsigned int> s,
                                             const List<unsigned int> &sep,
-                                            const unsigned int n);
+                                            unsigned int n);
   static List<unsigned int>
-  string_chain_fuel(const unsigned int fuel, const List<unsigned int> &s,
-                    const unsigned int n, const List<unsigned int> &sep,
+  string_chain_fuel(unsigned int fuel, const List<unsigned int> &s,
+                    unsigned int n, const List<unsigned int> &sep,
                     const List<unsigned int> &end_marker);
   static List<unsigned int> string_chain(const List<unsigned int> &s,
-                                         const unsigned int n,
+                                         unsigned int n,
                                          const List<unsigned int> &sep,
                                          const List<unsigned int> &end_marker);
   static List<unsigned int> reverse(const List<unsigned int> &l);
   static bool list_eq(const List<unsigned int> &l1,
                       const List<unsigned int> &l2);
   static bool is_palindrome(const List<unsigned int> &l);
-  static List<unsigned int> intersperse(const unsigned int sep,
+  static List<unsigned int> intersperse(unsigned int sep,
                                         const List<unsigned int> &l);
   static List<unsigned int> intercalate(const List<unsigned int> &sep,
                                         const List<List<unsigned int>> &ll);
-  static List<unsigned int> replicate(const unsigned int n,
-                                      const unsigned int x);
+  static List<unsigned int> replicate(unsigned int n, unsigned int x);
   static List<std::pair<unsigned int, unsigned int>>
-  run_length_aux(const unsigned int current, const unsigned int count,
+  run_length_aux(unsigned int current, unsigned int count,
                  const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   run_length_encode(const List<unsigned int> &l);

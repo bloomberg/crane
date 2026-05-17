@@ -3,10 +3,10 @@
 Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xo(succ(*(d_a0)));
+    return Positive::xo(succ(*d_a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*(d_a0));
+    return Positive::xi(*d_a0);
   } else {
     return Positive::xo(Positive::xh());
   }
@@ -17,31 +17,31 @@ Positive Pos::add(const Positive &x, const Positive &y) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xo(add_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      return Positive::xi(add(*d_a0, *d_a00));
     } else {
-      return Positive::xo(succ(*(d_a0)));
+      return Positive::xo(succ(*d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      return Positive::xi(add(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add(*(d_a0), *(d_a00)));
+      return Positive::xo(add(*d_a0, *d_a00));
     } else {
-      return Positive::xi(*(d_a0));
+      return Positive::xi(*d_a0);
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(succ(*(d_a00)));
+      return Positive::xo(succ(*d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(*(d_a00));
+      return Positive::xi(*d_a00);
     } else {
       return Positive::xo(Positive::xh());
     }
@@ -53,31 +53,31 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xi(add_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xo(add_carry(*d_a0, *d_a00));
     } else {
-      return Positive::xi(succ(*(d_a0)));
+      return Positive::xi(succ(*d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xo(add_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      return Positive::xi(add(*d_a0, *d_a00));
     } else {
-      return Positive::xo(succ(*(d_a0)));
+      return Positive::xo(succ(*d_a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(succ(*(d_a00)));
+      return Positive::xi(succ(*d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(succ(*(d_a00)));
+      return Positive::xo(succ(*d_a00));
     } else {
       return Positive::xi(Positive::xh());
     }
@@ -87,10 +87,10 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
 Positive Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xi(Positive::xo(*(d_a0)));
+    return Positive::xi(Positive::xo(*d_a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(pred_double(*(d_a0)));
+    return Positive::xi(pred_double(*d_a0));
   } else {
     return Positive::xh();
   }
@@ -99,10 +99,10 @@ Positive Pos::pred_double(const Positive &x) {
 N Pos::pred_N(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return N::npos(Positive::xo(*(d_a0)));
+    return N::npos(Positive::xo(*d_a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return N::npos(pred_double(*(d_a0)));
+    return N::npos(pred_double(*d_a0));
   } else {
     return N::n0();
   }
@@ -133,10 +133,10 @@ Pos::mask Pos::double_mask(const Pos::mask &x) {
 Pos::mask Pos::double_pred_mask(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return mask::ispos(Positive::xo(Positive::xo(*(d_a0))));
+    return mask::ispos(Positive::xo(Positive::xo(*d_a0)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return mask::ispos(Positive::xo(pred_double(*(d_a0))));
+    return mask::ispos(Positive::xo(pred_double(*d_a0)));
   } else {
     return mask::isnul();
   }
@@ -147,23 +147,23 @@ Pos::mask Pos::sub_mask(const Positive &x, const Positive &y) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return double_mask(sub_mask(*(d_a0), *(d_a00)));
+      return double_mask(sub_mask(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return succ_double_mask(sub_mask(*(d_a0), *(d_a00)));
+      return succ_double_mask(sub_mask(*d_a0, *d_a00));
     } else {
-      return mask::ispos(Positive::xo(*(d_a0)));
+      return mask::ispos(Positive::xo(*d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return succ_double_mask(sub_mask_carry(*(d_a0), *(d_a00)));
+      return succ_double_mask(sub_mask_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return double_mask(sub_mask(*(d_a0), *(d_a00)));
+      return double_mask(sub_mask(*d_a0, *d_a00));
     } else {
-      return mask::ispos(pred_double(*(d_a0)));
+      return mask::ispos(pred_double(*d_a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XH>(y.v())) {
@@ -179,23 +179,23 @@ Pos::mask Pos::sub_mask_carry(const Positive &x, const Positive &y) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return succ_double_mask(sub_mask_carry(*(d_a0), *(d_a00)));
+      return succ_double_mask(sub_mask_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return double_mask(sub_mask(*(d_a0), *(d_a00)));
+      return double_mask(sub_mask(*d_a0, *d_a00));
     } else {
-      return mask::ispos(pred_double(*(d_a0)));
+      return mask::ispos(pred_double(*d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return double_mask(sub_mask_carry(*(d_a0), *(d_a00)));
+      return double_mask(sub_mask_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return succ_double_mask(sub_mask_carry(*(d_a0), *(d_a00)));
+      return succ_double_mask(sub_mask_carry(*d_a0, *d_a00));
     } else {
-      return double_pred_mask(*(d_a0));
+      return double_pred_mask(*d_a0);
     }
   } else {
     return mask::isneg();
@@ -205,25 +205,25 @@ Pos::mask Pos::sub_mask_carry(const Positive &x, const Positive &y) {
 Positive Pos::mul(const Positive &x, Positive y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return add(y, Positive::xo(mul(*(d_a0), y)));
+    return add(y, Positive::xo(mul(*d_a0, y)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xo(mul(*(d_a0), std::move(y)));
+    return Positive::xo(mul(*d_a0, std::move(y)));
   } else {
     return y;
   }
 }
 
-Comparison Pos::compare_cont(const Comparison r, const Positive &x,
+Comparison Pos::compare_cont(Comparison r, const Positive &x,
                              const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return compare_cont(r, *(d_a0), *(d_a00));
+      return compare_cont(r, *d_a0, *d_a00);
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return compare_cont(Comparison::e_GT, *(d_a0), *(d_a00));
+      return compare_cont(Comparison::e_GT, *d_a0, *d_a00);
     } else {
       return Comparison::e_GT;
     }
@@ -231,10 +231,10 @@ Comparison Pos::compare_cont(const Comparison r, const Positive &x,
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return compare_cont(Comparison::e_LT, *(d_a0), *(d_a00));
+      return compare_cont(Comparison::e_LT, *d_a0, *d_a00);
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return compare_cont(r, *(d_a0), *(d_a00));
+      return compare_cont(r, *d_a0, *d_a00);
     } else {
       return Comparison::e_GT;
     }
@@ -262,10 +262,10 @@ unsigned int Pos::to_nat(const Positive &x) {
 Positive Coq_Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xo(succ(*(d_a0)));
+    return Positive::xo(succ(*d_a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*(d_a0));
+    return Positive::xi(*d_a0);
   } else {
     return Positive::xo(Positive::xh());
   }
@@ -276,31 +276,31 @@ Positive Coq_Pos::add(const Positive &x, const Positive &y) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xo(add_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      return Positive::xi(add(*d_a0, *d_a00));
     } else {
-      return Positive::xo(succ(*(d_a0)));
+      return Positive::xo(succ(*d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      return Positive::xi(add(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add(*(d_a0), *(d_a00)));
+      return Positive::xo(add(*d_a0, *d_a00));
     } else {
-      return Positive::xi(*(d_a0));
+      return Positive::xi(*d_a0);
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(succ(*(d_a00)));
+      return Positive::xo(succ(*d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(*(d_a00));
+      return Positive::xi(*d_a00);
     } else {
       return Positive::xo(Positive::xh());
     }
@@ -312,31 +312,31 @@ Positive Coq_Pos::add_carry(const Positive &x, const Positive &y) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xi(add_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xo(add_carry(*d_a0, *d_a00));
     } else {
-      return Positive::xi(succ(*(d_a0)));
+      return Positive::xi(succ(*d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      return Positive::xo(add_carry(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      return Positive::xi(add(*d_a0, *d_a00));
     } else {
-      return Positive::xo(succ(*(d_a0)));
+      return Positive::xo(succ(*d_a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(succ(*(d_a00)));
+      return Positive::xi(succ(*d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(succ(*(d_a00)));
+      return Positive::xo(succ(*d_a00));
     } else {
       return Positive::xi(Positive::xh());
     }
@@ -346,10 +346,10 @@ Positive Coq_Pos::add_carry(const Positive &x, const Positive &y) {
 Positive Coq_Pos::mul(const Positive &x, Positive y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return add(y, Positive::xo(mul(*(d_a0), y)));
+    return add(y, Positive::xo(mul(*d_a0, y)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xo(mul(*(d_a0), std::move(y)));
+    return Positive::xo(mul(*d_a0, std::move(y)));
   } else {
     return y;
   }
@@ -488,31 +488,31 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
     const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return BinInt::double_(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      return BinInt::double_(BinInt::pos_sub(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return BinInt::succ_double(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      return BinInt::succ_double(BinInt::pos_sub(*d_a0, *d_a00));
     } else {
-      return Z::zpos(Positive::xo(*(d_a0)));
+      return Z::zpos(Positive::xo(*d_a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return BinInt::pred_double(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      return BinInt::pred_double(BinInt::pos_sub(*d_a0, *d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return BinInt::double_(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      return BinInt::double_(BinInt::pos_sub(*d_a0, *d_a00));
     } else {
-      return Z::zpos(Pos::pred_double(*(d_a0)));
+      return Z::zpos(Pos::pred_double(*d_a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Z::zneg(Positive::xo(*(d_a00)));
+      return Z::zneg(Positive::xo(*d_a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Z::zneg(Pos::pred_double(*(d_a00)));
+      return Z::zneg(Pos::pred_double(*d_a00));
     } else {
       return Z::z0();
     }
@@ -659,7 +659,7 @@ Z BinaryNums::z_sign(const Z &z) {
   }
 }
 
-Comparison Datatypes::CompOpp(const Comparison r) {
+Comparison Datatypes::CompOpp(Comparison r) {
   switch (r) {
   case Comparison::e_EQ: {
     return Comparison::e_EQ;

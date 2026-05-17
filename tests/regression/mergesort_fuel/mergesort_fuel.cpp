@@ -8,7 +8,7 @@ MergesortFuel::split(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = *(d_a1);
+    auto &&_sv0 = *d_a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return std::make_pair(
           List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
@@ -16,7 +16,7 @@ MergesortFuel::split(const List<unsigned int> &l) {
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      auto _cs = split(*(d_a10));
+      auto _cs = split(*d_a10);
       const List<unsigned int> &l1 = _cs.first;
       const List<unsigned int> &l2 = _cs.second;
       return std::make_pair(List<unsigned int>::cons(d_a0, l1),
@@ -41,10 +41,10 @@ List<unsigned int> MergesortFuel::merge(List<unsigned int> l1,
         auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(l3.v_mut());
         if (Compare_dec::le_lt_dec(d_a0, d_a00)) {
-          return List<unsigned int>::cons(d_a0, merge(*(d_a1), l3));
+          return List<unsigned int>::cons(d_a0, merge(*d_a1, l3));
         } else {
           return List<unsigned int>::cons(
-              d_a00, _self_merge_aux(_self_merge_aux, *(d_a10)));
+              d_a00, _self_merge_aux(_self_merge_aux, *d_a10));
         }
       }
     }
@@ -56,7 +56,7 @@ List<unsigned int> MergesortFuel::merge(List<unsigned int> l1,
 }
 
 /// * Fuel-based merge sort
-List<unsigned int> MergesortFuel::msort_go(const unsigned int fuel,
+List<unsigned int> MergesortFuel::msort_go(unsigned int fuel,
                                            List<unsigned int> l) {
   if (fuel <= 0) {
     return l;
@@ -67,7 +67,7 @@ List<unsigned int> MergesortFuel::msort_go(const unsigned int fuel,
     } else {
       auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v_mut());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else {
@@ -85,7 +85,7 @@ List<unsigned int> MergesortFuel::msort(const List<unsigned int> &l) {
   return msort_go(l.length(), l);
 }
 
-bool Compare_dec::le_lt_dec(const unsigned int n, const unsigned int m) {
+bool Compare_dec::le_lt_dec(unsigned int n, unsigned int m) {
   if (n <= 0) {
     return true;
   } else {

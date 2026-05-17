@@ -2,9 +2,6 @@
 #define INCLUDED_FIX_IN_RECORD
 
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct FixInRecord {
@@ -24,10 +21,10 @@ struct FixInRecord {
     std::function<unsigned int(unsigned int)> fn;
 
     // ACCESSORS
-    fn_box clone() const { return fn_box{(*(this)).label, (*(this)).fn}; }
+    fn_box clone() const { return fn_box{(*this).label, (*this).fn}; }
   };
 
-  static fn_box make_box(const unsigned int n);
+  static fn_box make_box(unsigned int n);
   /// test1: n=10, base=30, fn = add where add(x) = 30+x.
   /// fn(make_box 10)(7) = 30 + 7 = 37.
   /// Bug: base captured by & in add, dangles after make_box returns.

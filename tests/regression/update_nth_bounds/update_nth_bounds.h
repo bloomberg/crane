@@ -2,8 +2,6 @@
 #define INCLUDED_UPDATE_NTH_BOUNDS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -122,60 +120,57 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  List<t_A> skipn(const unsigned int n) const {
+  List<t_A> skipn(unsigned int n) const {
     if (n <= 0) {
-      return std::move(*(this));
+      return std::move(*this);
     } else {
       unsigned int n0 = n - 1;
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return List<t_A>::nil();
       } else {
-        auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        return (*(d_a1)).skipn(n0);
+        auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+        return (*d_a1).skipn(n0);
       }
     }
   }
 
-  List<t_A> firstn(const unsigned int n) const {
+  List<t_A> firstn(unsigned int n) const {
     if (n <= 0) {
       return List<t_A>::nil();
     } else {
       unsigned int n0 = n - 1;
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
         return List<t_A>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        return List<t_A>::cons(d_a0, (*(d_a1)).firstn(n0));
+        const auto &[d_a0, d_a1] =
+            std::get<typename List<t_A>::Cons>(this->v());
+        return List<t_A>::cons(d_a0, (*d_a1).firstn(n0));
       }
     }
   }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
 
 struct UpdateNthBounds {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, List<T1> l) {
+  static List<T1> update_nth(unsigned int n, T1 x, List<T1> l) {
     if (n < l.length()) {
       return l.firstn(n).app(List<T1>::cons(x, l.skipn((n + 1))));
     } else {

@@ -169,12 +169,11 @@ struct ProgramWf {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JUN>(_sv.v())) {
-        const auto &[d_a0] = std::get<JUN>(_sv.v());
+      if (std::holds_alternative<JUN>(this->v())) {
+        const auto &[d_a0] = std::get<JUN>(this->v());
         return instruction(JUN{d_a0});
-      } else if (std::holds_alternative<JMS>(_sv.v())) {
-        const auto &[d_a0] = std::get<JMS>(_sv.v());
+      } else if (std::holds_alternative<JMS>(this->v())) {
+        const auto &[d_a0] = std::get<JMS>(this->v());
         return instruction(JMS{d_a0});
       } else {
         return instruction(NOP{});
@@ -182,13 +181,9 @@ struct ProgramWf {
     }
 
     // CREATORS
-    static instruction jun(unsigned int a0) {
-      return instruction(JUN{std::move(a0)});
-    }
+    static instruction jun(unsigned int a0) { return instruction(JUN{a0}); }
 
-    static instruction jms(unsigned int a0) {
-      return instruction(JMS{std::move(a0)});
-    }
+    static instruction jms(unsigned int a0) { return instruction(JMS{a0}); }
 
     static instruction nop() { return instruction(NOP{}); }
 
@@ -235,7 +230,7 @@ struct ProgramWf {
 
     // ACCESSORS
     layout clone() const {
-      return layout{(*(this)).base_addr, (*(this)).code_size};
+      return layout{(*this).base_addr, (*this).code_size};
     }
   };
 

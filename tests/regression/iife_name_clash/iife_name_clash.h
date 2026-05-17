@@ -1,8 +1,6 @@
 #ifndef INCLUDED_IIFE_NAME_CLASH
 #define INCLUDED_IIFE_NAME_CLASH
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -46,9 +44,8 @@ struct IifeNameClash {
 
     // ACCESSORS
     wrapper clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Wrap>(_sv.v())) {
-        const auto &[d_n] = std::get<Wrap>(_sv.v());
+      if (std::holds_alternative<Wrap>(this->v())) {
+        const auto &[d_n] = std::get<Wrap>(this->v());
         return wrapper(Wrap{d_n});
       } else {
         return wrapper(Empty{});
@@ -56,7 +53,7 @@ struct IifeNameClash {
     }
 
     // CREATORS
-    static wrapper wrap(unsigned int n) { return wrapper(Wrap{std::move(n)}); }
+    static wrapper wrap(unsigned int n) { return wrapper(Wrap{n}); }
 
     static wrapper empty() { return wrapper(Empty{}); }
 

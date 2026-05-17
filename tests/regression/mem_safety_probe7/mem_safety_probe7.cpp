@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe7::sum_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe7::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe7::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe7::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -59,7 +59,7 @@ MemSafetyProbe7::build_len_closures(
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<unsigned int>::Mynil>(
             _loop_l.v())) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           mylist<std::function<unsigned int(std::monostate)>>::mynil());
       break;
@@ -67,13 +67,13 @@ MemSafetyProbe7::build_len_closures(
       const auto &[d_a0, d_a1] =
           std::get<typename MemSafetyProbe7::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe7::mylist<unsigned int> d_a1_value = *(d_a1);
+      MemSafetyProbe7::mylist<unsigned int> d_a1_value = *d_a1;
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           typename mylist<std::function<unsigned int(std::monostate)>>::Mycons(
-              [=](const std::monostate) mutable { return d_a1_value.length(); },
+              [=](std::monostate) mutable { return d_a1_value.length(); },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(std::monostate)>>::Mycons>(
                     (*_write)->v_mut())
@@ -82,7 +82,7 @@ MemSafetyProbe7::build_len_closures(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe7::sum_fns(
@@ -111,7 +111,7 @@ unsigned int MemSafetyProbe7::sum_fns(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>
-          &l = *(_f.l);
+          &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe7::mylist<
               std::function<unsigned int(std::monostate)>>::Mynil>(l.v())) {
         _result = 0u;
@@ -145,7 +145,7 @@ MemSafetyProbe7::build_sum_closures(
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<unsigned int>::Mynil>(
             _loop_l.v())) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           mylist<std::function<unsigned int(std::monostate)>>::mynil());
       break;
@@ -153,15 +153,13 @@ MemSafetyProbe7::build_sum_closures(
       const auto &[d_a0, d_a1] =
           std::get<typename MemSafetyProbe7::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe7::mylist<unsigned int> d_a1_value = *(d_a1);
+      MemSafetyProbe7::mylist<unsigned int> d_a1_value = *d_a1;
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           typename mylist<std::function<unsigned int(std::monostate)>>::Mycons(
-              [=](const std::monostate) mutable {
-                return sum_list(d_a1_value);
-              },
+              [=](std::monostate) mutable { return sum_list(d_a1_value); },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(std::monostate)>>::Mycons>(
                     (*_write)->v_mut())
@@ -170,7 +168,7 @@ MemSafetyProbe7::build_sum_closures(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// TEST 4: Each closure captures the tail AND the current value.
@@ -190,7 +188,7 @@ MemSafetyProbe7::build_accum_closures(
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<unsigned int>::Mynil>(
             _loop_l.v())) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(unsigned int)>>>(
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
@@ -198,15 +196,15 @@ MemSafetyProbe7::build_accum_closures(
       const auto &[d_a0, d_a1] =
           std::get<typename MemSafetyProbe7::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe7::mylist<unsigned int> d_a1_value = *(d_a1);
+      MemSafetyProbe7::mylist<unsigned int> d_a1_value = *d_a1;
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-              [=](const unsigned int n) mutable {
+              [=](unsigned int n) mutable {
                 return ((d_a0 + sum_list(d_a1_value)) + n);
               },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
                     (*_write)->v_mut())
@@ -215,12 +213,12 @@ MemSafetyProbe7::build_accum_closures(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe7::apply_all(
     const MemSafetyProbe7::mylist<std::function<unsigned int(unsigned int)>> &l,
-    const unsigned int
+    unsigned int
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -244,7 +242,7 @@ unsigned int MemSafetyProbe7::apply_all(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe7::mylist<std::function<unsigned int(unsigned int)>>
-          &l = *(_f.l);
+          &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe7::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(l.v())) {
         _result = x;
@@ -265,20 +263,20 @@ unsigned int MemSafetyProbe7::apply_all(
 /// TEST 6: Stress test — large list, each closure captures
 /// the entire remaining tail.
 MemSafetyProbe7::mylist<unsigned int>
-MemSafetyProbe7::make_nat_list(const unsigned int n) {
+MemSafetyProbe7::make_nat_list(unsigned int n) {
   std::unique_ptr<MemSafetyProbe7::mylist<unsigned int>> _head{};
   std::unique_ptr<MemSafetyProbe7::mylist<unsigned int>> *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<MemSafetyProbe7::mylist<unsigned int>>(
+      *_write = std::make_unique<MemSafetyProbe7::mylist<unsigned int>>(
           mylist<unsigned int>::mynil());
       break;
     } else {
       unsigned int n_ = _loop_n - 1;
       auto _cell = std::make_unique<MemSafetyProbe7::mylist<unsigned int>>(
           typename mylist<unsigned int>::Mycons(_loop_n, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename mylist<unsigned int>::Mycons>((*_write)->v_mut())
                .d_a1;
@@ -286,5 +284,5 @@ MemSafetyProbe7::make_nat_list(const unsigned int n) {
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }

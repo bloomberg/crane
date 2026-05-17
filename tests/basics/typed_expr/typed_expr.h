@@ -3,8 +3,6 @@
 
 #include <any>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -139,9 +137,9 @@ public:
   }
 
   // CREATORS
-  static Expr enat(unsigned int a0) { return Expr(ENat{std::move(a0)}); }
+  static Expr enat(unsigned int a0) { return Expr(ENat{a0}); }
 
-  static Expr ebool(bool a0) { return Expr(EBool{std::move(a0)}); }
+  static Expr ebool(bool a0) { return Expr(EBool{a0}); }
 
   static Expr eadd(Expr a0, Expr a1) {
     return Expr(EAdd{std::make_unique<Expr>(std::move(a0)),
@@ -154,7 +152,7 @@ public:
   }
 
   static Expr eif(Ty t, Expr a1, Expr a2, Expr a3) {
-    return Expr(EIf{std::move(t), std::make_unique<Expr>(std::move(a1)),
+    return Expr(EIf{t, std::make_unique<Expr>(std::move(a1)),
                     std::make_unique<Expr>(std::move(a2)),
                     std::make_unique<Expr>(std::move(a3))});
   }
@@ -210,29 +208,28 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  std::any eval(const Ty) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Expr::ENat>(_sv.v())) {
-      const auto &[d_a0] = std::get<typename Expr::ENat>(_sv.v());
+  std::any eval(Ty) const {
+    if (std::holds_alternative<typename Expr::ENat>(this->v())) {
+      const auto &[d_a0] = std::get<typename Expr::ENat>(this->v());
       return d_a0;
-    } else if (std::holds_alternative<typename Expr::EBool>(_sv.v())) {
-      const auto &[d_a0] = std::get<typename Expr::EBool>(_sv.v());
+    } else if (std::holds_alternative<typename Expr::EBool>(this->v())) {
+      const auto &[d_a0] = std::get<typename Expr::EBool>(this->v());
       return d_a0;
-    } else if (std::holds_alternative<typename Expr::EAdd>(_sv.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename Expr::EAdd>(_sv.v());
-      return (std::any_cast<unsigned int>((*(d_a0)).eval(Ty::e_TNAT)) +
-              std::any_cast<unsigned int>((*(d_a1)).eval(Ty::e_TNAT)));
-    } else if (std::holds_alternative<typename Expr::EEq>(_sv.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename Expr::EEq>(_sv.v());
-      return std::any_cast<unsigned int>((*(d_a0)).eval(Ty::e_TNAT)) ==
-             std::any_cast<unsigned int>((*(d_a1)).eval(Ty::e_TNAT));
+    } else if (std::holds_alternative<typename Expr::EAdd>(this->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename Expr::EAdd>(this->v());
+      return (std::any_cast<unsigned int>((*d_a0).eval(Ty::e_TNAT)) +
+              std::any_cast<unsigned int>((*d_a1).eval(Ty::e_TNAT)));
+    } else if (std::holds_alternative<typename Expr::EEq>(this->v())) {
+      const auto &[d_a0, d_a1] = std::get<typename Expr::EEq>(this->v());
+      return std::any_cast<unsigned int>((*d_a0).eval(Ty::e_TNAT)) ==
+             std::any_cast<unsigned int>((*d_a1).eval(Ty::e_TNAT));
     } else {
       const auto &[d_t, d_a1, d_a2, d_a3] =
-          std::get<typename Expr::EIf>(_sv.v());
-      if (std::any_cast<bool>((*(d_a1)).eval(Ty::e_TBOOL))) {
-        return (*(d_a2)).eval(d_t);
+          std::get<typename Expr::EIf>(this->v());
+      if (std::any_cast<bool>((*d_a1).eval(Ty::e_TBOOL))) {
+        return (*d_a2).eval(d_t);
       } else {
-        return (*(d_a3)).eval(d_t);
+        return (*d_a3).eval(d_t);
       }
     }
   }

@@ -1,18 +1,14 @@
 #ifndef INCLUDED_FUNC_ONLY_SUBMODULE_AB
 #define INCLUDED_FUNC_ONLY_SUBMODULE_AB
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct FuncOnlySubmoduleAb {
   struct Root {
     struct A {
-      static unsigned int inc(const unsigned int n);
+      static unsigned int inc(unsigned int n);
     };
 
     struct B {
-      static unsigned int dec(const unsigned int _x0);
+      static unsigned int dec(unsigned int _x0);
     };
   };
 

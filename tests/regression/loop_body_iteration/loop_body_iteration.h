@@ -2,8 +2,6 @@
 #define INCLUDED_LOOP_BODY_ITERATION
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -125,7 +123,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct LoopBodyIteration {
@@ -133,17 +131,17 @@ struct LoopBodyIteration {
     List<unsigned int> regs_;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).regs_.clone()}; }
+    state clone() const { return state{(*this).regs_.clone()}; }
   };
 
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        return List<T1>::cons(x, *d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
@@ -151,14 +149,14 @@ struct LoopBodyIteration {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
       }
     }
   }
 
   static unsigned int get_reg0(const state &s);
   static state count_loop_body(const state &s);
-  static state iterate_body(const unsigned int n, state s);
+  static state iterate_body(unsigned int n, state s);
   static inline const state sample = state{List<unsigned int>::cons(
       0u, List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())))};
@@ -166,7 +164,7 @@ struct LoopBodyIteration {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -180,7 +178,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

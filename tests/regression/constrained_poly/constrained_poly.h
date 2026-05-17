@@ -1,8 +1,6 @@
 #ifndef INCLUDED_CONSTRAINED_POLY
 #define INCLUDED_CONSTRAINED_POLY
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -16,7 +14,7 @@ struct ConstrainedPoly {
 
     // ACCESSORS
     UPair<t_A, t_B> clone() const {
-      return UPair<t_A, t_B>{(*(this)).ufst, (*(this)).usnd};
+      return UPair<t_A, t_B>{(*this).ufst, (*this).usnd};
     }
   };
 
@@ -69,9 +67,8 @@ struct ConstrainedPoly {
 
     // ACCESSORS
     UOption<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<USome>(_sv.v())) {
-        const auto &[d_a0] = std::get<USome>(_sv.v());
+      if (std::holds_alternative<USome>(this->v())) {
+        const auto &[d_a0] = std::get<USome>(this->v());
         return UOption<t_A>(USome{d_a0});
       } else {
         return UOption<t_A>(UNone{});
@@ -142,7 +139,7 @@ struct ConstrainedPoly {
   static inline const bool test_snd = test_pair.usnd;
   static inline const UOption<unsigned int> test_umap =
       uoption_map<unsigned int, unsigned int>(
-          [](const unsigned int n) { return (n + 1u); },
+          [](unsigned int n) { return (n + 1u); },
           UOption<unsigned int>::usome(9u));
 };
 

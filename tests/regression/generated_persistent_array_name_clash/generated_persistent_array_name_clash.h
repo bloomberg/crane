@@ -2,10 +2,7 @@
 #define INCLUDED_GENERATED_PERSISTENT_ARRAY_NAME_CLASH
 
 #include <cstdint>
-#include <memory>
-#include <optional>
 #include <persistent_array.h>
-#include <type_traits>
 
 struct persistent_array_ {
   /// The PrimArray mapping includes the C++ runtime helper

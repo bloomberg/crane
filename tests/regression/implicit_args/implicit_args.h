@@ -2,7 +2,6 @@
 #define INCLUDED_IMPLICIT_ARGS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -150,7 +149,7 @@ struct ImplicitArgs {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -161,7 +160,7 @@ struct ImplicitArgs {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -170,35 +169,33 @@ struct ImplicitArgs {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      return (1u + length<T1>(*(d_a1)));
+      return (1u + length<T1>(*d_a1));
     }
   }
 
   static inline const unsigned int explicit_id = id<unsigned int>(5u);
   static inline const unsigned int explicit_fst =
       fst_of<unsigned int, bool>(3u, true);
-  static unsigned int add_one(const unsigned int _x0);
-  static unsigned int double_nat(const unsigned int n);
-  static unsigned int add_implicit(const unsigned int _x0,
-                                   const unsigned int _x1);
+  static unsigned int add_one(unsigned int _x0);
+  static unsigned int double_nat(unsigned int n);
+  static unsigned int add_implicit(unsigned int _x0, unsigned int _x1);
   static inline const unsigned int use_add_implicit = add_implicit(5u, 3u);
-  static unsigned int scale(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int scale(unsigned int _x0, unsigned int _x1);
   static inline const unsigned int use_scale = scale(3u, 7u);
-  static unsigned int combine(const unsigned int a, const unsigned int b,
-                              const unsigned int x);
+  static unsigned int combine(unsigned int a, unsigned int b, unsigned int x);
   static inline const unsigned int use_combine = combine(2u, 3u, 4u);
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int apply_implicit(F0 &&f, const unsigned int _x0) {
+  static unsigned int apply_implicit(F0 &&f, unsigned int _x0) {
     return f(_x0);
   }
 
   static inline const unsigned int use_apply_implicit = apply_implicit(
       [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
-  static unsigned int with_base(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int from_zero(const unsigned int _x0);
-  static unsigned int from_ten(const unsigned int _x0);
+  static unsigned int with_base(unsigned int _x0, unsigned int _x1);
+  static unsigned int from_zero(unsigned int _x0);
+  static unsigned int from_ten(unsigned int _x0);
   static inline const unsigned int use_from_zero = from_zero(5u);
   static inline const unsigned int use_from_ten = from_ten(5u);
 
@@ -215,18 +212,16 @@ struct ImplicitArgs {
       head_or<unsigned int>(0u, mylist<unsigned int>::mynil());
   static inline const unsigned int use_head_nonempty = head_or<unsigned int>(
       0u, mylist<unsigned int>::mycons(7u, mylist<unsigned int>::mynil()));
-  static unsigned int sum_with_init(const unsigned int init,
+  static unsigned int sum_with_init(unsigned int init,
                                     const mylist<unsigned int> &l);
   static inline const unsigned int use_sum_init = sum_with_init(
       5u,
       mylist<unsigned int>::mycons(
           1u, mylist<unsigned int>::mycons(2u, mylist<unsigned int>::mynil())));
-  static unsigned int nested_implicits(const unsigned int a,
-                                       const unsigned int b,
-                                       const unsigned int c);
+  static unsigned int nested_implicits(unsigned int a, unsigned int b,
+                                       unsigned int c);
   static inline const unsigned int use_nested = nested_implicits(1u, 2u, 3u);
-  static unsigned int choose_branch(const bool flag, const unsigned int t,
-                                    const unsigned int f);
+  static unsigned int choose_branch(bool flag, unsigned int t, unsigned int f);
   static inline const unsigned int use_choose_true =
       choose_branch(true, 7u, 3u);
   static inline const unsigned int use_choose_false =

@@ -100,7 +100,7 @@ struct MemSafetyProbe27 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -143,8 +143,8 @@ struct MemSafetyProbe27 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -156,8 +156,8 @@ struct MemSafetyProbe27 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -178,7 +178,7 @@ struct MemSafetyProbe27 {
   /// After IIFE inlining, this becomes a top-level Sif.
   /// return_captures_by_value may not process inner returns.
   static std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
-  cond_pair_fn(tree t, const bool b);
+  cond_pair_fn(tree t, bool b);
   static inline const unsigned int test_cond_pair_fn = []() {
     std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p1 =
         cond_pair_fn(tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u,
@@ -201,7 +201,7 @@ struct MemSafetyProbe27 {
   }();
   /// TEST 4: Closure stored in option (no match on tree).
   static std::optional<std::function<unsigned int(unsigned int)>>
-  opt_tree_fn(tree t, const bool b);
+  opt_tree_fn(tree t, bool b);
   static inline const unsigned int test_opt_tree_fn = []() -> unsigned int {
     auto _cs = opt_tree_fn(tree::node(tree::leaf(), 15u, tree::leaf()), true);
     if (_cs.has_value()) {
@@ -248,7 +248,7 @@ struct MemSafetyProbe27 {
   /// Multiple levels of wrapping.
   static std::pair<std::optional<std::function<unsigned int(unsigned int)>>,
                    unsigned int>
-  wrapped_fn(tree t, const bool b);
+  wrapped_fn(tree t, bool b);
   static inline const unsigned int test_wrapped_fn = []() {
     std::pair<std::optional<std::function<unsigned int(unsigned int)>>,
               unsigned int>

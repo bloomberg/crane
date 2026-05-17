@@ -3,8 +3,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -129,21 +127,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -154,7 +152,7 @@ struct LoopifyListOfLists {
   static List<List<unsigned int>> map_tl(const List<List<unsigned int>> &ll);
   static bool all_empty(const List<List<unsigned int>> &ll);
   static List<List<unsigned int>>
-  transpose_fuel(const unsigned int fuel, const List<List<unsigned int>> &ll);
+  transpose_fuel(unsigned int fuel, const List<List<unsigned int>> &ll);
   static unsigned int list_len(const List<unsigned int> &l);
   static unsigned int total_length(const List<List<unsigned int>> &ll);
   static List<List<unsigned int>> transpose(const List<List<unsigned int>> &ll);

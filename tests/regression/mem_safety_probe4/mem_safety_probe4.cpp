@@ -28,7 +28,7 @@ unsigned int MemSafetyProbe4::sum_through(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -74,7 +74,7 @@ unsigned int MemSafetyProbe4::add_through(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -124,7 +124,7 @@ unsigned int MemSafetyProbe4::double_partial(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -133,7 +133,7 @@ unsigned int MemSafetyProbe4::double_partial(
         const auto &[d_a0, d_a1] = std::get<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
-        MemSafetyProbe4::mylist<MemSafetyProbe4::tree> d_a1_value = *(d_a1);
+        MemSafetyProbe4::mylist<MemSafetyProbe4::tree> d_a1_value = *d_a1;
         std::function<unsigned int(unsigned int)> f =
             [=](unsigned int _x0) mutable -> unsigned int {
           return d_a0.sum_values(_x0);
@@ -155,7 +155,7 @@ unsigned int MemSafetyProbe4::double_partial(
 
 unsigned int MemSafetyProbe4::weighted_sum(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l,
-    const unsigned int
+    unsigned int
         w) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -179,8 +179,8 @@ unsigned int MemSafetyProbe4::weighted_sum(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int w = _f.w;
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
+      unsigned int w = _f.w;
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -189,7 +189,7 @@ unsigned int MemSafetyProbe4::weighted_sum(
         const auto &[d_a0, d_a1] = std::get<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
-        MemSafetyProbe4::mylist<MemSafetyProbe4::tree> d_a1_value = *(d_a1);
+        MemSafetyProbe4::mylist<MemSafetyProbe4::tree> d_a1_value = *d_a1;
         std::function<unsigned int(unsigned int)> f =
             [=](unsigned int _x0) mutable -> unsigned int {
           return d_a0.sum_values(_x0);
@@ -215,7 +215,7 @@ MemSafetyProbe4::mylist<unsigned int> MemSafetyProbe4::transform_list(
     if (std::holds_alternative<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
             _loop_l->v())) {
-      *(_write) = std::make_unique<MemSafetyProbe4::mylist<unsigned int>>(
+      *_write = std::make_unique<MemSafetyProbe4::mylist<unsigned int>>(
           mylist<unsigned int>::mynil());
       break;
     } else {
@@ -228,7 +228,7 @@ MemSafetyProbe4::mylist<unsigned int> MemSafetyProbe4::transform_list(
       };
       auto _cell = std::make_unique<MemSafetyProbe4::mylist<unsigned int>>(
           typename mylist<unsigned int>::Mycons(f(0u), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename mylist<unsigned int>::Mycons>((*_write)->v_mut())
                .d_a1;
@@ -236,7 +236,7 @@ MemSafetyProbe4::mylist<unsigned int> MemSafetyProbe4::transform_list(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe4::mysum(
@@ -263,7 +263,7 @@ unsigned int MemSafetyProbe4::mysum(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe4::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe4::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -306,7 +306,7 @@ unsigned int MemSafetyProbe4::process_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *(_f.l);
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
               l.v())) {
@@ -315,7 +315,7 @@ unsigned int MemSafetyProbe4::process_list(
         const auto &[d_a0, d_a1] = std::get<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
             l.v());
-        MemSafetyProbe4::mylist<MemSafetyProbe4::tree> d_a1_value = *(d_a1);
+        MemSafetyProbe4::mylist<MemSafetyProbe4::tree> d_a1_value = *d_a1;
         std::function<unsigned int(unsigned int)> f =
             [=](unsigned int _x0) mutable -> unsigned int {
           return d_a0.sum_values(_x0);
@@ -334,9 +334,9 @@ unsigned int MemSafetyProbe4::process_list(
 /// TEST 7: Nested recursion with closure capture across calls.
 unsigned int MemSafetyProbe4::nested_apply(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l,
-    const unsigned int base) {
+    unsigned int base) {
   unsigned int _result;
-  unsigned int _loop_base = base;
+  unsigned int _loop_base = std::move(base);
   const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<

@@ -2,8 +2,6 @@
 #define INCLUDED_RESET_STATE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,19 +121,18 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct ResetState {
@@ -150,10 +147,10 @@ struct ResetState {
 
     // ACCESSORS
     state_full clone() const {
-      return state_full{(*(this)).acc,           (*(this)).regs_full.clone(),
-                        (*(this)).carry,         (*(this)).pc_full,
-                        (*(this)).stack.clone(), (*(this)).ram_sys.clone(),
-                        (*(this)).rom.clone()};
+      return state_full{(*this).acc,           (*this).regs_full.clone(),
+                        (*this).carry,         (*this).pc_full,
+                        (*this).stack.clone(), (*this).ram_sys.clone(),
+                        (*this).rom.clone()};
     }
   };
 
@@ -166,10 +163,9 @@ struct ResetState {
 
     // ACCESSORS
     state_minimal clone() const {
-      return state_minimal{(*(this)).regs_minimal.clone(),
-                           (*(this)).carry_minimal, (*(this)).pc_minimal,
-                           (*(this)).ram_sys_minimal.clone(),
-                           (*(this)).rom_minimal.clone()};
+      return state_minimal{(*this).regs_minimal.clone(), (*this).carry_minimal,
+                           (*this).pc_minimal, (*this).ram_sys_minimal.clone(),
+                           (*this).rom_minimal.clone()};
     }
   };
 
@@ -211,7 +207,7 @@ struct ResetState {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -225,7 +221,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

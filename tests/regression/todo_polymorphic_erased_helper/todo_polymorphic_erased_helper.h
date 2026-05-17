@@ -1,10 +1,6 @@
 #ifndef INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER
 #define INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 template <typename T1> T1 _anon_aux(const T1 x) { return x; }
 
 struct TodoPolymorphicErasedHelper {

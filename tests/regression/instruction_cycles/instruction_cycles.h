@@ -2,7 +2,6 @@
 #define INCLUDED_INSTRUCTION_CYCLES
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,12 +124,11 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   bool forallb(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (f(d_a0) && (*(d_a1)).forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) && (*d_a1).forallb(f));
     }
   }
 };
@@ -143,7 +141,7 @@ struct InstructionCycles {
 
     // ACCESSORS
     state1 clone() const {
-      return state1{(*(this)).acc1, (*(this)).carry1, (*(this)).test_pin1};
+      return state1{(*this).acc1, (*this).carry1, (*this).test_pin1};
     }
   };
 
@@ -187,9 +185,8 @@ struct InstructionCycles {
 
     // ACCESSORS
     instruction1 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JCN1>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<JCN1>(_sv.v());
+      if (std::holds_alternative<JCN1>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<JCN1>(this->v());
         return instruction1(JCN1{d_a0, d_a1});
       } else {
         return instruction1(NOP1{});
@@ -198,7 +195,7 @@ struct InstructionCycles {
 
     // CREATORS
     static instruction1 jcn1(unsigned int a0, unsigned int a1) {
-      return instruction1(JCN1{std::move(a0), std::move(a1)});
+      return instruction1(JCN1{a0, a1});
     }
 
     static instruction1 nop1() { return instruction1(NOP1{}); }
@@ -210,10 +207,9 @@ struct InstructionCycles {
     const variant_t &v() const { return d_v_; }
 
     unsigned int cycles_jcn(const state1 &s) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
+      if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::JCN1>(_sv.v());
+            std::get<typename instruction1::JCN1>(this->v());
         unsigned int c1 = (8u ? d_a0 / 8u : 0);
         unsigned int c2 =
             (2u ? (4u ? d_a0 / 4u : 0) % 2u : (4u ? d_a0 / 4u : 0));
@@ -242,10 +238,9 @@ struct InstructionCycles {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 instruction1_rec(F0 &&f, T1 f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
+      if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::JCN1>(_sv.v());
+            std::get<typename instruction1::JCN1>(this->v());
         return f(d_a0, d_a1);
       } else {
         return f0;
@@ -255,10 +250,9 @@ struct InstructionCycles {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 instruction1_rect(F0 &&f, T1 f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction1::JCN1>(_sv.v())) {
+      if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::JCN1>(_sv.v());
+            std::get<typename instruction1::JCN1>(this->v());
         return f(d_a0, d_a1);
       } else {
         return f0;
@@ -308,9 +302,8 @@ struct InstructionCycles {
 
     // ACCESSORS
     instruction2 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JMS2>(_sv.v())) {
-        const auto &[d_a0] = std::get<JMS2>(_sv.v());
+      if (std::holds_alternative<JMS2>(this->v())) {
+        const auto &[d_a0] = std::get<JMS2>(this->v());
         return instruction2(JMS2{d_a0});
       } else {
         return instruction2(NOP2{});
@@ -318,9 +311,7 @@ struct InstructionCycles {
     }
 
     // CREATORS
-    static instruction2 jms2(unsigned int a0) {
-      return instruction2(JMS2{std::move(a0)});
-    }
+    static instruction2 jms2(unsigned int a0) { return instruction2(JMS2{a0}); }
 
     static instruction2 nop2() { return instruction2(NOP2{}); }
 
@@ -333,9 +324,8 @@ struct InstructionCycles {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 instruction2_rec(F0 &&f, T1 f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction2::JMS2>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction2::JMS2>(_sv.v());
+      if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
+        const auto &[d_a0] = std::get<typename instruction2::JMS2>(this->v());
         return f(d_a0);
       } else {
         return f0;
@@ -345,9 +335,8 @@ struct InstructionCycles {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 instruction2_rect(F0 &&f, T1 f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction2::JMS2>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction2::JMS2>(_sv.v());
+      if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
+        const auto &[d_a0] = std::get<typename instruction2::JMS2>(this->v());
         return f(d_a0);
       } else {
         return f0;
@@ -359,7 +348,7 @@ struct InstructionCycles {
     unsigned int acc2;
 
     // ACCESSORS
-    state2 clone() const { return state2{(*(this)).acc2}; }
+    state2 clone() const { return state2{(*this).acc2}; }
   };
 
   static unsigned int cycles_jms(const state2 &_x, const instruction2 &i);
@@ -379,7 +368,7 @@ struct InstructionCycles {
 
   template <typename T1>
   static T1 instr3_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                        T1 f7, const Instr3 i) {
+                        T1 f7, Instr3 i) {
     switch (i) {
     case Instr3::e_NOP3: {
       return f;
@@ -415,7 +404,7 @@ struct InstructionCycles {
 
   template <typename T1>
   static T1 instr3_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                       T1 f7, const Instr3 i) {
+                       T1 f7, Instr3 i) {
     switch (i) {
     case Instr3::e_NOP3: {
       return f;
@@ -449,7 +438,7 @@ struct InstructionCycles {
     }
   }
 
-  static unsigned int cycles_min(const Instr3 i);
+  static unsigned int cycles_min(Instr3 i);
   static inline const List<Instr3> all_instrs3 = List<Instr3>::cons(
       Instr3::e_NOP3,
       List<Instr3>::cons(
@@ -470,7 +459,7 @@ struct InstructionCycles {
                                       Instr3::e_ISZZERO3,
                                       List<Instr3>::nil())))))))));
   static inline const bool test_min_cycles_per_instruction =
-      all_instrs3.forallb([](const Instr3 i) { return 8u <= cycles_min(i); });
+      all_instrs3.forallb([](Instr3 i) { return 8u <= cycles_min(i); });
   enum class Instr4 {
     e_NOP4,
     e_ADD4,
@@ -485,7 +474,7 @@ struct InstructionCycles {
 
   template <typename T1>
   static T1 instr4_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                        T1 f7, const Instr4 i) {
+                        T1 f7, Instr4 i) {
     switch (i) {
     case Instr4::e_NOP4: {
       return f;
@@ -521,7 +510,7 @@ struct InstructionCycles {
 
   template <typename T1>
   static T1 instr4_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                       T1 f7, const Instr4 i) {
+                       T1 f7, Instr4 i) {
     switch (i) {
     case Instr4::e_NOP4: {
       return f;
@@ -555,7 +544,7 @@ struct InstructionCycles {
     }
   }
 
-  static unsigned int cycles_max(const Instr4 i);
+  static unsigned int cycles_max(Instr4 i);
   static inline const List<Instr4> all_instrs4 = List<Instr4>::cons(
       Instr4::e_NOP4,
       List<Instr4>::cons(
@@ -576,7 +565,7 @@ struct InstructionCycles {
                                       Instr4::e_ISZZERO4,
                                       List<Instr4>::nil())))))))));
   static inline const bool test_max_cycles_per_instruction =
-      all_instrs4.forallb([](const Instr4 i) { return cycles_max(i) <= 24u; });
+      all_instrs4.forallb([](Instr4 i) { return cycles_max(i) <= 24u; });
 
   struct state5 {
     unsigned int acc5;
@@ -585,7 +574,7 @@ struct InstructionCycles {
 
     // ACCESSORS
     state5 clone() const {
-      return state5{(*(this)).acc5, (*(this)).carry5, (*(this)).test5};
+      return state5{(*this).acc5, (*this).carry5, (*this).test5};
     }
   };
 
@@ -634,14 +623,13 @@ struct InstructionCycles {
 
     // ACCESSORS
     instruction5 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP5>(_sv.v())) {
+      if (std::holds_alternative<NOP5>(this->v())) {
         return instruction5(NOP5{});
-      } else if (std::holds_alternative<JCN5>(_sv.v())) {
-        const auto &[d_a0] = std::get<JCN5>(_sv.v());
+      } else if (std::holds_alternative<JCN5>(this->v())) {
+        const auto &[d_a0] = std::get<JCN5>(this->v());
         return instruction5(JCN5{d_a0});
       } else {
-        const auto &[d_a0] = std::get<INC5>(_sv.v());
+        const auto &[d_a0] = std::get<INC5>(this->v());
         return instruction5(INC5{d_a0});
       }
     }
@@ -649,13 +637,9 @@ struct InstructionCycles {
     // CREATORS
     static instruction5 nop5() { return instruction5(NOP5{}); }
 
-    static instruction5 jcn5(unsigned int a0) {
-      return instruction5(JCN5{std::move(a0)});
-    }
+    static instruction5 jcn5(unsigned int a0) { return instruction5(JCN5{a0}); }
 
-    static instruction5 inc5(unsigned int a0) {
-      return instruction5(INC5{std::move(a0)});
-    }
+    static instruction5 inc5(unsigned int a0) { return instruction5(INC5{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -664,8 +648,7 @@ struct InstructionCycles {
     const variant_t &v() const { return d_v_; }
 
     state5 execute5(state5 s) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction5::INC5>(_sv.v())) {
+      if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
         return state5{(16u ? (s.acc5 + 1u) % 16u : (s.acc5 + 1u)), s.carry5,
                       s.test5};
       } else {
@@ -674,9 +657,8 @@ struct InstructionCycles {
     }
 
     unsigned int cycles_sum(const state5 &s) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction5::JCN5>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction5::JCN5>(_sv.v());
+      if (std::holds_alternative<typename instruction5::JCN5>(this->v())) {
+        const auto &[d_a0] = std::get<typename instruction5::JCN5>(this->v());
         if ((8u ? d_a0 / 8u : 0) == 1u) {
           return 16u;
         } else {
@@ -696,14 +678,14 @@ struct InstructionCycles {
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 instruction5_rec(T1 f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction5::NOP5>(_sv.v())) {
+      if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
         return f;
-      } else if (std::holds_alternative<typename instruction5::JCN5>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction5::JCN5>(_sv.v());
+      } else if (std::holds_alternative<typename instruction5::JCN5>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction5::JCN5>(this->v());
         return f0(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename instruction5::INC5>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction5::INC5>(this->v());
         return f1(d_a0);
       }
     }
@@ -712,14 +694,14 @@ struct InstructionCycles {
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F2 &, unsigned int &>
     T1 instruction5_rect(T1 f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction5::NOP5>(_sv.v())) {
+      if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
         return f;
-      } else if (std::holds_alternative<typename instruction5::JCN5>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction5::JCN5>(_sv.v());
+      } else if (std::holds_alternative<typename instruction5::JCN5>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction5::JCN5>(this->v());
         return f0(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename instruction5::INC5>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction5::INC5>(this->v());
         return f1(d_a0);
       }
     }
@@ -737,11 +719,11 @@ struct InstructionCycles {
                                        List<instruction5>::nil()))));
   enum class Instruction6 { e_NOP6 };
 
-  template <typename T1> static T1 instruction6_rect(T1 f, const Instruction6) {
+  template <typename T1> static T1 instruction6_rect(T1 f, Instruction6) {
     return f;
   }
 
-  template <typename T1> static T1 instruction6_rec(T1 f, const Instruction6) {
+  template <typename T1> static T1 instruction6_rec(T1 f, Instruction6) {
     return f;
   }
 
@@ -749,10 +731,10 @@ struct InstructionCycles {
     unsigned int acc6;
 
     // ACCESSORS
-    state6 clone() const { return state6{(*(this)).acc6}; }
+    state6 clone() const { return state6{(*this).acc6}; }
   };
 
-  static unsigned int cycles6(const state6 &_x, const Instruction6 _x0);
+  static unsigned int cycles6(const state6 &_x, Instruction6 _x0);
   static unsigned int program_cycles6(const state6 &s,
                                       const List<Instruction6> &prog);
   static inline const unsigned int singleton_cycles6 = program_cycles6(
@@ -771,11 +753,11 @@ struct InstructionCycles {
           std::make_pair(singleton_cycles6, three_nop_cycles6);
   enum class Instruction7 { e_NOP7 };
 
-  template <typename T1> static T1 instruction7_rect(T1 f, const Instruction7) {
+  template <typename T1> static T1 instruction7_rect(T1 f, Instruction7) {
     return f;
   }
 
-  template <typename T1> static T1 instruction7_rec(T1 f, const Instruction7) {
+  template <typename T1> static T1 instruction7_rec(T1 f, Instruction7) {
     return f;
   }
 
@@ -783,10 +765,10 @@ struct InstructionCycles {
     unsigned int acc7;
 
     // ACCESSORS
-    state7 clone() const { return state7{(*(this)).acc7}; }
+    state7 clone() const { return state7{(*this).acc7}; }
   };
 
-  static unsigned int cycles7(const state7 &_x, const Instruction7 _x0);
+  static unsigned int cycles7(const state7 &_x, Instruction7 _x0);
   static unsigned int program_cycles7(const state7 &s,
                                       const List<Instruction7> &prog);
   static inline const unsigned int test_program_cycles_single = program_cycles7(

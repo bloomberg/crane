@@ -6,9 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -133,7 +131,7 @@ public:
 struct EffectCrossModule {
   /// Inner module defines a helper that returns a value
   struct Inner {
-    static void greet(const std::string name);
+    static void greet(std::string name);
     static std::string ask_name();
 
     /// Function taking a callback

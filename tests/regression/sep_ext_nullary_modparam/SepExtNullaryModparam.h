@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTNULLARYMODPARAM
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 namespace SepExtNullaryModparam {
 
@@ -46,8 +43,8 @@ struct NatAsIntLike {
     return v;
   }
 
-  static unsigned int add(const unsigned int _x0, const unsigned int _x1);
-  static bool eqb(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int add(unsigned int _x0, unsigned int _x1);
+  static bool eqb(unsigned int _x0, unsigned int _x1);
 };
 
 template <IntLike I> struct Counter {
@@ -56,11 +53,11 @@ template <IntLike I> struct Counter {
     return v;
   }
 
-  constexpr static typename I::t step(const typename I::t x) {
+  constexpr static typename I::t step(typename I::t x) {
     return I::add(x, I::one());
   }
 
-  constexpr static bool is_zero(const typename I::t x) {
+  constexpr static bool is_zero(typename I::t x) {
     return I::eqb(x, I::zero());
   }
 };

@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_TAIL_LOOP
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -129,7 +127,7 @@ unsigned int _length_list_go(const List<T1> xs, const unsigned int n) {
     return n;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-    return _length_list_go<T1>(*(d_a1), (1u + n));
+    return _length_list_go<T1>(*d_a1, (1u + n));
   }
 }
 

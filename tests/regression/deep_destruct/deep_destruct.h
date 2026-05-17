@@ -2,7 +2,6 @@
 #define INCLUDED_DEEP_DESTRUCT
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -155,13 +154,13 @@ struct DeepDestruct {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = *(_f.m);
+        const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -202,13 +201,13 @@ struct DeepDestruct {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = *(_f.m);
+        const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -220,9 +219,9 @@ struct DeepDestruct {
   }
 
   /// Tail-recursive list builder — should compile to a loop.
-  static mylist<unsigned int> build_aux(const unsigned int n,
+  static mylist<unsigned int> build_aux(unsigned int n,
                                         mylist<unsigned int> acc);
-  static mylist<unsigned int> build(const unsigned int n);
+  static mylist<unsigned int> build(unsigned int n);
   /// Simple accessor to observe the result.
   static unsigned int head_or_zero(const mylist<unsigned int> &l);
 };

@@ -4,8 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -203,48 +201,48 @@ struct MutualCoind {
     const variant_t &v() const { return d_lazyV_.force(); }
   };
 
-  template <typename T1> static T1 headA(const streamA<T1> s) {
+  template <typename T1> static T1 headA(streamA<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename streamA<T1>::ConsA>(s.v());
     return d_a0;
   }
 
-  template <typename T1> static streamB<T1> tailA(const streamA<T1> s) {
+  template <typename T1> static streamB<T1> tailA(streamA<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename streamA<T1>::ConsA>(s.v());
-    return streamB<T1>::lazy_([=]() mutable -> streamB<T1> { return *(d_a1); });
+    return streamB<T1>::lazy_([=]() mutable -> streamB<T1> { return *d_a1; });
   }
 
-  template <typename T1> static T1 headB(const streamB<T1> s) {
+  template <typename T1> static T1 headB(streamB<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename streamB<T1>::ConsB>(s.v());
     return d_a0;
   }
 
-  template <typename T1> static streamA<T1> tailB(const streamB<T1> s) {
+  template <typename T1> static streamA<T1> tailB(streamB<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename streamB<T1>::ConsB>(s.v());
-    return streamA<T1>::lazy_([=]() mutable -> streamA<T1> { return *(d_a1); });
+    return streamA<T1>::lazy_([=]() mutable -> streamA<T1> { return *d_a1; });
   }
 
-  static streamA<unsigned int> countA(const unsigned int n);
-  static streamB<unsigned int> countB(const unsigned int n);
+  static streamA<unsigned int> countA(unsigned int n);
+  static streamB<unsigned int> countB(unsigned int n);
 
   template <typename T1>
-  static List<T1> takeA(const unsigned int fuel, const streamA<T1> s) {
+  static List<T1> takeA(unsigned int fuel, streamA<T1> s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
       unsigned int f = fuel - 1;
       const auto &[d_a0, d_a1] = std::get<typename streamA<T1>::ConsA>(s.v());
-      return List<T1>::cons(d_a0, takeB<T1>(f, *(d_a1)));
+      return List<T1>::cons(d_a0, takeB<T1>(f, *d_a1));
     }
   }
 
   template <typename T1>
-  static List<T1> takeB(const unsigned int fuel, const streamB<T1> s) {
+  static List<T1> takeB(unsigned int fuel, streamB<T1> s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
       unsigned int f = fuel - 1;
       const auto &[d_a0, d_a1] = std::get<typename streamB<T1>::ConsB>(s.v());
-      return List<T1>::cons(d_a0, takeA<T1>(f, *(d_a1)));
+      return List<T1>::cons(d_a0, takeA<T1>(f, *d_a1));
     }
   }
 

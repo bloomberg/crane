@@ -1,13 +1,12 @@
 #include "hof_tree_loopify.h"
 
-HofTreeLoopify::tree<unsigned int>
-HofTreeLoopify::depth_tree(const unsigned int n) {
+HofTreeLoopify::tree<unsigned int> HofTreeLoopify::depth_tree(unsigned int n) {
   std::unique_ptr<HofTreeLoopify::tree<unsigned int>> _head{};
   std::unique_ptr<HofTreeLoopify::tree<unsigned int>> *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<HofTreeLoopify::tree<unsigned int>>(
+      *_write = std::make_unique<HofTreeLoopify::tree<unsigned int>>(
           tree<unsigned int>::leaf());
       break;
     } else {
@@ -17,20 +16,20 @@ HofTreeLoopify::depth_tree(const unsigned int n) {
               nullptr, _loop_n,
               std::make_unique<HofTreeLoopify::tree<unsigned int>>(
                   tree<unsigned int>::leaf())));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename tree<unsigned int>::Node>((*_write)->v_mut()).d_a0;
       _loop_n = m;
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-unsigned int Nat::tail_add(const unsigned int n, const unsigned int m) {
+unsigned int Nat::tail_add(unsigned int n, unsigned int m) {
   unsigned int _result;
-  unsigned int _loop_m = m;
-  unsigned int _loop_n = n;
+  unsigned int _loop_m = std::move(m);
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       _result = _loop_m;
@@ -44,11 +43,10 @@ unsigned int Nat::tail_add(const unsigned int n, const unsigned int m) {
   return _result;
 }
 
-unsigned int Nat::tail_addmul(const unsigned int r, const unsigned int n,
-                              const unsigned int m) {
+unsigned int Nat::tail_addmul(unsigned int r, unsigned int n, unsigned int m) {
   unsigned int _result;
-  unsigned int _loop_n = n;
-  unsigned int _loop_r = r;
+  unsigned int _loop_n = std::move(n);
+  unsigned int _loop_r = std::move(r);
   while (true) {
     if (_loop_n <= 0) {
       _result = _loop_r;
@@ -62,13 +60,13 @@ unsigned int Nat::tail_addmul(const unsigned int r, const unsigned int n,
   return _result;
 }
 
-unsigned int Nat::tail_mul(const unsigned int n, const unsigned int m) {
+unsigned int Nat::tail_mul(unsigned int n, unsigned int m) {
   return Nat::tail_addmul(0u, n, m);
 }
 
-unsigned int Nat::of_uint_acc(const Uint &d, const unsigned int acc) {
+unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
   unsigned int _result;
-  unsigned int _loop_acc = acc;
+  unsigned int _loop_acc = std::move(acc);
   const Uint *_loop_d = &d;
   while (true) {
     if (std::holds_alternative<typename Uint::Nil>(_loop_d->v())) {
@@ -131,9 +129,9 @@ unsigned int Nat::of_uint_acc(const Uint &d, const unsigned int acc) {
 
 unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
 
-unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
+unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
   unsigned int _result;
-  unsigned int _loop_acc = acc;
+  unsigned int _loop_acc = std::move(acc);
   const Uint0 *_loop_d = &d;
   while (true) {
     if (std::holds_alternative<typename Uint0::Nil0>(_loop_d->v())) {

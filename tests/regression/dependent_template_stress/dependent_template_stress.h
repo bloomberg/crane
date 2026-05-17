@@ -1,10 +1,6 @@
 #ifndef INCLUDED_DEPENDENT_TEMPLATE_STRESS
 #define INCLUDED_DEPENDENT_TEMPLATE_STRESS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 template <typename M>
 concept Container = requires {
   typename M::template t<void>;
@@ -43,8 +39,7 @@ struct DependentTemplateStress {
       return v;
     }
 
-    static typename C::template t<unsigned int>
-    complex_use(const unsigned int _x0) {
+    static typename C::template t<unsigned int> complex_use(unsigned int _x0) {
       return C::template singleton<unsigned int>(_x0);
     }
   };

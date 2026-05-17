@@ -19,9 +19,8 @@ NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
   }
 }
 
-unsigned int
-NestedMod::Outer::shape_with_color(const Inner::shape &s,
-                                   const NestedMod::Outer::Color c) {
+unsigned int NestedMod::Outer::shape_with_color(const Inner::shape &s,
+                                                NestedMod::Outer::Color c) {
   switch (c) {
   case Color::e_RED: {
     return (Inner::area(s) + 100u);
@@ -37,7 +36,7 @@ NestedMod::Outer::shape_with_color(const Inner::shape &s,
   }
 }
 
-unsigned int NestedMod::Outer::color_code(const NestedMod::Outer::Color c) {
+unsigned int NestedMod::Outer::color_code(NestedMod::Outer::Color c) {
   switch (c) {
   case Color::e_RED: {
     return 1u;

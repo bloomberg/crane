@@ -1,8 +1,6 @@
 #ifndef INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
 #define INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -51,11 +49,10 @@ struct GeneratedStorageFieldNameClash {
 
     // ACCESSORS
     d_v_ clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Empty>(_sv.v())) {
+      if (std::holds_alternative<Empty>(this->v())) {
         return d_v_(Empty{});
       } else {
-        const auto &[d_a0] = std::get<Flag>(_sv.v());
+        const auto &[d_a0] = std::get<Flag>(this->v());
         return d_v_(Flag{d_a0});
       }
     }
@@ -63,7 +60,7 @@ struct GeneratedStorageFieldNameClash {
     // CREATORS
     static d_v_ empty() { return d_v_(Empty{}); }
 
-    static d_v_ flag(bool a0) { return d_v_(Flag{std::move(a0)}); }
+    static d_v_ flag(bool a0) { return d_v_(Flag{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v__; }

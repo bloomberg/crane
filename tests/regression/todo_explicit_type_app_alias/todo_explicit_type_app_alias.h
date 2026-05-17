@@ -1,10 +1,6 @@
 #ifndef INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS
 #define INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct TodoExplicitTypeAppAlias {
   template <typename T1> static T1 id(T1 x) { return x; }
 

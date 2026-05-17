@@ -3,9 +3,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct Clock {
   static int64_t get_steady();

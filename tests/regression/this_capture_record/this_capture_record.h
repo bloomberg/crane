@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -95,7 +94,7 @@ struct ThisCaptureRecord {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -130,12 +129,12 @@ struct ThisCaptureRecord {
     const variant_t &v() const { return d_v_; }
 
     unsigned int tree_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum());
       }
     }
 
@@ -143,13 +142,13 @@ struct ThisCaptureRecord {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -157,13 +156,13 @@ struct ThisCaptureRecord {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -204,13 +203,12 @@ struct ThisCaptureRecord {
 
     // ACCESSORS
     tag clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<MkTag>(_sv.v());
+      const auto &[d_a0] = std::get<MkTag>(this->v());
       return tag(MkTag{d_a0});
     }
 
     // CREATORS
-    static tag mktag(unsigned int a0) { return tag(MkTag{std::move(a0)}); }
+    static tag mktag(unsigned int a0) { return tag(MkTag{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -221,16 +219,14 @@ struct ThisCaptureRecord {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());
+      const auto &[d_a0] = std::get<typename tag::MkTag>(this->v());
       return f(d_a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());
+      const auto &[d_a0] = std::get<typename tag::MkTag>(this->v());
       return f(d_a0);
     }
   };
@@ -241,7 +237,7 @@ struct ThisCaptureRecord {
 
     // ACCESSORS
     callback_rec clone() const {
-      return callback_rec{(*(this)).cr_add, (*(this)).cr_mul};
+      return callback_rec{(*this).cr_add, (*this).cr_mul};
     }
   };
 
@@ -249,7 +245,7 @@ struct ThisCaptureRecord {
   /// treat this as a multi-argument function (preventing eta-collapse).
   /// Returns a record whose fields are closures that capture this
   /// via =, this.
-  static callback_rec tree_callbacks(tree t, const unsigned int flag);
+  static callback_rec tree_callbacks(tree t, unsigned int flag);
   /// test1: flag=0, tree_sum=5.
   /// cr_add(10) = 10 + 5 = 15, cr_mul(3) = 3 * 5 = 15.
   /// Total = 30.
@@ -273,7 +269,7 @@ struct ThisCaptureRecord {
       tree_callbacks(tree::node(tree::leaf(), 100u, tree::leaf()), 1u)
           .cr_mul(7u);
   /// Dummy use of tag to keep it around for extraction.
-  static tag mk_tag(const unsigned int n);
+  static tag mk_tag(unsigned int n);
 };
 
 #endif // INCLUDED_THIS_CAPTURE_RECORD

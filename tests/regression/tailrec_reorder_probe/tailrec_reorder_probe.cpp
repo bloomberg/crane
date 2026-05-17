@@ -48,7 +48,7 @@ TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
     if (std::holds_alternative<
             typename TailrecReorderProbe::mylist<unsigned int>::Mynil>(
             _loop_l1->v())) {
-      _result = my_rev_append<unsigned int>(std::move(_loop_acc), *(_loop_l2));
+      _result = my_rev_append<unsigned int>(std::move(_loop_acc), *_loop_l2);
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -57,8 +57,7 @@ TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
       if (std::holds_alternative<
               typename TailrecReorderProbe::mylist<unsigned int>::Mynil>(
               _loop_l2->v())) {
-        _result =
-            my_rev_append<unsigned int>(std::move(_loop_acc), *(_loop_l1));
+        _result = my_rev_append<unsigned int>(std::move(_loop_acc), *_loop_l1);
         break;
       } else {
         const auto &[d_a00, d_a10] = std::get<

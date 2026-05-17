@@ -7,7 +7,7 @@ List<unsigned int> NameClashScopeLeak::rotate(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    return (*(d_a1)).app(
+    return (*d_a1).app(
         List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
   }
 }
@@ -43,7 +43,7 @@ unsigned int NameClashScopeLeak::first_two_sum(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = *(d_a1);
+    auto &&_sv0 = *d_a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return d_a0;
     } else {

@@ -126,24 +126,22 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 };
@@ -152,17 +150,17 @@ struct ClosuresInData {
   /// A list of functions: successor, doubling, and squaring.
   static inline const List<std::function<unsigned int(unsigned int)>> fn_list =
       List<std::function<unsigned int(unsigned int)>>::cons(
-          [](const unsigned int x) { return (x + 1); },
+          [](unsigned int x) { return (x + 1); },
           List<std::function<unsigned int(unsigned int)>>::cons(
-              [](const unsigned int x) { return (x + x); },
+              [](unsigned int x) { return (x + x); },
               List<std::function<unsigned int(unsigned int)>>::cons(
-                  [](const unsigned int x) { return (x * x); },
+                  [](unsigned int x) { return (x * x); },
                   List<std::function<unsigned int(unsigned int)>>::nil())));
   /// apply_all fns x applies every function in fns to x,
   /// returning the list of results.
   static List<unsigned int>
   apply_all(const List<std::function<unsigned int(unsigned int)>> &fns,
-            const unsigned int x);
+            unsigned int x);
 
   /// A pair of invertible transformations: forward and backward.
   struct transform {
@@ -171,35 +169,35 @@ struct ClosuresInData {
 
     // ACCESSORS
     transform clone() const {
-      return transform{(*(this)).forward, (*(this)).backward};
+      return transform{(*this).forward, (*this).backward};
     }
   };
 
   /// A transform that doubles via addition and halves via division.
   static inline const transform double_transform =
-      transform{[](const unsigned int x) { return (x + x); },
-                [](const unsigned int x) { return (2u ? x / 2u : 0); }};
-  static unsigned int apply_forward(const transform &t, const unsigned int x);
-  static unsigned int apply_backward(const transform &t, const unsigned int x);
+      transform{[](unsigned int x) { return (x + x); },
+                [](unsigned int x) { return (2u ? x / 2u : 0); }};
+  static unsigned int apply_forward(const transform &t, unsigned int x);
+  static unsigned int apply_backward(const transform &t, unsigned int x);
   /// compose_all fns x folds fns left, threading x through each
   /// function in sequence.
   static unsigned int
   compose_all(const List<std::function<unsigned int(unsigned int)>> &fns,
-              const unsigned int x);
+              unsigned int x);
   /// A pipeline of transformations: increment, double, then add 10.
   static inline const List<std::function<unsigned int(unsigned int)>> pipeline =
       List<std::function<unsigned int(unsigned int)>>::cons(
-          [](const unsigned int x) { return (x + 1u); },
+          [](unsigned int x) { return (x + 1u); },
           List<std::function<unsigned int(unsigned int)>>::cons(
-              [](const unsigned int x) { return (x * 2u); },
+              [](unsigned int x) { return (x * 2u); },
               List<std::function<unsigned int(unsigned int)>>::cons(
-                  [](const unsigned int x) { return (x + 10u); },
+                  [](unsigned int x) { return (x + 10u); },
                   List<std::function<unsigned int(unsigned int)>>::nil())));
   /// maybe_apply mf x applies function mf to x if present,
   /// otherwise returns x unchanged.
   static unsigned int maybe_apply(
       const std::optional<std::function<unsigned int(unsigned int)>> &mf,
-      const unsigned int x);
+      unsigned int x);
   static inline const List<unsigned int> test_apply_all =
       apply_all(fn_list, 5u);
   static inline const unsigned int test_forward =
@@ -209,7 +207,7 @@ struct ClosuresInData {
   static inline const unsigned int test_compose = compose_all(pipeline, 3u);
   static inline const unsigned int test_maybe_some =
       maybe_apply(std::make_optional<std::function<unsigned int(unsigned int)>>(
-                      [](const unsigned int x) { return (x + 1); }),
+                      [](unsigned int x) { return (x + 1); }),
                   41u);
   static inline const unsigned int test_maybe_none = maybe_apply(
       std::optional<std::function<unsigned int(unsigned int)>>(), 42u);

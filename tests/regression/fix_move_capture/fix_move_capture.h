@@ -2,7 +2,6 @@
 #define INCLUDED_FIX_MOVE_CAPTURE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -96,8 +95,7 @@ struct FixMoveCapture {
     static mylist mynil() { return mylist(Mynil{}); }
 
     static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -135,7 +133,7 @@ struct FixMoveCapture {
       return f0;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f1(d_a0, *(d_a1), mylist_rect<T1>(f0, f1, *(d_a1)));
+      return f1(d_a0, *d_a1, mylist_rect<T1>(f0, f1, *d_a1));
     }
   }
 
@@ -146,7 +144,7 @@ struct FixMoveCapture {
       return f0;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f1(d_a0, *(d_a1), mylist_rec<T1>(f0, f1, *(d_a1)));
+      return f1(d_a0, *d_a1, mylist_rec<T1>(f0, f1, *d_a1));
     }
   }
 

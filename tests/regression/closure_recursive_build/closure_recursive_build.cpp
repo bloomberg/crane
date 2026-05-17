@@ -8,7 +8,7 @@
 /// build_adders returns, all intermediate stack frames are gone,
 /// and every closure holds a dangling reference.
 ClosureRecursiveBuild::fn_list
-ClosureRecursiveBuild::build_adders(const unsigned int n) {
+ClosureRecursiveBuild::build_adders(unsigned int n) {
   if (n <= 0) {
     return fn_list::fnil();
   } else {
@@ -31,7 +31,7 @@ ClosureRecursiveBuild::build_adders(const unsigned int n) {
 
 unsigned int
 ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
-                                   const unsigned int x) {
+                                   unsigned int x) {
   if (std::holds_alternative<typename ClosureRecursiveBuild::fn_list::FNil>(
           fl.v())) {
     return 0u;
@@ -44,13 +44,13 @@ ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
 
 unsigned int
 ClosureRecursiveBuild::apply_all_sum(const ClosureRecursiveBuild::fn_list &fl,
-                                     const unsigned int x) {
+                                     unsigned int x) {
   if (std::holds_alternative<typename ClosureRecursiveBuild::fn_list::FNil>(
           fl.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
-    return (d_a0(x) + apply_all_sum(*(d_a1), x));
+    return (d_a0(x) + apply_all_sum(*d_a1, x));
   }
 }

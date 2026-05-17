@@ -1,15 +1,12 @@
 #ifndef INCLUDED_COMPARISON
 #define INCLUDED_COMPARISON
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct Comparison {
   enum class Cmp { e_CMPLT, e_CMPEQ, e_CMPGT };
 
-  template <typename T1> static T1 cmp_rect(T1 f, T1 f0, T1 f1, const Cmp c) {
+  template <typename T1> static T1 cmp_rect(T1 f, T1 f0, T1 f1, Cmp c) {
     switch (c) {
     case Cmp::e_CMPLT: {
       return f;
@@ -25,7 +22,7 @@ struct Comparison {
     }
   }
 
-  template <typename T1> static T1 cmp_rec(T1 f, T1 f0, T1 f1, const Cmp c) {
+  template <typename T1> static T1 cmp_rec(T1 f, T1 f0, T1 f1, Cmp c) {
     switch (c) {
     case Cmp::e_CMPLT: {
       return f;
@@ -41,13 +38,12 @@ struct Comparison {
     }
   }
 
-  static unsigned int cmp_to_nat(const Cmp c);
-  static Cmp compare_nats(const unsigned int a, const unsigned int b);
-  static unsigned int max_nat(const unsigned int a, const unsigned int b);
-  static unsigned int min_nat(const unsigned int a, const unsigned int b);
-  static unsigned int clamp(const unsigned int val, const unsigned int lo,
-                            const unsigned int hi);
-  static Cmp flip_cmp(const Cmp c);
+  static unsigned int cmp_to_nat(Cmp c);
+  static Cmp compare_nats(unsigned int a, unsigned int b);
+  static unsigned int max_nat(unsigned int a, unsigned int b);
+  static unsigned int min_nat(unsigned int a, unsigned int b);
+  static unsigned int clamp(unsigned int val, unsigned int lo, unsigned int hi);
+  static Cmp flip_cmp(Cmp c);
   static inline const unsigned int test_lt_nat = cmp_to_nat(Cmp::e_CMPLT);
   static inline const unsigned int test_eq_nat = cmp_to_nat(Cmp::e_CMPEQ);
   static inline const unsigned int test_gt_nat = cmp_to_nat(Cmp::e_CMPGT);

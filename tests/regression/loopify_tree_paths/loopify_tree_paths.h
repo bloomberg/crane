@@ -129,21 +129,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -226,7 +226,7 @@ struct LoopifyTreePaths {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -293,7 +293,7 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = List<unsigned int>::nil();
           } else {
@@ -347,7 +347,7 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -368,10 +368,10 @@ struct LoopifyTreePaths {
       return _result;
     }
 
-    std::optional<List<unsigned int>>
-    find_path_sum(const unsigned int acc, const unsigned int target) const {
+    std::optional<List<unsigned int>> find_path_sum(unsigned int acc,
+                                                    unsigned int target) const {
       const tree *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         if (acc == target) {
           return std::make_optional<List<unsigned int>>(
@@ -382,13 +382,13 @@ struct LoopifyTreePaths {
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
         unsigned int new_acc = (acc + d_a1);
-        auto _cs = (*(d_a0)).find_path_sum(new_acc, target);
+        auto _cs = (*d_a0).find_path_sum(new_acc, target);
         if (_cs.has_value()) {
           const List<unsigned int> &path = *_cs;
           return std::make_optional<List<unsigned int>>(
               List<unsigned int>::cons(d_a1, path));
         } else {
-          auto _cs1 = (*(d_a2)).find_path_sum(new_acc, target);
+          auto _cs1 = (*d_a2).find_path_sum(new_acc, target);
           if (_cs1.has_value()) {
             const List<unsigned int> &path = *_cs1;
             return std::make_optional<List<unsigned int>>(
@@ -400,12 +400,12 @@ struct LoopifyTreePaths {
       }
     }
 
-    unsigned int count_paths_sum(const unsigned int target) const {
-      return (*(this)).count_paths_sum_aux(0u, target);
+    unsigned int count_paths_sum(unsigned int target) const {
+      return (*this).count_paths_sum_aux(0u, target);
     }
 
-    unsigned int count_paths_sum_aux(const unsigned int acc,
-                                     const unsigned int target) const {
+    unsigned int count_paths_sum_aux(unsigned int acc,
+                                     unsigned int target) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -438,8 +438,8 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          const unsigned int acc = _f.acc;
-          auto &&_sv = *(_self);
+          unsigned int acc = _f.acc;
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             if (acc == target) {
               _result = 1u;
@@ -501,7 +501,7 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = List<List<unsigned int>>::cons(
                 List<unsigned int>::nil(), List<List<unsigned int>>::nil());
@@ -566,14 +566,13 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -630,14 +629,13 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -654,7 +652,7 @@ struct LoopifyTreePaths {
     }
   };
 
-  static List<List<unsigned int>> map_cons(const unsigned int x,
+  static List<List<unsigned int>> map_cons(unsigned int x,
                                            const List<List<unsigned int>> &ll);
 
   struct bool_tree {
@@ -734,9 +732,7 @@ struct LoopifyTreePaths {
     }
 
     // CREATORS
-    static bool_tree bleaf(unsigned int a0) {
-      return bool_tree(BLeaf{std::move(a0)});
-    }
+    static bool_tree bleaf(unsigned int a0) { return bool_tree(BLeaf{a0}); }
 
     static bool_tree bnode(bool_tree a0, bool_tree a1) {
       return bool_tree(BNode{std::make_unique<bool_tree>(std::move(a0)),
@@ -806,7 +802,7 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const bool_tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_tree::BLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename bool_tree::BLeaf>(_sv.v());
             _result = p(d_a0);
@@ -861,7 +857,7 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const bool_tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_tree::BLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename bool_tree::BLeaf>(_sv.v());
             _result = p(d_a0);
@@ -922,14 +918,14 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const bool_tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_tree::BLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename bool_tree::BLeaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_tree::BNode>(_sv.v());
-            _stack.emplace_back(_After_BNode{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BNode{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_After_BNode>(_frame)) {
@@ -984,14 +980,14 @@ struct LoopifyTreePaths {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const bool_tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_tree::BLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename bool_tree::BLeaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_tree::BNode>(_sv.v());
-            _stack.emplace_back(_After_BNode{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BNode{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_After_BNode>(_frame)) {

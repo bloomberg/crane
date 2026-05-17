@@ -1,10 +1,10 @@
 #include "loopify_list_access.h"
 
-unsigned int LoopifyListAccess::nth(const unsigned int n,
+unsigned int LoopifyListAccess::nth(unsigned int n,
                                     const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -36,7 +36,7 @@ unsigned int LoopifyListAccess::last(const List<unsigned int> &l) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         _result = d_a0;
         break;
@@ -48,11 +48,11 @@ unsigned int LoopifyListAccess::last(const List<unsigned int> &l) {
   return _result;
 }
 
-unsigned int LoopifyListAccess::index_of_aux(const unsigned int x,
+unsigned int LoopifyListAccess::index_of_aux(unsigned int x,
                                              const List<unsigned int> &l,
-                                             const unsigned int idx) {
+                                             unsigned int idx) {
   unsigned int _result;
-  unsigned int _loop_idx = idx;
+  unsigned int _loop_idx = std::move(idx);
   const List<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -74,13 +74,12 @@ unsigned int LoopifyListAccess::index_of_aux(const unsigned int x,
   return _result;
 }
 
-unsigned int LoopifyListAccess::index_of(const unsigned int x,
+unsigned int LoopifyListAccess::index_of(unsigned int x,
                                          const List<unsigned int> &l) {
   return index_of_aux(x, l, 0u);
 }
 
-bool LoopifyListAccess::member(const unsigned int x,
-                               const List<unsigned int> &l) {
+bool LoopifyListAccess::member(unsigned int x, const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -103,8 +102,7 @@ bool LoopifyListAccess::member(const unsigned int x,
 }
 
 unsigned int LoopifyListAccess::lookup(
-    const unsigned int key,
-    const List<std::pair<unsigned int, unsigned int>> &l) {
+    unsigned int key, const List<std::pair<unsigned int, unsigned int>> &l) {
   unsigned int _result;
   const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
@@ -131,8 +129,7 @@ unsigned int LoopifyListAccess::lookup(
 }
 
 List<unsigned int> LoopifyListAccess::lookup_all(
-    const unsigned int key,
-    const List<std::pair<unsigned int, unsigned int>> &l) {
+    unsigned int key, const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
@@ -140,8 +137,7 @@ List<unsigned int> LoopifyListAccess::lookup_all(
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -152,7 +148,7 @@ List<unsigned int> LoopifyListAccess::lookup_all(
       if (k == key) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(v, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -164,11 +160,11 @@ List<unsigned int> LoopifyListAccess::lookup_all(
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int LoopifyListAccess::count(
-    const unsigned int x,
+    unsigned int x,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -192,7 +188,7 @@ unsigned int LoopifyListAccess::count(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -213,12 +209,11 @@ unsigned int LoopifyListAccess::count(
   return _result;
 }
 
-bool LoopifyListAccess::elem_at_eq(const unsigned int idx,
-                                   const unsigned int val,
+bool LoopifyListAccess::elem_at_eq(unsigned int idx, unsigned int val,
                                    const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_idx = idx;
+  unsigned int _loop_idx = std::move(idx);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -239,12 +234,12 @@ bool LoopifyListAccess::elem_at_eq(const unsigned int idx,
   return _result;
 }
 
-unsigned int LoopifyListAccess::nth_default(const unsigned int n,
-                                            const unsigned int default0,
+unsigned int LoopifyListAccess::nth_default(unsigned int n,
+                                            unsigned int default0,
                                             const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {

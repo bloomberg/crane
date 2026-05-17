@@ -5,9 +5,7 @@
 #include <ctime>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -811,12 +809,11 @@ public:
 
   // ACCESSORS
   Uint1 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
-      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
+    if (std::holds_alternative<UIntDecimal>(this->v())) {
+      const auto &[d_u] = std::get<UIntDecimal>(this->v());
       return Uint1(UIntDecimal{d_u.clone()});
     } else {
-      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
+      const auto &[d_u] = std::get<UIntHexadecimal>(this->v());
       return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
@@ -836,13 +833,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int n, const unsigned int m);
-  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
-                                  const unsigned int m);
-  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
+  static unsigned int tail_add(unsigned int n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, unsigned int n,
+                                  unsigned int m);
+  static unsigned int tail_mul(unsigned int n, unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };
@@ -850,9 +847,9 @@ struct Nat {
 /// ------------------------------------------------------------------
 struct ITreeEffects {
   static void greet();
-  static unsigned int roll_dice(const unsigned int sides);
+  static unsigned int roll_dice(unsigned int sides);
   static void timed_greeting();
-  static void echo_loop(const unsigned int n);
+  static void echo_loop(unsigned int n);
 };
 
 #endif // INCLUDED_ITREE_EFFECTS

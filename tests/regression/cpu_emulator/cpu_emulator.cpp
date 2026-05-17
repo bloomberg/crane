@@ -1,30 +1,27 @@
 #include "cpu_emulator.h"
 
-unsigned int CpuEmulator::get_reg(const CpuEmulator::state &s,
-                                  const unsigned int r) {
+unsigned int CpuEmulator::get_reg(const CpuEmulator::state &s, unsigned int r) {
   return ListDef::template nth<unsigned int>(r, s.ex_regs, 0u);
 }
 
 List<unsigned int> CpuEmulator::set_reg(const CpuEmulator::state &s,
-                                        const unsigned int r,
-                                        const unsigned int v) {
+                                        unsigned int r, unsigned int v) {
   return update_nth<unsigned int>(r, (16u ? v % 16u : v), s.ex_regs);
 }
 
-unsigned int CpuEmulator::pair_base(const unsigned int r) {
+unsigned int CpuEmulator::pair_base(unsigned int r) {
   return (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
 }
 
 unsigned int CpuEmulator::get_pair(const CpuEmulator::state &s,
-                                   const unsigned int r) {
+                                   unsigned int r) {
   unsigned int base = pair_base(r);
   return (((16u ? get_reg(s, base) % 16u : get_reg(s, base)) * 16u) +
           (16u ? get_reg(s, (base + 1)) % 16u : get_reg(s, (base + 1))));
 }
 
 List<unsigned int> CpuEmulator::set_pair(const CpuEmulator::state &s,
-                                         const unsigned int r,
-                                         const unsigned int v) {
+                                         unsigned int r, unsigned int v) {
   unsigned int base = pair_base(r);
   unsigned int hi = (16u ? (16u ? v / 16u : 0) % 16u : (16u ? v / 16u : 0));
   unsigned int lo = (16u ? v % 16u : v);
@@ -33,7 +30,7 @@ List<unsigned int> CpuEmulator::set_pair(const CpuEmulator::state &s,
 }
 
 List<unsigned int> CpuEmulator::push_return(const CpuEmulator::state &s,
-                                            const unsigned int ret) {
+                                            unsigned int ret) {
   return List<unsigned int>::cons((4096u ? ret % 4096u : ret), s.ex_stack)
       .firstn(2u);
 }

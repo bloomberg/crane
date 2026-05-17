@@ -1,9 +1,6 @@
 #ifndef INCLUDED_USE_AFTER_MOVE
 #define INCLUDED_USE_AFTER_MOVE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct UseAfterMove {
@@ -14,7 +11,7 @@ struct UseAfterMove {
 
     // ACCESSORS
     State clone() const {
-      return State{(*(this)).value, (*(this)).data, (*(this)).flag};
+      return State{(*this).value, (*this).data, (*this).flag};
     }
   };
 

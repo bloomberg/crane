@@ -16,7 +16,7 @@ unsigned int PathologicalRecord::nested_lets(const PathologicalRecord::Rec &r) {
 
 unsigned int
 PathologicalRecord::conditional_access(const PathologicalRecord::Rec &r,
-                                       const bool flag) {
+                                       bool flag) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;
@@ -27,7 +27,7 @@ PathologicalRecord::conditional_access(const PathologicalRecord::Rec &r,
   }
 }
 
-unsigned int PathologicalRecord::countdown(const unsigned int n,
+unsigned int PathologicalRecord::countdown(unsigned int n,
                                            const PathologicalRecord::Rec &r) {
   if (n <= 0) {
     return r.f1;
@@ -57,7 +57,7 @@ PathologicalRecord::double_match(const PathologicalRecord::Rec &r1,
 
 unsigned int
 PathologicalRecord::closure_over_fields(const PathologicalRecord::Rec &r,
-                                        const unsigned int x) {
+                                        unsigned int x) {
   unsigned int a = r.f1;
   unsigned int b = r.f2;
   unsigned int c = r.f3;

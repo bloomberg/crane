@@ -2,7 +2,6 @@
 #define INCLUDED_REUSE_FN_IN_BODY
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -81,8 +80,7 @@ struct ReuseFnInBody {
 
     // CREATORS
     static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     static mylist mynil() { return mylist(Mynil{}); }
@@ -120,7 +118,7 @@ struct ReuseFnInBody {
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rect<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -131,7 +129,7 @@ struct ReuseFnInBody {
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rec<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -155,7 +153,7 @@ struct ReuseFnInBody {
   /// This is similar to reuse_use_after_move but the scrutinee
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
-  static mylist prefix_sum(mylist l, const bool b);
+  static mylist prefix_sum(mylist l, bool b);
   static inline const unsigned int test1 = sum(prefix_sum(
       mylist::mycons(1u,
                      mylist::mycons(2u, mylist::mycons(3u, mylist::mynil()))),

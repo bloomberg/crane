@@ -2,8 +2,6 @@
 #define INCLUDED_RAM_BAD_STATE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -124,18 +122,18 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
 };
 
 struct RamBadState {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        return List<T1>::cons(x, *d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
@@ -143,7 +141,7 @@ struct RamBadState {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
       }
     }
   }
@@ -154,7 +152,7 @@ struct RamBadState {
 
     // ACCESSORS
     ram_reg clone() const {
-      return ram_reg{(*(this)).reg_main.clone(), (*(this)).reg_status.clone()};
+      return ram_reg{(*this).reg_main.clone(), (*this).reg_status.clone()};
     }
   };
 
@@ -164,7 +162,7 @@ struct RamBadState {
 
     // ACCESSORS
     ram_chip clone() const {
-      return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
+      return ram_chip{(*this).chip_regs.clone(), (*this).chip_port};
     }
   };
 
@@ -172,7 +170,7 @@ struct RamBadState {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*(this)).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
   };
 
   struct ram_sel {
@@ -183,8 +181,8 @@ struct RamBadState {
 
     // ACCESSORS
     ram_sel clone() const {
-      return ram_sel{(*(this)).sel_bank, (*(this)).sel_chip, (*(this)).sel_reg,
-                     (*(this)).sel_char};
+      return ram_sel{(*this).sel_bank, (*this).sel_chip, (*this).sel_reg,
+                     (*this).sel_char};
     }
   };
 
@@ -200,10 +198,10 @@ struct RamBadState {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).state_regs.clone(),  (*(this)).state_acc,
-                   (*(this)).state_carry,         (*(this)).state_pc,
-                   (*(this)).state_stack.clone(), (*(this)).state_ram.clone(),
-                   (*(this)).state_sel.clone(),   (*(this)).state_rom.clone()};
+      return state{(*this).state_regs.clone(),  (*this).state_acc,
+                   (*this).state_carry,         (*this).state_pc,
+                   (*this).state_stack.clone(), (*this).state_ram.clone(),
+                   (*this).state_sel.clone(),   (*this).state_rom.clone()};
     }
   };
 
@@ -261,7 +259,7 @@ struct RamBadState {
       bad_state_acc_overflow.state_acc;
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

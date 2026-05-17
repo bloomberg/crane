@@ -3,15 +3,12 @@
 
 #include <cstdlib>
 #include <filesystem>
-#include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <unistd.h>
 
 struct TempFile {
-  static std::string make_temp_file(const std::string prefix);
-  static std::string make_temp_dir(const std::string prefix);
+  static std::string make_temp_file(std::string prefix);
+  static std::string make_temp_dir(std::string prefix);
 };
 
 #endif // INCLUDED_TEMP_FILE

@@ -7,8 +7,7 @@
 /// - Both have arity 1
 /// But GoUp and GoDown are DIFFERENT constructors.
 ReuseTagMismatch::direction
-ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d,
-                             const bool flip_flag) {
+ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d, bool flip_flag) {
   if (flip_flag) {
     if (std::holds_alternative<typename ReuseTagMismatch::direction::GoUp>(
             d.v_mut())) {

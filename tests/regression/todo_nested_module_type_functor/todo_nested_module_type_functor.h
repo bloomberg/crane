@@ -2,9 +2,6 @@
 #define INCLUDED_TODO_NESTED_MODULE_TYPE_FUNCTOR
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename M>
 concept INNER = requires {

@@ -3,8 +3,6 @@
 
 #include <concepts>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -139,7 +137,7 @@ concept HasElements = requires {
 
 struct ConceptQualifyArgs {
   template <HasElements E> struct UseElements {
-    constexpr static typename E::t first_or_default(const typename E::t _x0) {
+    constexpr static typename E::t first_or_default(typename E::t _x0) {
       return E::head_or(_x0);
     }
   };
@@ -149,7 +147,7 @@ struct ConceptQualifyArgs {
     static inline const List<unsigned int> elements = List<unsigned int>::cons(
         1u, List<unsigned int>::cons(
                 2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())));
-    static unsigned int head_or(const unsigned int d);
+    static unsigned int head_or(unsigned int d);
   };
 
   using UseNatElems = UseElements<NatElems>;

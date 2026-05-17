@@ -1,18 +1,14 @@
 #ifndef INCLUDED_CURRYING
 #define INCLUDED_CURRYING
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 struct Currying {
-  static unsigned int add3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
-  static unsigned int add3_partial1(const unsigned int _x0,
-                                    const unsigned int _x1);
-  static unsigned int add3_partial2(const unsigned int _x0);
+  static unsigned int add3(unsigned int a, unsigned int b, unsigned int c);
+  static unsigned int add3_partial1(unsigned int _x0, unsigned int _x1);
+  static unsigned int add3_partial2(unsigned int _x0);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -49,8 +45,7 @@ struct Currying {
 
     // ACCESSORS
     pair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Pair0>(this->v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
     }
 
@@ -101,8 +96,7 @@ struct Currying {
   }
 
   static unsigned int pair_add(const pair<unsigned int, unsigned int> &p);
-  static unsigned int curried_add(const unsigned int _x0,
-                                  const unsigned int _x1);
+  static unsigned int curried_add(unsigned int _x0, unsigned int _x1);
   static unsigned int
   uncurried_add3(const pair<unsigned int, pair<unsigned int, unsigned int>> &p);
 
@@ -112,11 +106,10 @@ struct Currying {
     return f(a, b);
   }
 
-  static unsigned int sub(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int flipped_sub(const unsigned int _x0,
-                                  const unsigned int _x1);
-  static unsigned int add_base(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int add_ten(const unsigned int _x0);
+  static unsigned int sub(unsigned int _x0, unsigned int _x1);
+  static unsigned int flipped_sub(unsigned int _x0, unsigned int _x1);
+  static unsigned int add_base(unsigned int _x0, unsigned int _x1);
+  static unsigned int add_ten(unsigned int _x0);
   static inline const unsigned int test_add3 = add3(1u, 2u, 3u);
   static inline const unsigned int test_partial1 = add3_partial1(2u, 3u);
   static inline const unsigned int test_partial2 = add3_partial2(3u);

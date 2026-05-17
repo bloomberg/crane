@@ -2,8 +2,6 @@
 #define INCLUDED_TODO_MODUTIL_POLY_FIX
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -124,7 +122,7 @@ public:
 };
 
 struct TodoModutilPolyFix {
-  template <typename T1> static List<T1> build_nil_list(const unsigned int n) {
+  template <typename T1> static List<T1> build_nil_list(unsigned int n) {
     if (n <= 0) {
       return List<T1>::nil();
     } else {

@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTQUALIFIEDRAW
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -141,7 +140,7 @@ template <OrderedType X> struct Make {
     } else {
       const auto &[d_a0, d_a1, d_a2] =
           std::get<typename Fmap<T1>::Node>(f1.v());
-      return f0(d_a0, d_a1, *(d_a2), fmap_rect<T1, T2>(f, f0, *(d_a2)));
+      return f0(d_a0, d_a1, *d_a2, fmap_rect<T1, T2>(f, f0, *d_a2));
     }
   }
 
@@ -154,7 +153,7 @@ template <OrderedType X> struct Make {
     } else {
       const auto &[d_a0, d_a1, d_a2] =
           std::get<typename Fmap<T1>::Node>(f1.v());
-      return f0(d_a0, d_a1, *(d_a2), fmap_rec<T1, T2>(f, f0, *(d_a2)));
+      return f0(d_a0, d_a1, *d_a2, fmap_rec<T1, T2>(f, f0, *d_a2));
     }
   }
 

@@ -8,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -145,21 +144,21 @@ public:
 
 struct MatchMonadic {
   /// 1. Match on custom inductive with effects in each arm
-  static std::string color_name(const Color c);
+  static std::string color_name(Color c);
   /// 2. Match on bool inside a bind chain
-  static std::string conditional_read(const bool b);
+  static std::string conditional_read(bool b);
   /// 3. Nested match: match on result of another match
-  static std::string nested_match(const unsigned int n, const bool b);
+  static std::string nested_match(unsigned int n, bool b);
   /// 4. Match on option in monadic context
   static unsigned int handle_option(const std::optional<unsigned int> &o);
   /// 5. Recursive function matching on tree
   static unsigned int tree_sum(const Tree<unsigned int> &t);
   /// 6. Match result used in bind
-  static std::string match_then_bind(const unsigned int n);
+  static std::string match_then_bind(unsigned int n);
   /// 7. Match inside a bind continuation
   static int64_t bind_then_match();
   /// 8. Multiple matches in sequence
-  static std::string multi_match(const bool a, const bool b);
+  static std::string multi_match(bool a, bool b);
 };
 
 #endif // INCLUDED_MATCH_MONADIC

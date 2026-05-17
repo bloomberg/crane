@@ -1,20 +1,16 @@
 #ifndef INCLUDED_WRAPPER_COLLISION_POS
 #define INCLUDED_WRAPPER_COLLISION_POS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct WrapperCollisionPos {
   struct Left {
     struct Pos {
-      static unsigned int id_left(const unsigned int n);
+      static unsigned int id_left(unsigned int n);
     };
   };
 
   struct Right {
     struct Pos {
-      static unsigned int inc_right(const unsigned int n);
+      static unsigned int inc_right(unsigned int n);
     };
   };
 

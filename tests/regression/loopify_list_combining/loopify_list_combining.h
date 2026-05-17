@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_LIST_COMBINING
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -126,7 +124,7 @@ public:
 struct LoopifyListCombining {
   static List<unsigned int> append(const List<unsigned int> &a,
                                    List<unsigned int> b);
-  static List<unsigned int> intersperse(const unsigned int sep,
+  static List<unsigned int> intersperse(unsigned int sep,
                                         const List<unsigned int> &l);
   static List<unsigned int> intercalate(const List<unsigned int> &sep,
                                         const List<List<unsigned int>> &ll);
@@ -134,7 +132,7 @@ struct LoopifyListCombining {
   static List<unsigned int> mapcat(const List<unsigned int> &l);
   static List<unsigned int> interleave_two(List<unsigned int> l1,
                                            List<unsigned int> l2);
-  static List<unsigned int> concat_sep(const unsigned int sep,
+  static List<unsigned int> concat_sep(unsigned int sep,
                                        const List<List<unsigned int>> &ll);
 };
 

@@ -1,8 +1,6 @@
 #ifndef INCLUDED_INDUCTIVE_IN_MODULE
 #define INCLUDED_INDUCTIVE_IN_MODULE
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -11,8 +9,7 @@ struct InductiveInModule {
   struct Inner {
     enum class Color { e_RED, e_GREEN, e_BLUE };
 
-    template <typename T1>
-    static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
+    template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;
@@ -28,8 +25,7 @@ struct InductiveInModule {
       }
     }
 
-    template <typename T1>
-    static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
+    template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;
@@ -46,7 +42,7 @@ struct InductiveInModule {
     }
 
     static inline const Color default_color = Color::e_RED;
-    static unsigned int color_to_nat(const Color c);
+    static unsigned int color_to_nat(Color c);
   };
 
   static inline const unsigned int test_color =
@@ -93,11 +89,10 @@ struct InductiveInModule {
 
         // ACCESSORS
         option<t_A> clone() const {
-          auto &&_sv = *(this);
-          if (std::holds_alternative<None>(_sv.v())) {
+          if (std::holds_alternative<None>(this->v())) {
             return option<t_A>(None{});
           } else {
-            const auto &[d_a0] = std::get<Some>(_sv.v());
+            const auto &[d_a0] = std::get<Some>(this->v());
             return option<t_A>(Some{d_a0});
           }
         }

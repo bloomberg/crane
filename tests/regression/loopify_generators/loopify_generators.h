@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_GENERATORS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -128,49 +127,47 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
 /// Consolidated list generator functions.
 struct LoopifyGenerators {
   /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
-  static List<unsigned int> cycle(const unsigned int n,
-                                  const List<unsigned int> &l);
+  static List<unsigned int> cycle(unsigned int n, const List<unsigned int> &l);
 
   /// iterate f n x applies f repeatedly n times: iterate (+1) 3 5 -> 5,6,7.
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static List<unsigned int> iterate(F0 &&f, const unsigned int n,
-                                    const unsigned int x) {
+  static List<unsigned int> iterate(F0 &&f, unsigned int n, unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = x;
-    unsigned int _loop_n = n;
+    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         unsigned int m = _loop_n - 1;
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(_loop_x, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -179,7 +176,7 @@ struct LoopifyGenerators {
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// zip_with f l1 l2 zips with a combining function.
@@ -195,7 +192,7 @@ struct LoopifyGenerators {
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l1->v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
@@ -203,7 +200,7 @@ struct LoopifyGenerators {
             std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2->v())) {
-          *(_write) =
+          *_write =
               std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
           break;
         } else {
@@ -211,7 +208,7 @@ struct LoopifyGenerators {
               std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(f(d_a0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -221,48 +218,45 @@ struct LoopifyGenerators {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// zip_longest l1 l2 default zips, using default for missing elements.
   static List<std::pair<unsigned int, unsigned int>>
   zip_longest_aux(const List<unsigned int> &l1, const List<unsigned int> &l2,
-                  const unsigned int default0, const unsigned int fuel);
+                  unsigned int default0, unsigned int fuel);
   static unsigned int len_impl(const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   zip_longest(const List<unsigned int> &l1, const List<unsigned int> &l2,
-              const unsigned int default0);
+              unsigned int default0);
   /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
-  static List<unsigned int> build_list_fuel(const unsigned int fuel,
-                                            const unsigned int n);
-  static List<unsigned int> build_list(const unsigned int n);
+  static List<unsigned int> build_list_fuel(unsigned int fuel, unsigned int n);
+  static List<unsigned int> build_list(unsigned int n);
   /// take n l returns first n elements.
-  static List<unsigned int> take(const unsigned int n,
-                                 const List<unsigned int> &l);
+  static List<unsigned int> take(unsigned int n, const List<unsigned int> &l);
   /// repeat x n creates list with n copies of x.
-  static List<unsigned int> repeat(const unsigned int x, const unsigned int n);
+  static List<unsigned int> repeat(unsigned int x, unsigned int n);
 
   /// unfold f n init unfolds a list from seed value.
   template <typename F1>
     requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F1 &,
                                    unsigned int &>
-  static List<unsigned int> unfold_fuel(const unsigned int fuel, F1 &&f,
-                                        const unsigned int n,
-                                        const unsigned int seed) {
+  static List<unsigned int> unfold_fuel(unsigned int fuel, F1 &&f,
+                                        unsigned int n, unsigned int seed) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_seed = seed;
-    unsigned int _loop_n = n;
-    unsigned int _loop_fuel = fuel;
+    unsigned int _loop_seed = std::move(seed);
+    unsigned int _loop_n = std::move(n);
+    unsigned int _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         unsigned int g = _loop_fuel - 1;
         if (_loop_n == 0u) {
-          *(_write) =
+          *_write =
               std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
           break;
         } else {
@@ -271,7 +265,7 @@ struct LoopifyGenerators {
           const unsigned int &next_seed = _cs.second;
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(val, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -282,14 +276,13 @@ struct LoopifyGenerators {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
                                    unsigned int &>
-  static List<unsigned int> unfold(F0 &&f, const unsigned int n,
-                                   const unsigned int seed) {
+  static List<unsigned int> unfold(F0 &&f, unsigned int n, unsigned int seed) {
     return unfold_fuel(100u, f, n, seed);
   }
 
@@ -297,9 +290,8 @@ struct LoopifyGenerators {
   /// different naming).
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
-    auto go_impl = [&](auto &_self_go,
-                       const unsigned int i) -> List<unsigned int> {
+  static List<unsigned int> tabulate(unsigned int n, F1 &&f) {
+    auto go_impl = [&](auto &_self_go, unsigned int i) -> List<unsigned int> {
       if (i <= 0) {
         return List<unsigned int>::nil();
       } else {
@@ -308,18 +300,17 @@ struct LoopifyGenerators {
                                         _self_go(_self_go, j));
       }
     };
-    auto go = [&](const unsigned int i) -> List<unsigned int> {
+    auto go = [&](unsigned int i) -> List<unsigned int> {
       return go_impl(go_impl, i);
     };
     return go(n);
   }
 
   /// Helper: replicate single element n times.
-  static List<unsigned int> replicate_single(const unsigned int x,
-                                             const unsigned int n);
+  static List<unsigned int> replicate_single(unsigned int x, unsigned int n);
   /// replicate_each n l replicates each element n times: replicate_each 2 1,2
   /// -> 1,1,2,2.
-  static List<unsigned int> replicate_each(const unsigned int n,
+  static List<unsigned int> replicate_each(unsigned int n,
                                            const List<unsigned int> &l);
 };
 

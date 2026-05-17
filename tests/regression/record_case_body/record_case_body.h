@@ -2,7 +2,6 @@
 #define INCLUDED_RECORD_CASE_BODY
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,17 +14,17 @@ struct RecordCaseBody {
     unsigned int f3;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3}; }
+    Rec clone() const { return Rec{(*this).f1, (*this).f2, (*this).f3}; }
   };
 
   static unsigned int case_in_body(const Rec &r);
-  static unsigned int helper(const unsigned int n);
+  static unsigned int helper(unsigned int n);
   static unsigned int fix_in_body(const Rec &r);
   static unsigned int let_in_body(const Rec &r);
   static unsigned int apply_nonfld(const Rec &r);
-  static unsigned int conditional_body(const Rec &r, const bool flag);
-  static unsigned int outer_ref(const unsigned int x, const Rec &r);
-  static unsigned int lambda_body(const Rec &r, const unsigned int n);
+  static unsigned int conditional_body(const Rec &r, bool flag);
+  static unsigned int outer_ref(unsigned int x, const Rec &r);
+  static unsigned int lambda_body(const Rec &r, unsigned int n);
 
   struct RecRec {
     Rec inner;
@@ -33,7 +32,7 @@ struct RecordCaseBody {
 
     // ACCESSORS
     RecRec clone() const {
-      return RecRec{(*(this)).inner.clone(), (*(this)).outer_field};
+      return RecRec{(*this).inner.clone(), (*this).outer_field};
     }
   };
 
@@ -166,7 +165,7 @@ struct RecordCaseBody {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, list_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -177,7 +176,7 @@ struct RecordCaseBody {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, list_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 

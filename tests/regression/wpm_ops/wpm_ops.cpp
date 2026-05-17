@@ -16,7 +16,7 @@ bool WpmOps::nat_list_eqb(const List<unsigned int> &xs,
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename List<unsigned int>::Cons>(ys.v());
-      return (d_a0 == d_a00 && nat_list_eqb(*(d_a1), *(d_a10)));
+      return (d_a0 == d_a00 && nat_list_eqb(*d_a1, *d_a10));
     }
   }
 }

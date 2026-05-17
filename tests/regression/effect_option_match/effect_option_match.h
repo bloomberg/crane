@@ -6,7 +6,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -130,14 +129,13 @@ public:
 
 struct EffectOptionMatch {
   /// 1. get_env returns option, match immediately
-  static std::string show_or_default(const std::string name,
-                                     const std::string default0);
+  static std::string show_or_default(std::string name, std::string default0);
   /// 2. get_env with effect in one branch
-  static std::string show_or_ask(const std::string name);
+  static std::string show_or_ask(std::string name);
   /// 3. Multiple option matches in sequence
   static std::string get_first_set(const List<std::string> &names);
   /// 4. set then get, match on result
-  static bool set_and_verify(const std::string name, const std::string value);
+  static bool set_and_verify(std::string name, std::string value);
   /// 5. Recursive function with option matching
   static std::optional<std::string>
   find_env_value(const List<std::string> &names);

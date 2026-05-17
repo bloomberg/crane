@@ -128,22 +128,20 @@ public:
   const variant_t &v() const { return d_v_; }
 
   List<t_A> rev() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -161,17 +159,16 @@ struct ToString {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<std::string, F0 &, T1 &>
-  static std::string intersperse(F0 &&p, const std::string sep,
-                                 const List<T1> &l) {
+  static std::string intersperse(F0 &&p, std::string sep, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
         return sep + p(d_a0);
       } else {
-        return sep + p(d_a0) + intersperse<T1>(p, sep, *(d_a1));
+        return sep + p(d_a0) + intersperse<T1>(p, sep, *d_a1);
       }
     }
   }
@@ -183,11 +180,11 @@ struct ToString {
       return "[]";
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
         return "["s + p(d_a0) + "]"s;
       } else {
-        return "["s + p(d_a0) + intersperse<T1>(p, "; ", *(d_a1)) + "]"s;
+        return "["s + p(d_a0) + intersperse<T1>(p, "; ", *d_a1) + "]"s;
       }
     }
   }
@@ -196,13 +193,13 @@ struct ToString {
 struct Tokenizer {
   static std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>>
-  next_token(const std::basic_string_view<char> input,
-             const std::basic_string_view<char> soft,
-             const std::basic_string_view<char> hard);
+  next_token(std::basic_string_view<char> input,
+             std::basic_string_view<char> soft,
+             std::basic_string_view<char> hard);
   static List<std::basic_string_view<char>>
-  list_tokens(const std::basic_string_view<char> input,
-              const std::basic_string_view<char> soft,
-              const std::basic_string_view<char> hard);
+  list_tokens(std::basic_string_view<char> input,
+              std::basic_string_view<char> soft,
+              std::basic_string_view<char> hard);
 
   template <typename T1>
   static std::vector<T1> list_to_vec_h(const List<T1> &l) {
@@ -210,7 +207,7 @@ struct Tokenizer {
       return {};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      std::vector<T1> v = list_to_vec_h<T1>(*(d_a1));
+      std::vector<T1> v = list_to_vec_h<T1>(*d_a1);
       v.push_back(d_a0);
       return v;
     }
@@ -227,7 +224,7 @@ struct Tokenizer {
       return {};
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, *(d_a1));
+      std::vector<T2> v = list_to_vec_map_h<T1, T2>(f, *d_a1);
       v.push_back(f(d_a0));
       return v;
     }

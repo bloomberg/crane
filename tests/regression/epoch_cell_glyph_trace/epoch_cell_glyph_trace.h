@@ -2,7 +2,6 @@
 #define INCLUDED_EPOCH_CELL_GLYPH_TRACE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -293,14 +292,13 @@ public:
 
   // ACCESSORS
   Z clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Z0>(_sv.v())) {
+    if (std::holds_alternative<Z0>(this->v())) {
       return Z(Z0{});
-    } else if (std::holds_alternative<Zpos>(_sv.v())) {
-      const auto &[d_a0] = std::get<Zpos>(_sv.v());
+    } else if (std::holds_alternative<Zpos>(this->v())) {
+      const auto &[d_a0] = std::get<Zpos>(this->v());
       return Z(Zpos{d_a0.clone()});
     } else {
-      const auto &[d_a0] = std::get<Zneg>(_sv.v());
+      const auto &[d_a0] = std::get<Zneg>(this->v());
       return Z(Zneg{d_a0.clone()});
     }
   }
@@ -325,7 +323,7 @@ struct Pos {
   static Positive add_carry(const Positive &x, const Positive &y);
   static Positive pred_double(const Positive &x);
   static Positive mul(const Positive &x, Positive y);
-  static Comparison compare_cont(const Comparison r, const Positive &x,
+  static Comparison compare_cont(Comparison r, const Positive &x,
                                  const Positive &y);
   static Comparison compare(const Positive &_x0, const Positive &_x1);
   static bool eqb(const Positive &p, const Positive &q);
@@ -335,10 +333,10 @@ struct Pos {
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
-      return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));
+      return op(a, iter_op<T1>(op, *d_a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
-      return iter_op<T1>(op, *(d_a0), op(a, a));
+      return iter_op<T1>(op, *d_a0, op(a, a));
     } else {
       return a;
     }
@@ -373,7 +371,7 @@ struct Q {
   Positive Qden;
 
   // ACCESSORS
-  Q clone() const { return Q{(*(this)).Qnum.clone(), (*(this)).Qden.clone()}; }
+  Q clone() const { return Q{(*this).Qnum.clone(), (*this).Qden.clone()}; }
 };
 
 struct QArith_base {
@@ -381,7 +379,7 @@ struct QArith_base {
 };
 
 struct Datatypes {
-  static Comparison CompOpp(const Comparison r);
+  static Comparison CompOpp(Comparison r);
 };
 
 struct EpochCellGlyphTraceCase {
@@ -393,7 +391,7 @@ struct EpochCellGlyphTraceCase {
   };
 
   template <typename T1>
-  static T1 LunarPhase_rect(T1 f, T1 f0, T1 f1, T1 f2, const LunarPhase l) {
+  static T1 LunarPhase_rect(T1 f, T1 f0, T1 f1, T1 f2, LunarPhase l) {
     switch (l) {
     case LunarPhase::e_NEWMOON: {
       return f;
@@ -413,7 +411,7 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 LunarPhase_rec(T1 f, T1 f0, T1 f1, T1 f2, const LunarPhase l) {
+  static T1 LunarPhase_rec(T1 f, T1 f0, T1 f1, T1 f2, LunarPhase l) {
     switch (l) {
     case LunarPhase::e_NEWMOON: {
       return f;
@@ -432,7 +430,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int phase_code(const LunarPhase p);
+  static unsigned int phase_code(LunarPhase p);
   static LunarPhase phase_from_angle(const Z &angle_deg);
   enum class ZodiacSign {
     e_ARIES,
@@ -451,8 +449,7 @@ struct EpochCellGlyphTraceCase {
 
   template <typename T1>
   static T1 ZodiacSign_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
-                            T1 f6, T1 f7, T1 f8, T1 f9, T1 f10,
-                            const ZodiacSign z) {
+                            T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, ZodiacSign z) {
     switch (z) {
     case ZodiacSign::e_ARIES: {
       return f;
@@ -497,8 +494,7 @@ struct EpochCellGlyphTraceCase {
 
   template <typename T1>
   static T1 ZodiacSign_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
-                           T1 f6, T1 f7, T1 f8, T1 f9, T1 f10,
-                           const ZodiacSign z) {
+                           T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, ZodiacSign z) {
     switch (z) {
     case ZodiacSign::e_ARIES: {
       return f;
@@ -541,7 +537,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int zodiac_code(const ZodiacSign z);
+  static unsigned int zodiac_code(ZodiacSign z);
   static bool eclipse_possible_at_dial(const Z &dial_pos);
 
   struct MechanismState {
@@ -556,10 +552,10 @@ struct EpochCellGlyphTraceCase {
     // ACCESSORS
     MechanismState clone() const {
       return MechanismState{
-          (*(this)).crank_position.clone(), (*(this)).metonic_dial.clone(),
-          (*(this)).saros_dial.clone(),     (*(this)).callippic_dial.clone(),
-          (*(this)).exeligmos_dial.clone(), (*(this)).games_dial.clone(),
-          (*(this)).zodiac_position.clone()};
+          (*this).crank_position.clone(), (*this).metonic_dial.clone(),
+          (*this).saros_dial.clone(),     (*this).callippic_dial.clone(),
+          (*this).exeligmos_dial.clone(), (*this).games_dial.clone(),
+          (*this).zodiac_position.clone()};
     }
   };
 
@@ -582,7 +578,7 @@ struct EpochCellGlyphTraceCase {
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static MechanismState step(const MechanismState &s);
   static MechanismState step_reverse(const MechanismState &s);
-  static MechanismState step_n(const unsigned int n, MechanismState s);
+  static MechanismState step_n(unsigned int n, MechanismState s);
   static MechanismState state_at_cell(Z cell);
   static LunarPhase predict_moon_phase_from_state(const MechanismState &s);
   static Z predict_olympiad_year(const MechanismState &s);
@@ -597,7 +593,7 @@ struct EpochCellGlyphTraceCase {
 
   template <typename T1>
   static T1 EclipseCategory_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                                 const EclipseCategory e) {
+                                 EclipseCategory e) {
     switch (e) {
     case EclipseCategory::e_EC_TOTALLUNAR: {
       return f;
@@ -621,7 +617,7 @@ struct EpochCellGlyphTraceCase {
 
   template <typename T1>
   static T1 EclipseCategory_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                                const EclipseCategory e) {
+                                EclipseCategory e) {
     switch (e) {
     case EclipseCategory::e_EC_TOTALLUNAR: {
       return f;
@@ -643,7 +639,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int eclipse_category_code(const EclipseCategory c);
+  static unsigned int eclipse_category_code(EclipseCategory c);
 
   struct HistoricalEclipse {
     Z he_year;
@@ -657,14 +653,11 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     HistoricalEclipse clone() const {
-      return HistoricalEclipse{(*(this)).he_year.clone(),
-                               (*(this)).he_month.clone(),
-                               (*(this)).he_day.clone(),
-                               (*(this)).he_category,
-                               (*(this)).he_saros_series.clone(),
-                               (*(this)).he_saros_member.clone(),
-                               (*(this)).he_magnitude.clone(),
-                               (*(this)).he_visible_mediterranean};
+      return HistoricalEclipse{
+          (*this).he_year.clone(),         (*this).he_month.clone(),
+          (*this).he_day.clone(),          (*this).he_category,
+          (*this).he_saros_series.clone(), (*this).he_saros_member.clone(),
+          (*this).he_magnitude.clone(),    (*this).he_visible_mediterranean};
     }
   };
   enum class DialGlyph {
@@ -676,8 +669,7 @@ struct EpochCellGlyphTraceCase {
   };
 
   template <typename T1>
-  static T1 DialGlyph_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                           const DialGlyph d) {
+  static T1 DialGlyph_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, DialGlyph d) {
     switch (d) {
     case DialGlyph::e_GLYPH_SIGMA: {
       return f;
@@ -700,7 +692,7 @@ struct EpochCellGlyphTraceCase {
   }
 
   template <typename T1>
-  static T1 DialGlyph_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, const DialGlyph d) {
+  static T1 DialGlyph_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, DialGlyph d) {
     switch (d) {
     case DialGlyph::e_GLYPH_SIGMA: {
       return f;
@@ -722,9 +714,8 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int glyph_code(const DialGlyph g);
-  static bool category_matches_glyph(const EclipseCategory cat,
-                                     const DialGlyph g);
+  static unsigned int glyph_code(DialGlyph g);
+  static bool category_matches_glyph(EclipseCategory cat, DialGlyph g);
   static DialGlyph glyph_at_cell(const Z &cell);
   static inline const HistoricalEclipse eclipse_may_205_bc = HistoricalEclipse{
       Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
@@ -852,9 +843,9 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     EpochReading clone() const {
-      return EpochReading{
-          (*(this)).reading_state.clone(), (*(this)).reading_eclipse.clone(),
-          (*(this)).reading_cell.clone(), (*(this)).reading_glyph};
+      return EpochReading{(*this).reading_state.clone(),
+                          (*this).reading_eclipse.clone(),
+                          (*this).reading_cell.clone(), (*this).reading_glyph};
     }
   };
 
@@ -872,8 +863,8 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     ValidEpoch clone() const {
-      return ValidEpoch{(*(this)).ve_year.clone(), (*(this)).ve_month.clone(),
-                        (*(this)).ve_eclipse.clone()};
+      return ValidEpoch{(*this).ve_year.clone(), (*this).ve_month.clone(),
+                        (*this).ve_eclipse.clone()};
     }
   };
 
@@ -884,8 +875,8 @@ struct EpochCellGlyphTraceCase {
   static inline const EpochReading sample_epoch_reading = build_epoch_reading(
       epoch_205_bc_valid.ve_year, epoch_205_bc_valid.ve_month,
       epoch_205_bc_valid.ve_eclipse);
-  static unsigned int phase_code_after_steps(const unsigned int n);
-  static unsigned int zodiac_code_after_steps(const unsigned int n);
+  static unsigned int phase_code_after_steps(unsigned int n);
+  static unsigned int zodiac_code_after_steps(unsigned int n);
   static inline const unsigned int sample_total_lunar_count =
       count_total_lunar(eclipse_database);
   static inline const unsigned int sample_total_lunar_visible_count =

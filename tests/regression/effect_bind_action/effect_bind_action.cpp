@@ -1,7 +1,7 @@
 #include "effect_bind_action.h"
 
 /// 1. Bool match inside bind action: one branch block template
-std::string EffectBindAction::conditional_read(const bool use_stdin) {
+std::string EffectBindAction::conditional_read(bool use_stdin) {
   return [=]() mutable -> std::string {
     if (use_stdin) {
       return []() -> std::string {
@@ -16,7 +16,7 @@ std::string EffectBindAction::conditional_read(const bool use_stdin) {
 }
 
 /// 2. Bool match where both branches are effects
-int64_t EffectBindAction::conditional_effect(const bool flag) {
+int64_t EffectBindAction::conditional_effect(bool flag) {
   return (flag ? static_cast<int64_t>(
                      std::chrono::duration_cast<std::chrono::milliseconds>(
                          std::chrono::steady_clock::now().time_since_epoch())
@@ -25,8 +25,8 @@ int64_t EffectBindAction::conditional_effect(const bool flag) {
 }
 
 /// 3. Option match inside bind: conditional effect based on env
-std::string EffectBindAction::maybe_override(const std::string name,
-                                             const std::string default0) {
+std::string EffectBindAction::maybe_override(std::string name,
+                                             std::string default0) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -42,8 +42,7 @@ std::string EffectBindAction::maybe_override(const std::string name,
 }
 
 /// 4. Nested: effect result used in another conditional effect
-std::pair<int64_t, int64_t>
-EffectBindAction::timed_if_needed(const bool measure) {
+std::pair<int64_t, int64_t> EffectBindAction::timed_if_needed(bool measure) {
   int64_t t1 =
       (measure ? static_cast<int64_t>(
                      std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -60,7 +59,7 @@ EffectBindAction::timed_if_needed(const bool measure) {
 }
 
 /// 5. Block template get_line, then conditional print
-std::string EffectBindAction::echo_if(const bool flag) {
+std::string EffectBindAction::echo_if(bool flag) {
   std::string line;
   std::getline(std::cin, line);
   [&]() -> void {
@@ -75,12 +74,12 @@ std::string EffectBindAction::echo_if(const bool flag) {
 }
 
 /// 6. Effect action that's a function application (not inlined)
-std::string EffectBindAction::helper(const std::string s) {
+std::string EffectBindAction::helper(std::string s) {
   std::cout << s << '\n';
   return s;
 }
 
-std::string EffectBindAction::use_helper(const bool flag) {
+std::string EffectBindAction::use_helper(bool flag) {
   return [=]() mutable -> std::string {
     if (flag) {
       return helper("yes");
@@ -91,7 +90,7 @@ std::string EffectBindAction::use_helper(const bool flag) {
 }
 
 /// 7. Let-binding of a match result, then use in effect
-std::string EffectBindAction::let_match_then_effect(const unsigned int n) {
+std::string EffectBindAction::let_match_then_effect(unsigned int n) {
   std::string msg;
   if (n <= 0) {
     msg = "zero";
@@ -104,7 +103,7 @@ std::string EffectBindAction::let_match_then_effect(const unsigned int n) {
 }
 
 /// 8. Discard result of conditional effect
-unsigned int EffectBindAction::discard_conditional(const bool flag) {
+unsigned int EffectBindAction::discard_conditional(bool flag) {
   [&]() -> void {
     if (flag) {
       std::cout << "flagged"s << '\n';

@@ -1,10 +1,6 @@
 #ifndef INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH
 #define INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct std_ {
   /// Standard extraction includes C++ standard library headers and emits
   /// references to namespace std.  If the extracted Rocq module is named std,

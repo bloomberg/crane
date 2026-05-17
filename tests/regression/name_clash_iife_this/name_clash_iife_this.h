@@ -1,8 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_IIFE_THIS
 #define INCLUDED_NAME_CLASH_IIFE_THIS
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -10,8 +8,7 @@
 struct NameClashIifeThis {
   enum class Color { e_RED, e_GREEN, e_BLUE };
 
-  template <typename T1>
-  static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -27,8 +24,7 @@ struct NameClashIifeThis {
     }
   }
 
-  template <typename T1>
-  static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -85,23 +81,20 @@ struct NameClashIifeThis {
 
     // ACCESSORS
     shape clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<Circle>(_sv.v());
+      if (std::holds_alternative<Circle>(this->v())) {
+        const auto &[d_a0] = std::get<Circle>(this->v());
         return shape(Circle{d_a0});
       } else {
-        const auto &[d_a0, d_a1] = std::get<Square>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<Square>(this->v());
         return shape(Square{d_a0, d_a1});
       }
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) {
-      return shape(Circle{std::move(a0)});
-    }
+    static shape circle(unsigned int a0) { return shape(Circle{a0}); }
 
     static shape square(unsigned int a0, unsigned int a1) {
-      return shape(Square{std::move(a0), std::move(a1)});
+      return shape(Square{a0, a1});
     }
 
     // MANIPULATORS
@@ -110,10 +103,9 @@ struct NameClashIifeThis {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int nested_match(const Color c) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
+    unsigned int nested_match(Color c) const {
+      if (std::holds_alternative<typename shape::Circle>(this->v())) {
+        const auto &[d_a0] = std::get<typename shape::Circle>(this->v());
         switch (c) {
         case Color::e_RED: {
           return (d_a0 + 10u);
@@ -128,7 +120,7 @@ struct NameClashIifeThis {
           std::unreachable();
         }
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(this->v());
         switch (c) {
         case Color::e_RED: {
           return (d_a0 * d_a1);
@@ -145,7 +137,7 @@ struct NameClashIifeThis {
       }
     }
 
-    unsigned int describe(const Color c) const {
+    unsigned int describe(Color c) const {
       unsigned int color_val = [&]() {
         switch (c) {
         case Color::e_RED: {
@@ -162,12 +154,12 @@ struct NameClashIifeThis {
         }
       }();
       unsigned int shape_val = [&]() {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-          const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
+        if (std::holds_alternative<typename shape::Circle>(this->v())) {
+          const auto &[d_a0] = std::get<typename shape::Circle>(this->v());
           return d_a0;
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
+          const auto &[d_a0, d_a1] =
+              std::get<typename shape::Square>(this->v());
           return (d_a0 + d_a1);
         }
       }();
@@ -178,12 +170,11 @@ struct NameClashIifeThis {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
     T1 shape_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
+      if (std::holds_alternative<typename shape::Circle>(this->v())) {
+        const auto &[d_a0] = std::get<typename shape::Circle>(this->v());
         return f(d_a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(this->v());
         return f0(d_a0, d_a1);
       }
     }
@@ -192,18 +183,17 @@ struct NameClashIifeThis {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
     T1 shape_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
+      if (std::holds_alternative<typename shape::Circle>(this->v())) {
+        const auto &[d_a0] = std::get<typename shape::Circle>(this->v());
         return f(d_a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(this->v());
         return f0(d_a0, d_a1);
       }
     }
   };
 
-  static unsigned int match_of_match(const Color c, const shape &s);
+  static unsigned int match_of_match(Color c, const shape &s);
 
   struct wrapper {
     // TYPES
@@ -244,9 +234,8 @@ struct NameClashIifeThis {
 
     // ACCESSORS
     wrapper clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Wrap>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Wrap>(_sv.v());
+      if (std::holds_alternative<Wrap>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<Wrap>(this->v());
         return wrapper(Wrap{d_a0, d_a1.clone()});
       } else {
         return wrapper(Empty{});
@@ -255,7 +244,7 @@ struct NameClashIifeThis {
 
     // CREATORS
     static wrapper wrap(Color a0, shape a1) {
-      return wrapper(Wrap{std::move(a0), std::move(a1)});
+      return wrapper(Wrap{a0, std::move(a1)});
     }
 
     static wrapper empty() { return wrapper(Empty{}); }
@@ -267,9 +256,8 @@ struct NameClashIifeThis {
     const variant_t &v() const { return d_v_; }
 
     unsigned int triple_nest() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename wrapper::Wrap>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(_sv.v());
+      if (std::holds_alternative<typename wrapper::Wrap>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(this->v());
         if (std::holds_alternative<typename shape::Circle>(d_a1.v())) {
           const auto &[d_a00] = std::get<typename shape::Circle>(d_a1.v());
           switch (d_a0) {

@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <stm_adapter.h>
 #include <type_traits>
 #include <utility>
@@ -127,12 +126,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -140,13 +138,13 @@ public:
 struct STMDefs {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, T1 &>
-  static void modifyTVar(const stm::TVar<T1> a, F1 &&f);
+  static void modifyTVar(stm::TVar<T1> a, F1 &&f);
 };
 
 struct stmtest {
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<bool, F1 &, T1 &>
-  static T1 readOrRetry(const stm::TVar<T1> tv, F1 &&ok) {
+  static T1 readOrRetry(stm::TVar<T1> tv, F1 &&ok) {
     T1 x = stm::readTVar(tv);
     if (ok(x)) {
       return x;
@@ -155,26 +153,25 @@ struct stmtest {
     }
   }
 
-  static unsigned int stm_basic_counter(const std::monostate _x);
+  static unsigned int stm_basic_counter(std::monostate _x);
   static unsigned int io_basic_counter();
-  static unsigned int stm_inc(const unsigned int x);
-  static unsigned int io_inc(const unsigned int x);
-  static unsigned int stm_add_self(const unsigned int x);
-  static unsigned int io_add_self(const unsigned int x);
-  static void stm_enqueue(const stm::TVar<List<unsigned int>> q,
-                          const unsigned int x);
-  static unsigned int stm_dequeue(const stm::TVar<List<unsigned int>> q);
-  static unsigned int stm_tryDequeue(const stm::TVar<List<unsigned int>> q,
-                                     const unsigned int dflt);
-  static unsigned int stm_queue_roundtrip(const unsigned int x);
-  static unsigned int io_queue_roundtrip(const unsigned int x);
-  static unsigned int stm_orElse_retry_example(const std::monostate _x);
+  static unsigned int stm_inc(unsigned int x);
+  static unsigned int io_inc(unsigned int x);
+  static unsigned int stm_add_self(unsigned int x);
+  static unsigned int io_add_self(unsigned int x);
+  static void stm_enqueue(stm::TVar<List<unsigned int>> q, unsigned int x);
+  static unsigned int stm_dequeue(stm::TVar<List<unsigned int>> q);
+  static unsigned int stm_tryDequeue(stm::TVar<List<unsigned int>> q,
+                                     unsigned int dflt);
+  static unsigned int stm_queue_roundtrip(unsigned int x);
+  static unsigned int io_queue_roundtrip(unsigned int x);
+  static unsigned int stm_orElse_retry_example(std::monostate _x);
   static unsigned int io_orElse_retry_example();
 };
 
 template <typename T1, typename F1>
   requires std::is_invocable_r_v<T1, F1 &, T1 &>
-void STMDefs::modifyTVar(const stm::TVar<T1> a, F1 &&f) {
+void STMDefs::modifyTVar(stm::TVar<T1> a, F1 &&f) {
   T1 val = stm::readTVar(a);
   stm::writeTVar(a, f(val));
   return;

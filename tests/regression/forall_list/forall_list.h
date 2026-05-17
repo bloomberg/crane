@@ -2,8 +2,6 @@
 #define INCLUDED_FORALL_LIST
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,25 +121,24 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct ForallList {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        return List<T1>::cons(x, *d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
@@ -149,7 +146,7 @@ struct ForallList {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
       }
     }
   }

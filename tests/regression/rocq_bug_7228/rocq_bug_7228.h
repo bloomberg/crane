@@ -3,8 +3,6 @@
 
 #include <any>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -144,8 +142,7 @@ struct RocqBug7228 {
 
     // ACCESSORS
     data clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_t] = std::get<Data0>(_sv.v());
+      const auto &[d_t] = std::get<Data0>(this->v());
       return data(Data0{d_t});
     }
 

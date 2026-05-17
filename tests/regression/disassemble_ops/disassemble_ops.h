@@ -123,18 +123,17 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
 };
 
 struct DisassembleOps {
@@ -187,16 +186,15 @@ struct DisassembleOps {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP>(_sv.v())) {
+      if (std::holds_alternative<NOP>(this->v())) {
         return instruction(NOP{});
-      } else if (std::holds_alternative<NOP2>(_sv.v())) {
+      } else if (std::holds_alternative<NOP2>(this->v())) {
         return instruction(NOP2{});
-      } else if (std::holds_alternative<LDM>(_sv.v())) {
-        const auto &[d_a0] = std::get<LDM>(_sv.v());
+      } else if (std::holds_alternative<LDM>(this->v())) {
+        const auto &[d_a0] = std::get<LDM>(this->v());
         return instruction(LDM{d_a0});
       } else {
-        const auto &[d_a0] = std::get<LDM2>(_sv.v());
+        const auto &[d_a0] = std::get<LDM2>(this->v());
         return instruction(LDM2{d_a0});
       }
     }
@@ -206,13 +204,9 @@ struct DisassembleOps {
 
     static instruction nop2() { return instruction(NOP2{}); }
 
-    static instruction ldm(unsigned int a0) {
-      return instruction(LDM{std::move(a0)});
-    }
+    static instruction ldm(unsigned int a0) { return instruction(LDM{a0}); }
 
-    static instruction ldm2(unsigned int a0) {
-      return instruction(LDM2{std::move(a0)});
-    }
+    static instruction ldm2(unsigned int a0) { return instruction(LDM2{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -257,10 +251,10 @@ struct DisassembleOps {
     }
   }
 
-  static instruction decode1(const unsigned int b1, const unsigned int b2);
-  static List<unsigned int> drop_(const unsigned int n, List<unsigned int> l);
+  static instruction decode1(unsigned int b1, unsigned int b2);
+  static List<unsigned int> drop_(unsigned int n, List<unsigned int> l);
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble1(const List<unsigned int> &rom0, const unsigned int addr);
+  disassemble1(const List<unsigned int> &rom0, unsigned int addr);
   static inline const unsigned int test_disassemble_drop_window =
       []() -> unsigned int {
     auto _cs = disassemble1(
@@ -280,10 +274,9 @@ struct DisassembleOps {
       return 0u;
     }
   }();
-  static instruction decode2(const unsigned int b1, const unsigned int b2);
+  static instruction decode2(unsigned int b1, unsigned int b2);
 
-  template <typename T1>
-  static List<T1> drop(const unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> drop(unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -292,13 +285,13 @@ struct DisassembleOps {
         return List<T1>::nil();
       } else {
         auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v_mut());
-        return drop<T1>(n_, *(d_a1));
+        return drop<T1>(n_, *d_a1);
       }
     }
   }
 
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble2(const List<unsigned int> &rom0, const unsigned int addr);
+  disassemble2(const List<unsigned int> &rom0, unsigned int addr);
   static inline const unsigned int test_disassemble_next_address =
       []() -> unsigned int {
     auto _cs = disassemble2(
@@ -317,9 +310,9 @@ struct DisassembleOps {
       return 0u;
     }
   }();
-  static instruction decode3(const unsigned int b1, const unsigned int b2);
+  static instruction decode3(unsigned int b1, unsigned int b2);
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble3(const List<unsigned int> &rom0, const unsigned int addr);
+  disassemble3(const List<unsigned int> &rom0, unsigned int addr);
 
   template <typename T1> static bool is_none(const std::optional<T1> &o) {
     if (o.has_value()) {
@@ -333,9 +326,9 @@ struct DisassembleOps {
   static inline const bool test_disassemble_short_rom_none =
       is_none<std::pair<instruction, unsigned int>>(disassemble3(
           List<unsigned int>::cons(9u, List<unsigned int>::nil()), 0u));
-  static instruction decode4(const unsigned int b1, const unsigned int b2);
+  static instruction decode4(unsigned int b1, unsigned int b2);
   static std::optional<std::pair<instruction, unsigned int>>
-  disassemble4(const List<unsigned int> &rom0, const unsigned int addr);
+  disassemble4(const List<unsigned int> &rom0, unsigned int addr);
 
   struct state {
     List<unsigned int> regs;
@@ -343,7 +336,7 @@ struct DisassembleOps {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).regs.clone(), (*(this)).rom.clone()};
+      return state{(*this).regs.clone(), (*this).rom.clone()};
     }
   };
 
@@ -412,7 +405,7 @@ struct DisassembleOps {
           test_init_state_rom);
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

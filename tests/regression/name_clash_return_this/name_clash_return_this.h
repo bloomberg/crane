@@ -1,8 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_RETURN_THIS
 #define INCLUDED_NAME_CLASH_RETURN_THIS
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -52,23 +50,20 @@ struct NameClashReturnThis {
 
     // ACCESSORS
     shape clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<Circle>(_sv.v());
+      if (std::holds_alternative<Circle>(this->v())) {
+        const auto &[d_a0] = std::get<Circle>(this->v());
         return shape(Circle{d_a0});
       } else {
-        const auto &[d_a0, d_a1] = std::get<Square>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<Square>(this->v());
         return shape(Square{d_a0, d_a1});
       }
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) {
-      return shape(Circle{std::move(a0)});
-    }
+    static shape circle(unsigned int a0) { return shape(Circle{a0}); }
 
     static shape square(unsigned int a0, unsigned int a1) {
-      return shape(Square{std::move(a0), std::move(a1)});
+      return shape(Square{a0, a1});
     }
 
     // MANIPULATORS
@@ -107,7 +102,7 @@ struct NameClashReturnThis {
   /// Inner match returns shape in all branches, one branch returns the
   /// argument itself. The function takes shape as input, so it gets
   /// methodified. In the Blue branch, `s` becomes `this`.
-  static shape maybe_transform(const bool flag, shape s);
+  static shape maybe_transform(bool flag, shape s);
   /// Match on shape where one branch returns the same shape unchanged.
   static shape identity_or_double(const shape &s);
   /// Two shapes, return one of them based on a match on the other.

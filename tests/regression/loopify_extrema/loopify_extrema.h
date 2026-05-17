@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -159,13 +158,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *(d_a1);
+          auto &&_sv = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
             _result = f(d_a0);
@@ -219,13 +218,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *(d_a1);
+          auto &&_sv = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
             _result = f(d_a0);
@@ -279,13 +278,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *(d_a1);
+          auto &&_sv = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
             _result = d_a0;
@@ -340,13 +339,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *(d_a1);
+          auto &&_sv = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
             _result = d_a0;
@@ -390,7 +389,7 @@ struct LoopifyExtrema {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        auto &&_sv0 = *(d_a1);
+        auto &&_sv0 = *d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
           _result = true;

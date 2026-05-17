@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe17::sum_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe17::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe17::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe17::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -100,7 +100,7 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe17::qtree &t = *(_f.t);
+      const MemSafetyProbe17::qtree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe17::qtree::QLeaf>(
               t.v())) {
         _result = mylist<unsigned int>::mynil();
@@ -138,7 +138,7 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
 
 /// TEST 7: Build a 4-ary tree programmatically and check.
 MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -173,7 +173,7 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = qtree::qleaf();
       } else {

@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -148,9 +147,10 @@ struct EffectPoly {
   static std::string test_lift_string();
   static bool test_lift_bool();
   /// 3. Monadic when / guard
-  static void when_(const bool b, std::monostate action);
-  static void test_when(); /// 4. Monadic unless
-  static void unless(const bool b, std::monostate action);
+  static void when_(bool b, std::monostate action);
+  static void test_when();
+  /// 4. Monadic unless
+  static void unless(bool b, std::monostate action);
   static void test_unless();
   /// 5. Monadic sequence of list of actions
   static void sequence_void(const List<std::monostate> &actions);
@@ -164,12 +164,11 @@ struct EffectPoly {
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T2>::Cons>(xs.v());
       T1 acc = f(init, d_a0);
-      return fold_m<T1, T2>(f, acc, *(d_a1));
+      return fold_m<T1, T2>(f, acc, *d_a1);
     }
   }
 
-  static unsigned int sum_with_logging(const unsigned int acc,
-                                       const unsigned int n);
+  static unsigned int sum_with_logging(unsigned int acc, unsigned int n);
   static unsigned int test_fold();
   /// 7. Returning a pair from a monadic computation
   static std::pair<std::string, std::string> read_two_lines();

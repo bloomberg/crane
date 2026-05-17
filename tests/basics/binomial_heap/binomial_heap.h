@@ -246,8 +246,8 @@ struct BinomialHeap {
   static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *(d_a1), tree_rect<T1>(f, f0, *(d_a1)), *(d_a2),
-               tree_rect<T1>(f, f0, *(d_a2)));
+      return f(d_a0, *d_a1, tree_rect<T1>(f, f0, *d_a1), *d_a2,
+               tree_rect<T1>(f, f0, *d_a2));
     } else {
       return f0;
     }
@@ -259,8 +259,8 @@ struct BinomialHeap {
   static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *(d_a1), tree_rec<T1>(f, f0, *(d_a1)), *(d_a2),
-               tree_rec<T1>(f, f0, *(d_a2)));
+      return f(d_a0, *d_a1, tree_rec<T1>(f, f0, *d_a1), *d_a2,
+               tree_rec<T1>(f, f0, *d_a2));
     } else {
       return f0;
     }
@@ -270,15 +270,15 @@ struct BinomialHeap {
   static inline const priqueue empty = List<tree>::nil();
   static tree smash(const tree &t, const tree &u);
   static List<tree> carry(const List<tree> &q, tree t);
-  static priqueue insert(const unsigned int x, const List<tree> &q);
+  static priqueue insert(unsigned int x, const List<tree> &q);
   static priqueue join(const List<tree> &p, const List<tree> &q, tree c);
 
   static priqueue unzip(const tree &t,
-                        const std::function<List<tree>(List<tree>)> cont) {
+                        std::function<List<tree>(List<tree>)> cont) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      tree d_a1_value = *(d_a1);
-      tree d_a2_value = *(d_a2);
+      tree d_a1_value = *d_a1;
+      tree d_a2_value = *d_a2;
       std::function<List<tree>(List<tree>)> f =
           [=](const List<tree> &q) mutable {
             return List<tree>::cons(tree::node(d_a0, d_a1_value, tree::leaf()),
@@ -291,16 +291,15 @@ struct BinomialHeap {
   }
 
   static priqueue heap_delete_max(const tree &t);
-  static key find_max_helper(const unsigned int current, const List<tree> &q);
+  static key find_max_helper(unsigned int current, const List<tree> &q);
   static std::optional<key> find_max(const List<tree> &q);
-  static std::pair<priqueue, priqueue> delete_max_aux(const unsigned int m,
+  static std::pair<priqueue, priqueue> delete_max_aux(unsigned int m,
                                                       const List<tree> &p);
   static std::optional<std::pair<key, priqueue>>
   delete_max(const List<tree> &q);
   static priqueue merge(const List<tree> &p, const List<tree> &q);
   static priqueue insert_list(const List<unsigned int> &l, List<tree> q);
-  static List<unsigned int> make_list(const unsigned int n,
-                                      List<unsigned int> l);
+  static List<unsigned int> make_list(unsigned int n, List<unsigned int> l);
   static key help(const List<tree> &c);
   static inline const key example1 =
       help(merge(insert(5u, insert(3u, insert(7u, List<tree>::nil()))),

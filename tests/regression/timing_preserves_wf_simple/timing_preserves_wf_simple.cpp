@@ -5,8 +5,7 @@ bool TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
           (s.rom_len == 4u && (s.pc < 4096u && s.stack_len <= 3u)));
 }
 
-unsigned int
-TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
+unsigned int TimingPreservesWfSimple::cycles(TimingPreservesWfSimple::Instr i) {
   switch (i) {
   case Instr::e_FIM: {
     return 16u;
@@ -22,7 +21,7 @@ TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
 
 TimingPreservesWfSimple::state
 TimingPreservesWfSimple::execute(const TimingPreservesWfSimple::state &s,
-                                 const TimingPreservesWfSimple::Instr i) {
+                                 TimingPreservesWfSimple::Instr i) {
   switch (i) {
   case Instr::e_JMS: {
     return state{s.regs_len, s.rom_len, s.pc, (s.stack_len + 1)};

@@ -1,10 +1,6 @@
 #ifndef INCLUDED_RECORD_DEFAULTS
 #define INCLUDED_RECORD_DEFAULTS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct RecordDefaults {
   struct Config {
     unsigned int cfg_width;
@@ -14,21 +10,21 @@ struct RecordDefaults {
 
     // ACCESSORS
     Config clone() const {
-      return Config{(*(this)).cfg_width, (*(this)).cfg_height,
-                    (*(this)).cfg_depth, (*(this)).cfg_debug};
+      return Config{(*this).cfg_width, (*this).cfg_height, (*this).cfg_depth,
+                    (*this).cfg_debug};
     }
   };
 
   static inline const Config default_config = Config{80u, 24u, 1u, false};
-  static Config set_width(const unsigned int w, const Config &c);
-  static Config set_debug(const bool d, const Config &c);
+  static Config set_width(unsigned int w, const Config &c);
+  static Config set_debug(bool d, const Config &c);
 
   struct Point {
     unsigned int px;
     unsigned int py;
 
     // ACCESSORS
-    Point clone() const { return Point{(*(this)).px, (*(this)).py}; }
+    Point clone() const { return Point{(*this).px, (*this).py}; }
   };
 
   struct Rect {
@@ -37,13 +33,13 @@ struct RecordDefaults {
 
     // ACCESSORS
     Rect clone() const {
-      return Rect{(*(this)).origin.clone(), (*(this)).extent.clone()};
+      return Rect{(*this).origin.clone(), (*this).extent.clone()};
     }
   };
 
   static unsigned int rect_area(const Rect &r);
-  static Rect make_rect(const unsigned int x, const unsigned int y,
-                        const unsigned int w, const unsigned int h);
+  static Rect make_rect(unsigned int x, unsigned int y, unsigned int w,
+                        unsigned int h);
   static unsigned int total_cells(const Config &c);
   static inline const unsigned int test_default_width =
       default_config.cfg_width;

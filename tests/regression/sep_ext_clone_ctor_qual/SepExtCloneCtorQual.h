@@ -1,9 +1,6 @@
 #ifndef INCLUDED_SEPEXTCLONECTORQUAL
 #define INCLUDED_SEPEXTCLONECTORQUAL
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 

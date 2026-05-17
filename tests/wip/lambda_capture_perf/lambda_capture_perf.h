@@ -2,7 +2,6 @@
 #define INCLUDED_LAMBDA_CAPTURE_PERF
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,22 +124,20 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -149,8 +146,7 @@ template <typename M>
 concept Params = requires { typename M::A; };
 
 template <Params P> struct Worker {
-  static List<typename P::A> replicate(const unsigned int n,
-                                       const typename P::A x) {
+  static List<typename P::A> replicate(unsigned int n, typename P::A x) {
     if (n <= 0) {
       return List<typename P::A>::nil();
     } else {
@@ -162,7 +158,7 @@ template <Params P> struct Worker {
   static List<unsigned int> process_with_context(const List<typename P::A> &ctx,
                                                  const List<unsigned int> &xs) {
     return xs.template map<unsigned int>(
-        [=](const unsigned int x) mutable { return (x + ctx.length()); });
+        [=](unsigned int x) mutable { return (x + ctx.length()); });
   }
 };
 
@@ -173,7 +169,7 @@ struct NatParams {
 using W = Worker<NatParams>;
 
 struct LambdaCapturePerf {
-  static List<unsigned int> iota(const unsigned int n);
+  static List<unsigned int> iota(unsigned int n);
   static inline const unsigned int test = []() {
     List<unsigned int> ctx = W::replicate(500u, 42u);
     List<unsigned int> input = iota(500u);

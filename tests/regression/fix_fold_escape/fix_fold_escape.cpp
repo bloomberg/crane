@@ -12,8 +12,7 @@
 List<std::function<unsigned int(unsigned int)>>
 FixFoldEscape::collect_adders(const List<unsigned int> &l) {
   return fold_left(
-      [](List<std::function<unsigned int(unsigned int)>> acc,
-         const unsigned int n) {
+      [](List<std::function<unsigned int(unsigned int)>> acc, unsigned int n) {
         auto adder_impl = [=](auto &_self_adder,
                               unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
@@ -33,8 +32,7 @@ FixFoldEscape::collect_adders(const List<unsigned int> &l) {
 }
 
 unsigned int FixFoldEscape::apply_head(
-    const List<std::function<unsigned int(unsigned int)>> &l,
-    const unsigned int x) {
+    const List<std::function<unsigned int(unsigned int)>> &l, unsigned int x) {
   if (std::holds_alternative<
           typename List<std::function<unsigned int(unsigned int)>>::Nil>(
           l.v())) {
@@ -47,8 +45,7 @@ unsigned int FixFoldEscape::apply_head(
 }
 
 unsigned int FixFoldEscape::sum_apply(
-    const List<std::function<unsigned int(unsigned int)>> &l,
-    const unsigned int x) {
+    const List<std::function<unsigned int(unsigned int)>> &l, unsigned int x) {
   if (std::holds_alternative<
           typename List<std::function<unsigned int(unsigned int)>>::Nil>(
           l.v())) {
@@ -56,6 +53,6 @@ unsigned int FixFoldEscape::sum_apply(
   } else {
     const auto &[d_a0, d_a1] = std::get<
         typename List<std::function<unsigned int(unsigned int)>>::Cons>(l.v());
-    return (d_a0(x) + sum_apply(*(d_a1), x));
+    return (d_a0(x) + sum_apply(*d_a1, x));
   }
 }

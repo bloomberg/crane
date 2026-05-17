@@ -1,7 +1,7 @@
 #include "inductive_in_module.h"
 
-unsigned int InductiveInModule::Inner::color_to_nat(
-    const InductiveInModule::Inner::Color c) {
+unsigned int
+InductiveInModule::Inner::color_to_nat(InductiveInModule::Inner::Color c) {
   switch (c) {
   case Color::e_RED: {
     return 0u;

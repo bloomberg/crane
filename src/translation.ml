@@ -1168,19 +1168,18 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   (* Inline clone for a [unique_ptr<T>] field: null-safe make_unique using
      the pointee's clone() method. *)
   let mk_uptr_clone inner_s expr_s =
+    require_header "memory";
     expr_s ^ " ? std::make_unique<" ^ inner_s ^ ">(" ^ expr_s
     ^ "->clone()) : nullptr"
   in
-  (* Inline clone for [optional<unique_ptr<T>>] (same-type): null-check +
-     make_optional + make_unique + ->clone(). *)
   let mk_opt_uptr_clone inner_s expr_s =
+    require_header "memory";
+    require_header "optional";
     expr_s ^ ".has_value() ? std::make_optional(std::make_unique<" ^ inner_s
     ^ ">((*" ^ expr_s ^ ")->clone())) : std::nullopt"
   in
-  (* Convert [optional<unique_ptr<T>>] → [optional<T>]: null-check + clone
-     the pointed-to value.  Uses clone() because T may have a deleted copy
-     constructor (when T itself contains a [unique_ptr] field). *)
   let mk_opt_uptr_to_val dst_inner_s expr_s =
+    require_header "optional";
     expr_s ^ ".has_value() ? std::make_optional<" ^ dst_inner_s ^ ">((*"
     ^ expr_s ^ ")->clone()) : std::nullopt"
   in
@@ -1241,6 +1240,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
     | Tunique_ptr (Tglob (g, [elem_ty], e))
       when is_list_global g ->
       (* unique_ptr<List<T>>: clone uses List's own clone() *)
+      require_header "memory";
       let list_s = render (Tglob (g, [elem_ty], e)) in
       let ty_s = render src_ty in
       with_expr_s ~lambda_ty:ty_s
@@ -1273,6 +1273,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
     match (src_ty, dst_ty) with
     | Tunique_ptr _src_inner, Tunique_ptr dst_inner ->
       (* unique_ptr<S> → unique_ptr<T>: null-check + dereference inner *)
+      require_header "memory";
       let dst_inner_s = render dst_inner in
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
@@ -1317,6 +1318,8 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
            && (match src_inner with Tunique_ptr _ | Tshared_ptr _ -> false | _ -> true) ->
       (* optional<T> → optional<unique_ptr<T>> *)
+      require_header "memory";
+      require_header "optional";
       let dst_inner_s = render dst_inner in
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
@@ -1327,6 +1330,8 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
            && (match src_inner with Tunique_ptr _ | Tshared_ptr _ -> false | _ -> true) ->
       (* optional<T> → optional<shared_ptr<T>> *)
+      require_header "memory";
+      require_header "optional";
       let dst_inner_s = render dst_inner in
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
@@ -2238,11 +2243,16 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
         | _ -> (id, Tmod (TMconst, cpp_ty)) )
       params
   in
+  let unwrap_fun_ty = function
+    | Tmod (TMconst, (Tfun _ as f)) -> Some f
+    | Tfun _ as f -> Some f
+    | _ -> None
+  in
   let fun_tys =
     List.filter_map
       (fun (x, ty, j) ->
-        match ty with
-        | Tmod (TMconst, Tfun (dom, cod_f)) when not (is_non_fwd_source j) ->
+        match unwrap_fun_ty ty with
+        | Some (Tfun (dom, cod_f)) when not (is_non_fwd_source j) ->
           let cod_f = if is_cpp_unit_type cod_f then Tvoid else cod_f in
           Some (x, TTfun (dom, cod_f), fun_tparam_id j)
         | _ -> None )
@@ -2252,8 +2262,8 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
   let cpp_params =
     List.mapi
       (fun j (x, ty) ->
-        match ty with
-        | Tmod (TMconst, Tfun (_, _)) when not (is_non_fwd_db j) ->
+        match unwrap_fun_ty ty with
+        | Some (Tfun _) when not (is_non_fwd_db j) ->
           (x, Tref (Tref (Tvar (0, Some (fun_tparam_id (n_params - j - 1))))))
         | _ -> (x, ty) )
       cpp_params
@@ -2511,6 +2521,11 @@ let is_inductive_value_type = function
     | _ -> false )
   | _ -> false
 
+let is_trivially_copyable_type = function
+  | Tglob (g, _, _) | Tnamespace (g, _) ->
+    is_enum_inductive g || Table.is_custom_scalar_ref g
+  | _ -> false
+
 (** Wraps a C++ parameter type with const/ref based on ownership semantics.
     Owned inductive/shared_ptr params are passed by value (moved in);
     borrowed inductive/shared_ptr/unique_ptr params are passed by const
@@ -2528,7 +2543,7 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
        When owned (caller moves in), pass by value to enable move semantics. *)
     if is_owned then cpp_ty
     else Tref (Tmod (TMconst, cpp_ty))
-  | _ -> Tmod (TMconst, cpp_ty)
+  | _ -> cpp_ty
 
 (** Check if the return type of an ML function type is erased — i.e., it
     becomes [std::any] in C++.  This covers three cases:
@@ -11014,11 +11029,16 @@ let gen_dfun n b cty ty temps =
      or dummy_type) also get TTtypename, since their type structure has been
      partially erased and an is_invocable_v constraint would be malformed. *)
   let primary = primary_tvar_indices dom cod in
+  let unwrap_fun_ty2 = function
+    | Tmod (TMconst, (Tfun _ as f)) -> Some f
+    | Tfun _ as f -> Some f
+    | _ -> None
+  in
   let fun_tys =
     List.filter_map
       (fun (x, ty, i) ->
-        match ty with
-        | Tmod (TMconst, Tfun (fdom, fcod)) when not (is_non_fwd_param_source i) ->
+        match unwrap_fun_ty2 ty with
+        | Some (Tfun (fdom, fcod)) when not (is_non_fwd_param_source i) ->
           let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
@@ -11039,8 +11059,8 @@ let gen_dfun n b cty ty temps =
   let ids =
     List.mapi
       (fun i (x, ty) ->
-        match ty with
-        | Tmod (TMconst, Tfun (dom, cod)) when not (is_non_fwd_param_db i) ->
+        match unwrap_fun_ty2 ty with
+        | Some (Tfun _) when not (is_non_fwd_param_db i) ->
           ( x,
             Tref
               (Tref (Tvar (0, Some (fun_tparam_id (List.length ids - i - 1)))))
@@ -13826,7 +13846,9 @@ let gen_ind_header_v2
                   ("(static_cast<void>("
                   ^ Id.to_string (param_name_of j)
                   ^ "), nullptr)")
-              | _ when storage_ty = api_ty -> CPPmove var
+              | _ when storage_ty = api_ty ->
+                if is_trivially_copyable_type api_ty then var
+                else CPPmove var
               | _ ->
                 gen_clone_field_expr
                   ~src_ty:api_ty ~dst_ty:storage_ty var )

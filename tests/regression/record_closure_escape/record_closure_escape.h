@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct RecordClosureEscape {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -131,8 +130,8 @@ struct RecordClosureEscape {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -144,12 +143,12 @@ struct RecordClosureEscape {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
-  static unsigned int sum_values(const tree &t, const unsigned int x);
+  static unsigned int sum_values(const tree &t, unsigned int x);
 
   /// A record holding a closure and a value. Records are single-constructor
   /// inductives and get special treatment in Crane's translation.
@@ -159,7 +158,7 @@ struct RecordClosureEscape {
 
     // ACCESSORS
     fn_record clone() const {
-      return fn_record{(*(this)).fn_field, (*(this)).val_field};
+      return fn_record{(*this).fn_field, (*this).val_field};
     }
   };
 

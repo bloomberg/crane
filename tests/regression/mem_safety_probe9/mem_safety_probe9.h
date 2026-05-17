@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -92,7 +91,7 @@ struct MemSafetyProbe9 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -129,18 +128,16 @@ struct MemSafetyProbe9 {
     /// TEST 5: Mutual use pattern — the left subtree is used to compute
     /// a value that's passed to a closure that captures the right subtree.
     unsigned int cross_capture() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        tree d_a0_value = *(d_a0);
-        tree d_a2_value = *(d_a2);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        tree d_a0_value = *d_a0;
+        tree d_a2_value = *d_a2;
         unsigned int lsum = d_a0_value.tree_sum();
         std::function<unsigned int(unsigned int)> f =
-            [=](const unsigned int n) mutable {
-              return (d_a2_value.tree_sum() + n);
-            };
+            [=](unsigned int n) mutable { return (d_a2_value.tree_sum() + n); };
         return (f(lsum) + f(d_a1));
       }
     }
@@ -149,13 +146,12 @@ struct MemSafetyProbe9 {
     /// independently — tests that cloning produces independent
     /// copies. Modify one subtree's computation after capture.
     unsigned int triple_capture() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return ((_anon_f1(0u, *(d_a0)) + _anon_f2(0u, *(d_a2))) +
-                _anon_f3(0u, *(this)));
+        auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(this->v());
+        return ((_anon_f1(0u, *d_a0) + _anon_f2(0u, *d_a2)) +
+                _anon_f3(0u, *this));
       }
     }
 
@@ -192,7 +188,7 @@ struct MemSafetyProbe9 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -254,14 +250,13 @@ struct MemSafetyProbe9 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -318,14 +313,13 @@ struct MemSafetyProbe9 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -483,7 +477,7 @@ struct MemSafetyProbe9 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = 0u;
           } else {
@@ -530,13 +524,13 @@ struct MemSafetyProbe9 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -577,13 +571,13 @@ struct MemSafetyProbe9 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -684,7 +678,7 @@ struct MemSafetyProbe9 {
                  tree::node(tree::leaf(), 15u, tree::leaf()))
           .cross_capture();
   /// TEST 6: Stress test — large tree, many closures.
-  static tree make_balanced(const unsigned int n);
+  static tree make_balanced(unsigned int n);
   static inline const unsigned int test_stress = []() {
     tree t = make_balanced(5u);
     mylist<std::function<unsigned int(unsigned int)>> fns = collect_left_sums(

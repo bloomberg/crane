@@ -2,9 +2,6 @@
 #define INCLUDED_Z_DIV_MIN
 
 #include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct ZDivMin {

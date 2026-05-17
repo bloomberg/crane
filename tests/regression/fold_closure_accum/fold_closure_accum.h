@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -126,12 +125,11 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return f(d_a0, (*(d_a1)).template fold_right<T1>(f, a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f(d_a0, (*d_a1).template fold_right<T1>(f, a0));
     }
   }
 };
@@ -215,7 +213,7 @@ struct FoldClosureAccum {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -258,8 +256,8 @@ struct FoldClosureAccum {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -271,8 +269,8 @@ struct FoldClosureAccum {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   } /// Sum all values in a tree.
 
@@ -286,8 +284,7 @@ struct FoldClosureAccum {
   /// captures the previous closure (acc) and the current tree (t).
   /// If captures are by reference, the previous closure is stack-local
   /// and dies when the fold step returns, creating a dangling chain.
-  static unsigned int compose_adders(const List<tree> &trees,
-                                     const unsigned int _x0);
+  static unsigned int compose_adders(const List<tree> &trees, unsigned int _x0);
   /// Test: compose adders from 3 trees.
   /// t1 sums to 10, t2 sums to 20, t3 sums to 30.
   /// compose_adders t1; t2; t3 x = x + 30 + 20 + 10 = x + 60

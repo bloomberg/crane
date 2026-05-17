@@ -7,7 +7,6 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -172,7 +171,7 @@ struct MonadicClosure {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::string>::Cons>(xs.v());
-      unsigned int n = count_matching(pred, *(d_a1));
+      unsigned int n = count_matching(pred, *d_a1);
       if (pred(d_a0)) {
         return (n + 1);
       } else {

@@ -1,13 +1,13 @@
 #include "loopify_sequences.h"
 
 /// alternate_sum sign acc l alternating sum with sign flip.
-unsigned int LoopifySequences::alternate_sum(const unsigned int sign,
-                                             const unsigned int acc,
+unsigned int LoopifySequences::alternate_sum(unsigned int sign,
+                                             unsigned int acc,
                                              const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = acc;
-  unsigned int _loop_sign = sign;
+  unsigned int _loop_acc = std::move(acc);
+  unsigned int _loop_sign = std::move(sign);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -38,8 +38,8 @@ unsigned int LoopifySequences::alternate_sum(const unsigned int sign,
 
 /// collatz_list n generates collatz sequence.
 List<unsigned int> LoopifySequences::collatz_list_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -57,8 +57,8 @@ List<unsigned int> LoopifySequences::collatz_list_fuel(
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     auto _f = std::move(std::get<_Enter>(_frame));
-    const unsigned int n = _f.n;
-    const unsigned int fuel = _f.fuel;
+    unsigned int n = _f.n;
+    unsigned int fuel = _f.fuel;
     if (fuel <= 0) {
       _result = List<unsigned int>::nil();
     } else {
@@ -77,22 +77,21 @@ List<unsigned int> LoopifySequences::collatz_list_fuel(
   return _result;
 }
 
-List<unsigned int> LoopifySequences::collatz_list(const unsigned int n) {
+List<unsigned int> LoopifySequences::collatz_list(unsigned int n) {
   return collatz_list_fuel(1000u, n);
 }
 
 /// run_sum l running sum (scanl for addition).
-List<unsigned int> LoopifySequences::run_sum_aux(const unsigned int acc,
+List<unsigned int> LoopifySequences::run_sum_aux(unsigned int acc,
                                                  const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = acc;
+  unsigned int _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -100,7 +99,7 @@ List<unsigned int> LoopifySequences::run_sum_aux(const unsigned int acc,
       unsigned int new_acc = (_loop_acc + d_a0);
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(new_acc, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_l = d_a1.get();
@@ -108,7 +107,7 @@ List<unsigned int> LoopifySequences::run_sum_aux(const unsigned int acc,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifySequences::run_sum(const List<unsigned int> &l) {
@@ -116,13 +115,13 @@ List<unsigned int> LoopifySequences::run_sum(const List<unsigned int> &l) {
 }
 
 /// rotate_left n l rotates list left by n positions.
-List<unsigned int> LoopifySequences::rotate_left_fuel(const unsigned int fuel,
-                                                      const unsigned int n,
+List<unsigned int> LoopifySequences::rotate_left_fuel(unsigned int fuel,
+                                                      unsigned int n,
                                                       List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
-  unsigned int _loop_n = n;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_n = std::move(n);
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       _result = std::move(_loop_l);
@@ -140,7 +139,7 @@ List<unsigned int> LoopifySequences::rotate_left_fuel(const unsigned int fuel,
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-          _loop_l = (*(d_a1)).app(
+          _loop_l = (*d_a1).app(
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
           _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
           _loop_fuel = f;
@@ -151,17 +150,17 @@ List<unsigned int> LoopifySequences::rotate_left_fuel(const unsigned int fuel,
   return _result;
 }
 
-List<unsigned int> LoopifySequences::rotate_left(const unsigned int n,
+List<unsigned int> LoopifySequences::rotate_left(unsigned int n,
                                                  const List<unsigned int> &l) {
   return rotate_left_fuel(100u, n, l);
 }
 
 /// sum_acc acc l sum with accumulator.
-unsigned int LoopifySequences::sum_acc(const unsigned int acc,
+unsigned int LoopifySequences::sum_acc(unsigned int acc,
                                        const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = acc;
+  unsigned int _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -180,7 +179,7 @@ unsigned int LoopifySequences::sum_acc(const unsigned int acc,
 /// repeat_string s n repeats string n times (using list as string).
 List<unsigned int> LoopifySequences::repeat_string(
     const List<unsigned int> &s,
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -203,7 +202,7 @@ List<unsigned int> LoopifySequences::repeat_string(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -222,7 +221,7 @@ List<unsigned int> LoopifySequences::repeat_string(
 /// repeat_with_sep s sep n repeats with separator.
 List<unsigned int> LoopifySequences::repeat_with_sep(
     List<unsigned int> s, const List<unsigned int> &sep,
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -246,7 +245,7 @@ List<unsigned int> LoopifySequences::repeat_with_sep(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -269,7 +268,7 @@ List<unsigned int> LoopifySequences::repeat_with_sep(
 
 /// string_chain s n recursive string chain: s-chain(s, n-1)-end.
 List<unsigned int> LoopifySequences::string_chain_fuel(
-    const unsigned int fuel, const List<unsigned int> &s, const unsigned int n,
+    unsigned int fuel, const List<unsigned int> &s, unsigned int n,
     const List<unsigned int> &sep,
     const List<unsigned int>
         &end_marker) { /// _Enter: captures varying parameters for each
@@ -299,8 +298,8 @@ List<unsigned int> LoopifySequences::string_chain_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -320,16 +319,17 @@ List<unsigned int> LoopifySequences::string_chain_fuel(
   return _result;
 }
 
-List<unsigned int> LoopifySequences::string_chain(
-    const List<unsigned int> &s, const unsigned int n,
-    const List<unsigned int> &sep, const List<unsigned int> &end_marker) {
+List<unsigned int>
+LoopifySequences::string_chain(const List<unsigned int> &s, unsigned int n,
+                               const List<unsigned int> &sep,
+                               const List<unsigned int> &end_marker) {
   return string_chain_fuel(1000u, s, n, sep, end_marker);
 }
 
 /// split_by_sign l base pos neg splits list based on base threshold.
 std::pair<List<unsigned int>, List<unsigned int>>
-LoopifySequences::split_by_sign(const List<unsigned int> &l,
-                                const unsigned int base, List<unsigned int> pos,
+LoopifySequences::split_by_sign(const List<unsigned int> &l, unsigned int base,
+                                List<unsigned int> pos,
                                 List<unsigned int> neg) {
   std::pair<List<unsigned int>, List<unsigned int>> _result;
   List<unsigned int> _loop_neg = std::move(neg);
@@ -363,15 +363,14 @@ List<unsigned int> LoopifySequences::differences(const List<unsigned int> &l) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
@@ -380,7 +379,7 @@ List<unsigned int> LoopifySequences::differences(const List<unsigned int> &l) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(
                 (((d_a00 - d_a0) > d_a00 ? 0 : (d_a00 - d_a0))), nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -389,34 +388,33 @@ List<unsigned int> LoopifySequences::differences(const List<unsigned int> &l) {
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// replace_at idx value l replaces element at index with value.
-List<unsigned int> LoopifySequences::replace_at(const unsigned int idx,
-                                                const unsigned int value,
+List<unsigned int> LoopifySequences::replace_at(unsigned int idx,
+                                                unsigned int value,
                                                 const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_idx = idx;
+  unsigned int _loop_idx = std::move(idx);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_idx == 0u) {
-        *(_write) = std::make_unique<List<unsigned int>>(
-            List<unsigned int>::cons(value, *(d_a1)));
+        *_write = std::make_unique<List<unsigned int>>(
+            List<unsigned int>::cons(value, *d_a1));
         break;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -426,12 +424,12 @@ List<unsigned int> LoopifySequences::replace_at(const unsigned int idx,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// cycle n l repeats list n times.
 List<unsigned int> LoopifySequences::cycle(
-    const unsigned int n,
+    unsigned int n,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -455,7 +453,7 @@ List<unsigned int> LoopifySequences::cycle(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -498,7 +496,7 @@ unsigned int LoopifySequences::last_elem(const List<unsigned int> &l) {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         _result = d_a0;
         break;
@@ -517,7 +515,7 @@ List<unsigned int> LoopifySequences::tail_list(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    return *(d_a1);
+    return *d_a1;
   }
 }
 
@@ -529,21 +527,20 @@ List<unsigned int> LoopifySequences::init_list(const List<unsigned int> &l) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -552,15 +549,15 @@ List<unsigned int> LoopifySequences::init_list(const List<unsigned int> &l) {
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// is_palindrome s checks if list is a palindrome.
-bool LoopifySequences::is_palindrome_fuel(const unsigned int fuel,
+bool LoopifySequences::is_palindrome_fuel(unsigned int fuel,
                                           const List<unsigned int> &s) {
   bool _result;
   List<unsigned int> _loop_s = s;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       _result = true;
@@ -622,7 +619,7 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &s = *(_f.s);
+      const List<unsigned int> &s = *_f.s;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(s.v())) {
         _result = List<List<unsigned int>>::cons(
             List<unsigned int>::nil(), List<List<unsigned int>>::nil());
@@ -647,7 +644,7 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
               std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
           return List<List<unsigned int>>::cons(
               List<unsigned int>::cons(d_a0, d_a00),
-              _self_map_prepend_c(_self_map_prepend_c, *(d_a10)));
+              _self_map_prepend_c(_self_map_prepend_c, *d_a10));
         }
       };
       auto map_prepend_c = [&](const List<List<unsigned int>> &lsts)
@@ -662,23 +659,22 @@ List<List<unsigned int>> LoopifySequences::string_subsequences(
 
 /// run_length_groups l groups consecutive runs into sublist lengths.
 List<unsigned int>
-LoopifySequences::run_length_groups_aux(const unsigned int prev,
-                                        const unsigned int count,
+LoopifySequences::run_length_groups_aux(unsigned int prev, unsigned int count,
                                         const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_count = count;
-  unsigned int _loop_prev = prev;
+  unsigned int _loop_count = std::move(count);
+  unsigned int _loop_prev = std::move(prev);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
       if (_loop_count == 0u) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        *(_write) = std::make_unique<List<unsigned int>>(
+        *_write = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(_loop_count, List<unsigned int>::nil()));
         break;
       }
@@ -699,7 +695,7 @@ LoopifySequences::run_length_groups_aux(const unsigned int prev,
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(_loop_count, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -711,7 +707,7 @@ LoopifySequences::run_length_groups_aux(const unsigned int prev,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int>
@@ -721,7 +717,7 @@ LoopifySequences::run_length_groups(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    return run_length_groups_aux(d_a0, 1u, *(d_a1));
+    return run_length_groups_aux(d_a0, 1u, *d_a1);
   }
 }
 
@@ -767,15 +763,14 @@ List<unsigned int> LoopifySequences::lis(List<unsigned int> l) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l.v_mut())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(_loop_l);
+        *_write = std::make_unique<List<unsigned int>>(_loop_l);
         break;
       } else {
         const auto &[d_a00, d_a10] =
@@ -783,25 +778,25 @@ List<unsigned int> LoopifySequences::lis(List<unsigned int> l) {
         if (d_a0 < d_a00) {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = std::move(*(d_a1));
+          _loop_l = std::move(*d_a1);
           continue;
         } else {
-          _loop_l = std::move(*(d_a1));
+          _loop_l = std::move(*d_a1);
           continue;
         }
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// Helper: check if element is in list.
 bool LoopifySequences::elem(
-    const unsigned int x,
+    unsigned int x,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -811,7 +806,7 @@ bool LoopifySequences::elem(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(std::declval<const unsigned int &>() ==
+    decltype(std::declval<unsigned int &>() ==
              std::declval<unsigned int &>()) _s0;
   };
 
@@ -826,7 +821,7 @@ bool LoopifySequences::elem(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = false;
       } else {
@@ -844,7 +839,7 @@ bool LoopifySequences::elem(
 }
 
 /// Helper: filter list.
-List<unsigned int> LoopifySequences::filter_ne(const unsigned int x,
+List<unsigned int> LoopifySequences::filter_ne(unsigned int x,
                                                const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -852,8 +847,7 @@ List<unsigned int> LoopifySequences::filter_ne(const unsigned int x,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -864,7 +858,7 @@ List<unsigned int> LoopifySequences::filter_ne(const unsigned int x,
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -873,26 +867,25 @@ List<unsigned int> LoopifySequences::filter_ne(const unsigned int x,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// nub l removes duplicates from list.
-List<unsigned int> LoopifySequences::nub_fuel(const unsigned int fuel,
+List<unsigned int> LoopifySequences::nub_fuel(unsigned int fuel,
                                               const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = l;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l.v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
@@ -900,17 +893,17 @@ List<unsigned int> LoopifySequences::nub_fuel(const unsigned int fuel,
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
-        _loop_l = filter_ne(d_a0, *(d_a1));
+        _loop_l = filter_ne(d_a0, *d_a1);
         _loop_fuel = f;
         continue;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifySequences::nub(const List<unsigned int> &l) {
@@ -919,8 +912,7 @@ List<unsigned int> LoopifySequences::nub(const List<unsigned int> &l) {
 
 /// group l groups consecutive equal elements.
 List<List<unsigned int>>
-LoopifySequences::group_fuel(const unsigned int fuel,
-                             const List<unsigned int> &l) {
+LoopifySequences::group_fuel(unsigned int fuel, const List<unsigned int> &l) {
   if (fuel <= 0) {
     return List<List<unsigned int>>::nil();
   } else {
@@ -930,7 +922,7 @@ LoopifySequences::group_fuel(const unsigned int fuel,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         return List<List<unsigned int>>::cons(
             List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
@@ -939,7 +931,7 @@ LoopifySequences::group_fuel(const unsigned int fuel,
         const auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(_sv0.v());
         if (d_a0 == d_a00) {
-          auto &&_sv1 = group_fuel(f, *(d_a1));
+          auto &&_sv1 = group_fuel(f, *d_a1);
           if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                   _sv1.v())) {
             return List<List<unsigned int>>::cons(
@@ -949,12 +941,12 @@ LoopifySequences::group_fuel(const unsigned int fuel,
             const auto &[d_a01, d_a11] =
                 std::get<typename List<List<unsigned int>>::Cons>(_sv1.v());
             return List<List<unsigned int>>::cons(
-                List<unsigned int>::cons(d_a0, d_a01), *(d_a11));
+                List<unsigned int>::cons(d_a0, d_a01), *d_a11);
           }
         } else {
           return List<List<unsigned int>>::cons(
               List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
-              group_fuel(f, *(d_a1)));
+              group_fuel(f, *d_a1));
         }
       }
     }
@@ -966,7 +958,7 @@ List<List<unsigned int>> LoopifySequences::group(const List<unsigned int> &l) {
 }
 
 /// Helper: get head with default.
-unsigned int LoopifySequences::head_or(const unsigned int default0,
+unsigned int LoopifySequences::head_or(unsigned int default0,
                                        const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return default0;
@@ -986,20 +978,19 @@ LoopifySequences::remove_if_sum_even(const List<unsigned int> &l) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      unsigned int next = head_or(0u, *(d_a1));
+      unsigned int next = head_or(0u, *d_a1);
       if ((2u ? (d_a0 + next) % 2u : (d_a0 + next)) == 0u) {
         _loop_l = d_a1.get();
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -1008,12 +999,12 @@ LoopifySequences::remove_if_sum_even(const List<unsigned int> &l) {
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// run_length_encode l encodes consecutive runs: 1,1,2,2,2 -> (1,2),(2,3).
 List<std::pair<unsigned int, unsigned int>>
-LoopifySequences::run_length_encode_fuel(const unsigned int fuel,
+LoopifySequences::run_length_encode_fuel(unsigned int fuel,
                                          const List<unsigned int> &l) {
   if (fuel <= 0) {
     return List<std::pair<unsigned int, unsigned int>>::nil();
@@ -1024,13 +1015,13 @@ LoopifySequences::run_length_encode_fuel(const unsigned int fuel,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         return List<std::pair<unsigned int, unsigned int>>::cons(
             std::make_pair(d_a0, 1u),
             List<std::pair<unsigned int, unsigned int>>::nil());
       } else {
-        auto &&_sv1 = run_length_encode_fuel(f, *(d_a1));
+        auto &&_sv1 = run_length_encode_fuel(f, *d_a1);
         if (std::holds_alternative<
                 typename List<std::pair<unsigned int, unsigned int>>::Nil>(
                 _sv1.v())) {
@@ -1045,12 +1036,12 @@ LoopifySequences::run_length_encode_fuel(const unsigned int fuel,
           const unsigned int &n = d_a01.second;
           if (d_a0 == y) {
             return List<std::pair<unsigned int, unsigned int>>::cons(
-                std::make_pair(y, (n + 1)), *(d_a11));
+                std::make_pair(y, (n + 1)), *d_a11);
           } else {
             return List<std::pair<unsigned int, unsigned int>>::cons(
                 std::make_pair(d_a0, 1u),
                 List<std::pair<unsigned int, unsigned int>>::cons(
-                    std::make_pair(y, n), *(d_a11)));
+                    std::make_pair(y, n), *d_a11));
           }
         }
       }
@@ -1064,8 +1055,7 @@ LoopifySequences::run_length_encode(const List<unsigned int> &l) {
 }
 
 /// between lo hi l filters elements in range lo, hi.
-List<unsigned int> LoopifySequences::between(const unsigned int lo,
-                                             const unsigned int hi,
+List<unsigned int> LoopifySequences::between(unsigned int lo, unsigned int hi,
                                              const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -1073,8 +1063,7 @@ List<unsigned int> LoopifySequences::between(const unsigned int lo,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -1082,7 +1071,7 @@ List<unsigned int> LoopifySequences::between(const unsigned int lo,
       if ((lo <= d_a0 && d_a0 <= hi)) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -1094,5 +1083,5 @@ List<unsigned int> LoopifySequences::between(const unsigned int lo,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }

@@ -2,11 +2,9 @@
 
 namespace SeparateExtraction {
 
-unsigned int sep_add(const unsigned int _x0, const unsigned int _x1) {
-  return (_x0 + _x1);
-}
+unsigned int sep_add(unsigned int _x0, unsigned int _x1) { return (_x0 + _x1); }
 
-unsigned int color_to_nat(const Color c) {
+unsigned int color_to_nat(Color c) {
   switch (c) {
   case Color::e_RED: {
     return 1u;

@@ -1,10 +1,6 @@
 #ifndef INCLUDED_SEPEXTTEMPLATEALIAS
 #define INCLUDED_SEPEXTTEMPLATEALIAS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 namespace SepExtTemplateAlias {
 
 template <typename M>

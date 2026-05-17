@@ -123,12 +123,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -183,14 +182,13 @@ struct DeepPatterns {
 
     // ACCESSORS
     outer clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<OLeft>(_sv.v())) {
-        const auto &[d_a0] = std::get<OLeft>(_sv.v());
+      if (std::holds_alternative<OLeft>(this->v())) {
+        const auto &[d_a0] = std::get<OLeft>(this->v());
         return outer(
             OLeft{d_a0 ? std::make_unique<DeepPatterns::inner>(d_a0->clone())
                        : nullptr});
       } else {
-        const auto &[d_a0] = std::get<ORight>(_sv.v());
+        const auto &[d_a0] = std::get<ORight>(this->v());
         return outer(ORight{d_a0});
       }
     }
@@ -200,9 +198,7 @@ struct DeepPatterns {
       return outer(OLeft{std::make_unique<inner>(std::move(a0))});
     }
 
-    static outer oright(unsigned int a0) {
-      return outer(ORight{std::move(a0)});
-    }
+    static outer oright(unsigned int a0) { return outer(ORight{a0}); }
 
     // MANIPULATORS
     ~outer() {
@@ -271,20 +267,19 @@ struct DeepPatterns {
 
     // ACCESSORS
     inner clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<ILeft>(_sv.v())) {
-        const auto &[d_a0] = std::get<ILeft>(_sv.v());
+      if (std::holds_alternative<ILeft>(this->v())) {
+        const auto &[d_a0] = std::get<ILeft>(this->v());
         return inner(ILeft{d_a0});
       } else {
-        const auto &[d_a0] = std::get<IRight>(_sv.v());
+        const auto &[d_a0] = std::get<IRight>(this->v());
         return inner(IRight{d_a0});
       }
     }
 
     // CREATORS
-    static inner ileft(unsigned int a0) { return inner(ILeft{std::move(a0)}); }
+    static inner ileft(unsigned int a0) { return inner(ILeft{a0}); }
 
-    static inner iright(bool a0) { return inner(IRight{std::move(a0)}); }
+    static inner iright(bool a0) { return inner(IRight{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -299,7 +294,7 @@ struct DeepPatterns {
   static T1 outer_rect(F0 &&f, F1 &&f0, const outer &o) {
     if (std::holds_alternative<typename outer::OLeft>(o.v())) {
       const auto &[d_a0] = std::get<typename outer::OLeft>(o.v());
-      return f(*(d_a0));
+      return f(*d_a0);
     } else {
       const auto &[d_a0] = std::get<typename outer::ORight>(o.v());
       return f0(d_a0);
@@ -312,7 +307,7 @@ struct DeepPatterns {
   static T1 outer_rec(F0 &&f, F1 &&f0, const outer &o) {
     if (std::holds_alternative<typename outer::OLeft>(o.v())) {
       const auto &[d_a0] = std::get<typename outer::OLeft>(o.v());
-      return f(*(d_a0));
+      return f(*d_a0);
     } else {
       const auto &[d_a0] = std::get<typename outer::ORight>(o.v());
       return f0(d_a0);
@@ -386,8 +381,7 @@ struct DeepPatterns {
 
     // ACCESSORS
     pair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Pair0>(this->v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
     }
 
@@ -412,18 +406,16 @@ struct DeepPatterns {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 pair_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
       return f(d_a0, d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 pair_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
       return f(d_a0, d_a1);
     }
   };
@@ -546,26 +538,24 @@ struct DeepPatterns {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Nil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Cons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
+            std::get<typename mylist<t_A>::Cons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Nil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Cons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
+            std::get<typename mylist<t_A>::Cons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
       }
     }
   };

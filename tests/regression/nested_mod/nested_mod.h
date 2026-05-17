@@ -1,8 +1,6 @@
 #ifndef INCLUDED_NESTED_MOD
 #define INCLUDED_NESTED_MOD
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -11,8 +9,7 @@ struct NestedMod {
   struct Outer {
     enum class Color { e_RED, e_GREEN, e_BLUE };
 
-    template <typename T1>
-    static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
+    template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;
@@ -28,8 +25,7 @@ struct NestedMod {
       }
     }
 
-    template <typename T1>
-    static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
+    template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
       switch (c) {
       case Color::e_RED: {
         return f;
@@ -94,31 +90,26 @@ struct NestedMod {
 
         // ACCESSORS
         shape clone() const {
-          auto &&_sv = *(this);
-          if (std::holds_alternative<Circle>(_sv.v())) {
-            const auto &[d_a0] = std::get<Circle>(_sv.v());
+          if (std::holds_alternative<Circle>(this->v())) {
+            const auto &[d_a0] = std::get<Circle>(this->v());
             return shape(Circle{d_a0});
-          } else if (std::holds_alternative<Square>(_sv.v())) {
-            const auto &[d_a0] = std::get<Square>(_sv.v());
+          } else if (std::holds_alternative<Square>(this->v())) {
+            const auto &[d_a0] = std::get<Square>(this->v());
             return shape(Square{d_a0});
           } else {
-            const auto &[d_a0, d_a1, d_a2] = std::get<Triangle>(_sv.v());
+            const auto &[d_a0, d_a1, d_a2] = std::get<Triangle>(this->v());
             return shape(Triangle{d_a0, d_a1, d_a2});
           }
         }
 
         // CREATORS
-        static shape circle(unsigned int a0) {
-          return shape(Circle{std::move(a0)});
-        }
+        static shape circle(unsigned int a0) { return shape(Circle{a0}); }
 
-        static shape square(unsigned int a0) {
-          return shape(Square{std::move(a0)});
-        }
+        static shape square(unsigned int a0) { return shape(Square{a0}); }
 
         static shape triangle(unsigned int a0, unsigned int a1,
                               unsigned int a2) {
-          return shape(Triangle{std::move(a0), std::move(a1), std::move(a2)});
+          return shape(Triangle{a0, a1, a2});
         }
 
         // MANIPULATORS
@@ -169,8 +160,8 @@ struct NestedMod {
       static unsigned int area(const shape &s);
     };
 
-    static unsigned int shape_with_color(const Inner::shape &s, const Color c);
-    static unsigned int color_code(const Color c);
+    static unsigned int shape_with_color(const Inner::shape &s, Color c);
+    static unsigned int color_code(Color c);
   };
 
   static inline const Outer::Inner::shape my_circle =

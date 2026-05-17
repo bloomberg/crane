@@ -4,7 +4,6 @@
 #include <crane_real.h>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,12 +124,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -138,7 +136,7 @@ public:
 struct Pos {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
-  static T1 iter(F0 &&f, const T1 &x, const unsigned int n) {
+  static T1 iter(F0 &&f, const T1 &x, unsigned int n) {
     if (n == 1u) {
       return f(x);
     } else if (n % 2u != 0u) {
@@ -152,12 +150,12 @@ struct Pos {
 };
 
 struct BinInt {
-  static int64_t pow_pos(const int64_t z, const unsigned int _x0);
+  static int64_t pow_pos(int64_t z, unsigned int _x0);
 };
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct Q {
@@ -165,7 +163,7 @@ struct Q {
   unsigned int Qden;
 
   // ACCESSORS
-  Q clone() const { return Q{(*(this)).Qnum, (*(this)).Qden}; }
+  Q clone() const { return Q{(*this).Qnum, (*this).Qden}; }
 };
 
 struct Rdefinitions {
@@ -178,7 +176,7 @@ struct PolygonWindingAreaTraceCase {
     Real lambda;
 
     // ACCESSORS
-    Point clone() const { return Point{(*(this)).phi, (*(this)).lambda}; }
+    Point clone() const { return Point{(*this).phi, (*this).lambda}; }
   };
 
   static inline const Real R_earth_default = Rdefinitions::Q2R(Q{
@@ -188,27 +186,25 @@ struct PolygonWindingAreaTraceCase {
         (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
                1u))))});
   static inline const Real R_earth = R_earth_default;
-  static Real hav(const Real theta);
+  static Real hav(Real theta);
   static Real distance(const Point &p1, const Point &p2);
   using Polygon = List<Point>;
 
   template <typename T1>
-  static T1 nth_cyclic(const T1 &default0, const List<T1> &l,
-                       const unsigned int i) {
+  static T1 nth_cyclic(const T1 &default0, const List<T1> &l, unsigned int i) {
     return ListDef::template nth<T1>((l.length() ? i % l.length() : i), l,
                                      default0);
   }
 
-  static Real lon_diff(const Real lon1, const Real lon2);
+  static Real lon_diff(Real lon1, Real lon2);
   static Real spherical_shoelace_aux(const List<Point> &pts,
                                      const List<Point> &all_pts,
-                                     const unsigned int idx);
+                                     unsigned int idx);
   static Real spherical_shoelace(const List<Point> &pts);
   static Real spherical_polygon_area(const List<Point> &poly);
-  static Real distance_to_central_angle(const Real d);
-  static Real spherical_cosine_arg(const Real ca, const Real cb,
-                                   const Real cab);
-  static Real law_of_cosines_arg(const Real da, const Real db, const Real dab);
+  static Real distance_to_central_angle(Real d);
+  static Real spherical_cosine_arg(Real ca, Real cb, Real cab);
+  static Real law_of_cosines_arg(Real da, Real db, Real dab);
   static Real segment_angle(const Point &p, const Point &a, const Point &b);
   static Real winding_sum_aux(const Point &p, const List<Point> &pts,
                               const Point &first);
@@ -237,7 +233,7 @@ struct PolygonWindingAreaTraceCase {
   static inline const Point test_exterior =
       Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
             Real::from_z(INT64_C(-1))};
-  static Polygon test_equatorial_square(const Real delta);
+  static Polygon test_equatorial_square(Real delta);
   static inline const Real sample_square_delta =
       (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(10)));
   static inline const bool sample_centroid_inside =
@@ -256,7 +252,7 @@ struct PolygonWindingAreaTraceCase {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -270,7 +266,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

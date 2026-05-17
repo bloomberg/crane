@@ -2,7 +2,6 @@
 #define INCLUDED_MEM_SAFETY_PROBE23
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -98,7 +97,7 @@ struct MemSafetyProbe23 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -141,8 +140,8 @@ struct MemSafetyProbe23 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -154,8 +153,8 @@ struct MemSafetyProbe23 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -200,7 +199,7 @@ struct MemSafetyProbe23 {
   /// ACCUMULATOR that captures the original tree. The accumulator
   /// forces the tree to be owned. Two recursive calls on children.
   static std::pair<tree, unsigned int> sum_with_acc(const tree &t,
-                                                    const unsigned int acc);
+                                                    unsigned int acc);
   static inline const unsigned int test_sum_with_acc = []() {
     std::pair<tree, unsigned int> r =
         sum_with_acc(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
@@ -230,7 +229,7 @@ struct MemSafetyProbe23 {
   /// with t embedded AND another takes a child of t.
   /// Forces t to NOT be pointer-safe. The After frame saves
   /// state for the child-based call.
-  static unsigned int mixed_recurse(tree t, const unsigned int n);
+  static unsigned int mixed_recurse(tree t, unsigned int n);
   static inline const unsigned int test_mixed_recurse =
       mixed_recurse(tree::node(tree::leaf(), 5u, tree::leaf()), 1u);
   /// TEST 8: Three-way split: function returns original tree AND

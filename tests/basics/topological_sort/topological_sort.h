@@ -127,18 +127,16 @@ public:
 
   template <typename T1>
   List<std::pair<t_A, T1>> combine(const List<T1> &l_) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<std::pair<t_A, T1>>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
       if (std::holds_alternative<typename List<T1>::Nil>(l_.v())) {
         return List<std::pair<t_A, T1>>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l_.v());
         return List<std::pair<t_A, T1>>::cons(
-            std::make_pair(d_a0, d_a00),
-            (*(d_a1)).template combine<T1>(*(d_a10)));
+            std::make_pair(d_a0, d_a00), (*d_a1).template combine<T1>(*d_a10));
       }
     }
   }
@@ -146,15 +144,14 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   std::optional<t_A> find(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return std::optional<t_A>();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
       if (f(d_a0)) {
         return std::make_optional<t_A>(d_a0);
       } else {
-        return (*(d_a1)).find(f);
+        return (*d_a1).find(f);
       }
     }
   }
@@ -162,15 +159,14 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   List<t_A> filter(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
       if (f(d_a0)) {
-        return List<t_A>::cons(d_a0, (*(d_a1)).filter(f));
+        return List<t_A>::cons(d_a0, (*d_a1).filter(f));
       } else {
-        return (*(d_a1)).filter(f);
+        return (*d_a1).filter(f);
       }
     }
   }
@@ -178,62 +174,56 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return f(d_a0, (*(d_a1)).template fold_right<T1>(f, a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f(d_a0, (*d_a1).template fold_right<T1>(f, a0));
     }
   }
 
   template <typename T1> List<T1> concat() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<List<T1>>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<T1>>::Cons>(_sv.v());
-      return d_a0.app((*(d_a1)).template concat<T1>());
+          std::get<typename List<List<T1>>::Cons>(this->v());
+      return d_a0.app((*d_a1).template concat<T1>());
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
 
 struct ListDef {
-  static List<unsigned int> seq(const unsigned int start,
-                                const unsigned int len);
+  static List<unsigned int> seq(unsigned int start, unsigned int len);
 };
 
 struct ToString {
@@ -249,17 +239,16 @@ struct ToString {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<std::string, F0 &, T1 &>
-  static std::string intersperse(F0 &&p, const std::string sep,
-                                 const List<T1> &l) {
+  static std::string intersperse(F0 &&p, std::string sep, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
         return sep + p(d_a0);
       } else {
-        return sep + p(d_a0) + intersperse<T1>(p, sep, *(d_a1));
+        return sep + p(d_a0) + intersperse<T1>(p, sep, *d_a1);
       }
     }
   }
@@ -271,11 +260,11 @@ struct ToString {
       return "[]";
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
         return "["s + p(d_a0) + "]"s;
       } else {
-        return "["s + p(d_a0) + intersperse<T1>(p, "; ", *(d_a1)) + "]"s;
+        return "["s + p(d_a0) + intersperse<T1>(p, "; ", *d_a1) + "]"s;
       }
     }
   }
@@ -298,7 +287,7 @@ struct TopologicalSort {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<std::pair<T1, T1>>::Cons>(l0.v());
-        List<std::pair<T1, T1>> d_a1_value = *(d_a1);
+        List<std::pair<T1, T1>> d_a1_value = *d_a1;
         const T1 &e1 = d_a0.first;
         const T1 &e2 = d_a0.second;
         std::optional<T1> f1 =
@@ -399,9 +388,9 @@ struct TopologicalSort {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static T1
-  cycle_entry_aux(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0,
-                  List<T1> seens, T1 elem, const unsigned int counter) {
+  static T1 cycle_entry_aux(F0 &&eqb_node,
+                            const List<std::pair<T1, List<T1>>> &graph0,
+                            List<T1> seens, T1 elem, unsigned int counter) {
     if (contains<T1>(eqb_node, elem, seens)) {
       return elem;
     } else {
@@ -443,7 +432,7 @@ struct TopologicalSort {
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<T1>
   cycle_extract_aux(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0,
-                    const unsigned int counter, T1 elem, List<T1> cycl) {
+                    unsigned int counter, T1 elem, List<T1> cycl) {
     if (counter <= 0) {
       return cycl;
     } else {
@@ -488,7 +477,7 @@ struct TopologicalSort {
   static order<T1>
   topological_sort_aux(F0 &&eqb_node,
                        const List<std::pair<T1, List<T1>>> &graph0,
-                       const unsigned int counter) {
+                       unsigned int counter) {
     if (counter <= 0) {
       return List<List<T1>>::nil();
     } else {

@@ -133,7 +133,7 @@ struct LoopifyPredicates {
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
@@ -142,20 +142,20 @@ struct LoopifyPredicates {
         if (p(d_a0)) {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
           _loop_l = d_a1.get();
           continue;
         } else {
-          *(_write) =
+          *_write =
               std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
           break;
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename F0>
@@ -172,7 +172,7 @@ struct LoopifyPredicates {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
         if (p(d_a0)) {
-          _loop_l = std::move(*(d_a1));
+          _loop_l = std::move(*d_a1);
         } else {
           _result = _loop_l;
           break;
@@ -219,7 +219,7 @@ struct LoopifyPredicates {
               std::get<typename List<unsigned int>::Cons>(l.v_mut());
           if (p(d_a0)) {
             _stack.emplace_back(_Cont1{d_a0});
-            _stack.emplace_back(_Enter{std::move(*(d_a1))});
+            _stack.emplace_back(_Enter{std::move(*d_a1)});
           } else {
             _result = std::make_pair(List<unsigned int>::nil(), l);
           }
@@ -274,7 +274,7 @@ struct LoopifyPredicates {
             _result = std::make_pair(List<unsigned int>::nil(), l);
           } else {
             _stack.emplace_back(_Cont1{d_a0});
-            _stack.emplace_back(_Enter{std::move(*(d_a1))});
+            _stack.emplace_back(_Enter{std::move(*d_a1)});
           }
         }
       } else {
@@ -297,9 +297,9 @@ struct LoopifyPredicates {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
       if (p(d_a0)) {
-        return List<unsigned int>::cons(d_a0, filter(p, *(d_a1)));
+        return List<unsigned int>::cons(d_a0, filter(p, *d_a1));
       } else {
-        return filter(p, *(d_a1));
+        return filter(p, *d_a1);
       }
     }
   }
@@ -313,9 +313,9 @@ struct LoopifyPredicates {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
       if (p(d_a0)) {
-        return reject(p, *(d_a1));
+        return reject(p, *d_a1);
       } else {
-        return List<unsigned int>::cons(d_a0, reject(p, *(d_a1)));
+        return List<unsigned int>::cons(d_a0, reject(p, *d_a1));
       }
     }
   }
@@ -347,7 +347,7 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = true;
         } else {
@@ -391,7 +391,7 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = false;
         } else {
@@ -411,9 +411,9 @@ struct LoopifyPredicates {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static std::optional<unsigned int>
-  find_index_aux(F0 &&p, const List<unsigned int> &l, const unsigned int idx) {
+  find_index_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
     std::optional<unsigned int> _result;
-    unsigned int _loop_idx = idx;
+    unsigned int _loop_idx = std::move(idx);
     const List<unsigned int> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -444,19 +444,18 @@ struct LoopifyPredicates {
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> find_indices_aux(F0 &&p,
-                                             const List<unsigned int> &l,
-                                             const unsigned int idx) {
+  static List<unsigned int>
+  find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
       if (p(d_a0)) {
-        return List<unsigned int>::cons(
-            idx, find_indices_aux(p, *(d_a1), (idx + 1u)));
+        return List<unsigned int>::cons(idx,
+                                        find_indices_aux(p, *d_a1, (idx + 1u)));
       } else {
-        return find_indices_aux(p, *(d_a1), (idx + 1u));
+        return find_indices_aux(p, *d_a1, (idx + 1u));
       }
     }
   }
@@ -469,7 +468,7 @@ struct LoopifyPredicates {
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
-  static List<unsigned int> delete_by(F0 &&eq, const unsigned int x,
+  static List<unsigned int> delete_by(F0 &&eq, unsigned int x,
                                       const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -477,19 +476,19 @@ struct LoopifyPredicates {
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (eq(x, d_a0)) {
-          *(_write) = std::make_unique<List<unsigned int>>(*(d_a1));
+          *_write = std::make_unique<List<unsigned int>>(*d_a1);
           break;
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -498,10 +497,10 @@ struct LoopifyPredicates {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
-  static List<unsigned int> remove_all(const unsigned int x,
+  static List<unsigned int> remove_all(unsigned int x,
                                        const List<unsigned int> &l);
 };
 

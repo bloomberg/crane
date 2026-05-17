@@ -3,7 +3,6 @@
 
 #include <any>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -13,8 +12,8 @@
 struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
-  static MysteryType mystery_function(const MysteryType _x0);
-  static MysteryType use_axiom(const std::monostate _x);
+  static MysteryType mystery_function(MysteryType _x0);
+  static MysteryType use_axiom(std::monostate _x);
 
   struct AxiomRecord {
     unsigned int normal_field;
@@ -22,11 +21,11 @@ struct AxiomTypes {
 
     // ACCESSORS
     AxiomRecord clone() const {
-      return AxiomRecord{(*(this)).normal_field, (*(this)).axiom_field};
+      return AxiomRecord{(*this).normal_field, (*this).axiom_field};
     }
   };
 
-  static AxiomRecord make_axiom_record(const std::monostate _x);
+  static AxiomRecord make_axiom_record(std::monostate _x);
   static MysteryType extract_axiom_field(const AxiomRecord &r);
 
   struct AxiomInductive {
@@ -70,19 +69,18 @@ struct AxiomTypes {
 
     // ACCESSORS
     AxiomInductive clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<AxConstr1>(_sv.v())) {
-        const auto &[d_a0] = std::get<AxConstr1>(_sv.v());
+      if (std::holds_alternative<AxConstr1>(this->v())) {
+        const auto &[d_a0] = std::get<AxConstr1>(this->v());
         return AxiomInductive(AxConstr1{d_a0});
       } else {
-        const auto &[d_a0] = std::get<AxConstr2>(_sv.v());
+        const auto &[d_a0] = std::get<AxConstr2>(this->v());
         return AxiomInductive(AxConstr2{d_a0});
       }
     }
 
     // CREATORS
     static AxiomInductive axconstr1(unsigned int a0) {
-      return AxiomInductive(AxConstr1{std::move(a0)});
+      return AxiomInductive(AxConstr1{a0});
     }
 
     static AxiomInductive axconstr2(MysteryType a0) {
@@ -122,9 +120,9 @@ struct AxiomTypes {
     }
   }
 
-  static AxiomInductive use_axiom_inductive(const std::monostate _x);
-  static MysteryType axiom_identity(const MysteryType x);
-  static MysteryType nested_axiom(const std::monostate _x);
+  static AxiomInductive use_axiom_inductive(std::monostate _x);
+  static MysteryType axiom_identity(MysteryType x);
+  static MysteryType nested_axiom(std::monostate _x);
 
   template <typename t_A> struct list {
     // TYPES
@@ -244,33 +242,33 @@ struct AxiomTypes {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
     T1 list_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename list<t_A>::Cons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template list_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<t_A>::Cons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template list_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, list<t_A> &, T1 &>
     T1 list_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename list<t_A>::Nil>(_sv.v())) {
+      if (std::holds_alternative<typename list<t_A>::Nil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename list<t_A>::Cons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template list_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] =
+            std::get<typename list<t_A>::Cons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template list_rect<T1>(f, f0));
       }
     }
   };
 
-  static list<MysteryType> axiom_list(const std::monostate _x);
+  static list<MysteryType> axiom_list(std::monostate _x);
 
   template <typename T1> static T1 poly_axiom(T1 x) { return x; }
 
-  static MysteryType use_poly_axiom(const std::monostate _x);
+  static MysteryType use_poly_axiom(std::monostate _x);
 };
 
 #endif // INCLUDED_AXIOM_TYPES

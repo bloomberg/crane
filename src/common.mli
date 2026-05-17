@@ -305,3 +305,9 @@ val enum_ctor_name_of_id : Id.t -> string
 val enum_ctor_names_of_packet : Id.t array -> string array
 
 val capitalize_last_component : string -> string
+
+(** {2 Needed C++ Headers} *)
+
+val require_header : string -> unit
+val get_needed_headers : unit -> string list
+val reset_needed_headers : unit -> unit

@@ -1,8 +1,6 @@
 #ifndef INCLUDED_BENCH_LET_IN
 #define INCLUDED_BENCH_LET_IN
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -43,8 +41,7 @@ struct BenchLetIn {
 
     // ACCESSORS
     pair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Pair0>(this->v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
     }
 
@@ -69,27 +66,25 @@ struct BenchLetIn {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 pair_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
       return f(d_a0, d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 pair_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
+          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
       return f(d_a0, d_a1);
     }
   };
 
-  static unsigned int swap_snd(const unsigned int a, const unsigned int b);
-  static unsigned int add_via_pair(const unsigned int a, const unsigned int b);
-  static unsigned int nested_swap(const unsigned int a, const unsigned int b,
-                                  const unsigned int c, const unsigned int d);
-  static unsigned int sum_via_pairs(const unsigned int n);
+  static unsigned int swap_snd(unsigned int a, unsigned int b);
+  static unsigned int add_via_pair(unsigned int a, unsigned int b);
+  static unsigned int nested_swap(unsigned int a, unsigned int b,
+                                  unsigned int c, unsigned int d);
+  static unsigned int sum_via_pairs(unsigned int n);
 
   template <typename t_A, typename t_B, typename t_C> struct triple {
     // TYPES
@@ -128,8 +123,7 @@ struct BenchLetIn {
 
     // ACCESSORS
     triple<t_A, t_B, t_C> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] = std::get<Triple0>(_sv.v());
+      const auto &[d_a0, d_a1, d_a2] = std::get<Triple0>(this->v());
       return triple<t_A, t_B, t_C>(Triple0{d_a0, d_a1, d_a2});
     }
 
@@ -154,28 +148,24 @@ struct BenchLetIn {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
     T1 triple_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple<t_A, t_B, t_C>::Triple0>(_sv.v());
+          std::get<typename triple<t_A, t_B, t_C>::Triple0>(this->v());
       return f(d_a0, d_a1, d_a2);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
     T1 triple_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple<t_A, t_B, t_C>::Triple0>(_sv.v());
+          std::get<typename triple<t_A, t_B, t_C>::Triple0>(this->v());
       return f(d_a0, d_a1, d_a2);
     }
   };
 
-  static unsigned int mid3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
-  static unsigned int sum3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
-  static unsigned int chain_pairs(const unsigned int a, const unsigned int b,
-                                  const unsigned int c);
+  static unsigned int mid3(unsigned int a, unsigned int b, unsigned int c);
+  static unsigned int sum3(unsigned int a, unsigned int b, unsigned int c);
+  static unsigned int chain_pairs(unsigned int a, unsigned int b,
+                                  unsigned int c);
   static inline const unsigned int test_swap = swap_snd(3u, 4u);
   static inline const unsigned int test_add = add_via_pair(3u, 4u);
   static inline const unsigned int test_nested = nested_swap(1u, 2u, 3u, 4u);

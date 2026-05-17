@@ -1,9 +1,6 @@
 #ifndef INCLUDED_ASCII
 #define INCLUDED_ASCII
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -50,18 +47,15 @@ public:
 
   // ACCESSORS
   Ascii clone() const {
-    auto &&_sv = *(this);
     const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
-        std::get<Ascii0>(_sv.v());
+        std::get<Ascii0>(this->v());
     return Ascii(Ascii0{d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7});
   }
 
   // CREATORS
   static Ascii ascii0(bool a0, bool a1, bool a2, bool a3, bool a4, bool a5,
                       bool a6, bool a7) {
-    return Ascii(Ascii0{std::move(a0), std::move(a1), std::move(a2),
-                        std::move(a3), std::move(a4), std::move(a5),
-                        std::move(a6), std::move(a7)});
+    return Ascii(Ascii0{a0, a1, a2, a3, a4, a5, a6, a7});
   }
 
   // MANIPULATORS

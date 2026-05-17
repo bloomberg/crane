@@ -2,8 +2,6 @@
 #define INCLUDED_RAM_EMPTY_WF
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -124,7 +122,7 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
 };
 
 struct RamEmptyWf {
@@ -134,7 +132,7 @@ struct RamEmptyWf {
 
     // ACCESSORS
     ram_reg clone() const {
-      return ram_reg{(*(this)).reg_main.clone(), (*(this)).reg_status.clone()};
+      return ram_reg{(*this).reg_main.clone(), (*this).reg_status.clone()};
     }
   };
 
@@ -144,7 +142,7 @@ struct RamEmptyWf {
 
     // ACCESSORS
     ram_chip clone() const {
-      return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
+      return ram_chip{(*this).chip_regs.clone(), (*this).chip_port};
     }
   };
 
@@ -152,7 +150,7 @@ struct RamEmptyWf {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*(this)).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
   };
 
   struct ram_sel {
@@ -163,8 +161,8 @@ struct RamEmptyWf {
 
     // ACCESSORS
     ram_sel clone() const {
-      return ram_sel{(*(this)).sel_bank, (*(this)).sel_chip, (*(this)).sel_reg,
-                     (*(this)).sel_char};
+      return ram_sel{(*this).sel_bank, (*this).sel_chip, (*this).sel_reg,
+                     (*this).sel_char};
     }
   };
 
@@ -181,7 +179,7 @@ struct RamEmptyWf {
   static inline const unsigned int default_bank_idx = default_sel.sel_bank;
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

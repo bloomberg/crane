@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_PAIRS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -156,12 +155,12 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -202,12 +201,12 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -248,7 +247,7 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
         } else {
@@ -285,14 +284,14 @@ struct LoopifyPairs {
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *(_write) = std::make_unique<list<std::pair<T1, T2>>>(
+        *_write = std::make_unique<list<std::pair<T1, T2>>>(
             list<std::pair<T1, T2>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          *(_write) = std::make_unique<list<std::pair<T1, T2>>>(
+          *_write = std::make_unique<list<std::pair<T1, T2>>>(
               list<std::pair<T1, T2>>::nil());
           break;
         } else {
@@ -301,7 +300,7 @@ struct LoopifyPairs {
           auto _cell = std::make_unique<list<std::pair<T1, T2>>>(
               typename list<std::pair<T1, T2>>::Cons(
                   std::make_pair(d_a0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write = &std::get<typename list<std::pair<T1, T2>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
@@ -311,7 +310,7 @@ struct LoopifyPairs {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   } /// zip3 combines three lists.
 
   template <typename T1, typename T2, typename T3>
@@ -324,23 +323,22 @@ struct LoopifyPairs {
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *(_write) = std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
+        *_write = std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
             list<std::pair<T1, std::pair<T2, T3>>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          *(_write) = std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
+          *_write = std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
               list<std::pair<T1, std::pair<T2, T3>>>::nil());
           break;
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
           if (std::holds_alternative<typename list<T3>::Nil>(_loop_l3->v())) {
-            *(_write) =
-                std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
-                    list<std::pair<T1, std::pair<T2, T3>>>::nil());
+            *_write = std::make_unique<list<std::pair<T1, std::pair<T2, T3>>>>(
+                list<std::pair<T1, std::pair<T2, T3>>>::nil());
             break;
           } else {
             const auto &[d_a01, d_a11] =
@@ -350,7 +348,7 @@ struct LoopifyPairs {
                     typename list<std::pair<T1, std::pair<T2, T3>>>::Cons(
                         std::make_pair(d_a0, std::make_pair(d_a00, d_a01)),
                         nullptr));
-            *(_write) = std::move(_cell);
+            *_write = std::move(_cell);
             _write =
                 &std::get<
                      typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
@@ -364,13 +362,13 @@ struct LoopifyPairs {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// split_at n l splits at position n.
   template <typename T1>
   static std::pair<list<T1>, list<T1>>
-  split_at(const unsigned int n,
+  split_at(unsigned int n,
            list<T1> l) { /// _Enter: captures varying parameters for each
                          /// recursive call.
 
@@ -397,7 +395,7 @@ struct LoopifyPairs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         list<T1> l = std::move(_f.l);
-        const unsigned int n = _f.n;
+        unsigned int n = _f.n;
         if (n <= 0) {
           _result = std::make_pair(list<T1>::nil(), std::move(l));
         } else {
@@ -407,7 +405,7 @@ struct LoopifyPairs {
           } else {
             auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v_mut());
             _stack.emplace_back(_Cont_Cons{d_a0});
-            _stack.emplace_back(_Enter{std::move(*(d_a1)), m});
+            _stack.emplace_back(_Enter{std::move(*d_a1), m});
           }
         }
       } else {
@@ -449,12 +447,12 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          auto &&_sv0 = *(d_a1);
+          auto &&_sv0 = *d_a1;
           if (std::holds_alternative<typename list<T1>::Nil>(_sv0.v())) {
             _result = std::make_pair(list<T1>::cons(d_a0, list<T1>::nil()),
                                      list<T1>::nil());
@@ -506,7 +504,7 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
         } else {
@@ -516,7 +514,7 @@ struct LoopifyPairs {
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             _result =
-                std::make_pair(list<T1>::nil(), list<T1>::cons(d_a0, *(d_a1)));
+                std::make_pair(list<T1>::nil(), list<T1>::cons(d_a0, *d_a1));
           }
         }
       } else {
@@ -533,7 +531,7 @@ struct LoopifyPairs {
   /// partition3 pivot l three-way partition around pivot.
   static std::pair<list<unsigned int>,
                    std::pair<list<unsigned int>, list<unsigned int>>>
-  partition3(const unsigned int pivot, const list<unsigned int> &l);
+  partition3(unsigned int pivot, const list<unsigned int> &l);
   /// min_max l finds both min and max in one pass.
   static std::pair<unsigned int, unsigned int>
   min_max(const list<unsigned int> &l);
@@ -575,7 +573,7 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> &l = *(_f.l);
+        const list<unsigned int> &l = *_f.l;
         unsigned int acc = _f.acc;
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(std::move(acc), list<unsigned int>::nil());
@@ -602,7 +600,7 @@ struct LoopifyPairs {
 
   /// lookup_all key l finds all values associated with key.
   static list<unsigned int>
-  lookup_all(const unsigned int key,
+  lookup_all(unsigned int key,
              const list<std::pair<unsigned int, unsigned int>> &l);
   /// swap_pairs l swaps elements in each pair.
   static list<std::pair<unsigned int, unsigned int>>

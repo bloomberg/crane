@@ -125,22 +125,20 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -154,8 +152,7 @@ struct PulseParseCertificateCase {
   static unsigned int pulse_base_from_runs(const List<unsigned int> &rs);
   enum class PulseClass { e_MARKSHORT, e_MARKLONG };
 
-  template <typename T1>
-  static T1 PulseClass_rect(T1 f, T1 f0, const PulseClass p) {
+  template <typename T1> static T1 PulseClass_rect(T1 f, T1 f0, PulseClass p) {
     switch (p) {
     case PulseClass::e_MARKSHORT: {
       return f;
@@ -168,8 +165,7 @@ struct PulseParseCertificateCase {
     }
   }
 
-  template <typename T1>
-  static T1 PulseClass_rec(T1 f, T1 f0, const PulseClass p) {
+  template <typename T1> static T1 PulseClass_rec(T1 f, T1 f0, PulseClass p) {
     switch (p) {
     case PulseClass::e_MARKSHORT: {
       return f;
@@ -182,11 +178,10 @@ struct PulseParseCertificateCase {
     }
   }
 
-  static PulseClass classify_run_with_base(const unsigned int base,
-                                           const unsigned int n);
-  static List<PulseClass> classify_runs_with_base(const unsigned int base,
+  static PulseClass classify_run_with_base(unsigned int base, unsigned int n);
+  static List<PulseClass> classify_runs_with_base(unsigned int base,
                                                   const List<unsigned int> &rs);
-  static bool pulse_class_eqb(const PulseClass x, const PulseClass y);
+  static bool pulse_class_eqb(PulseClass x, PulseClass y);
   static bool pulse_class_list_eqb(const List<PulseClass> &xs,
                                    const List<PulseClass> &ys);
 
@@ -200,9 +195,9 @@ struct PulseParseCertificateCase {
     // ACCESSORS
     PulseCertificate clone() const {
       return PulseCertificate{
-          (*(this)).certificate_first_active, (*(this)).certificate_last_active,
-          (*(this)).certificate_runs, (*(this)).certificate_base,
-          (*(this)).certificate_classes.clone()};
+          (*this).certificate_first_active, (*this).certificate_last_active,
+          (*this).certificate_runs, (*this).certificate_base,
+          (*this).certificate_classes.clone()};
     }
   };
 

@@ -2,8 +2,6 @@
 #define INCLUDED_TUPLE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -143,8 +141,7 @@ public:
 
   // ACCESSORS
   Prod<t_A, t_B> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
+    const auto &[d_a0, d_a1] = std::get<Pair>(this->v());
     return Prod<t_A, t_B>(Pair{d_a0, d_a1});
   }
 

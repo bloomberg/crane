@@ -4,7 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -32,7 +31,7 @@ struct Coinductive {
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(unsigned int a0, const stream &a1) {
-      return stream(Cons{std::move(a0), std::make_shared<stream>(a1)});
+      return stream(Cons{a0, std::make_shared<stream>(a1)});
     }
 
     static stream lazy_(std::function<stream()> thunk) {
@@ -47,20 +46,20 @@ struct Coinductive {
   };
 
   static stream zeros();
-  static stream count_from(const unsigned int n);
-  static unsigned int hd(const stream s);
-  static stream tl(const stream s);
+  static stream count_from(unsigned int n);
+  static unsigned int hd(stream s);
+  static stream tl(stream s);
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static stream smap(F0 &&f, const stream s) {
+  static stream smap(F0 &&f, stream s) {
     const auto &[d_a0, d_a1] = std::get<typename stream::Cons>(s.v());
     return stream::lazy_([=]() mutable -> stream {
-      return stream::cons(f(d_a0), smap(f, *(d_a1)));
+      return stream::cons(f(d_a0), smap(f, *d_a1));
     });
   }
 
-  static stream interleave(const stream s1, const stream s2);
+  static stream interleave(stream s1, stream s2);
   static inline const stream get_zeros = zeros();
   static inline const stream get_count = count_from(0u);
   static inline const unsigned int test_hd = hd(get_zeros);
@@ -95,11 +94,11 @@ struct Coinductive {
     explicit tree(std::function<variant_t()> _thunk)
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
+    static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
 
     static tree node(unsigned int a0, const tree &a1, const tree &a2) {
-      return tree(Node{std::move(a0), std::make_shared<tree>(a1),
-                       std::make_shared<tree>(a2)});
+      return tree(
+          Node{a0, std::make_shared<tree>(a1), std::make_shared<tree>(a2)});
     }
 
     static tree lazy_(std::function<tree()> thunk) {
@@ -113,7 +112,7 @@ struct Coinductive {
     const variant_t &v() const { return d_lazyV_.force(); }
   };
 
-  static tree infinite_tree(const unsigned int n);
+  static tree infinite_tree(unsigned int n);
 };
 
 #endif // INCLUDED_COINDUCTIVE

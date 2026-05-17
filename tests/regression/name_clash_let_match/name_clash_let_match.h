@@ -1,8 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_LET_MATCH
 #define INCLUDED_NAME_CLASH_LET_MATCH
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -49,22 +47,19 @@ struct NameClashLetMatch {
 
     // ACCESSORS
     either clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<Left>(_sv.v());
+      if (std::holds_alternative<Left>(this->v())) {
+        const auto &[d_a0] = std::get<Left>(this->v());
         return either(Left{d_a0});
       } else {
-        const auto &[d_a0] = std::get<Right>(_sv.v());
+        const auto &[d_a0] = std::get<Right>(this->v());
         return either(Right{d_a0});
       }
     }
 
     // CREATORS
-    static either left(unsigned int a0) { return either(Left{std::move(a0)}); }
+    static either left(unsigned int a0) { return either(Left{a0}); }
 
-    static either right(unsigned int a0) {
-      return either(Right{std::move(a0)});
-    }
+    static either right(unsigned int a0) { return either(Right{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -75,12 +70,11 @@ struct NameClashLetMatch {
     /// Deeply nested let-match-let-match chain
     unsigned int deep_let_match(const either &e2, const either &e3) const {
       unsigned int a = [&]() {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<typename either::Left>(_sv.v())) {
-          const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
+        if (std::holds_alternative<typename either::Left>(this->v())) {
+          const auto &[d_a0] = std::get<typename either::Left>(this->v());
           return d_a0;
         } else {
-          const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
+          const auto &[d_a0] = std::get<typename either::Right>(this->v());
           return d_a0;
         }
       }();
@@ -108,12 +102,11 @@ struct NameClashLetMatch {
     /// Two either values matched in sequence, same field names.
     unsigned int two_eithers(const either &e2) const {
       unsigned int v1 = [&]() {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<typename either::Left>(_sv.v())) {
-          const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
+        if (std::holds_alternative<typename either::Left>(this->v())) {
+          const auto &[d_a0] = std::get<typename either::Left>(this->v());
           return d_a0;
         } else {
-          const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
+          const auto &[d_a0] = std::get<typename either::Right>(this->v());
           return (d_a0 * 2u);
         }
       }();
@@ -131,12 +124,11 @@ struct NameClashLetMatch {
 
     /// Match binding used in a nested let that shadows.
     unsigned int match_then_let() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
+      if (std::holds_alternative<typename either::Left>(this->v())) {
+        const auto &[d_a0] = std::get<typename either::Left>(this->v());
         return (d_a0 + 1u);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
+        const auto &[d_a0] = std::get<typename either::Right>(this->v());
         return d_a0;
       }
     }
@@ -145,12 +137,11 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
+      if (std::holds_alternative<typename either::Left>(this->v())) {
+        const auto &[d_a0] = std::get<typename either::Left>(this->v());
         return f(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
+        const auto &[d_a0] = std::get<typename either::Right>(this->v());
         return f0(d_a0);
       }
     }
@@ -159,12 +150,11 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(_sv.v());
+      if (std::holds_alternative<typename either::Left>(this->v())) {
+        const auto &[d_a0] = std::get<typename either::Left>(this->v());
         return f(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(_sv.v());
+        const auto &[d_a0] = std::get<typename either::Right>(this->v());
         return f0(d_a0);
       }
     }
@@ -206,14 +196,13 @@ struct NameClashLetMatch {
 
     // ACCESSORS
     triple clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
+      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(this->v());
       return triple(MkTriple{d_a0, d_a1, d_a2});
     }
 
     // CREATORS
     static triple mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
-      return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
+      return triple(MkTriple{a0, a1, a2});
     }
 
     // MANIPULATORS
@@ -224,9 +213,8 @@ struct NameClashLetMatch {
 
     /// Match on a triple, then match on an either, same-ish names
     unsigned int triple_then_either(const either &e) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(_sv.v());
+          std::get<typename triple::MkTriple>(this->v());
       unsigned int from_either = [&]() {
         if (std::holds_alternative<typename either::Left>(e.v())) {
           const auto &[d_a00] = std::get<typename either::Left>(e.v());
@@ -243,9 +231,8 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(_sv.v());
+          std::get<typename triple::MkTriple>(this->v());
       return f(d_a0, d_a1, d_a2);
     }
 
@@ -253,9 +240,8 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(_sv.v());
+          std::get<typename triple::MkTriple>(this->v());
       return f(d_a0, d_a1, d_a2);
     }
   };

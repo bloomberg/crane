@@ -9,7 +9,7 @@ unsigned int MemSafetyProbe11::sum_fns(
   } else {
     const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe11::mylist<
         std::function<unsigned int(unsigned int)>>::Mycons>(l.v());
-    return (d_a0(0u) + sum_fns(*(d_a1)));
+    return (d_a0(0u) + sum_fns(*d_a1));
   }
 }
 
@@ -27,8 +27,8 @@ MemSafetyProbe11::collect_dual_captures(
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
-    MemSafetyProbe11::tree d_a0_value = *(d_a0);
-    MemSafetyProbe11::tree d_a2_value = *(d_a2);
+    MemSafetyProbe11::tree d_a0_value = *d_a0;
+    MemSafetyProbe11::tree d_a2_value = *d_a2;
     MemSafetyProbe11::mylist<std::function<unsigned int(unsigned int)>> acc2 =
         mylist<std::function<unsigned int(unsigned int)>>::mycons(
             [=](auto _xarg0) mutable {
@@ -54,7 +54,7 @@ MemSafetyProbe11::capture_tails(
     const auto &[d_a0, d_a1] =
         std::get<typename MemSafetyProbe11::mylist<unsigned int>::Mycons>(
             l.v());
-    MemSafetyProbe11::mylist<unsigned int> d_a1_value = *(d_a1);
+    MemSafetyProbe11::mylist<unsigned int> d_a1_value = *d_a1;
     return capture_tails(
         d_a1_value, mylist<std::function<unsigned int(unsigned int)>>::mycons(
                         [=](auto _xarg0) mutable {
@@ -76,8 +76,8 @@ MemSafetyProbe11::triple_use_tree(
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
-    MemSafetyProbe11::tree d_a0_value = *(d_a0);
-    MemSafetyProbe11::tree d_a2_value = *(d_a2);
+    MemSafetyProbe11::tree d_a0_value = *d_a0;
+    MemSafetyProbe11::tree d_a2_value = *d_a2;
     MemSafetyProbe11::mylist<std::function<unsigned int(unsigned int)>> acc2 =
         mylist<std::function<unsigned int(unsigned int)>>::mycons(
             [=](auto _xarg0) mutable {
@@ -98,7 +98,7 @@ MemSafetyProbe11::triple_use_tree(
 /// Tests whether accumulator values are properly captured.
 MemSafetyProbe11::mylist<std::function<unsigned int(unsigned int)>>
 MemSafetyProbe11::dual_accum(
-    const MemSafetyProbe11::mylist<unsigned int> &l, const unsigned int sum_acc,
+    const MemSafetyProbe11::mylist<unsigned int> &l, unsigned int sum_acc,
     MemSafetyProbe11::mylist<std::function<unsigned int(unsigned int)>>
         fn_acc) {
   if (std::holds_alternative<
@@ -108,7 +108,7 @@ MemSafetyProbe11::dual_accum(
     const auto &[d_a0, d_a1] =
         std::get<typename MemSafetyProbe11::mylist<unsigned int>::Mycons>(
             l.v());
-    MemSafetyProbe11::mylist<unsigned int> d_a1_value = *(d_a1);
+    MemSafetyProbe11::mylist<unsigned int> d_a1_value = *d_a1;
     unsigned int new_sum = (sum_acc + d_a0);
     return dual_accum(
         d_a1_value, new_sum,

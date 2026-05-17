@@ -2,9 +2,6 @@
 #define INCLUDED_SEP_EXT_SIGT_DEPENDENT
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -43,8 +40,7 @@ public:
 
   // ACCESSORS
   SigT<t_A, t_P> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
+    const auto &[d_x, d_a1] = std::get<ExistT>(this->v());
     return SigT<t_A, t_P>(ExistT{d_x, d_a1});
   }
 
@@ -67,9 +63,8 @@ public:
   const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
-    auto &&_sv = *(this);
     const auto &[d_x, d_a1] =
-        std::get<typename SigT<t_A, t_P>::ExistT>(_sv.v());
+        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
     return d_x;
   }
 };
@@ -79,8 +74,8 @@ using tag_type = std::any;
 struct Packer {
   static inline const SigT<Tag, tag_type> pack_a =
       SigT<Tag, std::any>::existt(Tag::e_TAGA, std::monostate{});
-  static SigT<Tag, tag_type> pack_b(const unsigned int n);
-  static SigT<Tag, tag_type> pack_c(const bool b);
+  static SigT<Tag, tag_type> pack_b(unsigned int n);
+  static SigT<Tag, tag_type> pack_c(bool b);
   static Tag get_tag(const SigT<Tag, tag_type> &_x0);
 };
 

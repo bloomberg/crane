@@ -2,7 +2,6 @@
 #define INCLUDED_DEP_ELIM
 
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -198,10 +197,10 @@ struct DepElim {
     }
 
     // CREATORS
-    static fin fz(unsigned int n) { return fin(FZ{std::move(n)}); }
+    static fin fz(unsigned int n) { return fin(FZ{n}); }
 
     static fin fs(unsigned int n, fin a1) {
-      return fin(FS{std::move(n), std::make_unique<fin>(std::move(a1))});
+      return fin(FS{n, std::make_unique<fin>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -231,41 +230,38 @@ struct DepElim {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int fin_to_nat(const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
+    unsigned int fin_to_nat(unsigned int) const {
+      if (std::holds_alternative<typename fin::FZ>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_n, d_a1] = std::get<typename fin::FS>(_sv.v());
-        return ((*(d_a1)).fin_to_nat(d_n) + 1);
+        const auto &[d_n, d_a1] = std::get<typename fin::FS>(this->v());
+        return ((*d_a1).fin_to_nat(d_n) + 1);
       }
     }
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &, fin &, T1 &>
-    T1 fin_rec(F0 &&f, F1 &&f0, const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
-        const auto &[d_n] = std::get<typename fin::FZ>(_sv.v());
+    T1 fin_rec(F0 &&f, F1 &&f0, unsigned int) const {
+      if (std::holds_alternative<typename fin::FZ>(this->v())) {
+        const auto &[d_n] = std::get<typename fin::FZ>(this->v());
         return f(d_n);
       } else {
-        const auto &[d_n, d_a1] = std::get<typename fin::FS>(_sv.v());
-        return f0(d_n, *(d_a1), (*(d_a1)).template fin_rec<T1>(f, f0, d_n));
+        const auto &[d_n, d_a1] = std::get<typename fin::FS>(this->v());
+        return f0(d_n, *d_a1, (*d_a1).template fin_rec<T1>(f, f0, d_n));
       }
     }
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &, fin &, T1 &>
-    T1 fin_rect(F0 &&f, F1 &&f0, const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
-        const auto &[d_n] = std::get<typename fin::FZ>(_sv.v());
+    T1 fin_rect(F0 &&f, F1 &&f0, unsigned int) const {
+      if (std::holds_alternative<typename fin::FZ>(this->v())) {
+        const auto &[d_n] = std::get<typename fin::FZ>(this->v());
         return f(d_n);
       } else {
-        const auto &[d_n, d_a1] = std::get<typename fin::FS>(_sv.v());
-        return f0(d_n, *(d_a1), (*(d_a1)).template fin_rect<T1>(f, f0, d_n));
+        const auto &[d_n, d_a1] = std::get<typename fin::FS>(this->v());
+        return f0(d_n, *d_a1, (*d_a1).template fin_rect<T1>(f, f0, d_n));
       }
     }
   };
@@ -356,8 +352,8 @@ struct DepElim {
     static vec<t_A> vnil() { return vec(Vnil{}); }
 
     static vec<t_A> vcons(unsigned int n, t_A a1, vec<t_A> a2) {
-      return vec(Vcons{std::move(n), std::move(a1),
-                       std::make_unique<vec<t_A>>(std::move(a2))});
+      return vec(
+          Vcons{n, std::move(a1), std::make_unique<vec<t_A>>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -387,80 +383,72 @@ struct DepElim {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    vec<t_A> vec_tail(const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
+    vec<t_A> vec_tail(unsigned int) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         throw std::logic_error("unreachable");
       } else {
         const auto &[d_n, d_a1, d_a2] =
-            std::get<typename vec<t_A>::Vcons>(_sv.v());
-        return *(d_a2);
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return *d_a2;
       }
     }
 
-    t_A vec_head(const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
+    t_A vec_head(unsigned int) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         throw std::logic_error("unreachable");
       } else {
         const auto &[d_n, d_a1, d_a2] =
-            std::get<typename vec<t_A>::Vcons>(_sv.v());
+            std::get<typename vec<t_A>::Vcons>(this->v());
         return d_a1;
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
-    vec<T1> vec_map(const unsigned int, F1 &&f) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
+    vec<T1> vec_map(unsigned int, F1 &&f) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         return vec<T1>::vnil();
       } else {
         const auto &[d_n, d_a1, d_a2] =
-            std::get<typename vec<t_A>::Vcons>(_sv.v());
+            std::get<typename vec<t_A>::Vcons>(this->v());
         return vec<T1>::vcons(d_n, f(d_a1),
-                              (*(d_a2)).template vec_map<T1>(d_n, f));
+                              (*d_a2).template vec_map<T1>(d_n, f));
       }
     }
 
-    List<t_A> vec_to_list(const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
+    List<t_A> vec_to_list(unsigned int) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         return List<t_A>::nil();
       } else {
         const auto &[d_n, d_a1, d_a2] =
-            std::get<typename vec<t_A>::Vcons>(_sv.v());
-        return List<t_A>::cons(d_a1, (*(d_a2)).vec_to_list(d_n));
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return List<t_A>::cons(d_a1, (*d_a2).vec_to_list(d_n));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, t_A &,
                                      vec<t_A> &, T1 &>
-    T1 vec_rec(T1 f, F1 &&f0, const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
+    T1 vec_rec(T1 f, F1 &&f0, unsigned int) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         return f;
       } else {
         const auto &[d_n, d_a1, d_a2] =
-            std::get<typename vec<t_A>::Vcons>(_sv.v());
-        return f0(d_n, d_a1, *(d_a2),
-                  (*(d_a2)).template vec_rec<T1>(f, f0, d_n));
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return f0(d_n, d_a1, *d_a2, (*d_a2).template vec_rec<T1>(f, f0, d_n));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, t_A &,
                                      vec<t_A> &, T1 &>
-    T1 vec_rect(T1 f, F1 &&f0, const unsigned int) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename vec<t_A>::Vnil>(_sv.v())) {
+    T1 vec_rect(T1 f, F1 &&f0, unsigned int) const {
+      if (std::holds_alternative<typename vec<t_A>::Vnil>(this->v())) {
         return f;
       } else {
         const auto &[d_n, d_a1, d_a2] =
-            std::get<typename vec<t_A>::Vcons>(_sv.v());
-        return f0(d_n, d_a1, *(d_a2),
-                  (*(d_a2)).template vec_rect<T1>(f, f0, d_n));
+            std::get<typename vec<t_A>::Vcons>(this->v());
+        return f0(d_n, d_a1, *d_a2, (*d_a2).template vec_rect<T1>(f, f0, d_n));
       }
     }
   };
@@ -503,9 +491,8 @@ struct DepElim {
 
     // ACCESSORS
     avail clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Present>(_sv.v())) {
-        const auto &[d_a0] = std::get<Present>(_sv.v());
+      if (std::holds_alternative<Present>(this->v())) {
+        const auto &[d_a0] = std::get<Present>(this->v());
         return avail(Present{d_a0});
       } else {
         return avail(Absent{});
@@ -513,9 +500,7 @@ struct DepElim {
     }
 
     // CREATORS
-    static avail present(unsigned int a0) {
-      return avail(Present{std::move(a0)});
-    }
+    static avail present(unsigned int a0) { return avail(Present{a0}); }
 
     static avail absent() { return avail(Absent{}); }
 
@@ -526,9 +511,8 @@ struct DepElim {
     const variant_t &v() const { return d_v_; }
 
     unsigned int get_present() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename avail::Present>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());
+      if (std::holds_alternative<typename avail::Present>(this->v())) {
+        const auto &[d_a0] = std::get<typename avail::Present>(this->v());
         return d_a0;
       } else {
         throw std::logic_error("unreachable");
@@ -537,10 +521,9 @@ struct DepElim {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-    T1 avail_rec(F0 &&f, T1 f0, const bool) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename avail::Present>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());
+    T1 avail_rec(F0 &&f, T1 f0, bool) const {
+      if (std::holds_alternative<typename avail::Present>(this->v())) {
+        const auto &[d_a0] = std::get<typename avail::Present>(this->v());
         return f(d_a0);
       } else {
         return f0;
@@ -549,10 +532,9 @@ struct DepElim {
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
-    T1 avail_rect(F0 &&f, T1 f0, const bool) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename avail::Present>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename avail::Present>(_sv.v());
+    T1 avail_rect(F0 &&f, T1 f0, bool) const {
+      if (std::holds_alternative<typename avail::Present>(this->v())) {
+        const auto &[d_a0] = std::get<typename avail::Present>(this->v());
         return f(d_a0);
       } else {
         return f0;
@@ -575,7 +557,7 @@ struct DepElim {
   static inline const List<unsigned int> test_vec_map =
       my_vec
           .template vec_map<unsigned int>(
-              3u, [](const unsigned int n) { return (n + 1u); })
+              3u, [](unsigned int n) { return (n + 1u); })
           .vec_to_list(3u);
   static inline const unsigned int test_present =
       avail::present(42u).get_present();

@@ -2,8 +2,6 @@
 #define INCLUDED_FIX_STATE_THREADING
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -124,7 +122,7 @@ public:
 };
 
 struct Nat {
-  static bool even(const unsigned int n);
+  static bool even(unsigned int n);
 };
 
 struct FixStateThreading {

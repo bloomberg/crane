@@ -4,19 +4,19 @@
 /// Partial application of this to a tree creates a
 /// closure nat -> nat in C++ via & lambda.
 unsigned int PartialAppMove::sum_values(const PartialAppMove::tree &t,
-                                        const unsigned int x) {
+                                        unsigned int x) {
   if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(t.v())) {
     return x;
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename PartialAppMove::tree::Node>(t.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *d_a0;
     if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(_sv0.v())) {
       return (d_a1 + x);
     } else {
       const auto &[d_a00, d_a10, d_a20] =
           std::get<typename PartialAppMove::tree::Node>(_sv0.v());
-      auto &&_sv1 = *(d_a2);
+      auto &&_sv1 = *d_a2;
       if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(
               _sv1.v())) {
         return (d_a10 + x);

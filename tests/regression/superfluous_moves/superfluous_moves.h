@@ -2,8 +2,6 @@
 #define INCLUDED_SUPERFLUOUS_MOVES
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -129,12 +127,12 @@ struct SuperfluousMoves {
     unsigned int px;
 
     // ACCESSORS
-    position clone() const { return position{(*(this)).px}; }
+    position clone() const { return position{(*this).px}; }
   };
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { e_CHASE, e_FRIGHTENED };
 
-  template <typename T1> static T1 mode_rect(T1 f, T1 f0, const Mode m) {
+  template <typename T1> static T1 mode_rect(T1 f, T1 f0, Mode m) {
     switch (m) {
     case Mode::e_CHASE: {
       return f;
@@ -147,7 +145,7 @@ struct SuperfluousMoves {
     }
   }
 
-  template <typename T1> static T1 mode_rec(T1 f, T1 f0, const Mode m) {
+  template <typename T1> static T1 mode_rec(T1 f, T1 f0, Mode m) {
     switch (m) {
     case Mode::e_CHASE: {
       return f;
@@ -168,8 +166,8 @@ struct SuperfluousMoves {
 
     // ACCESSORS
     game_state clone() const {
-      return game_state{(*(this)).pacpos.clone(), (*(this)).ghosts.clone(),
-                        (*(this)).lives};
+      return game_state{(*this).pacpos.clone(), (*this).ghosts.clone(),
+                        (*this).lives};
     }
   };
 
@@ -181,9 +179,8 @@ struct SuperfluousMoves {
 
     // ACCESSORS
     loop_state clone() const {
-      return loop_state{(*(this)).ls_game.clone(),
-                        (*(this)).ls_prev_pac.clone(),
-                        (*(this)).ls_prev_ghosts.clone()};
+      return loop_state{(*this).ls_game.clone(), (*this).ls_prev_pac.clone(),
+                        (*this).ls_prev_ghosts.clone()};
     }
   };
 

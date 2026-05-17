@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_TREES
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -128,21 +127,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -309,7 +308,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = tree<T1>::leaf();
           } else {
@@ -366,8 +365,8 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          const tree<t_A> &t2 = *(_f.t2);
-          auto &&_sv = *(_self);
+          const tree<t_A> &t2 = *_f.t2;
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             if (std::holds_alternative<typename tree<t_A>::Leaf>(t2.v())) {
               _result = true;
@@ -432,7 +431,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = List<t_A>::nil();
           } else {
@@ -485,7 +484,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = 1u;
           } else {
@@ -510,14 +509,14 @@ struct LoopifyTrees {
       t_A _result;
       const tree *_loop_self = this;
       while (true) {
-        auto &&_sv = *(_loop_self);
+        auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
           _result = default0;
           break;
         } else {
           const auto &[d_a0, d_a1, d_a2] =
               std::get<typename tree<t_A>::Node>(_sv.v());
-          auto &&_sv = *(d_a2);
+          auto &&_sv = *d_a2;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = d_a1;
             break;
@@ -534,14 +533,14 @@ struct LoopifyTrees {
       t_A _result;
       const tree *_loop_self = this;
       while (true) {
-        auto &&_sv = *(_loop_self);
+        auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
           _result = default0;
           break;
         } else {
           const auto &[d_a0, d_a1, d_a2] =
               std::get<typename tree<t_A>::Node>(_sv.v());
-          auto &&_sv = *(d_a0);
+          auto &&_sv = *d_a0;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = d_a1;
             break;
@@ -556,7 +555,7 @@ struct LoopifyTrees {
     /// same_shape tests structural equality.
     template <typename T1> bool same_shape(const tree<T1> &t2) const {
       const tree *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
         if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
           return true;
@@ -571,8 +570,8 @@ struct LoopifyTrees {
         } else {
           const auto &[d_a00, d_a10, d_a20] =
               std::get<typename tree<T1>::Node>(t2.v());
-          if ((*(d_a0)).template same_shape<T1>(*(d_a00))) {
-            return (*(d_a2)).template same_shape<T1>(*(d_a20));
+          if ((*d_a0).template same_shape<T1>(*d_a00)) {
+            return (*d_a2).template same_shape<T1>(*d_a20);
           } else {
             return false;
           }
@@ -613,7 +612,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = tree<t_A>::leaf();
           } else {
@@ -665,7 +664,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -688,14 +687,14 @@ struct LoopifyTrees {
 
     unsigned int tree_height() const {
       const tree *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
         return 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename tree<t_A>::Node>(_sv.v());
-        unsigned int lh = (*(d_a0)).tree_height();
-        unsigned int rh = (*(d_a2)).tree_height();
+        unsigned int lh = (*d_a0).tree_height();
+        unsigned int rh = (*d_a2).tree_height();
         return ((lh <= rh ? rh : lh) + 1);
       }
     }
@@ -741,14 +740,13 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree<t_A>::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -805,14 +803,13 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<t_A>::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree<t_A>::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -833,11 +830,10 @@ struct LoopifyTrees {
   /// leaf_sum sums only leaf values.
   static unsigned int leaf_sum(const tree<unsigned int> &t);
   /// insert_bst BST insertion.
-  static tree<unsigned int> insert_bst(const unsigned int x,
+  static tree<unsigned int> insert_bst(unsigned int x,
                                        const tree<unsigned int> &t);
   /// count_paths t n counts root-to-leaf paths that sum to n.
-  static unsigned int count_paths(const tree<unsigned int> &t,
-                                  const unsigned int n);
+  static unsigned int count_paths(const tree<unsigned int> &t, unsigned int n);
   /// sum_of_max_branches sums maximum values along each path.
   static unsigned int sum_of_max_branches(const tree<unsigned int> &t);
 
@@ -926,8 +922,7 @@ struct LoopifyTrees {
     static ternary tnode(ternary a0, ternary a1, ternary a2, unsigned int a3) {
       return ternary(TNode{std::make_unique<ternary>(std::move(a0)),
                            std::make_unique<ternary>(std::move(a1)),
-                           std::make_unique<ternary>(std::move(a2)),
-                           std::move(a3)});
+                           std::make_unique<ternary>(std::move(a2)), a3});
     }
 
     // MANIPULATORS
@@ -965,15 +960,15 @@ struct LoopifyTrees {
 
     unsigned int ternary_depth() const {
       const ternary *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
         return 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] =
             std::get<typename ternary::TNode>(_sv.v());
-        unsigned int d1 = (*(d_a0)).ternary_depth();
-        unsigned int d2 = (*(d_a1)).ternary_depth();
-        unsigned int d3 = (*(d_a2)).ternary_depth();
+        unsigned int d1 = (*d_a0).ternary_depth();
+        unsigned int d2 = (*d_a1).ternary_depth();
+        unsigned int d3 = (*d_a2).ternary_depth();
         return ([&]() -> unsigned int {
           if ((d1 <= d2 ? d2 : d1) <= d3) {
             return d3;
@@ -1033,7 +1028,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const ternary *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -1116,14 +1111,14 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const ternary *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename ternary::TNode>(_sv.v());
             _stack.emplace_back(_After_TNode{d_a1.get(), d_a0.get(), d_a3,
-                                             *(d_a2), *(d_a1), *(d_a0)});
+                                             *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_TNode>(_frame)) {
@@ -1205,14 +1200,14 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const ternary *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename ternary::TNode>(_sv.v());
             _stack.emplace_back(_After_TNode{d_a1.get(), d_a0.get(), d_a3,
-                                             *(d_a2), *(d_a1), *(d_a0)});
+                                             *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_TNode>(_frame)) {
@@ -1324,8 +1319,7 @@ struct LoopifyTrees {
 
     // CREATORS
     static rose rnode(unsigned int a0, List<rose> a1) {
-      return rose(
-          RNode{std::move(a0), std::make_unique<List<rose>>(std::move(a1))});
+      return rose(RNode{a0, std::make_unique<List<rose>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -1367,61 +1361,55 @@ struct LoopifyTrees {
 
     /// rose_depth t computes the depth of a rose tree.
     unsigned int rose_depth() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return (depth_rose_list_fuel(1000u, *(d_a1)) + 1);
+      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(this->v());
+      return (depth_rose_list_fuel(1000u, *d_a1) + 1);
     }
 
     /// rose_flatten t flattens a rose tree to a list (pre-order).
     List<unsigned int> rose_flatten() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(this->v());
       return List<unsigned int>::cons(d_a0,
-                                      flatten_rose_list_fuel(1000u, *(d_a1)));
+                                      flatten_rose_list_fuel(1000u, *d_a1));
     }
 
     /// rose_map f t applies f to all values in a rose tree.
     template <typename F0>
       requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
     rose rose_map(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return rose::rnode(f(d_a0), map_rose_list_fuel(1000u, f, *(d_a1)));
+      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(this->v());
+      return rose::rnode(f(d_a0), map_rose_list_fuel(1000u, f, *d_a1));
     }
 
     /// rose_sum t sums all values in a rose tree.
     unsigned int rose_sum() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return (d_a0 + sum_rose_list_fuel(1000u, *(d_a1)));
+      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(this->v());
+      return (d_a0 + sum_rose_list_fuel(1000u, *d_a1));
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<rose> &>
     T1 rose_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return f(d_a0, *(d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(this->v());
+      return f(d_a0, *d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<rose> &>
     T1 rose_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(_sv.v());
-      return f(d_a0, *(d_a1));
+      const auto &[d_a0, d_a1] = std::get<typename rose::RNode>(this->v());
+      return f(d_a0, *d_a1);
     }
   };
 
   /// Helper: sum all values in a list of rose trees (processes both tree and
   /// list levels in one recursive function to enable full loopification).
-  static unsigned int sum_rose_list_fuel(const unsigned int fuel,
+  static unsigned int sum_rose_list_fuel(unsigned int fuel,
                                          const List<rose> &cs);
 
   /// Helper: map function over all values in a list of rose trees.
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static List<rose> map_rose_list_fuel(const unsigned int fuel, F1 &&f,
+  static List<rose> map_rose_list_fuel(unsigned int fuel, F1 &&f,
                                        const List<rose> &cs) {
     if (fuel <= 0) {
       return List<rose>::nil();
@@ -1433,17 +1421,17 @@ struct LoopifyTrees {
         const auto &[d_a0, d_a1] = std::get<typename List<rose>::Cons>(cs.v());
         const auto &[d_a00, d_a10] = std::get<typename rose::RNode>(d_a0.v());
         return List<rose>::cons(
-            rose::rnode(f(d_a00), map_rose_list_fuel(g, f, *(d_a10))),
-            map_rose_list_fuel(g, f, *(d_a1)));
+            rose::rnode(f(d_a00), map_rose_list_fuel(g, f, *d_a10)),
+            map_rose_list_fuel(g, f, *d_a1));
       }
     }
   }
 
   /// Helper: flatten a list of rose trees to a flat list of nats.
-  static List<unsigned int> flatten_rose_list_fuel(const unsigned int fuel,
+  static List<unsigned int> flatten_rose_list_fuel(unsigned int fuel,
                                                    const List<rose> &cs);
   /// Helper: compute maximum depth among a list of rose trees.
-  static unsigned int depth_rose_list_fuel(const unsigned int fuel,
+  static unsigned int depth_rose_list_fuel(unsigned int fuel,
                                            const List<rose> &cs);
   /// tree_max t1 t2 element-wise maximum of two trees.
   static tree<unsigned int> tree_max(tree<unsigned int> t1,
@@ -1456,8 +1444,7 @@ struct LoopifyTrees {
   extract_tree_children(const List<tree<unsigned int>> &ts);
   /// tree_levels t returns list of lists, one per level (breadth-first).
   static List<List<unsigned int>>
-  tree_levels_fuel(const unsigned int fuel,
-                   const List<tree<unsigned int>> &trees);
+  tree_levels_fuel(unsigned int fuel, const List<tree<unsigned int>> &trees);
   static List<List<unsigned int>> tree_levels(tree<unsigned int> t);
   /// count_nodes t returns tuple (node_count, sum_of_values).
   static std::pair<unsigned int, unsigned int>
@@ -1468,13 +1455,13 @@ struct LoopifyTrees {
                     List<List<unsigned int>> l2);
   /// Helper: prepend value to all lists in a list of lists.
   static List<List<unsigned int>>
-  map_cons_to_all(const unsigned int x, const List<List<unsigned int>> &lsts);
+  map_cons_to_all(unsigned int x, const List<List<unsigned int>> &lsts);
   /// paths t returns all root-to-leaf paths in tree.
   static List<List<unsigned int>> paths(const tree<unsigned int> &t);
   /// collect_sorted t collects and sorts all tree values.
   static List<unsigned int> collect_unsorted(const tree<unsigned int> &t);
   /// Simple insertion sort for collect_sorted.
-  static List<unsigned int> insert_sorted(const unsigned int x,
+  static List<unsigned int> insert_sorted(unsigned int x,
                                           const List<unsigned int> &l);
   static List<unsigned int> sort_list(const List<unsigned int> &l);
   static List<unsigned int> collect_sorted(const tree<unsigned int> &t);
@@ -1491,7 +1478,7 @@ struct LoopifyTrees {
       if (p(d_a1)) {
         return true;
       } else {
-        return (or_search(p, *(d_a0)) || or_search(p, *(d_a2)));
+        return (or_search(p, *d_a0) || or_search(p, *d_a2));
       }
     }
   }
@@ -1582,9 +1569,7 @@ struct LoopifyTrees {
     }
 
     // CREATORS
-    static quadtree qleaf(unsigned int a0) {
-      return quadtree(QLeaf{std::move(a0)});
-    }
+    static quadtree qleaf(unsigned int a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
@@ -1683,7 +1668,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -1770,7 +1755,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_sv.v());
             _result = d_a0;
@@ -1876,7 +1861,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_sv.v());
             _result = f(d_a0);
@@ -1884,8 +1869,7 @@ struct LoopifyTrees {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
             _stack.emplace_back(_After_Quad{d_a2.get(), d_a1.get(), d_a0.get(),
-                                            *(d_a3), *(d_a2), *(d_a1),
-                                            *(d_a0)});
+                                            *d_a3, *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
@@ -1989,7 +1973,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_sv.v());
             _result = f(d_a0);
@@ -1997,8 +1981,7 @@ struct LoopifyTrees {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
             _stack.emplace_back(_After_Quad{d_a2.get(), d_a1.get(), d_a0.get(),
-                                            *(d_a3), *(d_a2), *(d_a1),
-                                            *(d_a0)});
+                                            *d_a3, *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
@@ -2030,8 +2013,8 @@ struct LoopifyTrees {
   };
 
   /// Helper: max of 4 values using nested max.
-  static unsigned int max4_impl(const unsigned int a, const unsigned int b,
-                                const unsigned int c, const unsigned int d);
+  static unsigned int max4_impl(unsigned int a, unsigned int b, unsigned int c,
+                                unsigned int d);
 
   /// Simple binary tree with values only at leaves.
   struct simple_tree {
@@ -2112,9 +2095,7 @@ struct LoopifyTrees {
     }
 
     // CREATORS
-    static simple_tree sleaf(unsigned int a0) {
-      return simple_tree(SLeaf{std::move(a0)});
-    }
+    static simple_tree sleaf(unsigned int a0) { return simple_tree(SLeaf{a0}); }
 
     static simple_tree snode(simple_tree a0, simple_tree a1) {
       return simple_tree(SNode{std::make_unique<simple_tree>(std::move(a0)),
@@ -2152,7 +2133,7 @@ struct LoopifyTrees {
     const variant_t &v() const { return d_v_; }
 
     /// count_paths_simple t n counts paths with sum n (simpler variant).
-    unsigned int count_paths_simple(const unsigned int n) const {
+    unsigned int count_paths_simple(unsigned int n) const {
       const simple_tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2164,10 +2145,10 @@ struct LoopifyTrees {
       /// _After2: saves [_s0, _s1], dispatches next recursive call.
       struct _After2 {
         simple_tree *_s0;
-        decltype((((std::declval<const unsigned int &>() - 1u) >
-                           std::declval<const unsigned int &>()
+        decltype((((std::declval<unsigned int &>() - 1u) >
+                           std::declval<unsigned int &>()
                        ? 0
-                       : (std::declval<const unsigned int &>() - 1u)))) _s1;
+                       : (std::declval<unsigned int &>() - 1u)))) _s1;
       };
 
       /// _Combine1: receives partial results, combines with _result from final
@@ -2188,8 +2169,8 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const simple_tree *_self = _f._self;
-          const unsigned int n = _f.n;
-          auto &&_sv = *(_self);
+          unsigned int n = _f.n;
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
             if (d_a0 == n) {
@@ -2253,7 +2234,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const simple_tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
             _result = d_a0;
@@ -2314,14 +2295,14 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const simple_tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename simple_tree::SNode>(_sv.v());
-            _stack.emplace_back(_After_SNode{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_SNode{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_After_SNode>(_frame)) {
@@ -2376,14 +2357,14 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const simple_tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename simple_tree::SNode>(_sv.v());
-            _stack.emplace_back(_After_SNode{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_SNode{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_After_SNode>(_frame)) {
@@ -2401,18 +2382,16 @@ struct LoopifyTrees {
   };
 
   /// Helper: compute minimum of three values.
-  static unsigned int min3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
+  static unsigned int min3(unsigned int a, unsigned int b, unsigned int c);
   /// Helper: compute maximum of three values.
-  static unsigned int max3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
+  static unsigned int max3(unsigned int a, unsigned int b, unsigned int c);
   /// tree_min_max t finds minimum and maximum values in tree.
   static std::pair<unsigned int, unsigned int>
   tree_min_max(const tree<unsigned int> &t);
   /// all_paths_sum t sums all root-to-leaf path sums.
   static unsigned int all_paths_sum(const tree<unsigned int> &t);
   /// tree_contains x t checks if value exists in tree.
-  static bool tree_contains(const unsigned int x, const tree<unsigned int> &t);
+  static bool tree_contains(unsigned int x, const tree<unsigned int> &t);
 };
 
 #endif // INCLUDED_LOOPIFY_TREES

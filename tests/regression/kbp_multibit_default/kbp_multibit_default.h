@@ -1,16 +1,12 @@
 #ifndef INCLUDED_KBP_MULTIBIT_DEFAULT
 #define INCLUDED_KBP_MULTIBIT_DEFAULT
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct KbpMultibitDefault {
   struct state {
     unsigned int acc;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).acc}; }
+    state clone() const { return state{(*this).acc}; }
   };
 
   static state execute_kbp(const state &s);

@@ -6,13 +6,12 @@ unsigned int MapPartialApp::tree_sum(const MapPartialApp::tree &t) {
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename MapPartialApp::tree::Node>(t.v());
-    return ((tree_sum(*(d_a0)) + d_a1) + tree_sum(*(d_a2)));
+    return ((tree_sum(*d_a0) + d_a1) + tree_sum(*d_a2));
   }
 }
 
 /// wrap: takes tree and nat, builds Node with leaves.
-MapPartialApp::tree MapPartialApp::wrap(MapPartialApp::tree t,
-                                        const unsigned int v) {
+MapPartialApp::tree MapPartialApp::wrap(MapPartialApp::tree t, unsigned int v) {
   return tree::node(std::move(t), v, tree::leaf());
 }
 
@@ -23,6 +22,6 @@ unsigned int MapPartialApp::sum_list(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    return (d_a0 + sum_list(*(d_a1)));
+    return (d_a0 + sum_list(*d_a1));
   }
 }

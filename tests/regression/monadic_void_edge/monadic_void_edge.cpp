@@ -55,7 +55,7 @@ void MonadicVoidEdge::deeply_nested_void() {
 
 void MonadicVoidEdge::test_apply_effect() {
   apply_effect(
-      [](const unsigned int) {
+      [](unsigned int) {
         std::cout << "applied"s << '\n';
         return std::monostate{};
       },
@@ -64,7 +64,7 @@ void MonadicVoidEdge::test_apply_effect() {
 }
 
 /// 9. Monadic function returning option unit
-std::optional<std::monostate> MonadicVoidEdge::maybe_print(const bool b) {
+std::optional<std::monostate> MonadicVoidEdge::maybe_print(bool b) {
   if (b) {
     std::cout << "yes"s << '\n';
     return std::make_optional<std::monostate>(std::monostate{});

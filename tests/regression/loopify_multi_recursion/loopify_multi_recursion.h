@@ -3,23 +3,19 @@
 
 #include <algorithm>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
 struct LoopifyMultiRecursion {
-  static unsigned int mixed_arith_fuel(const unsigned int fuel,
-                                       const unsigned int n);
-  static unsigned int mixed_arith(const unsigned int n);
-  static bool bool_or_chain_fuel(const unsigned int fuel, const unsigned int n,
-                                 const unsigned int target);
-  static unsigned int bool_or_chain(const unsigned int n,
-                                    const unsigned int target);
-  static bool bool_and_chain_fuel(const unsigned int fuel,
-                                  const unsigned int n);
-  static unsigned int bool_and_chain(const unsigned int n);
+  static unsigned int mixed_arith_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int mixed_arith(unsigned int n);
+  static bool bool_or_chain_fuel(unsigned int fuel, unsigned int n,
+                                 unsigned int target);
+  static unsigned int bool_or_chain(unsigned int n, unsigned int target);
+  static bool bool_and_chain_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int bool_and_chain(unsigned int n);
 
   struct quadtree {
     // TYPES
@@ -108,9 +104,7 @@ struct LoopifyMultiRecursion {
     }
 
     // CREATORS
-    static quadtree qleaf(unsigned int a0) {
-      return quadtree(QLeaf{std::move(a0)});
-    }
+    static quadtree qleaf(unsigned int a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(QQuad{std::make_unique<quadtree>(std::move(a0)),
@@ -167,10 +161,10 @@ struct LoopifyMultiRecursion {
     } else {
       const auto &[d_a0, d_a1, d_a2, d_a3] =
           std::get<typename quadtree::QQuad>(q.v());
-      return f0(*(d_a0), quadtree_rect<T1>(f, f0, *(d_a0)), *(d_a1),
-                quadtree_rect<T1>(f, f0, *(d_a1)), *(d_a2),
-                quadtree_rect<T1>(f, f0, *(d_a2)), *(d_a3),
-                quadtree_rect<T1>(f, f0, *(d_a3)));
+      return f0(*d_a0, quadtree_rect<T1>(f, f0, *d_a0), *d_a1,
+                quadtree_rect<T1>(f, f0, *d_a1), *d_a2,
+                quadtree_rect<T1>(f, f0, *d_a2), *d_a3,
+                quadtree_rect<T1>(f, f0, *d_a3));
     }
   }
 
@@ -185,18 +179,17 @@ struct LoopifyMultiRecursion {
     } else {
       const auto &[d_a0, d_a1, d_a2, d_a3] =
           std::get<typename quadtree::QQuad>(q.v());
-      return f0(*(d_a0), quadtree_rec<T1>(f, f0, *(d_a0)), *(d_a1),
-                quadtree_rec<T1>(f, f0, *(d_a1)), *(d_a2),
-                quadtree_rec<T1>(f, f0, *(d_a2)), *(d_a3),
-                quadtree_rec<T1>(f, f0, *(d_a3)));
+      return f0(*d_a0, quadtree_rec<T1>(f, f0, *d_a0), *d_a1,
+                quadtree_rec<T1>(f, f0, *d_a1), *d_a2,
+                quadtree_rec<T1>(f, f0, *d_a2), *d_a3,
+                quadtree_rec<T1>(f, f0, *d_a3));
     }
   }
 
   static unsigned int quad_count_leaves(const quadtree &t);
   static unsigned int quad_depth(const quadtree &t);
-  static unsigned int hofstadter_q_fuel(const unsigned int fuel,
-                                        const unsigned int n);
-  static unsigned int hofstadter_q(const unsigned int n);
+  static unsigned int hofstadter_q_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int hofstadter_q(unsigned int n);
 };
 
 #endif // INCLUDED_LOOPIFY_MULTI_RECURSION

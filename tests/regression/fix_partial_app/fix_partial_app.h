@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct FixPartialApp {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -131,8 +130,8 @@ struct FixPartialApp {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -144,13 +143,13 @@ struct FixPartialApp {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
   /// count_nodes: counts nodes in a tree. Will be partially applied.
-  static unsigned int count_nodes(const tree &t, const unsigned int base);
+  static unsigned int count_nodes(const tree &t, unsigned int base);
   /// BUG HYPOTHESIS: Partially applying a fixpoint.
   /// f := count_nodes big_tree creates a closure (nat -> nat).
   /// The closure captures the fixpoint AND the tree.
@@ -216,7 +215,7 @@ struct FixPartialApp {
       return tree::leaf();
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return tree::node(tree_map(f, *(d_a0)), f(d_a1), tree_map(f, *(d_a2)));
+      return tree::node(tree_map(f, *d_a0), f(d_a1), tree_map(f, *d_a2));
     }
   }
 
@@ -226,7 +225,7 @@ struct FixPartialApp {
   /// If the closure for g captures the function arg by &, it could dangle.
   static inline const unsigned int map_partial_bug = []() {
     std::function<tree(tree)> g = [](tree _x0) -> tree {
-      return tree_map([](const unsigned int x) { return (x + 1u); }, _x0);
+      return tree_map([](unsigned int x) { return (x + 1u); }, _x0);
     };
     tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
     tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());

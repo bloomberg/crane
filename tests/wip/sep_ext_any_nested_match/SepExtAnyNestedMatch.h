@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTANYNESTEDMATCH
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
@@ -22,9 +19,9 @@ template <SymTypes Ty> struct Destruct {
   using symbols_semty = tuple;
 
   static typename Ty::sym_semty
-  get_second(const typename Ty::sym, const typename Ty::sym,
+  get_second(typename Ty::sym, typename Ty::sym,
              const typename Datatypes::template List<typename Ty::sym> &,
-             const symbols_semty vs) {
+             symbols_semty vs) {
     return std::any_cast<std::pair<std::any, std::any>>(
                std::any_cast<std::pair<std::any, std::any>>(vs).second)
         .first;

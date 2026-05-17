@@ -128,21 +128,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -245,7 +245,7 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static nested elem(unsigned int a0) { return nested(Elem{std::move(a0)}); }
+    static nested elem(unsigned int a0) { return nested(Elem{a0}); }
 
     static nested nlist(List<nested> a0) {
       return nested(NList{std::make_unique<List<nested>>(std::move(a0))});
@@ -290,36 +290,33 @@ struct LoopifyStructures {
 
     /// nested_flatten n flattens to a regular list.
     List<unsigned int> nested_flatten() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename nested::Elem>(_sv.v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &[d_a0] = std::get<typename nested::Elem>(this->v());
         return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
       } else {
-        const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return flatten_nested_list_fuel(1000u, *(d_a0));
+        const auto &[d_a0] = std::get<typename nested::NList>(this->v());
+        return flatten_nested_list_fuel(1000u, *d_a0);
       }
     }
 
     /// nested_depth n computes maximum nesting depth.
     unsigned int nested_depth() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return (depth_nested_list_fuel(1000u, *(d_a0)) + 1);
+        const auto &[d_a0] = std::get<typename nested::NList>(this->v());
+        return (depth_nested_list_fuel(1000u, *d_a0) + 1);
       }
     }
 
     /// nested_sum n sums all elements in a nested structure.
     unsigned int nested_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename nested::Elem>(_sv.v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &[d_a0] = std::get<typename nested::Elem>(this->v());
         return d_a0;
       } else {
-        const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return sum_nested_list_fuel(1000u, *(d_a0));
+        const auto &[d_a0] = std::get<typename nested::NList>(this->v());
+        return sum_nested_list_fuel(1000u, *d_a0);
       }
     }
 
@@ -327,13 +324,12 @@ struct LoopifyStructures {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, List<nested> &>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename nested::Elem>(_sv.v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &[d_a0] = std::get<typename nested::Elem>(this->v());
         return f(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return f0(*(d_a0));
+        const auto &[d_a0] = std::get<typename nested::NList>(this->v());
+        return f0(*d_a0);
       }
     }
 
@@ -341,26 +337,25 @@ struct LoopifyStructures {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, List<nested> &>
     T1 nested_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename nested::Elem>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename nested::Elem>(_sv.v());
+      if (std::holds_alternative<typename nested::Elem>(this->v())) {
+        const auto &[d_a0] = std::get<typename nested::Elem>(this->v());
         return f(d_a0);
       } else {
-        const auto &[d_a0] = std::get<typename nested::NList>(_sv.v());
-        return f0(*(d_a0));
+        const auto &[d_a0] = std::get<typename nested::NList>(this->v());
+        return f0(*d_a0);
       }
     }
   };
 
   /// Helper: sum all elements in a list of nested structures.
   /// Handles both tree and list levels in one function for full loopification.
-  static unsigned int sum_nested_list_fuel(const unsigned int fuel,
+  static unsigned int sum_nested_list_fuel(unsigned int fuel,
                                            const List<nested> &l);
   /// Helper: compute max depth among a list of nested structures.
-  static unsigned int depth_nested_list_fuel(const unsigned int fuel,
+  static unsigned int depth_nested_list_fuel(unsigned int fuel,
                                              const List<nested> &l);
   /// Helper: flatten a list of nested structures to a flat list of nats.
-  static List<unsigned int> flatten_nested_list_fuel(const unsigned int fuel,
+  static List<unsigned int> flatten_nested_list_fuel(unsigned int fuel,
                                                      const List<nested> &l);
 
   /// Quadtree: leaf or 4-way branch.
@@ -450,9 +445,7 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static quadtree qleaf(unsigned int a0) {
-      return quadtree(QLeaf{std::move(a0)});
-    }
+    static quadtree qleaf(unsigned int a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
@@ -553,7 +546,7 @@ struct LoopifyStructures {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_sv.v());
             _result = quadtree::qleaf(f(d_a0));
@@ -592,16 +585,16 @@ struct LoopifyStructures {
     /// quad_depth t computes quadtree depth.
     unsigned int quad_depth() const {
       const quadtree *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
         return 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3] =
             std::get<typename quadtree::Quad>(_sv.v());
-        unsigned int d1 = (*(d_a0)).quad_depth();
-        unsigned int d2 = (*(d_a1)).quad_depth();
-        unsigned int d3 = (*(d_a2)).quad_depth();
-        unsigned int d4 = (*(d_a3)).quad_depth();
+        unsigned int d1 = (*d_a0).quad_depth();
+        unsigned int d2 = (*d_a1).quad_depth();
+        unsigned int d3 = (*d_a2).quad_depth();
+        unsigned int d4 = (*d_a3).quad_depth();
         return ([&]() -> unsigned int {
           if ((d1 <= d2 ? d2 : d1) <= (d3 <= d4 ? d4 : d3)) {
             if (d3 <= d4) {
@@ -674,7 +667,7 @@ struct LoopifyStructures {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_sv.v());
             _result = d_a0;
@@ -780,7 +773,7 @@ struct LoopifyStructures {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_sv.v());
             _result = f(d_a0);
@@ -788,8 +781,7 @@ struct LoopifyStructures {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
             _stack.emplace_back(_After_Quad{d_a2.get(), d_a1.get(), d_a0.get(),
-                                            *(d_a3), *(d_a2), *(d_a1),
-                                            *(d_a0)});
+                                            *d_a3, *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
@@ -893,7 +885,7 @@ struct LoopifyStructures {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const quadtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename quadtree::QLeaf>(_sv.v());
             _result = f(d_a0);
@@ -901,8 +893,7 @@ struct LoopifyStructures {
             const auto &[d_a0, d_a1, d_a2, d_a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
             _stack.emplace_back(_After_Quad{d_a2.get(), d_a1.get(), d_a0.get(),
-                                            *(d_a3), *(d_a2), *(d_a1),
-                                            *(d_a0)});
+                                            *d_a3, *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a3.get()});
           }
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
@@ -972,9 +963,9 @@ struct LoopifyStructures {
       auto _cs = f(d_a0);
       if (_cs.has_value()) {
         const unsigned int &y = *_cs;
-        return List<unsigned int>::cons(y, map_opt(f, *(d_a1)));
+        return List<unsigned int>::cons(y, map_opt(f, *d_a1));
       } else {
-        return map_opt(f, *(d_a1));
+        return map_opt(f, *d_a1);
       }
     }
   } /// filter_map p f l filters and maps in one pass.
@@ -990,9 +981,9 @@ struct LoopifyStructures {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
       if (p(d_a0)) {
-        return List<unsigned int>::cons(f(d_a0), filter_map(p, f, *(d_a1)));
+        return List<unsigned int>::cons(f(d_a0), filter_map(p, f, *d_a1));
       } else {
-        return filter_map(p, f, *(d_a1));
+        return filter_map(p, f, *d_a1);
       }
     }
   }
@@ -1080,10 +1071,10 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static ltree lleaf(unsigned int a0) { return ltree(LLeaf{std::move(a0)}); }
+    static ltree lleaf(unsigned int a0) { return ltree(LLeaf{a0}); }
 
     static ltree lnode(unsigned int a0, ltree a1, ltree a2) {
-      return ltree(LNode{std::move(a0), std::make_unique<ltree>(std::move(a1)),
+      return ltree(LNode{a0, std::make_unique<ltree>(std::move(a1)),
                          std::make_unique<ltree>(std::move(a2))});
     }
 
@@ -1155,7 +1146,7 @@ struct LoopifyStructures {
           auto _f = std::move(std::get<_Enter>(_frame));
           const ltree *_self = _f._self;
           ltree t2 = std::move(_f.t2);
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v());
             if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
@@ -1168,7 +1159,7 @@ struct LoopifyStructures {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename ltree::LNode>(_sv.v());
             if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
-              _result = *(_self);
+              _result = *_self;
             } else {
               auto &[d_a00, d_a10, d_a20] =
                   std::get<typename ltree::LNode>(t2.v_mut());
@@ -1178,8 +1169,8 @@ struct LoopifyStructures {
               } else {
                 max_val = d_a0;
               }
-              _stack.emplace_back(_After_LNode{d_a1.get(), *(d_a10), max_val});
-              _stack.emplace_back(_Enter{d_a2.get(), std::move(*(d_a20))});
+              _stack.emplace_back(_After_LNode{d_a1.get(), *d_a10, max_val});
+              _stack.emplace_back(_Enter{d_a2.get(), std::move(*d_a20)});
             }
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {
@@ -1236,15 +1227,14 @@ struct LoopifyStructures {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const ltree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename ltree::LNode>(_sv.v());
-            _stack.emplace_back(
-                _After_LNode{d_a1.get(), *(d_a2), *(d_a1), d_a0});
+            _stack.emplace_back(_After_LNode{d_a1.get(), *d_a2, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {
@@ -1302,15 +1292,14 @@ struct LoopifyStructures {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const ltree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename ltree::LNode>(_sv.v());
-            _stack.emplace_back(
-                _After_LNode{d_a1.get(), *(d_a2), *(d_a1), d_a0});
+            _stack.emplace_back(_After_LNode{d_a1.get(), *d_a2, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {

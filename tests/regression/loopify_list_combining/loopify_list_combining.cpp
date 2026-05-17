@@ -9,25 +9,25 @@ List<unsigned int> LoopifyListCombining::append(const List<unsigned int> &a,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_a->v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_b));
+      *_write = std::make_unique<List<unsigned int>>(std::move(_loop_b));
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_a->v());
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(d_a0, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_a = d_a1.get();
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int>
-LoopifyListCombining::intersperse(const unsigned int sep,
+LoopifyListCombining::intersperse(unsigned int sep,
                                   const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -35,15 +35,14 @@ LoopifyListCombining::intersperse(const unsigned int sep,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(
+        *_write = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
         break;
       } else {
@@ -53,7 +52,7 @@ LoopifyListCombining::intersperse(const unsigned int sep,
             typename List<unsigned int>::Cons(sep, nullptr));
         std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>(
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -64,7 +63,7 @@ LoopifyListCombining::intersperse(const unsigned int sep,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifyListCombining::intercalate(
@@ -94,14 +93,14 @@ List<unsigned int> LoopifyListCombining::intercalate(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
+      const List<List<unsigned int>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        auto &&_sv = *(d_a1);
+        auto &&_sv = *d_a1;
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 _sv.v())) {
           _result = d_a0;
@@ -142,7 +141,7 @@ List<unsigned int> LoopifyListCombining::concat(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
+      const List<List<unsigned int>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -187,7 +186,7 @@ List<unsigned int> LoopifyListCombining::mapcat(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
@@ -214,14 +213,14 @@ List<unsigned int> LoopifyListCombining::interleave_two(List<unsigned int> l1,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1.v_mut())) {
-      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
+      *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2.v_mut())) {
-        *(_write) = std::make_unique<List<unsigned int>>(_loop_l1);
+        *_write = std::make_unique<List<unsigned int>>(_loop_l1);
         break;
       } else {
         auto &[d_a00, d_a10] =
@@ -232,23 +231,23 @@ List<unsigned int> LoopifyListCombining::interleave_two(List<unsigned int> l1,
             typename List<unsigned int>::Cons(d_a00, nullptr));
         std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>(
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1->v_mut())
                  .d_a1;
-        _loop_l2 = std::move(*(d_a10));
-        _loop_l1 = std::move(*(d_a1));
+        _loop_l2 = std::move(*d_a10);
+        _loop_l1 = std::move(*d_a1);
         continue;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifyListCombining::concat_sep(
-    const unsigned int sep,
+    unsigned int sep,
     const List<List<unsigned int>>
         &ll) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -274,14 +273,14 @@ List<unsigned int> LoopifyListCombining::concat_sep(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
+      const List<List<unsigned int>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        auto &&_sv = *(d_a1);
+        auto &&_sv = *d_a1;
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 _sv.v())) {
           _result = d_a0;

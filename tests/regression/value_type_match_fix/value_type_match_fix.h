@@ -46,14 +46,13 @@ struct ValueTypeMatchFix {
 
     // ACCESSORS
     triple clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
+      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(this->v());
       return triple(MkTriple{d_a0, d_a1, d_a2});
     }
 
     // CREATORS
     static triple mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
-      return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
+      return triple(MkTriple{a0, a1, a2});
     }
 
     // MANIPULATORS

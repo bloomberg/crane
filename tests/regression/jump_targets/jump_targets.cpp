@@ -11,14 +11,14 @@ JumpTargets::collect_targets(const List<JumpTargets::instr_collection> &prog) {
     auto _cs = d_a0.jump_target_collection();
     if (_cs.has_value()) {
       const unsigned int &a = *_cs;
-      return List<unsigned int>::cons(a, collect_targets(*(d_a1)));
+      return List<unsigned int>::cons(a, collect_targets(*d_a1));
     } else {
-      return collect_targets(*(d_a1));
+      return collect_targets(*d_a1);
     }
   }
 }
 
-bool JumpTargets::addr_in_region(const unsigned int addr,
+bool JumpTargets::addr_in_region(unsigned int addr,
                                  const JumpTargets::layout &l) {
   return (l.base_ <= addr && addr < (l.base_ + l.code_));
 }

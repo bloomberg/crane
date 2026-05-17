@@ -3,8 +3,6 @@
 
 #include <any>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -146,8 +144,7 @@ public:
 
   // ACCESSORS
   SigT<t_A, t_P> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
+    const auto &[d_x, d_a1] = std::get<ExistT>(this->v());
     return SigT<t_A, t_P>(ExistT{d_x, d_a1});
   }
 

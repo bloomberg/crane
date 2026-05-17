@@ -1,13 +1,9 @@
 #ifndef INCLUDED_IDENTIFIER_ESCAPE_PARAM
 #define INCLUDED_IDENTIFIER_ESCAPE_PARAM
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct IdentifierEscapeParam {
-  static unsigned int id_from_param(const unsigned int double0);
-  static unsigned int add_one_from_param(const unsigned int double0);
+  static unsigned int id_from_param(unsigned int double0);
+  static unsigned int add_one_from_param(unsigned int double0);
   static inline const unsigned int t = add_one_from_param(6u);
 };
 

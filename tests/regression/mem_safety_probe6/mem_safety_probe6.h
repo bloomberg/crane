@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -142,49 +141,46 @@ struct MemSafetyProbe6 {
       std::unique_ptr<mylist<T1>> *_write = &_head;
       const mylist *_loop_self = this;
       while (true) {
-        auto &&_sv = *(_loop_self);
+        auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
-          *(_write) = std::make_unique<mylist<T1>>(mylist<T1>::mynil());
+          *_write = std::make_unique<mylist<T1>>(mylist<T1>::mynil());
           break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<t_A>::Mycons>(_sv.v());
           auto _cell = std::make_unique<mylist<T1>>(
               typename mylist<T1>::Mycons(f(d_a0), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).d_a1;
           _loop_self = d_a1.get();
           continue;
         }
       }
-      return std::move(*(_head));
+      return std::move(*_head);
     }
 
     /// TEST 2: Closure from match that reconstructs using both
     /// a value field and a recursive field.
-    mylist<t_A> head_and_tail(const unsigned int, const t_A &,
-                              const t_A &) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+    mylist<t_A> head_and_tail(unsigned int, const t_A &, const t_A &) const {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return mylist<t_A>::mynil();
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return mylist<t_A>::mycons(d_a0, *(d_a1));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return mylist<t_A>::mycons(d_a0, *d_a1);
       }
     }
 
     /// TEST 1: Return a closure that uses the TAIL of the list.
     /// xs is a unique_ptr<mylist> field — the closure must clone it.
-    unsigned int tail_adder(const unsigned int, const unsigned int n) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+    unsigned int tail_adder(unsigned int, unsigned int n) const {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return n;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return ((*(d_a1)).length() + n);
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return ((*d_a1).length() + n);
       }
     }
 
@@ -214,7 +210,7 @@ struct MemSafetyProbe6 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = 0u;
           } else {
@@ -261,13 +257,13 @@ struct MemSafetyProbe6 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -308,13 +304,13 @@ struct MemSafetyProbe6 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -426,7 +422,7 @@ struct MemSafetyProbe6 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -462,16 +458,16 @@ struct MemSafetyProbe6 {
 
     /// TEST 4: Return a closure that captures BOTH subtrees of a tree.
     /// Both l and r are unique_ptr fields.
-    tree both_subtrees(const unsigned int, const bool x) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+    tree both_subtrees(unsigned int, bool x) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::leaf();
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
         if (x) {
-          return *(d_a0);
+          return *d_a0;
         } else {
-          return *(d_a2);
+          return *d_a2;
         }
       }
     }
@@ -509,7 +505,7 @@ struct MemSafetyProbe6 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -571,14 +567,13 @@ struct MemSafetyProbe6 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -635,14 +630,13 @@ struct MemSafetyProbe6 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -662,14 +656,14 @@ struct MemSafetyProbe6 {
   template <typename F2>
     requires std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
   static mylist<unsigned int>
-  tail_mapper(const unsigned int, const mylist<unsigned int> &l, F2 &&x) {
+  tail_mapper(unsigned int, const mylist<unsigned int> &l, F2 &&x) {
     if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
       return mylist<unsigned int>::mynil();
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename mylist<unsigned int>::Mycons>(l.v());
       return mylist<unsigned int>::mycons(
-          d_a0, (*(d_a1)).template mymap<unsigned int>(x));
+          d_a0, (*d_a1).template mymap<unsigned int>(x));
     }
   }
 
@@ -685,8 +679,7 @@ struct MemSafetyProbe6 {
           -> mylist<unsigned int> {
         return tail_mapper(0u, std::move(l), _x0);
       };
-      mylist<unsigned int> l2 =
-          f([](const unsigned int n) { return (n * 10u); });
+      mylist<unsigned int> l2 = f([](unsigned int n) { return (n * 10u); });
       return std::move(l2).length();
     }();
   }();
@@ -705,7 +698,7 @@ struct MemSafetyProbe6 {
   build_chain(const mylist<unsigned int> &l);
   static unsigned int
   apply_chain(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-              const unsigned int x);
+              unsigned int x);
   static inline const unsigned int test_chain = []() {
     mylist<unsigned int> l = mylist<unsigned int>::mycons(
         10u, mylist<unsigned int>::mycons(
@@ -717,7 +710,7 @@ struct MemSafetyProbe6 {
   }();
   /// TEST 6: Closure captures tail, then tail is used again
   /// after the closure is created — tests double use.
-  static unsigned int capture_and_reuse(const unsigned int _x,
+  static unsigned int capture_and_reuse(unsigned int _x,
                                         const mylist<unsigned int> &l);
   static inline const unsigned int test_capture_reuse = capture_and_reuse(
       0u, mylist<unsigned int>::mycons(

@@ -4,7 +4,7 @@ unsigned int ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
   if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
-    return (1u + length(*(d_a1)));
+    return (1u + length(*d_a1));
   } else {
     return 0u;
   }
@@ -26,7 +26,7 @@ unsigned int ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
 /// 3. mycons is index 0 -> List.hd picks it
 /// 4. use_count() == 1 for fresh values
 ReuseSelfCycle::mylist ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l,
-                                                    const bool b) {
+                                                    bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
             l.v_mut())) {

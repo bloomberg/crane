@@ -2,7 +2,6 @@
 #define INCLUDED_UNIVERSE_POLY
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -135,7 +134,7 @@ struct UniversePoly {
 
     // ACCESSORS
     ppair<t_A, t_B> clone() const {
-      return ppair<t_A, t_B>{(*(this)).pfst, (*(this)).psnd};
+      return ppair<t_A, t_B>{(*this).pfst, (*this).psnd};
     }
   };
 
@@ -183,11 +182,10 @@ struct UniversePoly {
 
     // ACCESSORS
     poption<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Pnone>(_sv.v())) {
+      if (std::holds_alternative<Pnone>(this->v())) {
         return poption<t_A>(Pnone{});
       } else {
-        const auto &[d_a0] = std::get<Psome>(_sv.v());
+        const auto &[d_a0] = std::get<Psome>(this->v());
         return poption<t_A>(Psome{d_a0});
       }
     }
@@ -259,24 +257,23 @@ struct UniversePoly {
 
   static inline const poption<unsigned int> test_map_some =
       poption_map<unsigned int, unsigned int>(
-          [](const unsigned int n) { return (n + 1u); },
+          [](unsigned int n) { return (n + 1u); },
           poption<unsigned int>::psome(5u));
   static inline const poption<unsigned int> test_map_none =
       poption_map<unsigned int, unsigned int>(
-          [](const unsigned int n) { return (n + 1u); },
+          [](unsigned int n) { return (n + 1u); },
           poption<unsigned int>::pnone());
   static inline const poption<unsigned int> test_bind =
       poption_bind<unsigned int, unsigned int>(
-          poption<unsigned int>::psome(3u), [](const unsigned int n) {
-            return poption<unsigned int>::psome((n + n));
-          });
+          poption<unsigned int>::psome(3u),
+          [](unsigned int n) { return poption<unsigned int>::psome((n + n)); });
 
   template <typename T1> static unsigned int poly_length(const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      return (poly_length<T1>(*(d_a1)) + 1);
+      return (poly_length<T1>(*d_a1) + 1);
     }
   }
 

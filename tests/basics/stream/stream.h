@@ -4,8 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -260,21 +258,20 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_lazyV_.force(); }
 
-  Stream<t_A> interleave(const Stream<t_A> sb) const {
+  Stream<t_A> interleave(Stream<t_A> sb) const {
     const auto &[d_a0, d_a1] = std::get<typename Stream<t_A>::Scons>(this->v());
     return Stream<t_A>::lazy_([=]() mutable -> Stream<t_A> {
-      return Stream<t_A>::scons(d_a0, sb.interleave(*(d_a1)));
+      return Stream<t_A>::scons(d_a0, sb.interleave(*d_a1));
     });
   }
 
-  template <typename T1>
-  static List<T1> take(const Nat &n, const Stream<T1> s) {
+  template <typename T1> static List<T1> take(const Nat &n, Stream<T1> s) {
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       return List<T1>::nil();
     } else {
       const auto &[d_a0] = std::get<typename Nat::S>(n.v());
       const auto &[d_a00, d_a10] = std::get<typename Stream<T1>::Scons>(s.v());
-      return List<T1>::cons(d_a00, take<T1>(*(d_a0), *(d_a10)));
+      return List<T1>::cons(d_a00, take<T1>(*d_a0, *d_a10));
     }
   }
 

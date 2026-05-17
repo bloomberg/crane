@@ -3,12 +3,9 @@
 
 #include <any>
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct Bool {
-  static bool eqb(const bool b1, const bool b2);
+  static bool eqb(bool b1, bool b2);
 };
 
 template <typename I>

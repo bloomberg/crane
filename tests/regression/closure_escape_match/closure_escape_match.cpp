@@ -37,10 +37,10 @@ ClosureEscapeMatch::make_pair_fn_opt(
     const auto &[d_a0, d_a1] =
         std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
             l.v());
-    ClosureEscapeMatch::mylist<unsigned int> d_a1_value = *(d_a1);
+    ClosureEscapeMatch::mylist<unsigned int> d_a1_value = *d_a1;
     return std::make_optional<
         std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>(
-        [=](const std::monostate) mutable {
+        [=](std::monostate) mutable {
           return std::make_pair(d_a0, length<unsigned int>(d_a1_value));
         });
   }
@@ -61,7 +61,7 @@ ClosureEscapeMatch::nested_closure_opt(
           std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
               b.v());
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int n) mutable { return (d_a00 + n); });
+          [=](unsigned int n) mutable { return (d_a00 + n); });
     }
   } else {
     const auto &[d_a0, d_a1] =
@@ -70,13 +70,13 @@ ClosureEscapeMatch::nested_closure_opt(
     if (std::holds_alternative<
             typename ClosureEscapeMatch::mylist<unsigned int>::Mynil>(b.v())) {
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int n) mutable { return (d_a0 + n); });
+          [=](unsigned int n) mutable { return (d_a0 + n); });
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
               b.v());
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
-          [=](const unsigned int n) mutable { return ((d_a0 + d_a00) + n); });
+          [=](unsigned int n) mutable { return ((d_a0 + d_a00) + n); });
     }
   }
 }

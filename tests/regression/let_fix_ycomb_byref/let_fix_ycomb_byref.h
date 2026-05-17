@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_YCOMB_BYREF
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -127,7 +125,7 @@ struct LetFixYcombByref {
   static unsigned int sum_list(const List<unsigned int> &l);
   static List<unsigned int> zip_sum(const List<unsigned int> &xs,
                                     const List<unsigned int> &ys);
-  static List<unsigned int> countdown(const unsigned int k);
+  static List<unsigned int> countdown(unsigned int k);
   static inline const unsigned int test_sum = sum_list(List<unsigned int>::cons(
       1u, List<unsigned int>::cons(
               2u, List<unsigned int>::cons(

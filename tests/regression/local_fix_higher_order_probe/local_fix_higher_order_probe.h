@@ -3,8 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -115,7 +113,7 @@ T1 _sample_go(const std::function<T1(Nat)> k, const Nat n0) {
     return k(Nat::o());
   } else {
     const auto &[d_a0] = std::get<typename Nat::S>(n0.v());
-    Nat d_a0_value = *(d_a0);
+    Nat d_a0_value = *d_a0;
     return _sample_go<T1>([=](Nat x) mutable { return k(Nat::s(x)); },
                           d_a0_value);
   }

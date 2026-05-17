@@ -3,8 +3,6 @@
 
 #include <any>
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -36,7 +34,7 @@ template <SymTypes Ty> struct Actions {
         std::function<bool(std::any)>>::existt(std::move(gamma), f);
   }
 
-  constexpr static bool apply_entry(const entry _x0, const symbols_semty _x1) {
+  constexpr static bool apply_entry(entry _x0, symbols_semty _x1) {
     return _x0.projT2()(_x1);
   }
 };

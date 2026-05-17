@@ -2,7 +2,6 @@
 #define INCLUDED_NAME_CLASH_MATCH_MATCH
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -90,7 +89,7 @@ struct NameClashMatchMatch {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -133,8 +132,8 @@ struct NameClashMatchMatch {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -146,14 +145,14 @@ struct NameClashMatchMatch {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
   /// Returns a subtree based on a direction.
   enum class Dir { e_GOLEFT, e_GORIGHT };
 
-  template <typename T1> static T1 dir_rect(T1 f, T1 f0, const Dir d) {
+  template <typename T1> static T1 dir_rect(T1 f, T1 f0, Dir d) {
     switch (d) {
     case Dir::e_GOLEFT: {
       return f;
@@ -166,7 +165,7 @@ struct NameClashMatchMatch {
     }
   }
 
-  template <typename T1> static T1 dir_rec(T1 f, T1 f0, const Dir d) {
+  template <typename T1> static T1 dir_rec(T1 f, T1 f0, Dir d) {
     switch (d) {
     case Dir::e_GOLEFT: {
       return f;
@@ -179,11 +178,11 @@ struct NameClashMatchMatch {
     }
   }
 
-  static tree choose_subtree(const Dir d, const tree &t);
+  static tree choose_subtree(Dir d, const tree &t);
   /// Match on the result of choose_subtree (which itself contains a match).
-  static unsigned int subtree_value(const Dir d, const tree &t);
+  static unsigned int subtree_value(Dir d, const tree &t);
   /// Inline match-on-match: both matches are expressions.
-  static unsigned int inline_match_match(const Dir d, const tree &t);
+  static unsigned int inline_match_match(Dir d, const tree &t);
   /// Two matches on the same scrutinee.
   static unsigned int double_match(const tree &t);
   /// Match where the scrutinee is a function call that returns an inductive,

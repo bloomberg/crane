@@ -1,6 +1,6 @@
 #include "opaque.h"
 
-unsigned int Opaque::safe_pred(const unsigned int n) {
+unsigned int Opaque::safe_pred(unsigned int n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");
   } else {
@@ -9,11 +9,9 @@ unsigned int Opaque::safe_pred(const unsigned int n) {
   }
 }
 
-unsigned int Opaque::pred_of_succ(const unsigned int n) {
-  return safe_pred((n + 1));
-}
+unsigned int Opaque::pred_of_succ(unsigned int n) { return safe_pred((n + 1)); }
 
-bool Opaque::nat_eq_dec(const unsigned int n, const unsigned int x) {
+bool Opaque::nat_eq_dec(unsigned int n, unsigned int x) {
   if (n <= 0) {
     if (x <= 0) {
       return true;
@@ -36,7 +34,7 @@ bool Opaque::nat_eq_dec(const unsigned int n, const unsigned int x) {
   }
 }
 
-bool Opaque::are_equal(const unsigned int n, const unsigned int m) {
+bool Opaque::are_equal(unsigned int n, unsigned int m) {
   if (nat_eq_dec(n, m)) {
     return true;
   } else {
@@ -44,8 +42,8 @@ bool Opaque::are_equal(const unsigned int n, const unsigned int m) {
   }
 }
 
-Sig<unsigned int> Opaque::bounded_add(const unsigned int, const unsigned int,
-                                      const unsigned int) {
+Sig<unsigned int> Opaque::bounded_add(unsigned int, unsigned int,
+                                      unsigned int) {
   throw std::logic_error(
       "unrealized axiom: "
       "CraneTestsRegression.opaque.Opaque.Opaque.bounded_add");

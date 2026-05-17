@@ -1,7 +1,7 @@
 #include "loopify_grouping.h"
 
 List<List<unsigned int>>
-LoopifyGrouping::prepend_to_groups(const unsigned int x, const bool same,
+LoopifyGrouping::prepend_to_groups(unsigned int x, bool same,
                                    List<List<unsigned int>> groups) {
   if (same) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
@@ -13,7 +13,7 @@ LoopifyGrouping::prepend_to_groups(const unsigned int x, const bool same,
       auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(groups.v_mut());
       return List<List<unsigned int>>::cons(List<unsigned int>::cons(x, d_a0),
-                                            *(d_a1));
+                                            *d_a1);
     }
   } else {
     return List<List<unsigned int>>::cons(
@@ -23,7 +23,7 @@ LoopifyGrouping::prepend_to_groups(const unsigned int x, const bool same,
 }
 
 List<List<unsigned int>> LoopifyGrouping::group_fuel(
-    const unsigned int fuel,
+    unsigned int fuel,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -51,7 +51,7 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &l = _f.l;
-      const unsigned int fuel = _f.fuel;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<unsigned int>>::nil();
       } else {
@@ -61,7 +61,7 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv0 = *(d_a1);
+          auto &&_sv0 = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv0.v())) {
             _result = List<List<unsigned int>>::cons(
@@ -72,7 +72,7 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
                 std::get<typename List<unsigned int>::Cons>(_sv0.v());
             _stack.emplace_back(_Cont_Cons{d_a0, d_a00});
             _stack.emplace_back(
-                _Enter{List<unsigned int>::cons(d_a00, *(d_a10)), fuel_});
+                _Enter{List<unsigned int>::cons(d_a00, *d_a10), fuel_});
           }
         }
       }
@@ -91,7 +91,7 @@ List<List<unsigned int>> LoopifyGrouping::group(const List<unsigned int> &l) {
   return group_fuel(l.length(), l);
 }
 
-bool LoopifyGrouping::elem(const unsigned int x, const List<unsigned int> &l) {
+bool LoopifyGrouping::elem(unsigned int x, const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -138,7 +138,7 @@ List<unsigned int> LoopifyGrouping::nub(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
@@ -161,7 +161,7 @@ List<unsigned int> LoopifyGrouping::nub(
   return _result;
 }
 
-List<unsigned int> LoopifyGrouping::remove_elem(const unsigned int x,
+List<unsigned int> LoopifyGrouping::remove_elem(unsigned int x,
                                                 const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -169,8 +169,7 @@ List<unsigned int> LoopifyGrouping::remove_elem(const unsigned int x,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -181,7 +180,7 @@ List<unsigned int> LoopifyGrouping::remove_elem(const unsigned int x,
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -190,12 +189,12 @@ List<unsigned int> LoopifyGrouping::remove_elem(const unsigned int x,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 std::pair<std::pair<List<unsigned int>, List<unsigned int>>, List<unsigned int>>
 LoopifyGrouping::partition3(
-    const unsigned int pivot,
+    unsigned int pivot,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -223,7 +222,7 @@ LoopifyGrouping::partition3(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(std::make_pair(List<unsigned int>::nil(),
                                                 List<unsigned int>::nil()),
@@ -237,7 +236,7 @@ LoopifyGrouping::partition3(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       unsigned int d_a0 = _f.d_a0;
-      const unsigned int pivot = _f.pivot;
+      unsigned int pivot = _f.pivot;
       const std::pair<List<unsigned int>, List<unsigned int>> &p =
           _result.first;
       const List<unsigned int> &greater = _result.second;
@@ -263,7 +262,7 @@ LoopifyGrouping::partition3(
 }
 
 unsigned int LoopifyGrouping::count_elem(
-    const unsigned int x,
+    unsigned int x,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -287,7 +286,7 @@ unsigned int LoopifyGrouping::count_elem(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -316,23 +315,22 @@ LoopifyGrouping::group_pairs(const List<unsigned int> &l) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
+      *_write = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv = *(d_a1);
+      auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-        *(_write) =
-            std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
-                List<std::pair<unsigned int, unsigned int>>::nil());
+        *_write = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
+            List<std::pair<unsigned int, unsigned int>>::nil());
         break;
       } else {
-        auto &&_sv1 = *(d_a1);
+        auto &&_sv1 = *d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv1.v())) {
-          *(_write) =
+          *_write =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   List<std::pair<unsigned int, unsigned int>>::nil());
           break;
@@ -343,7 +341,7 @@ LoopifyGrouping::group_pairs(const List<unsigned int> &l) {
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
                       std::make_pair(d_a0, d_a01), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -355,5 +353,5 @@ LoopifyGrouping::group_pairs(const List<unsigned int> &l) {
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }

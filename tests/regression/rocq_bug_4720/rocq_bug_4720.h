@@ -2,8 +2,6 @@
 #define INCLUDED_ROCQ_BUG_4720
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>

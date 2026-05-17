@@ -2,16 +2,13 @@
 #define INCLUDED_SINGLETON_RECORD
 
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct SingletonRecord {
   struct wrapper {
     unsigned int value;
 
     // ACCESSORS
-    wrapper clone() const { return wrapper{(*(this)).value}; }
+    wrapper clone() const { return wrapper{(*this).value}; }
   };
 
   static inline const wrapper wrapped_five = wrapper{5u};
@@ -24,7 +21,7 @@ struct SingletonRecord {
     t_A contents;
 
     // ACCESSORS
-    box<t_A> clone() const { return box<t_A>{(*(this)).contents}; }
+    box<t_A> clone() const { return box<t_A>{(*this).contents}; }
   };
 
   static inline const box<unsigned int> boxed_three = box<unsigned int>{3u};
@@ -41,12 +38,12 @@ struct SingletonRecord {
     std::function<unsigned int(unsigned int)> fn;
 
     // ACCESSORS
-    fn_wrapper clone() const { return fn_wrapper{(*(this)).fn}; }
+    fn_wrapper clone() const { return fn_wrapper{(*this).fn}; }
   };
 
   static inline const fn_wrapper my_fn_wrapper =
       fn_wrapper{[](unsigned int _x0) -> unsigned int { return (1u + _x0); }};
-  static unsigned int apply_wrapped(const fn_wrapper &w, const unsigned int n);
+  static unsigned int apply_wrapped(const fn_wrapper &w, unsigned int n);
   static inline const unsigned int test_get = get_value(wrapped_five);
   static inline const unsigned int test_get2 = get_value2(wrapped_five);
   static inline const unsigned int test_unwrap = unwrap(wrapped_five);

@@ -1,10 +1,6 @@
 #ifndef INCLUDED_SEPEXTMODULEABBREV
 #define INCLUDED_SEPEXTMODULEABBREV
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 namespace SepExtModuleAbbrev {
 
 template <typename M>
@@ -16,13 +12,11 @@ concept WS = requires {
 };
 
 template <OrderedType X, WS M> struct OrdFacts {
-  constexpr static bool key_eq(const typename M::key, const typename M::key) {
+  constexpr static bool key_eq(typename M::key, typename M::key) {
     return true;
   }
 
-  constexpr static bool ord_eq(const typename X::t, const typename X::t) {
-    return true;
-  }
+  constexpr static bool ord_eq(typename X::t, typename X::t) { return true; }
 };
 
 template <WS M> struct KeyFacts {

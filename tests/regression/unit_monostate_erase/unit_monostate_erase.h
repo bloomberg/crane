@@ -4,10 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -18,19 +15,18 @@ struct UnitMonostateErase {
   ///
   /// The if result has type itree ioE unit, but its value is discarded
   /// by ;;.  Crane should lower this to plain if control flow.
-  static void seq_if(const bool b);
+  static void seq_if(bool b);
   /// --- Example 2: sequenced if where both branches are effects ---
   ///
   /// Both branches produce itree ioE unit.  Should be a plain if.
-  static void seq_if_both(const bool b);
+  static void seq_if_both(bool b);
   /// --- Example 3: tail-position match returning unit ---
   ///
   /// A match on a custom type, all branches unit-typed, in tail
   /// position of a void function.
   enum class Color { e_RED, e_GREEN, e_BLUE };
 
-  template <typename T1>
-  static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -46,8 +42,7 @@ struct UnitMonostateErase {
     }
   }
 
-  template <typename T1>
-  static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -63,13 +58,13 @@ struct UnitMonostateErase {
     }
   }
 
-  static void match_unit_tail(const Color c);
+  static void match_unit_tail(Color c);
   /// --- Example 4: match inside bind ---
-  static void match_then_next(const Color c);
+  static void match_then_next(Color c);
   /// --- Example 5: chained sequenced ifs ---
-  static void chained_ifs(const bool b1, const bool b2);
+  static void chained_ifs(bool b1, bool b2);
   /// --- Example 6: nested match-in-match ---
-  static void nested_matches(const Color c1, const Color c2);
+  static void nested_matches(Color c1, Color c2);
 };
 
 #endif // INCLUDED_UNIT_MONOSTATE_ERASE

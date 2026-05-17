@@ -17,7 +17,7 @@ MemSafetyProbe::build_adders(
     if (std::holds_alternative<
             typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mynil>(
             _loop_trees.v())) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe::mylist<std::function<unsigned int(unsigned int)>>>(
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
@@ -25,7 +25,7 @@ MemSafetyProbe::build_adders(
       const auto &[d_a0, d_a1] = std::get<
           typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mycons>(
           _loop_trees.v());
-      MemSafetyProbe::mylist<MemSafetyProbe::tree> d_a1_value = *(d_a1);
+      MemSafetyProbe::mylist<MemSafetyProbe::tree> d_a1_value = *d_a1;
       auto _cell = std::make_unique<
           MemSafetyProbe::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
@@ -33,7 +33,7 @@ MemSafetyProbe::build_adders(
                 return d_a0.sum_values(_x0);
               },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
                     (*_write)->v_mut())
@@ -42,13 +42,13 @@ MemSafetyProbe::build_adders(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe::apply_all(
     const MemSafetyProbe::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int
+    unsigned int
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -73,7 +73,7 @@ unsigned int MemSafetyProbe::apply_all(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe::mylist<std::function<unsigned int(unsigned int)>>
-          &fns = *(_f.fns);
+          &fns = *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
         _result = 0u;
@@ -110,8 +110,8 @@ unsigned int MemSafetyProbe::match_partial(MemSafetyProbe::tree t) {
 
 /// ---- TEST 6: Deep currying chain ----
 /// Multi-level partial application where each level binds a new value.
-unsigned int MemSafetyProbe::add3(const unsigned int a, const unsigned int b,
-                                  const unsigned int c) {
+unsigned int MemSafetyProbe::add3(unsigned int a, unsigned int b,
+                                  unsigned int c) {
   return ((a + b) + c);
 }
 
@@ -130,11 +130,11 @@ MemSafetyProbe::fn_box MemSafetyProbe::make_box(MemSafetyProbe::tree t) {
 MemSafetyProbe::fn_box
 MemSafetyProbe::box_from_match(const MemSafetyProbe::tree &t) {
   if (std::holds_alternative<typename MemSafetyProbe::tree::Leaf>(t.v())) {
-    return fn_box::box([](const unsigned int n) { return n; });
+    return fn_box::box([](unsigned int n) { return n; });
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename MemSafetyProbe::tree::Node>(t.v());
-    MemSafetyProbe::tree d_a0_value = *(d_a0);
+    MemSafetyProbe::tree d_a0_value = *d_a0;
     return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
       return d_a0_value.sum_values(_x0);
     });

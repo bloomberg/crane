@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTCONCEPTINCLUDE
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 namespace SepExtConceptInclude {
 

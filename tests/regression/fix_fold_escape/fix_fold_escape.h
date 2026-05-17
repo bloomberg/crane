@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -138,7 +137,7 @@ struct FixFoldEscape {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      return fold_left(f, f(std::move(acc), d_a0), *(d_a1));
+      return fold_left(f, f(std::move(acc), d_a0), *d_a1);
     }
   }
 
@@ -155,11 +154,11 @@ struct FixFoldEscape {
   collect_adders(const List<unsigned int> &l);
   static unsigned int
   apply_head(const List<std::function<unsigned int(unsigned int)>> &l,
-             const unsigned int x);
+             unsigned int x);
   static unsigned int
   sum_apply(const List<std::function<unsigned int(unsigned int)>> &l,
-            const unsigned int x); /// test1: collect_adders 10; 20; 30 ->
-                                   /// adder_30; adder_20; adder_10
+            unsigned int x); /// test1: collect_adders 10; 20; 30 -> adder_30;
+                             /// adder_20; adder_10
   /// (reversed by fold_left). apply_head picks adder_30, apply to 5 -> 35.
   static inline const unsigned int test1 = apply_head(
       collect_adders(List<unsigned int>::cons(

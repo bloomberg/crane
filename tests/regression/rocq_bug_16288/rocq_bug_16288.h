@@ -2,8 +2,6 @@
 #define INCLUDED_ROCQ_BUG_16288
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -135,7 +133,7 @@ struct RocqBug16288 {
 
       // ACCESSORS
       M_t_NonEmpty<t_elt> clone() const {
-        return M_t_NonEmpty<t_elt>{(*(this)).M_m.clone()};
+        return M_t_NonEmpty<t_elt>{(*this).M_m.clone()};
       }
     };
 
@@ -145,7 +143,7 @@ struct RocqBug16288 {
 
       // ACCESSORS
       M_t_NonEmpty_<t_X, t_Y> clone() const {
-        return M_t_NonEmpty_<t_X, t_Y>{(*(this)).a, (*(this)).b};
+        return M_t_NonEmpty_<t_X, t_Y>{(*this).a, (*this).b};
       }
     };
   };

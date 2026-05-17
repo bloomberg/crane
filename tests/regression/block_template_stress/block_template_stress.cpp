@@ -1,7 +1,7 @@
 #include "block_template_stress.h"
 
 /// 1. Block template in a fixpoint body
-List<std::string> BlockTemplateStress::read_n_lines(const unsigned int n) {
+List<std::string> BlockTemplateStress::read_n_lines(unsigned int n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
@@ -14,7 +14,7 @@ List<std::string> BlockTemplateStress::read_n_lines(const unsigned int n) {
 }
 
 /// 2. Block template inside a monadic if-then-else
-std::string BlockTemplateStress::conditional_read(const bool do_read) {
+std::string BlockTemplateStress::conditional_read(bool do_read) {
   if (do_read) {
     std::string s;
     std::getline(std::cin, s);
@@ -32,7 +32,7 @@ unsigned int BlockTemplateStress::read_and_add() {
 }
 
 /// 4. Block template used in multiple match arms
-std::string BlockTemplateStress::branch_read(const unsigned int choice) {
+std::string BlockTemplateStress::branch_read(unsigned int choice) {
   if (choice <= 0) {
     std::string a;
     std::getline(std::cin, a);
@@ -87,7 +87,7 @@ BlockTemplateStress::read_files(const List<std::string> &paths) {
       else
         content = d_a0;
     };
-    List<std::string> rest = read_files(*(d_a1));
+    List<std::string> rest = read_files(*d_a1);
     return List<std::string>::cons(content, rest);
   }
 }

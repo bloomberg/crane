@@ -1,20 +1,20 @@
 #include "hof_closure_escape.h"
 
 unsigned int HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
-                                          const unsigned int x) {
+                                          unsigned int x) {
   if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename HofClosureEscape::tree::Node>(t.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *d_a0;
     if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
             _sv0.v())) {
       return (d_a1 + x);
     } else {
       const auto &[d_a00, d_a10, d_a20] =
           std::get<typename HofClosureEscape::tree::Node>(_sv0.v());
-      auto &&_sv1 = *(d_a2);
+      auto &&_sv1 = *d_a2;
       if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
               _sv1.v())) {
         return (d_a10 + x);
@@ -40,7 +40,7 @@ HofClosureEscape::hof_escape(const HofClosureEscape::tree &t) {
 
 unsigned int HofClosureEscape::apply_option(
     const std::optional<std::function<unsigned int(unsigned int)>> &o,
-    const unsigned int x) {
+    unsigned int x) {
   if (o.has_value()) {
     const std::function<unsigned int(unsigned int)> &f = *o;
     return f(x);

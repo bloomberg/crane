@@ -2,7 +2,6 @@
 #define INCLUDED_ENCODE_OPS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -123,12 +122,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -215,29 +213,28 @@ struct EncodeOps {
 
     // ACCESSORS
     instruction1 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<CLB>(_sv.v())) {
+      if (std::holds_alternative<CLB>(this->v())) {
         return instruction1(CLB{});
-      } else if (std::holds_alternative<CMC>(_sv.v())) {
+      } else if (std::holds_alternative<CMC>(this->v())) {
         return instruction1(CMC{});
-      } else if (std::holds_alternative<DAA>(_sv.v())) {
+      } else if (std::holds_alternative<DAA>(this->v())) {
         return instruction1(DAA{});
-      } else if (std::holds_alternative<FIM>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<FIM>(_sv.v());
+      } else if (std::holds_alternative<FIM>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<FIM>(this->v());
         return instruction1(FIM{d_a0, d_a1});
-      } else if (std::holds_alternative<JUN>(_sv.v())) {
-        const auto &[d_a0] = std::get<JUN>(_sv.v());
+      } else if (std::holds_alternative<JUN>(this->v())) {
+        const auto &[d_a0] = std::get<JUN>(this->v());
         return instruction1(JUN{d_a0});
-      } else if (std::holds_alternative<LDM1>(_sv.v())) {
-        const auto &[d_a0] = std::get<LDM1>(_sv.v());
+      } else if (std::holds_alternative<LDM1>(this->v())) {
+        const auto &[d_a0] = std::get<LDM1>(this->v());
         return instruction1(LDM1{d_a0});
-      } else if (std::holds_alternative<NOP1>(_sv.v())) {
+      } else if (std::holds_alternative<NOP1>(this->v())) {
         return instruction1(NOP1{});
-      } else if (std::holds_alternative<RDM>(_sv.v())) {
+      } else if (std::holds_alternative<RDM>(this->v())) {
         return instruction1(RDM{});
-      } else if (std::holds_alternative<TCS>(_sv.v())) {
+      } else if (std::holds_alternative<TCS>(this->v())) {
         return instruction1(TCS{});
-      } else if (std::holds_alternative<WPM>(_sv.v())) {
+      } else if (std::holds_alternative<WPM>(this->v())) {
         return instruction1(WPM{});
       } else {
         return instruction1(WR0{});
@@ -252,16 +249,12 @@ struct EncodeOps {
     static instruction1 daa() { return instruction1(DAA{}); }
 
     static instruction1 fim(unsigned int a0, unsigned int a1) {
-      return instruction1(FIM{std::move(a0), std::move(a1)});
+      return instruction1(FIM{a0, a1});
     }
 
-    static instruction1 jun(unsigned int a0) {
-      return instruction1(JUN{std::move(a0)});
-    }
+    static instruction1 jun(unsigned int a0) { return instruction1(JUN{a0}); }
 
-    static instruction1 ldm1(unsigned int a0) {
-      return instruction1(LDM1{std::move(a0)});
-    }
+    static instruction1 ldm1(unsigned int a0) { return instruction1(LDM1{a0}); }
 
     static instruction1 nop1() { return instruction1(NOP1{}); }
 
@@ -280,35 +273,43 @@ struct EncodeOps {
     const variant_t &v() const { return d_v_; }
 
     std::pair<unsigned int, unsigned int> encode1() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
+      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
         return std::make_pair(240u, 0u);
-      } else if (std::holds_alternative<typename instruction1::CMC>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::CMC>(
+                     this->v())) {
         return std::make_pair(243u, 0u);
-      } else if (std::holds_alternative<typename instruction1::DAA>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::DAA>(
+                     this->v())) {
         return std::make_pair(251u, 0u);
-      } else if (std::holds_alternative<typename instruction1::FIM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::FIM>(
+                     this->v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(_sv.v());
+            std::get<typename instruction1::FIM>(this->v());
         return std::make_pair(
             (32u + (((d_a0 - (2u ? d_a0 % 2u : d_a0)) > d_a0
                          ? 0
                          : (d_a0 - (2u ? d_a0 % 2u : d_a0))))),
             (256u ? d_a1 % 256u : d_a1));
-      } else if (std::holds_alternative<typename instruction1::JUN>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(_sv.v());
+      } else if (std::holds_alternative<typename instruction1::JUN>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
         return std::make_pair((64u + (256u ? d_a0 / 256u : 0)),
                               (256u ? d_a0 % 256u : d_a0));
-      } else if (std::holds_alternative<typename instruction1::LDM1>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(_sv.v());
+      } else if (std::holds_alternative<typename instruction1::LDM1>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
         return std::make_pair((208u + (16u ? d_a0 % 16u : d_a0)), 0u);
-      } else if (std::holds_alternative<typename instruction1::NOP1>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::NOP1>(
+                     this->v())) {
         return std::make_pair(0u, 0u);
-      } else if (std::holds_alternative<typename instruction1::RDM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::RDM>(
+                     this->v())) {
         return std::make_pair(233u, 0u);
-      } else if (std::holds_alternative<typename instruction1::TCS>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::TCS>(
+                     this->v())) {
         return std::make_pair(249u, 0u);
-      } else if (std::holds_alternative<typename instruction1::WPM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::WPM>(
+                     this->v())) {
         return std::make_pair(227u, 0u);
       } else {
         return std::make_pair(228u, 0u);
@@ -322,30 +323,38 @@ struct EncodeOps {
                std::is_invocable_r_v<T1, F5 &, unsigned int &>
     T1 instruction1_rec(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
                         T1 f6, T1 f7, T1 f8, T1 f9) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
+      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
         return f;
-      } else if (std::holds_alternative<typename instruction1::CMC>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::CMC>(
+                     this->v())) {
         return f0;
-      } else if (std::holds_alternative<typename instruction1::DAA>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::DAA>(
+                     this->v())) {
         return f1;
-      } else if (std::holds_alternative<typename instruction1::FIM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::FIM>(
+                     this->v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(_sv.v());
+            std::get<typename instruction1::FIM>(this->v());
         return f2(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instruction1::JUN>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(_sv.v());
+      } else if (std::holds_alternative<typename instruction1::JUN>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
         return f3(d_a0);
-      } else if (std::holds_alternative<typename instruction1::LDM1>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(_sv.v());
+      } else if (std::holds_alternative<typename instruction1::LDM1>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
         return f4(d_a0);
-      } else if (std::holds_alternative<typename instruction1::NOP1>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::NOP1>(
+                     this->v())) {
         return f5;
-      } else if (std::holds_alternative<typename instruction1::RDM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::RDM>(
+                     this->v())) {
         return f6;
-      } else if (std::holds_alternative<typename instruction1::TCS>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::TCS>(
+                     this->v())) {
         return f7;
-      } else if (std::holds_alternative<typename instruction1::WPM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::WPM>(
+                     this->v())) {
         return f8;
       } else {
         return f9;
@@ -359,30 +368,38 @@ struct EncodeOps {
                std::is_invocable_r_v<T1, F5 &, unsigned int &>
     T1 instruction1_rect(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
                          T1 f6, T1 f7, T1 f8, T1 f9) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction1::CLB>(_sv.v())) {
+      if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
         return f;
-      } else if (std::holds_alternative<typename instruction1::CMC>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::CMC>(
+                     this->v())) {
         return f0;
-      } else if (std::holds_alternative<typename instruction1::DAA>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::DAA>(
+                     this->v())) {
         return f1;
-      } else if (std::holds_alternative<typename instruction1::FIM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::FIM>(
+                     this->v())) {
         const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(_sv.v());
+            std::get<typename instruction1::FIM>(this->v());
         return f2(d_a0, d_a1);
-      } else if (std::holds_alternative<typename instruction1::JUN>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(_sv.v());
+      } else if (std::holds_alternative<typename instruction1::JUN>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
         return f3(d_a0);
-      } else if (std::holds_alternative<typename instruction1::LDM1>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(_sv.v());
+      } else if (std::holds_alternative<typename instruction1::LDM1>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
         return f4(d_a0);
-      } else if (std::holds_alternative<typename instruction1::NOP1>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::NOP1>(
+                     this->v())) {
         return f5;
-      } else if (std::holds_alternative<typename instruction1::RDM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::RDM>(
+                     this->v())) {
         return f6;
-      } else if (std::holds_alternative<typename instruction1::TCS>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::TCS>(
+                     this->v())) {
         return f7;
-      } else if (std::holds_alternative<typename instruction1::WPM>(_sv.v())) {
+      } else if (std::holds_alternative<typename instruction1::WPM>(
+                     this->v())) {
         return f8;
       } else {
         return f9;
@@ -443,11 +460,10 @@ struct EncodeOps {
 
     // ACCESSORS
     instruction2 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP2>(_sv.v())) {
+      if (std::holds_alternative<NOP2>(this->v())) {
         return instruction2(NOP2{});
       } else {
-        const auto &[d_a0] = std::get<LDM2>(_sv.v());
+        const auto &[d_a0] = std::get<LDM2>(this->v());
         return instruction2(LDM2{d_a0});
       }
     }
@@ -455,9 +471,7 @@ struct EncodeOps {
     // CREATORS
     static instruction2 nop2() { return instruction2(NOP2{}); }
 
-    static instruction2 ldm2(unsigned int a0) {
-      return instruction2(LDM2{std::move(a0)});
-    }
+    static instruction2 ldm2(unsigned int a0) { return instruction2(LDM2{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -466,11 +480,10 @@ struct EncodeOps {
     const variant_t &v() const { return d_v_; }
 
     std::pair<unsigned int, unsigned int> encode2() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
+      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
         return std::make_pair(13u, (16u ? d_a0 % 16u : d_a0));
       }
     }
@@ -478,11 +491,10 @@ struct EncodeOps {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction2_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
+      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
         return f0(d_a0);
       }
     }
@@ -490,11 +502,10 @@ struct EncodeOps {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction2_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction2::NOP2>(_sv.v())) {
+      if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
         return f0(d_a0);
       }
     }
@@ -550,11 +561,10 @@ struct EncodeOps {
 
     // ACCESSORS
     instruction3 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP3>(_sv.v())) {
+      if (std::holds_alternative<NOP3>(this->v())) {
         return instruction3(NOP3{});
       } else {
-        const auto &[d_a0] = std::get<LDM3>(_sv.v());
+        const auto &[d_a0] = std::get<LDM3>(this->v());
         return instruction3(LDM3{d_a0});
       }
     }
@@ -562,9 +572,7 @@ struct EncodeOps {
     // CREATORS
     static instruction3 nop3() { return instruction3(NOP3{}); }
 
-    static instruction3 ldm3(unsigned int a0) {
-      return instruction3(LDM3{std::move(a0)});
-    }
+    static instruction3 ldm3(unsigned int a0) { return instruction3(LDM3{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -573,11 +581,10 @@ struct EncodeOps {
     const variant_t &v() const { return d_v_; }
 
     std::pair<unsigned int, unsigned int> encode3() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
+      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
         return std::make_pair(((13u * 16u) + (16u ? d_a0 % 16u : d_a0)), 0u);
       }
     }
@@ -585,11 +592,10 @@ struct EncodeOps {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction3_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
+      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
         return f0(d_a0);
       }
     }
@@ -597,11 +603,10 @@ struct EncodeOps {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instruction3_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instruction3::NOP3>(_sv.v())) {
+      if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(_sv.v());
+        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
         return f0(d_a0);
       }
     }

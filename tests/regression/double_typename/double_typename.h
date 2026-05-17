@@ -2,7 +2,6 @@
 #define INCLUDED_DOUBLE_TYPENAME
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -163,8 +162,7 @@ struct DoubleTypename {
 
       // ACCESSORS
       entry<t_A> clone() const {
-        auto &&_sv = *(this);
-        const auto &[d_a0, d_a1] = std::get<Entry0>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<Entry0>(this->v());
         return entry<t_A>(Entry0{d_a0, d_a1});
       }
 

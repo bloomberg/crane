@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_LIST_ACCESS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -124,19 +123,17 @@ public:
 };
 
 struct LoopifyListAccess {
-  static unsigned int nth(const unsigned int n, const List<unsigned int> &l);
+  static unsigned int nth(unsigned int n, const List<unsigned int> &l);
   static unsigned int last(const List<unsigned int> &l);
-  static unsigned int index_of_aux(const unsigned int x,
-                                   const List<unsigned int> &l,
-                                   const unsigned int idx);
-  static unsigned int index_of(const unsigned int x,
-                               const List<unsigned int> &l);
-  static bool member(const unsigned int x, const List<unsigned int> &l);
+  static unsigned int index_of_aux(unsigned int x, const List<unsigned int> &l,
+                                   unsigned int idx);
+  static unsigned int index_of(unsigned int x, const List<unsigned int> &l);
+  static bool member(unsigned int x, const List<unsigned int> &l);
   static unsigned int
-  lookup(const unsigned int key,
+  lookup(unsigned int key,
          const List<std::pair<unsigned int, unsigned int>> &l);
   static List<unsigned int>
-  lookup_all(const unsigned int key,
+  lookup_all(unsigned int key,
              const List<std::pair<unsigned int, unsigned int>> &l);
 
   template <typename F0>
@@ -163,7 +160,7 @@ struct LoopifyListAccess {
     return _result;
   }
 
-  static unsigned int count(const unsigned int x, const List<unsigned int> &l);
+  static unsigned int count(unsigned int x, const List<unsigned int> &l);
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
@@ -174,17 +171,16 @@ struct LoopifyListAccess {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
       if (p(d_a0)) {
-        return (1u + count_matching(p, *(d_a1)));
+        return (1u + count_matching(p, *d_a1));
       } else {
-        return count_matching(p, *(d_a1));
+        return count_matching(p, *d_a1);
       }
     }
   }
 
-  static bool elem_at_eq(const unsigned int idx, const unsigned int val,
+  static bool elem_at_eq(unsigned int idx, unsigned int val,
                          const List<unsigned int> &l);
-  static unsigned int nth_default(const unsigned int n,
-                                  const unsigned int default0,
+  static unsigned int nth_default(unsigned int n, unsigned int default0,
                                   const List<unsigned int> &l);
 };
 

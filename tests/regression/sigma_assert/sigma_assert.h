@@ -2,12 +2,9 @@
 #define INCLUDED_SIGMA_ASSERT
 
 #include <cassert>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct PeanoNat {
-  static unsigned int div2(const unsigned int n);
+  static unsigned int div2(unsigned int n);
 };
 
 struct SigmaAssert {

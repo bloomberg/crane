@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe15::sum_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe15::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe15::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe15::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -79,7 +79,7 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::flatten(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe15::tree &t = *(_f.t);
+      const MemSafetyProbe15::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(
               t.v())) {
         _result = mylist<unsigned int>::mynil();
@@ -136,7 +136,7 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::subtree_sums(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe15::tree &t = *(_f.t);
+      const MemSafetyProbe15::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(
               t.v())) {
         _result = mylist<unsigned int>::mynil();
@@ -144,8 +144,7 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::subtree_sums(
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe15::tree::Node>(t.v());
         _stack.emplace_back(_After_Node{
-            d_a0.get(),
-            (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum())});
+            d_a0.get(), (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum())});
         _stack.emplace_back(_Enter{d_a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -162,31 +161,31 @@ MemSafetyProbe15::mylist<unsigned int> MemSafetyProbe15::subtree_sums(
 
 /// TEST 5: Deep left-spine tree.
 /// Stresses the frame stack depth.
-MemSafetyProbe15::tree MemSafetyProbe15::left_spine(const unsigned int n) {
+MemSafetyProbe15::tree MemSafetyProbe15::left_spine(unsigned int n) {
   std::unique_ptr<MemSafetyProbe15::tree> _head{};
   std::unique_ptr<MemSafetyProbe15::tree> *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<MemSafetyProbe15::tree>(tree::leaf());
+      *_write = std::make_unique<MemSafetyProbe15::tree>(tree::leaf());
       break;
     } else {
       unsigned int n_ = _loop_n - 1;
       auto _cell = std::make_unique<MemSafetyProbe15::tree>(typename tree::Node(
           nullptr, _loop_n,
           std::make_unique<MemSafetyProbe15::tree>(tree::leaf())));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename tree::Node>((*_write)->v_mut()).d_a0;
       _loop_n = n_;
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// TEST 9: Build a large tree and verify all values are preserved.
 MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -217,7 +216,7 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = tree::leaf();
       } else {

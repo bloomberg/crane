@@ -148,14 +148,14 @@ struct MonadicVoidEdge {
   /// 8. Higher-order: pass a monadic void function as callback
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, unsigned int &>
-  static void apply_effect(F0 &&f, const unsigned int _x0) {
+  static void apply_effect(F0 &&f, unsigned int _x0) {
     f(_x0);
     return;
   }
 
   static void test_apply_effect();
   /// 9. Monadic function returning option unit
-  static std::optional<std::monostate> maybe_print(const bool b);
+  static std::optional<std::monostate> maybe_print(bool b);
   /// 10. Bind result used in a pair
   static std::pair<unsigned int, unsigned int> bind_into_pair();
   /// 11. Void function result stored in list (should stay Unit, not void)

@@ -1,10 +1,6 @@
 #ifndef INCLUDED_QUALIFIED_RECORD_SHADOW
 #define INCLUDED_QUALIFIED_RECORD_SHADOW
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct QualifiedRecordShadow {
   struct Shadow {
     unsigned int value;

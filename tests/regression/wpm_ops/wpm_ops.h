@@ -2,8 +2,6 @@
 #define INCLUDED_WPM_OPS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -125,18 +123,18 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct WpmOps {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        return List<T1>::cons(x, *d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
@@ -144,7 +142,7 @@ struct WpmOps {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
       }
     }
   }
@@ -160,8 +158,8 @@ struct WpmOps {
 
     // ACCESSORS
     state1 clone() const {
-      return state1{(*(this)).rom1.clone(), (*(this)).prom_addr1,
-                    (*(this)).prom_data1, (*(this)).prom_enable1};
+      return state1{(*this).rom1.clone(), (*this).prom_addr1,
+                    (*this).prom_data1, (*this).prom_enable1};
     }
   };
 
@@ -189,9 +187,9 @@ struct WpmOps {
 
     // ACCESSORS
     state2 clone() const {
-      return state2{(*(this)).ram_sys2.clone(), (*(this)).rom2.clone(),
-                    (*(this)).prom_addr2, (*(this)).prom_data2,
-                    (*(this)).prom_enable2};
+      return state2{(*this).ram_sys2.clone(), (*this).rom2.clone(),
+                    (*this).prom_addr2, (*this).prom_data2,
+                    (*this).prom_enable2};
     }
   };
 
@@ -217,9 +215,9 @@ struct WpmOps {
 
     // ACCESSORS
     state3 clone() const {
-      return state3{(*(this)).regs3.clone(), (*(this)).rom3.clone(),
-                    (*(this)).prom_addr3, (*(this)).prom_data3,
-                    (*(this)).prom_enable3};
+      return state3{(*this).regs3.clone(), (*this).rom3.clone(),
+                    (*this).prom_addr3, (*this).prom_data3,
+                    (*this).prom_enable3};
     }
   };
 
@@ -244,8 +242,8 @@ struct WpmOps {
 
     // ACCESSORS
     state4 clone() const {
-      return state4{(*(this)).rom4.clone(), (*(this)).prom_addr4,
-                    (*(this)).prom_data4, (*(this)).prom_enable4};
+      return state4{(*this).rom4.clone(), (*this).prom_addr4,
+                    (*this).prom_data4, (*this).prom_enable4};
     }
   };
 
@@ -268,8 +266,8 @@ struct WpmOps {
 
     // ACCESSORS
     state5 clone() const {
-      return state5{(*(this)).rom5.clone(), (*(this)).prom_addr5,
-                    (*(this)).prom_data5, (*(this)).prom_enable5};
+      return state5{(*this).rom5.clone(), (*this).prom_addr5,
+                    (*this).prom_data5, (*this).prom_enable5};
     }
   };
 
@@ -293,8 +291,8 @@ struct WpmOps {
 
     // ACCESSORS
     state6 clone() const {
-      return state6{(*(this)).rom6.clone(), (*(this)).prom_addr6,
-                    (*(this)).prom_data6, (*(this)).prom_enable6};
+      return state6{(*this).rom6.clone(), (*this).prom_addr6,
+                    (*this).prom_data6, (*this).prom_enable6};
     }
   };
 
@@ -328,7 +326,7 @@ struct WpmOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -342,7 +340,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

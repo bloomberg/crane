@@ -2,7 +2,6 @@
 #define INCLUDED_VISIT_MATCH_BUG
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -87,10 +86,10 @@ struct VisitMatchBug {
     }
 
     // CREATORS
-    static Tree leaf(unsigned int a0) { return Tree(Leaf{std::move(a0)}); }
+    static Tree leaf(unsigned int a0) { return Tree(Leaf{a0}); }
 
     static Tree node(Tree a0, unsigned int a1, Tree a2) {
-      return Tree(Node{std::make_unique<Tree>(std::move(a0)), std::move(a1),
+      return Tree(Node{std::make_unique<Tree>(std::move(a0)), a1,
                        std::make_unique<Tree>(std::move(a2))});
     }
 
@@ -135,8 +134,8 @@ struct VisitMatchBug {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(t.v());
-      return f0(*(d_a0), Tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                Tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, Tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                Tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -150,8 +149,8 @@ struct VisitMatchBug {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(t.v());
-      return f0(*(d_a0), Tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                Tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, Tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                Tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -166,7 +165,7 @@ struct VisitMatchBug {
     unsigned int data;
 
     // ACCESSORS
-    State clone() const { return State{(*(this)).value, (*(this)).data}; }
+    State clone() const { return State{(*this).value, (*this).data}; }
   };
 
   static unsigned int match_extract_field(const State &s);

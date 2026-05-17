@@ -3,9 +3,7 @@
 
 #include <filesystem>
 #include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -126,10 +124,10 @@ public:
 };
 
 struct Dir {
-  static bool make_dir(const std::string path);
-  static bool remove_dir(const std::string path);
+  static bool make_dir(std::string path);
+  static bool remove_dir(std::string path);
   static std::string get_cwd();
-  static List<std::string> list_dir(const std::string path);
+  static List<std::string> list_dir(std::string path);
 };
 
 #endif // INCLUDED_DIR

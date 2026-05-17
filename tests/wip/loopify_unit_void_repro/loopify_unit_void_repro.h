@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_UNIT_VOID_REPRO
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -125,8 +123,7 @@ public:
 
 struct LoopifyUnitVoidRepro {
   static inline const unsigned int cell_size = 42u;
-  static void loop(const unsigned int x, const unsigned int y,
-                   const List<bool> &cells);
+  static void loop(unsigned int x, unsigned int y, const List<bool> &cells);
   static int run();
 };
 

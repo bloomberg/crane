@@ -139,12 +139,12 @@ struct VoidCallback {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(xs.v());
-      for_each(f, *(d_a1));
+      for_each(f, *d_a1);
       return;
     }
   }
 
-  static void print_nat(const unsigned int _x);
+  static void print_nat(unsigned int _x);
   static inline const std::monostate test_for_each = []() {
     for_each(print_nat,
              List<unsigned int>::cons(
@@ -162,14 +162,14 @@ struct VoidCallback {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(xs.v());
       f(d_a0);
-      for_each_m(f, *(d_a1));
+      for_each_m(f, *d_a1);
       return;
     }
   }
 
   static void test_for_each_m();
   /// 3. Pure function returning unit, used in let
-  static void side_effect_pure(const unsigned int _x);
+  static void side_effect_pure(unsigned int _x);
   static inline const unsigned int use_side_effect = 42u;
 
   /// 4. Callback that ignores argument and returns nat
@@ -181,7 +181,7 @@ struct VoidCallback {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(xs.v());
-      return (ignore_and_count(f, *(d_a1)) + 1);
+      return (ignore_and_count(f, *d_a1) + 1);
     }
   }
 
@@ -195,7 +195,7 @@ struct VoidCallback {
   /// 5. Nested void callbacks
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, unsigned int &>
-  static void apply_twice(F0 &&f, const unsigned int _x0) {
+  static void apply_twice(F0 &&f, unsigned int _x0) {
     f(_x0);
     return;
   }
@@ -222,9 +222,9 @@ struct VoidCallback {
     return std::monostate{};
   }();
   /// 7. Void returning function in a match arm
-  static void void_in_match(const bool b);
+  static void void_in_match(bool b);
   /// 8. Option of void function result
-  static std::optional<std::monostate> void_option(const bool b);
+  static std::optional<std::monostate> void_option(bool b);
 };
 
 #endif // INCLUDED_VOID_CALLBACK

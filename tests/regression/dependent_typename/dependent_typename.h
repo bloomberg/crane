@@ -2,9 +2,6 @@
 #define INCLUDED_DEPENDENT_TYPENAME
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename M>
 concept HasType = requires {
@@ -27,7 +24,7 @@ struct DependentTypename {
       return v;
     }
 
-    constexpr static typename M::t identity(const typename M::t x) { return x; }
+    constexpr static typename M::t identity(typename M::t x) { return x; }
 
     static const typename M::t &make_default() {
       static const typename M::t v = M::default_;
@@ -51,7 +48,7 @@ struct DependentTypename {
     }
 
     static typename C::template t<unsigned int>
-    use_singleton(const unsigned int _x0) {
+    use_singleton(unsigned int _x0) {
       return C::template singleton<unsigned int>(_x0);
     }
   };

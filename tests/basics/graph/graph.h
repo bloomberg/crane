@@ -4,7 +4,6 @@
 #include <any>
 #include <concepts>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -227,15 +226,14 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   List<t_A> filter(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
       if (f(d_a0)) {
-        return List<t_A>::cons(d_a0, (*(d_a1)).filter(f));
+        return List<t_A>::cons(d_a0, (*d_a1).filter(f));
       } else {
-        return (*(d_a1)).filter(f);
+        return (*d_a1).filter(f);
       }
     }
   }
@@ -272,7 +270,7 @@ template <typename t_A> struct DirectedEdge {
 
   // ACCESSORS
   DirectedEdge<t_A> clone() const {
-    return DirectedEdge<t_A>{(*(this)).edge_from, (*(this)).edge_to};
+    return DirectedEdge<t_A>{(*this).edge_from, (*this).edge_to};
   }
 };
 
@@ -288,8 +286,8 @@ template <typename t_A> struct Directed {
 
   // ACCESSORS
   Directed<t_A> clone() const {
-    return Directed<t_A>{(*(this)).directed_nodes.clone(),
-                         (*(this)).directed_edges.clone()};
+    return Directed<t_A>{(*this).directed_nodes.clone(),
+                         (*this).directed_edges.clone()};
   }
 };
 
@@ -328,7 +326,7 @@ template <typename t_A> struct UndirectedEdge {
 
   // ACCESSORS
   UndirectedEdge<t_A> clone() const {
-    return UndirectedEdge<t_A>{(*(this)).edge_first, (*(this)).edge_second};
+    return UndirectedEdge<t_A>{(*this).edge_first, (*this).edge_second};
   }
 };
 
@@ -343,8 +341,8 @@ template <typename t_A> struct Undirected {
 
   // ACCESSORS
   Undirected<t_A> clone() const {
-    return Undirected<t_A>{(*(this)).undirected_nodes.clone(),
-                           (*(this)).undirected_edges.clone()};
+    return Undirected<t_A>{(*this).undirected_nodes.clone(),
+                           (*this).undirected_edges.clone()};
   }
 };
 

@@ -2,8 +2,6 @@
 #define INCLUDED_CLOSURE_IN_CTOR
 
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -47,9 +45,8 @@ struct ClosureInCtor {
 
     // ACCESSORS
     box clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Box0>(_sv.v())) {
-        const auto &[d_a0] = std::get<Box0>(_sv.v());
+      if (std::holds_alternative<Box0>(this->v())) {
+        const auto &[d_a0] = std::get<Box0>(this->v());
         return box(Box0{d_a0});
       } else {
         return box(Empty{});
@@ -105,7 +102,7 @@ struct ClosureInCtor {
   ///
   /// Difference from fix_escape_capture: escapes through a CUSTOM
   /// INDUCTIVE constructor, not a pair.
-  static box make_box_fix(const unsigned int n);
+  static box make_box_fix(unsigned int n);
   /// test1: make_box_fix(5) returns Box(add) where add(x) = x + 5.
   /// Expected: add(3) = 5 + 3 = 8.
   /// Bug: & captures dangling reference to n.

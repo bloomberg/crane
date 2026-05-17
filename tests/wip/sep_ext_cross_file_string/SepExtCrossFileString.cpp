@@ -14,7 +14,7 @@ String::String ShowNat::show(const Datatypes::Nat &n) {
                                    String::String::emptystring());
   } else {
     const auto &[d_a0] = std::get<typename Datatypes::Nat::S>(n.v());
-    return show(*(d_a0)).append(
+    return show(*d_a0).append(
         String::String::string0(Ascii::Ascii::ascii0(true, true, false, true,
                                                      false, true, false, false),
                                 String::String::emptystring()));

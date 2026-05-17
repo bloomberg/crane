@@ -26,7 +26,7 @@ unsigned int MemSafetyProbe5::sum_left_vals(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l = *(_f.l);
+      const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mynil>(
               l.v())) {
@@ -62,7 +62,7 @@ MemSafetyProbe5::build_getters(
     if (std::holds_alternative<
             typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mynil>(
             _loop_l.v())) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>>>(
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
@@ -70,7 +70,7 @@ MemSafetyProbe5::build_getters(
       const auto &[d_a0, d_a1] = std::get<
           typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
           _loop_l.v());
-      MemSafetyProbe5::mylist<MemSafetyProbe5::tree> d_a1_value = *(d_a1);
+      MemSafetyProbe5::mylist<MemSafetyProbe5::tree> d_a1_value = *d_a1;
       auto _cell = std::make_unique<
           MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
@@ -78,7 +78,7 @@ MemSafetyProbe5::build_getters(
                 return d_a0.get_left_val(_x0);
               },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
                     (*_write)->v_mut())
@@ -87,12 +87,12 @@ MemSafetyProbe5::build_getters(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe5::apply_all(
     const MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>> &l,
-    const unsigned int
+    unsigned int
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -116,7 +116,7 @@ unsigned int MemSafetyProbe5::apply_all(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>>
-          &l = *(_f.l);
+          &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(l.v())) {
         _result = x;
@@ -171,8 +171,8 @@ MemSafetyProbe5::collect_left_vals(
       } else {
         auto &[d_a0, d_a1, d_a2] =
             std::get<typename MemSafetyProbe5::tree::Node>(t.v_mut());
-        MemSafetyProbe5::tree d_a0_value = *(d_a0);
-        MemSafetyProbe5::tree d_a2_value = *(d_a2);
+        MemSafetyProbe5::tree d_a0_value = *d_a0;
+        MemSafetyProbe5::tree d_a2_value = *d_a2;
         _stack.emplace_back(_Resume_Node{d_a0_value});
         _stack.emplace_back(
             _Enter{mylist<std::function<unsigned int(unsigned int)>>::mycons(
@@ -192,14 +192,14 @@ MemSafetyProbe5::collect_left_vals(
 
 /// TEST 6: Stress test with very large list of trees.
 MemSafetyProbe5::mylist<MemSafetyProbe5::tree>
-MemSafetyProbe5::make_tree_list(const unsigned int n) {
+MemSafetyProbe5::make_tree_list(unsigned int n) {
   std::unique_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _head{};
   std::unique_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> *_write =
       &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) =
+      *_write =
           std::make_unique<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
               mylist<MemSafetyProbe5::tree>::mynil());
       break;
@@ -211,7 +211,7 @@ MemSafetyProbe5::make_tree_list(const unsigned int n) {
                   tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
                              (_loop_n * 2u), tree::leaf()),
                   nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<MemSafetyProbe5::tree>::Mycons>(
                     (*_write)->v_mut())
                     .d_a1;
@@ -219,12 +219,12 @@ MemSafetyProbe5::make_tree_list(const unsigned int n) {
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe5::sum_getters(
     const MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>> &l,
-    const unsigned int
+    unsigned int
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -248,7 +248,7 @@ unsigned int MemSafetyProbe5::sum_getters(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>>
-          &l = *(_f.l);
+          &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(l.v())) {
         _result = 0u;

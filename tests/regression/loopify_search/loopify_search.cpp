@@ -4,7 +4,7 @@
 /// knapsack capacity items solves 0/1 knapsack problem.
 /// Items are (weight, value) pairs.
 unsigned int LoopifySearch::knapsack_fuel(
-    const unsigned int fuel, const unsigned int capacity,
+    unsigned int fuel, unsigned int capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   if (fuel <= 0) {
     return 0u;
@@ -21,21 +21,21 @@ unsigned int LoopifySearch::knapsack_fuel(
       const unsigned int &weight = d_a0.first;
       const unsigned int &value = d_a0.second;
       if (capacity < weight) {
-        return knapsack_fuel(f, capacity, *(d_a1));
+        return knapsack_fuel(f, capacity, *d_a1);
       } else {
-        if (knapsack_fuel(f, capacity, *(d_a1)) <=
+        if (knapsack_fuel(f, capacity, *d_a1) <=
             (value +
              knapsack_fuel(
                  f,
                  (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-                 *(d_a1)))) {
+                 *d_a1))) {
           return (value + knapsack_fuel(f,
                                         (((capacity - weight) > capacity
                                               ? 0
                                               : (capacity - weight))),
-                                        *(d_a1)));
+                                        *d_a1));
         } else {
-          return knapsack_fuel(f, capacity, *(d_a1));
+          return knapsack_fuel(f, capacity, *d_a1);
         }
       }
     }
@@ -43,7 +43,7 @@ unsigned int LoopifySearch::knapsack_fuel(
 }
 
 unsigned int LoopifySearch::knapsack(
-    const unsigned int capacity,
+    unsigned int capacity,
     const List<std::pair<unsigned int, unsigned int>> &items) {
   return knapsack_fuel(len_impl<std::pair<unsigned int, unsigned int>>(items),
                        capacity, items);
@@ -76,7 +76,7 @@ std::pair<unsigned int, unsigned int> LoopifySearch::majority(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(0u, 0u);
       } else {
@@ -114,15 +114,14 @@ LoopifySearch::longest_increasing_subseq(const List<unsigned int> &l) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(
+        *_write = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
         break;
       } else {
@@ -131,7 +130,7 @@ LoopifySearch::longest_increasing_subseq(const List<unsigned int> &l) {
         if (d_a0 < d_a00) {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -144,15 +143,15 @@ LoopifySearch::longest_increasing_subseq(const List<unsigned int> &l) {
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// Helper for binary search: get nth element.
-unsigned int LoopifySearch::nth_impl(const unsigned int n,
+unsigned int LoopifySearch::nth_impl(unsigned int n,
                                      const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -183,22 +182,21 @@ unsigned int LoopifySearch::nth_impl(const unsigned int n,
 }
 
 /// Helper for binary search: take first k elements.
-List<unsigned int> LoopifySearch::take_impl(const unsigned int k,
+List<unsigned int> LoopifySearch::take_impl(unsigned int k,
                                             const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_k = k;
+  unsigned int _loop_k = std::move(k);
   while (true) {
     if (_loop_k <= 0) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       unsigned int m = _loop_k - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
@@ -206,7 +204,7 @@ List<unsigned int> LoopifySearch::take_impl(const unsigned int k,
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -216,15 +214,15 @@ List<unsigned int> LoopifySearch::take_impl(const unsigned int k,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// Helper for binary search: drop first k elements.
-List<unsigned int> LoopifySearch::drop_impl(const unsigned int k,
+List<unsigned int> LoopifySearch::drop_impl(unsigned int k,
                                             List<unsigned int> l) {
   List<unsigned int> _result;
   List<unsigned int> _loop_l = std::move(l);
-  unsigned int _loop_k = k;
+  unsigned int _loop_k = std::move(k);
   while (true) {
     if (_loop_k <= 0) {
       _result = std::move(_loop_l);
@@ -238,7 +236,7 @@ List<unsigned int> LoopifySearch::drop_impl(const unsigned int k,
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        _loop_l = std::move(*(d_a1));
+        _loop_l = std::move(*d_a1);
         _loop_k = m;
       }
     }
@@ -248,12 +246,11 @@ List<unsigned int> LoopifySearch::drop_impl(const unsigned int k,
 
 /// binary_search_fuel target sorted_list searches for target in sorted list.
 /// Returns true if found.
-bool LoopifySearch::binary_search_fuel(const unsigned int fuel,
-                                       const unsigned int target,
+bool LoopifySearch::binary_search_fuel(unsigned int fuel, unsigned int target,
                                        const List<unsigned int> &l) {
   bool _result;
   List<unsigned int> _loop_l = l;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       _result = false;
@@ -286,7 +283,7 @@ bool LoopifySearch::binary_search_fuel(const unsigned int fuel,
   return _result;
 }
 
-bool LoopifySearch::binary_search(const unsigned int target,
+bool LoopifySearch::binary_search(unsigned int target,
                                   const List<unsigned int> &l) {
   return binary_search_fuel(len_impl<unsigned int>(l), target, l);
 }
@@ -314,7 +311,7 @@ LoopifySearch::longest_run_aux(List<unsigned int> current_run,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         List<unsigned int> new_run =
             List<unsigned int>::cons(d_a0, std::move(_loop_current_run));
@@ -360,8 +357,8 @@ List<unsigned int> LoopifySearch::longest_run(const List<unsigned int> &l) {
 
 /// collatz n computes Collatz sequence length (not the list).
 unsigned int LoopifySearch::collatz_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -386,8 +383,8 @@ unsigned int LoopifySearch::collatz_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -415,7 +412,7 @@ unsigned int LoopifySearch::collatz_fuel(
   return _result;
 }
 
-unsigned int LoopifySearch::collatz(const unsigned int n) {
+unsigned int LoopifySearch::collatz(unsigned int n) {
   return collatz_fuel(1000u, n);
 }
 
@@ -427,15 +424,14 @@ List<unsigned int> LoopifySearch::lis(const List<unsigned int> &l) {
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(
+        *_write = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
         break;
       } else {
@@ -444,7 +440,7 @@ List<unsigned int> LoopifySearch::lis(const List<unsigned int> &l) {
         if (d_a0 < d_a00) {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -457,12 +453,11 @@ List<unsigned int> LoopifySearch::lis(const List<unsigned int> &l) {
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// subset_sum target l checks if any subset sums to target.
-bool LoopifySearch::subset_sum_fuel(const unsigned int fuel,
-                                    const unsigned int target,
+bool LoopifySearch::subset_sum_fuel(unsigned int fuel, unsigned int target,
                                     const List<unsigned int> &l) {
   if (fuel <= 0) {
     return false;
@@ -473,13 +468,13 @@ bool LoopifySearch::subset_sum_fuel(const unsigned int fuel,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      bool without = subset_sum_fuel(f, target, *(d_a1));
+      bool without = subset_sum_fuel(f, target, *d_a1);
       if (without) {
         return true;
       } else {
         if (d_a0 <= target) {
           return subset_sum_fuel(
-              f, (((target - d_a0) > target ? 0 : (target - d_a0))), *(d_a1));
+              f, (((target - d_a0) > target ? 0 : (target - d_a0))), *d_a1);
         } else {
           return false;
         }
@@ -488,41 +483,41 @@ bool LoopifySearch::subset_sum_fuel(const unsigned int fuel,
   }
 }
 
-bool LoopifySearch::subset_sum(const unsigned int target,
+bool LoopifySearch::subset_sum(unsigned int target,
                                const List<unsigned int> &l) {
   return subset_sum_fuel((len_impl<unsigned int>(l) + 1), target, l);
 }
 
 /// sieve l removes multiples (simplified sieve of Eratosthenes).
-List<unsigned int> LoopifySearch::sieve_fuel(const unsigned int fuel,
+List<unsigned int> LoopifySearch::sieve_fuel(unsigned int fuel,
                                              List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
+      *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l.v_mut())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> d_a1_value = *(d_a1);
+        List<unsigned int> d_a1_value = *d_a1;
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
         _loop_l = filter_impl(
-            [=](const unsigned int y) mutable {
+            [=](unsigned int y) mutable {
               return !((d_a0 ? y % d_a0 : y) == 0u);
             },
             d_a1_value);
@@ -531,7 +526,7 @@ List<unsigned int> LoopifySearch::sieve_fuel(const unsigned int fuel,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifySearch::sieve(const List<unsigned int> &l) {
@@ -539,8 +534,7 @@ List<unsigned int> LoopifySearch::sieve(const List<unsigned int> &l) {
 }
 
 /// Helper: check if element is in list.
-bool LoopifySearch::elem_impl(const unsigned int x,
-                              const List<unsigned int> &l) {
+bool LoopifySearch::elem_impl(unsigned int x, const List<unsigned int> &l) {
   bool _result;
   const List<unsigned int> *_loop_l = &l;
   while (true) {
@@ -563,45 +557,45 @@ bool LoopifySearch::elem_impl(const unsigned int x,
 }
 
 /// nub l removes duplicates from list.
-List<unsigned int> LoopifySearch::nub_fuel(const unsigned int fuel,
+List<unsigned int> LoopifySearch::nub_fuel(unsigned int fuel,
                                            List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
+      *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l.v_mut())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        if (elem_impl(d_a0, *(d_a1))) {
-          _loop_l = std::move(*(d_a1));
+        if (elem_impl(d_a0, *d_a1)) {
+          _loop_l = std::move(*d_a1);
           _loop_fuel = f;
           continue;
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
-          _loop_l = std::move(*(d_a1));
+          _loop_l = std::move(*d_a1);
           _loop_fuel = f;
           continue;
         }
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifySearch::nub(const List<unsigned int> &l) {
@@ -609,28 +603,27 @@ List<unsigned int> LoopifySearch::nub(const List<unsigned int> &l) {
 }
 
 /// remove_duplicates l removes all duplicate elements.
-List<unsigned int>
-LoopifySearch::remove_duplicates_fuel(const unsigned int fuel,
-                                      List<unsigned int> l) {
+List<unsigned int> LoopifySearch::remove_duplicates_fuel(unsigned int fuel,
+                                                         List<unsigned int> l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l = std::move(l);
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l));
+      *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l.v_mut())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> d_a1_value = *(d_a1);
+        List<unsigned int> d_a1_value = *d_a1;
         if (elem_impl(d_a0, d_a1_value)) {
           _loop_l = d_a1_value;
           _loop_fuel = f;
@@ -638,20 +631,19 @@ LoopifySearch::remove_duplicates_fuel(const unsigned int fuel,
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
           _loop_l = filter_impl(
-              [=](const unsigned int y) mutable { return !(d_a0 == y); },
-              d_a1_value);
+              [=](unsigned int y) mutable { return !(d_a0 == y); }, d_a1_value);
           _loop_fuel = f;
           continue;
         }
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int>
@@ -661,7 +653,7 @@ LoopifySearch::remove_duplicates(const List<unsigned int> &l) {
 
 /// quicksort l sorts list using quicksort with filter-based partitioning.
 List<unsigned int> LoopifySearch::quicksort_fuel(
-    const unsigned int fuel,
+    unsigned int fuel,
     List<unsigned int>
         l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -696,7 +688,7 @@ List<unsigned int> LoopifySearch::quicksort_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = std::move(_f.l);
-      const unsigned int fuel = _f.fuel;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -707,13 +699,11 @@ List<unsigned int> LoopifySearch::quicksort_fuel(
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v_mut());
-          List<unsigned int> d_a1_value = *(d_a1);
+          List<unsigned int> d_a1_value = *d_a1;
           List<unsigned int> smaller = filter_impl(
-              [=](const unsigned int y) mutable { return y < d_a0; },
-              d_a1_value);
+              [=](unsigned int y) mutable { return y < d_a0; }, d_a1_value);
           List<unsigned int> greater = filter_impl(
-              [=](const unsigned int y) mutable { return d_a0 <= y; },
-              d_a1_value);
+              [=](unsigned int y) mutable { return d_a0 <= y; }, d_a1_value);
           _stack.emplace_back(_After_Cons{std::move(smaller), f, d_a0});
           _stack.emplace_back(_Enter{std::move(greater), f});
         }
@@ -761,14 +751,14 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifySearch::split_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        auto &&_sv0 = *(d_a1);
+        auto &&_sv0 = *d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
           _result = std::make_pair(
@@ -795,31 +785,31 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifySearch::split_list(
 }
 
 /// Helper: merge two sorted lists with fuel.
-List<unsigned int> LoopifySearch::merge_sorted_fuel(const unsigned int fuel,
+List<unsigned int> LoopifySearch::merge_sorted_fuel(unsigned int fuel,
                                                     List<unsigned int> l1,
                                                     List<unsigned int> l2) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   List<unsigned int> _loop_l2 = std::move(l2);
   List<unsigned int> _loop_l1 = std::move(l1);
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<unsigned int>>(
+      *_write = std::make_unique<List<unsigned int>>(
           std::move(_loop_l1).app(std::move(_loop_l2)));
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l1.v_mut())) {
-        *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
+        *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2.v_mut())) {
-          *(_write) = std::make_unique<List<unsigned int>>(_loop_l1);
+          *_write = std::make_unique<List<unsigned int>>(_loop_l1);
           break;
         } else {
           auto &[d_a00, d_a10] =
@@ -827,21 +817,21 @@ List<unsigned int> LoopifySearch::merge_sorted_fuel(const unsigned int fuel,
           if (d_a0 <= d_a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
                 typename List<unsigned int>::Cons(d_a0, nullptr));
-            *(_write) = std::move(_cell);
+            *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            _loop_l1 = std::move(*(d_a1));
+            _loop_l1 = std::move(*d_a1);
             _loop_fuel = f;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
                 typename List<unsigned int>::Cons(d_a00, nullptr));
-            *(_write) = std::move(_cell);
+            *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1;
-            _loop_l2 = std::move(*(d_a10));
+            _loop_l2 = std::move(*d_a10);
             _loop_fuel = f;
             continue;
           }
@@ -849,7 +839,7 @@ List<unsigned int> LoopifySearch::merge_sorted_fuel(const unsigned int fuel,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifySearch::merge_sorted(const List<unsigned int> &l1,
@@ -860,7 +850,7 @@ List<unsigned int> LoopifySearch::merge_sorted(const List<unsigned int> &l1,
 
 /// merge_sort l sorts list using merge sort.
 List<unsigned int> LoopifySearch::merge_sort_fuel(
-    const unsigned int fuel,
+    unsigned int fuel,
     List<unsigned int>
         l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -893,7 +883,7 @@ List<unsigned int> LoopifySearch::merge_sort_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<unsigned int> l = std::move(_f.l);
-      const unsigned int fuel = _f.fuel;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -904,7 +894,7 @@ List<unsigned int> LoopifySearch::merge_sort_fuel(
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v_mut());
-          auto &&_sv = *(d_a1);
+          auto &&_sv = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
             _result = l;
@@ -934,7 +924,7 @@ List<unsigned int> LoopifySearch::merge_sort(const List<unsigned int> &l) {
 }
 
 /// Helper: remove first occurrence of x from list.
-List<unsigned int> LoopifySearch::remove_first(const unsigned int x,
+List<unsigned int> LoopifySearch::remove_first(unsigned int x,
                                                const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
@@ -942,19 +932,18 @@ List<unsigned int> LoopifySearch::remove_first(const unsigned int x,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x == d_a0) {
-        *(_write) = std::make_unique<List<unsigned int>>(*(d_a1));
+        *_write = std::make_unique<List<unsigned int>>(*d_a1);
         break;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -963,20 +952,19 @@ List<unsigned int> LoopifySearch::remove_first(const unsigned int x,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// Helper: map function that prepends element to each list.
 List<List<unsigned int>>
-LoopifySearch::map_cons(const unsigned int x,
-                        const List<List<unsigned int>> &lsts) {
+LoopifySearch::map_cons(unsigned int x, const List<List<unsigned int>> &lsts) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
   const List<List<unsigned int>> *_loop_lsts = &lsts;
   while (true) {
     if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
             _loop_lsts->v())) {
-      *(_write) = std::make_unique<List<List<unsigned int>>>(
+      *_write = std::make_unique<List<List<unsigned int>>>(
           List<List<unsigned int>>::nil());
       break;
     } else {
@@ -985,7 +973,7 @@ LoopifySearch::map_cons(const unsigned int x,
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
               List<unsigned int>::cons(x, d_a0), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
@@ -993,14 +981,14 @@ LoopifySearch::map_cons(const unsigned int x,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// perms_choices_fuel fuel choices orig generates permutations by iterating
 /// over choices.  Single self-recursive function for full loopification.
 /// Match on remaining is hoisted out of let-binding.
 List<List<unsigned int>> LoopifySearch::perms_choices_fuel(
-    const unsigned int fuel, const List<unsigned int> &choices,
+    unsigned int fuel, const List<unsigned int> &choices,
     const List<unsigned int> &
         orig) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -1048,7 +1036,7 @@ List<List<unsigned int>> LoopifySearch::perms_choices_fuel(
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<unsigned int> &orig = _f.orig;
       const List<unsigned int> &choices = _f.choices;
-      const unsigned int fuel = _f.fuel;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<unsigned int>>::nil();
       } else {
@@ -1066,10 +1054,10 @@ List<List<unsigned int>> LoopifySearch::perms_choices_fuel(
                 map_cons(d_a0, List<List<unsigned int>>::cons(
                                    List<unsigned int>::nil(),
                                    List<List<unsigned int>>::nil()))});
-            _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
+            _stack.emplace_back(_Enter{orig, std::move(*d_a1), f});
           } else {
             _stack.emplace_back(_After_Cons{remaining, remaining, f, d_a0});
-            _stack.emplace_back(_Enter{orig, std::move(*(d_a1)), f});
+            _stack.emplace_back(_Enter{orig, std::move(*d_a1), f});
           }
         }
       }
@@ -1091,7 +1079,7 @@ List<List<unsigned int>> LoopifySearch::perms_choices_fuel(
 
 /// permutations_fuel fuel l generates all permutations of list.
 List<List<unsigned int>>
-LoopifySearch::permutations_fuel(const unsigned int fuel,
+LoopifySearch::permutations_fuel(unsigned int fuel,
                                  const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<List<unsigned int>>::cons(List<unsigned int>::nil(),
@@ -1107,10 +1095,11 @@ LoopifySearch::permutations(const List<unsigned int> &l) {
 }
 
 /// linear_search x l finds index of first occurrence of x.
-std::optional<unsigned int> LoopifySearch::linear_search_aux(
-    const unsigned int x, const List<unsigned int> &l, const unsigned int idx) {
+std::optional<unsigned int>
+LoopifySearch::linear_search_aux(unsigned int x, const List<unsigned int> &l,
+                                 unsigned int idx) {
   std::optional<unsigned int> _result;
-  unsigned int _loop_idx = idx;
+  unsigned int _loop_idx = std::move(idx);
   const List<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
@@ -1133,24 +1122,22 @@ std::optional<unsigned int> LoopifySearch::linear_search_aux(
 }
 
 std::optional<unsigned int>
-LoopifySearch::linear_search(const unsigned int x,
-                             const List<unsigned int> &l) {
+LoopifySearch::linear_search(unsigned int x, const List<unsigned int> &l) {
   return linear_search_aux(x, l, 0u);
 }
 
 /// all_indices x l finds all indices where x occurs.
-List<unsigned int> LoopifySearch::all_indices_aux(const unsigned int x,
+List<unsigned int> LoopifySearch::all_indices_aux(unsigned int x,
                                                   const List<unsigned int> &l,
-                                                  const unsigned int idx) {
+                                                  unsigned int idx) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_idx = idx;
+  unsigned int _loop_idx = std::move(idx);
   const List<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -1158,7 +1145,7 @@ List<unsigned int> LoopifySearch::all_indices_aux(const unsigned int x,
       if (x == d_a0) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(_loop_idx, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -1172,10 +1159,10 @@ List<unsigned int> LoopifySearch::all_indices_aux(const unsigned int x,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-List<unsigned int> LoopifySearch::all_indices(const unsigned int x,
+List<unsigned int> LoopifySearch::all_indices(unsigned int x,
                                               const List<unsigned int> &l) {
   return all_indices_aux(x, l, 0u);
 }
@@ -1206,13 +1193,13 @@ unsigned int LoopifySearch::min_element(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        auto &&_sv = *(d_a1);
+        auto &&_sv = *d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
           _result = d_a0;
         } else {

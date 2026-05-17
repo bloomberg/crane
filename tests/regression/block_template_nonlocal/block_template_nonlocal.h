@@ -2,9 +2,6 @@
 #define INCLUDED_BLOCK_TEMPLATE_NONLOCAL
 
 #include <iostream>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct BlockTemplateNonlocal {
   /// Block template in pure let binding — compiled to static inline initializer

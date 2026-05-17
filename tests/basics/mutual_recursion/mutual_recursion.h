@@ -2,15 +2,14 @@
 #define INCLUDED_MUTUAL_RECURSION
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
 struct MutualRecursion {
-  static bool is_even(const unsigned int n);
-  static bool is_odd(const unsigned int n);
+  static bool is_even(unsigned int n);
+  static bool is_odd(unsigned int n);
   template <typename t_A> struct tree;
   template <typename t_A> struct forest;
 
@@ -54,12 +53,11 @@ struct MutualRecursion {
 
     // ACCESSORS
     tree<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
+      if (std::holds_alternative<Leaf>(this->v())) {
+        const auto &[d_a0] = std::get<Leaf>(this->v());
         return tree<t_A>(Leaf{d_a0});
       } else {
-        const auto &[d_a0] = std::get<Node>(_sv.v());
+        const auto &[d_a0] = std::get<Node>(this->v());
         return tree<t_A>(Node{
             d_a0 ? std::make_unique<MutualRecursion::forest<t_A>>(d_a0->clone())
                  : nullptr});
@@ -252,7 +250,7 @@ struct MutualRecursion {
       return f(d_a0);
     } else {
       const auto &[d_a0] = std::get<typename tree<T1>::Node>(t.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 
@@ -265,7 +263,7 @@ struct MutualRecursion {
       return f(d_a0);
     } else {
       const auto &[d_a0] = std::get<typename tree<T1>::Node>(t.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 
@@ -276,7 +274,7 @@ struct MutualRecursion {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename forest<T1>::Trees>(f1.v());
-      return f0(*(d_a0), *(d_a1), forest_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(*d_a0, *d_a1, forest_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -287,7 +285,7 @@ struct MutualRecursion {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename forest<T1>::Trees>(f1.v());
-      return f0(*(d_a0), *(d_a1), forest_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(*d_a0, *d_a1, forest_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -296,7 +294,7 @@ struct MutualRecursion {
       return 1u;
     } else {
       const auto &[d_a0] = std::get<typename tree<T1>::Node>(t.v());
-      return forest_size<T1>(*(d_a0));
+      return forest_size<T1>(*d_a0);
     }
   }
 
@@ -305,7 +303,7 @@ struct MutualRecursion {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename forest<T1>::Trees>(f.v());
-      return (tree_size<T1>(*(d_a0)) + forest_size<T1>(*(d_a1)));
+      return (tree_size<T1>(*d_a0) + forest_size<T1>(*d_a1));
     }
   }
 

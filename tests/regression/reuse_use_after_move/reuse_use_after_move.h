@@ -2,7 +2,6 @@
 #define INCLUDED_REUSE_USE_AFTER_MOVE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -85,8 +84,7 @@ struct ReuseUseAfterMove {
 
     // CREATORS
     static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     static mylist mynil() { return mylist(Mynil{}); }
@@ -124,7 +122,7 @@ struct ReuseUseAfterMove {
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rect<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -135,7 +133,7 @@ struct ReuseUseAfterMove {
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rec<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -160,7 +158,7 @@ struct ReuseUseAfterMove {
   ///
   /// length(l) traverses l, hitting the null d_a1 field.
   /// Dereferencing null shared_ptr -> CRASH.
-  static mylist rewrite_head(mylist l, const bool b);
+  static mylist rewrite_head(mylist l, bool b);
   /// test1: rewrite_head on 1, 2, 3 with true.
   /// Expected: length 1,2,3 = 3, so result = 3, 2, 3.
   /// Bug: null dereference inside length.
@@ -177,7 +175,7 @@ struct ReuseUseAfterMove {
     }
   }();
   /// test2: Use sum instead of length — same bug pattern.
-  static mylist rewrite_head_sum(mylist l, const bool b);
+  static mylist rewrite_head_sum(mylist l, bool b);
   static inline const unsigned int test2 = []() {
     auto &&_sv0 = rewrite_head_sum(
         mylist::mycons(

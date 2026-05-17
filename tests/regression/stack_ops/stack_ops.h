@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,12 +122,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -139,7 +137,7 @@ struct StackOps {
 
     // ACCESSORS
     state_basic clone() const {
-      return state_basic{(*(this)).stack_basic.clone()};
+      return state_basic{(*this).stack_basic.clone()};
     }
   };
 
@@ -149,7 +147,7 @@ struct StackOps {
 
     // ACCESSORS
     state_with_acc clone() const {
-      return state_with_acc{(*(this)).stack_with_acc.clone(), (*(this)).acc};
+      return state_with_acc{(*this).stack_with_acc.clone(), (*this).acc};
     }
   };
 
@@ -180,7 +178,7 @@ struct StackOps {
       return s_.acc;
     }
   }();
-  static state_basic push_stack(const state_basic &s, const unsigned int addr);
+  static state_basic push_stack(const state_basic &s, unsigned int addr);
   static unsigned int top_or_zero(const state_basic &s);
   static inline const unsigned int empty_len =
       push_stack(state_basic{List<unsigned int>::nil()}, 12u)
@@ -198,8 +196,7 @@ struct StackOps {
                                      3u, List<unsigned int>::nil())))},
                  9u)
           .stack_basic.length();
-  static state_basic push_stack_cap(const state_basic &s,
-                                    const unsigned int addr);
+  static state_basic push_stack_cap(const state_basic &s, unsigned int addr);
   static inline const unsigned int push_cap_test =
       push_stack_cap(
           state_basic{List<unsigned int>::cons(

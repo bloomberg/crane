@@ -3,9 +3,6 @@
 
 #include <any>
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 enum class Bool0 { e_TRUE, e_FALSE };
 
@@ -14,7 +11,7 @@ struct PolymorphicFunctionFieldProbe {
     std::function<std::any(std::any)> apply;
 
     // ACCESSORS
-    poly clone() const { return poly{(*(this)).apply}; }
+    poly clone() const { return poly{(*this).apply}; }
   };
 
   template <typename T1> static T1 apply(const poly &p0, const T1 &x) {

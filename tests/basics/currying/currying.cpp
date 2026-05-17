@@ -1,16 +1,14 @@
 #include "currying.h"
 
-unsigned int Currying::add3(const unsigned int a, const unsigned int b,
-                            const unsigned int c) {
+unsigned int Currying::add3(unsigned int a, unsigned int b, unsigned int c) {
   return (a + (b + c));
 }
 
-unsigned int Currying::add3_partial1(const unsigned int _x0,
-                                     const unsigned int _x1) {
+unsigned int Currying::add3_partial1(unsigned int _x0, unsigned int _x1) {
   return add3(1u, _x0, _x1);
 }
 
-unsigned int Currying::add3_partial2(const unsigned int _x0) {
+unsigned int Currying::add3_partial2(unsigned int _x0) {
   return add3(1u, 2u, _x0);
 }
 
@@ -22,8 +20,7 @@ Currying::pair_add(const Currying::pair<unsigned int, unsigned int> &p) {
   return (d_a0 + d_a1);
 }
 
-unsigned int Currying::curried_add(const unsigned int _x0,
-                                   const unsigned int _x1) {
+unsigned int Currying::curried_add(unsigned int _x0, unsigned int _x1) {
   return curry<unsigned int, unsigned int, unsigned int>(pair_add, _x0, _x1);
 }
 
@@ -38,20 +35,18 @@ unsigned int Currying::uncurried_add3(
   return add3(d_a0, d_a00, d_a10);
 }
 
-unsigned int Currying::sub(const unsigned int _x0, const unsigned int _x1) {
+unsigned int Currying::sub(unsigned int _x0, unsigned int _x1) {
   return (((_x0 - _x1) > _x0 ? 0 : (_x0 - _x1)));
 }
 
-unsigned int Currying::flipped_sub(const unsigned int _x0,
-                                   const unsigned int _x1) {
+unsigned int Currying::flipped_sub(unsigned int _x0, unsigned int _x1) {
   return flip<unsigned int, unsigned int, unsigned int>(sub, _x0, _x1);
 }
 
-unsigned int Currying::add_base(const unsigned int _x0,
-                                const unsigned int _x1) {
+unsigned int Currying::add_base(unsigned int _x0, unsigned int _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int Currying::add_ten(const unsigned int _x0) {
+unsigned int Currying::add_ten(unsigned int _x0) {
   return add_base((2u * 5u), _x0);
 }

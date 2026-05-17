@@ -4,7 +4,6 @@
 #include <concepts>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -174,7 +173,7 @@ struct Typeclasses {
           return 0u;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-          return (_tcI0::to_nat(d_a0) + _self_sum(_self_sum, *(d_a1)));
+          return (_tcI0::to_nat(d_a0) + _self_sum(_self_sum, *d_a1));
         }
       };
       auto sum = [&](const List<T1> &l) -> unsigned int {

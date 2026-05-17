@@ -2,7 +2,6 @@
 #define INCLUDED_TREE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -110,27 +109,25 @@ public:
   const variant_t &v() const { return d_v_; }
 
   Nat max(Nat m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (std::holds_alternative<typename Nat::O>(this->v())) {
       return m;
     } else {
-      auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
+      auto &[d_a0] = std::get<typename Nat::S>(this->v());
       if (std::holds_alternative<typename Nat::O>(m.v_mut())) {
-        return *(this);
+        return *this;
       } else {
         auto &[d_a00] = std::get<typename Nat::S>(m.v_mut());
-        return Nat::s((*(d_a0)).max(*(d_a00)));
+        return Nat::s((*d_a0).max(*d_a00));
       }
     }
   }
 
   Nat add(Nat m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (std::holds_alternative<typename Nat::O>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_a0)).add(std::move(m)));
+      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
+      return Nat::s((*d_a0).add(std::move(m)));
     }
   }
 };
@@ -250,12 +247,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -390,14 +386,13 @@ public:
     requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
                                    Tree<t_A> &, T1 &>
   T1 tree_rect(T1 f, F1 &&f0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
+    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(_sv.v());
-      return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1, *(d_a2),
-                (*(d_a2)).template tree_rect<T1>(f, f0));
+          std::get<typename Tree<t_A>::Node>(this->v());
+      return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                (*d_a2).template tree_rect<T1>(f, f0));
     }
   }
 
@@ -405,21 +400,19 @@ public:
     requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
                                    Tree<t_A> &, T1 &>
   T1 tree_rec(T1 f, F1 &&f0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
+    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(_sv.v());
-      return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1, *(d_a2),
-                (*(d_a2)).template tree_rec<T1>(f, f0));
+          std::get<typename Tree<t_A>::Node>(this->v());
+      return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                (*d_a2).template tree_rec<T1>(f, f0));
     }
   }
 
   /// Returns true if t is a leaf, false otherwise.
   Bool0 is_leaf() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
+    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
       return Bool0::e_TRUE;
     } else {
       return Bool0::e_FALSE;
@@ -428,38 +421,34 @@ public:
 
   /// Number of nodes in tree t. A leaf counts as 1.
   Nat size() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
+    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(_sv.v());
-      return Nat::s(Nat::o()).add((*(d_a0)).size()).add((*(d_a2)).size());
+          std::get<typename Tree<t_A>::Node>(this->v());
+      return Nat::s(Nat::o()).add((*d_a0).size()).add((*d_a2).size());
     }
   }
 
   /// Height of tree t. A leaf has height 1.
   Nat height() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
+    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(_sv.v());
-      return Nat::s(Nat::o()).add((*(d_a0)).height().max((*(d_a2)).height()));
+          std::get<typename Tree<t_A>::Node>(this->v());
+      return Nat::s(Nat::o()).add((*d_a0).height().max((*d_a2).height()));
     }
   }
 
   /// Collect all values in t into a list via in-order traversal.
   List<t_A> flatten() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
+    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
       return List<t_A>::nil();
     } else {
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(_sv.v());
-      return (*(d_a0)).flatten().app(
-          List<t_A>::cons(d_a1, (*(d_a2)).flatten()));
+          std::get<typename Tree<t_A>::Node>(this->v());
+      return (*d_a0).flatten().app(List<t_A>::cons(d_a1, (*d_a2).flatten()));
     }
   }
 
@@ -468,8 +457,7 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<t_A, F0 &, t_A &, t_A &>
   Tree<t_A> merge(F0 &&combine, const Tree<t_A> &t2) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(_sv.v())) {
+    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
       if (std::holds_alternative<typename Tree<t_A>::Leaf>(t2.v())) {
         return Tree<t_A>::leaf();
       } else {
@@ -479,15 +467,15 @@ public:
       }
     } else {
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(_sv.v());
+          std::get<typename Tree<t_A>::Node>(this->v());
       if (std::holds_alternative<typename Tree<t_A>::Leaf>(t2.v())) {
         return Tree<t_A>::node(Tree<t_A>::leaf(), d_a1, Tree<t_A>::leaf());
       } else {
         const auto &[d_a00, d_a10, d_a20] =
             std::get<typename Tree<t_A>::Node>(t2.v());
-        return Tree<t_A>::node((*(d_a0)).merge(combine, *(d_a00)),
+        return Tree<t_A>::node((*d_a0).merge(combine, *d_a00),
                                combine(d_a1, d_a10),
-                               (*(d_a2)).merge(combine, *(d_a20)));
+                               (*d_a2).merge(combine, *d_a20));
       }
     }
   }

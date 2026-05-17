@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct MethodPartialApp {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -124,17 +123,17 @@ struct MethodPartialApp {
 
     /// add_to_sum: methodified on first arg (tree).
     /// Takes a tree and a nat, returns the tree's sum plus the nat.
-    unsigned int add_to_sum(const unsigned int x) const {
-      return ((*(this)).tree_sum() + x);
+    unsigned int add_to_sum(unsigned int x) const {
+      return ((*this).tree_sum() + x);
     }
 
     unsigned int tree_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum());
       }
     }
 
@@ -142,13 +141,13 @@ struct MethodPartialApp {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -156,13 +155,13 @@ struct MethodPartialApp {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -215,8 +214,7 @@ struct MethodPartialApp {
 
     // ACCESSORS
     box clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Box0>(_sv.v());
+      const auto &[d_a0] = std::get<Box0>(this->v());
       return box(Box0{d_a0});
     }
 
@@ -235,8 +233,7 @@ struct MethodPartialApp {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 box_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());
+      const auto &[d_a0] = std::get<typename box::Box0>(this->v());
       return f(d_a0);
     }
 
@@ -244,8 +241,7 @@ struct MethodPartialApp {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 box_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());
+      const auto &[d_a0] = std::get<typename box::Box0>(this->v());
       return f(d_a0);
     }
   };

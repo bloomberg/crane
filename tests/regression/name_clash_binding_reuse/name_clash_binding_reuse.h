@@ -1,8 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_BINDING_REUSE
 #define INCLUDED_NAME_CLASH_BINDING_REUSE
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -46,14 +44,13 @@ struct NameClashBindingReuse {
 
     // ACCESSORS
     pair_nat clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<MkPairNat>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<MkPairNat>(this->v());
       return pair_nat(MkPairNat{d_a0, d_a1});
     }
 
     // CREATORS
     static pair_nat mkpairnat(unsigned int a0, unsigned int a1) {
-      return pair_nat(MkPairNat{std::move(a0), std::move(a1)});
+      return pair_nat(MkPairNat{a0, a1});
     }
 
     // MANIPULATORS
@@ -66,9 +63,8 @@ struct NameClashBindingReuse {
     /// Neither needs an if guard, just structured bindings.
     /// Could be tricky if both are in the same block without scoping.
     pair_nat flat_combine(const pair_nat &p2) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair_nat::MkPairNat>(_sv.v());
+          std::get<typename pair_nat::MkPairNat>(this->v());
       const auto &[d_a00, d_a10] =
           std::get<typename pair_nat::MkPairNat>(p2.v());
       return pair_nat::mkpairnat((d_a0 + d_a00), (d_a1 + d_a10));
@@ -77,9 +73,8 @@ struct NameClashBindingReuse {
     /// Same but as let-bindings (each match is an expression → IIFE).
     unsigned int add_pairs_let(const pair_nat &p2) const {
       unsigned int sum1 = [&]() {
-        auto &&_sv = *(this);
         const auto &[d_a0, d_a1] =
-            std::get<typename pair_nat::MkPairNat>(_sv.v());
+            std::get<typename pair_nat::MkPairNat>(this->v());
         return (d_a0 + d_a1);
       }();
       unsigned int sum2 = [&]() {
@@ -93,9 +88,8 @@ struct NameClashBindingReuse {
     /// Two matches in sequence, both on pair_nat.
     /// Both generate d_a0, d_a1 structured bindings.
     unsigned int add_pairs(const pair_nat &p2) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair_nat::MkPairNat>(_sv.v());
+          std::get<typename pair_nat::MkPairNat>(this->v());
       const auto &[d_a00, d_a10] =
           std::get<typename pair_nat::MkPairNat>(p2.v());
       return (((d_a0 + d_a1) + d_a00) + d_a10);
@@ -104,18 +98,16 @@ struct NameClashBindingReuse {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_nat_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair_nat::MkPairNat>(_sv.v());
+          std::get<typename pair_nat::MkPairNat>(this->v());
       return f(d_a0, d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_nat_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename pair_nat::MkPairNat>(_sv.v());
+          std::get<typename pair_nat::MkPairNat>(this->v());
       return f(d_a0, d_a1);
     }
   };
@@ -157,16 +149,14 @@ struct NameClashBindingReuse {
 
     // ACCESSORS
     triple_nat clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTripleNat>(_sv.v());
+      const auto &[d_a0, d_a1, d_a2] = std::get<MkTripleNat>(this->v());
       return triple_nat(MkTripleNat{d_a0, d_a1, d_a2});
     }
 
     // CREATORS
     static triple_nat mktriplenat(unsigned int a0, unsigned int a1,
                                   unsigned int a2) {
-      return triple_nat(
-          MkTripleNat{std::move(a0), std::move(a1), std::move(a2)});
+      return triple_nat(MkTripleNat{a0, a1, a2});
     }
 
     // MANIPULATORS
@@ -176,7 +166,7 @@ struct NameClashBindingReuse {
     const variant_t &v() const { return d_v_; }
 
     unsigned int cascade_and_match() const {
-      auto &&_sv = (*(this)).cascade();
+      auto &&_sv = (*this).cascade();
       const auto &[d_a0, d_a1] =
           std::get<typename pair_nat::MkPairNat>(_sv.v());
       return (d_a0 + d_a1);
@@ -184,18 +174,16 @@ struct NameClashBindingReuse {
 
     /// Match where the binding variable is used as scrutinee of another match
     pair_nat cascade() const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple_nat::MkTripleNat>(_sv.v());
+          std::get<typename triple_nat::MkTripleNat>(this->v());
       return pair_nat::mkpairnat((d_a0 + d_a1), d_a2);
     }
 
     /// Nested match: outer match on triple, inner match on pair.
     /// Both have d_a0, d_a1; inner should get d_a00, d_a10.
     unsigned int combine(const pair_nat &p) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple_nat::MkTripleNat>(_sv.v());
+          std::get<typename triple_nat::MkTripleNat>(this->v());
       const auto &[d_a00, d_a10] =
           std::get<typename pair_nat::MkPairNat>(p.v());
       return ((((d_a0 + d_a1) + d_a2) + d_a00) + d_a10);
@@ -205,9 +193,8 @@ struct NameClashBindingReuse {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_nat_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple_nat::MkTripleNat>(_sv.v());
+          std::get<typename triple_nat::MkTripleNat>(this->v());
       return f(d_a0, d_a1, d_a2);
     }
 
@@ -215,9 +202,8 @@ struct NameClashBindingReuse {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_nat_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple_nat::MkTripleNat>(_sv.v());
+          std::get<typename triple_nat::MkTripleNat>(this->v());
       return f(d_a0, d_a1, d_a2);
     }
   };

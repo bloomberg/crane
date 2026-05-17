@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_TMC
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -158,12 +157,12 @@ struct LoopifyTmc {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -204,12 +203,12 @@ struct LoopifyTmc {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -228,20 +227,20 @@ struct LoopifyTmc {
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *(_write) = std::make_unique<list<T1>>(std::move(_loop_l2));
+        *_write = std::make_unique<list<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l1->v());
         auto _cell =
             std::make_unique<list<T1>>(typename list<T1>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).d_a1;
         _loop_l1 = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// map f l applies f to every element. TMC with element transform.
@@ -253,20 +252,20 @@ struct LoopifyTmc {
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *(_write) = std::make_unique<list<T2>>(list<T2>::nil());
+        *_write = std::make_unique<list<T2>>(list<T2>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<list<T2>>(
             typename list<T2>::Cons(f(d_a0), nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).d_a1;
         _loop_l = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// filter f l keeps elements satisfying f. Mixed tail + TMC branches.
@@ -278,9 +277,9 @@ struct LoopifyTmc {
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
       if (f(d_a0)) {
-        return list<T1>::cons(d_a0, filter<T1>(f, *(d_a1)));
+        return list<T1>::cons(d_a0, filter<T1>(f, *d_a1));
       } else {
-        return filter<T1>(f, *(d_a1));
+        return filter<T1>(f, *d_a1);
       }
     }
   }
@@ -292,7 +291,7 @@ struct LoopifyTmc {
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *(_write) =
+        *_write =
             std::make_unique<list<T1>>(list<T1>::cons(x, list<T1>::nil()));
         break;
       } else {
@@ -300,39 +299,39 @@ struct LoopifyTmc {
             std::get<typename list<T1>::Cons>(_loop_l->v());
         auto _cell =
             std::make_unique<list<T1>>(typename list<T1>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).d_a1;
         _loop_l = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// replicate n x creates n copies of x. Nat recursion producing list.
-  template <typename T1> static list<T1> replicate(const unsigned int n, T1 x) {
+  template <typename T1> static list<T1> replicate(unsigned int n, T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
-    unsigned int _loop_n = n;
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *(_write) = std::make_unique<list<T1>>(list<T1>::nil());
+        *_write = std::make_unique<list<T1>>(list<T1>::nil());
         break;
       } else {
         unsigned int m = _loop_n - 1;
         auto _cell =
             std::make_unique<list<T1>>(typename list<T1>::Cons(x, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).d_a1;
         _loop_n = m;
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// range lo hi creates lo, lo+1, ..., hi-1.
-  static list<unsigned int> range(const unsigned int lo, const unsigned int hi);
+  static list<unsigned int> range(unsigned int lo, unsigned int hi);
 
   /// zip_with f l1 l2 combines two lists element-wise. Two varying params.
   template <typename T1, typename T2, typename T3, typename F0>
@@ -344,20 +343,20 @@ struct LoopifyTmc {
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *(_write) = std::make_unique<list<T3>>(list<T3>::nil());
+        *_write = std::make_unique<list<T3>>(list<T3>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          *(_write) = std::make_unique<list<T3>>(list<T3>::nil());
+          *_write = std::make_unique<list<T3>>(list<T3>::nil());
           break;
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
           auto _cell = std::make_unique<list<T3>>(
               typename list<T3>::Cons(f(d_a0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write = &std::get<typename list<T3>::Cons>((*_write)->v_mut()).d_a1;
           _loop_l2 = d_a10.get();
           _loop_l1 = d_a1.get();
@@ -365,11 +364,11 @@ struct LoopifyTmc {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// prefix_sums acc l computes running prefix sums.
-  static list<unsigned int> prefix_sums(const unsigned int acc,
+  static list<unsigned int> prefix_sums(unsigned int acc,
                                         const list<unsigned int> &l);
 
   /// stutter l duplicates each element: 1,2 -> 1,1,2,2. Nested TMC.
@@ -379,7 +378,7 @@ struct LoopifyTmc {
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *(_write) = std::make_unique<list<T1>>(list<T1>::nil());
+        *_write = std::make_unique<list<T1>>(list<T1>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
@@ -390,7 +389,7 @@ struct LoopifyTmc {
             std::make_unique<list<T1>>(typename list<T1>::Cons(d_a0, nullptr));
         std::get<typename list<T1>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename list<T1>::Cons>(
                       std::get<typename list<T1>::Cons>((*_write)->v_mut())
                           .d_a1->v_mut())
@@ -399,7 +398,7 @@ struct LoopifyTmc {
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 

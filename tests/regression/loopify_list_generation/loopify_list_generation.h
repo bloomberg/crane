@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_LIST_GENERATION
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -128,38 +126,34 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
 struct LoopifyListGeneration {
-  static List<unsigned int> replicate(const unsigned int n,
-                                      const unsigned int x);
+  static List<unsigned int> replicate(unsigned int n, unsigned int x);
   static List<unsigned int> stutter(const List<unsigned int> &l);
-  static List<unsigned int> cycle(const unsigned int n,
-                                  const List<unsigned int> &l);
-  static List<unsigned int> iterate(const unsigned int n, const unsigned int x);
+  static List<unsigned int> cycle(unsigned int n, const List<unsigned int> &l);
+  static List<unsigned int> iterate(unsigned int n, unsigned int x);
   static List<unsigned int>
   replicate_list(const List<std::pair<unsigned int, unsigned int>> &l);
-  static List<unsigned int> repeat_with_sep(const unsigned int sep,
-                                            const unsigned int n,
-                                            const unsigned int x);
-  static List<unsigned int> range(const unsigned int start,
-                                  const unsigned int len);
+  static List<unsigned int> repeat_with_sep(unsigned int sep, unsigned int n,
+                                            unsigned int x);
+  static List<unsigned int> range(unsigned int start, unsigned int len);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_GENERATION

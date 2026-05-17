@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -137,39 +136,36 @@ struct MemSafetyProbe11 {
     const variant_t &v() const { return d_v_; }
 
     unsigned int length() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return 0u;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return (1u + (*(d_a1)).length());
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return (1u + (*d_a1).length());
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -255,7 +251,7 @@ struct MemSafetyProbe11 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -292,13 +288,13 @@ struct MemSafetyProbe11 {
     /// TEST 6: Function that matches on a tree AND returns a closure
     /// that RETURNS A TREE. Tests capture of value types in returned
     /// closures where the return type contains unique_ptr.
-    tree tree_transformer(const unsigned int n) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+    tree tree_transformer(unsigned int n) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::node(tree::leaf(), n, tree::leaf());
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return tree::node(*(d_a0), (d_a1 + n), *(d_a2));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return tree::node(*d_a0, (d_a1 + n), *d_a2);
       }
     }
 
@@ -306,44 +302,43 @@ struct MemSafetyProbe11 {
     /// The outer match destructs a tree, the inner match destructs a list.
     /// Tests pre-copy across nested match scopes.
     unsigned int nested_capture(const mylist<unsigned int> &l,
-                                const unsigned int n) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+                                unsigned int n) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return n;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
         if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(
                 l.v())) {
           return (d_a1 + n);
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename mylist<unsigned int>::Mycons>(l.v());
-          return (
-              ((((*(d_a0)).tree_sum() + (*(d_a2)).tree_sum()) + d_a00) + d_a1) +
-              n);
+          return (((((*d_a0).tree_sum() + (*d_a2).tree_sum()) + d_a00) + d_a1) +
+                  n);
         }
       }
     }
 
     unsigned int tree_depth() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        unsigned int dl = (*(d_a0)).tree_depth();
-        unsigned int dr = (*(d_a2)).tree_depth();
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        unsigned int dl = (*d_a0).tree_depth();
+        unsigned int dr = (*d_a2).tree_depth();
         return (1u + (dl <= dr ? dr : dl));
       }
     }
 
     unsigned int tree_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum());
       }
     }
 
@@ -351,13 +346,13 @@ struct MemSafetyProbe11 {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -365,13 +360,13 @@ struct MemSafetyProbe11 {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -462,7 +457,7 @@ struct MemSafetyProbe11 {
   }
 
   static mylist<std::function<unsigned int(unsigned int)>>
-  dual_accum(const mylist<unsigned int> &l, const unsigned int sum_acc,
+  dual_accum(const mylist<unsigned int> &l, unsigned int sum_acc,
              mylist<std::function<unsigned int(unsigned int)>> fn_acc);
   static inline const unsigned int test_dual_accum = []() {
     mylist<unsigned int> l = mylist<unsigned int>::mycons(

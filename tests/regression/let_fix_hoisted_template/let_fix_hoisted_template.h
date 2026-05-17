@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_HOISTED_TEMPLATE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -129,7 +127,7 @@ List<T1> _reverse_onto_go(const List<T1> xs, const List<T1> acc) {
     return acc;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-    return _reverse_onto_go<T1>(*(d_a1), List<T1>::cons(d_a0, std::move(acc)));
+    return _reverse_onto_go<T1>(*d_a1, List<T1>::cons(d_a0, std::move(acc)));
   }
 }
 

@@ -4,7 +4,7 @@
 /// dummy ensures tree is NOT the first arg (avoiding methodification).
 /// tree is the second arg — should be owned if it doesn't escape.
 unsigned int MemSafetyProbe8::tree_sum_ext(
-    const unsigned int _x,
+    unsigned int _x,
     const MemSafetyProbe8::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -38,8 +38,8 @@ unsigned int MemSafetyProbe8::tree_sum_ext(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe8::tree &t = *(_f.t);
-      const unsigned int _x = _f._x;
+      const MemSafetyProbe8::tree &t = *_f.t;
+      unsigned int _x = _f._x;
       if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
         _result = 0u;
       } else {
@@ -63,9 +63,9 @@ unsigned int MemSafetyProbe8::tree_sum_ext(
 /// TEST 2: Same but with a more complex computation to prevent
 /// the optimizer from simplifying.
 unsigned int MemSafetyProbe8::tree_weighted(
-    const unsigned int _x, const MemSafetyProbe8::tree &t,
-    const unsigned int depth) { /// _Enter: captures varying parameters for each
-                                /// recursive call.
+    unsigned int _x, const MemSafetyProbe8::tree &t,
+    unsigned int depth) { /// _Enter: captures varying parameters for each
+                          /// recursive call.
 
   struct _Enter {
     unsigned int depth;
@@ -99,9 +99,9 @@ unsigned int MemSafetyProbe8::tree_weighted(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int depth = _f.depth;
-      const MemSafetyProbe8::tree &t = *(_f.t);
-      const unsigned int _x = _f._x;
+      unsigned int depth = _f.depth;
+      const MemSafetyProbe8::tree &t = *_f.t;
+      unsigned int _x = _f._x;
       if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
         _result = 0u;
       } else {
@@ -124,40 +124,40 @@ unsigned int MemSafetyProbe8::tree_weighted(
 }
 
 /// TEST 3: Deep tree traversal — more iterations, more frames.
-MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(const unsigned int n) {
+MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(unsigned int n) {
   std::unique_ptr<MemSafetyProbe8::tree> _head{};
   std::unique_ptr<MemSafetyProbe8::tree> *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<MemSafetyProbe8::tree>(tree::leaf());
+      *_write = std::make_unique<MemSafetyProbe8::tree>(tree::leaf());
       break;
     } else {
       unsigned int n_ = _loop_n - 1;
       auto _cell = std::make_unique<MemSafetyProbe8::tree>(typename tree::Node(
           nullptr, _loop_n,
           std::make_unique<MemSafetyProbe8::tree>(tree::leaf())));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename tree::Node>((*_write)->v_mut()).d_a0;
       _loop_n = n_;
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// TEST 4: Tree traversal where both recursive calls use
 /// different subtrees — _After frame must hold one while
 /// processing the other.
-unsigned int MemSafetyProbe8::tree_collect(const unsigned int,
+unsigned int MemSafetyProbe8::tree_collect(unsigned int,
                                            const MemSafetyProbe8::tree &t) {
   if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename MemSafetyProbe8::tree::Node>(t.v());
-    unsigned int left = tree_collect(0u, *(d_a0));
-    unsigned int right = tree_collect(0u, *(d_a2));
+    unsigned int left = tree_collect(0u, *d_a0);
+    unsigned int right = tree_collect(0u, *d_a2);
     return ((left + d_a1) + right);
   }
 }
@@ -165,7 +165,7 @@ unsigned int MemSafetyProbe8::tree_collect(const unsigned int,
 /// TEST 5: Tree function where the tree is consumed (not
 /// used after recursive calls) — maximally owned.
 unsigned int MemSafetyProbe8::tree_flatten(
-    const unsigned int _x,
+    unsigned int _x,
     const MemSafetyProbe8::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -199,8 +199,8 @@ unsigned int MemSafetyProbe8::tree_flatten(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe8::tree &t = *(_f.t);
-      const unsigned int _x = _f._x;
+      const MemSafetyProbe8::tree &t = *_f.t;
+      unsigned int _x = _f._x;
       if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
         _result = 1u;
       } else {
@@ -225,18 +225,18 @@ unsigned int MemSafetyProbe8::tree_flatten(
 /// to prevent methodification completely.
 unsigned int
 MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
-  auto go_impl = [](auto &_self_go, const unsigned int,
+  auto go_impl = [](auto &_self_go, unsigned int,
                     const MemSafetyProbe8::tree &t0) -> unsigned int {
     if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t0.v())) {
       return 0u;
     } else {
       const auto &[d_a0, d_a1, d_a2] =
           std::get<typename MemSafetyProbe8::tree::Node>(t0.v());
-      return ((1u + _self_go(_self_go, 0u, *(d_a0))) +
-              _self_go(_self_go, 0u, *(d_a2)));
+      return ((1u + _self_go(_self_go, 0u, *d_a0)) +
+              _self_go(_self_go, 0u, *d_a2));
     }
   };
-  auto go = [&](const unsigned int _x,
+  auto go = [&](unsigned int _x,
                 const MemSafetyProbe8::tree &t0) -> unsigned int {
     return go_impl(go_impl, _x, t0);
   };

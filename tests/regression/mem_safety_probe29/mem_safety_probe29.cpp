@@ -8,7 +8,7 @@ MemSafetyProbe29::outer MemSafetyProbe29::dup_inner(MemSafetyProbe29::inner i) {
 
 /// TEST 5: Deep 3-child tree to stress clone/destructor.
 MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -48,7 +48,7 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = tree3::t3leaf();
       } else {

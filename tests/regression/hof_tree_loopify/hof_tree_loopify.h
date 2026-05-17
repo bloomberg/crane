@@ -2,7 +2,6 @@
 #define INCLUDED_HOF_TREE_LOOPIFY
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -805,12 +804,11 @@ public:
 
   // ACCESSORS
   Uint1 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
-      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
+    if (std::holds_alternative<UIntDecimal>(this->v())) {
+      const auto &[d_u] = std::get<UIntDecimal>(this->v());
       return Uint1(UIntDecimal{d_u.clone()});
     } else {
-      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
+      const auto &[d_u] = std::get<UIntHexadecimal>(this->v());
       return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
@@ -830,13 +828,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int n, const unsigned int m);
-  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
-                                  const unsigned int m);
-  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
+  static unsigned int tail_add(unsigned int n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, unsigned int n,
+                                  unsigned int m);
+  static unsigned int tail_mul(unsigned int n, unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };
@@ -976,8 +974,8 @@ struct HofTreeLoopify {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1, T2>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1, T2>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1, T2>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1, T2>(f, f0, *d_a2));
     }
   }
 
@@ -989,12 +987,12 @@ struct HofTreeLoopify {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1, T2>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1, T2>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1, T2>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1, T2>(f, f0, *d_a2));
     }
   }
 
-  static tree<unsigned int> depth_tree(const unsigned int n);
+  static tree<unsigned int> depth_tree(unsigned int n);
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
@@ -1003,8 +1001,8 @@ struct HofTreeLoopify {
       return tree<T2>::leaf();
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      return tree<T2>::node(tree_map<T1, T2>(f, *(d_a0)), f(d_a1),
-                            tree_map<T1, T2>(f, *(d_a2)));
+      return tree<T2>::node(tree_map<T1, T2>(f, *d_a0), f(d_a1),
+                            tree_map<T1, T2>(f, *d_a2));
     }
   }
 
@@ -1015,8 +1013,8 @@ struct HofTreeLoopify {
       return base;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      return f(tree_fold<T1, T2>(base, f, *(d_a0)), d_a1,
-               tree_fold<T1, T2>(base, f, *(d_a2)));
+      return f(tree_fold<T1, T2>(base, f, *d_a0), d_a1,
+               tree_fold<T1, T2>(base, f, *d_a2));
     }
   }
 
@@ -1034,9 +1032,9 @@ struct HofTreeLoopify {
       } else {
         const auto &[d_a00, d_a10, d_a20] =
             std::get<typename tree<T2>::Node>(t2.v());
-        return tree<T3>::node(tree_zip_with<T1, T2, T3>(f, *(d_a0), *(d_a00)),
+        return tree<T3>::node(tree_zip_with<T1, T2, T3>(f, *d_a0, *d_a00),
                               f(d_a1, d_a10),
-                              tree_zip_with<T1, T2, T3>(f, *(d_a2), *(d_a20)));
+                              tree_zip_with<T1, T2, T3>(f, *d_a2, *d_a20));
       }
     }
   }
@@ -1049,13 +1047,13 @@ struct HofTreeLoopify {
       return std::make_pair(std::move(acc), tree<T2>::leaf());
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      auto _cs = tree_map_accum<T1, T2, T3>(f, std::move(acc), *(d_a0));
+      auto _cs = tree_map_accum<T1, T2, T3>(f, std::move(acc), *d_a0);
       const T3 &acc1 = _cs.first;
       const tree<T2> &l_ = _cs.second;
       auto _cs1 = f(acc1, d_a1);
       const T3 &acc2 = _cs1.first;
       const T2 &x_ = _cs1.second;
-      auto _cs2 = tree_map_accum<T1, T2, T3>(f, std::move(_cs1.first), *(d_a2));
+      auto _cs2 = tree_map_accum<T1, T2, T3>(f, std::move(_cs1.first), *d_a2);
       const T3 &acc3 = _cs2.first;
       const tree<T2> &r_ = _cs2.second;
       return std::make_pair(std::move(_cs2.first), tree<T2>::node(l_, x_, r_));
@@ -1078,11 +1076,11 @@ struct HofTreeLoopify {
                                    tree<unsigned int>::leaf())));
   static inline const tree<unsigned int> mapped =
       tree_map<unsigned int, unsigned int>(
-          [](const unsigned int x) { return (x * 2u); }, small_tree);
+          [](unsigned int x) { return (x * 2u); }, small_tree);
   static inline const unsigned int folded =
       tree_fold<unsigned int, unsigned int>(
           0u,
-          [](const unsigned int l, const unsigned int x, const unsigned int r) {
+          [](unsigned int l, unsigned int x, unsigned int r) {
             return ((l + x) + r);
           },
           small_tree);
@@ -1094,7 +1092,7 @@ struct HofTreeLoopify {
           small_tree, small_tree);
   static inline const std::pair<unsigned int, tree<unsigned int>> accum =
       tree_map_accum<unsigned int, unsigned int, unsigned int>(
-          [](const unsigned int s, const unsigned int x) {
+          [](unsigned int s, unsigned int x) {
             return std::make_pair((s + x), s);
           },
           0u, small_tree);

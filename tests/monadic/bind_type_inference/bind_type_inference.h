@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -151,7 +150,7 @@ struct BindTypeInference {
 
   static int64_t test3();
   static int64_t test4();
-  static List<int64_t> intToList(const int64_t n);
+  static List<int64_t> intToList(int64_t n);
   static List<int64_t> test5();
   static int64_t test6();
 };

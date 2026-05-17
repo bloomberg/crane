@@ -1,8 +1,6 @@
 #ifndef INCLUDED_LET_IN
 #define INCLUDED_LET_IN
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -16,7 +14,7 @@ struct LetIn {
     return (x + y);
   }();
   static inline const unsigned int shadowed_let = 3u;
-  static unsigned int let_in_fun(const unsigned int n);
+  static unsigned int let_in_fun(unsigned int n);
   static inline const unsigned int let_fun = []() {
     unsigned int x = 5u;
     return (x + 1u);
@@ -57,8 +55,7 @@ struct LetIn {
 
     // ACCESSORS
     pair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Pair0>(this->v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
     }
 

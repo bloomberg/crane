@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -129,21 +128,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -226,7 +225,7 @@ struct LoopifyMoreTrees {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -269,8 +268,8 @@ struct LoopifyMoreTrees {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -282,8 +281,8 @@ struct LoopifyMoreTrees {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -294,7 +293,7 @@ struct LoopifyMoreTrees {
   static unsigned int count_nodes(const tree &t);
   static tree tree_max(tree t1, tree t2);
   static unsigned int sum_of_max_branches(const tree &t);
-  static tree insert_bst(const unsigned int x, const tree &t);
+  static tree insert_bst(unsigned int x, const tree &t);
   static tree build_bst(const List<unsigned int> &l);
   static List<unsigned int> append_lists(const List<unsigned int> &l1,
                                          List<unsigned int> l2);
@@ -303,7 +302,7 @@ struct LoopifyMoreTrees {
   static List<tree> tree_children(const tree &t);
   static List<tree> append_trees(const List<tree> &l1, List<tree> l2);
   static List<tree> concat_map_children(const List<tree> &lt);
-  static List<List<unsigned int>> tree_levels_fuel(const unsigned int fuel,
+  static List<List<unsigned int>> tree_levels_fuel(unsigned int fuel,
                                                    const List<tree> &level);
   static List<List<unsigned int>> tree_levels(tree t);
 };

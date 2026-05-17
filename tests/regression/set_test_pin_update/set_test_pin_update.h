@@ -1,20 +1,16 @@
 #ifndef INCLUDED_SET_TEST_PIN_UPDATE
 #define INCLUDED_SET_TEST_PIN_UPDATE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct SetTestPinUpdate {
   struct state {
     unsigned int acc;
     bool test_pin;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).acc, (*(this)).test_pin}; }
+    state clone() const { return state{(*this).acc, (*this).test_pin}; }
   };
 
-  static state set_test_pin(const state &s, const bool v);
+  static state set_test_pin(const state &s, bool v);
   static inline const unsigned int t = []() {
     return []() {
       state s_ = set_test_pin(state{6u, false}, true);

@@ -2,8 +2,6 @@
 #define INCLUDED_ISZ_OPS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -125,28 +123,28 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct IszOps {
-  static unsigned int nibble_of_nat(const unsigned int n);
+  static unsigned int nibble_of_nat(unsigned int n);
 
   struct state {
     List<unsigned int> regs;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).regs.clone()}; }
+    state clone() const { return state{(*this).regs.clone()}; }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int r);
-  static unsigned int cycles_isz(const state &s, const unsigned int r);
+  static unsigned int get_reg(const state &s, unsigned int r);
+  static unsigned int cycles_isz(const state &s, unsigned int r);
   static inline const unsigned int test_cycle_branch = cycles_isz(
       state{List<unsigned int>::cons(15u, List<unsigned int>::nil())}, 0u);
-  static unsigned int isz_iterations(const unsigned int v);
+  static unsigned int isz_iterations(unsigned int v);
   static inline const unsigned int test_iterations_remaining =
       (isz_iterations(0u) + isz_iterations(12u));
-  static bool isz_loops(const state &s, const unsigned int r);
-  static bool isz_terminates(const state &s, const unsigned int r);
+  static bool isz_loops(const state &s, unsigned int r);
+  static bool isz_terminates(const state &s, unsigned int r);
   static inline const unsigned int test_loop_flags = []() {
     return []() {
       state s = state{List<unsigned int>::cons(
@@ -162,7 +160,7 @@ struct IszOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -176,7 +174,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

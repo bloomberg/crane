@@ -1,8 +1,6 @@
 #ifndef INCLUDED_REUSE_MIXED_FIELDS
 #define INCLUDED_REUSE_MIXED_FIELDS
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -51,23 +49,22 @@ struct ReuseMixedFields {
 
     // ACCESSORS
     payload clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<AsNat>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<AsNat>(_sv.v());
+      if (std::holds_alternative<AsNat>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<AsNat>(this->v());
         return payload(AsNat{d_a0, d_a1});
       } else {
-        const auto &[d_a0, d_a1] = std::get<AsPair>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<AsPair>(this->v());
         return payload(AsPair{d_a0, d_a1});
       }
     }
 
     // CREATORS
     static payload asnat(unsigned int a0, unsigned int a1) {
-      return payload(AsNat{std::move(a0), std::move(a1)});
+      return payload(AsNat{a0, a1});
     }
 
     static payload aspair(unsigned int a0, unsigned int a1) {
-      return payload(AsPair{std::move(a0), std::move(a1)});
+      return payload(AsPair{a0, a1});
     }
 
     // MANIPULATORS
@@ -106,7 +103,7 @@ struct ReuseMixedFields {
   /// Forces d to be owned through the else branch.
   /// The match branch has reuse candidates: both AsNat and AsPair
   /// have arity 2.
-  static payload swap_tag_or_id(payload p, const bool do_swap);
+  static payload swap_tag_or_id(payload p, bool do_swap);
   /// test1: swap AsNat 10 20 -> should be AsPair 20 10.
   /// With reuse bug: variant stays AsNat, fields are 20, 10.
   /// Match sees AsNat -> returns first field + 1000 = 1020.

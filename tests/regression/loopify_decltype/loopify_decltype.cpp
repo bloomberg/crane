@@ -26,7 +26,7 @@ unsigned int LoopifyDecltype::count_true(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<bool> &xs = *(_f.xs);
+      const List<bool> &xs = *_f.xs;
       if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
         _result = 0u;
       } else {
@@ -66,7 +66,7 @@ unsigned int LoopifyDecltype::sum_flagged(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyDecltype::item> &xs = *(_f.xs);
+      const List<LoopifyDecltype::item> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyDecltype::item>::Nil>(
               xs.v())) {
         _result = 0u;

@@ -2,7 +2,6 @@
 #define INCLUDED_LIST_SELF_DEEP_COPY
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -272,7 +271,7 @@ struct ListSelfDeepCopy {
       return f;
     } else {
       const auto &[d_a0] = std::get<typename chain::Link>(c.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 
@@ -283,7 +282,7 @@ struct ListSelfDeepCopy {
       return f;
     } else {
       const auto &[d_a0] = std::get<typename chain::Link>(c.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 

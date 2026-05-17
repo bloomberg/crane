@@ -56,7 +56,7 @@ ComprehensivePatterns::compose(ComprehensivePatterns::S s) {
 
 std::pair<std::function<unsigned int(unsigned int)>, ComprehensivePatterns::S>
 ComprehensivePatterns::lambda_proj(ComprehensivePatterns::S s) {
-  return std::make_pair([=](const unsigned int) mutable { return s.s_a; }, s);
+  return std::make_pair([=](unsigned int) mutable { return s.s_a; }, s);
 }
 
 std::pair<
@@ -99,16 +99,15 @@ ComprehensivePatterns::match_pair(
 }
 
 List<std::pair<ComprehensivePatterns::S, unsigned int>>
-ComprehensivePatterns::make_list(const unsigned int n,
-                                 ComprehensivePatterns::S s) {
+ComprehensivePatterns::make_list(unsigned int n, ComprehensivePatterns::S s) {
   std::unique_ptr<List<std::pair<ComprehensivePatterns::S, unsigned int>>>
       _head{};
   std::unique_ptr<List<std::pair<ComprehensivePatterns::S, unsigned int>>>
       *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           List<std::pair<ComprehensivePatterns::S, unsigned int>>>(
           List<std::pair<ComprehensivePatterns::S, unsigned int>>::nil());
       break;
@@ -118,7 +117,7 @@ ComprehensivePatterns::make_list(const unsigned int n,
           List<std::pair<ComprehensivePatterns::S, unsigned int>>>(
           typename List<std::pair<ComprehensivePatterns::S, unsigned int>>::
               Cons(std::make_pair(s, s.s_a), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename List<
           std::pair<ComprehensivePatterns::S, unsigned int>>::Cons>(
                     (*_write)->v_mut())
@@ -127,7 +126,7 @@ ComprehensivePatterns::make_list(const unsigned int n,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 std::optional<std::pair<ComprehensivePatterns::S, ComprehensivePatterns::S>>
@@ -153,7 +152,7 @@ ComprehensivePatterns::multi_match(
 }
 
 std::pair<ComprehensivePatterns::S, unsigned int>
-ComprehensivePatterns::match_three(const ComprehensivePatterns::Three t,
+ComprehensivePatterns::match_three(ComprehensivePatterns::Three t,
                                    ComprehensivePatterns::S s) {
   switch (t) {
   case Three::e_A: {
@@ -191,8 +190,8 @@ ComprehensivePatterns::rebind(ComprehensivePatterns::S s1) {
 std::pair<std::function<unsigned int(std::monostate)>,
           std::function<unsigned int(std::monostate)>>
 ComprehensivePatterns::closure_pair(ComprehensivePatterns::S s) {
-  return std::make_pair([=](const std::monostate) mutable { return s.s_a; },
-                        [=](const std::monostate) mutable { return s.s_b; });
+  return std::make_pair([=](std::monostate) mutable { return s.s_a; },
+                        [=](std::monostate) mutable { return s.s_b; });
 }
 
 Sig<ComprehensivePatterns::S>
@@ -249,7 +248,7 @@ ComprehensivePatterns::nested_call(ComprehensivePatterns::R2 r2) {
 
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
           unsigned int>
-ComprehensivePatterns::multi_proj_let(const unsigned int n) {
+ComprehensivePatterns::multi_proj_let(unsigned int n) {
   ComprehensivePatterns::R2 r2 = R2{R1{n}, n};
   return std::make_pair(std::make_pair(r2, r2.r2_inner), r2.r2_data);
 }
@@ -276,13 +275,13 @@ ComprehensivePatterns::complex_nest(ComprehensivePatterns::R3 r3) {
       std::make_pair(r3.r3_r2.r2_inner, r3.r3_r2.r2_inner.r1_val));
 }
 
-ComprehensivePatterns::R2 ComprehensivePatterns::make_r2(const unsigned int n) {
+ComprehensivePatterns::R2 ComprehensivePatterns::make_r2(unsigned int n) {
   return R2{R1{n}, n};
 }
 
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
           unsigned int>
-ComprehensivePatterns::from_func(const unsigned int n) {
+ComprehensivePatterns::from_func(unsigned int n) {
   ComprehensivePatterns::R2 r2 = make_r2(n);
   return std::make_pair(std::make_pair(r2, r2.r2_inner), r2.r2_data);
 }
@@ -296,7 +295,7 @@ ComprehensivePatterns::pair_of_pairs(ComprehensivePatterns::R2 r2) {
 }
 
 std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>
-ComprehensivePatterns::cond_proj(const bool b, ComprehensivePatterns::R2 r2) {
+ComprehensivePatterns::cond_proj(bool b, ComprehensivePatterns::R2 r2) {
   if (b) {
     return std::make_pair(r2, r2.r2_inner);
   } else {
@@ -305,18 +304,17 @@ ComprehensivePatterns::cond_proj(const bool b, ComprehensivePatterns::R2 r2) {
 }
 
 List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>
-ComprehensivePatterns::repeat_r2(const unsigned int n,
-                                 ComprehensivePatterns::R2 r2) {
+ComprehensivePatterns::repeat_r2(unsigned int n, ComprehensivePatterns::R2 r2) {
   std::unique_ptr<
       List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
       _head{};
   std::unique_ptr<
       List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
       *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<List<
+      *_write = std::make_unique<List<
           std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
           List<std::pair<ComprehensivePatterns::R2,
                          ComprehensivePatterns::R1>>::nil());
@@ -328,7 +326,7 @@ ComprehensivePatterns::repeat_r2(const unsigned int n,
           typename List<
               std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>::
               Cons(std::make_pair(r2, r2.r2_inner), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<std::pair<ComprehensivePatterns::R2,
                                             ComprehensivePatterns::R1>>::Cons>(
@@ -338,7 +336,7 @@ ComprehensivePatterns::repeat_r2(const unsigned int n,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 std::pair<std::pair<ComprehensivePatterns::R3, ComprehensivePatterns::R2>,
@@ -447,7 +445,7 @@ unsigned int ComprehensivePatterns::option_unwrap_proj(
 }
 
 std::pair<ComprehensivePatterns::R, unsigned int>
-ComprehensivePatterns::fun_result_and_proj(const unsigned int n) {
+ComprehensivePatterns::fun_result_and_proj(unsigned int n) {
   ComprehensivePatterns::R r = R{n, n};
   return std::make_pair(r, r.val);
 }
@@ -473,16 +471,15 @@ ComprehensivePatterns::chain_to_pair(ComprehensivePatterns::R r1) {
 }
 
 List<std::pair<ComprehensivePatterns::R, unsigned int>>
-ComprehensivePatterns::repeat_pair(const unsigned int n,
-                                   ComprehensivePatterns::R r) {
+ComprehensivePatterns::repeat_pair(unsigned int n, ComprehensivePatterns::R r) {
   std::unique_ptr<List<std::pair<ComprehensivePatterns::R, unsigned int>>>
       _head{};
   std::unique_ptr<List<std::pair<ComprehensivePatterns::R, unsigned int>>>
       *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           List<std::pair<ComprehensivePatterns::R, unsigned int>>>(
           List<std::pair<ComprehensivePatterns::R, unsigned int>>::nil());
       break;
@@ -492,7 +489,7 @@ ComprehensivePatterns::repeat_pair(const unsigned int n,
           List<std::pair<ComprehensivePatterns::R, unsigned int>>>(
           typename List<std::pair<ComprehensivePatterns::R, unsigned int>>::
               Cons(std::make_pair(r, r.val), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename List<
           std::pair<ComprehensivePatterns::R, unsigned int>>::Cons>(
                     (*_write)->v_mut())
@@ -501,11 +498,11 @@ ComprehensivePatterns::repeat_pair(const unsigned int n,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 std::pair<ComprehensivePatterns::R, unsigned int>
-ComprehensivePatterns::cond_pair(const bool b, ComprehensivePatterns::R r) {
+ComprehensivePatterns::cond_pair(bool b, ComprehensivePatterns::R r) {
   if (b) {
     return std::make_pair(r, r.val);
   } else {
@@ -548,15 +545,15 @@ ComprehensivePatterns::proj_through_option(const ComprehensivePatterns::R &r) {
   return std::make_optional<unsigned int>(r.val);
 }
 
-unsigned int ComprehensivePatterns::use_proj(const unsigned int n) { return n; }
+unsigned int ComprehensivePatterns::use_proj(unsigned int n) { return n; }
 
 unsigned int
 ComprehensivePatterns::proj_as_arg(const ComprehensivePatterns::NC &r) {
   return use_proj(r.nc_a);
 }
 
-unsigned int ComprehensivePatterns::use_two(const unsigned int _x0,
-                                            const unsigned int _x1) {
+unsigned int ComprehensivePatterns::use_two(unsigned int _x0,
+                                            unsigned int _x1) {
   return (_x0 + _x1);
 }
 
@@ -606,9 +603,7 @@ ComprehensivePatterns::call_return_proj(const ComprehensivePatterns::NC &r) {
   return (return_proj_nc(r) + r.nc_b);
 }
 
-unsigned int ComprehensivePatterns::inc(const unsigned int n) {
-  return (n + 1u);
-}
+unsigned int ComprehensivePatterns::inc(unsigned int n) { return (n + 1u); }
 
 unsigned int
 ComprehensivePatterns::nested_proj_calls(const ComprehensivePatterns::NC &r) {
@@ -616,7 +611,7 @@ ComprehensivePatterns::nested_proj_calls(const ComprehensivePatterns::NC &r) {
 }
 
 unsigned int ComprehensivePatterns::count_down(
-    const unsigned int n,
+    unsigned int n,
     const ComprehensivePatterns::NC
         &r) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -640,7 +635,7 @@ unsigned int ComprehensivePatterns::count_down(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = r.nc_a;
       } else {
@@ -708,7 +703,7 @@ ComprehensivePatterns::multi_positions(const ComprehensivePatterns::NC &r) {
 }
 
 unsigned int ComprehensivePatterns::sum_proj(
-    const unsigned int n,
+    unsigned int n,
     const ComprehensivePatterns::NC
         &r) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -732,7 +727,7 @@ unsigned int ComprehensivePatterns::sum_proj(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -754,8 +749,8 @@ ComprehensivePatterns::hof_test(const ComprehensivePatterns::NC &r) {
       [](const ComprehensivePatterns::NC &x) { return (x.nc_a + x.nc_b); }, r);
 }
 
-unsigned int ComprehensivePatterns::use_two_fc(const unsigned int _x0,
-                                               const unsigned int _x1) {
+unsigned int ComprehensivePatterns::use_two_fc(unsigned int _x0,
+                                               unsigned int _x1) {
   return (_x0 + _x1);
 }
 
@@ -764,9 +759,8 @@ ComprehensivePatterns::bug_two_args(const ComprehensivePatterns::State &s) {
   return use_two_fc(s.state_value, s.state_data);
 }
 
-unsigned int ComprehensivePatterns::use_three(const unsigned int x,
-                                              const unsigned int y,
-                                              const unsigned int z) {
+unsigned int ComprehensivePatterns::use_three(unsigned int x, unsigned int y,
+                                              unsigned int z) {
   return ((x + y) + z);
 }
 
@@ -777,7 +771,7 @@ ComprehensivePatterns::bug_three_args(const ComprehensivePatterns::State &s) {
 
 unsigned int
 ComprehensivePatterns::take_state_and_val(const ComprehensivePatterns::State &,
-                                          const unsigned int n) {
+                                          unsigned int n) {
   return n;
 }
 
@@ -786,7 +780,7 @@ unsigned int ComprehensivePatterns::bug_state_and_proj(
   return take_state_and_val(s, s.state_value);
 }
 
-unsigned int ComprehensivePatterns::inner_func(const unsigned int n) {
+unsigned int ComprehensivePatterns::inner_func(unsigned int n) {
   return (n + 1u);
 }
 
@@ -804,11 +798,9 @@ ComprehensivePatterns::bug_in_condition(const ComprehensivePatterns::State &s) {
   }
 }
 
-unsigned int ComprehensivePatterns::f1_fc(const unsigned int n) { return n; }
+unsigned int ComprehensivePatterns::f1_fc(unsigned int n) { return n; }
 
-unsigned int ComprehensivePatterns::f2_fc(const unsigned int n) {
-  return (n + 1u);
-}
+unsigned int ComprehensivePatterns::f2_fc(unsigned int n) { return (n + 1u); }
 
 unsigned int
 ComprehensivePatterns::bug_multi_calls(const ComprehensivePatterns::State &s) {
@@ -899,7 +891,7 @@ ComprehensivePatterns::two_side_effects(const ComprehensivePatterns::RSeq &r) {
 }
 
 unsigned int ComprehensivePatterns::side_effect_in_branch(
-    const bool b, const ComprehensivePatterns::RSeq &r) {
+    bool b, const ComprehensivePatterns::RSeq &r) {
   ComprehensivePatterns::RSeq r2;
   if (b) {
     r2 = side_effect(r);
@@ -962,7 +954,7 @@ bool ComprehensivePatterns::bool_with_proj(
 }
 
 unsigned int ComprehensivePatterns::sum_values(
-    const unsigned int n,
+    unsigned int n,
     const ComprehensivePatterns::StateStmt
         &s) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -987,7 +979,7 @@ unsigned int ComprehensivePatterns::sum_values(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -1004,8 +996,7 @@ unsigned int ComprehensivePatterns::sum_values(
 }
 
 unsigned int
-ComprehensivePatterns::branch_use(const bool b,
-                                  const ComprehensivePatterns::RCF &r) {
+ComprehensivePatterns::branch_use(bool b, const ComprehensivePatterns::RCF &r) {
   if (b) {
     return r.cf_val;
   } else {
@@ -1014,8 +1005,7 @@ ComprehensivePatterns::branch_use(const bool b,
 }
 
 std::pair<ComprehensivePatterns::RCF, unsigned int>
-ComprehensivePatterns::branch_different(const bool b,
-                                        ComprehensivePatterns::RCF r) {
+ComprehensivePatterns::branch_different(bool b, ComprehensivePatterns::RCF r) {
   if (b) {
     return std::make_pair(r, r.cf_val);
   } else {
@@ -1034,7 +1024,7 @@ unsigned int ComprehensivePatterns::match_with_wild(
 }
 
 unsigned int ComprehensivePatterns::sum_with_state(
-    const unsigned int n,
+    unsigned int n,
     const ComprehensivePatterns::RCF
         &r) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -1058,7 +1048,7 @@ unsigned int ComprehensivePatterns::sum_with_state(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = r.cf_val;
       } else {
@@ -1075,7 +1065,7 @@ unsigned int ComprehensivePatterns::sum_with_state(
 }
 
 unsigned int
-ComprehensivePatterns::even_count(const unsigned int n,
+ComprehensivePatterns::even_count(unsigned int n,
                                   const ComprehensivePatterns::RCF &r) {
   if (n <= 0) {
     return 0u;
@@ -1086,7 +1076,7 @@ ComprehensivePatterns::even_count(const unsigned int n,
 }
 
 unsigned int
-ComprehensivePatterns::odd_count(const unsigned int n,
+ComprehensivePatterns::odd_count(unsigned int n,
                                  const ComprehensivePatterns::RCF &r) {
   if (n <= 0) {
     return r.cf_val;
@@ -1097,7 +1087,7 @@ ComprehensivePatterns::odd_count(const unsigned int n,
 }
 
 unsigned int ComprehensivePatterns::accum_with_state(
-    const unsigned int n,
+    unsigned int n,
     const ComprehensivePatterns::StateLB
         &s) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -1122,7 +1112,7 @@ unsigned int ComprehensivePatterns::accum_with_state(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = s.lb_value;
       } else {

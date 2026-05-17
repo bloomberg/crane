@@ -127,67 +127,61 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   bool forallb(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
-      return (f(d_a0) && (*(d_a1)).forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return (f(d_a0) && (*d_a1).forallb(f));
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
-      return f(d_a0, (*(d_a1)).template fold_right<T1>(f, a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return f(d_a0, (*d_a1).template fold_right<T1>(f, a0));
     }
   }
 
   template <typename T1> List<T1> concat() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<List<T1>>::Nil0>(_sv.v())) {
+    if (std::holds_alternative<typename List<List<T1>>::Nil0>(this->v())) {
       return List<T1>::nil0();
     } else {
       const auto &[d_a0, d_a1] =
-          std::get<typename List<List<T1>>::Cons0>(_sv.v());
-      return d_a0.app((*(d_a1)).template concat<T1>());
+          std::get<typename List<List<T1>>::Cons0>(this->v());
+      return d_a0.app((*d_a1).template concat<T1>());
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return List<T1>::nil0();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
-      return List<T1>::cons0(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return List<T1>::cons0(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil0>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil0>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(_sv.v());
-      return List<t_A>::cons0(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons0>(this->v());
+      return List<t_A>::cons0(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -226,8 +220,7 @@ public:
 
   // ACCESSORS
   Sig<t_A> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
+    const auto &[d_x] = std::get<Exist>(this->v());
     return Sig<t_A>(Exist{d_x});
   }
 
@@ -281,8 +274,7 @@ public:
 
   // ACCESSORS
   SigT<t_A, t_P> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
+    const auto &[d_x, d_a1] = std::get<ExistT>(this->v());
     return SigT<t_A, t_P>(ExistT{d_x, d_a1});
   }
 
@@ -345,11 +337,10 @@ public:
 
   // ACCESSORS
   T0<t_A> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Nil>(_sv.v())) {
+    if (std::holds_alternative<Nil>(this->v())) {
       return T0<t_A>(Nil{});
     } else {
-      const auto &[d_h, d_n, d_a2] = std::get<Cons>(_sv.v());
+      const auto &[d_h, d_n, d_a2] = std::get<Cons>(this->v());
       return T0<t_A>(Cons{
           d_h, d_n, d_a2 ? std::make_unique<T0<t_A>>(d_a2->clone()) : nullptr});
     }
@@ -370,8 +361,7 @@ public:
   static T0<t_A> nil() { return T0(Nil{}); }
 
   static T0<t_A> cons(t_A h, unsigned int n, T0<t_A> a2) {
-    return T0(Cons{std::move(h), std::move(n),
-                   std::make_unique<T0<t_A>>(std::move(a2))});
+    return T0(Cons{std::move(h), n, std::make_unique<T0<t_A>>(std::move(a2))});
   }
 
   // MANIPULATORS
@@ -453,10 +443,10 @@ public:
   }
 
   // CREATORS
-  static T f1(unsigned int n) { return T(F1{std::move(n)}); }
+  static T f1(unsigned int n) { return T(F1{n}); }
 
   static T fs(unsigned int n, T a1) {
-    return T(FS{std::move(n), std::make_unique<T>(std::move(a1))});
+    return T(FS{n, std::make_unique<T>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -486,13 +476,12 @@ public:
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
 
-  Sig<unsigned int> to_nat(const unsigned int) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename T::F1>(_sv.v())) {
+  Sig<unsigned int> to_nat(unsigned int) const {
+    if (std::holds_alternative<typename T::F1>(this->v())) {
       return Sig<unsigned int>::exist(0u);
     } else {
-      const auto &[d_n, d_a1] = std::get<typename T::FS>(_sv.v());
-      auto &&_sv0 = (*(d_a1)).to_nat(d_n);
+      const auto &[d_n, d_a1] = std::get<typename T::FS>(this->v());
+      auto &&_sv0 = (*d_a1).to_nat(d_n);
       const auto &[d_x0] =
           std::get<typename Sig<unsigned int>::Exist>(_sv0.v());
       return Sig<unsigned int>::exist((d_x0 + 1));
@@ -501,12 +490,12 @@ public:
 };
 
 struct Fin {
-  static T of_nat_lt(const unsigned int p, const unsigned int n);
+  static T of_nat_lt(unsigned int p, unsigned int n);
 };
 
 struct Vector {
   template <typename T1>
-  static List<T1> to_list(const unsigned int n, const T0<T1> &v);
+  static List<T1> to_list(unsigned int n, const T0<T1> &v);
 };
 
 struct Datatypes {
@@ -518,7 +507,7 @@ struct Datatypes {
 struct PendantSumtreeRoundtripCase {
   using digit = T;
   static unsigned int digit_to_nat(const T &d);
-  static digit digit_of_nat(const unsigned int n);
+  static digit digit_of_nat(unsigned int n);
   static inline const digit digit0 = digit_of_nat(0u);
   static inline const digit digit1 = digit_of_nat(1u);
   static inline const digit digit2 = digit_of_nat(2u);
@@ -528,16 +517,16 @@ struct PendantSumtreeRoundtripCase {
   static inline const digit digit6 = digit_of_nat(6u);
   static inline const digit digit7 = digit_of_nat(7u);
   static inline const digit digit9 = digit_of_nat(9u);
-  static unsigned int value_digits(const unsigned int _x, const T0<T> &ds);
-  static std::optional<T0<digit>> list_to_vector_opt(const unsigned int n,
+  static unsigned int value_digits(unsigned int _x, const T0<T> &ds);
+  static std::optional<T0<digit>> list_to_vector_opt(unsigned int n,
                                                      const List<T> &xs);
-  static List<List<digit>> encode_multi(const unsigned int n,
+  static List<List<digit>> encode_multi(unsigned int n,
                                         const List<T0<T>> &nums);
   static std::optional<List<T0<digit>>>
-  decode_multi(const unsigned int n, const List<List<T>> &segments);
+  decode_multi(unsigned int n, const List<List<T>> &segments);
   enum class Twist { e_TS, e_TZ };
 
-  template <typename T1> static T1 Twist_rect(T1 f, T1 f0, const Twist t1) {
+  template <typename T1> static T1 Twist_rect(T1 f, T1 f0, Twist t1) {
     switch (t1) {
     case Twist::e_TS: {
       return f;
@@ -550,7 +539,7 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1> static T1 Twist_rec(T1 f, T1 f0, const Twist t1) {
+  template <typename T1> static T1 Twist_rec(T1 f, T1 f0, Twist t1) {
     switch (t1) {
     case Twist::e_TS: {
       return f;
@@ -564,7 +553,7 @@ struct PendantSumtreeRoundtripCase {
   }
   enum class Fiber { e_COTTON, e_CAMELID };
 
-  template <typename T1> static T1 Fiber_rect(T1 f, T1 f0, const Fiber f1) {
+  template <typename T1> static T1 Fiber_rect(T1 f, T1 f0, Fiber f1) {
     switch (f1) {
     case Fiber::e_COTTON: {
       return f;
@@ -577,7 +566,7 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, const Fiber f1) {
+  template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, Fiber f1) {
     switch (f1) {
     case Fiber::e_COTTON: {
       return f;
@@ -592,7 +581,7 @@ struct PendantSumtreeRoundtripCase {
   enum class Color { e_WHITE, e_BROWN, e_RED, e_BLUE };
 
   template <typename T1>
-  static T1 Color_rect(T1 f, T1 f0, T1 f1, T1 f2, const Color c) {
+  static T1 Color_rect(T1 f, T1 f0, T1 f1, T1 f2, Color c) {
     switch (c) {
     case Color::e_WHITE: {
       return f;
@@ -612,7 +601,7 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1>
-  static T1 Color_rec(T1 f, T1 f0, T1 f1, T1 f2, const Color c) {
+  static T1 Color_rec(T1 f, T1 f0, T1 f1, T1 f2, Color c) {
     switch (c) {
     case Color::e_WHITE: {
       return f;
@@ -639,8 +628,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     CordMeta clone() const {
-      return CordMeta{(*(this)).cm_fiber, (*(this)).cm_color, (*(this)).cm_spin,
-                      (*(this)).cm_ply};
+      return CordMeta{(*this).cm_fiber, (*this).cm_color, (*this).cm_spin,
+                      (*this).cm_ply};
     }
   };
 
@@ -650,14 +639,14 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     CertifiedPendant clone() const {
-      return CertifiedPendant{(*(this)).cp_meta.clone(),
-                              (*(this)).cp_digits.clone()};
+      return CertifiedPendant{(*this).cp_meta.clone(),
+                              (*this).cp_digits.clone()};
     }
   };
 
-  static std::optional<T0<digit>> pendant_digits(const unsigned int n,
+  static std::optional<T0<digit>> pendant_digits(unsigned int n,
                                                  const CertifiedPendant &p);
-  static std::optional<unsigned int> pendant_value(const unsigned int n,
+  static std::optional<unsigned int> pendant_value(unsigned int n,
                                                    const CertifiedPendant &p);
   using Ledger = List<SigT<unsigned int, CertifiedPendant>>;
   static List<std::optional<unsigned int>>
@@ -669,12 +658,11 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     PendantGroup clone() const {
-      return PendantGroup{(*(this)).pg_top.clone(),
-                          (*(this)).pg_pendants.clone()};
+      return PendantGroup{(*this).pg_top.clone(), (*this).pg_pendants.clone()};
     }
   };
 
-  static bool group_sums_validb(const unsigned int n, const PendantGroup &g);
+  static bool group_sums_validb(unsigned int n, const PendantGroup &g);
 
   struct SumTree {
     // TYPES
@@ -825,14 +813,13 @@ struct PendantSumtreeRoundtripCase {
     requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
              std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
                                    List<SumTree> &>
-  static T1 SumTree_rect(const unsigned int, F1 &&f, F2 &&f0,
-                         const SumTree &s) {
+  static T1 SumTree_rect(unsigned int, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s.v());
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(d_a0, *(d_a1));
+      return f0(d_a0, *d_a1);
     }
   }
 
@@ -840,24 +827,24 @@ struct PendantSumtreeRoundtripCase {
     requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
              std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
                                    List<SumTree> &>
-  static T1 SumTree_rec(const unsigned int, F1 &&f, F2 &&f0, const SumTree &s) {
+  static T1 SumTree_rec(unsigned int, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[d_a0] = std::get<typename SumTree::SumLeaf>(s.v());
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(d_a0, *(d_a1));
+      return f0(d_a0, *d_a1);
     }
   }
 
-  static CertifiedPendant sumtree_top(const unsigned int _x, const SumTree &st);
-  static List<CertifiedPendant> sumtree_leaves(const unsigned int n,
+  static CertifiedPendant sumtree_top(unsigned int _x, const SumTree &st);
+  static List<CertifiedPendant> sumtree_leaves(unsigned int n,
                                                const SumTree &st);
-  static unsigned int sumtree_depth(const unsigned int n, const SumTree &st);
-  static bool sumtree_validb_aux(const unsigned int n, const unsigned int fuel,
+  static unsigned int sumtree_depth(unsigned int n, const SumTree &st);
+  static bool sumtree_validb_aux(unsigned int n, unsigned int fuel,
                                  const SumTree &st);
-  static bool sumtree_validb(const unsigned int n, const SumTree &st);
-  static std::optional<unsigned int> sumtree_leaf_total(const unsigned int n,
+  static bool sumtree_validb(unsigned int n, const SumTree &st);
+  static std::optional<unsigned int> sumtree_leaf_total(unsigned int n,
                                                         const SumTree &st);
   static bool nat_list_eqb(const List<unsigned int> &xs,
                            const List<unsigned int> &ys);
@@ -960,19 +947,19 @@ std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
 }
 
 template <typename T1>
-List<T1> Vector::to_list(const unsigned int n, const T0<T1> &v) {
-  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, const unsigned int,
+List<T1> Vector::to_list(unsigned int n, const T0<T1> &v) {
+  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, unsigned int,
                                 const T0<T1> &v0, List<T1> b) -> List<T1> {
     if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
       return b;
     } else {
       const auto &[d_h, d_n, d_a2] = std::get<typename T0<T1>::Cons>(v0.v());
-      return List<T1>::cons0(d_h,
-                             _self_fold_right_fix(_self_fold_right_fix, d_n,
-                                                  *(d_a2), std::move(b)));
+      return List<T1>::cons0(
+          d_h,
+          _self_fold_right_fix(_self_fold_right_fix, d_n, *d_a2, std::move(b)));
     }
   };
-  auto fold_right_fix = [&](const unsigned int _x, const T0<T1> &v0,
+  auto fold_right_fix = [&](unsigned int _x, const T0<T1> &v0,
                             List<T1> b) -> List<T1> {
     return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
   };

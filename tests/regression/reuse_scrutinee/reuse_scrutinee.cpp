@@ -8,7 +8,7 @@ unsigned int ReuseScrutinee::left_val(const ReuseScrutinee::tree &t) {
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename ReuseScrutinee::tree::Node>(t.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *d_a0;
     if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(_sv0.v())) {
       return 0u;
     } else {
@@ -26,7 +26,7 @@ unsigned int ReuseScrutinee::right_val(const ReuseScrutinee::tree &t) {
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename ReuseScrutinee::tree::Node>(t.v());
-    auto &&_sv0 = *(d_a2);
+    auto &&_sv0 = *d_a2;
     if (std::holds_alternative<typename ReuseScrutinee::tree::Leaf>(_sv0.v())) {
       return 0u;
     } else {

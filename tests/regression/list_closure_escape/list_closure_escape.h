@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct ListClosureEscape {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -122,19 +121,19 @@ struct ListClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int sum_values(const unsigned int x) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+    unsigned int sum_values(unsigned int x) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        auto &&_sv0 = *(d_a0);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        auto &&_sv0 = *d_a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (d_a1 + x);
         } else {
           const auto &[d_a00, d_a10, d_a20] =
               std::get<typename tree::Node>(_sv0.v());
-          auto &&_sv1 = *(d_a2);
+          auto &&_sv1 = *d_a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (d_a10 + x);
           } else {
@@ -150,13 +149,13 @@ struct ListClosureEscape {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -164,13 +163,13 @@ struct ListClosureEscape {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -281,12 +280,11 @@ struct ListClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int apply_first(const unsigned int x) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
+    unsigned int apply_first(unsigned int x) const {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
         return d_a0(x);
       }
     }
@@ -296,12 +294,11 @@ struct ListClosureEscape {
           T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
           T1 &>
     T1 fn_list_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template fn_list_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template fn_list_rec<T1>(f, f0));
       }
     }
 
@@ -310,12 +307,11 @@ struct ListClosureEscape {
           T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
           T1 &>
     T1 fn_list_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template fn_list_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template fn_list_rect<T1>(f, f0));
       }
     }
   };

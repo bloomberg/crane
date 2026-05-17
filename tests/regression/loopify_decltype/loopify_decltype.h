@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_DECLTYPE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -134,7 +132,7 @@ struct LoopifyDecltype {
     unsigned int item_val;
 
     // ACCESSORS
-    item clone() const { return item{(*(this)).item_flag, (*(this)).item_val}; }
+    item clone() const { return item{(*this).item_flag, (*this).item_val}; }
   };
 
   static unsigned int sum_flagged(const List<item> &xs);

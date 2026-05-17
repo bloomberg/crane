@@ -8,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -26,7 +25,7 @@ struct EffectNestedIo {
   /// 5. Block template in function that also uses clock effect
   static std::pair<std::string, int64_t> timed_read();
   /// 6. Block template result stored in env
-  static std::string read_and_store(const std::string key);
+  static std::string read_and_store(std::string key);
   /// 7. Multiple block templates interleaved with env effects
   static std::pair<std::string, std::string> multi_read_store();
   /// 8. Block template result length checked

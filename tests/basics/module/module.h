@@ -4,7 +4,6 @@
 #include <concepts>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -12,7 +11,7 @@
 enum class Comparison { e_EQ, e_LT, e_GT };
 
 struct Nat {
-  static Comparison compare(const unsigned int n, const unsigned int m);
+  static Comparison compare(unsigned int n, unsigned int m);
 };
 
 template <typename M>
@@ -172,7 +171,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
     return v;
   }
 
-  static t add(const typename K::t k, const typename V::t v, const tree &m) {
+  static t add(typename K::t k, typename V::t v, const tree &m) {
     if (std::holds_alternative<typename tree::Empty>(m.v())) {
       return tree::node(tree::empty(), k, v, tree::empty());
     } else {
@@ -180,13 +179,13 @@ template <OrderedType K, BaseType V> struct MakeMap {
           std::get<typename tree::Node>(m.v());
       switch (K::compare(k, d_a1)) {
       case Comparison::e_EQ: {
-        return tree::node(*(d_a0), k, v, *(d_a3));
+        return tree::node(*d_a0, k, v, *d_a3);
       }
       case Comparison::e_LT: {
-        return tree::node(add(k, v, *(d_a0)), d_a1, d_a2, *(d_a3));
+        return tree::node(add(k, v, *d_a0), d_a1, d_a2, *d_a3);
       }
       case Comparison::e_GT: {
-        return tree::node(*(d_a0), d_a1, d_a2, add(k, v, *(d_a3)));
+        return tree::node(*d_a0, d_a1, d_a2, add(k, v, *d_a3));
       }
       default:
         std::unreachable();
@@ -194,7 +193,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
     }
   }
 
-  static std::optional<value> find(const typename K::t k, const tree &m) {
+  static std::optional<value> find(typename K::t k, const tree &m) {
     if (std::holds_alternative<typename tree::Empty>(m.v())) {
       return std::optional<typename V::t>();
     } else {
@@ -205,10 +204,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
         return std::make_optional<typename V::t>(d_a2);
       }
       case Comparison::e_LT: {
-        return find(k, *(d_a0));
+        return find(k, *d_a0);
       }
       case Comparison::e_GT: {
-        return find(k, *(d_a3));
+        return find(k, *d_a3);
       }
       default:
         std::unreachable();
@@ -225,7 +224,7 @@ static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
   using t = unsigned int;
-  static Comparison compare(const unsigned int _x0, const unsigned int _x1);
+  static Comparison compare(unsigned int _x0, unsigned int _x1);
 };
 
 static_assert(OrderedType<NatOrdered>);

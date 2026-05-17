@@ -2,7 +2,6 @@
 #define INCLUDED_PATTERN_IMPOSSIBLE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -11,8 +10,7 @@
 struct PatternImpossible {
   enum class Three { e_ONE, e_TWO, e_THREE };
 
-  template <typename T1>
-  static T1 three_rect(T1 f, T1 f0, T1 f1, const Three t) {
+  template <typename T1> static T1 three_rect(T1 f, T1 f0, T1 f1, Three t) {
     switch (t) {
     case Three::e_ONE: {
       return f;
@@ -28,8 +26,7 @@ struct PatternImpossible {
     }
   }
 
-  template <typename T1>
-  static T1 three_rec(T1 f, T1 f0, T1 f1, const Three t) {
+  template <typename T1> static T1 three_rec(T1 f, T1 f0, T1 f1, Three t) {
     switch (t) {
     case Three::e_ONE: {
       return f;
@@ -121,7 +118,7 @@ struct PatternImpossible {
     }
 
     // CREATORS
-    static nested leaf(unsigned int a0) { return nested(Leaf{std::move(a0)}); }
+    static nested leaf(unsigned int a0) { return nested(Leaf{a0}); }
 
     static nested node(nested a0, nested a1) {
       return nested(Node{std::make_unique<nested>(std::move(a0)),
@@ -168,8 +165,8 @@ struct PatternImpossible {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n.v());
-      return f0(*(d_a0), nested_rect<T1>(f, f0, *(d_a0)), *(d_a1),
-                nested_rect<T1>(f, f0, *(d_a1)));
+      return f0(*d_a0, nested_rect<T1>(f, f0, *d_a0), *d_a1,
+                nested_rect<T1>(f, f0, *d_a1));
     }
   }
 
@@ -182,14 +179,14 @@ struct PatternImpossible {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n.v());
-      return f0(*(d_a0), nested_rec<T1>(f, f0, *(d_a0)), *(d_a1),
-                nested_rec<T1>(f, f0, *(d_a1)));
+      return f0(*d_a0, nested_rec<T1>(f, f0, *d_a0), *d_a1,
+                nested_rec<T1>(f, f0, *d_a1));
     }
   }
 
-  static unsigned int complex_match(const Three x);
+  static unsigned int complex_match(Three x);
   static unsigned int nested_match(const nested &n);
-  static unsigned int double_match(const Three x, const Three y);
+  static unsigned int double_match(Three x, Three y);
   static unsigned int multi_arg_pattern(const nested &n);
   static inline const unsigned int test1 = complex_match(Three::e_ONE);
   static inline const unsigned int test2 =

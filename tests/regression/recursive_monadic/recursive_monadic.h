@@ -132,14 +132,13 @@ public:
 
 struct RecursiveMonadic {
   /// 1. Simple recursive countdown with effect
-  static unsigned int countdown(const unsigned int n);
+  static unsigned int countdown(unsigned int n);
   /// 2. Recursive sum over list with logging
   static unsigned int sum_list(const List<unsigned int> &xs);
   /// 3. Recursive collect: transforms each element with effect
   static List<int64_t> collect_lengths(const List<std::string> &xs);
   /// 4. Recursive with two recursive calls (tree-like)
-  static unsigned int repeat_action(const unsigned int n,
-                                    const std::string msg);
+  static unsigned int repeat_action(unsigned int n, std::string msg);
 
   /// 5. Recursive with match in the middle
   template <typename F0>
@@ -151,7 +150,7 @@ struct RecursiveMonadic {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(xs.v());
-      List<unsigned int> rest_ = filter_print(pred, *(d_a1));
+      List<unsigned int> rest_ = filter_print(pred, *d_a1);
       if (pred(d_a0)) {
         std::cout << "keep"s << '\n';
         return List<unsigned int>::cons(d_a0, std::move(rest_));
@@ -162,10 +161,10 @@ struct RecursiveMonadic {
   }
 
   /// 6. Recursive with block template in each step
-  static List<std::string> read_n_lines(const unsigned int n);
+  static List<std::string> read_n_lines(unsigned int n);
   /// 7. Mutual-like: two functions calling each other via wrapper
-  static std::string even_action(const unsigned int n);
-  static std::string odd_action(const unsigned int n);
+  static std::string even_action(unsigned int n);
+  static std::string odd_action(unsigned int n);
 
   /// 8. Recursive option-returning function
   template <typename F0>
@@ -181,7 +180,7 @@ struct RecursiveMonadic {
       if (pred(d_a0)) {
         return std::make_optional<unsigned int>(d_a0);
       } else {
-        return find_first(pred, *(d_a1));
+        return find_first(pred, *d_a1);
       }
     }
   }

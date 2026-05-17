@@ -6,11 +6,11 @@ unsigned int EvenOdd::even_length(const EvenOdd::even_list &e) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename EvenOdd::even_list::ECons>(e.v());
-    return (odd_length(*(d_a1)) + 1);
+    return (odd_length(*d_a1) + 1);
   }
 }
 
 unsigned int EvenOdd::odd_length(const EvenOdd::odd_list &o) {
   const auto &[d_a0, d_a1] = std::get<typename EvenOdd::odd_list::OCons>(o.v());
-  return (even_length(*(d_a1)) + 1);
+  return (even_length(*d_a1) + 1);
 }

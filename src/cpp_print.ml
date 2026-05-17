@@ -1342,7 +1342,14 @@ and pp_cpp_expr env args t =
   | CPPconverting_ctor (ty, ts) ->
     let args_s = pp_list (pp_cpp_expr env args) ts in
     pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")"
-  | CPPderef e -> str "*(" ++ pp_cpp_expr env args e ++ str ")"
+  | CPPderef e ->
+    let needs_parens = match e with
+      | CPPvar _ | CPPthis | CPPfun_call _ | CPPmember _ | CPParrow _
+      | CPPmethod_call _ | CPPdot_method_call _ -> false
+      | _ -> true
+    in
+    if needs_parens then str "*(" ++ pp_cpp_expr env args e ++ str ")"
+    else str "*" ++ pp_cpp_expr env args e
   | CPPmove e ->
     require_header "utility";
     str (sn ()).move ++ str "(" ++ pp_cpp_expr env args e ++ str ")"
@@ -1608,8 +1615,8 @@ and pp_cpp_expr env args t =
     ( match e with
     | CPPmove inner ->
       str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "." ++ Id.print id ++ str ")"
-    | CPPderef _ ->
-      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
+    | CPPderef inner ->
+      pp_cpp_expr env args inner ++ str "->" ++ Id.print id
     | CPPraw s when String.length s > 0 && s.[0] = '*' ->
       str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
     | _ ->
@@ -2099,7 +2106,7 @@ and pp_cpp_stmt env args = function
       | Some (CPPvar id) ->
         let name = Id.to_string id in
         (mt (), str (v_access name), str name)
-      | Some CPPthis ->
+      | Some CPPthis | Some (CPPderef CPPthis) ->
         (mt (), str (if is_owned then "this->v_mut()" else "this->v()"), str "(*this)")
       | Some obj_expr ->
         let obj_pp = pp_scrut obj_expr in

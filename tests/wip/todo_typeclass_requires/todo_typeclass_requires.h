@@ -2,9 +2,6 @@
 #define INCLUDED_TODO_TYPECLASS_REQUIRES
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename I, typename t_A>
 concept Numeric = requires(t_A a0) {

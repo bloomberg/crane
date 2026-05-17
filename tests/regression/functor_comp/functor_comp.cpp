@@ -1,6 +1,6 @@
 #include "functor_comp.h"
 
-FunctorComp::Stack::t FunctorComp::Stack::push(const unsigned int x,
+FunctorComp::Stack::t FunctorComp::Stack::push(unsigned int x,
                                                List<unsigned int> s) {
   return List<unsigned int>::cons(x, std::move(s));
 }
@@ -13,16 +13,16 @@ FunctorComp::Stack::pop(const List<unsigned int> &s) {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(s.v());
     return std::make_optional<std::pair<unsigned int, List<unsigned int>>>(
-        std::make_pair(d_a0, *(d_a1)));
+        std::make_pair(d_a0, *d_a1));
   }
 }
 
-unsigned int FunctorComp::Stack::size(const FunctorComp::Stack::t _x0) {
+unsigned int FunctorComp::Stack::size(FunctorComp::Stack::t _x0) {
   return _x0.length();
 }
 
 FunctorComp::Queue::t FunctorComp::Queue::push(
-    const unsigned int x,
+    unsigned int x,
     const std::pair<List<unsigned int>, List<unsigned int>> &q) {
   const List<unsigned int> &front = q.first;
   const List<unsigned int> &back = q.second;
@@ -45,14 +45,14 @@ FunctorComp::Queue::pop(
       return std::make_optional<std::pair<
           unsigned int, std::pair<List<unsigned int>, List<unsigned int>>>>(
           std::make_pair(d_a00,
-                         std::make_pair(*(d_a10), List<unsigned int>::nil())));
+                         std::make_pair(*d_a10, List<unsigned int>::nil())));
     }
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(front.v());
     return std::make_optional<std::pair<
         unsigned int, std::pair<List<unsigned int>, List<unsigned int>>>>(
-        std::make_pair(d_a0, std::make_pair(*(d_a1), back)));
+        std::make_pair(d_a0, std::make_pair(*d_a1, back)));
   }
 }
 

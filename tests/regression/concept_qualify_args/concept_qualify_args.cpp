@@ -1,6 +1,6 @@
 #include "concept_qualify_args.h"
 
-unsigned int ConceptQualifyArgs::NatElems::head_or(const unsigned int d) {
+unsigned int ConceptQualifyArgs::NatElems::head_or(unsigned int d) {
   auto &&_sv = elements;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return d;

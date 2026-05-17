@@ -2,7 +2,6 @@
 #define INCLUDED_REUSE_MOVE_SHADOW
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -87,7 +86,7 @@ struct ReuseMoveShadow {
 
     // CREATORS
     static tree node(unsigned int a0, tree a1, tree a2) {
-      return tree(Node{std::move(a0), std::make_unique<tree>(std::move(a1)),
+      return tree(Node{a0, std::make_unique<tree>(std::move(a1)),
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -130,8 +129,8 @@ struct ReuseMoveShadow {
   static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *(d_a1), tree_rect<T1>(f, f0, *(d_a1)), *(d_a2),
-               tree_rect<T1>(f, f0, *(d_a2)));
+      return f(d_a0, *d_a1, tree_rect<T1>(f, f0, *d_a1), *d_a2,
+               tree_rect<T1>(f, f0, *d_a2));
     } else {
       return f0;
     }
@@ -143,8 +142,8 @@ struct ReuseMoveShadow {
   static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *(d_a1), tree_rec<T1>(f, f0, *(d_a1)), *(d_a2),
-               tree_rec<T1>(f, f0, *(d_a2)));
+      return f(d_a0, *d_a1, tree_rec<T1>(f, f0, *d_a1), *d_a2,
+               tree_rec<T1>(f, f0, *d_a2));
     } else {
       return f0;
     }
@@ -175,7 +174,7 @@ struct ReuseMoveShadow {
   ///
   /// The returned tree has d_a2 = nullptr.  Traversing the right subtree
   /// crashes with a null-pointer dereference.
-  static tree dup_left(tree t, const bool b);
+  static tree dup_left(tree t, bool b);
   /// test1: dup_left (node 10 (node 1 leaf leaf) (node 2 leaf leaf)) true
   /// Expected result: node 10 (node 1 leaf leaf) (node 1 leaf leaf)
   /// tree_sum = 10 + 1 + 0 + 0 + 1 + 0 + 0 = 12

@@ -2,7 +2,6 @@
 #define INCLUDED_MUTUAL_RECORD
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -163,8 +162,7 @@ struct MutualRecord {
 
     // ACCESSORS
     department clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Mk_department>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Mk_department>(this->v());
       return department(Mk_department{
           d_a0,
           d_a1 ? std::make_unique<List<MutualRecord::employee>>(d_a1->clone())
@@ -173,8 +171,8 @@ struct MutualRecord {
 
     // CREATORS
     static department mk_department(unsigned int a0, List<employee> a1) {
-      return department(Mk_department{
-          std::move(a0), std::make_unique<List<employee>>(std::move(a1))});
+      return department(
+          Mk_department{a0, std::make_unique<List<employee>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -219,14 +217,13 @@ struct MutualRecord {
 
     // ACCESSORS
     employee clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Mk_employee>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Mk_employee>(this->v());
       return employee(Mk_employee{d_a0, d_a1});
     }
 
     // CREATORS
     static employee mk_employee(unsigned int a0, unsigned int a1) {
-      return employee(Mk_employee{std::move(a0), std::move(a1)});
+      return employee(Mk_employee{a0, a1});
     }
 
     // MANIPULATORS
@@ -241,7 +238,7 @@ struct MutualRecord {
   static T1 department_rect(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, *(d_a1));
+    return f(d_a0, *d_a1);
   }
 
   template <typename T1, typename F0>
@@ -249,7 +246,7 @@ struct MutualRecord {
   static T1 department_rec(F0 &&f, const department &d) {
     const auto &[d_a0, d_a1] =
         std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, *(d_a1));
+    return f(d_a0, *d_a1);
   }
 
   template <typename T1, typename F0>

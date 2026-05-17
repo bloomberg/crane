@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_NUMBERS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -145,7 +144,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -166,46 +165,39 @@ public:
 /// Consolidated UNIQUE numeric algorithms - no basic arithmetic.
 /// Tests loopification on number theory and recursive sequences.
 struct LoopifyNumbers {
-  static unsigned int factorial(const unsigned int n);
-  static unsigned int fib(const unsigned int n);
-  static unsigned int tribonacci_fuel(const unsigned int fuel,
-                                      const unsigned int n);
-  static unsigned int tribonacci(const unsigned int n);
-  static unsigned int gcd_fuel(const unsigned int fuel, const unsigned int a,
-                               const unsigned int b);
-  static unsigned int gcd(const unsigned int a, const unsigned int b);
-  static unsigned int binomial(const unsigned int n, const unsigned int k);
-  static unsigned int pascal(const unsigned int row, const unsigned int col);
-  static unsigned int ackermann_fuel(const unsigned int fuel,
-                                     const unsigned int m,
-                                     const unsigned int n);
-  static unsigned int ack(const unsigned int m, const unsigned int n);
-  static unsigned int collatz_length_fuel(const unsigned int fuel,
-                                          const unsigned int n);
-  static unsigned int collatz_length(const unsigned int n);
-  static unsigned int digitsum_fuel(const unsigned int fuel,
-                                    const unsigned int n);
-  static unsigned int digitsum(const unsigned int n);
-  static unsigned int dec_to_bin_fuel(const unsigned int fuel,
-                                      const unsigned int n);
-  static unsigned int dec_to_bin(const unsigned int n);
-  static unsigned int sum_to(const unsigned int n);
-  static unsigned int sum_squares(const unsigned int n);
-  static unsigned int alternating_sum(const bool sign, const unsigned int acc,
-                                      const unsigned int n);
-  static unsigned int staircase_fuel(const unsigned int fuel,
-                                     const unsigned int n);
-  static unsigned int staircase(const unsigned int n);
+  static unsigned int factorial(unsigned int n);
+  static unsigned int fib(unsigned int n);
+  static unsigned int tribonacci_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int tribonacci(unsigned int n);
+  static unsigned int gcd_fuel(unsigned int fuel, unsigned int a,
+                               unsigned int b);
+  static unsigned int gcd(unsigned int a, unsigned int b);
+  static unsigned int binomial(unsigned int n, unsigned int k);
+  static unsigned int pascal(unsigned int row, unsigned int col);
+  static unsigned int ackermann_fuel(unsigned int fuel, unsigned int m,
+                                     unsigned int n);
+  static unsigned int ack(unsigned int m, unsigned int n);
+  static unsigned int collatz_length_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int collatz_length(unsigned int n);
+  static unsigned int digitsum_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int digitsum(unsigned int n);
+  static unsigned int dec_to_bin_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int dec_to_bin(unsigned int n);
+  static unsigned int sum_to(unsigned int n);
+  static unsigned int sum_squares(unsigned int n);
+  static unsigned int alternating_sum(bool sign, unsigned int acc,
+                                      unsigned int n);
+  static unsigned int staircase_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int staircase(unsigned int n);
 
   /// church n f x applies function f to x exactly n times.
   /// Tests recursive higher-order function application.
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int church(const unsigned int n, F1 &&f,
-                             const unsigned int x) {
+  static unsigned int church(unsigned int n, F1 &&f, unsigned int x) {
     unsigned int _result;
-    unsigned int _loop_x = x;
-    unsigned int _loop_n = n;
+    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         _result = _loop_x;
@@ -221,16 +213,16 @@ struct LoopifyNumbers {
 
   /// iterate_pred n applies predecessor n times, starting from n.
   /// Tests church-style iteration with concrete function.
-  static unsigned int iterate_pred(const unsigned int n);
+  static unsigned int iterate_pred(unsigned int n);
 
   /// nest_apply n f x nests function application: f(f(...f(x))).
   /// Similar to church but emphasizes nested call structure.
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int
-  nest_apply(const unsigned int n, F1 &&f,
-             const unsigned int x) { /// _Enter: captures varying parameters for
-                                     /// each recursive call.
+  nest_apply(unsigned int n, F1 &&f,
+             unsigned int x) { /// _Enter: captures varying parameters for each
+                               /// recursive call.
 
     struct _Enter {
       unsigned int n;
@@ -252,7 +244,7 @@ struct LoopifyNumbers {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const unsigned int n = _f.n;
+        unsigned int n = _f.n;
         if (n <= 0) {
           _result = x;
         } else {
@@ -275,51 +267,45 @@ struct LoopifyNumbers {
 
   /// sum_while_positive n sums numbers from n down to 0, but only positive
   /// ones. Tests conditional accumulation in recursion.
-  static unsigned int sum_while_positive(const unsigned int n);
+  static unsigned int sum_while_positive(unsigned int n);
   /// count_down_by k n counts down from n by steps of k.
   /// Tests recursion with non-standard step size.
-  static unsigned int count_down_by_fuel(const unsigned int fuel,
-                                         const unsigned int k,
-                                         const unsigned int n);
-  static unsigned int count_down_by(const unsigned int k, const unsigned int n);
+  static unsigned int count_down_by_fuel(unsigned int fuel, unsigned int k,
+                                         unsigned int n);
+  static unsigned int count_down_by(unsigned int k, unsigned int n);
   /// mixed_arith n combines multiplication and addition in recursion.
-  static unsigned int mixed_arith_fuel(const unsigned int fuel,
-                                       const unsigned int n);
-  static unsigned int mixed_arith(const unsigned int n);
+  static unsigned int mixed_arith_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int mixed_arith(unsigned int n);
   /// is_even n checks if n is even (mutually recursive with is_odd).
-  static bool is_even_fuel(const unsigned int fuel, const unsigned int n);
-  static bool is_odd_fuel(const unsigned int fuel, const unsigned int n);
-  static bool is_even(const unsigned int n);
-  static bool is_odd(const unsigned int n);
+  static bool is_even_fuel(unsigned int fuel, unsigned int n);
+  static bool is_odd_fuel(unsigned int fuel, unsigned int n);
+  static bool is_even(unsigned int n);
+  static bool is_odd(unsigned int n);
   /// power b e computes b^e.
-  static unsigned int power(const unsigned int b, const unsigned int e);
+  static unsigned int power(unsigned int b, unsigned int e);
   /// power_mod b e m computes (b^e) mod m efficiently.
-  static unsigned int power_mod_fuel(const unsigned int fuel,
-                                     const unsigned int b, const unsigned int e,
-                                     const unsigned int m);
-  static unsigned int power_mod(const unsigned int b, const unsigned int e,
-                                const unsigned int m);
+  static unsigned int power_mod_fuel(unsigned int fuel, unsigned int b,
+                                     unsigned int e, unsigned int m);
+  static unsigned int power_mod(unsigned int b, unsigned int e, unsigned int m);
   /// sum_divisors n sums all divisors of n (excluding n itself).
-  static unsigned int sum_divisors_aux(const unsigned int n,
-                                       const unsigned int k);
-  static unsigned int sum_divisors(const unsigned int n);
+  static unsigned int sum_divisors_aux(unsigned int n, unsigned int k);
+  static unsigned int sum_divisors(unsigned int n);
   /// sum_odd_indices l and sum_even_indices l are mutually recursive.
   /// sum_odd_indices adds elements at odd positions (0, 2, 4...).
   /// sum_even_indices processes even positions (1, 3, 5...) by calling
   /// sum_odd_indices.
-  static unsigned int sum_odd_indices_fuel(const unsigned int fuel,
+  static unsigned int sum_odd_indices_fuel(unsigned int fuel,
                                            const List<unsigned int> &l);
-  static unsigned int sum_even_indices_fuel(const unsigned int fuel,
+  static unsigned int sum_even_indices_fuel(unsigned int fuel,
                                             const List<unsigned int> &l);
   static unsigned int sum_odd_indices(const List<unsigned int> &l);
   static unsigned int sum_even_indices(const List<unsigned int> &l);
   /// collatz_list n generates collatz sequence as a list.
-  static List<unsigned int> collatz_list_fuel(const unsigned int fuel,
-                                              const unsigned int n);
-  static List<unsigned int> collatz_list(const unsigned int n);
+  static List<unsigned int> collatz_list_fuel(unsigned int fuel,
+                                              unsigned int n);
+  static List<unsigned int> collatz_list(unsigned int n);
   /// sum_divisible_by k n sums all numbers from 1 to n divisible by k.
-  static unsigned int sum_divisible_by(const unsigned int k,
-                                       const unsigned int n);
+  static unsigned int sum_divisible_by(unsigned int k, unsigned int n);
 };
 
 #endif // INCLUDED_LOOPIFY_NUMBERS

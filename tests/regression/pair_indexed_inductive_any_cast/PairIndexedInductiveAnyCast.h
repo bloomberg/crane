@@ -2,9 +2,6 @@
 #define INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -46,8 +43,7 @@ public:
 
   // ACCESSORS
   Pair_wrap clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_a] = std::get<Mk_pair_wrap>(_sv.v());
+    const auto &[d_a] = std::get<Mk_pair_wrap>(this->v());
     return Pair_wrap(Mk_pair_wrap{d_a});
   }
 

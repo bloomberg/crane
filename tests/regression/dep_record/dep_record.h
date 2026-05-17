@@ -4,8 +4,6 @@
 #include <any>
 #include <concepts>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -196,7 +194,7 @@ struct DepRecord {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<typename _tcI0::m_carrier>::Cons>(l.v());
-      return _tcI0::m_op(d_a0, mfold<_tcI0>(*(d_a1)));
+      return _tcI0::m_op(d_a0, mfold<_tcI0>(*d_a1));
     }
   }
 
@@ -213,7 +211,7 @@ struct DepRecord {
               3u, List<unsigned int>::cons(4u, List<unsigned int>::nil())))));
   enum class Tag { e_TNAT, e_TBOOL };
 
-  template <typename T1> static T1 tag_rect(T1 f, T1 f0, const Tag t) {
+  template <typename T1> static T1 tag_rect(T1 f, T1 f0, Tag t) {
     switch (t) {
     case Tag::e_TNAT: {
       return f;
@@ -226,7 +224,7 @@ struct DepRecord {
     }
   }
 
-  template <typename T1> static T1 tag_rec(T1 f, T1 f0, const Tag t) {
+  template <typename T1> static T1 tag_rec(T1 f, T1 f0, Tag t) {
     switch (t) {
     case Tag::e_TNAT: {
       return f;
@@ -246,9 +244,7 @@ struct DepRecord {
     tag_type the_value;
 
     // ACCESSORS
-    Tagged clone() const {
-      return Tagged{(*(this)).the_tag, (*(this)).the_value};
-    }
+    Tagged clone() const { return Tagged{(*this).the_tag, (*this).the_value}; }
   };
 
   static inline const Tagged tagged_nat = Tagged{Tag::e_TNAT, 42u};

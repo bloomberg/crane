@@ -2,9 +2,6 @@
 #define INCLUDED_FIX_ESCAPE_CAPTURE
 
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct FixEscapeCapture {

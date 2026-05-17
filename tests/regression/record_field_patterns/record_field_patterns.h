@@ -4,7 +4,6 @@
 #include <any>
 #include <concepts>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -127,24 +126,22 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 };
@@ -165,7 +162,7 @@ struct RecordFieldPatterns {
     unsigned int py;
 
     // ACCESSORS
-    Point clone() const { return Point{(*(this)).px, (*(this)).py}; }
+    Point clone() const { return Point{(*this).px, (*this).py}; }
   };
 
   static unsigned int classify_point(const Point &p);
@@ -194,12 +191,11 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     ScaledPoint clone() const {
-      return ScaledPoint{(*(this)).sp_x, (*(this)).sp_y};
+      return ScaledPoint{(*this).sp_x, (*this).sp_y};
     }
   };
 
-  static unsigned int scaled_sum(const unsigned int scale,
-                                 const ScaledPoint &sp);
+  static unsigned int scaled_sum(unsigned int scale, const ScaledPoint &sp);
   /// After section closing, scaled_sum is parameterized by scale : nat.
   /// The record type itself is NOT parameterized (scale is only used in
   /// the function body), but the function signature changes.
@@ -208,13 +204,13 @@ struct RecordFieldPatterns {
 
   struct PointImpl {
     using R = Point;
-    static Point mk(const unsigned int x, const unsigned int x0);
+    static Point mk(unsigned int x, unsigned int x0);
     static unsigned int get_x(const Point &p);
     static unsigned int get_y(const Point &p);
   };
 
   template <HasRecord M> struct UseRecord {
-    static unsigned int sum_fields(const typename M::R r) {
+    static unsigned int sum_fields(typename M::R r) {
       return (M::get_x(r) + M::get_y(r));
     }
   };
@@ -229,7 +225,7 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     Segment clone() const {
-      return Segment{(*(this)).seg_start.clone(), (*(this)).seg_end.clone()};
+      return Segment{(*this).seg_start.clone(), (*this).seg_end.clone()};
     }
   };
 
@@ -242,7 +238,7 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     Bounded clone() const {
-      return Bounded{(*(this)).lo, (*(this)).hi, (*(this)).mid};
+      return Bounded{(*this).lo, (*this).hi, (*this).mid};
     }
   };
 
@@ -257,9 +253,7 @@ struct RecordFieldPatterns {
     unsigned int count;
 
     // ACCESSORS
-    Container clone() const {
-      return Container{(*(this)).elem, (*(this)).count};
-    }
+    Container clone() const { return Container{(*this).elem, (*this).count}; }
   };
 
   using elem_type = std::any;

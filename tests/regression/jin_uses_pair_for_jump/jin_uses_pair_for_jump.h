@@ -2,8 +2,6 @@
 #define INCLUDED_JIN_USES_PAIR_FOR_JUMP
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -125,7 +123,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct JinUsesPairForJump {
@@ -134,13 +132,13 @@ struct JinUsesPairForJump {
     unsigned int pc;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).regs.clone(), (*(this)).pc}; }
+    state clone() const { return state{(*this).regs.clone(), (*this).pc}; }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int r);
-  static unsigned int get_reg_pair(const state &s, const unsigned int r);
-  static unsigned int page_of(const unsigned int addr);
-  static state execute_jin(const state &s, const unsigned int r);
+  static unsigned int get_reg(const state &s, unsigned int r);
+  static unsigned int get_reg_pair(const state &s, unsigned int r);
+  static unsigned int page_of(unsigned int addr);
+  static state execute_jin(const state &s, unsigned int r);
   static inline const state sample = state{
       List<unsigned int>::cons(
           0u,
@@ -156,7 +154,7 @@ struct JinUsesPairForJump {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -170,7 +168,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

@@ -2,7 +2,6 @@
 #define INCLUDED_RECORD_ERASED_PROOF_FIELDS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,12 +124,11 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 };
@@ -148,7 +146,7 @@ struct RecordErasedProofFieldsCase {
 
   template <typename T1>
   static T1 ItemKind_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
-                          const ItemKind i) {
+                          ItemKind i) {
     switch (i) {
     case ItemKind::e_KINDA: {
       return f;
@@ -178,7 +176,7 @@ struct RecordErasedProofFieldsCase {
 
   template <typename T1>
   static T1 ItemKind_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
-                         const ItemKind i) {
+                         ItemKind i) {
     switch (i) {
     case ItemKind::e_KINDA: {
       return f;
@@ -246,23 +244,22 @@ struct RecordErasedProofFieldsCase {
 
     // ACCESSORS
     StoredTag clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<TagPrimary>(_sv.v())) {
-        const auto &[d_a0] = std::get<TagPrimary>(_sv.v());
+      if (std::holds_alternative<TagPrimary>(this->v())) {
+        const auto &[d_a0] = std::get<TagPrimary>(this->v());
         return StoredTag(TagPrimary{d_a0});
       } else {
-        const auto &[d_a0] = std::get<TagSecondary>(_sv.v());
+        const auto &[d_a0] = std::get<TagSecondary>(this->v());
         return StoredTag(TagSecondary{d_a0});
       }
     }
 
     // CREATORS
     static StoredTag tagprimary(ItemKind a0) {
-      return StoredTag(TagPrimary{std::move(a0)});
+      return StoredTag(TagPrimary{a0});
     }
 
     static StoredTag tagsecondary(ItemKind a0) {
-      return StoredTag(TagSecondary{std::move(a0)});
+      return StoredTag(TagSecondary{a0});
     }
 
     // MANIPULATORS
@@ -300,7 +297,7 @@ struct RecordErasedProofFieldsCase {
   enum class TraceBucket { e_BUCKETA, e_BUCKETB, e_BUCKETC };
 
   template <typename T1>
-  static T1 TraceBucket_rect(T1 f, T1 f0, T1 f1, const TraceBucket t) {
+  static T1 TraceBucket_rect(T1 f, T1 f0, T1 f1, TraceBucket t) {
     switch (t) {
     case TraceBucket::e_BUCKETA: {
       return f;
@@ -317,7 +314,7 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1>
-  static T1 TraceBucket_rec(T1 f, T1 f0, T1 f1, const TraceBucket t) {
+  static T1 TraceBucket_rec(T1 f, T1 f0, T1 f1, TraceBucket t) {
     switch (t) {
     case TraceBucket::e_BUCKETA: {
       return f;
@@ -340,9 +337,9 @@ struct RecordErasedProofFieldsCase {
 
     // ACCESSORS
     PrimaryRecord clone() const {
-      return PrimaryRecord{(*(this)).primary_left_kind,
-                           (*(this)).primary_right_kind,
-                           (*(this)).primary_tag.clone()};
+      return PrimaryRecord{(*this).primary_left_kind,
+                           (*this).primary_right_kind,
+                           (*this).primary_tag.clone()};
     }
   };
 
@@ -351,14 +348,14 @@ struct RecordErasedProofFieldsCase {
 
     // ACCESSORS
     ErasedProofRecord clone() const {
-      return ErasedProofRecord{(*(this)).erased_bucket};
+      return ErasedProofRecord{(*this).erased_bucket};
     }
   };
 
-  static unsigned int kind_code(const ItemKind k);
+  static unsigned int kind_code(ItemKind k);
   static unsigned int tag_code(const StoredTag &t);
-  static unsigned int bucket_code(const TraceBucket b);
-  static StoredTag bucket_to_tag(const TraceBucket b);
+  static unsigned int bucket_code(TraceBucket b);
+  static StoredTag bucket_to_tag(TraceBucket b);
   static inline const PrimaryRecord sample_primary_record =
       PrimaryRecord{ItemKind::e_KINDC, ItemKind::e_KINDE,
                     StoredTag::tagprimary(ItemKind::e_KINDC)};

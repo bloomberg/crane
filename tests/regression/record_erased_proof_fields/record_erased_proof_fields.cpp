@@ -1,7 +1,7 @@
 #include "record_erased_proof_fields.h"
 
 unsigned int RecordErasedProofFieldsCase::kind_code(
-    const RecordErasedProofFieldsCase::ItemKind k) {
+    RecordErasedProofFieldsCase::ItemKind k) {
   switch (k) {
   case ItemKind::e_KINDA: {
     return 0u;
@@ -46,7 +46,7 @@ unsigned int RecordErasedProofFieldsCase::tag_code(
 }
 
 unsigned int RecordErasedProofFieldsCase::bucket_code(
-    const RecordErasedProofFieldsCase::TraceBucket b) {
+    RecordErasedProofFieldsCase::TraceBucket b) {
   switch (b) {
   case TraceBucket::e_BUCKETA: {
     return 30u;
@@ -64,7 +64,7 @@ unsigned int RecordErasedProofFieldsCase::bucket_code(
 
 RecordErasedProofFieldsCase::StoredTag
 RecordErasedProofFieldsCase::bucket_to_tag(
-    const RecordErasedProofFieldsCase::TraceBucket b) {
+    RecordErasedProofFieldsCase::TraceBucket b) {
   switch (b) {
   case TraceBucket::e_BUCKETA: {
     return StoredTag::tagsecondary(ItemKind::e_KINDD);

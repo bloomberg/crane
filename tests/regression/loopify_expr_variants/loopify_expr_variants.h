@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_EXPR_VARIANTS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -128,26 +127,26 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
 };
 
 struct LoopifyExprVariants {
@@ -251,9 +250,7 @@ struct LoopifyExprVariants {
     }
 
     // CREATORS
-    static cond_expr lit(unsigned int a0) {
-      return cond_expr(Lit{std::move(a0)});
-    }
+    static cond_expr lit(unsigned int a0) { return cond_expr(Lit{a0}); }
 
     static cond_expr add(cond_expr a0, cond_expr a1) {
       return cond_expr(Add{std::make_unique<cond_expr>(std::move(a0)),
@@ -366,7 +363,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const cond_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
             _result = 1u;
           } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
@@ -405,20 +402,20 @@ struct LoopifyExprVariants {
 
     unsigned int eval_cond() const {
       const cond_expr *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
         const auto &[d_a0] = std::get<typename cond_expr::Lit>(_sv.v());
         return d_a0;
       } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename cond_expr::Add>(_sv.v());
-        return ((*(d_a0)).eval_cond() + (*(d_a1)).eval_cond());
+        return ((*d_a0).eval_cond() + (*d_a1).eval_cond());
       } else {
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename cond_expr::Cond>(_sv.v());
-        if (0u < (*(d_a0)).eval_cond()) {
-          return (*(d_a1)).eval_cond();
+        if (0u < (*d_a0).eval_cond()) {
+          return (*d_a1).eval_cond();
         } else {
-          return (*(d_a2)).eval_cond();
+          return (*d_a2).eval_cond();
         }
       }
     }
@@ -496,20 +493,20 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const cond_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
             const auto &[d_a0] = std::get<typename cond_expr::Lit>(_sv.v());
             _result = f(d_a0);
           } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename cond_expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_Add{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename cond_expr::Cond>(_sv.v());
             _stack.emplace_back(
-                _After_Cond{d_a1.get(), d_a0.get(), *(d_a2), *(d_a1), *(d_a0)});
+                _After_Cond{d_a1.get(), d_a0.get(), *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Add>(_frame)) {
@@ -614,20 +611,20 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const cond_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
             const auto &[d_a0] = std::get<typename cond_expr::Lit>(_sv.v());
             _result = f(d_a0);
           } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename cond_expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_Add{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename cond_expr::Cond>(_sv.v());
             _stack.emplace_back(
-                _After_Cond{d_a1.get(), d_a0.get(), *(d_a2), *(d_a1), *(d_a0)});
+                _After_Cond{d_a1.get(), d_a0.get(), *d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Add>(_frame)) {
@@ -776,9 +773,7 @@ struct LoopifyExprVariants {
     }
 
     // CREATORS
-    static arith_expr anum(unsigned int a0) {
-      return arith_expr(ANum{std::move(a0)});
-    }
+    static arith_expr anum(unsigned int a0) { return arith_expr(ANum{a0}); }
 
     static arith_expr aadd(arith_expr a0, arith_expr a1) {
       return arith_expr(AAdd{std::make_unique<arith_expr>(std::move(a0)),
@@ -904,7 +899,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const arith_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
             _result = 0u;
           } else if (std::holds_alternative<typename arith_expr::AAdd>(
@@ -953,24 +948,24 @@ struct LoopifyExprVariants {
 
     unsigned int eval_arith() const {
       const arith_expr *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
         const auto &[d_a0] = std::get<typename arith_expr::ANum>(_sv.v());
         return d_a0;
       } else if (std::holds_alternative<typename arith_expr::AAdd>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename arith_expr::AAdd>(_sv.v());
-        return ((*(d_a0)).eval_arith() + (*(d_a1)).eval_arith());
+        return ((*d_a0).eval_arith() + (*d_a1).eval_arith());
       } else if (std::holds_alternative<typename arith_expr::AMul>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename arith_expr::AMul>(_sv.v());
-        return ((*(d_a0)).eval_arith() * (*(d_a1)).eval_arith());
+        return ((*d_a0).eval_arith() * (*d_a1).eval_arith());
       } else {
         const auto &[d_a0, d_a1] = std::get<typename arith_expr::ADiv>(_sv.v());
-        auto _cs = (*(d_a1)).eval_arith();
+        auto _cs = (*d_a1).eval_arith();
         if (_cs <= 0) {
           return 0u;
         } else {
           unsigned int n = _cs - 1;
-          return ((n + 1) ? (*(d_a0)).eval_arith() / (n + 1) : 0);
+          return ((n + 1) ? (*d_a0).eval_arith() / (n + 1) : 0);
         }
       }
     }
@@ -1050,7 +1045,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const arith_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
             const auto &[d_a0] = std::get<typename arith_expr::ANum>(_sv.v());
             _result = f(d_a0);
@@ -1058,18 +1053,18 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AAdd>(_sv.v());
-            _stack.emplace_back(_After_AAdd{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AAdd{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AMul>(_sv.v());
-            _stack.emplace_back(_After_AMul{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AMul{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::ADiv>(_sv.v());
-            _stack.emplace_back(_After_ADiv{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_ADiv{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_After_AAdd>(_frame)) {
@@ -1176,7 +1171,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const arith_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
             const auto &[d_a0] = std::get<typename arith_expr::ANum>(_sv.v());
             _result = f(d_a0);
@@ -1184,18 +1179,18 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AAdd>(_sv.v());
-            _stack.emplace_back(_After_AAdd{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AAdd{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::AMul>(_sv.v());
-            _stack.emplace_back(_After_AMul{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_AMul{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename arith_expr::ADiv>(_sv.v());
-            _stack.emplace_back(_After_ADiv{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_ADiv{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else if (std::holds_alternative<_After_AAdd>(_frame)) {
@@ -1405,16 +1400,16 @@ struct LoopifyExprVariants {
 
     bool_expr simplify_bool() const {
       const bool_expr *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
         return bool_expr::btrue();
       } else if (std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
         return bool_expr::bfalse();
       } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename bool_expr::BAnd>(_sv.v());
-        auto &&_sv0 = (*(d_a0)).simplify_bool();
+        auto &&_sv0 = (*d_a0).simplify_bool();
         if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1424,15 +1419,15 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(*(d_a01), *(d_a11));
+            return bool_expr::band(*d_a01, *d_a11);
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(*(d_a01), *(d_a11));
+            return bool_expr::bor(*d_a01, *d_a11);
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bnot(*(d_a01));
+            return bool_expr::bnot(*d_a01);
           }
         } else if (std::holds_alternative<typename bool_expr::BFalse>(
                        _sv0.v())) {
@@ -1440,8 +1435,8 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
               std::get<typename bool_expr::BAnd>(_sv0.v());
-          bool_expr a_ = bool_expr::band(*(d_a00), *(d_a10));
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          bool_expr a_ = bool_expr::band(*d_a00, *d_a10);
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1452,22 +1447,22 @@ struct LoopifyExprVariants {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
             return bool_expr::band(std::move(a_),
-                                   bool_expr::band(*(d_a01), *(d_a11)));
+                                   bool_expr::band(*d_a01, *d_a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
             return bool_expr::band(std::move(a_),
-                                   bool_expr::bor(*(d_a01), *(d_a11)));
+                                   bool_expr::bor(*d_a01, *d_a11));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bnot(*(d_a01)));
+            return bool_expr::band(std::move(a_), bool_expr::bnot(*d_a01));
           }
         } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
               std::get<typename bool_expr::BOr>(_sv0.v());
-          bool_expr a_ = bool_expr::bor(*(d_a00), *(d_a10));
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          bool_expr a_ = bool_expr::bor(*d_a00, *d_a10);
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1478,21 +1473,21 @@ struct LoopifyExprVariants {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
             return bool_expr::band(std::move(a_),
-                                   bool_expr::band(*(d_a01), *(d_a11)));
+                                   bool_expr::band(*d_a01, *d_a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
             return bool_expr::band(std::move(a_),
-                                   bool_expr::bor(*(d_a01), *(d_a11)));
+                                   bool_expr::bor(*d_a01, *d_a11));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bnot(*(d_a01)));
+            return bool_expr::band(std::move(a_), bool_expr::bnot(*d_a01));
           }
         } else {
           const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-          bool_expr a_ = bool_expr::bnot(*(d_a00));
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          bool_expr a_ = bool_expr::bnot(*d_a00);
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1503,26 +1498,26 @@ struct LoopifyExprVariants {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
             return bool_expr::band(std::move(a_),
-                                   bool_expr::band(*(d_a01), *(d_a11)));
+                                   bool_expr::band(*d_a01, *d_a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
             return bool_expr::band(std::move(a_),
-                                   bool_expr::bor(*(d_a01), *(d_a11)));
+                                   bool_expr::bor(*d_a01, *d_a11));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bnot(*(d_a01)));
+            return bool_expr::band(std::move(a_), bool_expr::bnot(*d_a01));
           }
         }
       } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
         const auto &[d_a0, d_a1] = std::get<typename bool_expr::BOr>(_sv.v());
-        auto &&_sv0 = (*(d_a0)).simplify_bool();
+        auto &&_sv0 = (*d_a0).simplify_bool();
         if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
           return bool_expr::btrue();
         } else if (std::holds_alternative<typename bool_expr::BFalse>(
                        _sv0.v())) {
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1532,21 +1527,21 @@ struct LoopifyExprVariants {
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(*(d_a01), *(d_a11));
+            return bool_expr::band(*d_a01, *d_a11);
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(*(d_a01), *(d_a11));
+            return bool_expr::bor(*d_a01, *d_a11);
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bnot(*(d_a01));
+            return bool_expr::bnot(*d_a01);
           }
         } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
               std::get<typename bool_expr::BAnd>(_sv0.v());
-          bool_expr a_ = bool_expr::band(*(d_a00), *(d_a10));
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          bool_expr a_ = bool_expr::band(*d_a00, *d_a10);
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1557,22 +1552,22 @@ struct LoopifyExprVariants {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
             return bool_expr::bor(std::move(a_),
-                                  bool_expr::band(*(d_a01), *(d_a11)));
+                                  bool_expr::band(*d_a01, *d_a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
             return bool_expr::bor(std::move(a_),
-                                  bool_expr::bor(*(d_a01), *(d_a11)));
+                                  bool_expr::bor(*d_a01, *d_a11));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bnot(*(d_a01)));
+            return bool_expr::bor(std::move(a_), bool_expr::bnot(*d_a01));
           }
         } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
               std::get<typename bool_expr::BOr>(_sv0.v());
-          bool_expr a_ = bool_expr::bor(*(d_a00), *(d_a10));
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          bool_expr a_ = bool_expr::bor(*d_a00, *d_a10);
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1583,21 +1578,21 @@ struct LoopifyExprVariants {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
             return bool_expr::bor(std::move(a_),
-                                  bool_expr::band(*(d_a01), *(d_a11)));
+                                  bool_expr::band(*d_a01, *d_a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
             return bool_expr::bor(std::move(a_),
-                                  bool_expr::bor(*(d_a01), *(d_a11)));
+                                  bool_expr::bor(*d_a01, *d_a11));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bnot(*(d_a01)));
+            return bool_expr::bor(std::move(a_), bool_expr::bnot(*d_a01));
           }
         } else {
           const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-          bool_expr a_ = bool_expr::bnot(*(d_a00));
-          auto &&_sv1 = (*(d_a1)).simplify_bool();
+          bool_expr a_ = bool_expr::bnot(*d_a00);
+          auto &&_sv1 = (*d_a1).simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1608,21 +1603,21 @@ struct LoopifyExprVariants {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BAnd>(_sv1.v());
             return bool_expr::bor(std::move(a_),
-                                  bool_expr::band(*(d_a01), *(d_a11)));
+                                  bool_expr::band(*d_a01, *d_a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
                          _sv1.v())) {
             const auto &[d_a01, d_a11] =
                 std::get<typename bool_expr::BOr>(_sv1.v());
             return bool_expr::bor(std::move(a_),
-                                  bool_expr::bor(*(d_a01), *(d_a11)));
+                                  bool_expr::bor(*d_a01, *d_a11));
           } else {
             const auto &[d_a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bnot(*(d_a01)));
+            return bool_expr::bor(std::move(a_), bool_expr::bnot(*d_a01));
           }
         }
       } else {
         const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-        auto &&_sv0 = (*(d_a0)).simplify_bool();
+        auto &&_sv0 = (*d_a0).simplify_bool();
         if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
           return bool_expr::bfalse();
         } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1631,14 +1626,14 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
               std::get<typename bool_expr::BAnd>(_sv0.v());
-          return bool_expr::bnot(bool_expr::band(*(d_a00), *(d_a10)));
+          return bool_expr::bnot(bool_expr::band(*d_a00, *d_a10));
         } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
           const auto &[d_a00, d_a10] =
               std::get<typename bool_expr::BOr>(_sv0.v());
-          return bool_expr::bnot(bool_expr::bor(*(d_a00), *(d_a10)));
+          return bool_expr::bnot(bool_expr::bor(*d_a00, *d_a10));
         } else {
           const auto &[d_a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-          return bool_expr::bnot(bool_expr::bnot(*(d_a00)));
+          return bool_expr::bnot(bool_expr::bnot(*d_a00));
         }
       }
     }
@@ -1690,7 +1685,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const bool_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = true;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1799,7 +1794,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const bool_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = f;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1809,16 +1804,16 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BAnd>(_sv.v());
-            _stack.emplace_back(_After_BAnd{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BAnd{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BOr>(_sv.v());
-            _stack.emplace_back(_After_BOr{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BOr{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-            _stack.emplace_back(_Resume_BNot{f3, *(d_a0)});
+            _stack.emplace_back(_Resume_BNot{f3, *d_a0});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_After_BAnd>(_frame)) {
@@ -1910,7 +1905,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const bool_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = f;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1920,16 +1915,16 @@ struct LoopifyExprVariants {
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BAnd>(_sv.v());
-            _stack.emplace_back(_After_BAnd{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BAnd{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename bool_expr::BOr>(_sv.v());
-            _stack.emplace_back(_After_BOr{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_BOr{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0] = std::get<typename bool_expr::BNot>(_sv.v());
-            _stack.emplace_back(_Resume_BNot{f3, *(d_a0)});
+            _stack.emplace_back(_Resume_BNot{f3, *d_a0});
             _stack.emplace_back(_Enter{d_a0.get()});
           }
         } else if (std::holds_alternative<_After_BAnd>(_frame)) {
@@ -2059,8 +2054,7 @@ struct LoopifyExprVariants {
     static list_expr lnil() { return list_expr(LNil{}); }
 
     static list_expr lcons(unsigned int a0, list_expr a1) {
-      return list_expr(
-          LCons{std::move(a0), std::make_unique<list_expr>(std::move(a1))});
+      return list_expr(LCons{a0, std::make_unique<list_expr>(std::move(a1))});
     }
 
     static list_expr lappend(list_expr a0, list_expr a1) {
@@ -2069,7 +2063,7 @@ struct LoopifyExprVariants {
     }
 
     static list_expr lreplicate(unsigned int a0, unsigned int a1) {
-      return list_expr(LReplicate{std::move(a0), std::move(a1)});
+      return list_expr(LReplicate{a0, a1});
     }
 
     // MANIPULATORS
@@ -2148,7 +2142,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const list_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LCons>(_sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
@@ -2217,7 +2211,7 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const list_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
             _result = List<unsigned int>::nil();
           } else if (std::holds_alternative<typename list_expr::LCons>(
@@ -2304,20 +2298,20 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const list_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
             _result = f;
           } else if (std::holds_alternative<typename list_expr::LCons>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume_LCons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_LCons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
-            _stack.emplace_back(_After_LAppend{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_LAppend{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
@@ -2392,20 +2386,20 @@ struct LoopifyExprVariants {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const list_expr *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
             _result = f;
           } else if (std::holds_alternative<typename list_expr::LCons>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume_LCons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_LCons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
             const auto &[d_a0, d_a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
-            _stack.emplace_back(_After_LAppend{d_a0.get(), *(d_a1), *(d_a0)});
+            _stack.emplace_back(_After_LAppend{d_a0.get(), *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           } else {
             const auto &[d_a0, d_a1] =
@@ -2430,25 +2424,25 @@ struct LoopifyExprVariants {
   };
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
   std::unique_ptr<List<T1>> _head{};
   std::unique_ptr<List<T1>> *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
+      *_write = std::make_unique<List<T1>>(List<T1>::nil());
       break;
     } else {
       unsigned int k = _loop_n - 1;
       auto _cell =
           std::make_unique<List<T1>>(typename List<T1>::Cons(x, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
       _loop_n = k;
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 #endif // INCLUDED_LOOPIFY_EXPR_VARIANTS

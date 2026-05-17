@@ -2,8 +2,6 @@
 #define INCLUDED_MERGESORT_FUEL
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,18 +121,17 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct Compare_dec {
-  static bool le_lt_dec(const unsigned int n, const unsigned int m);
+  static bool le_lt_dec(unsigned int n, unsigned int m);
 };
 
 struct MergesortFuel {
@@ -145,8 +142,7 @@ struct MergesortFuel {
   static List<unsigned int> merge(List<unsigned int> l1,
                                   const List<unsigned int> &l2);
   /// * Fuel-based merge sort
-  static List<unsigned int> msort_go(const unsigned int fuel,
-                                     List<unsigned int> l);
+  static List<unsigned int> msort_go(unsigned int fuel, List<unsigned int> l);
   /// * Top-level sort and correctness
   static List<unsigned int> msort(const List<unsigned int> &l);
 };

@@ -2,8 +2,6 @@
 #define INCLUDED_COMPUTATIONAL_PROOF
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -124,13 +122,13 @@ public:
 };
 
 struct ComputationalProof {
-  static bool nat_eq_dec(const unsigned int n, const unsigned int x);
-  static bool nat_eqb_dec(const unsigned int n, const unsigned int m);
-  static bool le_dec(const unsigned int n, const unsigned int m);
-  static bool nat_leb_dec(const unsigned int n, const unsigned int m);
-  static unsigned int min_dec(const unsigned int n, const unsigned int m);
-  static unsigned int max_dec(const unsigned int n, const unsigned int m);
-  static List<unsigned int> insert_dec(const unsigned int x,
+  static bool nat_eq_dec(unsigned int n, unsigned int x);
+  static bool nat_eqb_dec(unsigned int n, unsigned int m);
+  static bool le_dec(unsigned int n, unsigned int m);
+  static bool nat_leb_dec(unsigned int n, unsigned int m);
+  static unsigned int min_dec(unsigned int n, unsigned int m);
+  static unsigned int max_dec(unsigned int n, unsigned int m);
+  static List<unsigned int> insert_dec(unsigned int x,
                                        const List<unsigned int> &l);
   static List<unsigned int> isort_dec(const List<unsigned int> &l);
   static inline const bool test_eq_true = nat_eqb_dec(5u, 5u);

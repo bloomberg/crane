@@ -89,8 +89,7 @@ struct SimpleLambdaFieldCapture {
     static mylist mynil() { return mylist(Mynil{}); }
 
     static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -124,50 +123,46 @@ struct SimpleLambdaFieldCapture {
     /// Should use = capture (safe).
     std::optional<std::function<unsigned int(unsigned int)>>
     head_adder() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
-        mylist d_a1_value = *(d_a1);
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
+        mylist d_a1_value = *d_a1;
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            [=](const unsigned int x) mutable {
+            [=](unsigned int x) mutable {
               return ((x + d_a0) + d_a1_value.mylist_sum());
             });
       }
     }
 
     unsigned int mylist_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
-        return (d_a0 + (*(d_a1)).mylist_sum());
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
+        return (d_a0 + (*d_a1).mylist_sum());
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -207,13 +202,12 @@ struct SimpleLambdaFieldCapture {
 
     // ACCESSORS
     tag clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<MkTag>(_sv.v());
+      const auto &[d_a0] = std::get<MkTag>(this->v());
       return tag(MkTag{d_a0});
     }
 
     // CREATORS
-    static tag mktag(unsigned int a0) { return tag(MkTag{std::move(a0)}); }
+    static tag mktag(unsigned int a0) { return tag(MkTag{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -224,16 +218,14 @@ struct SimpleLambdaFieldCapture {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());
+      const auto &[d_a0] = std::get<typename tag::MkTag>(this->v());
       return f(d_a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename tag::MkTag>(_sv.v());
+      const auto &[d_a0] = std::get<typename tag::MkTag>(this->v());
       return f(d_a0);
     }
   };
@@ -271,7 +263,7 @@ struct SimpleLambdaFieldCapture {
     }
   }();
   /// Dummy use of tag.
-  static tag mk_tag(const unsigned int n);
+  static tag mk_tag(unsigned int n);
 };
 
 #endif // INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE

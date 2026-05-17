@@ -1,7 +1,7 @@
 #include "effect_dir_path.h"
 
 /// 1. list_directory result matched — exercises IIFE + list match
-std::optional<std::string> EffectDirPath::first_file(const std::string path) {
+std::optional<std::string> EffectDirPath::first_file(std::string path) {
   List<std::string> files = [&]() -> List<std::string> {
     auto result = List<std::string>::nil();
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
@@ -27,8 +27,7 @@ void EffectDirPath::save_cwd() {
 }
 
 /// 3. is_directory bool result used in conditional with effects in arms
-std::optional<std::string>
-EffectDirPath::check_and_list(const std::string path) {
+std::optional<std::string> EffectDirPath::check_and_list(std::string path) {
   bool isdir = std::filesystem::is_directory(std::filesystem::path(path));
   if (isdir) {
     return first_file(path);
@@ -38,7 +37,7 @@ EffectDirPath::check_and_list(const std::string path) {
 }
 
 /// 4. Path effect result chained to print
-void EffectDirPath::show_absolute(const std::string path) {
+void EffectDirPath::show_absolute(std::string path) {
   std::string abs =
       std::filesystem::absolute(std::filesystem::path(path)).string();
   std::cout << abs << '\n';
@@ -46,7 +45,7 @@ void EffectDirPath::show_absolute(const std::string path) {
 }
 
 /// 5. Multiple bool effects composed
-std::string EffectDirPath::classify_path(const std::string path) {
+std::string EffectDirPath::classify_path(std::string path) {
   bool isdir = std::filesystem::is_directory(std::filesystem::path(path));
   bool isfile = std::filesystem::is_regular_file(std::filesystem::path(path));
   if (isdir) {
@@ -61,7 +60,7 @@ std::string EffectDirPath::classify_path(const std::string path) {
 }
 
 /// 6. create_directory bool result explicitly bound and used
-std::string EffectDirPath::create_and_report(const std::string path) {
+std::string EffectDirPath::create_and_report(std::string path) {
   bool ok = std::filesystem::create_directories(std::filesystem::path(path));
   if (ok) {
     std::cout << "Created"s << '\n';
@@ -74,7 +73,7 @@ std::string EffectDirPath::create_and_report(const std::string path) {
 
 /// 7. Recursive function counting list items from list_directory
 unsigned int EffectDirPath::count_entries(const List<std::string> &dirs,
-                                          const unsigned int acc) {
+                                          unsigned int acc) {
   if (std::holds_alternative<typename List<std::string>::Nil>(dirs.v())) {
     return acc;
   } else {
@@ -89,12 +88,12 @@ unsigned int EffectDirPath::count_entries(const List<std::string> &dirs,
       return result;
     }();
     unsigned int n = std::move(files).length();
-    return count_entries(*(d_a1), (acc + n));
+    return count_entries(*d_a1, (acc + n));
   }
 }
 
 /// 8. remove_directory (returns bool but treated as unit in bind)
-void EffectDirPath::cleanup(const std::string path) {
+void EffectDirPath::cleanup(std::string path) {
   bool _x = std::filesystem::remove_all(std::filesystem::path(path));
   std::cout << "cleaned up"s << '\n';
   return;

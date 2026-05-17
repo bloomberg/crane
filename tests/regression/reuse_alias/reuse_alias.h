@@ -2,7 +2,6 @@
 #define INCLUDED_REUSE_ALIAS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -132,7 +131,7 @@ struct ReuseAlias {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -143,7 +142,7 @@ struct ReuseAlias {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -152,7 +151,7 @@ struct ReuseAlias {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      return (length<T1>(*(d_a1)) + 1);
+      return (length<T1>(*d_a1) + 1);
     }
   }
 

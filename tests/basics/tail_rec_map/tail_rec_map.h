@@ -2,7 +2,6 @@
 #define INCLUDED_TAIL_REC_MAP
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -123,22 +122,20 @@ public:
   const variant_t &v() const { return d_v_; }
 
   List<t_A> rev() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -152,8 +149,7 @@ List<T2> better_map(F0 &&f, const List<T1> &l) {
       return std::move(acc).rev();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l0.v());
-      return _self_go(_self_go, *(d_a1),
-                      List<T2>::cons(f(d_a0), std::move(acc)));
+      return _self_go(_self_go, *d_a1, List<T2>::cons(f(d_a0), std::move(acc)));
     }
   };
   auto go = [&](const List<T1> &l0, List<T2> acc) -> List<T2> {

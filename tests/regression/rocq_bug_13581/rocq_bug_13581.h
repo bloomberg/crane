@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -112,12 +111,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   Nat add(Nat m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (std::holds_alternative<typename Nat::O>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_a0)).add(std::move(m)));
+      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
+      return Nat::s((*d_a0).add(std::move(m)));
     }
   }
 };
@@ -127,7 +125,7 @@ struct RocqBug13581 {
     std::function<t_T0(t_T0)> mixin_f;
 
     // ACCESSORS
-    mixin_of<t_T0> clone() const { return mixin_of<t_T0>{(*(this)).mixin_f}; }
+    mixin_of<t_T0> clone() const { return mixin_of<t_T0>{(*this).mixin_f}; }
   };
 
   static inline const mixin_of<Nat> d =
@@ -138,7 +136,7 @@ struct RocqBug13581 {
     Nat x;
 
     // ACCESSORS
-    R<t_T0> clone() const { return R<t_T0>{(*(this)).g, (*(this)).x.clone()}; }
+    R<t_T0> clone() const { return R<t_T0>{(*this).g, (*this).x.clone()}; }
   };
 
   template <typename T1>
@@ -313,8 +311,7 @@ struct RocqBug13581 {
 
     // ACCESSORS
     J<t_T> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<E>(_sv.v());
+      const auto &[d_a0] = std::get<E>(this->v());
       return J<t_T>(
           E{d_a0 ? std::make_unique<RocqBug13581::I<t_T>>(d_a0->clone())
                  : nullptr});
@@ -374,7 +371,7 @@ struct RocqBug13581 {
       return f;
     } else {
       const auto &[d_a0] = std::get<typename I<T1>::D>(i.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 
@@ -386,23 +383,22 @@ struct RocqBug13581 {
       return f;
     } else {
       const auto &[d_a0] = std::get<typename I<T1>::D>(i.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 
   template <typename T1, typename T2, typename F2>
     requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
-  static T2 J_rect(const T1 &, const T1 &, F2 &&f, const Bool0,
-                   const J<T1> &j) {
+  static T2 J_rect(const T1 &, const T1 &, F2 &&f, Bool0, const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
-    return f(*(d_a0));
+    return f(*d_a0);
   }
 
   template <typename T1, typename T2, typename F2>
     requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
-  static T2 J_rec(const T1 &, const T1 &, F2 &&f, const Bool0, const J<T1> &j) {
+  static T2 J_rec(const T1 &, const T1 &, F2 &&f, Bool0, const J<T1> &j) {
     const auto &[d_a0] = std::get<typename J<T1>::E>(j.v());
-    return f(*(d_a0));
+    return f(*d_a0);
   }
 
   static inline const I<Nat> c = I<Nat>::d(J<Nat>::e(I<Nat>::c()));

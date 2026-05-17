@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <optional>
-#include <type_traits>
 
 enum class Player { e_BLACK, e_WHITE };
 using cell = std::optional<Player>;

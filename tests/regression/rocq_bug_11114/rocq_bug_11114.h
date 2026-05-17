@@ -2,7 +2,6 @@
 #define INCLUDED_ROCQ_BUG_11114
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -158,13 +157,12 @@ struct RocqBug11114 {
 
     // ACCESSORS
     t clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_k] = std::get<T0>(_sv.v());
+      const auto &[d_k] = std::get<T0>(this->v());
       return t(T0{d_k});
     }
 
     // CREATORS
-    static t t0(unsigned int k) { return t(T0{std::move(k)}); }
+    static t t0(unsigned int k) { return t(T0{k}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -192,9 +190,7 @@ struct RocqBug11114 {
     t _t;
 
     // ACCESSORS
-    pkg clone() const {
-      return pkg{(*(this))._sig.clone(), (*(this))._t.clone()};
-    }
+    pkg clone() const { return pkg{(*this)._sig.clone(), (*this)._t.clone()}; }
   };
 
   template <typename F0>
@@ -210,7 +206,7 @@ struct RocqBug11114 {
   static inline const pkg test_pkg =
       pkg{List<unsigned int>::cons(1u, List<unsigned int>::nil()), t::t0(2u)};
   static inline const pkg test_map =
-      map([](const unsigned int x) { return (x + 1u); }, test_pkg);
+      map([](unsigned int x) { return (x + 1u); }, test_pkg);
 };
 
 #endif // INCLUDED_ROCQ_BUG_11114

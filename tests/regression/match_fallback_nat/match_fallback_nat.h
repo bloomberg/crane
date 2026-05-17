@@ -1,8 +1,6 @@
 #ifndef INCLUDED_MATCH_FALLBACK_NAT
 #define INCLUDED_MATCH_FALLBACK_NAT
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -46,9 +44,8 @@ struct MatchFallbackNat {
 
     // ACCESSORS
     maybe_nat clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<SomeNat>(_sv.v())) {
-        const auto &[d_a0] = std::get<SomeNat>(_sv.v());
+      if (std::holds_alternative<SomeNat>(this->v())) {
+        const auto &[d_a0] = std::get<SomeNat>(this->v());
         return maybe_nat(SomeNat{d_a0});
       } else {
         return maybe_nat(NoneNat{});
@@ -56,9 +53,7 @@ struct MatchFallbackNat {
     }
 
     // CREATORS
-    static maybe_nat somenat(unsigned int a0) {
-      return maybe_nat(SomeNat{std::move(a0)});
-    }
+    static maybe_nat somenat(unsigned int a0) { return maybe_nat(SomeNat{a0}); }
 
     static maybe_nat nonenat() { return maybe_nat(NoneNat{}); }
 

@@ -4,8 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -37,7 +35,7 @@ struct crane_ {
         : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(bool a0, const stream &a1) {
-      return stream(Cons{std::move(a0), std::make_shared<stream>(a1)});
+      return stream(Cons{a0, std::make_shared<stream>(a1)});
     }
 
     static stream lazy_(std::function<stream()> thunk) {
@@ -52,7 +50,7 @@ struct crane_ {
   };
 
   static stream ones();
-  static bool head(const stream s);
+  static bool head(stream s);
   static inline const bool sample = head(ones());
 };
 

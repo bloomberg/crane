@@ -2,8 +2,6 @@
 #define INCLUDED_INIT_STATE_PROPS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,18 +121,17 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
 };
 
 struct InitStateProps {
@@ -144,7 +141,7 @@ struct InitStateProps {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).regs.clone(), (*(this)).rom.clone()};
+      return state{(*this).regs.clone(), (*this).rom.clone()};
     }
   };
 
@@ -158,7 +155,7 @@ struct InitStateProps {
       std::make_pair(test_register_count, test_rom_length);
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {

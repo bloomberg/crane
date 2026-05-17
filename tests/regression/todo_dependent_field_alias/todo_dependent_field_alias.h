@@ -4,9 +4,6 @@
 #include <any>
 #include <concepts>
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename I>
 concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {

@@ -1,6 +1,6 @@
 #include "comparison.h"
 
-unsigned int Comparison::cmp_to_nat(const Comparison::Cmp c) {
+unsigned int Comparison::cmp_to_nat(Comparison::Cmp c) {
   switch (c) {
   case Cmp::e_CMPLT: {
     return 0u;
@@ -16,8 +16,7 @@ unsigned int Comparison::cmp_to_nat(const Comparison::Cmp c) {
   }
 }
 
-Comparison::Cmp Comparison::compare_nats(const unsigned int a,
-                                         const unsigned int b) {
+Comparison::Cmp Comparison::compare_nats(unsigned int a, unsigned int b) {
   if (a < b) {
     return Cmp::e_CMPLT;
   } else {
@@ -29,7 +28,7 @@ Comparison::Cmp Comparison::compare_nats(const unsigned int a,
   }
 }
 
-unsigned int Comparison::max_nat(const unsigned int a, const unsigned int b) {
+unsigned int Comparison::max_nat(unsigned int a, unsigned int b) {
   switch (compare_nats(a, b)) {
   case Cmp::e_CMPLT: {
     return b;
@@ -40,7 +39,7 @@ unsigned int Comparison::max_nat(const unsigned int a, const unsigned int b) {
   }
 }
 
-unsigned int Comparison::min_nat(const unsigned int a, const unsigned int b) {
+unsigned int Comparison::min_nat(unsigned int a, unsigned int b) {
   switch (compare_nats(a, b)) {
   case Cmp::e_CMPGT: {
     return b;
@@ -51,8 +50,8 @@ unsigned int Comparison::min_nat(const unsigned int a, const unsigned int b) {
   }
 }
 
-unsigned int Comparison::clamp(const unsigned int val, const unsigned int lo,
-                               const unsigned int hi) {
+unsigned int Comparison::clamp(unsigned int val, unsigned int lo,
+                               unsigned int hi) {
   switch (compare_nats(val, lo)) {
   case Cmp::e_CMPLT: {
     return lo;
@@ -70,7 +69,7 @@ unsigned int Comparison::clamp(const unsigned int val, const unsigned int lo,
   }
 }
 
-Comparison::Cmp Comparison::flip_cmp(const Comparison::Cmp c) {
+Comparison::Cmp Comparison::flip_cmp(Comparison::Cmp c) {
   switch (c) {
   case Cmp::e_CMPLT: {
     return Cmp::e_CMPGT;

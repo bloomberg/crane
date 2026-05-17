@@ -32,7 +32,7 @@ unsigned int MemSafetyProbe21::tree_sum(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe21::tree &t = *(_f.t);
+      const MemSafetyProbe21::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe21::tree::Leaf>(
               t.v())) {
         _result = 0u;
@@ -58,9 +58,9 @@ unsigned int MemSafetyProbe21::tree_sum(
 /// a constructed tree. The loopifier must store the new tree
 /// somewhere that outlives the iteration.
 unsigned int MemSafetyProbe21::grow_and_sum(MemSafetyProbe21::tree t,
-                                            const unsigned int n) {
+                                            unsigned int n) {
   unsigned int _result;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_t = std::move(t);
   while (true) {
     if (_loop_n <= 0) {
@@ -80,7 +80,7 @@ unsigned int MemSafetyProbe21::grow_and_sum(MemSafetyProbe21::tree t,
 /// The recursive call creates a new tree AND uses the original.
 unsigned int MemSafetyProbe21::double_grow(
     MemSafetyProbe21::tree t,
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -104,7 +104,7 @@ unsigned int MemSafetyProbe21::double_grow(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       MemSafetyProbe21::tree t = std::move(_f.t);
       if (n <= 0) {
         _result = tree_sum(std::move(t));
@@ -125,7 +125,7 @@ unsigned int MemSafetyProbe21::double_grow(
 /// constructed tree.
 unsigned int MemSafetyProbe21::branch_grow(
     const MemSafetyProbe21::tree &t,
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -156,7 +156,7 @@ unsigned int MemSafetyProbe21::branch_grow(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       const MemSafetyProbe21::tree &t = _f.t;
       if (n <= 0) {
         _result = tree_sum(t);
@@ -181,9 +181,9 @@ unsigned int MemSafetyProbe21::branch_grow(
 /// TEST 4: Recursive call where the tree argument is built from
 /// MULTIPLE constructor calls with the original tree embedded.
 unsigned int MemSafetyProbe21::embed_grow(MemSafetyProbe21::tree t,
-                                          const unsigned int n) {
+                                          unsigned int n) {
   unsigned int _result;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_t = std::move(t);
   while (true) {
     if (_loop_n <= 0) {
@@ -202,9 +202,9 @@ unsigned int MemSafetyProbe21::embed_grow(MemSafetyProbe21::tree t,
 
 /// TEST 5: Accumulator pattern with tree building.
 MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
-                                                    const unsigned int n) {
+                                                    unsigned int n) {
   MemSafetyProbe21::tree _result;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_acc = std::move(acc);
   while (true) {
     if (_loop_n <= 0) {
@@ -224,9 +224,9 @@ MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
 /// construction at each level.
 unsigned int MemSafetyProbe21::weave(MemSafetyProbe21::tree t1,
                                      MemSafetyProbe21::tree t2,
-                                     const unsigned int n) {
+                                     unsigned int n) {
   unsigned int _result;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_t2 = std::move(t2);
   MemSafetyProbe21::tree _loop_t1 = std::move(t1);
   while (true) {
@@ -251,7 +251,7 @@ unsigned int MemSafetyProbe21::weave(MemSafetyProbe21::tree t1,
 /// TEST 8: Deep nesting with tree_sum at each level before recursion.
 unsigned int MemSafetyProbe21::sum_and_grow(
     MemSafetyProbe21::tree t,
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -275,7 +275,7 @@ unsigned int MemSafetyProbe21::sum_and_grow(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       MemSafetyProbe21::tree t = std::move(_f.t);
       if (n <= 0) {
         _result = tree_sum(std::move(t));

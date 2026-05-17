@@ -1,20 +1,20 @@
 #include "sigma_types.h"
 
-SigT<unsigned int, std::any> SigmaTypes::nat_with_double(const unsigned int n) {
+SigT<unsigned int, std::any> SigmaTypes::nat_with_double(unsigned int n) {
   return SigT<unsigned int, std::any>::existt((n + n), std::any{});
 }
 
-Sig<unsigned int> SigmaTypes::positive_succ(const unsigned int n) {
+Sig<unsigned int> SigmaTypes::positive_succ(unsigned int n) {
   return Sig<unsigned int>::exist((n + 1));
 }
 
-unsigned int SigmaTypes::get_positive(const unsigned int n) {
+unsigned int SigmaTypes::get_positive(unsigned int n) {
   auto &&_sv = positive_succ(n);
   const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
   return d_x;
 }
 
-Sig<unsigned int> SigmaTypes::double_positive(const unsigned int n) {
+Sig<unsigned int> SigmaTypes::double_positive(unsigned int n) {
   Sig<unsigned int> p = positive_succ(n);
   return Sig<unsigned int>::exist(
       ([=]() mutable {
@@ -27,11 +27,11 @@ Sig<unsigned int> SigmaTypes::double_positive(const unsigned int n) {
        }()));
 }
 
-unsigned int SigmaTypes::use_nat_double(const unsigned int n) {
+unsigned int SigmaTypes::use_nat_double(unsigned int n) {
   return nat_with_double(n).projT1();
 }
 
-List<unsigned int> SigmaTypes::positives_up_to(const unsigned int k) {
+List<unsigned int> SigmaTypes::positives_up_to(unsigned int k) {
   if (k <= 0) {
     return List<unsigned int>::nil();
   } else {

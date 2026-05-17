@@ -4,8 +4,7 @@
 /// The match branch has reuse candidates: both AsNat and AsPair
 /// have arity 2.
 ReuseMixedFields::payload
-ReuseMixedFields::swap_tag_or_id(ReuseMixedFields::payload p,
-                                 const bool do_swap) {
+ReuseMixedFields::swap_tag_or_id(ReuseMixedFields::payload p, bool do_swap) {
   if (do_swap) {
     if (std::holds_alternative<typename ReuseMixedFields::payload::AsNat>(
             p.v_mut())) {

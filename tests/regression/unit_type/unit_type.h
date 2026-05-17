@@ -1,17 +1,15 @@
 #ifndef INCLUDED_UNIT_TYPE
 #define INCLUDED_UNIT_TYPE
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 struct UnitType {
   static inline const std::monostate unit_val = std::monostate{};
-  static void return_unit(const unsigned int _x);
-  static unsigned int take_unit(const std::monostate _x);
-  static unsigned int match_unit(const std::monostate u);
+  static void return_unit(unsigned int _x);
+  static unsigned int take_unit(std::monostate _x);
+  static unsigned int match_unit(std::monostate u);
 
   template <typename t_A, typename t_B> struct pair {
     // TYPES
@@ -48,8 +46,7 @@ struct UnitType {
 
     // ACCESSORS
     pair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Pair0>(this->v());
       return pair<t_A, t_B>(Pair0{d_a0, d_a1});
     }
 
@@ -91,7 +88,7 @@ struct UnitType {
   static inline const pair<std::monostate, std::monostate> unit_pair =
       pair<std::monostate, std::monostate>::pair0(std::monostate{},
                                                   std::monostate{});
-  static void unit_to_unit(const std::monostate u);
+  static void unit_to_unit(std::monostate u);
 
   template <typename T1, typename T2> static T2 seq(const T1 &, T2 b) {
     return b;

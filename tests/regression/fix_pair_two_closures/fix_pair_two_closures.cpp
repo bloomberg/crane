@@ -7,7 +7,7 @@
 /// dangle after make_ops returns.
 std::pair<std::function<unsigned int(unsigned int)>,
           std::function<unsigned int(unsigned int)>>
-FixPairTwoClosures::make_ops(const unsigned int a, const unsigned int b) {
+FixPairTwoClosures::make_ops(unsigned int a, unsigned int b) {
   auto f_impl = [=](auto &_self_f, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return a;

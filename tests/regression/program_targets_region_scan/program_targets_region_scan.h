@@ -125,12 +125,11 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   bool forallb(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (f(d_a0) && (*(d_a1)).forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) && (*d_a1).forallb(f));
     }
   }
 };
@@ -181,12 +180,11 @@ struct ProgramTargetsRegionScan {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JUN>(_sv.v())) {
-        const auto &[d_a0] = std::get<JUN>(_sv.v());
+      if (std::holds_alternative<JUN>(this->v())) {
+        const auto &[d_a0] = std::get<JUN>(this->v());
         return instruction(JUN{d_a0});
-      } else if (std::holds_alternative<JMS>(_sv.v())) {
-        const auto &[d_a0] = std::get<JMS>(_sv.v());
+      } else if (std::holds_alternative<JMS>(this->v())) {
+        const auto &[d_a0] = std::get<JMS>(this->v());
         return instruction(JMS{d_a0});
       } else {
         return instruction(NOP{});
@@ -194,13 +192,9 @@ struct ProgramTargetsRegionScan {
     }
 
     // CREATORS
-    static instruction jun(unsigned int a0) {
-      return instruction(JUN{std::move(a0)});
-    }
+    static instruction jun(unsigned int a0) { return instruction(JUN{a0}); }
 
-    static instruction jms(unsigned int a0) {
-      return instruction(JMS{std::move(a0)});
-    }
+    static instruction jms(unsigned int a0) { return instruction(JMS{a0}); }
 
     static instruction nop() { return instruction(NOP{}); }
 
@@ -247,12 +241,12 @@ struct ProgramTargetsRegionScan {
 
     // ACCESSORS
     layout clone() const {
-      return layout{(*(this)).base_addr, (*(this)).code_size};
+      return layout{(*this).base_addr, (*this).code_size};
     }
   };
 
   static std::optional<unsigned int> jump_target(const instruction &i);
-  static bool addr_in_regionb(const unsigned int addr, const layout &l);
+  static bool addr_in_regionb(unsigned int addr, const layout &l);
   static bool target_in_layoutb(const layout &l, const instruction &i);
   static bool program_targets_okb(const List<instruction> &prog,
                                   const layout &l);

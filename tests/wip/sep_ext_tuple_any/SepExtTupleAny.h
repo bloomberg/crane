@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTTUPLEANY
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
@@ -22,9 +19,9 @@ template <SymTypes Ty> struct Defs {
   using symbols_semty = tuple;
 
   static typename Ty::symbol_semty
-  get_first(const typename Ty::symbol,
+  get_first(typename Ty::symbol,
             const typename Datatypes::template List<typename Ty::symbol> &,
-            const symbols_semty vs) {
+            symbols_semty vs) {
     return std::any_cast<std::pair<std::any, std::any>>(vs).first;
   }
 };

@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -921,12 +920,11 @@ public:
 
   // ACCESSORS
   Uint1 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
-      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
+    if (std::holds_alternative<UIntDecimal>(this->v())) {
+      const auto &[d_u] = std::get<UIntDecimal>(this->v());
       return Uint1(UIntDecimal{d_u.clone()});
     } else {
-      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
+      const auto &[d_u] = std::get<UIntHexadecimal>(this->v());
       return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
@@ -946,13 +944,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int n, const unsigned int m);
-  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
-                                  const unsigned int m);
-  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
+  static unsigned int tail_add(unsigned int n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, unsigned int n,
+                                  unsigned int m);
+  static unsigned int tail_mul(unsigned int n, unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };
@@ -980,7 +978,7 @@ struct NumeralEdge {
   static inline const int64_t mul_numerals = (INT64_C(10) * INT64_C(20));
   static inline const int64_t sub_numerals = (INT64_C(100) - INT64_C(1));
   /// 6. Numeral as function argument
-  static unsigned int take_nat(const unsigned int n);
+  static unsigned int take_nat(unsigned int n);
   static inline const unsigned int test_arg = take_nat(42u);
   /// 7. Numeral in list
   static inline const List<unsigned int> nat_list = List<unsigned int>::cons(
@@ -993,9 +991,9 @@ struct NumeralEdge {
   static inline const std::pair<unsigned int, unsigned int> nat_pair =
       std::make_pair(10u, 20u);
   /// 10. Numeral in match
-  static unsigned int classify(const unsigned int n);
+  static unsigned int classify(unsigned int n);
   /// 11. Comparison with numeral
-  static bool is_big(const unsigned int n);
+  static bool is_big(unsigned int n);
   /// 12. Multiple Z values in one function
   static inline const int64_t z_arith =
       (INT64_C(10) + (INT64_C(3) * INT64_C(7)));

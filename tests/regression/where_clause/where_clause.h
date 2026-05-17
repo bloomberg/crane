@@ -2,7 +2,6 @@
 #define INCLUDED_WHERE_CLAUSE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -103,7 +102,7 @@ struct WhereClause {
     }
 
     // CREATORS
-    static Expr num(unsigned int a0) { return Expr(Num{std::move(a0)}); }
+    static Expr num(unsigned int a0) { return Expr(Num{a0}); }
 
     static Expr plus(Expr a0, Expr a1) {
       return Expr(Plus{std::make_unique<Expr>(std::move(a0)),
@@ -155,29 +154,27 @@ struct WhereClause {
     const variant_t &v() const { return d_v_; }
 
     unsigned int expr_size() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
         return 1u;
-      } else if (std::holds_alternative<typename Expr::Plus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(_sv.v());
-        return ((1u + (*(d_a0)).expr_size()) + (*(d_a1)).expr_size());
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(this->v());
+        return ((1u + (*d_a0).expr_size()) + (*d_a1).expr_size());
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(_sv.v());
-        return ((1u + (*(d_a0)).expr_size()) + (*(d_a1)).expr_size());
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(this->v());
+        return ((1u + (*d_a0).expr_size()) + (*d_a1).expr_size());
       }
     }
 
     unsigned int eval() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename Expr::Num>(_sv.v());
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
+        const auto &[d_a0] = std::get<typename Expr::Num>(this->v());
         return d_a0;
-      } else if (std::holds_alternative<typename Expr::Plus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(_sv.v());
-        return ((*(d_a0)).eval() + (*(d_a1)).eval());
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(this->v());
+        return ((*d_a0).eval() + (*d_a1).eval());
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(_sv.v());
-        return ((*(d_a0)).eval() * (*(d_a1)).eval());
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(this->v());
+        return ((*d_a0).eval() * (*d_a1).eval());
       }
     }
 
@@ -186,18 +183,17 @@ struct WhereClause {
                std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
     T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename Expr::Num>(_sv.v());
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
+        const auto &[d_a0] = std::get<typename Expr::Num>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename Expr::Plus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template Expr_rec<T1>(f, f0, f1), *(d_a1),
-                  (*(d_a1)).template Expr_rec<T1>(f, f0, f1));
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(this->v());
+        return f0(*d_a0, (*d_a0).template Expr_rec<T1>(f, f0, f1), *d_a1,
+                  (*d_a1).template Expr_rec<T1>(f, f0, f1));
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(_sv.v());
-        return f1(*(d_a0), (*(d_a0)).template Expr_rec<T1>(f, f0, f1), *(d_a1),
-                  (*(d_a1)).template Expr_rec<T1>(f, f0, f1));
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(this->v());
+        return f1(*d_a0, (*d_a0).template Expr_rec<T1>(f, f0, f1), *d_a1,
+                  (*d_a1).template Expr_rec<T1>(f, f0, f1));
       }
     }
 
@@ -206,18 +202,17 @@ struct WhereClause {
                std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
     T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename Expr::Num>(_sv.v());
+      if (std::holds_alternative<typename Expr::Num>(this->v())) {
+        const auto &[d_a0] = std::get<typename Expr::Num>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename Expr::Plus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template Expr_rect<T1>(f, f0, f1), *(d_a1),
-                  (*(d_a1)).template Expr_rect<T1>(f, f0, f1));
+      } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Plus>(this->v());
+        return f0(*d_a0, (*d_a0).template Expr_rect<T1>(f, f0, f1), *d_a1,
+                  (*d_a1).template Expr_rect<T1>(f, f0, f1));
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(_sv.v());
-        return f1(*(d_a0), (*(d_a0)).template Expr_rect<T1>(f, f0, f1), *(d_a1),
-                  (*(d_a1)).template Expr_rect<T1>(f, f0, f1));
+        const auto &[d_a0, d_a1] = std::get<typename Expr::Times>(this->v());
+        return f1(*d_a0, (*d_a0).template Expr_rect<T1>(f, f0, f1), *d_a1,
+                  (*d_a1).template Expr_rect<T1>(f, f0, f1));
       }
     }
   };
@@ -396,20 +391,19 @@ struct WhereClause {
     const variant_t &v() const { return d_v_; }
 
     bool beval() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
+      if (std::holds_alternative<typename BExpr::BTrue>(this->v())) {
         return true;
-      } else if (std::holds_alternative<typename BExpr::BFalse>(_sv.v())) {
+      } else if (std::holds_alternative<typename BExpr::BFalse>(this->v())) {
         return false;
-      } else if (std::holds_alternative<typename BExpr::BAnd>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(_sv.v());
-        return ((*(d_a0)).beval() && (*(d_a1)).beval());
-      } else if (std::holds_alternative<typename BExpr::BOr>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(_sv.v());
-        return ((*(d_a0)).beval() || (*(d_a1)).beval());
+      } else if (std::holds_alternative<typename BExpr::BAnd>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(this->v());
+        return ((*d_a0).beval() && (*d_a1).beval());
+      } else if (std::holds_alternative<typename BExpr::BOr>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(this->v());
+        return ((*d_a0).beval() || (*d_a1).beval());
       } else {
-        const auto &[d_a0] = std::get<typename BExpr::BNot>(_sv.v());
-        return !((*(d_a0)).beval());
+        const auto &[d_a0] = std::get<typename BExpr::BNot>(this->v());
+        return !((*d_a0).beval());
       }
     }
 
@@ -418,22 +412,21 @@ struct WhereClause {
                std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
     T1 BExpr_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
+      if (std::holds_alternative<typename BExpr::BTrue>(this->v())) {
         return f;
-      } else if (std::holds_alternative<typename BExpr::BFalse>(_sv.v())) {
+      } else if (std::holds_alternative<typename BExpr::BFalse>(this->v())) {
         return f0;
-      } else if (std::holds_alternative<typename BExpr::BAnd>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(_sv.v());
-        return f1(*(d_a0), (*(d_a0)).template BExpr_rec<T1>(f, f0, f1, f2, f3),
-                  *(d_a1), (*(d_a1)).template BExpr_rec<T1>(f, f0, f1, f2, f3));
-      } else if (std::holds_alternative<typename BExpr::BOr>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(_sv.v());
-        return f2(*(d_a0), (*(d_a0)).template BExpr_rec<T1>(f, f0, f1, f2, f3),
-                  *(d_a1), (*(d_a1)).template BExpr_rec<T1>(f, f0, f1, f2, f3));
+      } else if (std::holds_alternative<typename BExpr::BAnd>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(this->v());
+        return f1(*d_a0, (*d_a0).template BExpr_rec<T1>(f, f0, f1, f2, f3),
+                  *d_a1, (*d_a1).template BExpr_rec<T1>(f, f0, f1, f2, f3));
+      } else if (std::holds_alternative<typename BExpr::BOr>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(this->v());
+        return f2(*d_a0, (*d_a0).template BExpr_rec<T1>(f, f0, f1, f2, f3),
+                  *d_a1, (*d_a1).template BExpr_rec<T1>(f, f0, f1, f2, f3));
       } else {
-        const auto &[d_a0] = std::get<typename BExpr::BNot>(_sv.v());
-        return f3(*(d_a0), (*(d_a0)).template BExpr_rec<T1>(f, f0, f1, f2, f3));
+        const auto &[d_a0] = std::get<typename BExpr::BNot>(this->v());
+        return f3(*d_a0, (*d_a0).template BExpr_rec<T1>(f, f0, f1, f2, f3));
       }
     }
 
@@ -442,25 +435,21 @@ struct WhereClause {
                std::is_invocable_r_v<T1, F3 &, BExpr &, T1 &, BExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F4 &, BExpr &, T1 &>
     T1 BExpr_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2, F4 &&f3) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
+      if (std::holds_alternative<typename BExpr::BTrue>(this->v())) {
         return f;
-      } else if (std::holds_alternative<typename BExpr::BFalse>(_sv.v())) {
+      } else if (std::holds_alternative<typename BExpr::BFalse>(this->v())) {
         return f0;
-      } else if (std::holds_alternative<typename BExpr::BAnd>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(_sv.v());
-        return f1(*(d_a0), (*(d_a0)).template BExpr_rect<T1>(f, f0, f1, f2, f3),
-                  *(d_a1),
-                  (*(d_a1)).template BExpr_rect<T1>(f, f0, f1, f2, f3));
-      } else if (std::holds_alternative<typename BExpr::BOr>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(_sv.v());
-        return f2(*(d_a0), (*(d_a0)).template BExpr_rect<T1>(f, f0, f1, f2, f3),
-                  *(d_a1),
-                  (*(d_a1)).template BExpr_rect<T1>(f, f0, f1, f2, f3));
+      } else if (std::holds_alternative<typename BExpr::BAnd>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BAnd>(this->v());
+        return f1(*d_a0, (*d_a0).template BExpr_rect<T1>(f, f0, f1, f2, f3),
+                  *d_a1, (*d_a1).template BExpr_rect<T1>(f, f0, f1, f2, f3));
+      } else if (std::holds_alternative<typename BExpr::BOr>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename BExpr::BOr>(this->v());
+        return f2(*d_a0, (*d_a0).template BExpr_rect<T1>(f, f0, f1, f2, f3),
+                  *d_a1, (*d_a1).template BExpr_rect<T1>(f, f0, f1, f2, f3));
       } else {
-        const auto &[d_a0] = std::get<typename BExpr::BNot>(_sv.v());
-        return f3(*(d_a0),
-                  (*(d_a0)).template BExpr_rect<T1>(f, f0, f1, f2, f3));
+        const auto &[d_a0] = std::get<typename BExpr::BNot>(this->v());
+        return f3(*d_a0, (*d_a0).template BExpr_rect<T1>(f, f0, f1, f2, f3));
       }
     }
   };
@@ -561,7 +550,7 @@ struct WhereClause {
     }
 
     // CREATORS
-    static AExpr anum(unsigned int a0) { return AExpr(ANum{std::move(a0)}); }
+    static AExpr anum(unsigned int a0) { return AExpr(ANum{a0}); }
 
     static AExpr aplus(AExpr a0, AExpr a1) {
       return AExpr(APlus{std::make_unique<AExpr>(std::move(a0)),
@@ -613,19 +602,19 @@ struct WhereClause {
     const variant_t &v() const { return d_v_; }
 
     unsigned int aeval() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename AExpr::ANum>(_sv.v());
+      if (std::holds_alternative<typename AExpr::ANum>(this->v())) {
+        const auto &[d_a0] = std::get<typename AExpr::ANum>(this->v());
         return d_a0;
-      } else if (std::holds_alternative<typename AExpr::APlus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename AExpr::APlus>(_sv.v());
-        return ((*(d_a0)).aeval() + (*(d_a1)).aeval());
+      } else if (std::holds_alternative<typename AExpr::APlus>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename AExpr::APlus>(this->v());
+        return ((*d_a0).aeval() + (*d_a1).aeval());
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename AExpr::AIf>(_sv.v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename AExpr::AIf>(this->v());
         if (d_a0.beval()) {
-          return (*(d_a1)).aeval();
+          return (*d_a1).aeval();
         } else {
-          return (*(d_a2)).aeval();
+          return (*d_a2).aeval();
         }
       }
     }
@@ -636,18 +625,18 @@ struct WhereClause {
                std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
                                      T1 &>
     T1 AExpr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename AExpr::ANum>(_sv.v());
+      if (std::holds_alternative<typename AExpr::ANum>(this->v())) {
+        const auto &[d_a0] = std::get<typename AExpr::ANum>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename AExpr::APlus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename AExpr::APlus>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template AExpr_rec<T1>(f, f0, f1), *(d_a1),
-                  (*(d_a1)).template AExpr_rec<T1>(f, f0, f1));
+      } else if (std::holds_alternative<typename AExpr::APlus>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename AExpr::APlus>(this->v());
+        return f0(*d_a0, (*d_a0).template AExpr_rec<T1>(f, f0, f1), *d_a1,
+                  (*d_a1).template AExpr_rec<T1>(f, f0, f1));
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename AExpr::AIf>(_sv.v());
-        return f1(d_a0, *(d_a1), (*(d_a1)).template AExpr_rec<T1>(f, f0, f1),
-                  *(d_a2), (*(d_a2)).template AExpr_rec<T1>(f, f0, f1));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename AExpr::AIf>(this->v());
+        return f1(d_a0, *d_a1, (*d_a1).template AExpr_rec<T1>(f, f0, f1), *d_a2,
+                  (*d_a2).template AExpr_rec<T1>(f, f0, f1));
       }
     }
 
@@ -657,18 +646,18 @@ struct WhereClause {
                std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
                                      T1 &>
     T1 AExpr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename AExpr::ANum>(_sv.v());
+      if (std::holds_alternative<typename AExpr::ANum>(this->v())) {
+        const auto &[d_a0] = std::get<typename AExpr::ANum>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename AExpr::APlus>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename AExpr::APlus>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template AExpr_rect<T1>(f, f0, f1),
-                  *(d_a1), (*(d_a1)).template AExpr_rect<T1>(f, f0, f1));
+      } else if (std::holds_alternative<typename AExpr::APlus>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<typename AExpr::APlus>(this->v());
+        return f0(*d_a0, (*d_a0).template AExpr_rect<T1>(f, f0, f1), *d_a1,
+                  (*d_a1).template AExpr_rect<T1>(f, f0, f1));
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename AExpr::AIf>(_sv.v());
-        return f1(d_a0, *(d_a1), (*(d_a1)).template AExpr_rect<T1>(f, f0, f1),
-                  *(d_a2), (*(d_a2)).template AExpr_rect<T1>(f, f0, f1));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename AExpr::AIf>(this->v());
+        return f1(d_a0, *d_a1, (*d_a1).template AExpr_rect<T1>(f, f0, f1),
+                  *d_a2, (*d_a2).template AExpr_rect<T1>(f, f0, f1));
       }
     }
   };

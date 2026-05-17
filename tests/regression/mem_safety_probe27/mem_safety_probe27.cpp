@@ -32,7 +32,7 @@ unsigned int MemSafetyProbe27::tree_sum(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe27::tree &t = *(_f.t);
+      const MemSafetyProbe27::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe27::tree::Leaf>(
               t.v())) {
         _result = 0u;
@@ -86,7 +86,7 @@ unsigned int MemSafetyProbe27::tree_depth(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe27::tree &t = *(_f.t);
+      const MemSafetyProbe27::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe27::tree::Leaf>(
               t.v())) {
         _result = 0u;
@@ -114,21 +114,20 @@ unsigned int MemSafetyProbe27::tree_depth(
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 MemSafetyProbe27::pair_with_fn(MemSafetyProbe27::tree t) {
   return std::make_pair(
-      [=](const unsigned int x) mutable { return (x + tree_sum(t)); },
-      tree_sum(t));
+      [=](unsigned int x) mutable { return (x + tree_sum(t)); }, tree_sum(t));
 }
 
 /// TEST 2: if/else returning different closures in a pair.
 /// After IIFE inlining, this becomes a top-level Sif.
 /// return_captures_by_value may not process inner returns.
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
-MemSafetyProbe27::cond_pair_fn(MemSafetyProbe27::tree t, const bool b) {
+MemSafetyProbe27::cond_pair_fn(MemSafetyProbe27::tree t, bool b) {
   if (b) {
     return std::make_pair(
-        [=](const unsigned int x) mutable { return (x + tree_sum(t)); }, 1u);
+        [=](unsigned int x) mutable { return (x + tree_sum(t)); }, 1u);
   } else {
     return std::make_pair(
-        [=](const unsigned int x) mutable { return (x + tree_depth(t)); }, 2u);
+        [=](unsigned int x) mutable { return (x + tree_depth(t)); }, 2u);
   }
 }
 
@@ -137,7 +136,7 @@ std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 MemSafetyProbe27::pair_two_trees(MemSafetyProbe27::tree t1,
                                  MemSafetyProbe27::tree t2) {
   return std::make_pair(
-      [=](const unsigned int x) mutable {
+      [=](unsigned int x) mutable {
         return ((x + tree_sum(t1)) + tree_sum(t2));
       },
       tree_sum(t1));
@@ -145,10 +144,10 @@ MemSafetyProbe27::pair_two_trees(MemSafetyProbe27::tree t1,
 
 /// TEST 4: Closure stored in option (no match on tree).
 std::optional<std::function<unsigned int(unsigned int)>>
-MemSafetyProbe27::opt_tree_fn(MemSafetyProbe27::tree t, const bool b) {
+MemSafetyProbe27::opt_tree_fn(MemSafetyProbe27::tree t, bool b) {
   if (b) {
     return std::make_optional<std::function<unsigned int(unsigned int)>>(
-        [=](const unsigned int x) mutable { return (x + tree_sum(t)); });
+        [=](unsigned int x) mutable { return (x + tree_sum(t)); });
   } else {
     return std::optional<std::function<unsigned int(unsigned int)>>();
   }
@@ -158,9 +157,10 @@ MemSafetyProbe27::opt_tree_fn(MemSafetyProbe27::tree t, const bool b) {
 /// Tests that the inner closure correctly clones the tree.
 std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
 MemSafetyProbe27::nested_closure_pair(MemSafetyProbe27::tree t) {
-  std::function<unsigned int(unsigned int)> f =
-      [=](const unsigned int x) mutable { return (x + tree_sum(t)); };
-  return std::make_pair([=](const unsigned int x) mutable { return f(f(x)); },
+  std::function<unsigned int(unsigned int)> f = [=](unsigned int x) mutable {
+    return (x + tree_sum(t));
+  };
+  return std::make_pair([=](unsigned int x) mutable { return f(f(x)); },
                         tree_sum(std::move(t)));
 }
 
@@ -171,8 +171,8 @@ std::pair<std::pair<std::function<unsigned int(unsigned int)>,
 MemSafetyProbe27::triple_fns(MemSafetyProbe27::tree t) {
   return std::make_pair(
       std::make_pair(
-          [=](const unsigned int x) mutable { return (x + tree_sum(t)); },
-          [=](const unsigned int x) mutable { return (x + tree_depth(t)); }),
+          [=](unsigned int x) mutable { return (x + tree_sum(t)); },
+          [=](unsigned int x) mutable { return (x + tree_depth(t)); }),
       (tree_sum(t) + tree_depth(t)));
 }
 
@@ -182,17 +182,17 @@ MemSafetyProbe27::triple_fns(MemSafetyProbe27::tree t) {
 std::pair<std::function<unsigned int(unsigned int)>, MemSafetyProbe27::tree>
 MemSafetyProbe27::fn_and_tree(MemSafetyProbe27::tree t) {
   return std::make_pair(
-      [=](const unsigned int x) mutable { return (x + tree_sum(t)); }, t);
+      [=](unsigned int x) mutable { return (x + tree_sum(t)); }, t);
 }
 
 /// TEST 8: Closure captures tree, stored in option inside a pair.
 /// Multiple levels of wrapping.
 std::pair<std::optional<std::function<unsigned int(unsigned int)>>,
           unsigned int>
-MemSafetyProbe27::wrapped_fn(MemSafetyProbe27::tree t, const bool b) {
+MemSafetyProbe27::wrapped_fn(MemSafetyProbe27::tree t, bool b) {
   return std::make_pair(
       (b ? std::make_optional<std::function<unsigned int(unsigned int)>>(
-               [=](const unsigned int x) mutable { return (x + tree_sum(t)); })
+               [=](unsigned int x) mutable { return (x + tree_sum(t)); })
          : std::optional<std::function<unsigned int(unsigned int)>>()),
       tree_sum(t));
 }

@@ -2,8 +2,6 @@
 #define INCLUDED_IND_PARAM
 
 #include <concepts>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -59,12 +57,11 @@ struct IndParam {
 
       // ACCESSORS
       result clone() const {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<Ok>(_sv.v())) {
-          const auto &[d_a0] = std::get<Ok>(_sv.v());
+        if (std::holds_alternative<Ok>(this->v())) {
+          const auto &[d_a0] = std::get<Ok>(this->v());
           return result(Ok{d_a0.clone()});
         } else {
-          const auto &[d_a0] = std::get<Err>(_sv.v());
+          const auto &[d_a0] = std::get<Err>(this->v());
           return result(Err{d_a0});
         }
       }
@@ -72,7 +69,7 @@ struct IndParam {
       // CREATORS
       static result ok(typename C::t a0) { return result(Ok{std::move(a0)}); }
 
-      static result err(unsigned int a0) { return result(Err{std::move(a0)}); }
+      static result err(unsigned int a0) { return result(Err{a0}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return d_v_; }
@@ -107,12 +104,11 @@ struct IndParam {
       }
     }
 
-    static result make_single(const typename C::elem e) {
+    static result make_single(typename C::elem e) {
       return result::ok(C::t::single(e));
     }
 
-    static result make_pair(const typename C::elem e1,
-                            const typename C::elem e2) {
+    static result make_pair(typename C::elem e1, typename C::elem e2) {
       return result::ok(C::t::pair(e1, e2));
     }
 
@@ -184,14 +180,13 @@ struct IndParam {
 
       // ACCESSORS
       t clone() const {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<Empty>(_sv.v())) {
+        if (std::holds_alternative<Empty>(this->v())) {
           return t(Empty{});
-        } else if (std::holds_alternative<Single>(_sv.v())) {
-          const auto &[d_a0] = std::get<Single>(_sv.v());
+        } else if (std::holds_alternative<Single>(this->v())) {
+          const auto &[d_a0] = std::get<Single>(this->v());
           return t(Single{d_a0});
         } else {
-          const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
+          const auto &[d_a0, d_a1] = std::get<Pair>(this->v());
           return t(Pair{d_a0, d_a1});
         }
       }

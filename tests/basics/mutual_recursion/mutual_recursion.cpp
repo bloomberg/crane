@@ -1,6 +1,6 @@
 #include "mutual_recursion.h"
 
-bool MutualRecursion::is_even(const unsigned int n) {
+bool MutualRecursion::is_even(unsigned int n) {
   if (n <= 0) {
     return true;
   } else {
@@ -9,7 +9,7 @@ bool MutualRecursion::is_even(const unsigned int n) {
   }
 }
 
-bool MutualRecursion::is_odd(const unsigned int n) {
+bool MutualRecursion::is_odd(unsigned int n) {
   if (n <= 0) {
     return false;
   } else {
@@ -28,7 +28,7 @@ MutualRecursion::tree_sum(const MutualRecursion::tree<unsigned int> &t) {
   } else {
     const auto &[d_a0] =
         std::get<typename MutualRecursion::tree<unsigned int>::Node>(t.v());
-    return forest_sum(*(d_a0));
+    return forest_sum(*d_a0);
   }
 }
 
@@ -40,6 +40,6 @@ MutualRecursion::forest_sum(const MutualRecursion::forest<unsigned int> &f) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename MutualRecursion::forest<unsigned int>::Trees>(f.v());
-    return (tree_sum(*(d_a0)) + forest_sum(*(d_a1)));
+    return (tree_sum(*d_a0) + forest_sum(*d_a1));
   }
 }

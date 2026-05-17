@@ -2,7 +2,6 @@
 #define INCLUDED_DEEP_APP
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -155,13 +154,13 @@ struct DeepApp {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = *(_f.m);
+        const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -202,13 +201,13 @@ struct DeepApp {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = *(_f.m);
+        const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -220,8 +219,7 @@ struct DeepApp {
   }
 
   /// Tail-recursive builder — loopified.
-  static mylist<unsigned int> build(const unsigned int n,
-                                    mylist<unsigned int> acc);
+  static mylist<unsigned int> build(unsigned int n, mylist<unsigned int> acc);
 
   /// Recursive app — NOT tail-recursive, so loopification won't help
   /// unless TMC kicks in.  Even with TMC, the destructor chain for
@@ -234,21 +232,21 @@ struct DeepApp {
     const mylist<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1->v())) {
-        *(_write) = std::make_unique<mylist<T1>>(std::move(_loop_l2));
+        *_write = std::make_unique<mylist<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l1->v());
         auto _cell = std::make_unique<mylist<T1>>(
             typename mylist<T1>::Mycons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).d_a1;
         _loop_l1 = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   } /// Recursive map — same issue.
 
   template <typename T1, typename T2, typename F0>
@@ -259,21 +257,21 @@ struct DeepApp {
     const mylist<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
-        *(_write) = std::make_unique<mylist<T2>>(mylist<T2>::mynil());
+        *_write = std::make_unique<mylist<T2>>(mylist<T2>::mynil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l->v());
         auto _cell = std::make_unique<mylist<T2>>(
             typename mylist<T2>::Mycons(f(d_a0), nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename mylist<T2>::Mycons>((*_write)->v_mut()).d_a1;
         _loop_l = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// Identity map to force traversal.
@@ -306,7 +304,7 @@ struct DeepApp {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &l = *(_f.l);
+        const mylist<T1> &l = *_f.l;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
           _result = 0u;
         } else {

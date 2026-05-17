@@ -4,9 +4,6 @@
 #include <any>
 #include <concepts>
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 template <typename I>concept Pack = requires (typename I::carrier

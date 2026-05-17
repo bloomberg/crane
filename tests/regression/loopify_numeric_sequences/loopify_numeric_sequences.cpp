@@ -1,8 +1,8 @@
 #include "loopify_numeric_sequences.h"
 
 unsigned int LoopifyNumericSequences::collatz_length_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -31,8 +31,8 @@ unsigned int LoopifyNumericSequences::collatz_length_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -60,33 +60,32 @@ unsigned int LoopifyNumericSequences::collatz_length_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumericSequences::collatz_length(const unsigned int n) {
+unsigned int LoopifyNumericSequences::collatz_length(unsigned int n) {
   return collatz_length_fuel((n * 100u), n);
 }
 
 List<unsigned int>
-LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
-                                               const unsigned int n) {
+LoopifyNumericSequences::collatz_sequence_fuel(unsigned int fuel,
+                                               unsigned int n) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_n = n;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_n = std::move(n);
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_n <= 1u) {
-        *(_write) = std::make_unique<List<unsigned int>>(
+        *_write = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(1u, List<unsigned int>::nil()));
         break;
       } else {
         if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(_loop_n, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -96,7 +95,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
               typename List<unsigned int>::Cons(_loop_n, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -107,17 +106,16 @@ LoopifyNumericSequences::collatz_sequence_fuel(const unsigned int fuel,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-List<unsigned int>
-LoopifyNumericSequences::collatz_sequence(const unsigned int n) {
+List<unsigned int> LoopifyNumericSequences::collatz_sequence(unsigned int n) {
   return collatz_sequence_fuel((n * 100u), n);
 }
 
 unsigned int LoopifyNumericSequences::tribonacci_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -159,8 +157,8 @@ unsigned int LoopifyNumericSequences::tribonacci_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -199,13 +197,13 @@ unsigned int LoopifyNumericSequences::tribonacci_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumericSequences::tribonacci(const unsigned int n) {
+unsigned int LoopifyNumericSequences::tribonacci(unsigned int n) {
   return tribonacci_fuel((n * 3u), n);
 }
 
 unsigned int LoopifyNumericSequences::staircase_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -247,8 +245,8 @@ unsigned int LoopifyNumericSequences::staircase_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 1u;
       } else {
@@ -282,13 +280,13 @@ unsigned int LoopifyNumericSequences::staircase_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumericSequences::staircase(const unsigned int n) {
+unsigned int LoopifyNumericSequences::staircase(unsigned int n) {
   return staircase_fuel((n * 3u), n);
 }
 
 unsigned int LoopifyNumericSequences::digitsum_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -298,8 +296,8 @@ unsigned int LoopifyNumericSequences::digitsum_fuel(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype((10u ? std::declval<const unsigned int &>() % 10u
-                  : std::declval<const unsigned int &>())) _s0;
+    decltype((10u ? std::declval<unsigned int &>() % 10u
+                  : std::declval<unsigned int &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -313,8 +311,8 @@ unsigned int LoopifyNumericSequences::digitsum_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -334,13 +332,13 @@ unsigned int LoopifyNumericSequences::digitsum_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumericSequences::digitsum(const unsigned int n) {
+unsigned int LoopifyNumericSequences::digitsum(unsigned int n) {
   return digitsum_fuel((n + 1u), n);
 }
 
 unsigned int LoopifyNumericSequences::dec_to_bin_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -350,8 +348,8 @@ unsigned int LoopifyNumericSequences::dec_to_bin_fuel(
 
   /// _Resume1: saves [_s0, _s1], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype((2u ? std::declval<const unsigned int &>() % 2u
-                 : std::declval<const unsigned int &>())) _s0;
+    decltype((2u ? std::declval<unsigned int &>() % 2u
+                 : std::declval<unsigned int &>())) _s0;
     decltype(10u) _s1;
   };
 
@@ -366,8 +364,8 @@ unsigned int LoopifyNumericSequences::dec_to_bin_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 0u;
       } else {
@@ -387,17 +385,17 @@ unsigned int LoopifyNumericSequences::dec_to_bin_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumericSequences::dec_to_bin(const unsigned int n) {
+unsigned int LoopifyNumericSequences::dec_to_bin(unsigned int n) {
   return dec_to_bin_fuel((n + 1u), n);
 }
 
 unsigned int
-LoopifyNumericSequences::alternate_sum(const bool sign, const unsigned int acc,
+LoopifyNumericSequences::alternate_sum(bool sign, unsigned int acc,
                                        const List<unsigned int> &l) {
   unsigned int _result;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = acc;
-  bool _loop_sign = sign;
+  unsigned int _loop_acc = std::move(acc);
+  bool _loop_sign = std::move(sign);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -428,8 +426,8 @@ LoopifyNumericSequences::alternate_sum(const bool sign, const unsigned int acc,
 }
 
 unsigned int LoopifyNumericSequences::sum_divisors_aux(
-    const unsigned int n,
-    const unsigned int
+    unsigned int n,
+    unsigned int
         d) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -452,7 +450,7 @@ unsigned int LoopifyNumericSequences::sum_divisors_aux(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int d = _f.d;
+      unsigned int d = _f.d;
       if (d <= 0) {
         _result = 0u;
       } else {
@@ -472,7 +470,7 @@ unsigned int LoopifyNumericSequences::sum_divisors_aux(
   return _result;
 }
 
-unsigned int LoopifyNumericSequences::sum_divisors(const unsigned int n) {
+unsigned int LoopifyNumericSequences::sum_divisors(unsigned int n) {
   if (n <= 1u) {
     return 0u;
   } else {

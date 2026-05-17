@@ -1,6 +1,6 @@
 #include "fix_partial_app_escape.h"
 
-unsigned int FixPartialAppEscape::count_bits(const unsigned int _x0) {
+unsigned int FixPartialAppEscape::count_bits(unsigned int _x0) {
   return []() {
     auto go_impl = [](auto &_self_go, unsigned int depth,
                       unsigned int n) -> unsigned int {

@@ -123,12 +123,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -180,12 +179,11 @@ struct JumpTargets {
 
     // ACCESSORS
     instr_collection clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JUN_coll>(_sv.v())) {
-        const auto &[d_a0] = std::get<JUN_coll>(_sv.v());
+      if (std::holds_alternative<JUN_coll>(this->v())) {
+        const auto &[d_a0] = std::get<JUN_coll>(this->v());
         return instr_collection(JUN_coll{d_a0});
-      } else if (std::holds_alternative<JMS_coll>(_sv.v())) {
-        const auto &[d_a0] = std::get<JMS_coll>(_sv.v());
+      } else if (std::holds_alternative<JMS_coll>(this->v())) {
+        const auto &[d_a0] = std::get<JMS_coll>(this->v());
         return instr_collection(JMS_coll{d_a0});
       } else {
         return instr_collection(NOP_coll{});
@@ -194,11 +192,11 @@ struct JumpTargets {
 
     // CREATORS
     static instr_collection jun_coll(unsigned int a0) {
-      return instr_collection(JUN_coll{std::move(a0)});
+      return instr_collection(JUN_coll{a0});
     }
 
     static instr_collection jms_coll(unsigned int a0) {
-      return instr_collection(JMS_coll{std::move(a0)});
+      return instr_collection(JMS_coll{a0});
     }
 
     static instr_collection nop_coll() { return instr_collection(NOP_coll{}); }
@@ -210,16 +208,15 @@ struct JumpTargets {
     const variant_t &v() const { return d_v_; }
 
     std::optional<unsigned int> jump_target_collection() const {
-      auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
-              _sv.v())) {
+              this->v())) {
         const auto &[d_a0] =
-            std::get<typename instr_collection::JUN_coll>(_sv.v());
+            std::get<typename instr_collection::JUN_coll>(this->v());
         return std::make_optional<unsigned int>(d_a0);
       } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
-                     _sv.v())) {
+                     this->v())) {
         const auto &[d_a0] =
-            std::get<typename instr_collection::JMS_coll>(_sv.v());
+            std::get<typename instr_collection::JMS_coll>(this->v());
         return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
@@ -230,16 +227,15 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_collection_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
-              _sv.v())) {
+              this->v())) {
         const auto &[d_a0] =
-            std::get<typename instr_collection::JUN_coll>(_sv.v());
+            std::get<typename instr_collection::JUN_coll>(this->v());
         return f(d_a0);
       } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
-                     _sv.v())) {
+                     this->v())) {
         const auto &[d_a0] =
-            std::get<typename instr_collection::JMS_coll>(_sv.v());
+            std::get<typename instr_collection::JMS_coll>(this->v());
         return f0(d_a0);
       } else {
         return f1;
@@ -250,16 +246,15 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_collection_rect(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
-              _sv.v())) {
+              this->v())) {
         const auto &[d_a0] =
-            std::get<typename instr_collection::JUN_coll>(_sv.v());
+            std::get<typename instr_collection::JUN_coll>(this->v());
         return f(d_a0);
       } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
-                     _sv.v())) {
+                     this->v())) {
         const auto &[d_a0] =
-            std::get<typename instr_collection::JMS_coll>(_sv.v());
+            std::get<typename instr_collection::JMS_coll>(this->v());
         return f0(d_a0);
       } else {
         return f1;
@@ -325,12 +320,11 @@ struct JumpTargets {
 
     // ACCESSORS
     instr_region clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JUN_reg>(_sv.v())) {
-        const auto &[d_a0] = std::get<JUN_reg>(_sv.v());
+      if (std::holds_alternative<JUN_reg>(this->v())) {
+        const auto &[d_a0] = std::get<JUN_reg>(this->v());
         return instr_region(JUN_reg{d_a0});
-      } else if (std::holds_alternative<JMS_reg>(_sv.v())) {
-        const auto &[d_a0] = std::get<JMS_reg>(_sv.v());
+      } else if (std::holds_alternative<JMS_reg>(this->v())) {
+        const auto &[d_a0] = std::get<JMS_reg>(this->v());
         return instr_region(JMS_reg{d_a0});
       } else {
         return instr_region(NOP_reg{});
@@ -339,11 +333,11 @@ struct JumpTargets {
 
     // CREATORS
     static instr_region jun_reg(unsigned int a0) {
-      return instr_region(JUN_reg{std::move(a0)});
+      return instr_region(JUN_reg{a0});
     }
 
     static instr_region jms_reg(unsigned int a0) {
-      return instr_region(JMS_reg{std::move(a0)});
+      return instr_region(JMS_reg{a0});
     }
 
     static instr_region nop_reg() { return instr_region(NOP_reg{}); }
@@ -355,13 +349,14 @@ struct JumpTargets {
     const variant_t &v() const { return d_v_; }
 
     std::optional<unsigned int> jump_target_region() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_region::JUN_reg>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_region::JUN_reg>(_sv.v());
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
         return std::make_optional<unsigned int>(d_a0);
       } else if (std::holds_alternative<typename instr_region::JMS_reg>(
-                     _sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_region::JMS_reg>(_sv.v());
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
         return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
@@ -372,13 +367,14 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_region_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_region::JUN_reg>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_region::JUN_reg>(_sv.v());
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
         return f(d_a0);
       } else if (std::holds_alternative<typename instr_region::JMS_reg>(
-                     _sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_region::JMS_reg>(_sv.v());
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
         return f0(d_a0);
       } else {
         return f1;
@@ -389,13 +385,14 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_region_rect(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_region::JUN_reg>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_region::JUN_reg>(_sv.v());
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JUN_reg>(this->v());
         return f(d_a0);
       } else if (std::holds_alternative<typename instr_region::JMS_reg>(
-                     _sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_region::JMS_reg>(_sv.v());
+                     this->v())) {
+        const auto &[d_a0] =
+            std::get<typename instr_region::JMS_reg>(this->v());
         return f0(d_a0);
       } else {
         return f1;
@@ -408,10 +405,10 @@ struct JumpTargets {
     unsigned int code_;
 
     // ACCESSORS
-    layout clone() const { return layout{(*(this)).base_, (*(this)).code_}; }
+    layout clone() const { return layout{(*this).base_, (*this).code_}; }
   };
 
-  static bool addr_in_region(const unsigned int addr, const layout &l);
+  static bool addr_in_region(unsigned int addr, const layout &l);
   static bool in_layout(const layout &l, const instr_region &i);
   static inline const bool test_region_check =
       in_layout(layout{16u, 32u}, instr_region::jun_reg(40u));
@@ -460,12 +457,11 @@ struct JumpTargets {
 
     // ACCESSORS
     instr_jms clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JUN_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<JUN_jms>(_sv.v());
+      if (std::holds_alternative<JUN_jms>(this->v())) {
+        const auto &[d_a0] = std::get<JUN_jms>(this->v());
         return instr_jms(JUN_jms{d_a0});
-      } else if (std::holds_alternative<JMS_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<JMS_jms>(_sv.v());
+      } else if (std::holds_alternative<JMS_jms>(this->v())) {
+        const auto &[d_a0] = std::get<JMS_jms>(this->v());
         return instr_jms(JMS_jms{d_a0});
       } else {
         return instr_jms(NOP_jms{});
@@ -473,13 +469,9 @@ struct JumpTargets {
     }
 
     // CREATORS
-    static instr_jms jun_jms(unsigned int a0) {
-      return instr_jms(JUN_jms{std::move(a0)});
-    }
+    static instr_jms jun_jms(unsigned int a0) { return instr_jms(JUN_jms{a0}); }
 
-    static instr_jms jms_jms(unsigned int a0) {
-      return instr_jms(JMS_jms{std::move(a0)});
-    }
+    static instr_jms jms_jms(unsigned int a0) { return instr_jms(JMS_jms{a0}); }
 
     static instr_jms nop_jms() { return instr_jms(NOP_jms{}); }
 
@@ -490,12 +482,12 @@ struct JumpTargets {
     const variant_t &v() const { return d_v_; }
 
     std::optional<unsigned int> jump_target_jms() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_jms::JUN_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(_sv.v());
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
         return std::make_optional<unsigned int>(d_a0);
-      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(_sv.v());
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
         return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
@@ -506,12 +498,12 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jms_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_jms::JUN_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(_sv.v());
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(_sv.v());
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
         return f0(d_a0);
       } else {
         return f1;
@@ -522,12 +514,12 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jms_rect(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_jms::JUN_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(_sv.v());
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JUN_jms>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(_sv.v());
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jms::JMS_jms>(this->v());
         return f0(d_a0);
       } else {
         return f1;
@@ -583,12 +575,11 @@ struct JumpTargets {
 
     // ACCESSORS
     instr_jun clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<JUN_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<JUN_jun>(_sv.v());
+      if (std::holds_alternative<JUN_jun>(this->v())) {
+        const auto &[d_a0] = std::get<JUN_jun>(this->v());
         return instr_jun(JUN_jun{d_a0});
-      } else if (std::holds_alternative<JMS_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<JMS_jun>(_sv.v());
+      } else if (std::holds_alternative<JMS_jun>(this->v())) {
+        const auto &[d_a0] = std::get<JMS_jun>(this->v());
         return instr_jun(JMS_jun{d_a0});
       } else {
         return instr_jun(NOP_jun{});
@@ -596,13 +587,9 @@ struct JumpTargets {
     }
 
     // CREATORS
-    static instr_jun jun_jun(unsigned int a0) {
-      return instr_jun(JUN_jun{std::move(a0)});
-    }
+    static instr_jun jun_jun(unsigned int a0) { return instr_jun(JUN_jun{a0}); }
 
-    static instr_jun jms_jun(unsigned int a0) {
-      return instr_jun(JMS_jun{std::move(a0)});
-    }
+    static instr_jun jms_jun(unsigned int a0) { return instr_jun(JMS_jun{a0}); }
 
     static instr_jun nop_jun() { return instr_jun(NOP_jun{}); }
 
@@ -613,12 +600,12 @@ struct JumpTargets {
     const variant_t &v() const { return d_v_; }
 
     std::optional<unsigned int> jump_target_jun() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_jun::JUN_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(_sv.v());
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
         return std::make_optional<unsigned int>(d_a0);
-      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(_sv.v());
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
         return std::make_optional<unsigned int>(d_a0);
       } else {
         return std::optional<unsigned int>();
@@ -629,12 +616,12 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jun_rec(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_jun::JUN_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(_sv.v());
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(_sv.v());
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
         return f0(d_a0);
       } else {
         return f1;
@@ -645,12 +632,12 @@ struct JumpTargets {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 instr_jun_rect(F0 &&f, F1 &&f0, T1 f1) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename instr_jun::JUN_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(_sv.v());
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JUN_jun>(this->v());
         return f(d_a0);
-      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(_sv.v());
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[d_a0] = std::get<typename instr_jun::JMS_jun>(this->v());
         return f0(d_a0);
       } else {
         return f1;

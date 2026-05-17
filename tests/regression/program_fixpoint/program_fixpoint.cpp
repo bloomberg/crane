@@ -20,7 +20,7 @@ List<unsigned int> ProgFix::interleave_func(
   } else {
     auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l1.v_mut());
-    return List<unsigned int>::cons(d_a0, interleave0(std::move(l2), *(d_a1)));
+    return List<unsigned int>::cons(d_a0, interleave0(std::move(l2), *d_a1));
   }
 }
 

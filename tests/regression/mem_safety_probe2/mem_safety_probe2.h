@@ -88,7 +88,7 @@ struct MemSafetyProbe2 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -124,7 +124,7 @@ struct MemSafetyProbe2 {
 
     /// TEST 18: Construct a tree using partial app results, then traverse it.
     tree build_from_partial() const {
-      unsigned int v = (*(this)).sum_values(0u);
+      unsigned int v = (*this).sum_values(0u);
       return tree::node(tree::node(tree::leaf(), v, tree::leaf()), v,
                         tree::node(tree::leaf(), v, tree::leaf()));
     }
@@ -132,25 +132,24 @@ struct MemSafetyProbe2 {
     /// TEST 16: Closure captured in a match branch that also destructs a tree.
     /// The closure captures a value-type match-bound field.
     unsigned int capture_in_branch(const tree &) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
         std::function<unsigned int(unsigned int)> f =
             [&](unsigned int _x0) -> unsigned int {
-          return (*(d_a0)).sum_values(_x0);
+          return (*d_a0).sum_values(_x0);
         };
-        return (f(d_a1) + (*(d_a2)).sum_values(d_a1));
+        return (f(d_a1) + (*d_a2).sum_values(d_a1));
       }
     }
 
     /// TEST 15: Multiple closures applied in sequence, each consuming a tree.
-    unsigned int apply_chain(tree t2, const tree &t3,
-                             const unsigned int x) const {
+    unsigned int apply_chain(tree t2, const tree &t3, unsigned int x) const {
       std::function<unsigned int(unsigned int)> f1 =
           [&](unsigned int _x0) -> unsigned int {
-        return std::move(*(this)).sum_values(_x0);
+        return std::move(*this).sum_values(_x0);
       };
       std::function<unsigned int(unsigned int)> f2 =
           [&](unsigned int _x0) -> unsigned int {
@@ -162,18 +161,18 @@ struct MemSafetyProbe2 {
     /// TEST 14: Partial application stored in pair alongside tree.
     std::pair<std::function<unsigned int(unsigned int)>, tree>
     pair_closure_tree() const {
-      tree _self_val = *(this);
+      tree _self_val = *this;
       return std::make_pair(
           [=](unsigned int _x0) mutable -> unsigned int {
             return _self_val.sum_values(_x0);
           },
-          *(this));
+          *this);
     }
 
     /// TEST 12: Value type cloned into pair, then both halves used with
     /// closures.
     unsigned int clone_and_close() const {
-      std::pair<tree, tree> p = std::make_pair(*(this), *(this));
+      std::pair<tree, tree> p = std::make_pair(*this, *this);
       std::function<unsigned int(unsigned int)> f =
           [=](unsigned int _x0) mutable -> unsigned int {
         return p.first.sum_values(_x0);
@@ -187,10 +186,10 @@ struct MemSafetyProbe2 {
 
     /// TEST 11: Partial application used in BOTH branches of a match
     /// (only one branch executes).
-    unsigned int branch_use(const bool b) const {
+    unsigned int branch_use(bool b) const {
       std::function<unsigned int(unsigned int)> f =
           [&](unsigned int _x0) -> unsigned int {
-        return std::move(*(this)).sum_values(_x0);
+        return std::move(*this).sum_values(_x0);
       };
       if (b) {
         return f(0u);
@@ -201,8 +200,8 @@ struct MemSafetyProbe2 {
 
     /// TEST 9: Option wrapping a closure.
     std::optional<std::function<unsigned int(unsigned int)>>
-    opt_adder(const bool b) const {
-      tree _self_val = *(this);
+    opt_adder(bool b) const {
+      tree _self_val = *this;
       if (b) {
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
             [=](unsigned int _x0) mutable -> unsigned int {
@@ -217,18 +216,18 @@ struct MemSafetyProbe2 {
     /// a match-bound field AND the match is inside a let continuation.
     /// Probes interaction between escape analysis and nested match.
     unsigned int extract_and_apply() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
         std::function<unsigned int(unsigned int)> fl =
             [&](unsigned int _x0) -> unsigned int {
-          return (*(d_a0)).sum_values(_x0);
+          return (*d_a0).sum_values(_x0);
         };
         std::function<unsigned int(unsigned int)> fr =
             [&](unsigned int _x0) -> unsigned int {
-          return (*(d_a2)).sum_values(_x0);
+          return (*d_a2).sum_values(_x0);
         };
         return (fl(d_a1) + fr(d_a1));
       }
@@ -236,28 +235,28 @@ struct MemSafetyProbe2 {
 
     /// TEST 6: Value type used twice in pair.
     std::pair<tree, tree> tree_pair() const {
-      return std::make_pair(*(this), *(this));
+      return std::make_pair(*this, *this);
     }
 
     /// TEST 5: Closure capturing a closure.
     /// The inner closure captures a tree, the outer captures the inner closure.
-    unsigned int double_wrap(const unsigned int x) const {
+    unsigned int double_wrap(unsigned int x) const {
       std::function<unsigned int(unsigned int)> f =
           [&](unsigned int _x0) -> unsigned int {
-        return std::move(*(this)).sum_values(_x0);
+        return std::move(*this).sum_values(_x0);
       };
       return (f(x) + x);
     }
 
     /// TEST 4: Partial application of a wrapper that stores its arg in a
     /// constructor.
-    tree make_node(const unsigned int v, tree r) const {
-      return tree::node(std::move(*(this)), v, std::move(r));
+    tree make_node(unsigned int v, tree r) const {
+      return tree::node(std::move(*this), v, std::move(r));
     }
 
     /// TEST 3: Compose two closures, each capturing a different tree.
-    unsigned int compose_adders(const tree &t2, const unsigned int x) const {
-      return (*(this)).sum_values(t2.sum_values(x));
+    unsigned int compose_adders(const tree &t2, unsigned int x) const {
+      return (*this).sum_values(t2.sum_values(x));
     }
 
     /// TEST 2: CPS-style: pass a continuation that captures value types.
@@ -265,7 +264,7 @@ struct MemSafetyProbe2 {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 with_tree(F0 &&k) const {
-      tree _self_val = *(this);
+      tree _self_val = *this;
       return k([=](unsigned int _x0) mutable -> unsigned int {
         return _self_val.sum_values(_x0);
       });
@@ -275,23 +274,23 @@ struct MemSafetyProbe2 {
     /// constructor arg. Tests whether the move analysis correctly handles
     /// double-use.
     std::pair<tree, unsigned int> dup_tree() const {
-      return std::make_pair(tree::node(*(this), 0u, tree::leaf()),
-                            (*(this)).sum_values(0u));
+      return std::make_pair(tree::node(*this, 0u, tree::leaf()),
+                            (*this).sum_values(0u));
     }
 
-    unsigned int sum_values(const unsigned int x) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+    unsigned int sum_values(unsigned int x) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        auto &&_sv0 = *(d_a0);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        auto &&_sv0 = *d_a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (d_a1 + x);
         } else {
           const auto &[d_a00, d_a10, d_a20] =
               std::get<typename tree::Node>(_sv0.v());
-          auto &&_sv1 = *(d_a2);
+          auto &&_sv1 = *d_a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (d_a10 + x);
           } else {
@@ -344,14 +343,13 @@ struct MemSafetyProbe2 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -408,14 +406,13 @@ struct MemSafetyProbe2 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -548,7 +545,7 @@ struct MemSafetyProbe2 {
     const variant_t &v() const { return d_v_; }
 
     mylist<t_A> myrev() const {
-      return (*(this)).myrev_append(mylist<t_A>::mynil());
+      return (*this).myrev_append(mylist<t_A>::mynil());
     }
 
     /// TEST 17: Build a list of closures, reverse it, and apply all.
@@ -558,7 +555,7 @@ struct MemSafetyProbe2 {
       const mylist *_loop_self = this;
       mylist<t_A> _loop_acc = std::move(acc);
       while (true) {
-        auto &&_sv = *(_loop_self);
+        auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
           _result = std::move(_loop_acc);
           break;
@@ -598,7 +595,7 @@ struct MemSafetyProbe2 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = 0u;
           } else {
@@ -645,13 +642,13 @@ struct MemSafetyProbe2 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -692,13 +689,13 @@ struct MemSafetyProbe2 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -719,7 +716,7 @@ struct MemSafetyProbe2 {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
     return std::move(t).template with_tree<unsigned int>(
-        [](const std::function<unsigned int(unsigned int)> f) {
+        [](std::function<unsigned int(unsigned int)> f) {
           return (f(5u) + f(0u));
         });
   }();
@@ -752,7 +749,7 @@ struct MemSafetyProbe2 {
   /// TEST 7: Closure escaping through a list, then applied.
   static mylist<unsigned int>
   map_apply(const mylist<std::function<unsigned int(unsigned int)>> &fs,
-            const unsigned int x);
+            unsigned int x);
   static unsigned int mysum(const mylist<unsigned int> &l);
   static inline const unsigned int test_closure_escape_list = []() {
     return []() {
@@ -817,7 +814,7 @@ struct MemSafetyProbe2 {
   /// TEST 13: Fold building tree from closures' results.
   static tree
   fold_tree_build(const mylist<std::function<unsigned int(unsigned int)>> &fs,
-                  const unsigned int acc);
+                  unsigned int acc);
   static inline const unsigned int test_fold_tree = []() {
     return []() {
       tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
@@ -853,7 +850,7 @@ struct MemSafetyProbe2 {
           .capture_in_branch(tree::leaf());
   static unsigned int
   apply_all(const mylist<std::function<unsigned int(unsigned int)>> &fs,
-            const unsigned int x);
+            unsigned int x);
   static inline const unsigned int test_rev_closures = []() {
     return []() {
       tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());

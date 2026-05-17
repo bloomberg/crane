@@ -2,15 +2,12 @@
 #define INCLUDED_TYPECLASS_FUNCTION_FIELD_PROBE
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 enum class Bool0 { e_TRUE, e_FALSE };
 
 struct Datatypes {
-  static Bool0 negb(const Bool0 b);
+  static Bool0 negb(Bool0 b);
 };
 
 template <typename I, typename t_A>

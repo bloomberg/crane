@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <variant>
 
 #include "Datatypes.h"
@@ -20,7 +19,7 @@ template <Sig S> struct Worker {
     typename S::A payload;
 
     // ACCESSORS
-    item clone() const { return item{(*(this)).label, (*(this)).payload}; }
+    item clone() const { return item{(*this).label, (*this).payload}; }
   };
 
   static unsigned int get_label(const item &x) { return x.label; }
@@ -31,7 +30,7 @@ template <Sig S> struct Worker {
   }
 
   static std::optional<typename S::A>
-  find_label(const unsigned int target,
+  find_label(unsigned int target,
              const typename Datatypes::template List<item> &xs) {
     if (std::holds_alternative<typename Datatypes::template List<item>::Nil>(
             xs.v())) {
@@ -42,7 +41,7 @@ template <Sig S> struct Worker {
       if (d_a0.label == target) {
         return std::make_optional<typename S::A>(d_a0.payload);
       } else {
-        return find_label(target, *(d_a1));
+        return find_label(target, *d_a1);
       }
     }
   }

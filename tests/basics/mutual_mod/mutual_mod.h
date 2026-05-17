@@ -2,8 +2,6 @@
 #define INCLUDED_MUTUAL_MOD
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -95,8 +93,7 @@ struct EvenOdd {
     static even_list enil() { return even_list(ENil{}); }
 
     static even_list econs(unsigned int a0, odd_list a1) {
-      return even_list(
-          ECons{std::move(a0), std::make_unique<odd_list>(std::move(a1))});
+      return even_list(ECons{a0, std::make_unique<odd_list>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -169,8 +166,7 @@ struct EvenOdd {
 
     // ACCESSORS
     odd_list clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<OCons>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<OCons>(this->v());
       return odd_list(
           OCons{d_a0, d_a1 ? std::make_unique<EvenOdd::even_list>(d_a1->clone())
                            : nullptr});
@@ -178,8 +174,7 @@ struct EvenOdd {
 
     // CREATORS
     static odd_list ocons(unsigned int a0, even_list a1) {
-      return odd_list(
-          OCons{std::move(a0), std::make_unique<even_list>(std::move(a1))});
+      return odd_list(OCons{a0, std::make_unique<even_list>(std::move(a1))});
     }
 
     // MANIPULATORS

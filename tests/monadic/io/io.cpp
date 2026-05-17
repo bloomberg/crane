@@ -1,13 +1,13 @@
 #include "io.h"
 
-void iotest::test1(const std::string) { return; }
+void iotest::test1(std::string) { return; }
 
-void iotest::test2(const std::string s) {
+void iotest::test2(std::string s) {
   std::cout << s;
   return;
 }
 
-void iotest::test3(const std::string s) {
+void iotest::test3(std::string s) {
   std::cout << s << '\n';
   return;
 }

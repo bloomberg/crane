@@ -4,7 +4,6 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <type_traits>
 
 struct ClosureLetEscape {
   /// A local fixpoint captures a LET-BINDING (not a function parameter)
@@ -19,7 +18,7 @@ struct ClosureLetEscape {
   /// (not a function parameter). The let-binding involves a computation
   /// (n * 2), so it can't be optimized away.
   static std::optional<std::function<unsigned int(unsigned int)>>
-  make_fn_fix(const unsigned int n);
+  make_fn_fix(unsigned int n);
   /// test1: make_fn_fix(21) => base=42, Some(add).
   /// add(3) = 42 + 3 = 45.
   /// Bug: & captures dangling reference to base.
@@ -48,7 +47,7 @@ struct ClosureLetEscape {
   /// test3: Captures from multiple let bindings.
   /// BUG: Both a and b are captured by &, both dangle.
   static std::optional<std::function<unsigned int(unsigned int)>>
-  make_fn_multi(const unsigned int n);
+  make_fn_multi(unsigned int n);
 
   static inline const unsigned int test3 = []() -> unsigned int {
     auto _cs = make_fn_multi(10u);

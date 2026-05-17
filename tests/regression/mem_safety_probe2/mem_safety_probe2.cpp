@@ -4,7 +4,7 @@
 MemSafetyProbe2::mylist<unsigned int> MemSafetyProbe2::map_apply(
     const MemSafetyProbe2::mylist<std::function<unsigned int(unsigned int)>>
         &fs,
-    const unsigned int x) {
+    unsigned int x) {
   std::unique_ptr<MemSafetyProbe2::mylist<unsigned int>> _head{};
   std::unique_ptr<MemSafetyProbe2::mylist<unsigned int>> *_write = &_head;
   const MemSafetyProbe2::mylist<std::function<unsigned int(unsigned int)>>
@@ -12,7 +12,7 @@ MemSafetyProbe2::mylist<unsigned int> MemSafetyProbe2::map_apply(
   while (true) {
     if (std::holds_alternative<typename MemSafetyProbe2::mylist<
             std::function<unsigned int(unsigned int)>>::Mynil>(_loop_fs->v())) {
-      *(_write) = std::make_unique<MemSafetyProbe2::mylist<unsigned int>>(
+      *_write = std::make_unique<MemSafetyProbe2::mylist<unsigned int>>(
           mylist<unsigned int>::mynil());
       break;
     } else {
@@ -20,7 +20,7 @@ MemSafetyProbe2::mylist<unsigned int> MemSafetyProbe2::map_apply(
           std::function<unsigned int(unsigned int)>>::Mycons>(_loop_fs->v());
       auto _cell = std::make_unique<MemSafetyProbe2::mylist<unsigned int>>(
           typename mylist<unsigned int>::Mycons(d_a0(x), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename mylist<unsigned int>::Mycons>((*_write)->v_mut())
                .d_a1;
@@ -28,7 +28,7 @@ MemSafetyProbe2::mylist<unsigned int> MemSafetyProbe2::map_apply(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe2::mysum(
@@ -55,7 +55,7 @@ unsigned int MemSafetyProbe2::mysum(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe2::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe2::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe2::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -78,16 +78,16 @@ unsigned int MemSafetyProbe2::mysum(
 MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
     const MemSafetyProbe2::mylist<std::function<unsigned int(unsigned int)>>
         &fs,
-    const unsigned int acc) {
+    unsigned int acc) {
   std::unique_ptr<MemSafetyProbe2::tree> _head{};
   std::unique_ptr<MemSafetyProbe2::tree> *_write = &_head;
-  unsigned int _loop_acc = acc;
+  unsigned int _loop_acc = std::move(acc);
   const MemSafetyProbe2::mylist<std::function<unsigned int(unsigned int)>>
       *_loop_fs = &fs;
   while (true) {
     if (std::holds_alternative<typename MemSafetyProbe2::mylist<
             std::function<unsigned int(unsigned int)>>::Mynil>(_loop_fs->v())) {
-      *(_write) = std::make_unique<MemSafetyProbe2::tree>(tree::leaf());
+      *_write = std::make_unique<MemSafetyProbe2::tree>(tree::leaf());
       break;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe2::mylist<
@@ -95,20 +95,20 @@ MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
       auto _cell = std::make_unique<MemSafetyProbe2::tree>(typename tree::Node(
           nullptr, d_a0(_loop_acc),
           std::make_unique<MemSafetyProbe2::tree>(tree::leaf())));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename tree::Node>((*_write)->v_mut()).d_a0;
       _loop_acc = d_a0(_loop_acc);
       _loop_fs = d_a1.get();
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe2::apply_all(
     const MemSafetyProbe2::mylist<std::function<unsigned int(unsigned int)>>
         &fs,
-    const unsigned int
+    unsigned int
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -133,7 +133,7 @@ unsigned int MemSafetyProbe2::apply_all(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe2::mylist<std::function<unsigned int(unsigned int)>>
-          &fs = *(_f.fs);
+          &fs = *_f.fs;
       if (std::holds_alternative<typename MemSafetyProbe2::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(fs.v())) {
         _result = 0u;

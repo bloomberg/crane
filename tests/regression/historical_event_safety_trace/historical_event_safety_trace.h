@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,12 +124,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -932,12 +930,11 @@ public:
 
   // ACCESSORS
   Uint1 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
-      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
+    if (std::holds_alternative<UIntDecimal>(this->v())) {
+      const auto &[d_u] = std::get<UIntDecimal>(this->v());
       return Uint1(UIntDecimal{d_u.clone()});
     } else {
-      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
+      const auto &[d_u] = std::get<UIntHexadecimal>(this->v());
       return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
@@ -957,13 +954,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int n, const unsigned int m);
-  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
-                                  const unsigned int m);
-  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
+  static unsigned int tail_add(unsigned int n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, unsigned int n,
+                                  unsigned int m);
+  static unsigned int tail_mul(unsigned int n, unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };
@@ -976,8 +973,8 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     State clone() const {
-      return State{(*(this)).reservoir_level_cm, (*(this)).downstream_stage_cm,
-                   (*(this)).gate_open_pct};
+      return State{(*this).reservoir_level_cm, (*this).downstream_stage_cm,
+                   (*this).gate_open_pct};
     }
   };
 
@@ -996,17 +993,17 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     PlantConfig clone() const {
-      return PlantConfig{(*(this)).max_reservoir_cm,
-                         (*(this)).max_downstream_cm,
-                         (*(this)).gate_capacity_cm,
-                         (*(this)).forecast_error_pct,
-                         (*(this)).gate_slew_pct,
-                         (*(this)).max_stage_rise_cm,
-                         (*(this)).reservoir_area_min_cm2,
-                         (*(this)).reservoir_area_max_cm2,
-                         (*(this)).reservoir_area_curve_cm2,
-                         (*(this)).design_head_cm,
-                         (*(this)).timestep_s};
+      return PlantConfig{(*this).max_reservoir_cm,
+                         (*this).max_downstream_cm,
+                         (*this).gate_capacity_cm,
+                         (*this).forecast_error_pct,
+                         (*this).gate_slew_pct,
+                         (*this).max_stage_rise_cm,
+                         (*this).reservoir_area_min_cm2,
+                         (*this).reservoir_area_max_cm2,
+                         (*this).reservoir_area_curve_cm2,
+                         (*this).design_head_cm,
+                         (*this).timestep_s};
     }
   };
 
@@ -1018,14 +1015,14 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     InflowRecord clone() const {
-      return InflowRecord{(*(this)).ir_timestep, (*(this)).ir_inflow_cm};
+      return InflowRecord{(*this).ir_timestep, (*this).ir_inflow_cm};
     }
   };
 
   using HistoricalEvent = List<InflowRecord>;
   static unsigned int event_to_inflow(const List<InflowRecord> &event,
-                                      const unsigned int default_inflow,
-                                      const unsigned int t);
+                                      unsigned int default_inflow,
+                                      unsigned int t);
 
   struct TestResult {
     unsigned int tr_event_name;
@@ -1036,9 +1033,9 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     TestResult clone() const {
-      return TestResult{(*(this)).tr_event_name, (*(this)).tr_initial_safe,
-                        (*(this)).tr_final_safe, (*(this)).tr_max_level,
-                        (*(this)).tr_max_stage};
+      return TestResult{(*this).tr_event_name, (*this).tr_initial_safe,
+                        (*this).tr_final_safe, (*this).tr_max_level,
+                        (*this).tr_max_stage};
     }
   };
 
@@ -1049,7 +1046,7 @@ struct HistoricalEventSafetyTraceCase {
              std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
   static State step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
                          const PlantConfig &pconf, const State &s,
-                         const unsigned int t) {
+                         unsigned int t) {
     unsigned int out =
         std::min((100u ? (pconf.gate_capacity_cm * ctrl(s, t)) / 100u : 0),
                  (s.reservoir_level_cm + inflow(t)));
@@ -1069,9 +1066,8 @@ struct HistoricalEventSafetyTraceCase {
              std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
   static std::pair<std::pair<State, unsigned int>, unsigned int>
   simulate_with_max(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
-                    const PlantConfig &pconf, const unsigned int horizon,
-                    State s, const unsigned int max_level,
-                    const unsigned int max_stage) {
+                    const PlantConfig &pconf, unsigned int horizon, State s,
+                    unsigned int max_level, unsigned int max_stage) {
     if (horizon <= 0) {
       return std::make_pair(std::make_pair(std::move(s), max_level), max_stage);
     } else {
@@ -1089,9 +1085,9 @@ struct HistoricalEventSafetyTraceCase {
              std::is_invocable_r_v<unsigned int, F4 &, unsigned int &>
   static TestResult
   run_historical_test(const PlantConfig &pconf, List<InflowRecord> event,
-                      const unsigned int default_inflow, F3 &&ctrl,
-                      F4 &&stage_fn, const State &initial_state,
-                      const unsigned int horizon, const unsigned int event_id) {
+                      unsigned int default_inflow, F3 &&ctrl, F4 &&stage_fn,
+                      const State &initial_state, unsigned int horizon,
+                      unsigned int event_id) {
     std::function<unsigned int(unsigned int)> inflow =
         [=](unsigned int _x0) mutable -> unsigned int {
       return event_to_inflow(event, default_inflow, _x0);
@@ -1112,14 +1108,14 @@ struct HistoricalEventSafetyTraceCase {
   using RatingTable = List<std::pair<unsigned int, unsigned int>>;
   static unsigned int
   stage_from_table(const List<std::pair<unsigned int, unsigned int>> &tbl,
-                   const unsigned int base_stage, const unsigned int out);
+                   unsigned int base_stage, unsigned int out);
 
   struct MonotoneRatingTable {
     RatingTable mrt_table;
 
     // ACCESSORS
     MonotoneRatingTable clone() const {
-      return MonotoneRatingTable{(*(this)).mrt_table};
+      return MonotoneRatingTable{(*this).mrt_table};
     }
   };
 
@@ -1195,11 +1191,11 @@ struct HistoricalEventSafetyTraceCase {
   static inline const PlantConfig hist_witness_plant =
       PlantConfig{500u, 500u, 500u,
                   1u,   5u,   10u,
-                  100u, 100u, [](const unsigned int) {
+                  100u, 100u, [](unsigned int) {
 return 100u; },
                   100u, 1u};
-  static unsigned int hist_witness_stage(const unsigned int out);
-  static unsigned int hist_witness_ctrl(const State &s, const unsigned int _x);
+  static unsigned int hist_witness_stage(unsigned int out);
+  static unsigned int hist_witness_ctrl(const State &s, unsigned int _x);
   static inline const State hist_witness_initial = State{50u, 0u, 0u};
   static inline const TestResult hist_test_1983 = run_historical_test(
       hist_witness_plant, flood_1983_inflows, 0u, hist_witness_ctrl,
@@ -1210,11 +1206,11 @@ return 100u; },
   static inline const PlantConfig hoover_dam_config =
       PlantConfig{2200u, 100u,  500u,
                   15u,   5u,    10u,
-                  1000u, 1000u, [](const unsigned int) {
+                  1000u, 1000u, [](unsigned int) {
 return 1000u; },
                   200u,  60u};
   static inline const State hoover_initial_state = State{1500u, 20u, 0u};
-  static unsigned int hoover_controller(const State &s, const unsigned int _x);
+  static unsigned int hoover_controller(const State &s, unsigned int _x);
   static inline const MonotoneRatingTable hoover_rating_table =
       MonotoneRatingTable{List<std::pair<unsigned int, unsigned int>>::cons(
           std::make_pair(100u, 30u),
@@ -1228,7 +1224,7 @@ return 1000u; },
                           std::make_pair(500u, 90u),
                           List<std::pair<unsigned int,
                                          unsigned int>>::nil())))))};
-  static unsigned int hoover_stage_from_rating(const unsigned int out);
+  static unsigned int hoover_stage_from_rating(unsigned int out);
   static inline const TestResult hoover_test = run_historical_test(
       hoover_dam_config, dual_peak_scenario, 0u, hoover_controller,
       hoover_stage_from_rating, hoover_initial_state, 10u, 9001u);
@@ -1244,13 +1240,11 @@ return 1000u; },
 
     // ACCESSORS
     HistoricalScenarioBundle clone() const {
-      return HistoricalScenarioBundle{(*(this)).hsb_hist_plant.clone(),
-                                      (*(this)).hsb_hist_table.clone(),
-                                      (*(this)).hsb_hist_initial.clone(),
-                                      (*(this)).hsb_test_1983.clone(),
-                                      (*(this)).hsb_test_2011.clone(),
-                                      (*(this)).hsb_hoover_plant.clone(),
-                                      (*(this)).hsb_hoover_test.clone()};
+      return HistoricalScenarioBundle{
+          (*this).hsb_hist_plant.clone(),   (*this).hsb_hist_table.clone(),
+          (*this).hsb_hist_initial.clone(), (*this).hsb_test_1983.clone(),
+          (*this).hsb_test_2011.clone(),    (*this).hsb_hoover_plant.clone(),
+          (*this).hsb_hoover_test.clone()};
     }
   };
 
@@ -1259,12 +1253,12 @@ return 1000u; },
                                hist_witness_initial, hist_test_1983,
                                hist_test_2011,       hoover_dam_config,
                                hoover_test};
-  static unsigned int historical_lookup_1983(const unsigned int t);
-  static unsigned int historical_lookup_2011(const unsigned int t);
-  static bool witness_test_initial_safe_at(const unsigned int h);
-  static unsigned int witness_test_peak_level_at(const unsigned int h);
-  static unsigned int hoover_controller_sample(const unsigned int level);
-  static unsigned int hoover_stage_sample(const unsigned int _x0);
+  static unsigned int historical_lookup_1983(unsigned int t);
+  static unsigned int historical_lookup_2011(unsigned int t);
+  static bool witness_test_initial_safe_at(unsigned int h);
+  static unsigned int witness_test_peak_level_at(unsigned int h);
+  static unsigned int hoover_controller_sample(unsigned int level);
+  static unsigned int hoover_stage_sample(unsigned int _x0);
   static inline const unsigned int sample_bundle_test_count =
       List<TestResult>::cons(
           historical_bundle.hsb_test_1983,

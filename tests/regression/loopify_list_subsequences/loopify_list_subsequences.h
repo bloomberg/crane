@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_LIST_SUBSEQUENCES
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -145,7 +143,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -165,19 +163,17 @@ public:
 
 struct LoopifyListSubsequences {
   static List<List<unsigned int>>
-  map_cons_helper(const unsigned int x, const List<List<unsigned int>> &ll);
+  map_cons_helper(unsigned int x, const List<List<unsigned int>> &ll);
   static List<List<unsigned int>> tails(List<unsigned int> l);
-  static List<List<unsigned int>> inits_fuel(const unsigned int fuel,
+  static List<List<unsigned int>> inits_fuel(unsigned int fuel,
                                              const List<unsigned int> &l);
   static List<List<unsigned int>> inits(const List<unsigned int> &l);
   static List<unsigned int> init_list(const List<unsigned int> &l);
-  static List<unsigned int> snoc(const List<unsigned int> &l,
-                                 const unsigned int x);
+  static List<unsigned int> snoc(const List<unsigned int> &l, unsigned int x);
   static unsigned int last_elem(const List<unsigned int> &l);
-  static unsigned int nth_elem(const unsigned int n,
-                               const List<unsigned int> &l);
+  static unsigned int nth_elem(unsigned int n, const List<unsigned int> &l);
   static std::pair<List<unsigned int>, List<unsigned int>>
-  split_at(const unsigned int n, List<unsigned int> l);
+  split_at(unsigned int n, List<unsigned int> l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_SUBSEQUENCES

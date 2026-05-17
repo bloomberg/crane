@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,7 +124,7 @@ public:
 };
 
 struct Matcher {
-  static bool char_eq(const int64_t x, const int64_t y);
+  static bool char_eq(int64_t x, int64_t y);
 
   /// Regular expression abstract syntax
   struct regexp {
@@ -255,7 +254,7 @@ struct Matcher {
     // CREATORS
     static regexp any() { return regexp(Any{}); }
 
-    static regexp Char_(int64_t c) { return regexp(Char{std::move(c)}); }
+    static regexp Char_(int64_t c) { return regexp(Char{c}); }
 
     static regexp eps() { return regexp(Eps{}); }
 
@@ -337,17 +336,17 @@ struct Matcher {
       return f1;
     } else if (std::holds_alternative<typename regexp::Cat>(r.v())) {
       const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r.v());
-      return f2(*(d_r1), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
-                *(d_r2), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+      return f2(*d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *d_r1), *d_r2,
+                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *d_r2));
     } else if (std::holds_alternative<typename regexp::Alt>(r.v())) {
       const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r.v());
-      return f3(*(d_r1), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
-                *(d_r2), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+      return f3(*d_r1, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *d_r1), *d_r2,
+                regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *d_r2));
     } else if (std::holds_alternative<typename regexp::Zero>(r.v())) {
       return f4;
     } else {
       const auto &[d_r] = std::get<typename regexp::Star>(r.v());
-      return f5(*(d_r), regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r)));
+      return f5(*d_r, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *d_r));
     }
   }
 
@@ -367,17 +366,17 @@ struct Matcher {
       return f1;
     } else if (std::holds_alternative<typename regexp::Cat>(r.v())) {
       const auto &[d_r1, d_r2] = std::get<typename regexp::Cat>(r.v());
-      return f2(*(d_r1), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
-                *(d_r2), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+      return f2(*d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *d_r1), *d_r2,
+                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *d_r2));
     } else if (std::holds_alternative<typename regexp::Alt>(r.v())) {
       const auto &[d_r1, d_r2] = std::get<typename regexp::Alt>(r.v());
-      return f3(*(d_r1), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r1)),
-                *(d_r2), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r2)));
+      return f3(*d_r1, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *d_r1), *d_r2,
+                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *d_r2));
     } else if (std::holds_alternative<typename regexp::Zero>(r.v())) {
       return f4;
     } else {
       const auto &[d_r] = std::get<typename regexp::Star>(r.v());
-      return f5(*(d_r), regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *(d_r)));
+      return f5(*d_r, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *d_r));
     }
   }
 
@@ -391,7 +390,7 @@ struct Matcher {
   static bool accepts_null(const regexp &r);
   /// This is the heart of the algorithm.  It returns a regexp denoting
   /// { cs | (c::cs) in r }.
-  static regexp deriv(const regexp &r, const int64_t c);
+  static regexp deriv(const regexp &r, int64_t c);
   /// This calculates the derivative of a regular expression with respect to a
   /// string.
   static regexp derivs(regexp r, const List<int64_t> &cs);

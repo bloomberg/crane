@@ -2,7 +2,6 @@
 #define INCLUDED_NO_MAPPING_EVENT_PROBE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -166,23 +165,22 @@ struct NoMappingEventProbe {
 
     // ACCESSORS
     reproE clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Hidden>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Hidden>(_sv.v());
+      if (std::holds_alternative<Hidden>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<Hidden>(this->v());
         return reproE(Hidden{d_a0, d_a1});
       } else {
-        const auto &[d_a0, d_a1] = std::get<Revealed>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<Revealed>(this->v());
         return reproE(Revealed{d_a0, d_a1});
       }
     }
 
     // CREATORS
     static reproE hidden(unsigned int a0, unsigned int a1) {
-      return reproE(Hidden{std::move(a0), std::move(a1)});
+      return reproE(Hidden{a0, a1});
     }
 
     static reproE revealed(unsigned int a0, unsigned int a1) {
-      return reproE(Revealed{std::move(a0), std::move(a1)});
+      return reproE(Revealed{a0, a1});
     }
 
     // MANIPULATORS
@@ -219,10 +217,9 @@ struct NoMappingEventProbe {
   }
 
   static inline const unsigned int cell_size = 42u;
-  static void draw_hidden_tile(const unsigned int x, const unsigned int y);
-  static void draw_revealed_tile(const unsigned int x, const unsigned int y);
-  static void loop(const unsigned int x, const unsigned int y,
-                   const List<bool> &cells);
+  static void draw_hidden_tile(unsigned int x, unsigned int y);
+  static void draw_revealed_tile(unsigned int x, unsigned int y);
+  static void loop(unsigned int x, unsigned int y, const List<bool> &cells);
 };
 
 #endif // INCLUDED_NO_MAPPING_EVENT_PROBE

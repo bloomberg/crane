@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_NUMERIC_SEQUENCES
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -124,26 +123,22 @@ public:
 };
 
 struct LoopifyNumericSequences {
-  static unsigned int collatz_length_fuel(const unsigned int fuel,
-                                          const unsigned int n);
-  static unsigned int collatz_length(const unsigned int n);
-  static List<unsigned int> collatz_sequence_fuel(const unsigned int fuel,
-                                                  const unsigned int n);
-  static List<unsigned int> collatz_sequence(const unsigned int n);
-  static unsigned int tribonacci_fuel(const unsigned int fuel,
-                                      const unsigned int n);
-  static unsigned int tribonacci(const unsigned int n);
-  static unsigned int staircase_fuel(const unsigned int fuel,
-                                     const unsigned int n);
-  static unsigned int staircase(const unsigned int n);
+  static unsigned int collatz_length_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int collatz_length(unsigned int n);
+  static List<unsigned int> collatz_sequence_fuel(unsigned int fuel,
+                                                  unsigned int n);
+  static List<unsigned int> collatz_sequence(unsigned int n);
+  static unsigned int tribonacci_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int tribonacci(unsigned int n);
+  static unsigned int staircase_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int staircase(unsigned int n);
 
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int church(const unsigned int n, F1 &&f,
-                             const unsigned int x) {
+  static unsigned int church(unsigned int n, F1 &&f, unsigned int x) {
     unsigned int _result;
-    unsigned int _loop_x = x;
-    unsigned int _loop_n = n;
+    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         _result = _loop_x;
@@ -157,17 +152,14 @@ struct LoopifyNumericSequences {
     return _result;
   }
 
-  static unsigned int digitsum_fuel(const unsigned int fuel,
-                                    const unsigned int n);
-  static unsigned int digitsum(const unsigned int n);
-  static unsigned int dec_to_bin_fuel(const unsigned int fuel,
-                                      const unsigned int n);
-  static unsigned int dec_to_bin(const unsigned int n);
-  static unsigned int alternate_sum(const bool sign, const unsigned int acc,
+  static unsigned int digitsum_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int digitsum(unsigned int n);
+  static unsigned int dec_to_bin_fuel(unsigned int fuel, unsigned int n);
+  static unsigned int dec_to_bin(unsigned int n);
+  static unsigned int alternate_sum(bool sign, unsigned int acc,
                                     const List<unsigned int> &l);
-  static unsigned int sum_divisors_aux(const unsigned int n,
-                                       const unsigned int d);
-  static unsigned int sum_divisors(const unsigned int n);
+  static unsigned int sum_divisors_aux(unsigned int n, unsigned int d);
+  static unsigned int sum_divisors(unsigned int n);
 };
 
 #endif // INCLUDED_LOOPIFY_NUMERIC_SEQUENCES

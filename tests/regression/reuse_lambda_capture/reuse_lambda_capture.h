@@ -2,7 +2,6 @@
 #define INCLUDED_REUSE_LAMBDA_CAPTURE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -84,8 +83,7 @@ struct ReuseLambdaCapture {
 
     // CREATORS
     static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     static mylist mynil() { return mylist(Mynil{}); }
@@ -123,7 +121,7 @@ struct ReuseLambdaCapture {
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rect<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -134,7 +132,7 @@ struct ReuseLambdaCapture {
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rec<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -147,7 +145,7 @@ struct ReuseLambdaCapture {
   static mylist map(F0 &&f, const mylist &l) {
     if (std::holds_alternative<typename mylist::Mycons>(l.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(l.v());
-      return mylist::mycons(f(d_a0), map(f, *(d_a1)));
+      return mylist::mycons(f(d_a0), map(f, *d_a1));
     } else {
       return mylist::mynil();
     }
@@ -164,7 +162,7 @@ struct ReuseLambdaCapture {
   /// // l is the same object as _rf
   /// // l.d_a1 is null -> crash
   /// return _rf;
-  static mylist add_length_to_each(mylist l, const bool b);
+  static mylist add_length_to_each(mylist l, bool b);
   static inline const unsigned int test1 = length(add_length_to_each(
       mylist::mycons(10u,
                      mylist::mycons(20u, mylist::mycons(30u, mylist::mynil()))),

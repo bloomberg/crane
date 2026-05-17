@@ -1,10 +1,7 @@
 #ifndef INCLUDED_UNSOUND_AXIOMS
 #define INCLUDED_UNSOUND_AXIOMS
 
-#include <memory>
-#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <variant>
 
 struct UnsoundAxioms {
@@ -25,7 +22,7 @@ struct UnsoundAxioms {
     unsigned int f2;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2}; }
+    Rec clone() const { return Rec{(*this).f1, (*this).f2}; }
   };
 
   static unsigned int cast_confusion(const Rec &r);
@@ -36,15 +33,13 @@ struct UnsoundAxioms {
     unsigned int pf_val2;
 
     // ACCESSORS
-    ProofRec clone() const {
-      return ProofRec{(*(this)).pf_val, (*(this)).pf_val2};
-    }
+    ProofRec clone() const { return ProofRec{(*this).pf_val, (*this).pf_val2}; }
   };
 
   static unsigned int extract_proof_computation(const ProofRec &pr);
-  static bool use_type_eq(const unsigned int n);
+  static bool use_type_eq(unsigned int n);
   static Rec impossible_rec();
-  static unsigned int use_impossible(const std::monostate _x);
+  static unsigned int use_impossible(std::monostate _x);
   static unsigned int from_false(const Rec &_x);
   static unsigned int prop_as_type();
   static unsigned int use_prop_as_type(const Rec &r);

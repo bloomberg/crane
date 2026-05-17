@@ -3,7 +3,7 @@
 /// Mutual fixpoint using fix...with...for syntax, then return
 /// both functions through a pair.
 std::pair<std::function<bool(unsigned int)>, std::function<bool(unsigned int)>>
-MutualFixEscape::make_even_odd(const unsigned int) {
+MutualFixEscape::make_even_odd(unsigned int) {
   auto even_impl = [](auto &_self_even, auto &_self_odd,
                       unsigned int n) -> bool {
     if (n <= 0) {
@@ -58,7 +58,7 @@ MutualFixEscape::make_even_odd(const unsigned int) {
 /// A mutual fixpoint that captures a parameter base.
 std::pair<std::function<unsigned int(unsigned int)>,
           std::function<unsigned int(unsigned int)>>
-MutualFixEscape::make_count_pair(const unsigned int base) {
+MutualFixEscape::make_count_pair(unsigned int base) {
   auto count_even_impl = [=](auto &_self_count_even, auto &_self_count_odd,
                              unsigned int n) mutable -> unsigned int {
     if (n <= 0) {

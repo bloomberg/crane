@@ -1,7 +1,7 @@
 #include "effect_workflow.h"
 
 /// 1. Use 5 different effect types in one function
-std::string EffectWorkflow::full_workflow(const std::string prefix) {
+std::string EffectWorkflow::full_workflow(std::string prefix) {
   int64_t _x = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now().time_since_epoch())
@@ -25,7 +25,7 @@ std::string EffectWorkflow::full_workflow(const std::string prefix) {
 }
 
 /// 2. Match on bool from create_directory inside a chain
-std::string EffectWorkflow::conditional_create(const std::string path) {
+std::string EffectWorkflow::conditional_create(std::string path) {
   bool ok = std::filesystem::create_directories(std::filesystem::path(path));
   if (ok) {
     std::cout << "created"s << '\n';
@@ -44,8 +44,7 @@ void EffectWorkflow::read_and_set() {
 }
 
 /// 4. Recursive function using effects
-unsigned int EffectWorkflow::repeat_log(const unsigned int n,
-                                        const std::string msg) {
+unsigned int EffectWorkflow::repeat_log(unsigned int n, std::string msg) {
   if (n <= 0) {
     return 0u;
   } else {
@@ -61,8 +60,7 @@ unsigned int EffectWorkflow::repeat_log(const unsigned int n,
 }
 
 /// 5. Effect returning option, matched, then another effect
-std::string EffectWorkflow::env_or_create(const std::string name,
-                                          const std::string path) {
+std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();

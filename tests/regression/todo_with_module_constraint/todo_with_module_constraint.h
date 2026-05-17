@@ -2,9 +2,6 @@
 #define INCLUDED_TODO_WITH_MODULE_CONSTRAINT
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename M>
 concept INNER = requires {
@@ -35,7 +32,7 @@ struct TodoWithModuleConstraint {
 
   struct NatOuter {
     using Inner = NatInner;
-    static Inner::t step(const unsigned int n);
+    static Inner::t step(unsigned int n);
   };
 
   template <OUTER_NAT X> struct UseNat {

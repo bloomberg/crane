@@ -126,42 +126,38 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
   List<t_A> rev() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
     }
   }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -189,17 +185,17 @@ struct FunctorComp {
   struct Stack {
     using t = List<unsigned int>;
     static inline const t empty = List<unsigned int>::nil();
-    static t push(const unsigned int x, List<unsigned int> s);
+    static t push(unsigned int x, List<unsigned int> s);
     static std::optional<std::pair<unsigned int, t>>
     pop(const List<unsigned int> &s);
-    static unsigned int size(const t _x0);
+    static unsigned int size(t _x0);
   };
 
   struct Queue {
     using t = std::pair<List<unsigned int>, List<unsigned int>>;
     static inline const t empty =
         std::make_pair(List<unsigned int>::nil(), List<unsigned int>::nil());
-    static t push(const unsigned int x,
+    static t push(unsigned int x,
                   const std::pair<List<unsigned int>, List<unsigned int>> &q);
     static std::optional<std::pair<unsigned int, t>>
     pop(const std::pair<List<unsigned int>, List<unsigned int>> &q);
@@ -209,18 +205,15 @@ struct FunctorComp {
 
   template <CONTAINER C> struct ContainerOps {
     static typename C::t push_list(const List<unsigned int> &l,
-                                   const typename C::t c) {
+                                   typename C::t c) {
       return l.template fold_left<typename C::t>(
-          [](const typename C::t acc, const unsigned int x) {
-            return C::push(x, acc);
-          },
-          c);
+          [](typename C::t acc, unsigned int x) { return C::push(x, acc); }, c);
     }
 
-    static List<unsigned int> to_list(const typename C::t c) {
-      auto go_impl = [](auto &_self_go, const unsigned int fuel,
+    static List<unsigned int> to_list(typename C::t c) {
+      auto go_impl = [](auto &_self_go, unsigned int fuel,
                         List<unsigned int> acc,
-                        const typename C::t c0) -> List<unsigned int> {
+                        typename C::t c0) -> List<unsigned int> {
         if (fuel <= 0) {
           return std::move(acc).rev();
         } else {
@@ -237,8 +230,8 @@ struct FunctorComp {
           }
         }
       };
-      auto go = [&](const unsigned int fuel, List<unsigned int> acc,
-                    const typename C::t c0) -> List<unsigned int> {
+      auto go = [&](unsigned int fuel, List<unsigned int> acc,
+                    typename C::t c0) -> List<unsigned int> {
         return go_impl(go_impl, fuel, acc, c0);
       };
       return go(C::size(c), List<unsigned int>::nil(), c);

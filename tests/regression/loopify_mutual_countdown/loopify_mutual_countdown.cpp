@@ -6,16 +6,16 @@
 /// still emits even_countdown and odd_countdown as ordinary mutually
 /// recursive C++ calls instead of a loop, so a deep countdown overflows the C++
 /// stack.
-bool LoopifyMutualCountdown::even_countdown(const unsigned int n) {
+bool LoopifyMutualCountdown::even_countdown(unsigned int n) {
   bool _result;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       _result = true;
       break;
     } else {
       unsigned int n_ = _loop_n - 1;
-      const unsigned int _inl_n = n_;
+      unsigned int _inl_n = n_;
       if (_inl_n <= 0) {
         _result = false;
         break;
@@ -28,16 +28,16 @@ bool LoopifyMutualCountdown::even_countdown(const unsigned int n) {
   return _result;
 }
 
-bool LoopifyMutualCountdown::odd_countdown(const unsigned int n) {
+bool LoopifyMutualCountdown::odd_countdown(unsigned int n) {
   bool _result;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       _result = false;
       break;
     } else {
       unsigned int n_ = _loop_n - 1;
-      const unsigned int _inl_n = n_;
+      unsigned int _inl_n = n_;
       if (_inl_n <= 0) {
         _result = true;
         break;

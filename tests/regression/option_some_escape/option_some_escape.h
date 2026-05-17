@@ -88,7 +88,7 @@ struct OptionSomeEscape {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -131,8 +131,8 @@ struct OptionSomeEscape {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -144,12 +144,12 @@ struct OptionSomeEscape {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
-  static unsigned int sum_values(const tree &t, const unsigned int x);
+  static unsigned int sum_values(const tree &t, unsigned int x);
   /// BUG: Partial application stored in Some (std::make_optional).
   /// The & lambda captures parameter t by reference.
   /// return_captures_by_value doesn't handle lambdas inside
@@ -158,8 +158,7 @@ struct OptionSomeEscape {
   option_escape(tree t);
   static unsigned int apply_option(
       const std::optional<std::function<unsigned int(unsigned int)>> &o,
-      const unsigned int
-          x); /// Clobber stack, then use the closure from the option.
+      unsigned int x); /// Clobber stack, then use the closure from the option.
   static inline const unsigned int bug_option_some = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                          tree::node(tree::leaf(), 30u, tree::leaf()));

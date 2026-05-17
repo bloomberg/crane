@@ -4,8 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -37,7 +35,7 @@ struct GeneratedLazyFieldNameClash {
         : d_lazyV__(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static d_lazyV_ cons(bool a0, const d_lazyV_ &a1) {
-      return d_lazyV_(Cons{std::move(a0), std::make_shared<d_lazyV_>(a1)});
+      return d_lazyV_(Cons{a0, std::make_shared<d_lazyV_>(a1)});
     }
 
     static d_lazyV_ lazy_(std::function<d_lazyV_()> thunk) {
@@ -52,7 +50,7 @@ struct GeneratedLazyFieldNameClash {
   };
 
   static d_lazyV_ true_stream();
-  static bool head(const d_lazyV_ s);
+  static bool head(d_lazyV_ s);
   static inline const bool sample = head(true_stream());
 };
 

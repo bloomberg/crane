@@ -1,7 +1,7 @@
 #include "option.h"
 
 unsigned int Option::get_or_default(const std::optional<unsigned int> &o,
-                                    const unsigned int default0) {
+                                    unsigned int default0) {
   if (o.has_value()) {
     const unsigned int &x = *o;
     return x;
@@ -10,7 +10,7 @@ unsigned int Option::get_or_default(const std::optional<unsigned int> &o,
   }
 }
 
-std::optional<unsigned int> Option::safe_pred(const unsigned int n) {
+std::optional<unsigned int> Option::safe_pred(unsigned int n) {
   if (n <= 0) {
     return std::optional<unsigned int>();
   } else {

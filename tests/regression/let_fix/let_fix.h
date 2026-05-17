@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -133,8 +131,7 @@ struct LetFix {
         return acc;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-        return _self_go(_self_go, List<T1>::cons(d_a0, std::move(acc)),
-                        *(d_a1));
+        return _self_go(_self_go, List<T1>::cons(d_a0, std::move(acc)), *d_a1);
       }
     };
     auto go = [&](List<T1> acc, const List<T1> &xs) -> List<T1> {
@@ -144,14 +141,14 @@ struct LetFix {
   }
 
   static List<unsigned int> local_flatten(const List<List<unsigned int>> &xss);
-  static bool local_mem(const unsigned int n, const List<unsigned int> &l);
+  static bool local_mem(unsigned int n, const List<unsigned int> &l);
 
   template <typename T1> static unsigned int local_length(const List<T1> &xs) {
     if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-      return (local_length<T1>(*(d_a1)) + 1);
+      return (local_length<T1>(*d_a1) + 1);
     }
   }
 

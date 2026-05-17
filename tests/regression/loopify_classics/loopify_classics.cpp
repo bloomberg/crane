@@ -1,7 +1,7 @@
 #include "loopify_classics.h"
 
 unsigned int LoopifyClassics::factorial(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -24,7 +24,7 @@ unsigned int LoopifyClassics::factorial(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 1u;
       } else {
@@ -40,9 +40,9 @@ unsigned int LoopifyClassics::factorial(
   return _result;
 }
 
-unsigned int LoopifyClassics::fib(
-    const unsigned int
-        n) { /// _Enter: captures varying parameters for each recursive call.
+unsigned int
+LoopifyClassics::fib(unsigned int n) { /// _Enter: captures varying parameters
+                                       /// for each recursive call.
 
   struct _Enter {
     unsigned int n;
@@ -70,7 +70,7 @@ unsigned int LoopifyClassics::fib(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -96,8 +96,8 @@ unsigned int LoopifyClassics::fib(
 }
 
 unsigned int LoopifyClassics::ack_fuel(
-    const unsigned int fuel, const unsigned int m,
-    const unsigned int
+    unsigned int fuel, unsigned int m,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -124,9 +124,9 @@ unsigned int LoopifyClassics::ack_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int m = _f.m;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int m = _f.m;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = (n + 1u);
       } else {
@@ -147,7 +147,7 @@ unsigned int LoopifyClassics::ack_fuel(
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
       unsigned int fuel_ = _f.fuel_;
-      const unsigned int m = _f.m;
+      unsigned int m = _f.m;
       unsigned int inner = _result;
       _stack.emplace_back(
           _Enter{inner, (((m - 1u) > m ? 0 : (m - 1u))), fuel_});
@@ -156,13 +156,13 @@ unsigned int LoopifyClassics::ack_fuel(
   return _result;
 }
 
-unsigned int LoopifyClassics::ack(const unsigned int m, const unsigned int n) {
+unsigned int LoopifyClassics::ack(unsigned int m, unsigned int n) {
   return ack_fuel(((100u * (m + 1u)) * (n + 1u)), m, n);
 }
 
 unsigned int LoopifyClassics::binomial_fuel(
-    const unsigned int fuel, const unsigned int n,
-    const unsigned int
+    unsigned int fuel, unsigned int n,
+    unsigned int
         k) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -173,14 +173,14 @@ unsigned int LoopifyClassics::binomial_fuel(
 
   /// _After2: saves [_s0, _s1, fuel_], dispatches next recursive call.
   struct _After2 {
-    decltype((((std::declval<const unsigned int &>() - 1u) >
-                       std::declval<const unsigned int &>()
-                   ? 0
-                   : (std::declval<const unsigned int &>() - 1u)))) _s0;
-    decltype((((std::declval<const unsigned int &>() - 1u) >
-                       std::declval<const unsigned int &>()
-                   ? 0
-                   : (std::declval<const unsigned int &>() - 1u)))) _s1;
+    decltype((
+        ((std::declval<unsigned int &>() - 1u) > std::declval<unsigned int &>()
+             ? 0
+             : (std::declval<unsigned int &>() - 1u)))) _s0;
+    decltype((
+        ((std::declval<unsigned int &>() - 1u) > std::declval<unsigned int &>()
+             ? 0
+             : (std::declval<unsigned int &>() - 1u)))) _s1;
     unsigned int fuel_;
   };
 
@@ -201,9 +201,9 @@ unsigned int LoopifyClassics::binomial_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int k = _f.k;
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int k = _f.k;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 1u;
       } else {
@@ -229,14 +229,13 @@ unsigned int LoopifyClassics::binomial_fuel(
   return _result;
 }
 
-unsigned int LoopifyClassics::binomial(const unsigned int n,
-                                       const unsigned int k) {
+unsigned int LoopifyClassics::binomial(unsigned int n, unsigned int k) {
   return binomial_fuel((n * k), n, k);
 }
 
 unsigned int LoopifyClassics::pascal_fuel(
-    const unsigned int fuel, const unsigned int row,
-    const unsigned int
+    unsigned int fuel, unsigned int row,
+    unsigned int
         col) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -247,14 +246,14 @@ unsigned int LoopifyClassics::pascal_fuel(
 
   /// _After2: saves [_s0, _s1, fuel_], dispatches next recursive call.
   struct _After2 {
-    decltype((((std::declval<const unsigned int &>() - 1u) >
-                       std::declval<const unsigned int &>()
-                   ? 0
-                   : (std::declval<const unsigned int &>() - 1u)))) _s0;
-    decltype((((std::declval<const unsigned int &>() - 1u) >
-                       std::declval<const unsigned int &>()
-                   ? 0
-                   : (std::declval<const unsigned int &>() - 1u)))) _s1;
+    decltype((
+        ((std::declval<unsigned int &>() - 1u) > std::declval<unsigned int &>()
+             ? 0
+             : (std::declval<unsigned int &>() - 1u)))) _s0;
+    decltype((
+        ((std::declval<unsigned int &>() - 1u) > std::declval<unsigned int &>()
+             ? 0
+             : (std::declval<unsigned int &>() - 1u)))) _s1;
     unsigned int fuel_;
   };
 
@@ -275,9 +274,9 @@ unsigned int LoopifyClassics::pascal_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int col = _f.col;
-      const unsigned int row = _f.row;
-      const unsigned int fuel = _f.fuel;
+      unsigned int col = _f.col;
+      unsigned int row = _f.row;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 1u;
       } else {
@@ -304,18 +303,16 @@ unsigned int LoopifyClassics::pascal_fuel(
   return _result;
 }
 
-unsigned int LoopifyClassics::pascal(const unsigned int row,
-                                     const unsigned int col) {
+unsigned int LoopifyClassics::pascal(unsigned int row, unsigned int col) {
   return pascal_fuel((row * col), row, col);
 }
 
-unsigned int LoopifyClassics::gcd_fuel(const unsigned int fuel,
-                                       const unsigned int a,
-                                       const unsigned int b) {
+unsigned int LoopifyClassics::gcd_fuel(unsigned int fuel, unsigned int a,
+                                       unsigned int b) {
   unsigned int _result;
-  unsigned int _loop_b = b;
-  unsigned int _loop_a = a;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_b = std::move(b);
+  unsigned int _loop_a = std::move(a);
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       _result = _loop_a;
@@ -337,13 +334,13 @@ unsigned int LoopifyClassics::gcd_fuel(const unsigned int fuel,
   return _result;
 }
 
-unsigned int LoopifyClassics::gcd(const unsigned int a, const unsigned int b) {
+unsigned int LoopifyClassics::gcd(unsigned int a, unsigned int b) {
   return gcd_fuel((a + b), a, b);
 }
 
 unsigned int LoopifyClassics::power(
-    const unsigned int base,
-    const unsigned int
+    unsigned int base,
+    unsigned int
         exp) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -366,7 +363,7 @@ unsigned int LoopifyClassics::power(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int exp = _f.exp;
+      unsigned int exp = _f.exp;
       if (exp <= 0) {
         _result = 1u;
       } else {
@@ -383,7 +380,7 @@ unsigned int LoopifyClassics::power(
 }
 
 unsigned int LoopifyClassics::sum_to(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -406,7 +403,7 @@ unsigned int LoopifyClassics::sum_to(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -423,7 +420,7 @@ unsigned int LoopifyClassics::sum_to(
 }
 
 unsigned int LoopifyClassics::sum_squares(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -446,7 +443,7 @@ unsigned int LoopifyClassics::sum_squares(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {

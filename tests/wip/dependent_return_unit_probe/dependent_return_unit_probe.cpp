@@ -1,6 +1,6 @@
 #include "dependent_return_unit_probe.h"
 
-std::any DependentReturnUnitProbe::dep(const Bool0 b) {
+std::any DependentReturnUnitProbe::dep(Bool0 b) {
   switch (b) {
   case Bool0::e_TRUE: {
     return Unit::e_TT;

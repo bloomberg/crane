@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTENUMASVALUE
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
@@ -40,7 +37,7 @@ template <ColorParam P> struct UseColor {
     return v;
   }
 
-  constexpr static bool is_red(const Color c) {
+  constexpr static bool is_red(Color c) {
     switch (c) {
     case Color::e_RED: {
       return true;

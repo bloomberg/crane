@@ -2,7 +2,6 @@
 #define INCLUDED_MEM_SAFETY_PROBE17
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -108,7 +107,7 @@ struct MemSafetyProbe17 {
     static qtree qnode(qtree a0, qtree a1, unsigned int a2, qtree a3,
                        qtree a4) {
       return qtree(QNode{std::make_unique<qtree>(std::move(a0)),
-                         std::make_unique<qtree>(std::move(a1)), std::move(a2),
+                         std::make_unique<qtree>(std::move(a1)), a2,
                          std::make_unique<qtree>(std::move(a3)),
                          std::make_unique<qtree>(std::move(a4))});
     }
@@ -210,17 +209,17 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const qtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = 0u;
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             unsigned int local_weight =
-                (((((*(d_a0)).qtree_sum() + (2u * (*(d_a1)).qtree_sum())) +
+                (((((*d_a0).qtree_sum() + (2u * (*d_a1).qtree_sum())) +
                    (3u * d_a2)) +
-                  (4u * (*(d_a3)).qtree_sum())) +
-                 (5u * (*(d_a4)).qtree_sum()));
+                  (4u * (*d_a3).qtree_sum())) +
+                 (5u * (*d_a4).qtree_sum()));
             _stack.emplace_back(
                 _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), local_weight});
             _stack.emplace_back(_Enter{d_a4.get()});
@@ -317,21 +316,21 @@ struct MemSafetyProbe17 {
           auto _f = std::move(std::get<_Enter>(_frame));
           const qtree *_self = _f._self;
           qtree t2 = std::move(_f.t2);
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = std::move(t2);
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             if (std::holds_alternative<typename qtree::QLeaf>(t2.v_mut())) {
-              _result = *(_self);
+              _result = *_self;
             } else {
               auto &[d_a00, d_a10, d_a20, d_a30, d_a40] =
                   std::get<typename qtree::QNode>(t2.v_mut());
-              _stack.emplace_back(_After_QNode{d_a3.get(), *(d_a30), d_a1.get(),
-                                               *(d_a10), d_a0.get(), *(d_a00),
+              _stack.emplace_back(_After_QNode{d_a3.get(), *d_a30, d_a1.get(),
+                                               *d_a10, d_a0.get(), *d_a00,
                                                (d_a2 + d_a20)});
-              _stack.emplace_back(_Enter{d_a4.get(), std::move(*(d_a40))});
+              _stack.emplace_back(_Enter{d_a4.get(), std::move(*d_a40)});
             }
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
@@ -420,7 +419,7 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const qtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = qtree::qleaf();
           } else {
@@ -513,7 +512,7 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const qtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -548,16 +547,16 @@ struct MemSafetyProbe17 {
 
     unsigned int qtree_depth() const {
       const qtree *_self = this;
-      auto &&_sv = *(_self);
+      auto &&_sv = *_self;
       if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
         return 0u;
       } else {
         const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
             std::get<typename qtree::QNode>(_sv.v());
-        unsigned int da = (*(d_a0)).qtree_depth();
-        unsigned int db = (*(d_a1)).qtree_depth();
-        unsigned int dc = (*(d_a3)).qtree_depth();
-        unsigned int dd = (*(d_a4)).qtree_depth();
+        unsigned int da = (*d_a0).qtree_depth();
+        unsigned int db = (*d_a1).qtree_depth();
+        unsigned int dc = (*d_a3).qtree_depth();
+        unsigned int dd = (*d_a4).qtree_depth();
         unsigned int m1;
         if (da <= db) {
           m1 = db;
@@ -632,7 +631,7 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const qtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -743,15 +742,14 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const qtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             _stack.emplace_back(_After_QNode{d_a3.get(), d_a1.get(), d_a0.get(),
-                                             *(d_a4), *(d_a3), d_a2, *(d_a1),
-                                             *(d_a0)});
+                                             *d_a4, *d_a3, d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
@@ -861,15 +859,14 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const qtree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             _stack.emplace_back(_After_QNode{d_a3.get(), d_a1.get(), d_a0.get(),
-                                             *(d_a4), *(d_a3), d_a2, *(d_a1),
-                                             *(d_a0)});
+                                             *d_a4, *d_a3, d_a2, *d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
@@ -1058,23 +1055,23 @@ struct MemSafetyProbe17 {
       const mylist *_loop_self = this;
       mylist<t_A> _loop_l2 = std::move(l2);
       while (true) {
-        auto &&_sv = *(_loop_self);
+        auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
-          *(_write) = std::make_unique<mylist<t_A>>(std::move(_loop_l2));
+          *_write = std::make_unique<mylist<t_A>>(std::move(_loop_l2));
           break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<t_A>::Mycons>(_sv.v());
           auto _cell = std::make_unique<mylist<t_A>>(
               typename mylist<t_A>::Mycons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename mylist<t_A>::Mycons>((*_write)->v_mut()).d_a1;
           _loop_self = d_a1.get();
           continue;
         }
       }
-      return std::move(*(_head));
+      return std::move(*_head);
     }
 
     template <typename T1, typename F1>
@@ -1107,13 +1104,13 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -1154,13 +1151,13 @@ struct MemSafetyProbe17 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -1206,7 +1203,7 @@ struct MemSafetyProbe17 {
     return std::move(t).weighted_sum();
   }();
   /// TEST 7: Build a 4-ary tree programmatically and check.
-  static qtree make_qtree(const unsigned int n);
+  static qtree make_qtree(unsigned int n);
   static inline const unsigned int test_make_qtree = make_qtree(4u).qtree_sum();
   /// TEST 8: Two-pass on a 4-ary tree: flatten then sum vs direct sum.
   static inline const unsigned int test_two_pass_qtree = []() {

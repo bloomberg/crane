@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -134,40 +133,36 @@ struct AccumClosureEscape {
     const variant_t &v() const { return d_v_; }
 
     mylist<t_A> mylist_append(mylist<t_A> l2) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return l2;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return mylist<t_A>::mycons(d_a0,
-                                   (*(d_a1)).mylist_append(std::move(l2)));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return mylist<t_A>::mycons(d_a0, (*d_a1).mylist_append(std::move(l2)));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -251,7 +246,7 @@ struct AccumClosureEscape {
     static tree tleaf() { return tree(TLeaf{}); }
 
     static tree tnode(tree a0, unsigned int a1, tree a2) {
-      return tree(TNode{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(TNode{std::make_unique<tree>(std::move(a0)), a1,
                         std::make_unique<tree>(std::move(a2))});
     }
 
@@ -288,31 +283,28 @@ struct AccumClosureEscape {
     /// Build closures from TREE traversal: tree nodes become closures.
     /// Each closure captures pattern variables from tree match.
     mylist<std::function<unsigned int(unsigned int)>> tree_to_adders() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return mylist<std::function<unsigned int(unsigned int)>>::mynil();
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(_sv.v());
-        tree d_a0_value = *(d_a0);
-        tree d_a2_value = *(d_a2);
+            std::get<typename tree::TNode>(this->v());
+        tree d_a0_value = *d_a0;
+        tree d_a2_value = *d_a2;
         return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int x) mutable { return (d_a1 + x); },
+            [=](unsigned int x) mutable { return (d_a1 + x); },
             d_a0_value.tree_to_adders().mylist_append(
                 d_a2_value.tree_to_adders()));
       }
     }
 
     mylist<unsigned int> tree_to_list() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return mylist<unsigned int>::mynil();
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(_sv.v());
+            std::get<typename tree::TNode>(this->v());
         return mylist<unsigned int>::mycons(
-            d_a1,
-            (*(d_a0)).tree_to_list().mylist_append((*(d_a2)).tree_to_list()));
+            d_a1, (*d_a0).tree_to_list().mylist_append((*d_a2).tree_to_list()));
       }
     }
 
@@ -320,14 +312,13 @@ struct AccumClosureEscape {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+            std::get<typename tree::TNode>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -335,14 +326,13 @@ struct AccumClosureEscape {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::TLeaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+            std::get<typename tree::TNode>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -358,11 +348,11 @@ struct AccumClosureEscape {
   /// Apply first closure from the list.
   static unsigned int
   apply_first(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-              const unsigned int x);
+              unsigned int x);
   /// Apply all closures and sum.
   static unsigned int
   apply_all_sum(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-                const unsigned int x);
+                unsigned int x);
   /// test1: build_adders 10, 20, 30  = 30+_, 20+_, 10+_ (reversed)
   /// apply_first result 5 = 30 + 5 = 35
   static inline const unsigned int test1 = []() {
@@ -389,20 +379,19 @@ struct AccumClosureEscape {
   /// This creates closures that capture OTHER closures.
   static unsigned int
   compose_from_list(const mylist<unsigned int> &l,
-                    const std::function<unsigned int(unsigned int)> acc,
-                    const unsigned int _x0) {
+                    std::function<unsigned int(unsigned int)> acc,
+                    unsigned int _x0) {
     return [=]() mutable -> std::function<unsigned int(unsigned int)> {
       if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
         return acc;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename mylist<unsigned int>::Mycons>(l.v());
-        mylist<unsigned int> d_a1_value = *(d_a1);
+        mylist<unsigned int> d_a1_value = *d_a1;
         return [=](unsigned int _x0) mutable -> unsigned int {
           return compose_from_list(
               d_a1_value,
-              [=](const unsigned int x) mutable { return acc((d_a0 + x)); },
-              _x0);
+              [=](unsigned int x) mutable { return acc((d_a0 + x)); }, _x0);
         };
       }
     }()(_x0);
@@ -417,7 +406,7 @@ struct AccumClosureEscape {
           10u, mylist<unsigned int>::mycons(
                    20u, mylist<unsigned int>::mycons(
                             30u, mylist<unsigned int>::mynil()))),
-      [](const unsigned int x) { return x; }, 7u);
+      [](unsigned int x) { return x; }, 7u);
   /// test4: Tree (Node (Node Leaf 10 Leaf) 20 (Node Leaf 30 Leaf))
   /// Closures: 20+_, 10+_, 30+_
   /// apply_all_sum with 5: (20+5) + (10+5) + (30+5) = 25+15+35 = 75

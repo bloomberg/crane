@@ -1,23 +1,18 @@
 #ifndef INCLUDED_BOOL_OPS
 #define INCLUDED_BOOL_OPS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct BoolOps {
   static inline const bool bool_true = true;
   static inline const bool bool_false = false;
-  static bool my_negb(const bool b);
-  static bool my_andb(const bool a, const bool b);
-  static bool my_orb(const bool a, const bool b);
-  static bool my_xorb(const bool a, const bool b);
-  static unsigned int if_nat(const bool b, const unsigned int t,
-                             const unsigned int f);
-  static bool complex_bool(const bool a, const bool b, const bool c);
-  static bool nat_eq(const unsigned int _x0, const unsigned int _x1);
-  static bool nat_lt(const unsigned int _x0, const unsigned int _x1);
-  static bool nat_le(const unsigned int _x0, const unsigned int _x1);
+  static bool my_negb(bool b);
+  static bool my_andb(bool a, bool b);
+  static bool my_orb(bool a, bool b);
+  static bool my_xorb(bool a, bool b);
+  static unsigned int if_nat(bool b, unsigned int t, unsigned int f);
+  static bool complex_bool(bool a, bool b, bool c);
+  static bool nat_eq(unsigned int _x0, unsigned int _x1);
+  static bool nat_lt(unsigned int _x0, unsigned int _x1);
+  static bool nat_le(unsigned int _x0, unsigned int _x1);
   static inline const bool test_neg_t = my_negb(true);
   static inline const bool test_neg_f = my_negb(false);
   static inline const bool test_and_tt = my_andb(true, true);

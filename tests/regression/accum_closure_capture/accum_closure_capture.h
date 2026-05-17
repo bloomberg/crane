@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -118,13 +117,12 @@ struct AccumClosureCapture {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int apply_all(const unsigned int init) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
+    unsigned int apply_all(unsigned int init) const {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return init;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
-        return (*(d_a1)).apply_all(d_a0(init));
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return (*d_a1).apply_all(d_a0(init));
       }
     }
 
@@ -133,12 +131,11 @@ struct AccumClosureCapture {
           T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
           T1 &>
     T1 fn_list_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template fn_list_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template fn_list_rec<T1>(f, f0));
       }
     }
 
@@ -147,12 +144,11 @@ struct AccumClosureCapture {
           T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
           T1 &>
     T1 fn_list_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename fn_list::FNil>(_sv.v())) {
+      if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template fn_list_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template fn_list_rect<T1>(f, f0));
       }
     }
   };
@@ -235,7 +231,7 @@ struct AccumClosureCapture {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -275,33 +271,29 @@ struct AccumClosureCapture {
     /// destroyed. Calling the closures from apply_all dereferences dangling
     /// this.
     fn_list extract_closures() const {
-      tree _self_val = *(this);
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      tree _self_val = *this;
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return fn_list::fnil();
       } else {
-        auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(this->v());
         return fn_list::fcons(
-            [=](const unsigned int x) mutable {
-              return (x + _self_val.tree_sum());
-            },
-            fn_list::fcons(
-                [=](const unsigned int x) mutable { return (x + d_a1); },
-                fn_list::fcons(
-                    [=](const unsigned int x) mutable {
-                      return (x + _self_val.tree_sum());
-                    },
-                    fn_list::fnil())));
+            [=](unsigned int x) mutable { return (x + _self_val.tree_sum()); },
+            fn_list::fcons([=](unsigned int x) mutable { return (x + d_a1); },
+                           fn_list::fcons(
+                               [=](unsigned int x) mutable {
+                                 return (x + _self_val.tree_sum());
+                               },
+                               fn_list::fnil())));
       }
     }
 
     unsigned int tree_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum());
       }
     }
 
@@ -309,13 +301,13 @@ struct AccumClosureCapture {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -323,13 +315,13 @@ struct AccumClosureCapture {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rect<T1>(f, f0));
       }
     }
   };

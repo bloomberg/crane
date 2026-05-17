@@ -2,7 +2,6 @@
 #define INCLUDED_BINARY_NUMS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -173,11 +172,10 @@ public:
 
   // ACCESSORS
   N clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<N0>(_sv.v())) {
+    if (std::holds_alternative<N0>(this->v())) {
       return N(N0{});
     } else {
-      const auto &[d_a0] = std::get<Npos>(_sv.v());
+      const auto &[d_a0] = std::get<Npos>(this->v());
       return N(Npos{d_a0.clone()});
     }
   }
@@ -238,14 +236,13 @@ public:
 
   // ACCESSORS
   Z clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Z0>(_sv.v())) {
+    if (std::holds_alternative<Z0>(this->v())) {
       return Z(Z0{});
-    } else if (std::holds_alternative<Zpos>(_sv.v())) {
-      const auto &[d_a0] = std::get<Zpos>(_sv.v());
+    } else if (std::holds_alternative<Zpos>(this->v())) {
+      const auto &[d_a0] = std::get<Zpos>(this->v());
       return Z(Zpos{d_a0.clone()});
     } else {
-      const auto &[d_a0] = std::get<Zneg>(_sv.v());
+      const auto &[d_a0] = std::get<Zneg>(this->v());
       return Z(Zneg{d_a0.clone()});
     }
   }
@@ -313,11 +310,10 @@ struct Pos {
 
     // ACCESSORS
     mask clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<IsNul>(_sv.v())) {
+      if (std::holds_alternative<IsNul>(this->v())) {
         return mask(IsNul{});
-      } else if (std::holds_alternative<IsPos>(_sv.v())) {
-        const auto &[d_a0] = std::get<IsPos>(_sv.v());
+      } else if (std::holds_alternative<IsPos>(this->v())) {
+        const auto &[d_a0] = std::get<IsPos>(this->v());
         return mask(IsPos{d_a0.clone()});
       } else {
         return mask(IsNeg{});
@@ -344,7 +340,7 @@ struct Pos {
   static mask sub_mask(const Positive &x, const Positive &y);
   static mask sub_mask_carry(const Positive &x, const Positive &y);
   static Positive mul(const Positive &x, Positive y);
-  static Comparison compare_cont(const Comparison r, const Positive &x,
+  static Comparison compare_cont(Comparison r, const Positive &x,
                                  const Positive &y);
   static Comparison compare(const Positive &_x0, const Positive &_x1);
 
@@ -353,10 +349,10 @@ struct Pos {
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
-      return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));
+      return op(a, iter_op<T1>(op, *d_a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
-      return iter_op<T1>(op, *(d_a0), op(a, a));
+      return iter_op<T1>(op, *d_a0, op(a, a));
     } else {
       return a;
     }
@@ -376,10 +372,10 @@ struct Coq_Pos {
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
-      return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));
+      return op(a, iter_op<T1>(op, *d_a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
       const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
-      return iter_op<T1>(op, *(d_a0), op(a, a));
+      return iter_op<T1>(op, *d_a0, op(a, a));
     } else {
       return a;
     }
@@ -412,7 +408,7 @@ struct BinInt {
 };
 
 struct Datatypes {
-  static Comparison CompOpp(const Comparison r);
+  static Comparison CompOpp(Comparison r);
 };
 
 struct BinaryNums {

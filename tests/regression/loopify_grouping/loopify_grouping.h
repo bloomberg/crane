@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_GROUPING
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -145,7 +143,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -165,20 +163,18 @@ public:
 
 struct LoopifyGrouping {
   static List<List<unsigned int>>
-  prepend_to_groups(const unsigned int x, const bool same,
-                    List<List<unsigned int>> groups);
-  static List<List<unsigned int>> group_fuel(const unsigned int fuel,
+  prepend_to_groups(unsigned int x, bool same, List<List<unsigned int>> groups);
+  static List<List<unsigned int>> group_fuel(unsigned int fuel,
                                              const List<unsigned int> &l);
   static List<List<unsigned int>> group(const List<unsigned int> &l);
-  static bool elem(const unsigned int x, const List<unsigned int> &l);
+  static bool elem(unsigned int x, const List<unsigned int> &l);
   static List<unsigned int> nub(const List<unsigned int> &l);
-  static List<unsigned int> remove_elem(const unsigned int x,
+  static List<unsigned int> remove_elem(unsigned int x,
                                         const List<unsigned int> &l);
   static std::pair<std::pair<List<unsigned int>, List<unsigned int>>,
                    List<unsigned int>>
-  partition3(const unsigned int pivot, const List<unsigned int> &l);
-  static unsigned int count_elem(const unsigned int x,
-                                 const List<unsigned int> &l);
+  partition3(unsigned int pivot, const List<unsigned int> &l);
+  static unsigned int count_elem(unsigned int x, const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   group_pairs(const List<unsigned int> &l);
 };

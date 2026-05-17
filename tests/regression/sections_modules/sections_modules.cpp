@@ -1,14 +1,12 @@
 #include "sections_modules.h"
 
-unsigned int SectionsModules::add_params(const unsigned int x,
-                                         const unsigned int y,
-                                         const unsigned int n) {
+unsigned int SectionsModules::add_params(unsigned int x, unsigned int y,
+                                         unsigned int n) {
   return ((n + x) + y);
 }
 
-unsigned int SectionsModules::count_down_from_x(const unsigned int x,
-                                                const unsigned int y,
-                                                const unsigned int n) {
+unsigned int SectionsModules::count_down_from_x(unsigned int x, unsigned int y,
+                                                unsigned int n) {
   if (n <= 0) {
     return x;
   } else {
@@ -17,38 +15,36 @@ unsigned int SectionsModules::count_down_from_x(const unsigned int x,
   }
 }
 
-unsigned int SectionsModules::NatMonoid::op(const unsigned int _x0,
-                                            const unsigned int _x1) {
+unsigned int SectionsModules::NatMonoid::op(unsigned int _x0,
+                                            unsigned int _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int SectionsModules::LocalDefs::private_helper(const unsigned int n) {
+unsigned int SectionsModules::LocalDefs::private_helper(unsigned int n) {
   return (n * 2u);
 }
 
-unsigned int SectionsModules::LocalDefs::public_use(const unsigned int n) {
+unsigned int SectionsModules::LocalDefs::public_use(unsigned int n) {
   return (private_helper(n) + 1u);
 }
 
-unsigned int SectionsModules::use_both(const unsigned int a,
-                                       const unsigned int b,
-                                       const unsigned int c) {
+unsigned int SectionsModules::use_both(unsigned int a, unsigned int b,
+                                       unsigned int c) {
   return ((a + b) + c);
 }
 
-unsigned int SectionsModules::use_outer(const unsigned int _x0,
-                                        const unsigned int _x1) {
+unsigned int SectionsModules::use_outer(unsigned int _x0, unsigned int _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int SectionsModules::Base::base_fun(const unsigned int n) {
+unsigned int SectionsModules::Base::base_fun(unsigned int n) {
   return (n + 1u);
 }
 
-unsigned int SectionsModules::Extended::base_fun(const unsigned int n) {
+unsigned int SectionsModules::Extended::base_fun(unsigned int n) {
   return (n + 1u);
 }
 
-unsigned int SectionsModules::Extended::extended_fun(const unsigned int n) {
+unsigned int SectionsModules::Extended::extended_fun(unsigned int n) {
   return (base_fun(n) + extended_val);
 }

@@ -2,7 +2,6 @@
 #define INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -103,7 +102,7 @@ struct MutualValueDeepDestruct {
     static a aend() { return a(AEnd{}); }
 
     static a anode(bool a0, b a1) {
-      return a(ANode{std::move(a0), std::make_unique<b>(std::move(a1))});
+      return a(ANode{a0, std::make_unique<b>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -177,8 +176,7 @@ struct MutualValueDeepDestruct {
 
     // ACCESSORS
     b clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<BNode>(_sv.v());
+      const auto &[d_a0] = std::get<BNode>(this->v());
       return b(BNode{
           d_a0 ? std::make_unique<MutualValueDeepDestruct::a>(d_a0->clone())
                : nullptr});
@@ -233,7 +231,7 @@ struct MutualValueDeepDestruct {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename a::ANode>(a0.v());
-      return f0(d_a0, *(d_a1));
+      return f0(d_a0, *d_a1);
     }
   }
 
@@ -244,7 +242,7 @@ struct MutualValueDeepDestruct {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename a::ANode>(a0.v());
-      return f0(d_a0, *(d_a1));
+      return f0(d_a0, *d_a1);
     }
   }
 
@@ -252,14 +250,14 @@ struct MutualValueDeepDestruct {
     requires std::is_invocable_r_v<T1, F0 &, a &>
   static T1 b_rect(F0 &&f, const b &b0) {
     const auto &[d_a0] = std::get<typename b::BNode>(b0.v());
-    return f(*(d_a0));
+    return f(*d_a0);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, a &>
   static T1 b_rec(F0 &&f, const b &b0) {
     const auto &[d_a0] = std::get<typename b::BNode>(b0.v());
-    return f(*(d_a0));
+    return f(*d_a0);
   }
 
   static a keep_a(a x);

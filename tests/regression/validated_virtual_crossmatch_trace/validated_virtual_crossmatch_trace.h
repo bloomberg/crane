@@ -126,56 +126,51 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   bool existsb(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return false;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (f(d_a0) || (*(d_a1)).existsb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) || (*d_a1).existsb(f));
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<List<T1>, F0 &, t_A &>
   List<T1> flat_map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return f(d_a0).app((*(d_a1)).template flat_map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return f(d_a0).app((*d_a1).template flat_map<T1>(f));
     }
   }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -938,11 +933,11 @@ public:
 };
 
 struct PeanoNat {
-  static bool eq_dec(const unsigned int n, const unsigned int m);
+  static bool eq_dec(unsigned int n, unsigned int m);
 };
 
 struct Bool {
-  static bool bool_dec(const bool b1, const bool b2);
+  static bool bool_dec(bool b1, bool b2);
 };
 
 struct Uint1 {
@@ -985,12 +980,11 @@ public:
 
   // ACCESSORS
   Uint1 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
-      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
+    if (std::holds_alternative<UIntDecimal>(this->v())) {
+      const auto &[d_u] = std::get<UIntDecimal>(this->v());
       return Uint1(UIntDecimal{d_u.clone()});
     } else {
-      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
+      const auto &[d_u] = std::get<UIntHexadecimal>(this->v());
       return Uint1(UIntHexadecimal{d_u.clone()});
     }
   }
@@ -1010,13 +1004,13 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int n, const unsigned int m);
-  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
-                                  const unsigned int m);
-  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
+  static unsigned int tail_add(unsigned int n, unsigned int m);
+  static unsigned int tail_addmul(unsigned int r, unsigned int n,
+                                  unsigned int m);
+  static unsigned int tail_mul(unsigned int n, unsigned int m);
+  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
   static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
+  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
   static unsigned int of_hex_uint(const Uint0 &d);
   static unsigned int of_num_uint(const Uint1 &d);
 };
@@ -1025,7 +1019,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   enum class HLALocus { e_LOCUS_A, e_LOCUS_B, e_LOCUS_DR };
 
   template <typename T1>
-  static T1 HLALocus_rect(T1 f, T1 f0, T1 f1, const HLALocus h) {
+  static T1 HLALocus_rect(T1 f, T1 f0, T1 f1, HLALocus h) {
     switch (h) {
     case HLALocus::e_LOCUS_A: {
       return f;
@@ -1042,7 +1036,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 HLALocus_rec(T1 f, T1 f0, T1 f1, const HLALocus h) {
+  static T1 HLALocus_rec(T1 f, T1 f0, T1 f1, HLALocus h) {
     switch (h) {
     case HLALocus::e_LOCUS_A: {
       return f;
@@ -1058,7 +1052,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   }
 
-  static bool hla_locus_eq_dec(const HLALocus x, const HLALocus y);
+  static bool hla_locus_eq_dec(HLALocus x, HLALocus y);
 
   struct HLAAllele {
     HLALocus hla_locus;
@@ -1066,7 +1060,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     HLAAllele clone() const {
-      return HLAAllele{(*(this)).hla_locus, (*(this)).hla_group};
+      return HLAAllele{(*this).hla_locus, (*this).hla_group};
     }
   };
 
@@ -1078,7 +1072,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     HLATyping clone() const {
-      return HLATyping{(*(this)).hla_typed_alleles.clone()};
+      return HLATyping{(*this).hla_typed_alleles.clone()};
     }
   };
 
@@ -1089,8 +1083,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     HLAEpitope clone() const {
-      return HLAEpitope{(*(this)).epitope_id, (*(this)).epitope_locus,
-                        (*(this)).epitope_immunogenic};
+      return HLAEpitope{(*this).epitope_id, (*this).epitope_locus,
+                        (*this).epitope_immunogenic};
     }
   };
 
@@ -1115,8 +1109,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     EpitopeAntibody clone() const {
-      return EpitopeAntibody{(*(this)).ab_epitope.clone(), (*(this)).ab_mfi,
-                             (*(this)).ab_complement_fixing};
+      return EpitopeAntibody{(*this).ab_epitope.clone(), (*this).ab_mfi,
+                             (*this).ab_complement_fixing};
     }
   };
 
@@ -1128,9 +1122,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     VirtualXMProfile clone() const {
-      return VirtualXMProfile{(*(this)).vxm_epitope_abs.clone(),
-                              (*(this)).vxm_current_pra, (*(this)).vxm_peak_pra,
-                              (*(this)).vxm_sensitization_events};
+      return VirtualXMProfile{(*this).vxm_epitope_abs.clone(),
+                              (*this).vxm_current_pra, (*this).vxm_peak_pra,
+                              (*this).vxm_sensitization_events};
     }
   };
 
@@ -1145,9 +1139,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
     // ACCESSORS
     MFIThresholdConfig clone() const {
       return MFIThresholdConfig{
-          (*(this)).mfi_cfg_negative, (*(this)).mfi_cfg_weak_positive,
-          (*(this)).mfi_cfg_moderate, (*(this)).mfi_cfg_strong,
-          (*(this)).mfi_cfg_lab_id,   (*(this)).mfi_cfg_validated};
+          (*this).mfi_cfg_negative, (*this).mfi_cfg_weak_positive,
+          (*this).mfi_cfg_moderate, (*this).mfi_cfg_strong,
+          (*this).mfi_cfg_lab_id,   (*this).mfi_cfg_validated};
     }
   };
 
@@ -1160,7 +1154,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     ValidatedMFIConfig clone() const {
-      return ValidatedMFIConfig{(*(this)).vmc_config.clone()};
+      return ValidatedMFIConfig{(*this).vmc_config.clone()};
     }
   };
 
@@ -1175,8 +1169,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 MFIStrength_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                             const MFIStrength m) {
+  static T1 MFIStrength_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, MFIStrength m) {
     switch (m) {
     case MFIStrength::e_MFI_NEGATIVE: {
       return f;
@@ -1199,8 +1192,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 MFIStrength_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                            const MFIStrength m) {
+  static T1 MFIStrength_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, MFIStrength m) {
     switch (m) {
     case MFIStrength::e_MFI_NEGATIVE: {
       return f;
@@ -1223,9 +1215,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   static MFIStrength classify_mfi_with_config(const MFIThresholdConfig &cfg,
-                                              const unsigned int mfi);
+                                              unsigned int mfi);
   static MFIStrength classify_mfi_safe(const ValidatedMFIConfig &vcfg,
-                                       const unsigned int mfi);
+                                       unsigned int mfi);
   static inline const unsigned int mfi_negative_threshold = 1000u;
   static unsigned int max_dsa_mfi(const VirtualXMProfile &recipient,
                                   const HLATyping &donor);
@@ -1239,8 +1231,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 VirtualXMResult_rect(T1 f, T1 f0, T1 f1, T1 f2,
-                                 const VirtualXMResult v) {
+  static T1 VirtualXMResult_rect(T1 f, T1 f0, T1 f1, T1 f2, VirtualXMResult v) {
     switch (v) {
     case VirtualXMResult::e_VXM_NEGATIVE: {
       return f;
@@ -1260,8 +1251,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 VirtualXMResult_rec(T1 f, T1 f0, T1 f1, T1 f2,
-                                const VirtualXMResult v) {
+  static T1 VirtualXMResult_rec(T1 f, T1 f0, T1 f1, T1 f2, VirtualXMResult v) {
     switch (v) {
     case VirtualXMResult::e_VXM_NEGATIVE: {
       return f;
@@ -1293,7 +1283,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 TransplantAcceptability_rect(T1 f, T1 f0, T1 f1, T1 f2,
-                                         const TransplantAcceptability t) {
+                                         TransplantAcceptability t) {
     switch (t) {
     case TransplantAcceptability::e_ACCEPTABLE: {
       return f;
@@ -1314,7 +1304,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 TransplantAcceptability_rec(T1 f, T1 f0, T1 f1, T1 f2,
-                                        const TransplantAcceptability t) {
+                                        TransplantAcceptability t) {
     switch (t) {
     case TransplantAcceptability::e_ACCEPTABLE: {
       return f;
@@ -1334,8 +1324,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   static TransplantAcceptability
-  transplant_acceptability(const VirtualXMResult vxm,
-                           const bool complement_fixing_dsa);
+  transplant_acceptability(VirtualXMResult vxm, bool complement_fixing_dsa);
   static TransplantAcceptability
   full_virtual_crossmatch_safe(const ValidatedMFIConfig &vcfg,
                                const VirtualXMProfile &recipient,
@@ -1347,7 +1336,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   template <typename T1>
-  static T1 TestConfidence_rect(T1 f, T1 f0, T1 f1, const TestConfidence t) {
+  static T1 TestConfidence_rect(T1 f, T1 f0, T1 f1, TestConfidence t) {
     switch (t) {
     case TestConfidence::e_CONFIDENCE_HIGH: {
       return f;
@@ -1364,7 +1353,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   template <typename T1>
-  static T1 TestConfidence_rec(T1 f, T1 f0, T1 f1, const TestConfidence t) {
+  static T1 TestConfidence_rec(T1 f, T1 f0, T1 f1, TestConfidence t) {
     switch (t) {
     case TestConfidence::e_CONFIDENCE_HIGH: {
       return f;
@@ -1388,7 +1377,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 CrossmatchResult_rect(T1 f, T1 f0, T1 f1, T1 f2,
-                                  const CrossmatchResult c) {
+                                  CrossmatchResult c) {
     switch (c) {
     case CrossmatchResult::e_XM_COMPATIBLE: {
       return f;
@@ -1409,7 +1398,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 CrossmatchResult_rec(T1 f, T1 f0, T1 f1, T1 f2,
-                                 const CrossmatchResult c) {
+                                 CrossmatchResult c) {
     switch (c) {
     case CrossmatchResult::e_XM_COMPATIBLE: {
       return f;
@@ -1435,8 +1424,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     CrossmatchWithUncertainty clone() const {
-      return CrossmatchWithUncertainty{
-          (*(this)).xmu_result, (*(this)).xmu_method, (*(this)).xmu_confidence};
+      return CrossmatchWithUncertainty{(*this).xmu_result, (*this).xmu_method,
+                                       (*this).xmu_confidence};
     }
   };
 
@@ -1453,25 +1442,22 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     SafeTransfusionOrder clone() const {
-      return SafeTransfusionOrder{(*(this)).sto_recipient_id,
-                                  (*(this)).sto_product_id,
-                                  (*(this)).sto_compatibility_check,
-                                  (*(this)).sto_crossmatch.clone(),
-                                  (*(this)).sto_sample_collection_time,
-                                  (*(this)).sto_authorized_by,
-                                  (*(this)).sto_emergency_release};
+      return SafeTransfusionOrder{
+          (*this).sto_recipient_id,           (*this).sto_product_id,
+          (*this).sto_compatibility_check,    (*this).sto_crossmatch.clone(),
+          (*this).sto_sample_collection_time, (*this).sto_authorized_by,
+          (*this).sto_emergency_release};
     }
   };
 
-  static bool order_sample_valid(const unsigned int collection_time,
-                                 const unsigned int current_time);
+  static bool order_sample_valid(unsigned int collection_time,
+                                 unsigned int current_time);
   static bool transfusion_order_authorized(const SafeTransfusionOrder &order,
-                                           const unsigned int current_time);
+                                           unsigned int current_time);
   static std::optional<SafeTransfusionOrder> create_safe_transfusion_order(
-      const unsigned int recipient_id, const unsigned int product_id,
-      const bool compat_result, CrossmatchWithUncertainty xm,
-      const unsigned int sample_time, const unsigned int current_time,
-      const unsigned int authorizer, const bool is_emergency);
+      unsigned int recipient_id, unsigned int product_id, bool compat_result,
+      CrossmatchWithUncertainty xm, unsigned int sample_time,
+      unsigned int current_time, unsigned int authorizer, bool is_emergency);
   static inline const HLATyping donor_hla = HLATyping{List<HLAAllele>::cons(
       HLAAllele{HLALocus::e_LOCUS_A, 2u},
       List<HLAAllele>::cons(
@@ -1498,7 +1484,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const CrossmatchWithUncertainty bad_crossmatch =
       CrossmatchWithUncertainty{CrossmatchResult::e_XM_INCOMPATIBLE, 1u,
                                 TestConfidence::e_CONFIDENCE_HIGH};
-  static bool risk_acceptable(const TransplantAcceptability a);
+  static bool risk_acceptable(TransplantAcceptability a);
   static inline const bool sample_virtual_zero_negative = []() {
     switch (classify_mfi_safe(validated_luminex, 0u)) {
     case MFIStrength::e_MFI_NEGATIVE: {

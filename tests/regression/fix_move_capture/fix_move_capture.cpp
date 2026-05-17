@@ -6,7 +6,7 @@ unsigned int FixMoveCapture::length(const FixMoveCapture::mylist &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
-    return (1u + length(*(d_a1)));
+    return (1u + length(*d_a1));
   }
 }
 
@@ -16,7 +16,7 @@ unsigned int FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
-    return (d_a0 + sum(*(d_a1)));
+    return (d_a0 + sum(*d_a1));
   }
 }
 
@@ -41,7 +41,7 @@ FixMoveCapture::mylist FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
 /// - l is now null in caller scope
 /// - g(3) calls fixpoint, which accesses l via & → null → CRASH
 unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
-  auto go_impl = [&](auto &_self_go, const unsigned int n) -> unsigned int {
+  auto go_impl = [&](auto &_self_go, unsigned int n) -> unsigned int {
     if (n <= 0) {
       return sum(l);
     } else {
@@ -49,9 +49,7 @@ unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
       return (1u + _self_go(_self_go, m));
     }
   };
-  auto go = [&](const unsigned int n) -> unsigned int {
-    return go_impl(go_impl, n);
-  };
+  auto go = [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
   FixMoveCapture::mylist t = dup_head(l);
   return (go(3u) + length(std::move(t)));
 }
@@ -60,7 +58,7 @@ unsigned int FixMoveCapture::f(FixMoveCapture::mylist l) {
 /// function. The addition's evaluation order is unspecified in C++,
 /// so we use a let-binding to force the order.
 unsigned int FixMoveCapture::f2(FixMoveCapture::mylist l) {
-  auto go_impl = [&](auto &_self_go, const unsigned int n) -> unsigned int {
+  auto go_impl = [&](auto &_self_go, unsigned int n) -> unsigned int {
     if (n <= 0) {
       return sum(l);
     } else {
@@ -68,9 +66,7 @@ unsigned int FixMoveCapture::f2(FixMoveCapture::mylist l) {
       return (1u + _self_go(_self_go, m));
     }
   };
-  auto go = [&](const unsigned int n) -> unsigned int {
-    return go_impl(go_impl, n);
-  };
+  auto go = [&](unsigned int n) -> unsigned int { return go_impl(go_impl, n); };
   unsigned int result_g = go(3u);
   FixMoveCapture::mylist t = dup_head(l);
   return (result_g + length(std::move(t)));

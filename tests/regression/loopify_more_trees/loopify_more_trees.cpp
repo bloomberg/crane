@@ -32,7 +32,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::mirror(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree &t = *(_f.t);
+      const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = tree::leaf();
@@ -87,8 +87,8 @@ bool LoopifyMoreTrees::same_shape(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree &t2 = *(_f.t2);
-      const LoopifyMoreTrees::tree &t1 = *(_f.t1);
+      const LoopifyMoreTrees::tree &t2 = *_f.t2;
+      const LoopifyMoreTrees::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t1.v())) {
         if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
@@ -156,7 +156,7 @@ List<unsigned int> LoopifyMoreTrees::tree_to_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree &t = *(_f.t);
+      const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = List<unsigned int>::nil();
@@ -216,7 +216,7 @@ unsigned int LoopifyMoreTrees::count_nodes(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree &t = *(_f.t);
+      const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = 0u;
@@ -290,8 +290,8 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
           auto &[d_a00, d_a10, d_a20] =
               std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());
           _stack.emplace_back(
-              _After_Node{*(d_a00), *(d_a0), std::max(d_a1, d_a10)});
-          _stack.emplace_back(_Enter{std::move(*(d_a20)), std::move(*(d_a2))});
+              _After_Node{*d_a00, *d_a0, std::max(d_a1, d_a10)});
+          _stack.emplace_back(_Enter{std::move(*d_a20), std::move(*d_a2)});
         }
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -338,7 +338,7 @@ unsigned int LoopifyMoreTrees::sum_of_max_branches(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree &t = *(_f.t);
+      const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = 0u;
@@ -361,7 +361,7 @@ unsigned int LoopifyMoreTrees::sum_of_max_branches(
 }
 
 LoopifyMoreTrees::tree LoopifyMoreTrees::insert_bst(
-    const unsigned int x,
+    unsigned int x,
     const LoopifyMoreTrees::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -392,7 +392,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::insert_bst(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMoreTrees::tree &t = *(_f.t);
+      const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
         _result = tree::node(tree::leaf(), x, tree::leaf());
@@ -400,10 +400,10 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::insert_bst(
         const auto &[d_a0, d_a1, d_a2] =
             std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
         if (x <= d_a1) {
-          _stack.emplace_back(_Resume1{*(d_a2), d_a1});
+          _stack.emplace_back(_Resume1{*d_a2, d_a1});
           _stack.emplace_back(_Enter{d_a0.get()});
         } else {
-          _stack.emplace_back(_Resume2{d_a1, *(d_a0)});
+          _stack.emplace_back(_Resume2{d_a1, *d_a0});
           _stack.emplace_back(_Enter{d_a2.get()});
         }
       }
@@ -442,7 +442,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::build_bst(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = tree::leaf();
       } else {
@@ -468,21 +468,21 @@ List<unsigned int> LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1->v())) {
-      *(_write) = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
+      *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(d_a0, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_l1 = d_a1.get();
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<unsigned int> LoopifyMoreTrees::flatten(
@@ -509,7 +509,7 @@ List<unsigned int> LoopifyMoreTrees::flatten(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
+      const List<List<unsigned int>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
               ll.v())) {
         _result = List<unsigned int>::nil();
@@ -535,7 +535,7 @@ LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
             _loop_lt->v())) {
-      *(_write) = std::make_unique<List<List<unsigned int>>>(
+      *_write = std::make_unique<List<List<unsigned int>>>(
           List<List<unsigned int>>::nil());
       break;
     } else {
@@ -543,7 +543,7 @@ LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
           std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_lt->v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(tree_to_list(d_a0), nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
                .d_a1;
@@ -551,7 +551,7 @@ LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<LoopifyMoreTrees::tree>
@@ -562,8 +562,8 @@ LoopifyMoreTrees::tree_children(const LoopifyMoreTrees::tree &t) {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
     return List<LoopifyMoreTrees::tree>::cons(
-        *(d_a0), List<LoopifyMoreTrees::tree>::cons(
-                     *(d_a2), List<LoopifyMoreTrees::tree>::nil()));
+        *d_a0, List<LoopifyMoreTrees::tree>::cons(
+                   *d_a2, List<LoopifyMoreTrees::tree>::nil()));
   }
 }
 
@@ -577,7 +577,7 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
             _loop_l1->v())) {
-      *(_write) =
+      *_write =
           std::make_unique<List<LoopifyMoreTrees::tree>>(std::move(_loop_l2));
       break;
     } else {
@@ -585,7 +585,7 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
           std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_l1->v());
       auto _cell = std::make_unique<List<LoopifyMoreTrees::tree>>(
           typename List<LoopifyMoreTrees::tree>::Cons(d_a0, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename List<LoopifyMoreTrees::tree>::Cons>(
                     (*_write)->v_mut())
                     .d_a1;
@@ -593,7 +593,7 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
@@ -620,7 +620,7 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyMoreTrees::tree> &lt = *(_f.lt);
+      const List<LoopifyMoreTrees::tree> &lt = *_f.lt;
       if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
               lt.v())) {
         _result = List<LoopifyMoreTrees::tree>::nil();
@@ -639,22 +639,22 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
 }
 
 List<List<unsigned int>>
-LoopifyMoreTrees::tree_levels_fuel(const unsigned int fuel,
+LoopifyMoreTrees::tree_levels_fuel(unsigned int fuel,
                                    const List<LoopifyMoreTrees::tree> &level) {
   std::unique_ptr<List<List<unsigned int>>> _head{};
   std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
   List<LoopifyMoreTrees::tree> _loop_level = level;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<List<unsigned int>>>(
+      *_write = std::make_unique<List<List<unsigned int>>>(
           List<List<unsigned int>>::nil());
       break;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
               _loop_level.v())) {
-        *(_write) = std::make_unique<List<List<unsigned int>>>(
+        *_write = std::make_unique<List<List<unsigned int>>>(
             List<List<unsigned int>>::nil());
         break;
       } else {
@@ -663,7 +663,7 @@ LoopifyMoreTrees::tree_levels_fuel(const unsigned int fuel,
         auto _cell = std::make_unique<List<List<unsigned int>>>(
             typename List<List<unsigned int>>::Cons(std::move(values),
                                                     nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<List<unsigned int>>::Cons>(
                       (*_write)->v_mut())
                       .d_a1;
@@ -673,7 +673,7 @@ LoopifyMoreTrees::tree_levels_fuel(const unsigned int fuel,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<List<unsigned int>>

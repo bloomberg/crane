@@ -101,7 +101,7 @@ struct NestedMatchClosure {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -144,8 +144,8 @@ struct NestedMatchClosure {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -157,8 +157,8 @@ struct NestedMatchClosure {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -205,7 +205,7 @@ struct NestedMatchClosure {
   /// After the function returns, BOTH the pattern variables AND the
   /// function parameter are dead.
   static std::optional<std::function<unsigned int(unsigned int)>>
-  make_param_combiner(const tree &t, const unsigned int base);
+  make_param_combiner(const tree &t, unsigned int base);
   /// test3: Node (Node Leaf 5 Leaf) 10 (Node Leaf 15 Leaf), base=1000
   /// go(0) = 1000 + 10 + 5 + 15 = 1030
   /// go(3) = 1030 + 3 = 1033

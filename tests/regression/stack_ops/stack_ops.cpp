@@ -9,7 +9,7 @@ StackOps::pop_stack(StackOps::state_basic s) {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<unsigned int>(d_a0),
-                          state_basic{*(d_a1)});
+                          state_basic{*d_a1});
   }
 }
 
@@ -40,12 +40,12 @@ StackOps::pop_stack_acc(StackOps::state_with_acc s) {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<unsigned int>(d_a0),
-                          state_with_acc{*(d_a1), s.acc});
+                          state_with_acc{*d_a1, s.acc});
   }
 }
 
 StackOps::state_basic StackOps::push_stack(const StackOps::state_basic &s,
-                                           const unsigned int addr) {
+                                           unsigned int addr) {
   auto &&_sv = s.stack_basic;
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return state_basic{
@@ -53,7 +53,7 @@ StackOps::state_basic StackOps::push_stack(const StackOps::state_basic &s,
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(_sv.v());
-    auto &&_sv0 = *(d_a1);
+    auto &&_sv0 = *d_a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return state_basic{List<unsigned int>::cons(
           addr, List<unsigned int>::cons(d_a0, List<unsigned int>::nil()))};
@@ -80,7 +80,7 @@ unsigned int StackOps::top_or_zero(const StackOps::state_basic &s) {
 }
 
 StackOps::state_basic StackOps::push_stack_cap(const StackOps::state_basic &s,
-                                               const unsigned int addr) {
+                                               unsigned int addr) {
   List<unsigned int> new_stack = [&]() {
     auto &&_sv = s.stack_basic;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
@@ -88,7 +88,7 @@ StackOps::state_basic StackOps::push_stack_cap(const StackOps::state_basic &s,
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_sv.v());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         return List<unsigned int>::cons(
             addr, List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));

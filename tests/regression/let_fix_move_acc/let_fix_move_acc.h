@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_MOVE_ACC
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -131,8 +129,7 @@ struct LetFixMoveAcc {
         return acc;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-        return _self_go(_self_go, *(d_a1),
-                        List<T1>::cons(d_a0, std::move(acc)));
+        return _self_go(_self_go, *d_a1, List<T1>::cons(d_a0, std::move(acc)));
       }
     };
     auto go = [&](const List<T1> &xs, List<T1> acc) -> List<T1> {
@@ -148,7 +145,7 @@ struct LetFixMoveAcc {
         return acc;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(xs.v());
-        return _self_rev(_self_rev, *(d_a1),
+        return _self_rev(_self_rev, *d_a1,
                          List<T1>::cons(d_a0, std::move(acc)));
       }
     };

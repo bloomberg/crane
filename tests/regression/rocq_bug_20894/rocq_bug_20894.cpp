@@ -5,7 +5,7 @@ void RocqBug20894::M::fold(const List<Unit> &l) {
     return;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename List<Unit>::Cons>(l.v());
-    fold(*(d_a1));
+    fold(*d_a1);
     return;
   }
 }

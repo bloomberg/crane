@@ -4,14 +4,14 @@
 /// Functions where the recursive call is wrapped in a single constructor
 /// should be optimized to use O(1) extra space via destination-passing style.
 /// range lo hi creates lo, lo+1, ..., hi-1.
-LoopifyTmc::list<unsigned int> LoopifyTmc::range(const unsigned int lo,
-                                                 const unsigned int hi) {
+LoopifyTmc::list<unsigned int> LoopifyTmc::range(unsigned int lo,
+                                                 unsigned int hi) {
   std::unique_ptr<LoopifyTmc::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyTmc::list<unsigned int>> *_write = &_head;
-  unsigned int _loop_hi = hi;
+  unsigned int _loop_hi = std::move(hi);
   while (true) {
     if (_loop_hi <= 0) {
-      *(_write) = std::make_unique<LoopifyTmc::list<unsigned int>>(
+      *_write = std::make_unique<LoopifyTmc::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
@@ -19,34 +19,34 @@ LoopifyTmc::list<unsigned int> LoopifyTmc::range(const unsigned int lo,
       if (lo <= hi_) {
         auto _cell = std::make_unique<LoopifyTmc::list<unsigned int>>(
             typename list<unsigned int>::Cons(hi_, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
         _loop_hi = hi_;
         continue;
       } else {
-        *(_write) = std::make_unique<LoopifyTmc::list<unsigned int>>(
+        *_write = std::make_unique<LoopifyTmc::list<unsigned int>>(
             list<unsigned int>::nil());
         break;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// prefix_sums acc l computes running prefix sums.
 LoopifyTmc::list<unsigned int>
-LoopifyTmc::prefix_sums(const unsigned int acc,
+LoopifyTmc::prefix_sums(unsigned int acc,
                         const LoopifyTmc::list<unsigned int> &l) {
   std::unique_ptr<LoopifyTmc::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyTmc::list<unsigned int>> *_write = &_head;
   const LoopifyTmc::list<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = acc;
+  unsigned int _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename LoopifyTmc::list<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) = std::make_unique<LoopifyTmc::list<unsigned int>>(
+      *_write = std::make_unique<LoopifyTmc::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
@@ -55,7 +55,7 @@ LoopifyTmc::prefix_sums(const unsigned int acc,
       unsigned int s = (_loop_acc + d_a0);
       auto _cell = std::make_unique<LoopifyTmc::list<unsigned int>>(
           typename list<unsigned int>::Cons(s, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_l = d_a1.get();
@@ -63,5 +63,5 @@ LoopifyTmc::prefix_sums(const unsigned int acc,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }

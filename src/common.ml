@@ -1487,3 +1487,15 @@ let capitalize_last_component s =
     prefix ^ String.capitalize_ascii suffix
   | _ -> String.capitalize_ascii s
 
+(* ---- Needed C++ headers (demand-driven) ---- *)
+
+module SSet = Set.Make (String)
+
+let needed_headers : SSet.t ref = ref SSet.empty
+
+let require_header h = needed_headers := SSet.add h !needed_headers
+
+let get_needed_headers () = SSet.elements !needed_headers
+
+let reset_needed_headers () = needed_headers := SSet.empty
+

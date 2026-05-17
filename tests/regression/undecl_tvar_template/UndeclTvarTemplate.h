@@ -1,9 +1,6 @@
 #ifndef INCLUDED_UNDECLTVARTEMPLATE
 #define INCLUDED_UNDECLTVARTEMPLATE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <variant>
 
 #include "Datatypes.h"

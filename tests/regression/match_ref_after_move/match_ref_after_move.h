@@ -2,7 +2,6 @@
 #define INCLUDED_MATCH_REF_AFTER_MOVE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -131,39 +130,36 @@ struct MatchRefAfterMove {
     /// to the tail that also takes the head as argument.
     /// The generated code must ensure h survives until both uses.
     unsigned int mylist_length() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return 0u;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return (1u + (*(d_a1)).mylist_length());
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return (1u + (*d_a1).mylist_length());
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rec<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
         return f;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(_sv.v());
-        return f0(d_a0, *(d_a1), (*(d_a1)).template mylist_rect<T1>(f, f0));
+            std::get<typename mylist<t_A>::Mycons>(this->v());
+        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -204,8 +200,7 @@ struct MatchRefAfterMove {
 
     // ACCESSORS
     mypair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Mkpair>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Mkpair>(this->v());
       return mypair<t_A, t_B>(Mkpair{d_a0, d_a1});
     }
 
@@ -230,18 +225,16 @@ struct MatchRefAfterMove {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 mypair_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename mypair<t_A, t_B>::Mkpair>(_sv.v());
+          std::get<typename mypair<t_A, t_B>::Mkpair>(this->v());
       return f(d_a0, d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 mypair_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename mypair<t_A, t_B>::Mkpair>(_sv.v());
+          std::get<typename mypair<t_A, t_B>::Mkpair>(this->v());
       return f(d_a0, d_a1);
     }
   };
@@ -316,7 +309,7 @@ struct MatchRefAfterMove {
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename mylist<unsigned int>::Mycons>(l.v());
-      return k(d_a0, (*(d_a1)).mylist_length());
+      return k(d_a0, (*d_a1).mylist_length());
     }
   }
 
@@ -372,12 +365,11 @@ struct MatchRefAfterMove {
 
     // ACCESSORS
     either<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<Left>(_sv.v());
+      if (std::holds_alternative<Left>(this->v())) {
+        const auto &[d_a0] = std::get<Left>(this->v());
         return either<t_A, t_B>(Left{d_a0});
       } else {
-        const auto &[d_a0] = std::get<Right>(_sv.v());
+        const auto &[d_a0] = std::get<Right>(this->v());
         return either<t_A, t_B>(Right{d_a0});
       }
     }
@@ -412,13 +404,13 @@ struct MatchRefAfterMove {
       requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
                std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
         return f(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(_sv.v());
+            std::get<typename either<t_A, t_B>::Right>(this->v());
         return f0(d_a0);
       }
     }
@@ -427,13 +419,13 @@ struct MatchRefAfterMove {
       requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
                std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
         return f(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(_sv.v());
+            std::get<typename either<t_A, t_B>::Right>(this->v());
         return f0(d_a0);
       }
     }

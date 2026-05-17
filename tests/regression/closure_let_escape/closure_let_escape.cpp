@@ -12,7 +12,7 @@
 /// (not a function parameter). The let-binding involves a computation
 /// (n * 2), so it can't be optimized away.
 std::optional<std::function<unsigned int(unsigned int)>>
-ClosureLetEscape::make_fn_fix(const unsigned int n) {
+ClosureLetEscape::make_fn_fix(unsigned int n) {
   unsigned int base = (n * 2u);
   auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
@@ -31,7 +31,7 @@ ClosureLetEscape::make_fn_fix(const unsigned int n) {
 /// test3: Captures from multiple let bindings.
 /// BUG: Both a and b are captured by &, both dangle.
 std::optional<std::function<unsigned int(unsigned int)>>
-ClosureLetEscape::make_fn_multi(const unsigned int n) {
+ClosureLetEscape::make_fn_multi(unsigned int n) {
   unsigned int a = (n + 1u);
   unsigned int b = (a * 3u);
   auto helper_impl = [=](auto &_self_helper,

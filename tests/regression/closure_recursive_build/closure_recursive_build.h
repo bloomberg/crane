@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,7 +124,7 @@ struct ClosureRecursiveBuild {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1.v());
-      return f0(d_a0, *(d_a1), fn_list_rect<T1>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, fn_list_rect<T1>(f, f0, *d_a1));
     }
   }
 
@@ -137,7 +136,7 @@ struct ClosureRecursiveBuild {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename fn_list::FCons>(f1.v());
-      return f0(d_a0, *(d_a1), fn_list_rec<T1>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, fn_list_rec<T1>(f, f0, *d_a1));
     }
   }
 
@@ -148,9 +147,9 @@ struct ClosureRecursiveBuild {
   /// by &. The closures are stored in FCons constructors. After
   /// build_adders returns, all intermediate stack frames are gone,
   /// and every closure holds a dangling reference.
-  static fn_list build_adders(const unsigned int n);
-  static unsigned int apply_first(const fn_list &fl, const unsigned int x);
-  static unsigned int apply_all_sum(const fn_list &fl, const unsigned int x);
+  static fn_list build_adders(unsigned int n);
+  static unsigned int apply_first(const fn_list &fl, unsigned int x);
+  static unsigned int apply_all_sum(const fn_list &fl, unsigned int x);
   /// test1: build_adders(3) = adder_3, adder_2, adder_1.
   /// apply_first returns adder_3(10) = 3 + 10 = 13.
   static inline const unsigned int test1 = apply_first(build_adders(3u), 10u);

@@ -1,10 +1,7 @@
 #ifndef INCLUDED_OPAQUE
 #define INCLUDED_OPAQUE
 
-#include <memory>
-#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -42,8 +39,7 @@ public:
 
   // ACCESSORS
   Sig<t_A> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
+    const auto &[d_x] = std::get<Exist>(this->v());
     return Sig<t_A>(Exist{d_x});
   }
 
@@ -63,13 +59,12 @@ public:
 };
 
 struct Opaque {
-  static unsigned int safe_pred(const unsigned int n);
-  static unsigned int pred_of_succ(const unsigned int n);
-  static bool nat_eq_dec(const unsigned int n, const unsigned int x);
-  static bool are_equal(const unsigned int n, const unsigned int m);
-  static Sig<unsigned int> bounded_add(const unsigned int _x0,
-                                       const unsigned int _x1,
-                                       const unsigned int _x2);
+  static unsigned int safe_pred(unsigned int n);
+  static unsigned int pred_of_succ(unsigned int n);
+  static bool nat_eq_dec(unsigned int n, unsigned int x);
+  static bool are_equal(unsigned int n, unsigned int m);
+  static Sig<unsigned int> bounded_add(unsigned int _x0, unsigned int _x1,
+                                       unsigned int _x2);
   static inline const unsigned int test_safe_pred = safe_pred(5u);
   static inline const unsigned int test_pred_succ = pred_of_succ(7u);
   static inline const bool test_eq_true = are_equal(5u, 5u);

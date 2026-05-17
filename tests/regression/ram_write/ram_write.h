@@ -2,8 +2,6 @@
 #define INCLUDED_RAM_WRITE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,31 +121,30 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct RamWrite {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        return List<T1>::cons(x, *d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
@@ -155,7 +152,7 @@ struct RamWrite {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
       }
     }
   }
@@ -166,7 +163,7 @@ struct RamWrite {
 
     // ACCESSORS
     ram_reg clone() const {
-      return ram_reg{(*(this)).reg_main.clone(), (*(this)).reg_status.clone()};
+      return ram_reg{(*this).reg_main.clone(), (*this).reg_status.clone()};
     }
   };
 
@@ -176,7 +173,7 @@ struct RamWrite {
 
     // ACCESSORS
     ram_chip clone() const {
-      return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
+      return ram_chip{(*this).chip_regs.clone(), (*this).chip_port};
     }
   };
 
@@ -184,7 +181,7 @@ struct RamWrite {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*(this)).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
   };
 
   struct ram_sel {
@@ -195,8 +192,8 @@ struct RamWrite {
 
     // ACCESSORS
     ram_sel clone() const {
-      return ram_sel{(*(this)).sel_bank, (*(this)).sel_chip, (*(this)).sel_reg,
-                     (*(this)).sel_char};
+      return ram_sel{(*this).sel_bank, (*this).sel_chip, (*this).sel_reg,
+                     (*this).sel_char};
     }
   };
 
@@ -212,10 +209,10 @@ struct RamWrite {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).state_regs.clone(),  (*(this)).state_acc,
-                   (*(this)).state_carry,         (*(this)).state_pc,
-                   (*(this)).state_stack.clone(), (*(this)).state_ram.clone(),
-                   (*(this)).state_sel.clone(),   (*(this)).state_rom.clone()};
+      return state{(*this).state_regs.clone(),  (*this).state_acc,
+                   (*this).state_carry,         (*this).state_pc,
+                   (*this).state_stack.clone(), (*this).state_ram.clone(),
+                   (*this).state_sel.clone(),   (*this).state_rom.clone()};
     }
   };
 
@@ -238,35 +235,32 @@ struct RamWrite {
             empty_ram,
             default_sel,
             ListDef::template repeat<unsigned int>(0u, 8u)};
-  static unsigned int get_main(const ram_reg &rg, const unsigned int i);
-  static ram_reg upd_main_in_reg(const ram_reg &rg, const unsigned int i,
-                                 const unsigned int v);
-  static ram_reg upd_stat_in_reg(const ram_reg &rg, const unsigned int i,
-                                 const unsigned int v);
-  static ram_reg get_regRAM(const ram_chip &ch, const unsigned int r);
-  static ram_chip upd_reg_in_chip(const ram_chip &ch, const unsigned int r,
+  static unsigned int get_main(const ram_reg &rg, unsigned int i);
+  static ram_reg upd_main_in_reg(const ram_reg &rg, unsigned int i,
+                                 unsigned int v);
+  static ram_reg upd_stat_in_reg(const ram_reg &rg, unsigned int i,
+                                 unsigned int v);
+  static ram_reg get_regRAM(const ram_chip &ch, unsigned int r);
+  static ram_chip upd_reg_in_chip(const ram_chip &ch, unsigned int r,
                                   const ram_reg &rg);
-  static ram_chip get_chip(const ram_bank &bk, const unsigned int c);
-  static ram_bank upd_chip_in_bank(const ram_bank &bk, const unsigned int c,
+  static ram_chip get_chip(const ram_bank &bk, unsigned int c);
+  static ram_bank upd_chip_in_bank(const ram_bank &bk, unsigned int c,
                                    const ram_chip &ch);
-  static ram_bank get_bank_from_sys(const List<ram_bank> &sys,
-                                    const unsigned int b);
-  static List<ram_bank> upd_bank_in_sys(const state &s, const unsigned int b,
+  static ram_bank get_bank_from_sys(const List<ram_bank> &sys, unsigned int b);
+  static List<ram_bank> upd_bank_in_sys(const state &s, unsigned int b,
                                         const ram_bank &bk);
   static ram_bank current_bank(const state &s);
   static ram_chip current_chip(const state &s);
   static ram_reg current_reg(const state &s);
   static unsigned int ram_read_main(const state &s);
-  static List<ram_bank> ram_write_main_sys(const state &s,
-                                           const unsigned int v);
-  static List<ram_bank> ram_write_status_sys(const state &s,
-                                             const unsigned int idx,
-                                             const unsigned int v);
+  static List<ram_bank> ram_write_main_sys(const state &s, unsigned int v);
+  static List<ram_bank> ram_write_status_sys(const state &s, unsigned int idx,
+                                             unsigned int v);
   static inline const unsigned int write_bank_count =
       ram_write_main_sys(init_state, 12u).length();
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
@@ -276,7 +270,7 @@ template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
 }
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -290,7 +284,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

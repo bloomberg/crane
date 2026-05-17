@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -126,12 +125,11 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 };
@@ -215,7 +213,7 @@ struct MapPartialApp {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -258,8 +256,8 @@ struct MapPartialApp {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -271,14 +269,14 @@ struct MapPartialApp {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
   static unsigned int tree_sum(const tree &t);
   /// wrap: takes tree and nat, builds Node with leaves.
-  static tree wrap(tree t, const unsigned int v);
+  static tree wrap(tree t, unsigned int v);
   /// Sum a list of nats.
   static unsigned int sum_list(const List<unsigned int> &l);
   /// BUG HYPOTHESIS: Create a partial application (wrap t), store it,
@@ -305,7 +303,7 @@ struct MapPartialApp {
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
               .template map<unsigned int>(
-                  [=](const unsigned int v) mutable { return tree_sum(f(v)); });
+                  [=](unsigned int v) mutable { return tree_sum(f(v)); });
       return sum_list(std::move(results));
     }();
   }();
@@ -323,9 +321,8 @@ struct MapPartialApp {
               1u,
               List<unsigned int>::cons(
                   2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              .template map<unsigned int>([=](const unsigned int v) mutable {
-                return tree_sum(p.first(v));
-              });
+              .template map<unsigned int>(
+                  [=](unsigned int v) mutable { return tree_sum(p.first(v)); });
       return sum_list(std::move(results));
     }();
   }();
@@ -341,15 +338,13 @@ struct MapPartialApp {
       List<unsigned int> r1 =
           List<unsigned int>::cons(
               1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))
-              .template map<unsigned int>([=](const unsigned int v) mutable {
-                return tree_sum(f1(v));
-              });
+              .template map<unsigned int>(
+                  [=](unsigned int v) mutable { return tree_sum(f1(v)); });
       List<unsigned int> r2 =
           List<unsigned int>::cons(
               3u, List<unsigned int>::cons(4u, List<unsigned int>::nil()))
-              .template map<unsigned int>([=](const unsigned int v) mutable {
-                return tree_sum(f2(v));
-              });
+              .template map<unsigned int>(
+                  [=](unsigned int v) mutable { return tree_sum(f2(v)); });
       return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
     }();
   }();

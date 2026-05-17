@@ -1,8 +1,7 @@
 #include "ack.h"
 
-unsigned int Ack::ack(const unsigned int m, const unsigned int n) {
-  auto ack_m_impl = [&](auto &_self_ack_m,
-                        const unsigned int n0) -> unsigned int {
+unsigned int Ack::ack(unsigned int m, unsigned int n) {
+  auto ack_m_impl = [&](auto &_self_ack_m, unsigned int n0) -> unsigned int {
     if (m <= 0) {
       return (n0 + 1);
     } else {
@@ -15,7 +14,7 @@ unsigned int Ack::ack(const unsigned int m, const unsigned int n) {
       }
     }
   };
-  auto ack_m = [&](const unsigned int n0) -> unsigned int {
+  auto ack_m = [&](unsigned int n0) -> unsigned int {
     return ack_m_impl(ack_m_impl, n0);
   };
   return ack_m(n);

@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -148,7 +147,7 @@ struct FoldClosureBuild {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -159,7 +158,7 @@ struct FoldClosureBuild {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rec<T1, T2>(f, f0, *d_a1));
     }
   } /// Simple fold_left.
 
@@ -170,7 +169,7 @@ struct FoldClosureBuild {
       return acc;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T2>::Mycons>(l.v());
-      return fold_left<T1, T2>(f, f(acc, d_a0), *(d_a1));
+      return fold_left<T1, T2>(f, f(acc, d_a0), *d_a1);
     }
   }
 
@@ -186,7 +185,7 @@ struct FoldClosureBuild {
   /// The inner closure fun x => acc(h+x) captures acc (std::function)
   /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
   static unsigned int compose_adders(const mylist<unsigned int> &l,
-                                     const unsigned int _x0);
+                                     unsigned int _x0);
   /// test1: compose_adders 10,20,30 7 = 67
   static inline const unsigned int test1 = compose_adders(
       mylist<unsigned int>::mycons(
@@ -213,7 +212,7 @@ struct FoldClosureBuild {
   collect_adders(const mylist<unsigned int> &l);
   static unsigned int
   apply_all(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-            const unsigned int x); /// test3: collect_adders 10,20,30
+            unsigned int x); /// test3: collect_adders 10,20,30
   /// = (30+_), (20+_), (10+_)  (reversed by fold_left)
   /// apply_all with x=5: (30+5) + (20+5) + (10+5) = 75
   static inline const unsigned int test3 =
@@ -232,7 +231,7 @@ struct FoldClosureBuild {
   /// When fold returns, these scopes are destroyed, but the
   /// final fixpoint (stored in the accumulator) still references them.
   static unsigned int compose_with_fix(const mylist<unsigned int> &l,
-                                       const unsigned int _x0);
+                                       unsigned int _x0);
   /// test4: compose_with_fix 10
   /// first iteration: acc=id, h=10
   /// go(x) = x + acc(h) = x + id(10) = x + 10

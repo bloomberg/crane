@@ -2,11 +2,11 @@
 
 /// Tail-recursive list builder — should compile to a loop.
 DeepDestruct::mylist<unsigned int>
-DeepDestruct::build_aux(const unsigned int n,
+DeepDestruct::build_aux(unsigned int n,
                         DeepDestruct::mylist<unsigned int> acc) {
   DeepDestruct::mylist<unsigned int> _result;
   DeepDestruct::mylist<unsigned int> _loop_acc = std::move(acc);
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       _result = std::move(_loop_acc);
@@ -21,7 +21,7 @@ DeepDestruct::build_aux(const unsigned int n,
   return _result;
 }
 
-DeepDestruct::mylist<unsigned int> DeepDestruct::build(const unsigned int n) {
+DeepDestruct::mylist<unsigned int> DeepDestruct::build(unsigned int n) {
   return build_aux(n, mylist<unsigned int>::mynil());
 }
 

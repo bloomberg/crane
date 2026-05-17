@@ -2,7 +2,6 @@
 #define INCLUDED_PSTRING
 
 #include <memory>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -237,7 +236,7 @@ struct PString {
       return "[]";
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      return p(d_a0) + "::"s + list_to_string<T1>(p, *(d_a1));
+      return p(d_a0) + "::"s + list_to_string<T1>(p, *d_a1);
     }
   }
 };

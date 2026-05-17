@@ -133,7 +133,7 @@ struct EffectHigherOrder {
   /// 1. Higher-order function with effectful callback
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
-  static void apply_effect(F0 &&f, const std::string _x0) {
+  static void apply_effect(F0 &&f, std::string _x0) {
     f(_x0);
     return;
   } /// 2. Map-like function over a list with effects
@@ -147,7 +147,7 @@ struct EffectHigherOrder {
       const auto &[d_a0, d_a1] =
           std::get<typename List<std::string>::Cons>(xs.v());
       f(d_a0);
-      for_each_str(f, *(d_a1));
+      for_each_str(f, *d_a1);
       return;
     }
   } /// 3. Callback that returns a value
@@ -172,7 +172,7 @@ struct EffectHigherOrder {
   /// 5. Effectful callback passed as argument
   static void greet_all(const List<std::string> &names);
   /// 6. Callback with env effect
-  static std::string lookup_or_ask(const std::string name);
+  static std::string lookup_or_ask(std::string name);
   /// 7. Chain of lookups
   static List<std::string> lookup_all(const List<std::string> &names);
   /// 8. Effect in let-bound function

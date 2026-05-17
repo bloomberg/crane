@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_SPECIAL_RECURSION
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -145,7 +144,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -168,21 +167,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -265,7 +264,7 @@ struct LoopifySpecialRecursion {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -308,8 +307,8 @@ struct LoopifySpecialRecursion {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -321,26 +320,26 @@ struct LoopifySpecialRecursion {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
-  static List<unsigned int> process_twice_fuel(const unsigned int fuel,
+  static List<unsigned int> process_twice_fuel(unsigned int fuel,
                                                const List<unsigned int> &l);
   static List<unsigned int> process_twice(const List<unsigned int> &l);
   static List<unsigned int> double_append(const List<unsigned int> &l1,
                                           List<unsigned int> l2);
   static List<unsigned int> remove_if_sum_even(const List<unsigned int> &l);
-  static List<unsigned int> reverse_insert(const unsigned int x,
+  static List<unsigned int> reverse_insert(unsigned int x,
                                            List<unsigned int> l);
 
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
   static unsigned int
-  nest_apply(const unsigned int n, F1 &&f,
-             const unsigned int x) { /// _Enter: captures varying parameters for
-                                     /// each recursive call.
+  nest_apply(unsigned int n, F1 &&f,
+             unsigned int x) { /// _Enter: captures varying parameters for each
+                               /// recursive call.
 
     struct _Enter {
       unsigned int n;
@@ -362,7 +361,7 @@ struct LoopifySpecialRecursion {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const unsigned int n = _f.n;
+        unsigned int n = _f.n;
         if (n <= 0) {
           _result = x;
         } else {
@@ -380,12 +379,11 @@ struct LoopifySpecialRecursion {
 
   static List<unsigned int> collect_sorted(const tree &t);
   static unsigned int sum_odd_indices_aux(const List<unsigned int> &l,
-                                          const unsigned int idx);
+                                          unsigned int idx);
   static unsigned int sum_odd_indices(const List<unsigned int> &l);
-  static unsigned int categorize_by(const unsigned int k,
+  static unsigned int categorize_by(unsigned int k,
                                     const List<unsigned int> &l);
-  static List<unsigned int> between(const unsigned int lo,
-                                    const unsigned int hi,
+  static List<unsigned int> between(unsigned int lo, unsigned int hi,
                                     const List<unsigned int> &l);
   static List<unsigned int> merge_levels(const List<List<unsigned int>> &ll);
 };

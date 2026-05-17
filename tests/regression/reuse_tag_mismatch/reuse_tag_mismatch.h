@@ -1,8 +1,6 @@
 #ifndef INCLUDED_REUSE_TAG_MISMATCH
 #define INCLUDED_REUSE_TAG_MISMATCH
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -61,24 +59,19 @@ struct ReuseTagMismatch {
 
     // ACCESSORS
     direction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<GoUp>(_sv.v())) {
-        const auto &[d_a0] = std::get<GoUp>(_sv.v());
+      if (std::holds_alternative<GoUp>(this->v())) {
+        const auto &[d_a0] = std::get<GoUp>(this->v());
         return direction(GoUp{d_a0});
       } else {
-        const auto &[d_a0] = std::get<GoDown>(_sv.v());
+        const auto &[d_a0] = std::get<GoDown>(this->v());
         return direction(GoDown{d_a0});
       }
     }
 
     // CREATORS
-    static direction goup(unsigned int a0) {
-      return direction(GoUp{std::move(a0)});
-    }
+    static direction goup(unsigned int a0) { return direction(GoUp{a0}); }
 
-    static direction godown(unsigned int a0) {
-      return direction(GoDown{std::move(a0)});
-    }
+    static direction godown(unsigned int a0) { return direction(GoDown{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -119,7 +112,7 @@ struct ReuseTagMismatch {
   /// - GoUp/GoDown are the same inductive (direction)
   /// - Both have arity 1
   /// But GoUp and GoDown are DIFFERENT constructors.
-  static direction id_or_flip(direction d, const bool flip_flag);
+  static direction id_or_flip(direction d, bool flip_flag);
   /// test1: flip GoUp 42 -> should be GoDown 42.
   /// Match on the result:
   /// - GoUp _ => 1 (wrong, reuse bug would make this match)

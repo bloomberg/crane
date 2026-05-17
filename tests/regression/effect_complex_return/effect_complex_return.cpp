@@ -10,7 +10,7 @@ std::pair<std::string, std::string> EffectComplexReturn::read_pair() {
 }
 
 /// 2. Effect returning an option
-std::optional<std::string> EffectComplexReturn::maybe_read(const bool do_read) {
+std::optional<std::string> EffectComplexReturn::maybe_read(bool do_read) {
   if (do_read) {
     std::string line;
     std::getline(std::cin, line);
@@ -21,7 +21,7 @@ std::optional<std::string> EffectComplexReturn::maybe_read(const bool do_read) {
 }
 
 /// 3. Void effect followed by value effect
-std::string EffectComplexReturn::print_then_read(const std::string prompt) {
+std::string EffectComplexReturn::print_then_read(std::string prompt) {
   std::cout << prompt << '\n';
   return []() -> std::string {
     std::string _r;
@@ -32,7 +32,7 @@ std::string EffectComplexReturn::print_then_read(const std::string prompt) {
 
 /// 4. Multiple effects with different return types
 std::pair<int64_t, std::string>
-EffectComplexReturn::mixed_effects(const std::string name) {
+EffectComplexReturn::mixed_effects(std::string name) {
   int64_t t = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch())
@@ -66,7 +66,7 @@ int64_t EffectComplexReturn::elapsed_ms() {
 }
 
 /// 6. Effect result used to build a list
-List<std::string> EffectComplexReturn::read_n(const unsigned int n) {
+List<std::string> EffectComplexReturn::read_n(unsigned int n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
@@ -93,7 +93,7 @@ List<std::string> EffectComplexReturn::read_n(const unsigned int n) {
 }
 
 /// 7. Env effect result used in conditional
-std::string EffectComplexReturn::env_or_prompt(const std::string name) {
+std::string EffectComplexReturn::env_or_prompt(std::string name) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();

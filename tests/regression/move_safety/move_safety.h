@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct MoveSafety {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -124,27 +123,27 @@ struct MoveSafety {
 
     /// TEST 4: Partial application followed by identity function
     /// that takes by value (returns its argument).
-    tree tree_id() const { return std::move(*(this)); }
+    tree tree_id() const { return std::move(*this); }
 
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
     tree wrap_tree() const {
-      return tree::node(std::move(*(this)), 0u, tree::leaf());
+      return tree::node(std::move(*this), 0u, tree::leaf());
     }
 
-    unsigned int sum_values(const unsigned int x) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+    unsigned int sum_values(unsigned int x) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        auto &&_sv0 = *(d_a0);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        auto &&_sv0 = *d_a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (d_a1 + x);
         } else {
           const auto &[d_a00, d_a10, d_a20] =
               std::get<typename tree::Node>(_sv0.v());
-          auto &&_sv1 = *(d_a2);
+          auto &&_sv1 = *d_a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (d_a10 + x);
           } else {
@@ -197,14 +196,13 @@ struct MoveSafety {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -261,14 +259,13 @@ struct MoveSafety {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -320,8 +317,7 @@ struct MoveSafety {
 
     // ACCESSORS
     fn_box clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Box>(_sv.v());
+      const auto &[d_a0] = std::get<Box>(this->v());
       return fn_box(Box{d_a0});
     }
 
@@ -336,9 +332,8 @@ struct MoveSafety {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int apply_box(const unsigned int x) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
+    unsigned int apply_box(unsigned int x) const {
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
       return d_a0(x);
     }
 
@@ -346,8 +341,7 @@ struct MoveSafety {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
       return f(d_a0);
     }
 
@@ -355,8 +349,7 @@ struct MoveSafety {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
       return f(d_a0);
     }
   };

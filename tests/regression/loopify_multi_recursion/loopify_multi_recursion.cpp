@@ -1,8 +1,8 @@
 #include "loopify_multi_recursion.h"
 
 unsigned int LoopifyMultiRecursion::mixed_arith_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -44,8 +44,8 @@ unsigned int LoopifyMultiRecursion::mixed_arith_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 1u;
       } else {
@@ -84,14 +84,14 @@ unsigned int LoopifyMultiRecursion::mixed_arith_fuel(
   return _result;
 }
 
-unsigned int LoopifyMultiRecursion::mixed_arith(const unsigned int n) {
+unsigned int LoopifyMultiRecursion::mixed_arith(unsigned int n) {
   return mixed_arith_fuel((n * 3u), n);
 }
 
 bool LoopifyMultiRecursion::bool_or_chain_fuel(
-    const unsigned int fuel, const unsigned int n,
-    const unsigned int target) { /// _Enter: captures varying parameters for
-                                 /// each recursive call.
+    unsigned int fuel, unsigned int n,
+    unsigned int target) { /// _Enter: captures varying parameters for each
+                           /// recursive call.
 
   struct _Enter {
     unsigned int n;
@@ -100,21 +100,21 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
 
   /// _After2: saves [_s0, fuel_, _s2], dispatches next recursive call.
   struct _After2 {
-    decltype((((std::declval<const unsigned int &>() - 1u) >
-                       std::declval<const unsigned int &>()
-                   ? 0
-                   : (std::declval<const unsigned int &>() - 1u)))) _s0;
+    decltype((
+        ((std::declval<unsigned int &>() - 1u) > std::declval<unsigned int &>()
+             ? 0
+             : (std::declval<unsigned int &>() - 1u)))) _s0;
     unsigned int fuel_;
-    decltype(std::declval<const unsigned int &>() ==
-             std::declval<const unsigned int &>()) _s2;
+    decltype(std::declval<unsigned int &>() ==
+             std::declval<unsigned int &>()) _s2;
   };
 
   /// _Combine1: receives partial results, combines with _result from final
   /// call.
   struct _Combine1 {
     bool _result;
-    decltype(std::declval<const unsigned int &>() ==
-             std::declval<const unsigned int &>()) _s1;
+    decltype(std::declval<unsigned int &>() ==
+             std::declval<unsigned int &>()) _s1;
   };
 
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
@@ -128,8 +128,8 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = false;
       } else {
@@ -154,8 +154,8 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
   return _result;
 }
 
-unsigned int LoopifyMultiRecursion::bool_or_chain(const unsigned int n,
-                                                  const unsigned int target) {
+unsigned int LoopifyMultiRecursion::bool_or_chain(unsigned int n,
+                                                  unsigned int target) {
   if (bool_or_chain_fuel((n * 2u), n, target)) {
     return 1u;
   } else {
@@ -164,8 +164,8 @@ unsigned int LoopifyMultiRecursion::bool_or_chain(const unsigned int n,
 }
 
 bool LoopifyMultiRecursion::bool_and_chain_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -175,10 +175,10 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
 
   /// _After2: saves [_s0, fuel_], dispatches next recursive call.
   struct _After2 {
-    decltype((((std::declval<const unsigned int &>() - 1u) >
-                       std::declval<const unsigned int &>()
-                   ? 0
-                   : (std::declval<const unsigned int &>() - 1u)))) _s0;
+    decltype((
+        ((std::declval<unsigned int &>() - 1u) > std::declval<unsigned int &>()
+             ? 0
+             : (std::declval<unsigned int &>() - 1u)))) _s0;
     unsigned int fuel_;
   };
 
@@ -199,8 +199,8 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = true;
       } else {
@@ -224,7 +224,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
   return _result;
 }
 
-unsigned int LoopifyMultiRecursion::bool_and_chain(const unsigned int n) {
+unsigned int LoopifyMultiRecursion::bool_and_chain(unsigned int n) {
   if (bool_and_chain_fuel((n * 2u), n)) {
     return 1u;
   } else {
@@ -284,7 +284,7 @@ unsigned int LoopifyMultiRecursion::quad_count_leaves(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMultiRecursion::quadtree &t = *(_f.t);
+      const LoopifyMultiRecursion::quadtree &t = *_f.t;
       if (std::holds_alternative<
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 1u;
@@ -371,7 +371,7 @@ unsigned int LoopifyMultiRecursion::quad_depth(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyMultiRecursion::quadtree &t = *(_f.t);
+      const LoopifyMultiRecursion::quadtree &t = *_f.t;
       if (std::holds_alternative<
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 0u;
@@ -405,8 +405,8 @@ unsigned int LoopifyMultiRecursion::quad_depth(
 }
 
 unsigned int LoopifyMultiRecursion::hofstadter_q_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -416,12 +416,11 @@ unsigned int LoopifyMultiRecursion::hofstadter_q_fuel(
 
   /// _After4: saves [_s0, fuel_], dispatches next recursive call.
   struct _After4 {
-    decltype((
-        ((std::declval<const unsigned int &>() -
-          std::declval<unsigned int &>()) > std::declval<const unsigned int &>()
-             ? 0
-             : (std::declval<const unsigned int &>() -
-                std::declval<unsigned int &>())))) _s0;
+    decltype((((std::declval<unsigned int &>() -
+                std::declval<unsigned int &>()) > std::declval<unsigned int &>()
+                   ? 0
+                   : (std::declval<unsigned int &>() -
+                      std::declval<unsigned int &>())))) _s0;
     unsigned int fuel_;
   };
 
@@ -458,8 +457,8 @@ unsigned int LoopifyMultiRecursion::hofstadter_q_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = 1u;
       } else {
@@ -490,14 +489,14 @@ unsigned int LoopifyMultiRecursion::hofstadter_q_fuel(
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
       unsigned int fuel_ = _f.fuel_;
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       unsigned int q1 = _result;
       _stack.emplace_back(_Cont2{fuel_, n, q1});
       _stack.emplace_back(_Enter{(((n - 2u) > n ? 0 : (n - 2u))), fuel_});
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
       unsigned int fuel_ = _f.fuel_;
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       unsigned int q1 = _f.q1;
       unsigned int q2 = _result;
       _stack.emplace_back(_After4{(((n - q1) > n ? 0 : (n - q1))), fuel_});
@@ -507,6 +506,6 @@ unsigned int LoopifyMultiRecursion::hofstadter_q_fuel(
   return _result;
 }
 
-unsigned int LoopifyMultiRecursion::hofstadter_q(const unsigned int n) {
+unsigned int LoopifyMultiRecursion::hofstadter_q(unsigned int n) {
   return hofstadter_q_fuel(((n * n) + 1u), n);
 }

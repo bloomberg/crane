@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_MATCH_ARG
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -126,7 +124,7 @@ public:
 struct LoopifyMatchArg {
   enum class Cell { e_WALL, e_EMPTY, e_DOT };
 
-  template <typename T1> static T1 cell_rect(T1 f, T1 f0, T1 f1, const Cell c) {
+  template <typename T1> static T1 cell_rect(T1 f, T1 f0, T1 f1, Cell c) {
     switch (c) {
     case Cell::e_WALL: {
       return f;
@@ -142,7 +140,7 @@ struct LoopifyMatchArg {
     }
   }
 
-  template <typename T1> static T1 cell_rec(T1 f, T1 f0, T1 f1, const Cell c) {
+  template <typename T1> static T1 cell_rec(T1 f, T1 f0, T1 f1, Cell c) {
     switch (c) {
     case Cell::e_WALL: {
       return f;

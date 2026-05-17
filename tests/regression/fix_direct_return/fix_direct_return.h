@@ -2,8 +2,6 @@
 #define INCLUDED_FIX_DIRECT_RETURN
 
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 
 struct FixDirectReturn {
@@ -17,7 +15,7 @@ struct FixDirectReturn {
   /// still holds & references to the destroyed stack variables.
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int make_callback(const unsigned int base, F1 &&_x0) {
+  static unsigned int make_callback(unsigned int base, F1 &&_x0) {
     return [=]() mutable {
       auto add_impl = [=](auto &_self_add,
                           unsigned int x) mutable -> unsigned int {
@@ -31,7 +29,7 @@ struct FixDirectReturn {
       auto add = [=](unsigned int x) mutable -> unsigned int {
         return add_impl(add_impl, x);
       };
-      return [=](const std::function<unsigned int(unsigned int)> g) mutable {
+      return [=](std::function<unsigned int(unsigned int)> g) mutable {
         return (g(add(0u)) + add(1u));
       };
     }()(_x0);
@@ -39,10 +37,10 @@ struct FixDirectReturn {
 
   /// test1: make_callback(42)(fun x => x) = id(42) + 43 = 85.
   static inline const unsigned int test1 =
-      make_callback(42u, [](const unsigned int x) { return x; });
+      make_callback(42u, [](unsigned int x) { return x; });
   /// test2: make_callback(10)(fun x => x * 2) = 20 + 11 = 31.
   static inline const unsigned int test2 =
-      make_callback(10u, [](const unsigned int x) { return (x * 2u); });
+      make_callback(10u, [](unsigned int x) { return (x * 2u); });
   /// test3: Nested — use the closure from make_callback inside another
   /// make_callback.
   static inline const unsigned int test3 = []() {
@@ -53,8 +51,8 @@ struct FixDirectReturn {
       std::function<unsigned int(std::function<unsigned int(unsigned int)>)>
           cb2 = [](std::function<unsigned int(unsigned int)> _x0)
           -> unsigned int { return make_callback(100u, _x0); };
-      return cb1([=](const unsigned int) mutable {
-        return cb2([](const unsigned int x) { return x; });
+      return cb1([=](unsigned int) mutable {
+        return cb2([](unsigned int x) { return x; });
       });
     }();
   }();

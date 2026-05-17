@@ -2,7 +2,6 @@
 #define INCLUDED_SHARED_UPTR_ESCAPE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -87,7 +86,7 @@ struct SharedUptrEscape {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -123,17 +122,17 @@ struct SharedUptrEscape {
 
     /// Pattern 2: Return tree from match, then use it twice.
     /// The match result is a temporary that might be unique_ptr.
-    tree extract_subtree(const unsigned int which) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+    tree extract_subtree(unsigned int which) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::leaf();
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
         if (which <= 0) {
-          return *(d_a0);
+          return *d_a0;
         } else {
           unsigned int _x0 = which - 1;
-          return *(d_a2);
+          return *d_a2;
         }
       }
     }
@@ -141,21 +140,19 @@ struct SharedUptrEscape {
     /// dup: takes a tree and returns a pair with two references to it.
     /// This REQUIRES the tree to be shared_ptr, since both elements
     /// of the pair point to the same tree.
-    std::pair<tree, tree> dup() const {
-      return std::make_pair(*(this), *(this));
-    }
+    std::pair<tree, tree> dup() const { return std::make_pair(*this, *this); }
 
     /// identity: takes a tree and returns it unchanged.
     /// The tree enters as owned and leaves as owned.
-    tree identity() const { return std::move(*(this)); }
+    tree identity() const { return std::move(*this); }
 
     unsigned int tree_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum());
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum());
       }
     }
 
@@ -163,13 +160,13 @@ struct SharedUptrEscape {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -177,13 +174,13 @@ struct SharedUptrEscape {
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
                                      tree &, T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
+                  (*d_a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -192,7 +189,7 @@ struct SharedUptrEscape {
   /// (unique_ptr sufficient) or duplicate it (needs shared_ptr).
   /// If escape analysis optimistically picks unique_ptr based on
   /// one branch, the other branch's sharing crashes.
-  static unsigned int conditional_share(const unsigned int flag);
+  static unsigned int conditional_share(unsigned int flag);
   static inline const unsigned int use_extracted_twice = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
@@ -236,8 +233,7 @@ struct SharedUptrEscape {
 
     // ACCESSORS
     wrapper clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Wrap>(_sv.v());
+      const auto &[d_a0] = std::get<Wrap>(this->v());
       return wrapper(Wrap{d_a0.clone()});
     }
 

@@ -2,7 +2,6 @@
 #define INCLUDED_DOC_COMMENTS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -11,7 +10,7 @@
 struct DocComments {
   /// add computes the sum of two natural numbers n and m.
   /// It works by structural recursion on n.
-  static unsigned int add(const unsigned int n, const unsigned int m);
+  static unsigned int add(unsigned int n, unsigned int m);
 
   /// A simple pair holding two values of possibly different types.
   template <typename t_A, typename t_B> struct pair {
@@ -22,7 +21,7 @@ struct DocComments {
 
     // ACCESSORS
     pair<t_A, t_B> clone() const {
-      return pair<t_A, t_B>{(*(this)).fst, (*(this)).snd};
+      return pair<t_A, t_B>{(*this).fst, (*this).snd};
     }
   }; /// mylist is a polymorphic list type.
 
@@ -151,7 +150,7 @@ struct DocComments {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -162,17 +161,17 @@ struct DocComments {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
-  static unsigned int no_doc_comment(const unsigned int x);
+  static unsigned int no_doc_comment(unsigned int x);
 
   /// The identity function: returns its argument unchanged.
   template <typename T1> static T1 identity(T1 x) { return x; }
 
   /// double n returns 2 * n.
-  static unsigned int double_(const unsigned int n);
+  static unsigned int double_(unsigned int n);
   /// A simple color enumeration.
   enum class Color {
     /// Red color.
@@ -183,8 +182,7 @@ struct DocComments {
     e_BLUE
   };
 
-  template <typename T1>
-  static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -200,8 +198,7 @@ struct DocComments {
     }
   }
 
-  template <typename T1>
-  static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;

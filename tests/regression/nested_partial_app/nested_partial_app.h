@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct NestedPartialApp {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -131,8 +130,8 @@ struct NestedPartialApp {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -144,14 +143,14 @@ struct NestedPartialApp {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
   static unsigned int tree_sum(const tree &t);
   /// 3-argument function: builds Node(t1, n, t2).
-  static tree build_node(tree t1, const unsigned int n, tree t2);
+  static tree build_node(tree t1, unsigned int n, tree t2);
   /// BUG HYPOTHESIS: Partially apply build_node in stages.
   /// g = build_node t1  → closure captures t1
   /// h = g 42           → closure captures t1 and 42
@@ -200,8 +199,8 @@ struct NestedPartialApp {
     }();
   }();
   /// Variation: 4-argument function, triple nesting.
-  static unsigned int quad_fn(const tree &a, const unsigned int b,
-                              const unsigned int c, const tree &d);
+  static unsigned int quad_fn(const tree &a, unsigned int b, unsigned int c,
+                              const tree &d);
   static inline const unsigned int triple_partial = []() {
     return []() {
       tree t = tree::node(tree::leaf(), 10u, tree::leaf());

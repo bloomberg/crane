@@ -2,7 +2,7 @@
 
 /// lookup_opt key l looks up key in an association list.
 std::optional<unsigned int> LoopifyOption::lookup_opt(
-    const unsigned int key,
+    unsigned int key,
     const LoopifyOption::list<std::pair<unsigned int, unsigned int>> &l) {
   std::optional<unsigned int> _result;
   const LoopifyOption::list<std::pair<unsigned int, unsigned int>> *_loop_l =

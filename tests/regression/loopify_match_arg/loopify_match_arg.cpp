@@ -26,7 +26,7 @@ unsigned int LoopifyMatchArg::count_dots(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyMatchArg::Cell> &xs = *(_f.xs);
+      const List<LoopifyMatchArg::Cell> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
               xs.v())) {
         _result = 0u;
@@ -77,7 +77,7 @@ unsigned int LoopifyMatchArg::my_length(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyMatchArg::Cell> &xs = *(_f.xs);
+      const List<LoopifyMatchArg::Cell> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
               xs.v())) {
         _result = 0u;

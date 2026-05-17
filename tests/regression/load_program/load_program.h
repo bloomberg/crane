@@ -2,8 +2,6 @@
 #define INCLUDED_LOAD_PROGRAM
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -123,30 +121,29 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct LoadProgram {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        return List<T1>::cons(x, *d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
@@ -154,7 +151,7 @@ struct LoadProgram {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
       }
     }
   }
@@ -167,8 +164,8 @@ struct LoadProgram {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).rom.clone(), (*(this)).prom_addr,
-                   (*(this)).prom_data, (*(this)).prom_enable};
+      return state{(*this).rom.clone(), (*this).prom_addr, (*this).prom_data,
+                   (*this).prom_enable};
     }
   };
 
@@ -183,13 +180,13 @@ struct LoadProgram {
 
     // ACCESSORS
     state_extended clone() const {
-      return state_extended{(*(this)).regs_len,
-                            (*(this)).rom_ext.clone(),
-                            (*(this)).pc,
-                            (*(this)).stack_len,
-                            (*(this)).prom_addr_ext,
-                            (*(this)).prom_data_ext,
-                            (*(this)).prom_enable_ext};
+      return state_extended{(*this).regs_len,
+                            (*this).rom_ext.clone(),
+                            (*this).pc,
+                            (*this).stack_len,
+                            (*this).prom_addr_ext,
+                            (*this).prom_data_ext,
+                            (*this).prom_enable_ext};
     }
   };
 
@@ -199,21 +196,20 @@ struct LoadProgram {
 
     // ACCESSORS
     state_simple clone() const {
-      return state_simple{(*(this)).rom_.clone(), (*(this)).ptr_};
+      return state_simple{(*this).rom_.clone(), (*this).ptr_};
     }
   };
 
-  static state set_prom_params(const state &s, const unsigned int addr,
-                               const unsigned int data, const bool enable);
+  static state set_prom_params(const state &s, unsigned int addr,
+                               unsigned int data, bool enable);
   static state execute_wpm(const state &s);
-  static state load_program(state s, const unsigned int base,
+  static state load_program(state s, unsigned int base,
                             const List<unsigned int> &bytes);
   static state_extended set_prom_params_ext(const state_extended &s,
-                                            const unsigned int addr,
-                                            const unsigned int data,
-                                            const bool enable);
+                                            unsigned int addr,
+                                            unsigned int data, bool enable);
   static state_extended execute_wpm_ext(const state_extended &s);
-  static state_simple write_byte(const state_simple &s, const unsigned int b);
+  static state_simple write_byte(const state_simple &s, unsigned int b);
   static state_simple load_program_simple(state_simple s,
                                           const List<unsigned int> &bytes);
   static inline const bool test_load_program_nil = []() {
@@ -348,7 +344,7 @@ struct LoadProgram {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -362,7 +358,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

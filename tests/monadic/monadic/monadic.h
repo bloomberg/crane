@@ -126,12 +126,11 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 };
@@ -152,13 +151,10 @@ struct Monadic {
     }
   }
 
-  static std::optional<unsigned int> safe_div(const unsigned int n,
-                                              const unsigned int m);
-  static std::optional<unsigned int> safe_sub(const unsigned int n,
-                                              const unsigned int m);
-  static std::optional<unsigned int> div_then_sub(const unsigned int a,
-                                                  const unsigned int b,
-                                                  const unsigned int c);
+  static std::optional<unsigned int> safe_div(unsigned int n, unsigned int m);
+  static std::optional<unsigned int> safe_sub(unsigned int n, unsigned int m);
+  static std::optional<unsigned int>
+  div_then_sub(unsigned int a, unsigned int b, unsigned int c);
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
@@ -168,7 +164,7 @@ struct Monadic {
 
   template <typename T1, typename T2, typename T3, typename F1>
     requires std::is_invocable_r_v<State<T1, T3>, F1 &, T2 &>
-  static State<T1, T3> state_bind(const State<T1, T2> ma, F1 &&f) {
+  static State<T1, T3> state_bind(State<T1, T2> ma, F1 &&f) {
     return [=](const T1 &s) mutable {
       auto _cs = ma(s);
       const T2 &a = _cs.first;
@@ -192,17 +188,16 @@ struct Monadic {
   template <typename T1>
   static State<unsigned int, unsigned int> count_elements(const List<T1> &l) {
     return l.template fold_left<State<unsigned int, unsigned int>>(
-        [](const std::function<std::pair<unsigned int, unsigned int>(
-               unsigned int)>
+        [](std::function<std::pair<unsigned int, unsigned int>(unsigned int)>
                acc,
            const T1 &) {
           return state_bind<unsigned int, unsigned int,
-                            unsigned int>(acc, [](const unsigned int) {
+                            unsigned int>(acc, [](unsigned int) {
             return state_bind<unsigned int, unsigned int, unsigned int>(
-                state_get<unsigned int>(), [](const unsigned int n) {
+                state_get<unsigned int>(), [](unsigned int n) {
                   return state_bind<unsigned int, std::monostate, unsigned int>(
                       state_put<unsigned int>((n + 1)),
-                      [=](const std::monostate) mutable {
+                      [=](std::monostate) mutable {
                         return state_return<unsigned int, unsigned int>(n);
                       });
                 });
@@ -215,12 +210,12 @@ struct Monadic {
       option_return<unsigned int>(42u);
   static inline const std::optional<unsigned int> test_bind_some =
       option_bind<unsigned int, unsigned int>(
-          std::make_optional<unsigned int>(10u), [](const unsigned int x) {
+          std::make_optional<unsigned int>(10u), [](unsigned int x) {
             return std::make_optional<unsigned int>((x + 1u));
           });
   static inline const std::optional<unsigned int> test_bind_none =
       option_bind<unsigned int, unsigned int>(
-          std::optional<unsigned int>(), [](const unsigned int x) {
+          std::optional<unsigned int>(), [](unsigned int x) {
             return std::make_optional<unsigned int>((x + 1u));
           });
   static inline const std::optional<unsigned int> test_safe_div_ok =

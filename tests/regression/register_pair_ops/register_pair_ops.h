@@ -2,7 +2,6 @@
 #define INCLUDED_REGISTER_PAIR_OPS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,32 +124,30 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, t_A &>
   bool forallb(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (f(d_a0) && (*(d_a1)).forallb(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (f(d_a0) && (*d_a1).forallb(f));
     }
   }
 };
 
 struct ListDef {
-  static List<unsigned int> seq(const unsigned int start,
-                                const unsigned int len);
+  static List<unsigned int> seq(unsigned int start, unsigned int len);
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct RegisterPairOps {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        return List<T1>::cons(x, *d_a1);
       }
     } else {
       unsigned int n_ = n - 1;
@@ -158,7 +155,7 @@ struct RegisterPairOps {
         return List<T1>::nil();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
       }
     }
   }
@@ -167,15 +164,13 @@ struct RegisterPairOps {
     List<unsigned int> regs;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).regs.clone()}; }
+    state clone() const { return state{(*this).regs.clone()}; }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int r);
-  static state set_reg(const state &s, const unsigned int r,
-                       const unsigned int v);
-  static unsigned int get_reg_pair(const state &s, const unsigned int r);
-  static state set_reg_pair(const state &s, const unsigned int r,
-                            const unsigned int v);
+  static unsigned int get_reg(const state &s, unsigned int r);
+  static state set_reg(const state &s, unsigned int r, unsigned int v);
+  static unsigned int get_reg_pair(const state &s, unsigned int r);
+  static state set_reg_pair(const state &s, unsigned int r, unsigned int v);
   static inline const unsigned int test_get_reg_pair_even_value = get_reg_pair(
       state{List<unsigned int>::cons(
           0u, List<unsigned int>::cons(
@@ -253,7 +248,7 @@ struct RegisterPairOps {
   static inline const bool test_set_reg_pair_preserves_other_pairs =
       get_reg_pair(set_reg_pair(sample_preserves, 0u, 171u), 2u) ==
       get_reg_pair(sample_preserves, 2u);
-  static unsigned int pair_base(const unsigned int r);
+  static unsigned int pair_base(unsigned int r);
   static inline const state sample_register_pair =
       state{List<unsigned int>::cons(
           0u,
@@ -270,8 +265,8 @@ struct RegisterPairOps {
       get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 2u) == 10u;
   static inline const bool test_set_pair_get_low =
       get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 3u) == 11u;
-  static unsigned int pair_index(const unsigned int r);
-  static bool pair_property(const unsigned int r);
+  static unsigned int pair_index(unsigned int r);
+  static bool pair_property(unsigned int r);
   static inline const List<unsigned int> test_regs = ListDef::seq(0u, 16u);
   static inline const bool test_register_pair_architecture =
       test_regs.forallb(pair_property);
@@ -356,7 +351,7 @@ struct RegisterPairOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -370,7 +365,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

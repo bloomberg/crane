@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTSELFREFINDUCTIVE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -153,8 +152,8 @@ template <S X> struct HashTrie {
     } else {
       const auto &[d_k, d_v, d_left, d_right] =
           std::get<typename Trie<T1>::Node>(t0.v());
-      return f0(d_k, d_v, *(d_left), Trie_rect<T1, T2>(f, f0, *(d_left)),
-                *(d_right), Trie_rect<T1, T2>(f, f0, *(d_right)));
+      return f0(d_k, d_v, *d_left, Trie_rect<T1, T2>(f, f0, *d_left), *d_right,
+                Trie_rect<T1, T2>(f, f0, *d_right));
     }
   }
 
@@ -167,8 +166,8 @@ template <S X> struct HashTrie {
     } else {
       const auto &[d_k, d_v, d_left, d_right] =
           std::get<typename Trie<T1>::Node>(t0.v());
-      return f0(d_k, d_v, *(d_left), Trie_rec<T1, T2>(f, f0, *(d_left)),
-                *(d_right), Trie_rec<T1, T2>(f, f0, *(d_right)));
+      return f0(d_k, d_v, *d_left, Trie_rec<T1, T2>(f, f0, *d_left), *d_right,
+                Trie_rec<T1, T2>(f, f0, *d_right));
     }
   }
 

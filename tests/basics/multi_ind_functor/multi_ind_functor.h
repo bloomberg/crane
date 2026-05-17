@@ -3,7 +3,6 @@
 
 #include <concepts>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -60,11 +59,10 @@ template <Elem E> struct Container {
 
     // ACCESSORS
     maybe clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Nothing>(_sv.v())) {
+      if (std::holds_alternative<Nothing>(this->v())) {
         return maybe(Nothing{});
       } else {
-        const auto &[d_a0] = std::get<Just>(_sv.v());
+        const auto &[d_a0] = std::get<Just>(this->v());
         return maybe(Just{d_a0});
       }
     }
@@ -72,7 +70,7 @@ template <Elem E> struct Container {
     // CREATORS
     static maybe nothing() { return maybe(Nothing{}); }
 
-    static maybe just(unsigned int a0) { return maybe(Just{std::move(a0)}); }
+    static maybe just(unsigned int a0) { return maybe(Just{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -215,7 +213,7 @@ template <Elem E> struct Container {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m.v());
-      return f0(d_a0, *(d_a1), mlist_rect<T1>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mlist_rect<T1>(f, f0, *d_a1));
     }
   }
 
@@ -226,7 +224,7 @@ template <Elem E> struct Container {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(m.v());
-      return f0(d_a0, *(d_a1), mlist_rec<T1>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mlist_rec<T1>(f, f0, *d_a1));
     }
   }
 
@@ -270,12 +268,11 @@ template <Elem E> struct Container {
 
     // ACCESSORS
     mtree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
+      if (std::holds_alternative<Leaf>(this->v())) {
+        const auto &[d_a0] = std::get<Leaf>(this->v());
         return mtree(Leaf{d_a0.clone()});
       } else {
-        const auto &[d_a0] = std::get<Node>(_sv.v());
+        const auto &[d_a0] = std::get<Node>(this->v());
         return mtree(Node{d_a0.clone()});
       }
     }
@@ -331,7 +328,7 @@ template <Elem E> struct Container {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mlist::MCons>(l.v());
-      return (mlist_length(*(d_a1)) + 1);
+      return (mlist_length(*d_a1) + 1);
     }
   }
 

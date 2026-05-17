@@ -2,7 +2,6 @@
 #define INCLUDED_DECODE_LIST
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -123,12 +122,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -173,11 +171,10 @@ struct DecodeList {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP>(_sv.v())) {
+      if (std::holds_alternative<NOP>(this->v())) {
         return instruction(NOP{});
       } else {
-        const auto &[d_a0] = std::get<LDM>(_sv.v());
+        const auto &[d_a0] = std::get<LDM>(this->v());
         return instruction(LDM{d_a0});
       }
     }
@@ -185,9 +182,7 @@ struct DecodeList {
     // CREATORS
     static instruction nop() { return instruction(NOP{}); }
 
-    static instruction ldm(unsigned int a0) {
-      return instruction(LDM{std::move(a0)});
-    }
+    static instruction ldm(unsigned int a0) { return instruction(LDM{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -218,7 +213,7 @@ struct DecodeList {
     }
   }
 
-  static instruction decode(const unsigned int b1, const unsigned int b2);
+  static instruction decode(unsigned int b1, unsigned int b2);
   static List<instruction> decode_list(const List<unsigned int> &bytes);
   static inline const unsigned int t_empty =
       decode_list(List<unsigned int>::nil()).length();
@@ -233,7 +228,7 @@ struct DecodeList {
       const auto &[d_a00, d_a10] =
           std::get<typename List<instruction>::Cons>(_sv0.v());
       if (std::holds_alternative<typename instruction::NOP>(d_a00.v())) {
-        auto &&_sv = *(d_a10);
+        auto &&_sv = *d_a10;
         if (std::holds_alternative<typename List<instruction>::Nil>(_sv.v())) {
           return 1u;
         } else {

@@ -4,7 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -162,38 +161,37 @@ struct LoopifyCoindStream {
     const variant_t &v() const { return d_lazyV_.force(); }
   };
 
-  template <typename T1> static T1 hd(const stream<T1> s) {
+  template <typename T1> static T1 hd(stream<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s.v());
     return d_a0;
   }
 
-  template <typename T1> static stream<T1> tl(const stream<T1> s) {
+  template <typename T1> static stream<T1> tl(stream<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename stream<T1>::Scons>(s.v());
-    return stream<T1>::lazy_([=]() mutable -> stream<T1> { return *(d_a1); });
+    return stream<T1>::lazy_([=]() mutable -> stream<T1> { return *d_a1; });
   }
 
-  template <typename T1>
-  static List<T1> take(const unsigned int n, const stream<T1> s) {
+  template <typename T1> static List<T1> take(unsigned int n, stream<T1> s) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
-    stream<T1> _loop_s = s;
-    unsigned int _loop_n = n;
+    stream<T1> _loop_s = std::move(s);
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
+        *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
         unsigned int n_ = _loop_n - 1;
         auto _cell = std::make_unique<List<T1>>(
             typename List<T1>::Cons(hd<T1>(_loop_s), nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
         _loop_s = tl<T1>(_loop_s);
         _loop_n = n_;
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename T1, typename F0>
@@ -206,7 +204,7 @@ struct LoopifyCoindStream {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static stream<T2> smap(F0 &&f, const stream<T1> s) {
+  static stream<T2> smap(F0 &&f, stream<T1> s) {
     return stream<T2>::lazy_([=]() mutable -> stream<T2> {
       return stream<T2>::scons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
@@ -214,7 +212,7 @@ struct LoopifyCoindStream {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
-  static stream<T3> zipWith(F0 &&f, const stream<T1> s1, const stream<T2> s2) {
+  static stream<T3> zipWith(F0 &&f, stream<T1> s1, stream<T2> s2) {
     return stream<T3>::lazy_([=]() mutable -> stream<T3> {
       return stream<T3>::scons(f(hd<T1>(s1), hd<T2>(s2)),
                                zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
@@ -233,10 +231,10 @@ struct LoopifyCoindStream {
   }
 
   static inline const stream<unsigned int> nats =
-      iterate<unsigned int>([](const unsigned int x) { return (x + 1); }, 0u);
+      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
   static inline const stream<unsigned int> doubled =
-      smap<unsigned int, unsigned int>(
-          [](const unsigned int n) { return (n * 2u); }, nats);
+      smap<unsigned int, unsigned int>([](unsigned int n) { return (n * 2u); },
+                                       nats);
   static inline const stream<unsigned int> sum_stream =
       zipWith<unsigned int, unsigned int, unsigned int>(
           [](unsigned int _x0, unsigned int _x1) -> unsigned int {

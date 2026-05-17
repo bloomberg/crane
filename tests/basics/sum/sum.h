@@ -1,8 +1,6 @@
 #ifndef INCLUDED_SUM
 #define INCLUDED_SUM
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -49,12 +47,11 @@ struct Sum {
 
     // ACCESSORS
     either<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<Left>(_sv.v());
+      if (std::holds_alternative<Left>(this->v())) {
+        const auto &[d_a0] = std::get<Left>(this->v());
         return either<t_A, t_B>(Left{d_a0});
       } else {
-        const auto &[d_a0] = std::get<Right>(_sv.v());
+        const auto &[d_a0] = std::get<Right>(this->v());
         return either<t_A, t_B>(Right{d_a0});
       }
     }
@@ -88,13 +85,13 @@ struct Sum {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_B &>
     either<t_A, T1> map_right(F0 &&f) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
         return either<t_A, T1>::left(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(_sv.v());
+            std::get<typename either<t_A, t_B>::Right>(this->v());
         return either<t_A, T1>::right(f(d_a0));
       }
     }
@@ -102,20 +99,19 @@ struct Sum {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &>
     either<T1, t_B> map_left(F0 &&f) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
         return either<T1, t_B>::left(f(d_a0));
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(_sv.v());
+            std::get<typename either<t_A, t_B>::Right>(this->v());
         return either<T1, t_B>::right(d_a0);
       }
     }
 
     bool is_left() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
         return true;
       } else {
         return false;
@@ -126,13 +122,13 @@ struct Sum {
       requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
                std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
         return f(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(_sv.v());
+            std::get<typename either<t_A, t_B>::Right>(this->v());
         return f0(d_a0);
       }
     }
@@ -141,13 +137,13 @@ struct Sum {
       requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
                std::is_invocable_r_v<T1, F1 &, t_B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename either<t_A, t_B>::Left>(_sv.v());
+      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
+        const auto &[d_a0] =
+            std::get<typename either<t_A, t_B>::Left>(this->v());
         return f(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(_sv.v());
+            std::get<typename either<t_A, t_B>::Right>(this->v());
         return f0(d_a0);
       }
     }
@@ -207,15 +203,14 @@ struct Sum {
 
     // ACCESSORS
     triple<t_A, t_B, t_C> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<First>(_sv.v())) {
-        const auto &[d_a0] = std::get<First>(_sv.v());
+      if (std::holds_alternative<First>(this->v())) {
+        const auto &[d_a0] = std::get<First>(this->v());
         return triple<t_A, t_B, t_C>(First{d_a0});
-      } else if (std::holds_alternative<Second>(_sv.v())) {
-        const auto &[d_a0] = std::get<Second>(_sv.v());
+      } else if (std::holds_alternative<Second>(this->v())) {
+        const auto &[d_a0] = std::get<Second>(this->v());
         return triple<t_A, t_B, t_C>(Second{d_a0});
       } else {
-        const auto &[d_a0] = std::get<Third>(_sv.v());
+        const auto &[d_a0] = std::get<Third>(this->v());
         return triple<t_A, t_B, t_C>(Third{d_a0});
       }
     }
@@ -265,20 +260,19 @@ struct Sum {
                std::is_invocable_r_v<T1, F1 &, t_B &> &&
                std::is_invocable_r_v<T1, F2 &, t_C &>
     T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
       if (std::holds_alternative<typename triple<t_A, t_B, t_C>::First>(
-              _sv.v())) {
+              this->v())) {
         const auto &[d_a0] =
-            std::get<typename triple<t_A, t_B, t_C>::First>(_sv.v());
+            std::get<typename triple<t_A, t_B, t_C>::First>(this->v());
         return f(d_a0);
       } else if (std::holds_alternative<typename triple<t_A, t_B, t_C>::Second>(
-                     _sv.v())) {
+                     this->v())) {
         const auto &[d_a0] =
-            std::get<typename triple<t_A, t_B, t_C>::Second>(_sv.v());
+            std::get<typename triple<t_A, t_B, t_C>::Second>(this->v());
         return f0(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename triple<t_A, t_B, t_C>::Third>(_sv.v());
+            std::get<typename triple<t_A, t_B, t_C>::Third>(this->v());
         return f1(d_a0);
       }
     }
@@ -288,20 +282,19 @@ struct Sum {
                std::is_invocable_r_v<T1, F1 &, t_B &> &&
                std::is_invocable_r_v<T1, F2 &, t_C &>
     T1 triple_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
-      auto &&_sv = *(this);
       if (std::holds_alternative<typename triple<t_A, t_B, t_C>::First>(
-              _sv.v())) {
+              this->v())) {
         const auto &[d_a0] =
-            std::get<typename triple<t_A, t_B, t_C>::First>(_sv.v());
+            std::get<typename triple<t_A, t_B, t_C>::First>(this->v());
         return f(d_a0);
       } else if (std::holds_alternative<typename triple<t_A, t_B, t_C>::Second>(
-                     _sv.v())) {
+                     this->v())) {
         const auto &[d_a0] =
-            std::get<typename triple<t_A, t_B, t_C>::Second>(_sv.v());
+            std::get<typename triple<t_A, t_B, t_C>::Second>(this->v());
         return f0(d_a0);
       } else {
         const auto &[d_a0] =
-            std::get<typename triple<t_A, t_B, t_C>::Third>(_sv.v());
+            std::get<typename triple<t_A, t_B, t_C>::Third>(this->v());
         return f1(d_a0);
       }
     }

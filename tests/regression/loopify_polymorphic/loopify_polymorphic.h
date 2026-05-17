@@ -128,21 +128,21 @@ public:
     const List *_loop_self = this;
     List<t_A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
+      auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
         auto _cell = std::make_unique<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
         _loop_self = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -172,7 +172,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = *(_f.l);
+        const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = 0u;
         } else {
@@ -213,7 +213,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = *(_f.l);
+        const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T1>::nil();
         } else {
@@ -238,20 +238,20 @@ struct LoopifyPolymorphic {
     const List<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
-        *(_write) = std::make_unique<List<T1>>(std::move(_loop_l2));
+        *_write = std::make_unique<List<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l1->v());
         auto _cell =
             std::make_unique<List<T1>>(typename List<T1>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
         _loop_l1 = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename T1> static std::optional<T1> poly_last(const List<T1> &l) {
@@ -264,7 +264,7 @@ struct LoopifyPolymorphic {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
-        auto &&_sv = *(d_a1);
+        auto &&_sv = *d_a1;
         if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
           _result = std::make_optional<T1>(d_a0);
           break;
@@ -277,26 +277,26 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1>
-  static List<T1> poly_take(const unsigned int n, const List<T1> &l) {
+  static List<T1> poly_take(unsigned int n, const List<T1> &l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     const List<T1> *_loop_l = &l;
-    unsigned int _loop_n = n;
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
+        *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
         unsigned int n_ = _loop_n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-          *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
+          *_write = std::make_unique<List<T1>>(List<T1>::nil());
           break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<T1>::Cons>(_loop_l->v());
           auto _cell = std::make_unique<List<T1>>(
               typename List<T1>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
           _loop_l = d_a1.get();
           _loop_n = n_;
@@ -304,14 +304,13 @@ struct LoopifyPolymorphic {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
-  template <typename T1>
-  static List<T1> poly_drop(const unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> poly_drop(unsigned int n, List<T1> l) {
     List<T1> _result;
     List<T1> _loop_l = std::move(l);
-    unsigned int _loop_n = n;
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         _result = std::move(_loop_l);
@@ -324,7 +323,7 @@ struct LoopifyPolymorphic {
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<T1>::Cons>(_loop_l.v_mut());
-          _loop_l = std::move(*(d_a1));
+          _loop_l = std::move(*d_a1);
           _loop_n = n_;
         }
       }
@@ -333,10 +332,10 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1>
-  static std::optional<T1> poly_nth(const unsigned int n, const List<T1> &l) {
+  static std::optional<T1> poly_nth(unsigned int n, const List<T1> &l) {
     std::optional<T1> _result;
     const List<T1> *_loop_l = &l;
-    unsigned int _loop_n = n;
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
@@ -364,9 +363,9 @@ struct LoopifyPolymorphic {
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
       if (p(d_a0)) {
-        return List<T1>::cons(d_a0, poly_filter<T1>(p, *(d_a1)));
+        return List<T1>::cons(d_a0, poly_filter<T1>(p, *d_a1));
       } else {
-        return poly_filter<T1>(p, *(d_a1));
+        return poly_filter<T1>(p, *d_a1);
       }
     }
   }
@@ -379,20 +378,20 @@ struct LoopifyPolymorphic {
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        *(_write) = std::make_unique<List<T2>>(List<T2>::nil());
+        *_write = std::make_unique<List<T2>>(List<T2>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<T2>>(
             typename List<T2>::Cons(f(d_a0), nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<T2>::Cons>((*_write)->v_mut()).d_a1;
         _loop_l = d_a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename T1, typename T2>
@@ -404,14 +403,14 @@ struct LoopifyPolymorphic {
     const List<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l1->v())) {
-        *(_write) = std::make_unique<List<std::pair<T1, T2>>>(
+        *_write = std::make_unique<List<std::pair<T1, T2>>>(
             List<std::pair<T1, T2>>::nil());
         break;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename List<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename List<T2>::Nil>(_loop_l2->v())) {
-          *(_write) = std::make_unique<List<std::pair<T1, T2>>>(
+          *_write = std::make_unique<List<std::pair<T1, T2>>>(
               List<std::pair<T1, T2>>::nil());
           break;
         } else {
@@ -420,7 +419,7 @@ struct LoopifyPolymorphic {
           auto _cell = std::make_unique<List<std::pair<T1, T2>>>(
               typename List<std::pair<T1, T2>>::Cons(
                   std::make_pair(d_a0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write = &std::get<typename List<std::pair<T1, T2>>::Cons>(
                         (*_write)->v_mut())
                         .d_a1;
@@ -430,7 +429,7 @@ struct LoopifyPolymorphic {
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename T1, typename T2>
@@ -460,7 +459,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<std::pair<T1, T2>> &l = *(_f.l);
+        const List<std::pair<T1, T2>> &l = *_f.l;
         if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
                 l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T2>::nil());
@@ -513,7 +512,7 @@ struct LoopifyPolymorphic {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = *(_f.l);
+        const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
@@ -560,26 +559,25 @@ struct LoopifyPolymorphic {
     return _result;
   }
 
-  template <typename T1>
-  static List<T1> poly_replicate(const unsigned int n, T1 x) {
+  template <typename T1> static List<T1> poly_replicate(unsigned int n, T1 x) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
-    unsigned int _loop_n = n;
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
+        *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
         unsigned int n_ = _loop_n - 1;
         auto _cell =
             std::make_unique<List<T1>>(typename List<T1>::Cons(x, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
         _loop_n = n_;
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   static unsigned int nat_length(const List<unsigned int> &_x0);
@@ -587,14 +585,14 @@ struct LoopifyPolymorphic {
   static List<unsigned int> nat_append(const List<unsigned int> &_x0,
                                        const List<unsigned int> &_x1);
   static std::optional<unsigned int> nat_last(const List<unsigned int> &_x0);
-  static List<unsigned int> nat_take(const unsigned int _x0,
+  static List<unsigned int> nat_take(unsigned int _x0,
                                      const List<unsigned int> &_x1);
-  static List<unsigned int> nat_drop(const unsigned int _x0,
+  static List<unsigned int> nat_drop(unsigned int _x0,
                                      const List<unsigned int> &_x1);
-  static std::optional<unsigned int> nat_nth(const unsigned int _x0,
+  static std::optional<unsigned int> nat_nth(unsigned int _x0,
                                              const List<unsigned int> &_x1);
-  static bool nat_eq(const unsigned int _x0, const unsigned int _x1);
-  static bool is_even(const unsigned int x);
+  static bool nat_eq(unsigned int _x0, unsigned int _x1);
+  static bool is_even(unsigned int x);
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
@@ -616,9 +614,8 @@ struct LoopifyPolymorphic {
     return poly_partition<unsigned int>(_x0, _x1);
   }
 
-  static bool nat_member(const unsigned int _x0, const List<unsigned int> &_x1);
-  static List<unsigned int> nat_replicate(const unsigned int _x0,
-                                          const unsigned int _x1);
+  static bool nat_member(unsigned int _x0, const List<unsigned int> &_x1);
+  static List<unsigned int> nat_replicate(unsigned int _x0, unsigned int _x1);
 };
 
 #endif // INCLUDED_LOOPIFY_POLYMORPHIC

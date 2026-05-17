@@ -2,8 +2,6 @@
 #define INCLUDED_DROP_HEAD_DEFAULT
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -124,8 +122,7 @@ public:
 };
 
 struct DropHeadDefault {
-  template <typename T1>
-  static List<T1> drop(const unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> drop(unsigned int n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
@@ -134,13 +131,13 @@ struct DropHeadDefault {
         return List<T1>::nil();
       } else {
         auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v_mut());
-        return drop<T1>(n_, *(d_a1));
+        return drop<T1>(n_, *d_a1);
       }
     }
   }
 
   static unsigned int head_after_drop(const List<unsigned int> &rom,
-                                      const unsigned int addr);
+                                      unsigned int addr);
   static inline const unsigned int t = head_after_drop(
       List<unsigned int>::cons(
           5u, List<unsigned int>::cons(

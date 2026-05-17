@@ -4,7 +4,6 @@
 #include <crane_real.h>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,12 +124,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
@@ -144,7 +142,7 @@ struct FoldSequenceStateTraceCase {
     Real C;
 
     // ACCESSORS
-    Line clone() const { return Line{(*(this)).A, (*(this)).B, (*(this)).C}; }
+    Line clone() const { return Line{(*this).A, (*this).B, (*this).C}; }
   };
 
   struct Fold {
@@ -181,8 +179,7 @@ struct FoldSequenceStateTraceCase {
 
     // ACCESSORS
     Fold clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Fold_line_ctor>(_sv.v());
+      const auto &[d_a0] = std::get<Fold_line_ctor>(this->v());
       return Fold(Fold_line_ctor{d_a0.clone()});
     }
 
@@ -198,24 +195,21 @@ struct FoldSequenceStateTraceCase {
     const variant_t &v() const { return d_v_; }
 
     Line fold_line() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
       return d_a0;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Line &>
     T1 Fold_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
       return f(d_a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Line &>
     T1 Fold_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(_sv.v());
+      const auto &[d_a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
       return f(d_a0);
     }
   };
@@ -292,15 +286,14 @@ struct FoldSequenceStateTraceCase {
 
     // ACCESSORS
     FoldStep clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<FS_O1>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<FS_O1>(_sv.v());
+      if (std::holds_alternative<FS_O1>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<FS_O1>(this->v());
         return FoldStep(FS_O1{d_a0, d_a1});
-      } else if (std::holds_alternative<FS_O2>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<FS_O2>(_sv.v());
+      } else if (std::holds_alternative<FS_O2>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<FS_O2>(this->v());
         return FoldStep(FS_O2{d_a0, d_a1});
       } else {
-        const auto &[d_a0, d_a1] = std::get<FS_O4>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<FS_O4>(this->v());
         return FoldStep(FS_O4{d_a0, d_a1.clone()});
       }
     }
@@ -325,15 +318,17 @@ struct FoldSequenceStateTraceCase {
     const variant_t &v() const { return d_v_; }
 
     Line execute_fold_step() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename FoldStep::FS_O1>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O1>(_sv.v());
+      if (std::holds_alternative<typename FoldStep::FS_O1>(this->v())) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O1>(this->v());
         return fold_O1(d_a0, d_a1).fold_line();
-      } else if (std::holds_alternative<typename FoldStep::FS_O2>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O2>(_sv.v());
+      } else if (std::holds_alternative<typename FoldStep::FS_O2>(this->v())) {
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O2>(this->v());
         return fold_O2(d_a0, d_a1).fold_line();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename FoldStep::FS_O4>(_sv.v());
+        const auto &[d_a0, d_a1] =
+            std::get<typename FoldStep::FS_O4>(this->v());
         return fold_O4(d_a0, d_a1).fold_line();
       }
     }
@@ -385,8 +380,8 @@ struct FoldSequenceStateTraceCase {
 
     // ACCESSORS
     ConstructionState clone() const {
-      return ConstructionState{(*(this)).state_points.clone(),
-                               (*(this)).state_lines.clone()};
+      return ConstructionState{(*this).state_points.clone(),
+                               (*this).state_lines.clone()};
     }
   };
 

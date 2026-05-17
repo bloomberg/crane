@@ -2,7 +2,6 @@
 #define INCLUDED_STEP_FETCH_DECODE_EXEC
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,7 +124,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
 };
 
 struct StepFetchDecodeExec {
@@ -168,11 +167,10 @@ struct StepFetchDecodeExec {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP>(_sv.v())) {
+      if (std::holds_alternative<NOP>(this->v())) {
         return instruction(NOP{});
       } else {
-        const auto &[d_a0] = std::get<ADD_ACC>(_sv.v());
+        const auto &[d_a0] = std::get<ADD_ACC>(this->v());
         return instruction(ADD_ACC{d_a0});
       }
     }
@@ -181,7 +179,7 @@ struct StepFetchDecodeExec {
     static instruction nop() { return instruction(NOP{}); }
 
     static instruction add_acc(unsigned int a0) {
-      return instruction(ADD_ACC{std::move(a0)});
+      return instruction(ADD_ACC{a0});
     }
 
     // MANIPULATORS
@@ -220,12 +218,12 @@ struct StepFetchDecodeExec {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).acc, (*(this)).pc, (*(this)).rom.clone()};
+      return state{(*this).acc, (*this).pc, (*this).rom.clone()};
     }
   };
 
-  static unsigned int fetch_byte(const state &s, const unsigned int addr);
-  static instruction decode(const unsigned int b1, const unsigned int b2);
+  static unsigned int fetch_byte(const state &s, unsigned int addr);
+  static instruction decode(unsigned int b1, unsigned int b2);
   static state execute(const state &s, const instruction &i);
   static state step(const state &s);
   static inline const unsigned int t = []() {
@@ -240,7 +238,7 @@ struct StepFetchDecodeExec {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -254,7 +252,7 @@ T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      return ListDef::template nth<T1>(m, *d_a10, default0);
     }
   }
 }

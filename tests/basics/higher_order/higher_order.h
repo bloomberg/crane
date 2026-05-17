@@ -2,7 +2,6 @@
 #define INCLUDED_HIGHER_ORDER
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -133,7 +132,7 @@ struct HigherOrder {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, list_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -144,7 +143,7 @@ struct HigherOrder {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, list_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -156,7 +155,7 @@ struct HigherOrder {
       return list<T2>::nil();
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return list<T2>::cons(f(d_a0), map<T1, T2>(f, *(d_a1)));
+      return list<T2>::cons(f(d_a0), map<T1, T2>(f, *d_a1));
     }
   }
 
@@ -169,7 +168,7 @@ struct HigherOrder {
       return z;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f(d_a0, foldr<T1, T2>(f, z, *(d_a1)));
+      return f(d_a0, foldr<T1, T2>(f, z, *d_a1));
     }
   }
 
@@ -182,7 +181,7 @@ struct HigherOrder {
       return z;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return foldl<T1, T2>(f, f(z, d_a0), *(d_a1));
+      return foldl<T1, T2>(f, f(z, d_a0), *d_a1);
     }
   } /// compose g f returns the composition of g after f.
 
@@ -195,7 +194,7 @@ struct HigherOrder {
   /// iterate n f x applies f to x a total of n times.
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, T1 &>
-  static T1 iterate(const unsigned int n, F1 &&f, T1 x) {
+  static T1 iterate(unsigned int n, F1 &&f, T1 x) {
     if (n <= 0) {
       return x;
     } else {
@@ -205,7 +204,7 @@ struct HigherOrder {
   }
 
   /// adder n returns a function that adds n to its argument.
-  static unsigned int adder(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int adder(unsigned int _x0, unsigned int _x1);
 
   /// twice f returns a function that applies f two times.
   template <typename T1, typename F0>

@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -124,38 +123,35 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct Nat {
-  static bool even(const unsigned int n);
+  static bool even(unsigned int n);
 };
 
 struct CPS {
-  static unsigned int
-  fact_cps(const unsigned int n,
-           const std::function<unsigned int(unsigned int)> k) {
+  static unsigned int fact_cps(unsigned int n,
+                               std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
       return k(1u);
     } else {
       unsigned int n_ = n - 1;
       return fact_cps(
-          n_, [=](const unsigned int r) mutable { return k(((n_ + 1) * r)); });
+          n_, [=](unsigned int r) mutable { return k(((n_ + 1) * r)); });
     }
   }
 
-  static unsigned int factorial(const unsigned int n);
+  static unsigned int factorial(unsigned int n);
 
-  static unsigned int
-  fib_cps(const unsigned int n,
-          const std::function<unsigned int(unsigned int)> k) {
+  static unsigned int fib_cps(unsigned int n,
+                              std::function<unsigned int(unsigned int)> k) {
     if (n <= 0) {
       return k(0u);
     } else {
@@ -164,15 +160,15 @@ struct CPS {
         return k(1u);
       } else {
         unsigned int n_ = n1 - 1;
-        return fib_cps(n_, [=](const unsigned int a) mutable {
-          return fib_cps(
-              n1, [=](const unsigned int b) mutable { return k((a + b)); });
+        return fib_cps(n_, [=](unsigned int a) mutable {
+          return fib_cps(n1,
+                         [=](unsigned int b) mutable { return k((a + b)); });
         });
       }
     }
   }
 
-  static unsigned int fibonacci(const unsigned int n);
+  static unsigned int fibonacci(unsigned int n);
 
   struct tree {
     // TYPES
@@ -250,7 +246,7 @@ struct CPS {
     }
 
     // CREATORS
-    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
+    static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
 
     static tree node(tree a0, tree a1) {
       return tree(Node{std::make_unique<tree>(std::move(a0)),
@@ -297,8 +293,8 @@ struct CPS {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), *(d_a1),
-                tree_rect<T1>(f, f0, *(d_a1)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), *d_a1,
+                tree_rect<T1>(f, f0, *d_a1));
     }
   }
 
@@ -311,43 +307,39 @@ struct CPS {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), *(d_a1),
-                tree_rec<T1>(f, f0, *(d_a1)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), *d_a1,
+                tree_rec<T1>(f, f0, *d_a1));
     }
   }
 
   static unsigned int
-  tree_sum_cps(const tree &t,
-               const std::function<unsigned int(unsigned int)> k) {
+  tree_sum_cps(const tree &t, std::function<unsigned int(unsigned int)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[d_a0] = std::get<typename tree::Leaf>(t.v());
       return k(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t.v());
-      tree d_a0_value = *(d_a0);
-      tree d_a1_value = *(d_a1);
-      return tree_sum_cps(d_a0_value, [=](const unsigned int sl) mutable {
-        return tree_sum_cps(d_a1_value, [=](const unsigned int sr) mutable {
-          return k((sl + sr));
-        });
+      tree d_a0_value = *d_a0;
+      tree d_a1_value = *d_a1;
+      return tree_sum_cps(d_a0_value, [=](unsigned int sl) mutable {
+        return tree_sum_cps(
+            d_a1_value, [=](unsigned int sr) mutable { return k((sl + sr)); });
       });
     }
   }
 
   static unsigned int tree_sum(const tree &t);
 
-  static unsigned int
-  sum_cps(const List<unsigned int> &l,
-          const std::function<unsigned int(unsigned int)> k) {
+  static unsigned int sum_cps(const List<unsigned int> &l,
+                              std::function<unsigned int(unsigned int)> k) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return k(0u);
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = *(d_a1);
-      return sum_cps(d_a1_value, [=](const unsigned int r) mutable {
-        return k((d_a0 + r));
-      });
+      List<unsigned int> d_a1_value = *d_a1;
+      return sum_cps(d_a1_value,
+                     [=](unsigned int r) mutable { return k((d_a0 + r)); });
     }
   }
 
@@ -357,14 +349,13 @@ struct CPS {
     requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static unsigned int partition_cps(
       F0 &&p, const List<unsigned int> &l,
-      const std::function<unsigned int(List<unsigned int>, List<unsigned int>)>
-          k) {
+      std::function<unsigned int(List<unsigned int>, List<unsigned int>)> k) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return k(List<unsigned int>::nil(), List<unsigned int>::nil());
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = *(d_a1);
+      List<unsigned int> d_a1_value = *d_a1;
       return partition_cps(
           p, d_a1_value,
           [=](List<unsigned int> yes, List<unsigned int> no) mutable {

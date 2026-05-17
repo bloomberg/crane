@@ -12,7 +12,7 @@
 /// independently read garbage from the same dangling reference.
 std::pair<std::function<unsigned int(unsigned int)>,
           std::function<unsigned int(unsigned int)>>
-ClosureNestedEscape::make_pair_fix(const unsigned int n) {
+ClosureNestedEscape::make_pair_fix(unsigned int n) {
   auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return n;

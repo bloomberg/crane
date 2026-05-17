@@ -159,8 +159,7 @@ public:
 
   // ACCESSORS
   Sig<t_A> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
+    const auto &[d_x] = std::get<Exist>(this->v());
     return Sig<t_A>(Exist{d_x});
   }
 
@@ -186,7 +185,7 @@ struct ComprehensivePatterns {
     unsigned int s_c;
 
     // ACCESSORS
-    S clone() const { return S{(*(this)).s_a, (*(this)).s_b, (*(this)).s_c}; }
+    S clone() const { return S{(*this).s_a, (*this).s_b, (*this).s_c}; }
   };
 
   static std::pair<std::pair<S, unsigned int>, unsigned int>
@@ -197,35 +196,35 @@ struct ComprehensivePatterns {
     S l1_s;
 
     // ACCESSORS
-    L1 clone() const { return L1{(*(this)).l1_s.clone()}; }
+    L1 clone() const { return L1{(*this).l1_s.clone()}; }
   };
 
   struct L2 {
     L1 l2_l1;
 
     // ACCESSORS
-    L2 clone() const { return L2{(*(this)).l2_l1.clone()}; }
+    L2 clone() const { return L2{(*this).l2_l1.clone()}; }
   };
 
   struct L3 {
     L2 l3_l2;
 
     // ACCESSORS
-    L3 clone() const { return L3{(*(this)).l3_l2.clone()}; }
+    L3 clone() const { return L3{(*this).l3_l2.clone()}; }
   };
 
   struct L4 {
     L3 l4_l3;
 
     // ACCESSORS
-    L4 clone() const { return L4{(*(this)).l4_l3.clone()}; }
+    L4 clone() const { return L4{(*this).l4_l3.clone()}; }
   };
 
   struct L5 {
     L4 l5_l4;
 
     // ACCESSORS
-    L5 clone() const { return L5{(*(this)).l5_l4.clone()}; }
+    L5 clone() const { return L5{(*this).l5_l4.clone()}; }
   };
 
   static std::pair<
@@ -251,13 +250,12 @@ struct ComprehensivePatterns {
   nested_containers(S s);
   static std::pair<std::pair<S, unsigned int>, unsigned int>
   match_pair(const std::pair<S, unsigned int> &p);
-  static List<std::pair<S, unsigned int>> make_list(const unsigned int n, S s);
+  static List<std::pair<S, unsigned int>> make_list(unsigned int n, S s);
   static std::optional<std::pair<S, S>> multi_match(const std::optional<S> &o1,
                                                     const std::optional<S> &o2);
   enum class Three { e_A, e_B, e_C };
 
-  template <typename T1>
-  static T1 Three_rect(T1 f, T1 f0, T1 f3, const Three t) {
+  template <typename T1> static T1 Three_rect(T1 f, T1 f0, T1 f3, Three t) {
     switch (t) {
     case Three::e_A: {
       return f;
@@ -273,8 +271,7 @@ struct ComprehensivePatterns {
     }
   }
 
-  template <typename T1>
-  static T1 Three_rec(T1 f, T1 f0, T1 f3, const Three t) {
+  template <typename T1> static T1 Three_rec(T1 f, T1 f0, T1 f3, Three t) {
     switch (t) {
     case Three::e_A: {
       return f;
@@ -290,7 +287,7 @@ struct ComprehensivePatterns {
     }
   }
 
-  static std::pair<S, unsigned int> match_three(const Three t, S s);
+  static std::pair<S, unsigned int> match_three(Three t, S s);
   static std::pair<S, unsigned int> let_in_arg(S s);
   static std::pair<S, unsigned int> match_record(S s);
   static std::pair<S, unsigned int> rebind(S s1);
@@ -341,12 +338,11 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     Either clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Left_S>(_sv.v())) {
-        const auto &[d_s] = std::get<Left_S>(_sv.v());
+      if (std::holds_alternative<Left_S>(this->v())) {
+        const auto &[d_s] = std::get<Left_S>(this->v());
         return Either(Left_S{d_s.clone()});
       } else {
-        const auto &[d_n] = std::get<Right_N>(_sv.v());
+        const auto &[d_n] = std::get<Right_N>(this->v());
         return Either(Right_N{d_n});
       }
     }
@@ -354,9 +350,7 @@ struct ComprehensivePatterns {
     // CREATORS
     static Either left_s(S s) { return Either(Left_S{std::move(s)}); }
 
-    static Either right_n(unsigned int n) {
-      return Either(Right_N{std::move(n)});
-    }
+    static Either right_n(unsigned int n) { return Either(Right_N{n}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -368,12 +362,11 @@ struct ComprehensivePatterns {
       requires std::is_invocable_r_v<T1, F0 &, S &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Either::Left_S>(_sv.v())) {
-        const auto &[d_s] = std::get<typename Either::Left_S>(_sv.v());
+      if (std::holds_alternative<typename Either::Left_S>(this->v())) {
+        const auto &[d_s] = std::get<typename Either::Left_S>(this->v());
         return f(d_s);
       } else {
-        const auto &[d_n] = std::get<typename Either::Right_N>(_sv.v());
+        const auto &[d_n] = std::get<typename Either::Right_N>(this->v());
         return f0(d_n);
       }
     }
@@ -382,12 +375,11 @@ struct ComprehensivePatterns {
       requires std::is_invocable_r_v<T1, F0 &, S &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Either::Left_S>(_sv.v())) {
-        const auto &[d_s] = std::get<typename Either::Left_S>(_sv.v());
+      if (std::holds_alternative<typename Either::Left_S>(this->v())) {
+        const auto &[d_s] = std::get<typename Either::Left_S>(this->v());
         return f(d_s);
       } else {
-        const auto &[d_n] = std::get<typename Either::Right_N>(_sv.v());
+        const auto &[d_n] = std::get<typename Either::Right_N>(this->v());
         return f0(d_n);
       }
     }
@@ -399,7 +391,7 @@ struct ComprehensivePatterns {
     unsigned int r1_val;
 
     // ACCESSORS
-    R1 clone() const { return R1{(*(this)).r1_val}; }
+    R1 clone() const { return R1{(*this).r1_val}; }
   };
 
   struct R2 {
@@ -407,9 +399,7 @@ struct ComprehensivePatterns {
     unsigned int r2_data;
 
     // ACCESSORS
-    R2 clone() const {
-      return R2{(*(this)).r2_inner.clone(), (*(this)).r2_data};
-    }
+    R2 clone() const { return R2{(*this).r2_inner.clone(), (*this).r2_data}; }
   };
 
   struct R3 {
@@ -419,8 +409,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     R3 clone() const {
-      return R3{(*(this)).r3_r2.clone(), (*(this)).r3_r1.clone(),
-                (*(this)).r3_num};
+      return R3{(*this).r3_r2.clone(), (*this).r3_r1.clone(), (*this).r3_num};
     }
   };
 
@@ -431,19 +420,18 @@ struct ComprehensivePatterns {
   static unsigned int extract_val(const R1 &r1);
   static std::pair<R2, unsigned int> nested_call(R2 r2);
   static std::pair<std::pair<R2, R1>, unsigned int>
-  multi_proj_let(const unsigned int n);
+  multi_proj_let(unsigned int n);
   static std::optional<std::pair<R2, R1>> match_proj(R2 r2);
   static std::pair<std::pair<R1, unsigned int>, unsigned int>
   proj_multi_use(const R2 &r2);
   static std::pair<std::pair<R3, R2>, std::pair<R1, unsigned int>>
   complex_nest(R3 r3);
-  static R2 make_r2(const unsigned int n);
-  static std::pair<std::pair<R2, R1>, unsigned int>
-  from_func(const unsigned int n);
+  static R2 make_r2(unsigned int n);
+  static std::pair<std::pair<R2, R1>, unsigned int> from_func(unsigned int n);
   static std::pair<std::pair<R2, R1>, std::pair<R1, unsigned int>>
   pair_of_pairs(R2 r2);
-  static std::pair<R2, R1> cond_proj(const bool b, R2 r2);
-  static List<std::pair<R2, R1>> repeat_r2(const unsigned int n, R2 r2);
+  static std::pair<R2, R1> cond_proj(bool b, R2 r2);
+  static List<std::pair<R2, R1>> repeat_r2(unsigned int n, R2 r2);
   static std::pair<std::pair<R3, R2>, R1> nested_lets(R3 r3);
   static std::pair<R1, unsigned int> double_proj(const R3 &r3);
   static std::pair<std::pair<R3, R2>, R2> mixed_access(R3 r3);
@@ -460,7 +448,7 @@ struct ComprehensivePatterns {
     unsigned int dat;
 
     // ACCESSORS
-    R clone() const { return R{(*(this)).val, (*(this)).dat}; }
+    R clone() const { return R{(*this).val, (*this).dat}; }
   };
 
   static std::pair<R, unsigned int> pair_inline_proj(R r);
@@ -471,13 +459,12 @@ struct ComprehensivePatterns {
   static unsigned int proj_of_last_use(const R &r1);
   static unsigned int multi_let_same(const R &r);
   static unsigned int option_unwrap_proj(const std::optional<R> &o);
-  static std::pair<R, unsigned int> fun_result_and_proj(const unsigned int n);
+  static std::pair<R, unsigned int> fun_result_and_proj(unsigned int n);
   static std::optional<unsigned int> match_multi_use(const std::optional<R> &o);
   static std::pair<std::pair<R, unsigned int>, unsigned int> tuple_proj(R r);
   static std::pair<R, unsigned int> chain_to_pair(R r1);
-  static List<std::pair<R, unsigned int>> repeat_pair(const unsigned int n,
-                                                      R r);
-  static std::pair<R, unsigned int> cond_pair(const bool b, R r);
+  static List<std::pair<R, unsigned int>> repeat_pair(unsigned int n, R r);
+  static std::pair<R, unsigned int> cond_pair(bool b, R r);
   static unsigned int nested_match(const std::optional<R> &o1,
                                    const std::optional<R> &o2);
   static std::pair<unsigned int, unsigned int> both_proj(const R &r);
@@ -490,14 +477,12 @@ struct ComprehensivePatterns {
     unsigned int nc_c;
 
     // ACCESSORS
-    NC clone() const {
-      return NC{(*(this)).nc_a, (*(this)).nc_b, (*(this)).nc_c};
-    }
+    NC clone() const { return NC{(*this).nc_a, (*this).nc_b, (*this).nc_c}; }
   };
 
-  static unsigned int use_proj(const unsigned int n);
+  static unsigned int use_proj(unsigned int n);
   static unsigned int proj_as_arg(const NC &r);
-  static unsigned int use_two(const unsigned int _x0, const unsigned int _x1);
+  static unsigned int use_two(unsigned int _x0, unsigned int _x1);
   static unsigned int multi_proj_args(const NC &r);
   static unsigned int let_proj_then_base(const NC &r);
   static unsigned int base_then_multi_proj(const NC &r);
@@ -505,9 +490,9 @@ struct ComprehensivePatterns {
   static unsigned int proj_in_scrutinee(const NC &r);
   static unsigned int return_proj_nc(const NC &r);
   static unsigned int call_return_proj(const NC &r);
-  static unsigned int inc(const unsigned int n);
+  static unsigned int inc(unsigned int n);
   static unsigned int nested_proj_calls(const NC &r);
-  static unsigned int count_down(const unsigned int n, const NC &r);
+  static unsigned int count_down(unsigned int n, const NC &r);
   static unsigned int f1(const NC &r);
   static unsigned int f2(const NC &r);
   static unsigned int multi_function_calls(const NC &r);
@@ -520,12 +505,12 @@ struct ComprehensivePatterns {
     NC outer_nc;
 
     // ACCESSORS
-    OuterNC clone() const { return OuterNC{(*(this)).outer_nc.clone()}; }
+    OuterNC clone() const { return OuterNC{(*this).outer_nc.clone()}; }
   };
 
   static unsigned int double_proj_nc(const OuterNC &o);
   static unsigned int multi_positions(const NC &r);
-  static unsigned int sum_proj(const unsigned int n, const NC &r);
+  static unsigned int sum_proj(unsigned int n, const NC &r);
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, NC &>
@@ -541,23 +526,21 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     State clone() const {
-      return State{(*(this)).state_value, (*(this)).state_data};
+      return State{(*this).state_value, (*this).state_data};
     }
   };
 
-  static unsigned int use_two_fc(const unsigned int _x0,
-                                 const unsigned int _x1);
+  static unsigned int use_two_fc(unsigned int _x0, unsigned int _x1);
   static unsigned int bug_two_args(const State &s);
-  static unsigned int use_three(const unsigned int x, const unsigned int y,
-                                const unsigned int z);
+  static unsigned int use_three(unsigned int x, unsigned int y, unsigned int z);
   static unsigned int bug_three_args(const State &s);
-  static unsigned int take_state_and_val(const State &_x, const unsigned int n);
+  static unsigned int take_state_and_val(const State &_x, unsigned int n);
   static unsigned int bug_state_and_proj(const State &s);
-  static unsigned int inner_func(const unsigned int n);
+  static unsigned int inner_func(unsigned int n);
   static unsigned int bug_nested_calls(const State &s);
   static unsigned int bug_in_condition(const State &s);
-  static unsigned int f1_fc(const unsigned int n);
-  static unsigned int f2_fc(const unsigned int n);
+  static unsigned int f1_fc(unsigned int n);
+  static unsigned int f2_fc(unsigned int n);
   static unsigned int bug_multi_calls(const State &s);
   static std::pair<State, unsigned int> bug_base_and_proj(const State &s);
   static unsigned int sequential_lets(const State &s);
@@ -573,13 +556,13 @@ struct ComprehensivePatterns {
     unsigned int seq_val;
 
     // ACCESSORS
-    RSeq clone() const { return RSeq{(*(this)).seq_val}; }
+    RSeq clone() const { return RSeq{(*this).seq_val}; }
   };
 
   static RSeq side_effect(RSeq r);
   static unsigned int after_side_effect(const RSeq &r);
   static unsigned int two_side_effects(const RSeq &r);
-  static unsigned int side_effect_in_branch(const bool b, const RSeq &r);
+  static unsigned int side_effect_in_branch(bool b, const RSeq &r);
 
   struct StateStmt {
     unsigned int stmt_value;
@@ -587,7 +570,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     StateStmt clone() const {
-      return StateStmt{(*(this)).stmt_value, (*(this)).stmt_data};
+      return StateStmt{(*this).stmt_value, (*this).stmt_data};
     }
   };
 
@@ -599,7 +582,7 @@ struct ComprehensivePatterns {
     unsigned int inner_stmt_val;
 
     // ACCESSORS
-    InnerStmt clone() const { return InnerStmt{(*(this)).inner_stmt_val}; }
+    InnerStmt clone() const { return InnerStmt{(*this).inner_stmt_val}; }
   };
 
   struct OuterStmt {
@@ -608,8 +591,8 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     OuterStmt clone() const {
-      return OuterStmt{(*(this)).outer_stmt_inner.clone(),
-                       (*(this)).outer_stmt_data};
+      return OuterStmt{(*this).outer_stmt_inner.clone(),
+                       (*this).outer_stmt_data};
     }
   };
 
@@ -620,7 +603,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     Level3Stmt clone() const {
-      return Level3Stmt{(*(this)).l3_outer_stmt.clone()};
+      return Level3Stmt{(*this).l3_outer_stmt.clone()};
     }
   };
 
@@ -635,30 +618,28 @@ struct ComprehensivePatterns {
     return x;
   }
 
-  static unsigned int sum_values(const unsigned int n, const StateStmt &s);
+  static unsigned int sum_values(unsigned int n, const StateStmt &s);
 
   struct RCF {
     unsigned int cf_val;
 
     // ACCESSORS
-    RCF clone() const { return RCF{(*(this)).cf_val}; }
+    RCF clone() const { return RCF{(*this).cf_val}; }
   };
 
-  static unsigned int branch_use(const bool b, const RCF &r);
-  static std::pair<RCF, unsigned int> branch_different(const bool b, RCF r);
+  static unsigned int branch_use(bool b, const RCF &r);
+  static std::pair<RCF, unsigned int> branch_different(bool b, RCF r);
   static unsigned int match_with_wild(const std::optional<RCF> &o);
-  static unsigned int sum_with_state(const unsigned int n, const RCF &r);
-  static unsigned int even_count(const unsigned int n, const RCF &r);
-  static unsigned int odd_count(const unsigned int n, const RCF &r);
+  static unsigned int sum_with_state(unsigned int n, const RCF &r);
+  static unsigned int even_count(unsigned int n, const RCF &r);
+  static unsigned int odd_count(unsigned int n, const RCF &r);
 
   struct StateLB {
     unsigned int lb_value;
     unsigned int lb_data;
 
     // ACCESSORS
-    StateLB clone() const {
-      return StateLB{(*(this)).lb_value, (*(this)).lb_data};
-    }
+    StateLB clone() const { return StateLB{(*this).lb_value, (*this).lb_data}; }
   };
 
   struct Tree {
@@ -739,10 +720,10 @@ struct ComprehensivePatterns {
     }
 
     // CREATORS
-    static Tree leaf(unsigned int a0) { return Tree(Leaf{std::move(a0)}); }
+    static Tree leaf(unsigned int a0) { return Tree(Leaf{a0}); }
 
     static Tree node(Tree a0, unsigned int a1, Tree a2) {
-      return Tree(Node{std::make_unique<Tree>(std::move(a0)), std::move(a1),
+      return Tree(Node{std::make_unique<Tree>(std::move(a0)), a1,
                        std::make_unique<Tree>(std::move(a2))});
     }
 
@@ -777,29 +758,28 @@ struct ComprehensivePatterns {
     const variant_t &v() const { return d_v_; }
 
     Tree nested_reuse() const {
-      Tree t2 = (*(this)).transform_tree();
+      Tree t2 = (*this).transform_tree();
       return std::move(t2).transform_tree();
     }
 
     Tree flip_tree() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-        auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
-        return Tree::node(*(this), d_a0, *(this));
+      if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
+        auto &[d_a0] = std::get<typename Tree::Leaf>(this->v());
+        return Tree::node(*this, d_a0, *this);
       } else {
-        auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(_sv.v());
+        auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(this->v());
         return Tree::leaf(d_a1);
       }
     }
 
     Tree transform_tree() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
+      if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
+        const auto &[d_a0] = std::get<typename Tree::Leaf>(this->v());
         return Tree::leaf((d_a0 + 1u));
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(_sv.v());
-        return Tree::node(*(d_a0), (d_a1 + 1u), *(d_a2));
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename Tree::Node>(this->v());
+        return Tree::node(*d_a0, (d_a1 + 1u), *d_a2);
       }
     }
 
@@ -837,7 +817,7 @@ struct ComprehensivePatterns {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const Tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
             _result = (d_a0 + s.lb_value);
@@ -892,7 +872,7 @@ struct ComprehensivePatterns {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const Tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
             _result = d_a0;
@@ -956,15 +936,14 @@ struct ComprehensivePatterns {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const Tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -1022,15 +1001,14 @@ struct ComprehensivePatterns {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const Tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
             const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
             _result = f(d_a0);
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -1047,16 +1025,14 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int accum_with_state(const unsigned int n, const StateLB &s);
+  static unsigned int accum_with_state(unsigned int n, const StateLB &s);
 
   struct StateRO {
     unsigned int ro_value;
     unsigned int ro_data;
 
     // ACCESSORS
-    StateRO clone() const {
-      return StateRO{(*(this)).ro_value, (*(this)).ro_data};
-    }
+    StateRO clone() const { return StateRO{(*this).ro_value, (*this).ro_data}; }
   };
 
   struct Container {
@@ -1097,11 +1073,10 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     Container clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Empty>(_sv.v())) {
+      if (std::holds_alternative<Empty>(this->v())) {
         return Container(Empty{});
       } else {
-        const auto &[d_a0] = std::get<Full>(_sv.v());
+        const auto &[d_a0] = std::get<Full>(this->v());
         return Container(Full{d_a0.clone()});
       }
     }
@@ -1118,11 +1093,10 @@ struct ComprehensivePatterns {
     const variant_t &v() const { return d_v_; }
 
     unsigned int extract_from_container() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Container::Empty>(_sv.v())) {
+      if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0] = std::get<typename Container::Full>(_sv.v());
+        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
         return (d_a0.ro_value + d_a0.ro_data);
       }
     }
@@ -1130,11 +1104,10 @@ struct ComprehensivePatterns {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, StateRO &>
     T1 Container_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Container::Empty>(_sv.v())) {
+      if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename Container::Full>(_sv.v());
+        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
         return f0(d_a0);
       }
     }
@@ -1142,11 +1115,10 @@ struct ComprehensivePatterns {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, StateRO &>
     T1 Container_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename Container::Empty>(_sv.v())) {
+      if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename Container::Full>(_sv.v());
+        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
         return f0(d_a0);
       }
     }
@@ -1157,9 +1129,7 @@ struct ComprehensivePatterns {
     unsigned int op_data;
 
     // ACCESSORS
-    StateOP clone() const {
-      return StateOP{(*(this)).op_value, (*(this)).op_data};
-    }
+    StateOP clone() const { return StateOP{(*this).op_value, (*this).op_data}; }
   };
 
   static StateOP identity(StateOP s);

@@ -3,9 +3,9 @@
 /// Tail-recursive countdown using erased ITree. In sequential mode, itree is
 /// erased so this becomes a plain tail-recursive C++ function. Loopify should
 /// convert it to a while loop.
-unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
-  auto go_impl = [](auto &_self_go, const unsigned int k,
-                    const unsigned int acc) -> unsigned int {
+unsigned int LoopifyItreeSeq::count_down(unsigned int n) {
+  auto go_impl = [](auto &_self_go, unsigned int k,
+                    unsigned int acc) -> unsigned int {
     if (k <= 0) {
       return acc;
     } else {
@@ -13,16 +13,16 @@ unsigned int LoopifyItreeSeq::count_down(const unsigned int n) {
       return _self_go(_self_go, k_, (acc + 1u));
     }
   };
-  auto go = [&](const unsigned int k, const unsigned int acc) -> unsigned int {
+  auto go = [&](unsigned int k, unsigned int acc) -> unsigned int {
     return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);
 }
 
 /// Sum 1..n via tail recursion with accumulator.
-unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
-  auto go_impl = [](auto &_self_go, const unsigned int k,
-                    const unsigned int acc) -> unsigned int {
+unsigned int LoopifyItreeSeq::sum_to(unsigned int n) {
+  auto go_impl = [](auto &_self_go, unsigned int k,
+                    unsigned int acc) -> unsigned int {
     if (k <= 0) {
       return acc;
     } else {
@@ -30,7 +30,7 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
       return _self_go(_self_go, k_, (acc + k));
     }
   };
-  auto go = [&](const unsigned int k, const unsigned int acc) -> unsigned int {
+  auto go = [&](unsigned int k, unsigned int acc) -> unsigned int {
     return go_impl(go_impl, k, acc);
   };
   return go(n, 0u);
@@ -38,7 +38,7 @@ unsigned int LoopifyItreeSeq::sum_to(const unsigned int n) {
 
 /// Non-tail recursive: build a list counting down from n.
 List<unsigned int> LoopifyItreeSeq::countdown_list(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -61,7 +61,7 @@ List<unsigned int> LoopifyItreeSeq::countdown_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::cons(0u, List<unsigned int>::nil());
       } else {
@@ -71,7 +71,7 @@ List<unsigned int> LoopifyItreeSeq::countdown_list(
       }
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       List<unsigned int> rest = _result;
       _result = List<unsigned int>::cons(n, rest);
     }
@@ -79,10 +79,9 @@ List<unsigned int> LoopifyItreeSeq::countdown_list(
   return _result;
 }
 
-unsigned int LoopifyItreeSeq::delay_ret(const unsigned int n,
-                                        const unsigned int v) {
+unsigned int LoopifyItreeSeq::delay_ret(unsigned int n, unsigned int v) {
   unsigned int _result;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       _result = v;
@@ -101,8 +100,8 @@ void LoopifyItreeSeq::spin() {
   return;
 }
 
-void LoopifyItreeSeq::forever(const unsigned int n) {
-  unsigned int _loop_n = n;
+void LoopifyItreeSeq::forever(unsigned int n) {
+  unsigned int _loop_n = std::move(n);
   while (true) {
     _loop_n = (_loop_n + 1);
   }

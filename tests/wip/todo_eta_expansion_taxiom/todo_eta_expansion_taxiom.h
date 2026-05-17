@@ -1,8 +1,6 @@
 #ifndef INCLUDED_TODO_ETA_EXPANSION_TAXIOM
 #define INCLUDED_TODO_ETA_EXPANSION_TAXIOM
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -43,8 +41,7 @@ struct TodoEtaExpansionTaxiom {
 
     // ACCESSORS
     Pair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<MkPair>(this->v());
       return Pair<t_A, t_B>(MkPair{d_a0, d_a1});
     }
 

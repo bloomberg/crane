@@ -742,19 +742,6 @@ let get_containing_eponymous_struct (r : GlobRef.t) : GlobRef.t option =
 let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref =
   ref []
 
-(** Track which standard library headers are needed by the generated code.
-    Populated during the Pre-phase dry run; read by extract_env.ml to emit
-    only necessary #include directives. *)
-module SSet = Set.Make (String)
-
-let needed_headers : SSet.t ref = ref SSet.empty
-
-let require_header h = needed_headers := SSet.add h !needed_headers
-
-let get_needed_headers () = SSet.elements !needed_headers
-
-let reset_needed_headers () = needed_headers := SSet.empty
-
 (** Reset ALL global state - must be called between extractions to avoid
     pollution. This prevents state from one extraction affecting another when
     running multiple extractions in the same process (e.g., during 'dune
@@ -793,7 +780,7 @@ let reset_cpp_state () =
   Hashtbl.clear functor_app_sources;
   hoisted_concept_defs := [];
   Common.reset_ctor_field_names ();
-  reset_needed_headers ();
+  Common.reset_needed_headers ();
   Table.reset_itree_header ();
   Table.reset_main_function ()
 

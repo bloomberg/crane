@@ -2,8 +2,6 @@
 #define INCLUDED_STRING_
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -117,12 +115,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   String append(String s2) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+    if (std::holds_alternative<typename String::EmptyString>(this->v())) {
       return s2;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename String::String0>(_sv.v());
-      return String::string0(d_a0, (*(d_a1)).append(std::move(s2)));
+      const auto &[d_a0, d_a1] = std::get<typename String::String0>(this->v());
+      return String::string0(d_a0, (*d_a1).append(std::move(s2)));
     }
   }
 };

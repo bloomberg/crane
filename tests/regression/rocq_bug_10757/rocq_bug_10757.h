@@ -3,8 +3,6 @@
 
 #include <cassert>
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -45,8 +43,7 @@ public:
 
   // ACCESSORS
   Sig<t_A> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
+    const auto &[d_x] = std::get<Exist>(this->v());
     return Sig<t_A>(Exist{d_x});
   }
 

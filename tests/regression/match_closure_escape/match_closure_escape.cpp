@@ -10,11 +10,11 @@
 MatchClosureEscape::fn_box
 MatchClosureEscape::match_arm_box(const MatchClosureEscape::tree &t) {
   if (std::holds_alternative<typename MatchClosureEscape::tree::Leaf>(t.v())) {
-    return fn_box::box([](const unsigned int x) { return x; });
+    return fn_box::box([](unsigned int x) { return x; });
   } else {
     const auto &[d_a0, d_a1, d_a2] =
         std::get<typename MatchClosureEscape::tree::Node>(t.v());
-    MatchClosureEscape::tree d_a0_value = *(d_a0);
+    MatchClosureEscape::tree d_a0_value = *d_a0;
     return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
       return d_a0_value.sum_values(_x0);
     });

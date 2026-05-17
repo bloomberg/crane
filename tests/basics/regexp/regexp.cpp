@@ -1,6 +1,6 @@
 #include "regexp.h"
 
-bool Matcher::char_eq(const int64_t x, const int64_t y) {
+bool Matcher::char_eq(int64_t x, int64_t y) {
   bool b = x == y;
   if (b) {
     return true;
@@ -39,8 +39,8 @@ bool Matcher::regexp_eq(const Matcher::regexp &r, const Matcher::regexp &x) {
     if (std::holds_alternative<typename Matcher::regexp::Cat>(x.v())) {
       const auto &[d_r10, d_r20] =
           std::get<typename Matcher::regexp::Cat>(x.v());
-      if (regexp_eq(*(d_r1), *(d_r10))) {
-        if (regexp_eq(*(d_r2), *(d_r20))) {
+      if (regexp_eq(*d_r1, *d_r10)) {
+        if (regexp_eq(*d_r2, *d_r20)) {
           return true;
         } else {
           return false;
@@ -56,8 +56,8 @@ bool Matcher::regexp_eq(const Matcher::regexp &r, const Matcher::regexp &x) {
     if (std::holds_alternative<typename Matcher::regexp::Alt>(x.v())) {
       const auto &[d_r10, d_r20] =
           std::get<typename Matcher::regexp::Alt>(x.v());
-      if (regexp_eq(*(d_r1), *(d_r10))) {
-        if (regexp_eq(*(d_r2), *(d_r20))) {
+      if (regexp_eq(*d_r1, *d_r10)) {
+        if (regexp_eq(*d_r2, *d_r20)) {
           return true;
         } else {
           return false;
@@ -78,7 +78,7 @@ bool Matcher::regexp_eq(const Matcher::regexp &r, const Matcher::regexp &x) {
     const auto &[d_r] = std::get<typename Matcher::regexp::Star>(r.v());
     if (std::holds_alternative<typename Matcher::regexp::Star>(x.v())) {
       const auto &[d_r0] = std::get<typename Matcher::regexp::Star>(x.v());
-      if (regexp_eq(*(d_r), *(d_r0))) {
+      if (regexp_eq(*d_r, *d_r0)) {
         return true;
       } else {
         return false;
@@ -131,10 +131,10 @@ Matcher::regexp Matcher::null(const Matcher::regexp &r) {
     return regexp::eps();
   } else if (std::holds_alternative<typename Matcher::regexp::Cat>(r.v())) {
     const auto &[d_r1, d_r2] = std::get<typename Matcher::regexp::Cat>(r.v());
-    return OptCat(null(*(d_r1)), null(*(d_r2)));
+    return OptCat(null(*d_r1), null(*d_r2));
   } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r.v())) {
     const auto &[d_r1, d_r2] = std::get<typename Matcher::regexp::Alt>(r.v());
-    return OptAlt(null(*(d_r1)), null(*(d_r2)));
+    return OptAlt(null(*d_r1), null(*d_r2));
   } else if (std::holds_alternative<typename Matcher::regexp::Star>(r.v())) {
     return regexp::eps();
   } else {
@@ -148,7 +148,7 @@ bool Matcher::accepts_null(const Matcher::regexp &r) {
 
 /// This is the heart of the algorithm.  It returns a regexp denoting
 /// { cs | (c::cs) in r }.
-Matcher::regexp Matcher::deriv(const Matcher::regexp &r, const int64_t c) {
+Matcher::regexp Matcher::deriv(const Matcher::regexp &r, int64_t c) {
   if (std::holds_alternative<typename Matcher::regexp::Any>(r.v())) {
     return regexp::eps();
   } else if (std::holds_alternative<typename Matcher::regexp::Char>(r.v())) {
@@ -160,14 +160,14 @@ Matcher::regexp Matcher::deriv(const Matcher::regexp &r, const int64_t c) {
     }
   } else if (std::holds_alternative<typename Matcher::regexp::Cat>(r.v())) {
     const auto &[d_r1, d_r2] = std::get<typename Matcher::regexp::Cat>(r.v());
-    return OptAlt(OptCat(deriv(*(d_r1), c), *(d_r2)),
-                  OptCat(null(*(d_r1)), deriv(*(d_r2), c)));
+    return OptAlt(OptCat(deriv(*d_r1, c), *d_r2),
+                  OptCat(null(*d_r1), deriv(*d_r2, c)));
   } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r.v())) {
     const auto &[d_r1, d_r2] = std::get<typename Matcher::regexp::Alt>(r.v());
-    return OptAlt(deriv(*(d_r1), c), deriv(*(d_r2), c));
+    return OptAlt(deriv(*d_r1, c), deriv(*d_r2, c));
   } else if (std::holds_alternative<typename Matcher::regexp::Star>(r.v())) {
     const auto &[d_r] = std::get<typename Matcher::regexp::Star>(r.v());
-    return OptCat(deriv(*(d_r), c), regexp::star(*(d_r)));
+    return OptCat(deriv(*d_r, c), regexp::star(*d_r));
   } else {
     return regexp::zero();
   }
@@ -180,7 +180,7 @@ Matcher::regexp Matcher::derivs(Matcher::regexp r, const List<int64_t> &cs) {
     return r;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename List<int64_t>::Cons>(cs.v());
-    return derivs(deriv(std::move(r), d_a0), *(d_a1));
+    return derivs(deriv(std::move(r), d_a0), *d_a1);
   }
 }
 
@@ -200,14 +200,14 @@ bool Matcher::NullEpsOrZero(const Matcher::regexp &r) {
     return true;
   } else if (std::holds_alternative<typename Matcher::regexp::Cat>(r.v())) {
     const auto &[d_r1, d_r2] = std::get<typename Matcher::regexp::Cat>(r.v());
-    if (NullEpsOrZero(*(d_r1))) {
-      if (NullEpsOrZero(*(d_r2))) {
+    if (NullEpsOrZero(*d_r1)) {
+      if (NullEpsOrZero(*d_r2)) {
         return true;
       } else {
         return false;
       }
     } else {
-      if (NullEpsOrZero(*(d_r2))) {
+      if (NullEpsOrZero(*d_r2)) {
         return false;
       } else {
         return false;
@@ -215,14 +215,14 @@ bool Matcher::NullEpsOrZero(const Matcher::regexp &r) {
     }
   } else if (std::holds_alternative<typename Matcher::regexp::Alt>(r.v())) {
     const auto &[d_r1, d_r2] = std::get<typename Matcher::regexp::Alt>(r.v());
-    if (NullEpsOrZero(*(d_r1))) {
-      if (NullEpsOrZero(*(d_r2))) {
+    if (NullEpsOrZero(*d_r1)) {
+      if (NullEpsOrZero(*d_r2)) {
         return true;
       } else {
         return true;
       }
     } else {
-      if (NullEpsOrZero(*(d_r2))) {
+      if (NullEpsOrZero(*d_r2)) {
         return true;
       } else {
         return false;

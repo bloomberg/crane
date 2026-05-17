@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_BYREF_LIST_PARAM
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>

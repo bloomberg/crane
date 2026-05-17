@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -129,7 +128,7 @@ struct CustomInlineBug {
     unsigned int data;
 
     // ACCESSORS
-    State clone() const { return State{(*(this)).value, (*(this)).data}; }
+    State clone() const { return State{(*this).value, (*this).data}; }
   };
 
   static std::optional<unsigned int> bug_some_proj(const State &s);
@@ -137,14 +136,14 @@ struct CustomInlineBug {
   static std::optional<std::optional<unsigned int>>
   bug_nested_option(const State &s);
   static std::optional<std::pair<State, unsigned int>> bug_option_pair(State s);
-  static State get_state(const unsigned int n);
-  static std::optional<unsigned int> bug_some_of_call(const unsigned int n);
+  static State get_state(unsigned int n);
+  static std::optional<unsigned int> bug_some_of_call(unsigned int n);
   static std::pair<State, unsigned int> pair_simple(State s);
-  static std::pair<State, unsigned int> pair_let(const unsigned int n);
+  static std::pair<State, unsigned int> pair_let(unsigned int n);
   static std::pair<std::pair<State, unsigned int>,
                    std::pair<unsigned int, unsigned int>>
   pair_nested(State s);
-  static std::pair<State, unsigned int> pair_if(const bool b, State s);
+  static std::pair<State, unsigned int> pair_if(bool b, State s);
   static std::optional<std::pair<State, unsigned int>>
   pair_match(const std::optional<State> &o);
   static std::pair<std::pair<State, unsigned int>, unsigned int>
@@ -154,8 +153,8 @@ struct CustomInlineBug {
                    std::pair<unsigned int, unsigned int>>
   pair_extreme(State s);
   static std::pair<State, unsigned int> make_pair(State s);
-  static std::pair<State, unsigned int> outer_pair(const unsigned int n);
-  static List<std::pair<State, unsigned int>> count_pairs(const unsigned int n,
+  static std::pair<State, unsigned int> outer_pair(unsigned int n);
+  static List<std::pair<State, unsigned int>> count_pairs(unsigned int n,
                                                           State s);
 };
 

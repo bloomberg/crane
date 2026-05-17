@@ -24,7 +24,7 @@ LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
 }
 
 std::optional<unsigned int>
-LoopifyOptionMaybe::find_greater(const unsigned int threshold,
+LoopifyOptionMaybe::find_greater(unsigned int threshold,
                                  const List<unsigned int> &l) {
   std::optional<unsigned int> _result;
   const List<unsigned int> *_loop_l = &l;
@@ -48,8 +48,7 @@ LoopifyOptionMaybe::find_greater(const unsigned int threshold,
 }
 
 std::optional<unsigned int> LoopifyOptionMaybe::lookup(
-    const unsigned int key,
-    const List<std::pair<unsigned int, unsigned int>> &l) {
+    unsigned int key, const List<std::pair<unsigned int, unsigned int>> &l) {
   std::optional<unsigned int> _result;
   const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
   while (true) {
@@ -76,8 +75,7 @@ std::optional<unsigned int> LoopifyOptionMaybe::lookup(
 }
 
 List<unsigned int> LoopifyOptionMaybe::lookup_all(
-    const unsigned int key,
-    const List<std::pair<unsigned int, unsigned int>> &l) {
+    unsigned int key, const List<std::pair<unsigned int, unsigned int>> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
@@ -85,8 +83,7 @@ List<unsigned int> LoopifyOptionMaybe::lookup_all(
     if (std::holds_alternative<
             typename List<std::pair<unsigned int, unsigned int>>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -97,7 +94,7 @@ List<unsigned int> LoopifyOptionMaybe::lookup_all(
       if (key == k) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(v, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -109,7 +106,7 @@ List<unsigned int> LoopifyOptionMaybe::lookup_all(
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 std::optional<unsigned int>
@@ -130,7 +127,7 @@ LoopifyOptionMaybe::safe_tail(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    return std::make_optional<List<unsigned int>>(*(d_a1));
+    return std::make_optional<List<unsigned int>>(*d_a1);
   }
 }
 
@@ -142,8 +139,7 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
   while (true) {
     if (std::holds_alternative<typename List<std::optional<unsigned int>>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
@@ -153,7 +149,7 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
         const unsigned int &x = *d_a0;
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(x, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -165,14 +161,14 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 std::optional<unsigned int>
 LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
-                                        const unsigned int idx) {
+                                        unsigned int idx) {
   std::optional<unsigned int> _result;
-  unsigned int _loop_idx = idx;
+  unsigned int _loop_idx = std::move(idx);
   const List<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(

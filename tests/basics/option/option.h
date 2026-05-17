@@ -4,7 +4,6 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <type_traits>
 
 struct Option {
   static inline const std::optional<unsigned int> some_val =
@@ -12,14 +11,14 @@ struct Option {
   static inline const std::optional<unsigned int> none_val =
       std::optional<unsigned int>();
   static unsigned int get_or_default(const std::optional<unsigned int> &o,
-                                     const unsigned int default0);
+                                     unsigned int default0);
   static inline const std::optional<std::optional<unsigned int>> nested_some =
       std::make_optional<std::optional<unsigned int>>(
           std::make_optional<unsigned int>(3u));
   static inline const std::optional<std::optional<unsigned int>> nested_none =
       std::make_optional<std::optional<unsigned int>>(
           std::optional<unsigned int>());
-  static std::optional<unsigned int> safe_pred(const unsigned int n);
+  static std::optional<unsigned int> safe_pred(unsigned int n);
   static std::optional<unsigned int>
   chain_options(std::optional<unsigned int> o1, std::optional<unsigned int> o2);
 

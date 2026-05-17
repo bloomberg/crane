@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe24::sum_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe24::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe24::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe24::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -75,7 +75,7 @@ MemSafetyProbe24::mylist<unsigned int> MemSafetyProbe24::tree_to_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe24::tree &t = *(_f.t);
+      const MemSafetyProbe24::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(
               t.v())) {
         _result = mylist<unsigned int>::mynil();
@@ -162,8 +162,8 @@ MemSafetyProbe24::zip_trees(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe24::tree &t2 = *(_f.t2);
-      const MemSafetyProbe24::tree &t1 = *(_f.t1);
+      const MemSafetyProbe24::tree &t2 = *_f.t2;
+      const MemSafetyProbe24::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe24::tree::Leaf>(
               t1.v())) {
         _result = mylist<std::pair<unsigned int, unsigned int>>::mynil();

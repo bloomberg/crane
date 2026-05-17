@@ -1,8 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_CTOR_FIELD
 #define INCLUDED_NAME_CLASH_CTOR_FIELD
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -44,14 +42,13 @@ struct NameClashCtorField {
 
     // ACCESSORS
     clash1 clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_d_a0, d_d_a1] = std::get<C1>(_sv.v());
+      const auto &[d_d_a0, d_d_a1] = std::get<C1>(this->v());
       return clash1(C1{d_d_a0, d_d_a1});
     }
 
     // CREATORS
     static clash1 c1(unsigned int d_a0, unsigned int d_a1) {
-      return clash1(C1{std::move(d_a0), std::move(d_a1)});
+      return clash1(C1{d_a0, d_a1});
     }
 
     // MANIPULATORS
@@ -61,24 +58,21 @@ struct NameClashCtorField {
     const variant_t &v() const { return d_v_; }
 
     unsigned int sum_clash1() const {
-      auto &&_sv = *(this);
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
       return (d_d_a0 + d_d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 clash1_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
       return f(d_d_a0, d_d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 clash1_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(_sv.v());
+      const auto &[d_d_a0, d_d_a1] = std::get<typename clash1::C1>(this->v());
       return f(d_d_a0, d_d_a1);
     }
   };
@@ -124,22 +118,19 @@ struct NameClashCtorField {
 
     // ACCESSORS
     clash2 clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<C2a>(_sv.v())) {
-        const auto &[d_v] = std::get<C2a>(_sv.v());
+      if (std::holds_alternative<C2a>(this->v())) {
+        const auto &[d_v] = std::get<C2a>(this->v());
         return clash2(C2a{d_v});
       } else {
-        const auto &[d_result] = std::get<C2b>(_sv.v());
+        const auto &[d_result] = std::get<C2b>(this->v());
         return clash2(C2b{d_result});
       }
     }
 
     // CREATORS
-    static clash2 c2a(unsigned int v) { return clash2(C2a{std::move(v)}); }
+    static clash2 c2a(unsigned int v) { return clash2(C2a{v}); }
 
-    static clash2 c2b(unsigned int result) {
-      return clash2(C2b{std::move(result)});
-    }
+    static clash2 c2b(unsigned int result) { return clash2(C2b{result}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -148,12 +139,11 @@ struct NameClashCtorField {
     const variant_t &v() const { return d_v_; }
 
     unsigned int get_clash2() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
+      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
         return d_v;
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
         return d_result;
       }
     }
@@ -162,12 +152,11 @@ struct NameClashCtorField {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 clash2_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
+      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
         return f(d_v);
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
         return f0(d_result);
       }
     }
@@ -176,12 +165,11 @@ struct NameClashCtorField {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 clash2_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename clash2::C2a>(_sv.v())) {
-        const auto &[d_v] = std::get<typename clash2::C2a>(_sv.v());
+      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
+        const auto &[d_v] = std::get<typename clash2::C2a>(this->v());
         return f(d_v);
       } else {
-        const auto &[d_result] = std::get<typename clash2::C2b>(_sv.v());
+        const auto &[d_result] = std::get<typename clash2::C2b>(this->v());
         return f0(d_result);
       }
     }
@@ -223,14 +211,13 @@ struct NameClashCtorField {
 
     // ACCESSORS
     pair_ind clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<MkPair>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<MkPair>(this->v());
       return pair_ind(MkPair{d_a0, d_a1});
     }
 
     // CREATORS
     static pair_ind mkpair(unsigned int a0, unsigned int a1) {
-      return pair_ind(MkPair{std::move(a0), std::move(a1)});
+      return pair_ind(MkPair{a0, a1});
     }
 
     // MANIPULATORS
@@ -240,24 +227,21 @@ struct NameClashCtorField {
     const variant_t &v() const { return d_v_; }
 
     pair_ind swap_pair() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
       return pair_ind::mkpair(d_a1, d_a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_ind_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
       return f(d_a0, d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
     T1 pair_ind_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<typename pair_ind::MkPair>(this->v());
       return f(d_a0, d_a1);
     }
   };
@@ -301,9 +285,8 @@ struct NameClashCtorField {
 
     // ACCESSORS
     box clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Box0>(_sv.v())) {
-        const auto &[d_a0] = std::get<Box0>(_sv.v());
+      if (std::holds_alternative<Box0>(this->v())) {
+        const auto &[d_a0] = std::get<Box0>(this->v());
         return box(Box0{d_a0.clone()});
       } else {
         return box(EmptyBox{});
@@ -322,9 +305,8 @@ struct NameClashCtorField {
     const variant_t &v() const { return d_v_; }
 
     unsigned int unbox_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename box::Box0>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());
+      if (std::holds_alternative<typename box::Box0>(this->v())) {
+        const auto &[d_a0] = std::get<typename box::Box0>(this->v());
         const auto &[d_a00, d_a10] =
             std::get<typename pair_ind::MkPair>(d_a0.v());
         return (d_a00 + d_a10);

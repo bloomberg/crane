@@ -2,8 +2,6 @@
 #define INCLUDED_FIX_COMPOSE_ESCAPE
 
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 
 struct FixComposeEscape {
@@ -17,8 +15,7 @@ struct FixComposeEscape {
   /// & references.
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int compose_add(const unsigned int base, F1 &&g,
-                                  const unsigned int _x0) {
+  static unsigned int compose_add(unsigned int base, F1 &&g, unsigned int _x0) {
     return [=]() mutable {
       auto add_impl = [=](auto &_self_add,
                           unsigned int x) mutable -> unsigned int {
@@ -32,16 +29,16 @@ struct FixComposeEscape {
       auto add = [=](unsigned int x) mutable -> unsigned int {
         return add_impl(add_impl, x);
       };
-      return [=](const unsigned int x) mutable { return g(add(x)); };
+      return [=](unsigned int x) mutable { return g(add(x)); };
     }()(_x0);
   }
 
   /// test1: compose_add 42 id 3 = id (42 + 3) = 45
   static inline const unsigned int test1 =
-      compose_add(42u, [](const unsigned int x) { return x; }, 3u);
+      compose_add(42u, [](unsigned int x) { return x; }, 3u);
   /// test2: compose_add 10 double 5 = 2 * (10 + 5) = 30
   static inline const unsigned int test2 =
-      compose_add(10u, [](const unsigned int x) { return (x * 2u); }, 5u);
+      compose_add(10u, [](unsigned int x) { return (x * 2u); }, 5u);
   /// test3: Compose two different compositions.
   /// compose_add 100 (compose_add 50 id)
   /// = fun x => (compose_add 50 id) (100 + x)
@@ -51,7 +48,7 @@ struct FixComposeEscape {
   static inline const unsigned int test3 = []() {
     std::function<unsigned int(unsigned int)> inner =
         [](unsigned int _x0) -> unsigned int {
-      return compose_add(50u, [](const unsigned int x) { return x; }, _x0);
+      return compose_add(50u, [](unsigned int x) { return x; }, _x0);
     };
     return compose_add(100u, inner, 7u);
   }();

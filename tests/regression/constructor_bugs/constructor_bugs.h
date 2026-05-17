@@ -158,8 +158,7 @@ public:
 
   // ACCESSORS
   Sig<t_A> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
+    const auto &[d_x] = std::get<Exist>(this->v());
     return Sig<t_A>(Exist{d_x});
   }
 
@@ -183,14 +182,14 @@ struct ConstructorBugs {
     unsigned int a_value;
 
     // ACCESSORS
-    field_a clone() const { return field_a{(*(this)).a_value}; }
+    field_a clone() const { return field_a{(*this).a_value}; }
   };
 
   struct field_b {
     unsigned int b_value;
 
     // ACCESSORS
-    field_b clone() const { return field_b{(*(this)).b_value}; }
+    field_b clone() const { return field_b{(*this).b_value}; }
   };
 
   struct source_state {
@@ -200,8 +199,8 @@ struct ConstructorBugs {
 
     // ACCESSORS
     source_state clone() const {
-      return source_state{(*(this)).source_a.clone(),
-                          (*(this)).source_b.clone(), (*(this)).source_flag};
+      return source_state{(*this).source_a.clone(), (*this).source_b.clone(),
+                          (*this).source_flag};
     }
   };
 
@@ -212,9 +211,8 @@ struct ConstructorBugs {
 
     // ACCESSORS
     packed_state clone() const {
-      return packed_state{(*(this)).packed_source.clone(),
-                          (*(this)).packed_a.clone(),
-                          (*(this)).packed_b.clone()};
+      return packed_state{(*this).packed_source.clone(),
+                          (*this).packed_a.clone(), (*this).packed_b.clone()};
     }
   };
 
@@ -232,9 +230,9 @@ struct ConstructorBugs {
 
     // ACCESSORS
     source_state_list clone() const {
-      return source_state_list{(*(this)).source_a_list.clone(),
-                               (*(this)).source_b_list.clone(),
-                               (*(this)).source_flag_list};
+      return source_state_list{(*this).source_a_list.clone(),
+                               (*this).source_b_list.clone(),
+                               (*this).source_flag_list};
     }
   };
 
@@ -245,9 +243,9 @@ struct ConstructorBugs {
 
     // ACCESSORS
     packed_state_list clone() const {
-      return packed_state_list{(*(this)).packed_source_list.clone(),
-                               (*(this)).packed_a_list.clone(),
-                               (*(this)).packed_b_list.clone()};
+      return packed_state_list{(*this).packed_source_list.clone(),
+                               (*this).packed_a_list.clone(),
+                               (*this).packed_b_list.clone()};
     }
   };
 
@@ -260,23 +258,21 @@ struct ConstructorBugs {
     List<unsigned int> data;
 
     // ACCESSORS
-    state clone() const {
-      return state{(*(this)).value, (*(this)).data.clone()};
-    }
+    state clone() const { return state{(*this).value, (*this).data.clone()}; }
   };
 
-  static state get_state(const unsigned int n);
+  static state get_state(unsigned int n);
   static std::pair<std::pair<state, state>, unsigned int>
-  tuple_from_call(const unsigned int n);
+  tuple_from_call(unsigned int n);
   static std::pair<std::pair<state, unsigned int>,
                    std::pair<unsigned int, List<unsigned int>>>
   nested_tuples(state s);
   static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
-  conditional_tuple(const bool b, const unsigned int n);
+  conditional_tuple(bool b, unsigned int n);
   static unsigned int extract_value(const state &s);
   static List<unsigned int> extract_data(const state &s);
   static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
-  multi_call_tuple(const unsigned int n);
+  multi_call_tuple(unsigned int n);
   static std::pair<unsigned int, std::pair<state, unsigned int>>
   pair_test(unsigned int n);
   static std::optional<std::pair<state, unsigned int>>
@@ -287,7 +283,7 @@ struct ConstructorBugs {
                    List<unsigned int>>
   triple_proj(state s);
   static std::pair<state, unsigned int> inner_pair(state s);
-  static std::pair<state, unsigned int> outer_call(const unsigned int n);
+  static std::pair<state, unsigned int> outer_call(unsigned int n);
   static std::pair<
       std::pair<std::pair<std::pair<state, state>, unsigned int>, unsigned int>,
       List<unsigned int>>
@@ -297,7 +293,7 @@ struct ConstructorBugs {
     unsigned int inner_val;
 
     // ACCESSORS
-    Inner clone() const { return Inner{(*(this)).inner_val}; }
+    Inner clone() const { return Inner{(*this).inner_val}; }
   };
 
   struct Outer {
@@ -306,7 +302,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     Outer clone() const {
-      return Outer{(*(this)).outer_inner.clone(), (*(this)).outer_data};
+      return Outer{(*this).outer_inner.clone(), (*this).outer_data};
     }
   };
 
@@ -317,8 +313,8 @@ struct ConstructorBugs {
                    std::pair<unsigned int, unsigned int>>
   nested_pairs(Inner i);
   static std::pair<Inner, Inner> pair_duplicate(Inner i);
-  static Inner mk_inner(const unsigned int n);
-  static std::pair<Inner, unsigned int> pair_from_func(const unsigned int n);
+  static Inner mk_inner(unsigned int n);
+  static std::pair<Inner, unsigned int> pair_from_func(unsigned int n);
   static std::optional<std::pair<Inner, unsigned int>>
   match_option_record(const std::optional<Inner> &o);
 
@@ -362,12 +358,11 @@ struct ConstructorBugs {
 
     // ACCESSORS
     MySum clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<Left>(_sv.v());
+      if (std::holds_alternative<Left>(this->v())) {
+        const auto &[d_a0] = std::get<Left>(this->v());
         return MySum(Left{d_a0.clone()});
       } else {
-        const auto &[d_a0] = std::get<Right>(_sv.v());
+        const auto &[d_a0] = std::get<Right>(this->v());
         return MySum(Right{d_a0});
       }
     }
@@ -375,7 +370,7 @@ struct ConstructorBugs {
     // CREATORS
     static MySum left(Inner a0) { return MySum(Left{std::move(a0)}); }
 
-    static MySum right(unsigned int a0) { return MySum(Right{std::move(a0)}); }
+    static MySum right(unsigned int a0) { return MySum(Right{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -420,13 +415,13 @@ struct ConstructorBugs {
     Outer cont_outer;
 
     // ACCESSORS
-    Container clone() const { return Container{(*(this)).cont_outer.clone()}; }
+    Container clone() const { return Container{(*this).cont_outer.clone()}; }
   };
 
   static std::pair<std::pair<Outer, Inner>, unsigned int>
   deep_proj(const Container &c);
   static std::pair<List<Inner>, unsigned int> list_with_proj(Inner i);
-  static std::pair<Inner, unsigned int> tail_pair(Inner i, const bool b);
+  static std::pair<Inner, unsigned int> tail_pair(Inner i, bool b);
   static std::pair<std::pair<Inner, Inner>,
                    std::pair<unsigned int, unsigned int>>
   quad_tuple(Inner i);
@@ -444,8 +439,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     State clone() const {
-      return State{(*(this)).value_inline, (*(this)).data_inline,
-                   (*(this)).flag};
+      return State{(*this).value_inline, (*this).data_inline, (*this).flag};
     }
   };
 
@@ -454,13 +448,13 @@ struct ConstructorBugs {
   inline_triple(State s);
   static std::pair<std::pair<State, unsigned int>, unsigned int>
   inline_nested(State s);
-  static State get_state_inline(const unsigned int n);
-  static std::pair<State, unsigned int> inline_from_call(const unsigned int n);
+  static State get_state_inline(unsigned int n);
+  static std::pair<State, unsigned int> inline_from_call(unsigned int n);
   static std::pair<std::pair<State, unsigned int>, unsigned int>
-  same_call_multi_proj(const unsigned int n);
+  same_call_multi_proj(unsigned int n);
   static std::optional<std::pair<State, unsigned int>>
   inline_match(const std::optional<State> &o);
-  static std::pair<State, unsigned int> inline_if(const bool b, State s);
+  static std::pair<State, unsigned int> inline_if(bool b, State s);
 
   struct OuterInline {
     State outer_state;
@@ -468,7 +462,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     OuterInline clone() const {
-      return OuterInline{(*(this)).outer_state.clone(), (*(this)).outer_num};
+      return OuterInline{(*this).outer_state.clone(), (*this).outer_num};
     }
   };
 
@@ -481,16 +475,15 @@ struct ConstructorBugs {
   inline_many(State s);
   static std::pair<std::pair<unsigned int, State>, unsigned int>
   inline_pattern(State s);
-  static List<std::pair<State, unsigned int>>
-  inline_recursive(const unsigned int n, State s);
+  static List<std::pair<State, unsigned int>> inline_recursive(unsigned int n,
+                                                               State s);
   static std::pair<std::pair<std::pair<State, unsigned int>, unsigned int>,
                    std::pair<unsigned int, State>>
   inline_complex(State s);
   static std::pair<std::pair<State, State>,
                    std::pair<unsigned int, unsigned int>>
   inline_quad(State s);
-  static std::pair<State, unsigned int> inline_both_branches(const bool b,
-                                                             State s);
+  static std::pair<State, unsigned int> inline_both_branches(bool b, State s);
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, State &>

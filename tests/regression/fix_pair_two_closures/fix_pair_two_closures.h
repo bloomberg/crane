@@ -2,9 +2,6 @@
 #define INCLUDED_FIX_PAIR_TWO_CLOSURES
 
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct FixPairTwoClosures {
@@ -15,7 +12,7 @@ struct FixPairTwoClosures {
   /// dangle after make_ops returns.
   static std::pair<std::function<unsigned int(unsigned int)>,
                    std::function<unsigned int(unsigned int)>>
-  make_ops(const unsigned int a, const unsigned int b);
+  make_ops(unsigned int a, unsigned int b);
   /// test1: make_ops(10, 20). fst(3) = 10+3 = 13, snd(5) = 20+5 = 25.
   /// Total = 38.
   static inline const unsigned int test1 = []() -> unsigned int {

@@ -2,7 +2,6 @@
 #define INCLUDED_TAILREC_REORDER_PROBE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -156,13 +155,13 @@ struct TailrecReorderProbe {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = *(_f.m);
+        const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -203,13 +202,13 @@ struct TailrecReorderProbe {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &m = *(_f.m);
+        const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -287,7 +286,7 @@ struct TailrecReorderProbe {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &l = *(_f.l);
+        const mylist<T1> &l = *_f.l;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
           _result = 0u;
         } else {
@@ -305,7 +304,7 @@ struct TailrecReorderProbe {
   }
 
   static inline const unsigned int test_rev = mylist_sum<unsigned int>(
-      [](const unsigned int x) { return x; },
+      [](unsigned int x) { return x; },
       my_reverse<unsigned int>(mylist<unsigned int>::mycons(
           1u, mylist<unsigned int>::mycons(
                   2u, mylist<unsigned int>::mycons(
@@ -319,9 +318,8 @@ struct TailrecReorderProbe {
         mylist<unsigned int>::mynil(), mylist<unsigned int>::mynil());
     const mylist<unsigned int> &a = _cs.first;
     const mylist<unsigned int> &b = _cs.second;
-    return (
-        mylist_sum<unsigned int>([](const unsigned int x) { return x; }, a) +
-        mylist_sum<unsigned int>([](const unsigned int x) { return x; }, b));
+    return (mylist_sum<unsigned int>([](unsigned int x) { return x; }, a) +
+            mylist_sum<unsigned int>([](unsigned int x) { return x; }, b));
   }();
   /// Tail-recursive function where the recursive argument is a COMPLEX
   /// expression involving multiple pattern variables.
@@ -329,7 +327,7 @@ struct TailrecReorderProbe {
                                     const mylist<unsigned int> &l2,
                                     mylist<unsigned int> acc);
   static inline const unsigned int test_weave = mylist_sum<unsigned int>(
-      [](const unsigned int x) { return x; },
+      [](unsigned int x) { return x; },
       weave(mylist<unsigned int>::mycons(
                 1u, mylist<unsigned int>::mycons(
                         3u, mylist<unsigned int>::mynil())),

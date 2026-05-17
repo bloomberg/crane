@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_COMPARATORS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -145,7 +143,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -166,16 +164,14 @@ public:
 struct LoopifyComparators {
   static unsigned int maximum_by(const List<unsigned int> &l);
   static unsigned int minimum_by(const List<unsigned int> &l);
-  static List<unsigned int> merge_by_fuel(const unsigned int fuel,
+  static List<unsigned int> merge_by_fuel(unsigned int fuel,
                                           List<unsigned int> l1,
                                           List<unsigned int> l2);
   static List<unsigned int> merge_by(const List<unsigned int> &l1,
                                      const List<unsigned int> &l2);
-  static List<unsigned int> insert_sorted(const unsigned int x,
-                                          List<unsigned int> l);
+  static List<unsigned int> insert_sorted(unsigned int x, List<unsigned int> l);
   static List<unsigned int> insertion_sort(const List<unsigned int> &l);
-  static bool is_sorted_fuel(const unsigned int fuel,
-                             const List<unsigned int> &l);
+  static bool is_sorted_fuel(unsigned int fuel, const List<unsigned int> &l);
   static bool is_sorted(const List<unsigned int> &l);
 };
 

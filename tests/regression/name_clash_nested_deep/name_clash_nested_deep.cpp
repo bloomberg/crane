@@ -93,7 +93,7 @@ NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(xs.v());
-      return *(d_a10);
+      return *d_a10;
     }
   }();
   unsigned int second = [&]() {
@@ -118,14 +118,14 @@ NameClashNestedDeep::nested_field_match(const NameClashNestedDeep::mylist &xs) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename NameClashNestedDeep::mylist::MyCons>(xs.v());
-    auto &&_sv0 = *(d_a1);
+    auto &&_sv0 = *d_a1;
     if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
             _sv0.v())) {
       return 1u;
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(_sv0.v());
-      auto &&_sv1 = *(d_a10);
+      auto &&_sv1 = *d_a10;
       if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
               _sv1.v())) {
         return 2u;

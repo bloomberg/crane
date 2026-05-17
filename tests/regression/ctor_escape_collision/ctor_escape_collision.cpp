@@ -1,6 +1,6 @@
 #include "ctor_escape_collision.h"
 
-unsigned int CtorEscapeCollision::tag(const CtorEscapeCollision::Item x) {
+unsigned int CtorEscapeCollision::tag(CtorEscapeCollision::Item x) {
   switch (x) {
   case Item::e_D_: {
     return 1u;

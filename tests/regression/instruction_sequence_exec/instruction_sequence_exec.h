@@ -2,7 +2,6 @@
 #define INCLUDED_INSTRUCTION_SEQUENCE_EXEC
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -129,7 +128,7 @@ struct InstructionSequenceExec {
     unsigned int acc_;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).pc_, (*(this)).acc_}; }
+    state clone() const { return state{(*this).pc_, (*this).acc_}; }
   };
 
   struct instruction {
@@ -175,13 +174,12 @@ struct InstructionSequenceExec {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP_>(_sv.v())) {
+      if (std::holds_alternative<NOP_>(this->v())) {
         return instruction(NOP_{});
-      } else if (std::holds_alternative<INC_PC>(_sv.v())) {
+      } else if (std::holds_alternative<INC_PC>(this->v())) {
         return instruction(INC_PC{});
       } else {
-        const auto &[d_a0] = std::get<ADD_ACC>(_sv.v());
+        const auto &[d_a0] = std::get<ADD_ACC>(this->v());
         return instruction(ADD_ACC{d_a0});
       }
     }
@@ -192,7 +190,7 @@ struct InstructionSequenceExec {
     static instruction inc_pc() { return instruction(INC_PC{}); }
 
     static instruction add_acc(unsigned int a0) {
-      return instruction(ADD_ACC{std::move(a0)});
+      return instruction(ADD_ACC{a0});
     }
 
     // MANIPULATORS

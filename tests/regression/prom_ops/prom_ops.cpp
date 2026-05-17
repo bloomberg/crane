@@ -16,7 +16,7 @@ bool PromOps::nat_list_eqb(const List<unsigned int> &xs,
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename List<unsigned int>::Cons>(ys.v());
-      return (d_a0 == d_a00 && nat_list_eqb(*(d_a1), *(d_a10)));
+      return (d_a0 == d_a00 && nat_list_eqb(*d_a1, *d_a10));
     }
   }
 }
@@ -34,53 +34,46 @@ unsigned int PromOps::flagged_sum(const PromOps::state2 &s) {
 }
 
 PromOps::state3 PromOps::set_prom_params3(const PromOps::state3 &s,
-                                          const unsigned int addr,
-                                          const unsigned int data,
-                                          const bool enable) {
+                                          unsigned int addr, unsigned int data,
+                                          bool enable) {
   return state3{s.acc3,     s.regs3,     s.carry3,   s.pc3,        s.stack3,
                 s.ram_sys3, s.cur_bank3, s.sel_ram3, s.rom_ports3, s.sel_rom3,
                 s.rom3,     s.test_pin3, addr,       data,         enable};
 }
 
 PromOps::state5 PromOps::set_prom_params5(const PromOps::state5 &s,
-                                          const unsigned int addr,
-                                          const unsigned int data,
-                                          const bool enable) {
+                                          unsigned int addr, unsigned int data,
+                                          bool enable) {
   return state5{s.acc5, s.regs5, s.rom5, addr, data, enable};
 }
 
 PromOps::state6 PromOps::set_prom_params6(const PromOps::state6 &s,
-                                          const unsigned int addr,
-                                          const unsigned int data,
-                                          const bool enable) {
+                                          unsigned int addr, unsigned int data,
+                                          bool enable) {
   return state6{s.rom6, addr, data, enable};
 }
 
 PromOps::state7 PromOps::set_prom_params7(const PromOps::state7 &s,
-                                          const unsigned int addr,
-                                          const unsigned int data,
-                                          const bool enable) {
+                                          unsigned int addr, unsigned int data,
+                                          bool enable) {
   return state7{s.regs7, s.ram_sys7, addr, data, enable};
 }
 
 PromOps::state8 PromOps::set_prom_params8(const PromOps::state8 &s,
-                                          const unsigned int addr,
-                                          const unsigned int data,
-                                          const bool enable) {
+                                          unsigned int addr, unsigned int data,
+                                          bool enable) {
   return state8{s.regs8, s.ram_sys8, addr, data, enable};
 }
 
 PromOps::state9 PromOps::set_prom_params9(const PromOps::state9 &s,
-                                          const unsigned int addr,
-                                          const unsigned int data,
-                                          const bool enable) {
+                                          unsigned int addr, unsigned int data,
+                                          bool enable) {
   return state9{s.rom9, addr, data, enable};
 }
 
 PromOps::state10 PromOps::set_prom_params10(const PromOps::state10 &s,
-                                            const unsigned int addr,
-                                            const unsigned int data,
-                                            const bool enable) {
+                                            unsigned int addr,
+                                            unsigned int data, bool enable) {
   return state10{s.regs10,  s.rom10,      s.acc10,       s.pc10,
                  s.stack10, s.cur_bank10, s.rom_ports10, s.sel_rom10,
                  addr,      data,         enable};
@@ -108,7 +101,7 @@ PromOps::state11 PromOps::execute_wpm11(PromOps::state11 s) {
   }
 }
 
-bool Bool::eqb(const bool b1, const bool b2) {
+bool Bool::eqb(bool b1, bool b2) {
   if (b1) {
     if (b2) {
       return true;

@@ -5,7 +5,7 @@ unsigned int ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
           l.v())) {
     const auto &[d_a0, d_a1] =
         std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
-    return (1u + length(*(d_a1)));
+    return (1u + length(*d_a1));
   } else {
     return 0u;
   }
@@ -23,17 +23,16 @@ unsigned int ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
 /// // l.d_a1 is null -> crash
 /// return _rf;
 ReuseLambdaCapture::mylist
-ReuseLambdaCapture::add_length_to_each(ReuseLambdaCapture::mylist l,
-                                       const bool b) {
+ReuseLambdaCapture::add_length_to_each(ReuseLambdaCapture::mylist l, bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(
             l.v_mut())) {
       auto &[d_a0, d_a1] =
           std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v_mut());
-      ReuseLambdaCapture::mylist d_a1_value = *(d_a1);
+      ReuseLambdaCapture::mylist d_a1_value = *d_a1;
       return mylist::mycons(
           (d_a0 + 1u),
-          map([=](const unsigned int x) mutable { return (x + length(l)); },
+          map([=](unsigned int x) mutable { return (x + length(l)); },
               d_a1_value));
     } else {
       return mylist::mynil();

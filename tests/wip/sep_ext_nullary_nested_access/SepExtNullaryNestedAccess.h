@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTNULLARYNESTEDACCESS
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 namespace SepExtNullaryNestedAccess {
 

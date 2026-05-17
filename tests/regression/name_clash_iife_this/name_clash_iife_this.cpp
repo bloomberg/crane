@@ -1,7 +1,7 @@
 #include "name_clash_iife_this.h"
 
 unsigned int
-NameClashIifeThis::match_of_match(const NameClashIifeThis::Color c,
+NameClashIifeThis::match_of_match(NameClashIifeThis::Color c,
                                   const NameClashIifeThis::shape &s) {
   auto &&_sv = [&]() {
     switch (c) {

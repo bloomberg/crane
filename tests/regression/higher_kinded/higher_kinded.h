@@ -153,8 +153,8 @@ struct HigherKinded {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
-      return f0(*(d_a0), Tree_rect<T1, T2>(f, f0, *(d_a0)), *(d_a1),
-                Tree_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(*d_a0, Tree_rect<T1, T2>(f, f0, *d_a0), *d_a1,
+                Tree_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -167,8 +167,8 @@ struct HigherKinded {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
-      return f0(*(d_a0), Tree_rec<T1, T2>(f, f0, *(d_a0)), *(d_a1),
-                Tree_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(*d_a0, Tree_rec<T1, T2>(f, f0, *d_a0), *d_a1,
+                Tree_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -180,8 +180,8 @@ struct HigherKinded {
       return Tree<T2>::leaf(f(d_a0));
     } else {
       const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
-      return Tree<T2>::branch(tree_map<T1, T2>(f, *(d_a0)),
-                              tree_map<T1, T2>(f, *(d_a1)));
+      return Tree<T2>::branch(tree_map<T1, T2>(f, *d_a0),
+                              tree_map<T1, T2>(f, *d_a1));
     }
   }
 
@@ -194,8 +194,8 @@ struct HigherKinded {
       return leaf_f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename Tree<T1>::Branch>(t.v());
-      return branch_f(tree_fold<T1, T2>(leaf_f, branch_f, *(d_a0)),
-                      tree_fold<T1, T2>(leaf_f, branch_f, *(d_a1)));
+      return branch_f(tree_fold<T1, T2>(leaf_f, branch_f, *d_a0),
+                      tree_fold<T1, T2>(leaf_f, branch_f, *d_a1));
     }
   }
 
@@ -230,21 +230,21 @@ struct HigherKinded {
       tree_size<unsigned int>(test_tree);
   static inline const Tree<unsigned int> test_tree_map =
       tree_map<unsigned int, unsigned int>(
-          [](const unsigned int n) { return (n * 2u); }, test_tree);
+          [](unsigned int n) { return (n * 2u); }, test_tree);
   static inline const std::optional<unsigned int> test_hk_option = hk_map(
       []<typename _T1>(auto &&d_a0,
                        const std::optional<_T1> &d_a1) -> decltype(auto) {
         return map_option<_T1, std::invoke_result_t<decltype(d_a0) &, _T1 &>>(
             std::forward<decltype(d_a0)>(d_a0), d_a1);
       },
-      [](const unsigned int n) { return (n + 1u); },
+      [](unsigned int n) { return (n + 1u); },
       std::make_optional<unsigned int>(5u));
   static inline const Tree<unsigned int> test_hk_tree = hk_map(
       []<typename _T1>(auto &&d_a0, const Tree<_T1> &d_a1) -> decltype(auto) {
         return tree_map<_T1, std::invoke_result_t<decltype(d_a0) &, _T1 &>>(
             std::forward<decltype(d_a0)>(d_a0), d_a1);
       },
-      [](const unsigned int n) { return (n + 10u); }, test_tree);
+      [](unsigned int n) { return (n + 10u); }, test_tree);
 };
 
 #endif // INCLUDED_HIGHER_KINDED

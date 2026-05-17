@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_SCANS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -124,17 +122,17 @@ public:
 };
 
 struct LoopifyScans {
-  static List<unsigned int> scanl(const unsigned int acc,
+  static List<unsigned int> scanl(unsigned int acc,
                                   const List<unsigned int> &l);
-  static List<unsigned int> scanl_mult(const unsigned int acc,
+  static List<unsigned int> scanl_mult(unsigned int acc,
                                        const List<unsigned int> &l);
-  static List<unsigned int> running_max(const unsigned int current,
+  static List<unsigned int> running_max(unsigned int current,
                                         const List<unsigned int> &l);
-  static List<unsigned int> running_min(const unsigned int current,
+  static List<unsigned int> running_min(unsigned int current,
                                         const List<unsigned int> &l);
-  static List<unsigned int> pairwise_diff(const unsigned int prev,
+  static List<unsigned int> pairwise_diff(unsigned int prev,
                                           const List<unsigned int> &l);
-  static List<unsigned int> accumulate_if_even(const unsigned int acc,
+  static List<unsigned int> accumulate_if_even(unsigned int acc,
                                                const List<unsigned int> &l);
 };
 

@@ -1,16 +1,12 @@
 #ifndef INCLUDED_LOWERCASE_EPONYMOUS_RECORD
 #define INCLUDED_LOWERCASE_EPONYMOUS_RECORD
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct LowercaseEponymousRecord {
   struct state {
     unsigned int x;
     unsigned int y;
 
-    state set_x(const unsigned int n) const { return state{n, (*(this)).y}; }
+    state set_x(unsigned int n) const { return state{n, (*this).y}; }
   };
 
   static inline const state example = state{0u, 0u}.set_x(42u);

@@ -1,7 +1,7 @@
 #include "loopify_tail.h"
 
 /// Tail-recursive: membership test
-bool LoopifyTail::member(const unsigned int x,
+bool LoopifyTail::member(unsigned int x,
                          const LoopifyTail::list<unsigned int> &l) {
   bool _result;
   const LoopifyTail::list<unsigned int> *_loop_l = &l;
@@ -26,12 +26,12 @@ bool LoopifyTail::member(const unsigned int x,
 }
 
 /// Tail-recursive: nth element
-unsigned int LoopifyTail::nth(const unsigned int n,
+unsigned int LoopifyTail::nth(unsigned int n,
                               const LoopifyTail::list<unsigned int> &l,
-                              const unsigned int default0) {
+                              unsigned int default0) {
   unsigned int _result;
   const LoopifyTail::list<unsigned int> *_loop_l = &l;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
             _loop_l->v())) {
@@ -55,7 +55,7 @@ unsigned int LoopifyTail::nth(const unsigned int n,
 
 /// Tail-recursive: lookup in association list
 unsigned int LoopifyTail::lookup(
-    const unsigned int key,
+    unsigned int key,
     const LoopifyTail::list<std::pair<unsigned int, unsigned int>> &l) {
   unsigned int _result;
   const LoopifyTail::list<std::pair<unsigned int, unsigned int>> *_loop_l = &l;

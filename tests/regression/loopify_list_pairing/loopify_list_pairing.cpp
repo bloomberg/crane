@@ -25,7 +25,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::unzip(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<std::pair<unsigned int, unsigned int>> &l = *(_f.l);
+      const List<std::pair<unsigned int, unsigned int>> &l = *_f.l;
       if (std::holds_alternative<
               typename List<std::pair<unsigned int, unsigned int>>::Nil>(
               l.v())) {
@@ -77,7 +77,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::swizzle(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -123,7 +123,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::partition(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
@@ -149,18 +149,18 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::partition(
 }
 
 List<std::pair<unsigned int, unsigned int>>
-LoopifyListPairing::zip_longest_fuel(const unsigned int fuel,
+LoopifyListPairing::zip_longest_fuel(unsigned int fuel,
                                      const List<unsigned int> &l1,
                                      const List<unsigned int> &l2,
-                                     const unsigned int default0) {
+                                     unsigned int default0) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
   List<unsigned int> _loop_l2 = l2;
   List<unsigned int> _loop_l1 = l1;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
+      *_write = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
@@ -169,7 +169,7 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int fuel,
               _loop_l1.v())) {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2.v())) {
-          *(_write) =
+          *_write =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   List<std::pair<unsigned int, unsigned int>>::nil());
           break;
@@ -180,13 +180,13 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int fuel,
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
                       std::make_pair(default0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
-          _loop_l2 = std::move(*(d_a10));
+          _loop_l2 = std::move(*d_a10);
           _loop_l1 = List<unsigned int>::nil();
           _loop_fuel = fuel_;
           continue;
@@ -200,14 +200,14 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int fuel,
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
                       std::make_pair(d_a0, default0), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
           _loop_l2 = List<unsigned int>::nil();
-          _loop_l1 = std::move(*(d_a1));
+          _loop_l1 = std::move(*d_a1);
           _loop_fuel = fuel_;
           continue;
         } else {
@@ -217,27 +217,27 @@ LoopifyListPairing::zip_longest_fuel(const unsigned int fuel,
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
                       std::make_pair(d_a0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
-          _loop_l2 = std::move(*(d_a10));
-          _loop_l1 = std::move(*(d_a1));
+          _loop_l2 = std::move(*d_a10);
+          _loop_l1 = std::move(*d_a1);
           _loop_fuel = fuel_;
           continue;
         }
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 List<std::pair<unsigned int, unsigned int>>
 LoopifyListPairing::zip_longest(const List<unsigned int> &l1,
                                 const List<unsigned int> &l2,
-                                const unsigned int default0) {
+                                unsigned int default0) {
   unsigned int len1 = l1.length();
   unsigned int len2 = l2.length();
   unsigned int maxlen;
@@ -258,15 +258,14 @@ List<unsigned int> LoopifyListPairing::zipWith(const List<unsigned int> &l1,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l1->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2->v())) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
@@ -274,7 +273,7 @@ List<unsigned int> LoopifyListPairing::zipWith(const List<unsigned int> &l1,
             std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons((d_a0 + d_a00), nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -284,7 +283,7 @@ List<unsigned int> LoopifyListPairing::zipWith(const List<unsigned int> &l1,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 std::pair<List<unsigned int>, List<unsigned int>>
@@ -313,7 +312,7 @@ LoopifyListPairing::split_even_odd(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());

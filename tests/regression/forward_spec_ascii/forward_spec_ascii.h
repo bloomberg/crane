@@ -1,8 +1,6 @@
 #ifndef INCLUDED_FORWARD_SPEC_ASCII
 #define INCLUDED_FORWARD_SPEC_ASCII
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -48,20 +46,19 @@ struct ForwardSpecAscii {
 
     // ACCESSORS
     node clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<ANode>(_sv.v())) {
-        const auto &[d_a0] = std::get<ANode>(_sv.v());
+      if (std::holds_alternative<ANode>(this->v())) {
+        const auto &[d_a0] = std::get<ANode>(this->v());
         return node(ANode{d_a0});
       } else {
-        const auto &[d_a0] = std::get<BNode>(_sv.v());
+        const auto &[d_a0] = std::get<BNode>(this->v());
         return node(BNode{d_a0});
       }
     }
 
     // CREATORS
-    static node anode(unsigned int a0) { return node(ANode{std::move(a0)}); }
+    static node anode(unsigned int a0) { return node(ANode{a0}); }
 
-    static node bnode(unsigned int a0) { return node(BNode{std::move(a0)}); }
+    static node bnode(unsigned int a0) { return node(BNode{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -96,7 +93,7 @@ struct ForwardSpecAscii {
     }
   }
 
-  static unsigned int helper_nat(const unsigned int n);
+  static unsigned int helper_nat(unsigned int n);
   static unsigned int bump_node(const node &x);
   static inline const unsigned int t = bump_node(node::anode(2u));
 };

@@ -12,13 +12,13 @@
 /// The inner closure fun x => acc(h+x) captures acc (std::function)
 /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
 unsigned int FoldClosureBuild::compose_adders(
-    const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int _x0) {
+    const FoldClosureBuild::mylist<unsigned int> &l, unsigned int _x0) {
   return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
-      [](const std::function<unsigned int(unsigned int)> acc,
-         const unsigned int h) -> std::function<unsigned int(unsigned int)> {
-        return [=](const unsigned int x) mutable { return acc((h + x)); };
+      [](std::function<unsigned int(unsigned int)> acc,
+         unsigned int h) -> std::function<unsigned int(unsigned int)> {
+        return [=](unsigned int x) mutable { return acc((h + x)); };
       },
-      [](const unsigned int x) { return x; }, l)(_x0);
+      [](unsigned int x) { return x; }, l)(_x0);
 }
 
 /// Pattern 3: Fold producing a list of closures (not composing them).
@@ -31,9 +31,9 @@ FoldClosureBuild::collect_adders(
       unsigned int>(
       [](FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
              acc,
-         const unsigned int h) {
+         unsigned int h) {
         return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int x) mutable { return (h + x); }, acc);
+            [=](unsigned int x) mutable { return (h + x); }, acc);
       },
       mylist<std::function<unsigned int(unsigned int)>>::mynil(), l);
 }
@@ -41,14 +41,14 @@ FoldClosureBuild::collect_adders(
 unsigned int FoldClosureBuild::apply_all(
     const FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int x) {
+    unsigned int x) {
   if (std::holds_alternative<typename FoldClosureBuild::mylist<
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] = std::get<typename FoldClosureBuild::mylist<
         std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return (d_a0(x) + apply_all(*(d_a1), x));
+    return (d_a0(x) + apply_all(*d_a1, x));
   }
 }
 
@@ -62,10 +62,9 @@ unsigned int FoldClosureBuild::apply_all(
 /// When fold returns, these scopes are destroyed, but the
 /// final fixpoint (stored in the accumulator) still references them.
 unsigned int FoldClosureBuild::compose_with_fix(
-    const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int _x0) {
+    const FoldClosureBuild::mylist<unsigned int> &l, unsigned int _x0) {
   return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
-      [](const std::function<unsigned int(unsigned int)> acc,
-         const unsigned int h) {
+      [](std::function<unsigned int(unsigned int)> acc, unsigned int h) {
         auto go_impl = [=](auto &_self_go,
                            unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
@@ -80,5 +79,5 @@ unsigned int FoldClosureBuild::compose_with_fix(
         };
         return go;
       },
-      [](const unsigned int x) { return x; }, l)(_x0);
+      [](unsigned int x) { return x; }, l)(_x0);
 }

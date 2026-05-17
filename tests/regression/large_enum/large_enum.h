@@ -1,8 +1,6 @@
 #ifndef INCLUDED_LARGE_ENUM
 #define INCLUDED_LARGE_ENUM
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -25,7 +23,7 @@ struct LargeEnum {
 
   template <typename T1>
   static T1 color_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                       T1 f7, T1 f8, T1 f9, T1 f10, const Color c) {
+                       T1 f7, T1 f8, T1 f9, T1 f10, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -70,7 +68,7 @@ struct LargeEnum {
 
   template <typename T1>
   static T1 color_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
-                      T1 f7, T1 f8, T1 f9, T1 f10, const Color c) {
+                      T1 f7, T1 f8, T1 f9, T1 f10, Color c) {
     switch (c) {
     case Color::e_RED: {
       return f;
@@ -113,9 +111,9 @@ struct LargeEnum {
     }
   }
 
-  static unsigned int color_to_nat(const Color c);
-  static bool is_warm(const Color c);
-  static bool is_neutral(const Color c);
+  static unsigned int color_to_nat(Color c);
+  static bool is_warm(Color c);
+  static bool is_neutral(Color c);
 
   struct tok {
     // TYPES
@@ -199,30 +197,29 @@ struct LargeEnum {
 
     // ACCESSORS
     tok clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<TNum>(_sv.v())) {
-        const auto &[d_a0] = std::get<TNum>(_sv.v());
+      if (std::holds_alternative<TNum>(this->v())) {
+        const auto &[d_a0] = std::get<TNum>(this->v());
         return tok(TNum{d_a0});
-      } else if (std::holds_alternative<TPlus>(_sv.v())) {
+      } else if (std::holds_alternative<TPlus>(this->v())) {
         return tok(TPlus{});
-      } else if (std::holds_alternative<TMinus>(_sv.v())) {
+      } else if (std::holds_alternative<TMinus>(this->v())) {
         return tok(TMinus{});
-      } else if (std::holds_alternative<TStar>(_sv.v())) {
+      } else if (std::holds_alternative<TStar>(this->v())) {
         return tok(TStar{});
-      } else if (std::holds_alternative<TSlash>(_sv.v())) {
+      } else if (std::holds_alternative<TSlash>(this->v())) {
         return tok(TSlash{});
-      } else if (std::holds_alternative<TLParen>(_sv.v())) {
+      } else if (std::holds_alternative<TLParen>(this->v())) {
         return tok(TLParen{});
-      } else if (std::holds_alternative<TRParen>(_sv.v())) {
+      } else if (std::holds_alternative<TRParen>(this->v())) {
         return tok(TRParen{});
-      } else if (std::holds_alternative<TEq>(_sv.v())) {
+      } else if (std::holds_alternative<TEq>(this->v())) {
         return tok(TEq{});
-      } else if (std::holds_alternative<TBang>(_sv.v())) {
+      } else if (std::holds_alternative<TBang>(this->v())) {
         return tok(TBang{});
-      } else if (std::holds_alternative<TSemicolon>(_sv.v())) {
+      } else if (std::holds_alternative<TSemicolon>(this->v())) {
         return tok(TSemicolon{});
-      } else if (std::holds_alternative<TIdent>(_sv.v())) {
-        const auto &[d_a0] = std::get<TIdent>(_sv.v());
+      } else if (std::holds_alternative<TIdent>(this->v())) {
+        const auto &[d_a0] = std::get<TIdent>(this->v());
         return tok(TIdent{d_a0});
       } else {
         return tok(TEOF{});
@@ -230,7 +227,7 @@ struct LargeEnum {
     }
 
     // CREATORS
-    static tok tnum(unsigned int a0) { return tok(TNum{std::move(a0)}); }
+    static tok tnum(unsigned int a0) { return tok(TNum{a0}); }
 
     static tok tplus() { return tok(TPlus{}); }
 
@@ -250,7 +247,7 @@ struct LargeEnum {
 
     static tok tsemicolon() { return tok(TSemicolon{}); }
 
-    static tok tident(unsigned int a0) { return tok(TIdent{std::move(a0)}); }
+    static tok tident(unsigned int a0) { return tok(TIdent{a0}); }
 
     static tok teof() { return tok(TEOF{}); }
 

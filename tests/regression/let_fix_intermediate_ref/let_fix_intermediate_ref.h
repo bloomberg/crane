@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_INTERMEDIATE_REF
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>

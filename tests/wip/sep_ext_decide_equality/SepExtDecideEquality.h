@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTDECIDEEQUALITY
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <variant>
 
 #include "Datatypes.h"
@@ -49,7 +46,7 @@ template <Sigma Ty> struct DefsFn {
               typename Datatypes::template List<typename Ty::Sigma>::Cons>(
               x.v());
           if (Ty::Sigma_dec(d_a0, d_a00)) {
-            if (String_dec(*(d_a1), *(d_a10))) {
+            if (String_dec(*d_a1, *d_a10)) {
               return true;
             } else {
               return false;

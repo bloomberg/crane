@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTNULLARYCALL
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 #include "Datatypes.h"
 #include "List.h"
@@ -51,7 +48,7 @@ template <Cfg C> struct Worker {
   }
 
   static typename Datatypes::template List<unsigned int>
-  prepend(const unsigned int x) {
+  prepend(unsigned int x) {
     return Datatypes::template List<unsigned int>::cons(x, C::default_list());
   }
 

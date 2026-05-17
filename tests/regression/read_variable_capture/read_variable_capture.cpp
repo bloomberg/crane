@@ -14,7 +14,7 @@ std::string ReadVariableCapture::read_literal() {
 }
 
 /// Bug: variable argument — path not captured by []() { ... path ... }()
-std::string ReadVariableCapture::read_variable(const std::string path) {
+std::string ReadVariableCapture::read_variable(std::string path) {
   return [&]() -> std::string {
     std::ifstream file(path);
     if (!file) {
@@ -29,7 +29,7 @@ std::string ReadVariableCapture::read_variable(const std::string path) {
 /// Bug: same issue with file_exists which is std::filesystem::exists(...),
 /// but that's a plain expression, not a lambda, so it works.
 /// This test is for read specifically.
-std::string ReadVariableCapture::read_and_check(const std::string path) {
+std::string ReadVariableCapture::read_and_check(std::string path) {
   bool ok = std::filesystem::exists(std::filesystem::path(path));
   if (ok) {
     return [&]() -> std::string {

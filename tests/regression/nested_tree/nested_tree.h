@@ -3,7 +3,6 @@
 
 #include <any>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -224,12 +223,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -274,11 +272,10 @@ struct NestedTree {
 
     // ACCESSORS
     tree<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
+      if (std::holds_alternative<Leaf>(this->v())) {
         return tree<t_A>(Leaf{});
       } else {
-        const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<Node>(this->v());
         return tree<t_A>(Node{d_a0, d_a1});
       }
     }
@@ -290,8 +287,8 @@ struct NestedTree {
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->d_v_ = Node{t_A(d_a0),
-                          std::shared_ptr<tree<std::pair<t_A, t_A>>>(*(d_a1))};
+        this->d_v_ =
+            Node{t_A(d_a0), std::shared_ptr<tree<std::pair<t_A, t_A>>>(*d_a1)};
       }
     }
 
@@ -315,7 +312,7 @@ struct NestedTree {
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
       return std::any_cast<T1>(
-          f0(d_a0, *(d_a1), tree_rect<T1, T2>(f, f0, *(d_a1))));
+          f0(d_a0, *d_a1, tree_rect<T1, T2>(f, f0, *d_a1)));
     }
   }
 
@@ -325,8 +322,7 @@ struct NestedTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree<T2>::Node>(t.v());
-      return std::any_cast<T1>(
-          f0(d_a0, *(d_a1), tree_rec<T1, T2>(f, f0, *(d_a1))));
+      return std::any_cast<T1>(f0(d_a0, *d_a1, tree_rec<T1, T2>(f, f0, *d_a1)));
     }
   }
 
@@ -378,7 +374,7 @@ List<List<T2>> _flatten_tree_go(F0 &&f,
                      [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
                        return NestedTree::template lift<T1, T2>(f, _x0);
                      },
-                     *(d_a1)));
+                     *d_a1));
   }
 }
 

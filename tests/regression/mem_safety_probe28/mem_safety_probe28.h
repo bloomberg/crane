@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -217,7 +216,7 @@ struct MemSafetyProbe28 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -260,8 +259,8 @@ struct MemSafetyProbe28 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -273,8 +272,8 @@ struct MemSafetyProbe28 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -327,7 +326,7 @@ struct MemSafetyProbe28 {
       tree_sum(merge_trees(tree::node(tree::leaf(), 5u, tree::leaf()),
                            tree::node(tree::leaf(), 10u, tree::leaf())));
   /// TEST 7: Deep trees to stress the optimization.
-  static tree build_balanced(const unsigned int n);
+  static tree build_balanced(unsigned int n);
   static inline const unsigned int test_deep_zip =
       zip_trees(build_balanced(5u), build_balanced(5u));
   /// TEST 8: Nested zip where result of one zip feeds into another.

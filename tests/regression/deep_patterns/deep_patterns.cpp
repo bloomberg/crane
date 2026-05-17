@@ -38,26 +38,26 @@ unsigned int DeepPatterns::list_shape(const List<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = *(d_a1);
+    auto &&_sv0 = *d_a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return d_a0;
     } else {
       const auto &[d_a00, d_a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      auto &&_sv1 = *(d_a10);
+      auto &&_sv1 = *d_a10;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv1.v())) {
         return (d_a0 + d_a00);
       } else {
         const auto &[d_a01, d_a11] =
             std::get<typename List<unsigned int>::Cons>(_sv1.v());
-        auto &&_sv2 = *(d_a11);
+        auto &&_sv2 = *d_a11;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv2.v())) {
           return ((d_a0 + d_a00) + d_a01);
         } else {
           const auto &[d_a02, d_a12] =
               std::get<typename List<unsigned int>::Cons>(_sv2.v());
-          return (((d_a0 + d_a00) + d_a01) + (*(d_a12)).length());
+          return (((d_a0 + d_a00) + d_a01) + (*d_a12).length());
         }
       }
     }
@@ -67,7 +67,7 @@ unsigned int DeepPatterns::list_shape(const List<unsigned int> &l) {
 unsigned int DeepPatterns::deep_sum(const DeepPatterns::outer &o) {
   if (std::holds_alternative<typename DeepPatterns::outer::OLeft>(o.v())) {
     const auto &[d_a0] = std::get<typename DeepPatterns::outer::OLeft>(o.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *d_a0;
     if (std::holds_alternative<typename DeepPatterns::inner::ILeft>(_sv0.v())) {
       const auto &[d_a00] =
           std::get<typename DeepPatterns::inner::ILeft>(_sv0.v());
@@ -98,13 +98,13 @@ unsigned int DeepPatterns::complex_match(
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         return (n + d_a0);
       } else {
         const auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(_sv0.v());
-        return ((n + d_a0) + (*(d_a10)).length());
+        return ((n + d_a0) + (*d_a10).length());
       }
     }
   } else {

@@ -126,24 +126,22 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
     }
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
     }
   }
 };
@@ -192,8 +190,7 @@ struct PartialApply {
 
     // ACCESSORS
     tagged<t_A> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Tag>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<Tag>(this->v());
       return tagged<t_A>(Tag{d_a0, d_a1});
     }
 
@@ -204,7 +201,7 @@ struct PartialApply {
     }
 
     static tagged<t_A> tag(unsigned int a0, t_A a1) {
-      return tagged(Tag{std::move(a0), std::move(a1)});
+      return tagged(Tag{a0, std::move(a1)});
     }
 
     // MANIPULATORS
@@ -228,10 +225,10 @@ struct PartialApply {
     return f(d_a0, d_a1);
   }
 
-  static List<tagged<bool>> tag_with(const unsigned int n, const List<bool> &l);
+  static List<tagged<bool>> tag_with(unsigned int n, const List<bool> &l);
   static List<std::pair<unsigned int, std::pair<unsigned int, unsigned int>>>
   double_tag(const List<unsigned int> &l);
-  static unsigned int sum_with_init(const unsigned int init,
+  static unsigned int sum_with_init(unsigned int init,
                                     const List<unsigned int> &l);
   static inline const List<unsigned int> test_inc =
       inc_all(List<unsigned int>::cons(

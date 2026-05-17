@@ -4,7 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -171,20 +170,20 @@ struct LoopifyCoindColist {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static colist<T2> comap(F0 &&f, const colist<T1> l) {
+  static colist<T2> comap(F0 &&f, colist<T1> l) {
     if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
       return colist<T2>::lazy_(
           []() -> colist<T2> { return colist<T2>::conil(); });
     } else {
       const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
       return colist<T2>::lazy_([=]() mutable -> colist<T2> {
-        return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, *(d_a1)));
+        return colist<T2>::cocons(f(d_a0), comap<T1, T2>(f, *d_a1));
       });
     }
   }
 
   template <typename T1>
-  static colist<T1> cotake(const unsigned int n, const colist<T1> l) {
+  static colist<T1> cotake(unsigned int n, colist<T1> l) {
     if (n <= 0) {
       return colist<T1>::lazy_(
           []() -> colist<T1> { return colist<T1>::conil(); });
@@ -196,7 +195,7 @@ struct LoopifyCoindColist {
       } else {
         const auto &[d_a0, d_a1] = std::get<typename colist<T1>::Cocons>(l.v());
         return colist<T1>::lazy_([=]() mutable -> colist<T1> {
-          return colist<T1>::cocons(d_a0, cotake<T1>(n_, *(d_a1)));
+          return colist<T1>::cocons(d_a0, cotake<T1>(n_, *d_a1));
         });
       }
     }
@@ -208,7 +207,7 @@ struct LoopifyCoindColist {
           []() -> colist<T1> { return colist<T1>::conil(); });
     } else {
       const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      List<T1> d_a1_value = *(d_a1);
+      List<T1> d_a1_value = *d_a1;
       return colist<T1>::lazy_([=]() mutable -> colist<T1> {
         return colist<T1>::cocons(d_a0, from_list<T1>(d_a1_value));
       });
@@ -216,39 +215,39 @@ struct LoopifyCoindColist {
   }
 
   template <typename T1>
-  static List<T1> to_list(const unsigned int fuel, const colist<T1> l) {
+  static List<T1> to_list(unsigned int fuel, colist<T1> l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
-    colist<T1> _loop_l = l;
-    unsigned int _loop_fuel = fuel;
+    colist<T1> _loop_l = std::move(l);
+    unsigned int _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
+        *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
         unsigned int f = _loop_fuel - 1;
         if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l.v())) {
-          *(_write) = std::make_unique<List<T1>>(List<T1>::nil());
+          *_write = std::make_unique<List<T1>>(List<T1>::nil());
           break;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename colist<T1>::Cocons>(_loop_l.v());
           auto _cell = std::make_unique<List<T1>>(
               typename List<T1>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_a1;
-          _loop_l = std::move(*(d_a1));
+          _loop_l = std::move(*d_a1);
           _loop_fuel = f;
           continue;
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   static inline const List<unsigned int> test_comap = to_list<unsigned int>(
       5u, comap<unsigned int, unsigned int>(
-              [](const unsigned int n) { return (n * 2u); },
+              [](unsigned int n) { return (n * 2u); },
               from_list<unsigned int>(List<unsigned int>::cons(
                   1u, List<unsigned int>::cons(
                           2u, List<unsigned int>::cons(

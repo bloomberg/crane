@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -97,7 +96,7 @@ struct MemSafetyProbe21 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -140,8 +139,8 @@ struct MemSafetyProbe21 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -153,8 +152,8 @@ struct MemSafetyProbe21 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -162,33 +161,33 @@ struct MemSafetyProbe21 {
   /// TEST 1: Tail-recursive function where the recursive call takes
   /// a constructed tree. The loopifier must store the new tree
   /// somewhere that outlives the iteration.
-  static unsigned int grow_and_sum(tree t, const unsigned int n);
+  static unsigned int grow_and_sum(tree t, unsigned int n);
   static inline const unsigned int test_grow_and_sum =
       grow_and_sum(tree::leaf(), 3u);
   /// TEST 2: Non-tail recursive with constructed tree argument.
   /// The recursive call creates a new tree AND uses the original.
-  static unsigned int double_grow(tree t, const unsigned int n);
+  static unsigned int double_grow(tree t, unsigned int n);
   static inline const unsigned int test_double_grow =
       double_grow(tree::node(tree::leaf(), 5u, tree::leaf()), 2u);
   /// TEST 3: Two recursive calls, one with original tree, one with
   /// constructed tree.
-  static unsigned int branch_grow(const tree &t, const unsigned int n);
+  static unsigned int branch_grow(const tree &t, unsigned int n);
   static inline const unsigned int test_branch_grow =
       branch_grow(tree::node(tree::leaf(), 10u, tree::leaf()), 2u);
   /// TEST 4: Recursive call where the tree argument is built from
   /// MULTIPLE constructor calls with the original tree embedded.
-  static unsigned int embed_grow(tree t, const unsigned int n);
+  static unsigned int embed_grow(tree t, unsigned int n);
   static inline const unsigned int test_embed_grow =
       embed_grow(tree::leaf(), 2u);
   /// TEST 5: Accumulator pattern with tree building.
-  static tree accum_tree(tree acc, const unsigned int n);
+  static tree accum_tree(tree acc, unsigned int n);
   static inline const unsigned int test_accum_tree =
       tree_sum(accum_tree(tree::leaf(), 4u));
 
   /// TEST 6: CPS-like pattern where the continuation builds a tree.
   static unsigned int cps_sum(
       const tree &t,
-      const std::function<unsigned int(unsigned int)>
+      std::function<unsigned int(unsigned int)>
           k) { /// _Enter: captures varying parameters for each recursive call.
 
     struct _Enter {
@@ -206,21 +205,21 @@ struct MemSafetyProbe21 {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
-      const std::function<unsigned int(unsigned int)> &k = _f.k;
-      const tree &t = *(_f.t);
+      std::function<unsigned int(unsigned int)> k = std::move(_f.k);
+      const tree &t = *_f.t;
       if (std::holds_alternative<typename tree::Leaf>(t.v())) {
         _result = k(0u);
       } else {
         const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-        tree d_a0_value = *(d_a0);
-        tree d_a2_value = *(d_a2);
-        _stack.emplace_back(_Enter{
-            [=](const unsigned int lsum) mutable {
-              return cps_sum(d_a2_value, [=](const unsigned int rsum) mutable {
-                return k(((lsum + d_a1) + rsum));
-              });
-            },
-            d_a0.get()});
+        tree d_a0_value = *d_a0;
+        tree d_a2_value = *d_a2;
+        _stack.emplace_back(
+            _Enter{[=](unsigned int lsum) mutable {
+                     return cps_sum(d_a2_value, [=](unsigned int rsum) mutable {
+                       return k(((lsum + d_a1) + rsum));
+                     });
+                   },
+                   d_a0.get()});
       }
     }
     return _result;
@@ -229,15 +228,15 @@ struct MemSafetyProbe21 {
   static inline const unsigned int test_cps_sum =
       cps_sum(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
                          tree::node(tree::leaf(), 3u, tree::leaf())),
-              [](const unsigned int n) { return n; });
+              [](unsigned int n) { return n; });
   /// TEST 7: Mutually-referencing recursive call with tree
   /// construction at each level.
-  static unsigned int weave(tree t1, tree t2, const unsigned int n);
+  static unsigned int weave(tree t1, tree t2, unsigned int n);
   static inline const unsigned int test_weave =
       weave(tree::node(tree::leaf(), 1u, tree::leaf()),
             tree::node(tree::leaf(), 2u, tree::leaf()), 2u);
   /// TEST 8: Deep nesting with tree_sum at each level before recursion.
-  static unsigned int sum_and_grow(tree t, const unsigned int n);
+  static unsigned int sum_and_grow(tree t, unsigned int n);
   static inline const unsigned int test_sum_and_grow =
       sum_and_grow(tree::node(tree::leaf(), 1u, tree::leaf()), 3u);
 };

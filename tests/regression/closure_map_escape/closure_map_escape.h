@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -133,7 +132,7 @@ struct ClosureMapEscape {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -144,7 +143,7 @@ struct ClosureMapEscape {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -165,11 +164,10 @@ struct ClosureMapEscape {
   map_to_adders(const mylist<unsigned int> &l);
   static unsigned int
   apply_first(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-              const unsigned int arg);
-  static unsigned int
-  sum_apply(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-            const unsigned int
-                arg); /// test1: map_to_adders 10, 20, 30, apply first to 5.
+              unsigned int arg);
+  static unsigned int sum_apply(
+      const mylist<std::function<unsigned int(unsigned int)>> &fns,
+      unsigned int arg); /// test1: map_to_adders 10, 20, 30, apply first to 5.
   /// add(5) where add(x) = x + 10. So 10 + 5 = 15.
   /// Bug: h=10 captured by &, dangling after match.
   static inline const unsigned int test1 =

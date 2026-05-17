@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct ClosureChain {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -131,8 +130,8 @@ struct ClosureChain {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -144,8 +143,8 @@ struct ClosureChain {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -160,8 +159,8 @@ struct ClosureChain {
   /// BUG HYPOTHESIS: make_chain (S n') t creates a local binding
   /// f := make_chain n' t, then returns fun x => f (x + 1).
   /// If f is captured by &, it dies when make_chain returns.
-  static unsigned int make_chain(const unsigned int n, const tree &t,
-                                 const unsigned int _x0);
+  static unsigned int make_chain(unsigned int n, const tree &t,
+                                 unsigned int _x0);
   /// Test: make_chain 0 t 5 = tree_sum(t) + 5 = 10 + 5 = 15
   static inline const unsigned int chain_0 = []() {
     tree t = tree::node(tree::leaf(), 10u, tree::leaf());

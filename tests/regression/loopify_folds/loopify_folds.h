@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_FOLDS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -145,7 +144,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -167,11 +166,11 @@ struct LoopifyFolds {
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
                                    unsigned int &>
-  static unsigned int fold_left(F0 &&f, const unsigned int acc,
+  static unsigned int fold_left(F0 &&f, unsigned int acc,
                                 const List<unsigned int> &l) {
     unsigned int _result;
     const List<unsigned int> *_loop_l = &l;
-    unsigned int _loop_acc = acc;
+    unsigned int _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
@@ -192,8 +191,8 @@ struct LoopifyFolds {
                                    unsigned int &>
   static unsigned int
   fold_right(F0 &&f, const List<unsigned int> &l,
-             const unsigned int acc) { /// _Enter: captures varying parameters
-                                       /// for each recursive call.
+             unsigned int acc) { /// _Enter: captures varying parameters for
+                                 /// each recursive call.
 
     struct _Enter {
       const List<unsigned int> *l;
@@ -217,7 +216,7 @@ struct LoopifyFolds {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = acc;
         } else {
@@ -237,16 +236,16 @@ struct LoopifyFolds {
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
                                    unsigned int &>
-  static List<unsigned int> scanl(F0 &&f, const unsigned int acc,
+  static List<unsigned int> scanl(F0 &&f, unsigned int acc,
                                   const List<unsigned int> &l) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
     const List<unsigned int> *_loop_l = &l;
-    unsigned int _loop_acc = acc;
+    unsigned int _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        *(_write) = std::make_unique<List<unsigned int>>(
+        *_write = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(_loop_acc, List<unsigned int>::nil()));
         break;
       } else {
@@ -254,7 +253,7 @@ struct LoopifyFolds {
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(_loop_acc, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -263,26 +262,26 @@ struct LoopifyFolds {
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
                                    unsigned int &>
-  static List<unsigned int> scanr(F0 &&f, const unsigned int acc,
+  static List<unsigned int> scanr(F0 &&f, unsigned int acc,
                                   const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::cons(acc, List<unsigned int>::nil());
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      auto &&_sv0 = scanr(f, acc, *(d_a1));
+      auto &&_sv0 = scanr(f, acc, *d_a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         return List<unsigned int>::cons(acc, List<unsigned int>::nil());
       } else {
         const auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(_sv0.v());
-        return List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
+        return List<unsigned int>::cons(f(d_a0, d_a00), *d_a10);
       }
     }
   }
@@ -290,11 +289,11 @@ struct LoopifyFolds {
   template <typename F1>
     requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
                                    unsigned int &>
-  static unsigned int foldl1_fuel(const unsigned int fuel, F1 &&f,
+  static unsigned int foldl1_fuel(unsigned int fuel, F1 &&f,
                                   const List<unsigned int> &l) {
     unsigned int _result;
     List<unsigned int> _loop_l = l;
-    unsigned int _loop_fuel = fuel;
+    unsigned int _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
         _result = 0u;
@@ -308,7 +307,7 @@ struct LoopifyFolds {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-          auto &&_sv0 = *(d_a1);
+          auto &&_sv0 = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv0.v())) {
             _result = d_a0;
@@ -316,7 +315,7 @@ struct LoopifyFolds {
           } else {
             const auto &[d_a00, d_a10] =
                 std::get<typename List<unsigned int>::Cons>(_sv0.v());
-            _loop_l = List<unsigned int>::cons(f(d_a0, d_a00), *(d_a10));
+            _loop_l = List<unsigned int>::cons(f(d_a0, d_a00), *d_a10);
             _loop_fuel = fuel_;
           }
         }
@@ -362,13 +361,13 @@ struct LoopifyFolds {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *(d_a1);
+          auto &&_sv = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
             _result = d_a0;
@@ -415,7 +414,7 @@ struct LoopifyFolds {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
+        const List<unsigned int> &l = *_f.l;
         unsigned int acc = _f.acc;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(std::move(acc), List<unsigned int>::nil());
@@ -442,22 +441,22 @@ struct LoopifyFolds {
 
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static List<unsigned int> iterate_accum(F0 &&f, const unsigned int n,
-                                          const unsigned int x) {
+  static List<unsigned int> iterate_accum(F0 &&f, unsigned int n,
+                                          unsigned int x) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = x;
-    unsigned int _loop_n = n;
+    unsigned int _loop_x = std::move(x);
+    unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         unsigned int n_ = _loop_n - 1;
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(_loop_x, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -466,21 +465,21 @@ struct LoopifyFolds {
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename F1>
     requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F1 &,
                                    unsigned int &>
-  static List<unsigned int> unfold_fuel(const unsigned int fuel, F1 &&f,
-                                        const unsigned int seed) {
+  static List<unsigned int> unfold_fuel(unsigned int fuel, F1 &&f,
+                                        unsigned int seed) {
     std::unique_ptr<List<unsigned int>> _head{};
     std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_seed = seed;
-    unsigned int _loop_fuel = fuel;
+    unsigned int _loop_seed = std::move(seed);
+    unsigned int _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
@@ -490,7 +489,7 @@ struct LoopifyFolds {
         const unsigned int &next_seed = _cs.second;
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(x, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -499,14 +498,14 @@ struct LoopifyFolds {
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename F1>
     requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F1 &,
                                    unsigned int &>
-  static List<unsigned int> unfold(const unsigned int _x0, F1 &&_x1,
-                                   const unsigned int _x2) {
+  static List<unsigned int> unfold(unsigned int _x0, F1 &&_x1,
+                                   unsigned int _x2) {
     return unfold_fuel(_x0, _x1, _x2);
   }
 };

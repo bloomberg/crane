@@ -2,7 +2,6 @@
 #define INCLUDED_POLY_INDUCTIVE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -43,8 +42,7 @@ struct PolyInductive {
 
     // ACCESSORS
     pbox<t_A> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<PBox>(_sv.v());
+      const auto &[d_a0] = std::get<PBox>(this->v());
       return pbox<t_A>(PBox{d_a0});
     }
 
@@ -63,24 +61,21 @@ struct PolyInductive {
     const variant_t &v() const { return d_v_; }
 
     t_A punbox() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(_sv.v());
+      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
       return d_a0;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &>
     T1 pbox_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(_sv.v());
+      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
       return f(d_a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &>
     T1 pbox_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(_sv.v());
+      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
       return f(d_a0);
     }
   };
@@ -121,8 +116,7 @@ struct PolyInductive {
 
     // ACCESSORS
     ppair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<PPair>(_sv.v());
+      const auto &[d_a0, d_a1] = std::get<PPair>(this->v());
       return ppair<t_A, t_B>(PPair{d_a0, d_a1});
     }
 
@@ -145,34 +139,30 @@ struct PolyInductive {
     const variant_t &v() const { return d_v_; }
 
     t_B psnd() const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(_sv.v());
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
       return d_a1;
     }
 
     t_A pfst() const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(_sv.v());
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
       return d_a0;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 ppair_rec(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(_sv.v());
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
       return f(d_a0, d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
     T1 ppair_rect(F0 &&f) const {
-      auto &&_sv = *(this);
       const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(_sv.v());
+          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
       return f(d_a0, d_a1);
     }
   };
@@ -215,11 +205,10 @@ struct PolyInductive {
 
     // ACCESSORS
     pmaybe<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<PNothing>(_sv.v())) {
+      if (std::holds_alternative<PNothing>(this->v())) {
         return pmaybe<t_A>(PNothing{});
       } else {
-        const auto &[d_a0] = std::get<PJust>(_sv.v());
+        const auto &[d_a0] = std::get<PJust>(this->v());
         return pmaybe<t_A>(PJust{d_a0});
       }
     }
@@ -245,11 +234,10 @@ struct PolyInductive {
     const variant_t &v() const { return d_v_; }
 
     t_A pmaybe_default(t_A d) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
+      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
         return d;
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(_sv.v());
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
         return d_a0;
       }
     }
@@ -257,11 +245,10 @@ struct PolyInductive {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, t_A &>
     pmaybe<T1> pmaybe_map(F0 &&f) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
+      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
         return pmaybe<T1>::pnothing();
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(_sv.v());
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
         return pmaybe<T1>::pjust(f(d_a0));
       }
     }
@@ -269,11 +256,10 @@ struct PolyInductive {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
     T1 pmaybe_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
+      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(_sv.v());
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
         return f0(d_a0);
       }
     }
@@ -281,11 +267,10 @@ struct PolyInductive {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
     T1 pmaybe_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(_sv.v())) {
+      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(_sv.v());
+        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
         return f0(d_a0);
       }
     }
@@ -419,13 +404,12 @@ struct PolyInductive {
     const variant_t &v() const { return d_v_; }
 
     unsigned int ptree_size() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {
+      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
         return 1u;
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename ptree<t_A>::PNode>(_sv.v());
-        return (((*(d_a0)).ptree_size() + (*(d_a1)).ptree_size()) + 1);
+            std::get<typename ptree<t_A>::PNode>(this->v());
+        return (((*d_a0).ptree_size() + (*d_a1).ptree_size()) + 1);
       }
     }
 
@@ -434,15 +418,14 @@ struct PolyInductive {
                std::is_invocable_r_v<T1, F1 &, ptree<t_A> &, T1 &, ptree<t_A> &,
                                      T1 &>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(_sv.v());
+      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
+        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(this->v());
         return f(d_a0);
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename ptree<t_A>::PNode>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template ptree_rec<T1>(f, f0), *(d_a1),
-                  (*(d_a1)).template ptree_rec<T1>(f, f0));
+            std::get<typename ptree<t_A>::PNode>(this->v());
+        return f0(*d_a0, (*d_a0).template ptree_rec<T1>(f, f0), *d_a1,
+                  (*d_a1).template ptree_rec<T1>(f, f0));
       }
     }
 
@@ -451,15 +434,14 @@ struct PolyInductive {
                std::is_invocable_r_v<T1, F1 &, ptree<t_A> &, T1 &, ptree<t_A> &,
                                      T1 &>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(_sv.v());
+      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
+        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(this->v());
         return f(d_a0);
       } else {
         const auto &[d_a0, d_a1] =
-            std::get<typename ptree<t_A>::PNode>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template ptree_rect<T1>(f, f0), *(d_a1),
-                  (*(d_a1)).template ptree_rect<T1>(f, f0));
+            std::get<typename ptree<t_A>::PNode>(this->v());
+        return f0(*d_a0, (*d_a0).template ptree_rect<T1>(f, f0), *d_a1,
+                  (*d_a1).template ptree_rect<T1>(f, f0));
       }
     }
   };
@@ -477,7 +459,7 @@ struct PolyInductive {
   static inline const unsigned int test_pmap =
       pmaybe<unsigned int>::pjust(5u)
           .template pmaybe_map<unsigned int>(
-              [](const unsigned int x) { return (x + 1); })
+              [](unsigned int x) { return (x + 1); })
           .pmaybe_default(0u);
   static inline const unsigned int test_ptree =
       ptree<unsigned int>::pnode(

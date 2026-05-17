@@ -2,9 +2,6 @@
 #define INCLUDED_ROCQ_BUG_20989
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename M>
 concept S = requires {

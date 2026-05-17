@@ -3,7 +3,6 @@
 
 #include <concepts>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -66,12 +65,11 @@ template <Elem E> struct MutualTree {
 
     // ACCESSORS
     tree clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Leaf>(_sv.v())) {
-        const auto &[d_a0] = std::get<Leaf>(_sv.v());
+      if (std::holds_alternative<Leaf>(this->v())) {
+        const auto &[d_a0] = std::get<Leaf>(this->v());
         return tree(Leaf{d_a0});
       } else {
-        const auto &[d_a0, d_a1] = std::get<Node>(_sv.v());
+        const auto &[d_a0, d_a1] = std::get<Node>(this->v());
         return tree(Node{
             d_a0, d_a1 ? std::make_unique<MutualTree::forest>(d_a1->clone())
                        : nullptr});
@@ -79,10 +77,10 @@ template <Elem E> struct MutualTree {
     }
 
     // CREATORS
-    static tree leaf(unsigned int a0) { return tree(Leaf{std::move(a0)}); }
+    static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
 
     static tree node(unsigned int a0, forest a1) {
-      return tree(Node{std::move(a0), std::make_unique<forest>(std::move(a1))});
+      return tree(Node{a0, std::make_unique<forest>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -236,7 +234,7 @@ template <Elem E> struct MutualTree {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
-      return f0(d_a0, *(d_a1));
+      return f0(d_a0, *d_a1);
     }
   }
 
@@ -249,7 +247,7 @@ template <Elem E> struct MutualTree {
       return f(d_a0);
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
-      return f0(d_a0, *(d_a1));
+      return f0(d_a0, *d_a1);
     }
   }
 
@@ -260,7 +258,7 @@ template <Elem E> struct MutualTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1.v());
-      return f0(*(d_a0), *(d_a1), forest_rect<T1>(f, f0, *(d_a1)));
+      return f0(*d_a0, *d_a1, forest_rect<T1>(f, f0, *d_a1));
     }
   }
 
@@ -271,7 +269,7 @@ template <Elem E> struct MutualTree {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f1.v());
-      return f0(*(d_a0), *(d_a1), forest_rec<T1>(f, f0, *(d_a1)));
+      return f0(*d_a0, *d_a1, forest_rec<T1>(f, f0, *d_a1));
     }
   }
 
@@ -280,7 +278,7 @@ template <Elem E> struct MutualTree {
       return 1u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
-      return (1u + forest_size(*(d_a1)));
+      return (1u + forest_size(*d_a1));
     }
   }
 
@@ -289,7 +287,7 @@ template <Elem E> struct MutualTree {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f.v());
-      return (tree_size(*(d_a0)) + forest_size(*(d_a1)));
+      return (tree_size(*d_a0) + forest_size(*d_a1));
     }
   }
 
@@ -299,7 +297,7 @@ template <Elem E> struct MutualTree {
       return d_a0;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename tree::Node>(t0.v());
-      return (d_a0 + forest_sum(*(d_a1)));
+      return (d_a0 + forest_sum(*d_a1));
     }
   }
 
@@ -308,7 +306,7 @@ template <Elem E> struct MutualTree {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename forest::FCons>(f.v());
-      return (tree_sum(*(d_a0)) + forest_sum(*(d_a1)));
+      return (tree_sum(*d_a0) + forest_sum(*d_a1));
     }
   }
 

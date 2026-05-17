@@ -13,8 +13,7 @@ unsigned int sum_list(const Datatypes::List<unsigned int> &l) {
       0u);
 }
 
-Datatypes::List<unsigned int> make_pair_list(const unsigned int n,
-                                             const unsigned int m) {
+Datatypes::List<unsigned int> make_pair_list(unsigned int n, unsigned int m) {
   return Datatypes::template List<unsigned int>::cons(
       n, Datatypes::template List<unsigned int>::cons(
              m, Datatypes::template List<unsigned int>::nil()));

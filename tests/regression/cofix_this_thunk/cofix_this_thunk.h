@@ -4,7 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -170,7 +169,7 @@ public:
   Sseq<t_A> stail() const {
     const auto &[d_shead, d_stail] =
         std::get<typename Sseq<t_A>::SCons>(this->v());
-    return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> { return *(d_stail); });
+    return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> { return *d_stail; });
   }
 
   /// This will be methodified on sseq because first arg is sseq A
@@ -184,7 +183,7 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<t_A, F0 &, t_A &>
   Sseq<t_A> smap(F0 &&f) const {
-    Sseq<t_A> _self_val = *(this);
+    Sseq<t_A> _self_val = *this;
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
       return Sseq<t_A>::scons(_self_val.double_head(f),
                               _self_val.stail().smap(f));
@@ -194,7 +193,7 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<t_A, F0 &, t_A &>
   Sseq<t_A> smap_direct(F0 &&f) const {
-    Sseq<t_A> _self_val = *(this);
+    Sseq<t_A> _self_val = *this;
     return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
       return Sseq<t_A>::scons(f(_self_val.shead()),
                               _self_val.stail().smap_direct(f));
@@ -202,7 +201,7 @@ public:
   }
 
   /// Take n elements
-  List<t_A> take(const unsigned int n) const {
+  List<t_A> take(unsigned int n) const {
     if (n <= 0) {
       return List<t_A>::nil();
     } else {
@@ -211,7 +210,7 @@ public:
     }
   }
 
-  static Sseq<unsigned int> nats_from(const unsigned int n) {
+  static Sseq<unsigned int> nats_from(unsigned int n) {
     return Sseq<unsigned int>::lazy_([=]() mutable -> Sseq<unsigned int> {
       return Sseq<unsigned int>::scons(n, nats_from((n + 1)));
     });
@@ -224,7 +223,7 @@ public:
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(l.v());
-      return (d_a0 + sum(*(d_a1)));
+      return (d_a0 + sum(*d_a1));
     }
   }
 
@@ -233,7 +232,7 @@ public:
   static const unsigned int &test1() {
     static const unsigned int v = []() {
       Sseq<unsigned int> s =
-          nats_from(0u).smap([](const unsigned int x) { return (x + 1); });
+          nats_from(0u).smap([](unsigned int x) { return (x + 1); });
       return sum(s.take(4u));
     }();
     return v;
@@ -243,8 +242,8 @@ public:
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
   static const unsigned int &test2() {
     static const unsigned int v = []() {
-      Sseq<unsigned int> s = nats_from(0u).smap_direct(
-          [](const unsigned int x) { return (x + 1); });
+      Sseq<unsigned int> s =
+          nats_from(0u).smap_direct([](unsigned int x) { return (x + 1); });
       return sum(s.take(4u));
     }();
     return v;

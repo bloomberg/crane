@@ -16,7 +16,7 @@ RamInitReset::pop_stack(RamInitReset::state s) {
         std::get<typename List<unsigned int>::Cons>(_sv.v());
     return std::make_pair(std::make_optional<unsigned int>(d_a0),
                           state{s.state_regs, s.state_acc, s.state_carry,
-                                s.state_pc, *(d_a1), s.state_ram, s.state_sel,
+                                s.state_pc, *d_a1, s.state_ram, s.state_sel,
                                 s.state_rom});
   }
 }

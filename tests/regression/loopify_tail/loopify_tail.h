@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_TAIL
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -155,12 +154,12 @@ struct LoopifyTail {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -201,12 +200,12 @@ struct LoopifyTail {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
+          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
           _stack.emplace_back(_Enter{d_a1.get()});
         }
       } else {
@@ -236,10 +235,10 @@ struct LoopifyTail {
   } /// Tail-recursive: length with accumulator
 
   template <typename T1>
-  static unsigned int length_acc(const unsigned int acc, const list<T1> &l) {
+  static unsigned int length_acc(unsigned int acc, const list<T1> &l) {
     unsigned int _result;
     const list<T1> *_loop_l = &l;
-    unsigned int _loop_acc = acc;
+    unsigned int _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = _loop_acc;
@@ -256,14 +255,12 @@ struct LoopifyTail {
 
   template <typename T1> static unsigned int length(const list<T1> &l) {
     return length_acc<T1>(0u, l);
-  }
+  } /// Tail-recursive: membership test
 
-  /// Tail-recursive: membership test
-  static bool member(const unsigned int x, const list<unsigned int> &l);
+  static bool member(unsigned int x, const list<unsigned int> &l);
   /// Tail-recursive: nth element
-  static unsigned int
-  nth(const unsigned int n, const list<unsigned int> &l,
-      const unsigned int default0); /// Tail-recursive: fold_left
+  static unsigned int nth(unsigned int n, const list<unsigned int> &l,
+                          unsigned int default0); /// Tail-recursive: fold_left
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
@@ -287,7 +284,7 @@ struct LoopifyTail {
 
   /// Tail-recursive: lookup in association list
   static unsigned int
-  lookup(const unsigned int key,
+  lookup(unsigned int key,
          const list<std::pair<unsigned int, unsigned int>> &l);
 };
 

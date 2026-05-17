@@ -2,9 +2,6 @@
 #define INCLUDED_INT63_ARITH
 
 #include <cstdint>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct Int63Arith {
   static inline const int64_t i_zero = int64_t(0);
@@ -21,7 +18,7 @@ struct Int63Arith {
   static inline const bool i_ltb_false = int64_t(5) < int64_t(3);
   static inline const bool i_leb_true = int64_t(3) <= int64_t(3);
   static inline const bool i_leb_false = int64_t(5) <= int64_t(3);
-  static int64_t i_abs(const int64_t x);
+  static int64_t i_abs(int64_t x);
   static inline const int64_t test_abs_pos = i_abs(int64_t(42));
   static inline const int64_t test_abs_neg =
       i_abs(((int64_t(0) - int64_t(42)) & 0x7FFFFFFFFFFFFFFFLL));

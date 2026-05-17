@@ -1,17 +1,13 @@
 #ifndef INCLUDED_OPCODE_OPERAND_DECODE
 #define INCLUDED_OPCODE_OPERAND_DECODE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct OpcodeOperandDecode {
   enum class Instruction { e_NOP_, e_WRM_, e_WRR_, e_RDM_, e_DCL_ };
 
   template <typename T1>
-  static T1 instruction_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                             const Instruction i) {
+  static T1 instruction_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instruction i) {
     switch (i) {
     case Instruction::e_NOP_: {
       return f;
@@ -34,8 +30,7 @@ struct OpcodeOperandDecode {
   }
 
   template <typename T1>
-  static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                            const Instruction i) {
+  static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instruction i) {
     switch (i) {
     case Instruction::e_NOP_: {
       return f;
@@ -57,7 +52,7 @@ struct OpcodeOperandDecode {
     }
   }
 
-  static Instruction decode(const unsigned int b1, const unsigned int _x);
+  static Instruction decode(unsigned int b1, unsigned int _x);
   static inline const unsigned int t = []() {
     switch (decode(224u, 0u)) {
     case Instruction::e_WRM_: {

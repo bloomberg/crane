@@ -24,7 +24,7 @@ unsigned int MemSafetyProbe16::sum_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe16::mylist<unsigned int> &l = *(_f.l);
+      const MemSafetyProbe16::mylist<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe16::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
@@ -57,7 +57,7 @@ MemSafetyProbe16::build_summers(
     if (std::holds_alternative<
             typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mynil>(
             _loop_trees.v())) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>>(
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
@@ -65,7 +65,7 @@ MemSafetyProbe16::build_summers(
       const auto &[d_a0, d_a1] = std::get<
           typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mycons>(
           _loop_trees.v());
-      MemSafetyProbe16::mylist<MemSafetyProbe16::tree> d_a1_value = *(d_a1);
+      MemSafetyProbe16::mylist<MemSafetyProbe16::tree> d_a1_value = *d_a1;
       auto _cell = std::make_unique<
           MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
@@ -73,7 +73,7 @@ MemSafetyProbe16::build_summers(
                 return d_a0.make_summer(_x0);
               },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
                     (*_write)->v_mut())
@@ -82,13 +82,13 @@ MemSafetyProbe16::build_summers(
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe16::apply_fns(
     const MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int
+    unsigned int
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -113,7 +113,7 @@ unsigned int MemSafetyProbe16::apply_fns(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>
-          &fns = *(_f.fns);
+          &fns = *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe16::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
         _result = 0u;
@@ -135,18 +135,17 @@ unsigned int MemSafetyProbe16::apply_fns(
 /// the SAME tree at different levels.
 /// Tests whether the tree is properly cloned for each closure.
 MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>
-MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t,
-                                     const unsigned int n) {
+MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t, unsigned int n) {
   std::unique_ptr<
       MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>>
       _head{};
   std::unique_ptr<
       MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>>
       *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>>(
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
@@ -155,11 +154,11 @@ MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t,
       auto _cell = std::make_unique<
           MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-              [=](const unsigned int x) mutable {
+              [=](unsigned int x) mutable {
                 return ((t.tree_sum() + x) + _loop_n);
               },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
                     (*_write)->v_mut())
@@ -168,14 +167,14 @@ MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// TEST 4: Return a closure from inside a NESTED match.
 /// The closure captures bindings from BOTH match levels.
 unsigned int MemSafetyProbe16::nested_match_closure(
     const MemSafetyProbe16::tree &t,
-    const MemSafetyProbe16::mylist<unsigned int> &l, const unsigned int n) {
+    const MemSafetyProbe16::mylist<unsigned int> &l, unsigned int n) {
   if (std::holds_alternative<typename MemSafetyProbe16::tree::Leaf>(t.v())) {
     return n;
   } else {
@@ -188,8 +187,7 @@ unsigned int MemSafetyProbe16::nested_match_closure(
       const auto &[d_a00, d_a10] =
           std::get<typename MemSafetyProbe16::mylist<unsigned int>::Mycons>(
               l.v());
-      return (((((*(d_a0)).tree_sum() + (*(d_a2)).tree_sum()) + d_a1) + d_a00) +
-              n);
+      return (((((*d_a0).tree_sum() + (*d_a2).tree_sum()) + d_a1) + d_a00) + n);
     }
   }
 }
@@ -209,7 +207,7 @@ MemSafetyProbe16::mylist<unsigned int> MemSafetyProbe16::zip_apply(
     if (std::holds_alternative<typename MemSafetyProbe16::mylist<
             std::function<unsigned int(unsigned int)>>::Mynil>(
             _loop_fns->v())) {
-      *(_write) = std::make_unique<MemSafetyProbe16::mylist<unsigned int>>(
+      *_write = std::make_unique<MemSafetyProbe16::mylist<unsigned int>>(
           mylist<unsigned int>::mynil());
       break;
     } else {
@@ -218,7 +216,7 @@ MemSafetyProbe16::mylist<unsigned int> MemSafetyProbe16::zip_apply(
       if (std::holds_alternative<
               typename MemSafetyProbe16::mylist<unsigned int>::Mynil>(
               _loop_vals->v())) {
-        *(_write) = std::make_unique<MemSafetyProbe16::mylist<unsigned int>>(
+        *_write = std::make_unique<MemSafetyProbe16::mylist<unsigned int>>(
             mylist<unsigned int>::mynil());
         break;
       } else {
@@ -227,7 +225,7 @@ MemSafetyProbe16::mylist<unsigned int> MemSafetyProbe16::zip_apply(
                 _loop_vals->v());
         auto _cell = std::make_unique<MemSafetyProbe16::mylist<unsigned int>>(
             typename mylist<unsigned int>::Mycons(d_a0(d_a00), nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename mylist<unsigned int>::Mycons>((*_write)->v_mut())
                  .d_a1;
@@ -237,7 +235,7 @@ MemSafetyProbe16::mylist<unsigned int> MemSafetyProbe16::zip_apply(
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 MemSafetyProbe16::mylist<unsigned int>

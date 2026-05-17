@@ -4,7 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -162,14 +161,14 @@ struct CoindGuard {
     const variant_t &v() const { return d_lazyV_.force(); }
   };
 
-  template <typename T1> static T1 hd(const Stream<T1> s) {
+  template <typename T1> static T1 hd(Stream<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename Stream<T1>::Cons>(s.v());
     return d_a0;
   }
 
-  template <typename T1> static Stream<T1> tl(const Stream<T1> s) {
+  template <typename T1> static Stream<T1> tl(Stream<T1> s) {
     const auto &[d_a0, d_a1] = std::get<typename Stream<T1>::Cons>(s.v());
-    return Stream<T1>::lazy_([=]() mutable -> Stream<T1> { return *(d_a1); });
+    return Stream<T1>::lazy_([=]() mutable -> Stream<T1> { return *d_a1; });
   }
 
   template <typename T1, typename F0>
@@ -182,7 +181,7 @@ struct CoindGuard {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
-  static Stream<T3> zipWith(F0 &&f, const Stream<T1> s1, const Stream<T2> s2) {
+  static Stream<T3> zipWith(F0 &&f, Stream<T1> s1, Stream<T2> s2) {
     return Stream<T3>::lazy_([=]() mutable -> Stream<T3> {
       return Stream<T3>::cons(f(hd<T1>(s1), hd<T2>(s2)),
                               zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
@@ -191,7 +190,7 @@ struct CoindGuard {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static Stream<T2> smap(F0 &&f, const Stream<T1> s) {
+  static Stream<T2> smap(F0 &&f, Stream<T1> s) {
     return Stream<T2>::lazy_([=]() mutable -> Stream<T2> {
       return Stream<T2>::cons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
     });
@@ -208,8 +207,7 @@ struct CoindGuard {
     });
   }
 
-  template <typename T1>
-  static List<T1> take(const unsigned int n, const Stream<T1> s) {
+  template <typename T1> static List<T1> take(unsigned int n, Stream<T1> s) {
     if (n <= 0) {
       return List<T1>::nil();
     } else {
@@ -219,10 +217,10 @@ struct CoindGuard {
   }
 
   static inline const Stream<unsigned int> nats =
-      iterate<unsigned int>([](const unsigned int x) { return (x + 1); }, 0u);
+      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
   static inline const Stream<unsigned int> evens =
-      smap<unsigned int, unsigned int>(
-          [](const unsigned int n) { return (n * 2u); }, nats);
+      smap<unsigned int, unsigned int>([](unsigned int n) { return (n * 2u); },
+                                       nats);
   static inline const Stream<unsigned int> fibs =
       unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
           [](const std::pair<unsigned int, unsigned int> &pat) {

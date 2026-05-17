@@ -1,8 +1,6 @@
 #ifndef INCLUDED_TODO_IOTA_COMPLEX_PATTERN
 #define INCLUDED_TODO_IOTA_COMPLEX_PATTERN
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -45,8 +43,7 @@ struct TodoIotaComplexPattern {
 
     // ACCESSORS
     Triple<t_A, t_B, t_C> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
+      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(this->v());
       return Triple<t_A, t_B, t_C>(MkTriple{d_a0, d_a1, d_a2});
     }
 

@@ -2,8 +2,6 @@
 #define INCLUDED_TAIL_REC_ZIP
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -43,8 +41,7 @@ public:
 
   // ACCESSORS
   Prod<t_A, t_B> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
+    const auto &[d_a0, d_a1] = std::get<Pair>(this->v());
     return Prod<t_A, t_B>(Pair{d_a0, d_a1});
   }
 
@@ -182,22 +179,20 @@ public:
   const variant_t &v() const { return d_v_; }
 
   List<t_A> rev() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return List<t_A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return (*d_a1).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
     }
   }
 
   List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
     }
   }
 };
@@ -214,7 +209,7 @@ List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
         return std::move(acc).rev();
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T2>::Cons>(lb0.v());
-        return _self_go(_self_go, *(d_a1), *(d_a10),
+        return _self_go(_self_go, *d_a1, *d_a10,
                         List<Prod<T1, T2>>::cons(
                             Prod<T1, T2>::pair(d_a0, d_a00), std::move(acc)));
       }

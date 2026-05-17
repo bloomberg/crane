@@ -2,9 +2,6 @@
 #define INCLUDED_TODO_WITH_TYPE_CONSTRAINT
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename M>
 concept BASE = requires {
@@ -25,7 +22,7 @@ struct TodoWithTypeConstraint {
   struct NatBase {
     using t = unsigned int;
     static inline const unsigned int zero = 0u;
-    static unsigned int bump(const unsigned int n);
+    static unsigned int bump(unsigned int n);
   };
 
   template <NAT_BASE X> struct UseNat {

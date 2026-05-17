@@ -2,7 +2,6 @@
 #define INCLUDED_LOOPIFY_ADVANCED_PATTERNS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -131,9 +130,9 @@ struct LoopifyAdvancedPatterns {
   static unsigned int nested_pattern(
       const List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
           &l);
-  static unsigned int guard_accum(const unsigned int acc,
+  static unsigned int guard_accum(unsigned int acc,
                                   const List<unsigned int> &l);
-  static List<unsigned int> cons_computed(const unsigned int n,
+  static List<unsigned int> cons_computed(unsigned int n,
                                           const List<unsigned int> &l);
 
   struct shape {
@@ -182,31 +181,24 @@ struct LoopifyAdvancedPatterns {
 
     // ACCESSORS
     shape clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<Circle>(_sv.v());
+      if (std::holds_alternative<Circle>(this->v())) {
+        const auto &[d_a0] = std::get<Circle>(this->v());
         return shape(Circle{d_a0});
-      } else if (std::holds_alternative<Square>(_sv.v())) {
-        const auto &[d_a0] = std::get<Square>(_sv.v());
+      } else if (std::holds_alternative<Square>(this->v())) {
+        const auto &[d_a0] = std::get<Square>(this->v());
         return shape(Square{d_a0});
       } else {
-        const auto &[d_a0] = std::get<Triangle>(_sv.v());
+        const auto &[d_a0] = std::get<Triangle>(this->v());
         return shape(Triangle{d_a0});
       }
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) {
-      return shape(Circle{std::move(a0)});
-    }
+    static shape circle(unsigned int a0) { return shape(Circle{a0}); }
 
-    static shape square(unsigned int a0) {
-      return shape(Square{std::move(a0)});
-    }
+    static shape square(unsigned int a0) { return shape(Square{a0}); }
 
-    static shape triangle(unsigned int a0) {
-      return shape(Triangle{std::move(a0)});
-    }
+    static shape triangle(unsigned int a0) { return shape(Triangle{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }
@@ -253,8 +245,7 @@ struct LoopifyAdvancedPatterns {
   static unsigned int sum_shapes(const List<shape> &l);
   static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
   count_by_shape(const List<shape> &l);
-  static List<unsigned int> replace_at(const unsigned int idx,
-                                       const unsigned int value,
+  static List<unsigned int> replace_at(unsigned int idx, unsigned int value,
                                        const List<unsigned int> &l);
 };
 

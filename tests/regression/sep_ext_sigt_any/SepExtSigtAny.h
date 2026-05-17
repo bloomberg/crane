@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTSIGTANY
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <variant>
 
 #include "Specif.h"

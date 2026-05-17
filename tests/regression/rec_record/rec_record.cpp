@@ -7,7 +7,7 @@ unsigned int RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename RecRecord::rlist<unsigned int>::Rcons>(l.v());
-    return (d_a0 + rlist_sum(*(d_a1)));
+    return (d_a0 + rlist_sum(*d_a1));
   }
 }
 

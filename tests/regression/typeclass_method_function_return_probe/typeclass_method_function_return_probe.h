@@ -2,9 +2,6 @@
 #define INCLUDED_TYPECLASS_METHOD_FUNCTION_RETURN_PROBE
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 enum class Bool0 { e_TRUE, e_FALSE };
@@ -30,7 +27,7 @@ struct TypeclassMethodFunctionReturnProbe {
   };
 
   static_assert(Factory<boolFactory, Bool0>);
-  static Bool0 partial(const Bool0 _x0);
+  static Bool0 partial(Bool0 _x0);
   static inline const Bool0 sample = partial(Bool0::e_FALSE);
 };
 

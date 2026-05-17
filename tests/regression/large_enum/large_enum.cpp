@@ -1,6 +1,6 @@
 #include "large_enum.h"
 
-unsigned int LargeEnum::color_to_nat(const LargeEnum::Color c) {
+unsigned int LargeEnum::color_to_nat(LargeEnum::Color c) {
   switch (c) {
   case Color::e_RED: {
     return 0u;
@@ -43,7 +43,7 @@ unsigned int LargeEnum::color_to_nat(const LargeEnum::Color c) {
   }
 }
 
-bool LargeEnum::is_warm(const LargeEnum::Color c) {
+bool LargeEnum::is_warm(LargeEnum::Color c) {
   switch (c) {
   case Color::e_RED: {
     return true;
@@ -66,7 +66,7 @@ bool LargeEnum::is_warm(const LargeEnum::Color c) {
   }
 }
 
-bool LargeEnum::is_neutral(const LargeEnum::Color c) {
+bool LargeEnum::is_neutral(LargeEnum::Color c) {
   switch (c) {
   case Color::e_BLACK: {
     return true;

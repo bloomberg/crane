@@ -634,7 +634,7 @@ let pp_hdecl d =
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
-            Cpp_state.require_header "any";
+            require_header "any";
             str " = std::any /* AXIOM TO BE REALIZED */" )
           else
             str " =" ++ spc () ++ pp_type false l t )
@@ -776,7 +776,7 @@ let pp_hdecl_spec_only = function
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
-            Cpp_state.require_header "any";
+            require_header "any";
             str " = std::any /* AXIOM TO BE REALIZED */" )
           else
             str " =" ++ spc () ++ pp_type false l t )
@@ -843,7 +843,7 @@ let pp_spec = function
         | None -> (ids, mt ())
         | Some Taxiom ->
           register_axiom_type r;
-          Cpp_state.require_header "any";
+          require_header "any";
           (ids, str " = std::any /* AXIOM TO BE REALIZED */")
         | Some t -> (ids, str " =" ++ spc () ++ pp_type false l t) )
     in

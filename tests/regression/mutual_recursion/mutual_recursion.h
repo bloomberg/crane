@@ -2,21 +2,18 @@
 #define INCLUDED_MUTUAL_RECURSION
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
 struct MutualRecursion {
-  static bool even(const unsigned int n);
-  static bool odd(const unsigned int n);
-  static unsigned int sum_even_indices(const unsigned int n,
-                                       const unsigned int acc);
-  static unsigned int sum_odd_indices(const unsigned int n,
-                                      const unsigned int acc);
-  static unsigned int process_a(const unsigned int n, const unsigned int m);
-  static unsigned int process_b(const unsigned int n, const unsigned int m);
+  static bool even(unsigned int n);
+  static bool odd(unsigned int n);
+  static unsigned int sum_even_indices(unsigned int n, unsigned int acc);
+  static unsigned int sum_odd_indices(unsigned int n, unsigned int acc);
+  static unsigned int process_a(unsigned int n, unsigned int m);
+  static unsigned int process_b(unsigned int n, unsigned int m);
 
   struct expr {
     // TYPES
@@ -111,15 +108,15 @@ struct MutualRecursion {
     }
 
     // CREATORS
-    static expr val(unsigned int a0) { return expr(Val{std::move(a0)}); }
+    static expr val(unsigned int a0) { return expr(Val{a0}); }
 
     static expr binop(unsigned int a0, expr a1, expr a2) {
-      return expr(BinOp{std::move(a0), std::make_unique<expr>(std::move(a1)),
+      return expr(BinOp{a0, std::make_unique<expr>(std::move(a1)),
                         std::make_unique<expr>(std::move(a2))});
     }
 
     static expr unop(unsigned int a0, expr a1) {
-      return expr(UnOp{std::move(a0), std::make_unique<expr>(std::move(a1))});
+      return expr(UnOp{a0, std::make_unique<expr>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -170,11 +167,11 @@ struct MutualRecursion {
       return f(d_a0);
     } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e.v());
-      return f0(d_a0, *(d_a1), expr_rect<T1>(f, f0, f4, *(d_a1)), *(d_a2),
-                expr_rect<T1>(f, f0, f4, *(d_a2)));
+      return f0(d_a0, *d_a1, expr_rect<T1>(f, f0, f4, *d_a1), *d_a2,
+                expr_rect<T1>(f, f0, f4, *d_a2));
     } else {
       const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e.v());
-      return f4(d_a0, *(d_a1), expr_rect<T1>(f, f0, f4, *(d_a1)));
+      return f4(d_a0, *d_a1, expr_rect<T1>(f, f0, f4, *d_a1));
     }
   }
 
@@ -189,18 +186,18 @@ struct MutualRecursion {
       return f(d_a0);
     } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e.v());
-      return f0(d_a0, *(d_a1), expr_rec<T1>(f, f0, f4, *(d_a1)), *(d_a2),
-                expr_rec<T1>(f, f0, f4, *(d_a2)));
+      return f0(d_a0, *d_a1, expr_rec<T1>(f, f0, f4, *d_a1), *d_a2,
+                expr_rec<T1>(f, f0, f4, *d_a2));
     } else {
       const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e.v());
-      return f4(d_a0, *(d_a1), expr_rec<T1>(f, f0, f4, *(d_a1)));
+      return f4(d_a0, *d_a1, expr_rec<T1>(f, f0, f4, *d_a1));
     }
   }
 
   static unsigned int eval_expr(const expr &e);
-  static unsigned int f1(const unsigned int n);
-  static unsigned int f2(const unsigned int n);
-  static unsigned int f3(const unsigned int n);
+  static unsigned int f1(unsigned int n);
+  static unsigned int f2(unsigned int n);
+  static unsigned int f3(unsigned int n);
   static inline const bool test_even = even(10u);
   static inline const unsigned int test_sum = sum_even_indices(5u, 0u);
   static inline const unsigned int test_eval =

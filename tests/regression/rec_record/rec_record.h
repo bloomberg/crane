@@ -132,7 +132,7 @@ struct RecRecord {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r.v());
-      return f0(d_a0, *(d_a1), rlist_rect<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, rlist_rect<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -143,7 +143,7 @@ struct RecRecord {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r.v());
-      return f0(d_a0, *(d_a1), rlist_rec<T1, T2>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, rlist_rec<T1, T2>(f, f0, *d_a1));
     }
   }
 
@@ -153,7 +153,7 @@ struct RecRecord {
 
     // ACCESSORS
     RNode clone() const {
-      return RNode{(*(this)).rn_value,
+      return RNode{(*this).rn_value,
                    (*this).rn_next.has_value()
                        ? std::make_optional(std::make_unique<RNode>(
                              (*(*this).rn_next)->clone()))
@@ -189,7 +189,7 @@ struct RecRecord {
 
     // ACCESSORS
     Employee clone() const {
-      return Employee{(*(this)).emp_name, (*(this)).emp_dept};
+      return Employee{(*this).emp_name, (*this).emp_dept};
     }
   };
 
@@ -200,8 +200,8 @@ struct RecRecord {
 
     // ACCESSORS
     Department clone() const {
-      return Department{(*(this)).dept_id, (*(this)).dept_head.clone(),
-                        (*(this)).dept_size};
+      return Department{(*this).dept_id, (*this).dept_head.clone(),
+                        (*this).dept_size};
     }
   };
 
@@ -210,7 +210,7 @@ struct RecRecord {
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(l.v());
-      return (rlist_length<T1>(*(d_a1)) + 1);
+      return (rlist_length<T1>(*d_a1) + 1);
     }
   }
 

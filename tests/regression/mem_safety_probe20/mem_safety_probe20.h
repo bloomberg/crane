@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -95,7 +94,7 @@ struct MemSafetyProbe20 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -162,7 +161,7 @@ struct MemSafetyProbe20 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -224,14 +223,13 @@ struct MemSafetyProbe20 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -288,14 +286,13 @@ struct MemSafetyProbe20 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -348,8 +345,7 @@ struct MemSafetyProbe20 {
 
     // ACCESSORS
     wrapped clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Wrap>(_sv.v());
+      const auto &[d_a0] = std::get<Wrap>(this->v());
       return wrapped(Wrap{d_a0});
     }
 
@@ -364,9 +360,8 @@ struct MemSafetyProbe20 {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int unwrap(const unsigned int x) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename wrapped::Wrap>(_sv.v());
+    unsigned int unwrap(unsigned int x) const {
+      const auto &[d_a0] = std::get<typename wrapped::Wrap>(this->v());
       return d_a0(x);
     }
 
@@ -374,8 +369,7 @@ struct MemSafetyProbe20 {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 wrapped_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename wrapped::Wrap>(_sv.v());
+      const auto &[d_a0] = std::get<typename wrapped::Wrap>(this->v());
       return f(d_a0);
     }
 
@@ -383,8 +377,7 @@ struct MemSafetyProbe20 {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 wrapped_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename wrapped::Wrap>(_sv.v());
+      const auto &[d_a0] = std::get<typename wrapped::Wrap>(this->v());
       return f(d_a0);
     }
   };
@@ -392,7 +385,7 @@ struct MemSafetyProbe20 {
   /// TEST 1: Return wrapped closure from if-branch.
   /// The if becomes top-level Sif. return_captures_by_value sees
   /// Sif, matches s -> s, leaves lambda as &.
-  static wrapped wrap_if(tree t, const bool b);
+  static wrapped wrap_if(tree t, bool b);
   static inline const unsigned int test_wrap_if = []() {
     wrapped w = wrap_if(tree::node(tree::leaf(), 42u, tree::leaf()), true);
     return std::move(w).unwrap(0u);
@@ -400,7 +393,7 @@ struct MemSafetyProbe20 {
   /// TEST 2: Return wrapped closure from match on custom type.
   enum class Choice { e_CLEFT, e_CRIGHT };
 
-  template <typename T1> static T1 choice_rect(T1 f, T1 f0, const Choice c) {
+  template <typename T1> static T1 choice_rect(T1 f, T1 f0, Choice c) {
     switch (c) {
     case Choice::e_CLEFT: {
       return f;
@@ -413,7 +406,7 @@ struct MemSafetyProbe20 {
     }
   }
 
-  template <typename T1> static T1 choice_rec(T1 f, T1 f0, const Choice c) {
+  template <typename T1> static T1 choice_rec(T1 f, T1 f0, Choice c) {
     switch (c) {
     case Choice::e_CLEFT: {
       return f;
@@ -426,7 +419,7 @@ struct MemSafetyProbe20 {
     }
   }
 
-  static wrapped wrap_match(tree t, const Choice c);
+  static wrapped wrap_match(tree t, Choice c);
   static inline const unsigned int test_wrap_match = []() {
     wrapped w =
         wrap_match(tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u,
@@ -436,7 +429,7 @@ struct MemSafetyProbe20 {
   }();
   /// TEST 3: Pair of closure and value, returned from if.
   /// Uses prod to wrap the closure.
-  static std::pair<wrapped, unsigned int> pair_from_if(tree t, const bool b);
+  static std::pair<wrapped, unsigned int> pair_from_if(tree t, bool b);
   static inline const unsigned int test_pair_if = []() {
     std::pair<wrapped, unsigned int> p =
         pair_from_if(tree::node(tree::leaf(), 15u, tree::leaf()), true);
@@ -446,7 +439,7 @@ struct MemSafetyProbe20 {
   }();
   /// TEST 4: Wrapped closure captured in a locally-constructed tree.
   /// The let-bound tree is stack-allocated.
-  static wrapped wrap_local(const unsigned int n, const bool b);
+  static wrapped wrap_local(unsigned int n, bool b);
   static inline const unsigned int test_wrap_local = []() {
     wrapped w = wrap_local(20u, true);
     return std::move(w).unwrap(5u);
@@ -457,7 +450,7 @@ struct MemSafetyProbe20 {
     return (w.unwrap(1u) + w.unwrap(2u));
   }();
   /// TEST 6: Nested wrapped closure: wrapped inside a pair inside if.
-  static wrapped nested_wrap(tree t, const bool b1, const bool b2);
+  static wrapped nested_wrap(tree t, bool b1, bool b2);
   static inline const unsigned int test_nested_wrap = []() {
     wrapped w =
         nested_wrap(tree::node(tree::leaf(), 5u, tree::leaf()), true, false);
@@ -609,13 +602,13 @@ struct MemSafetyProbe20 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -656,13 +649,13 @@ struct MemSafetyProbe20 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -674,9 +667,8 @@ struct MemSafetyProbe20 {
     }
   };
 
-  static mylist<wrapped> wrap_list(tree t, const bool b);
-  static unsigned int sum_wrapped(const mylist<wrapped> &l,
-                                  const unsigned int x);
+  static mylist<wrapped> wrap_list(tree t, bool b);
+  static unsigned int sum_wrapped(const mylist<wrapped> &l, unsigned int x);
   static inline const unsigned int test_wrap_list = []() {
     mylist<wrapped> l =
         wrap_list(tree::node(tree::leaf(), 3u, tree::leaf()), true);

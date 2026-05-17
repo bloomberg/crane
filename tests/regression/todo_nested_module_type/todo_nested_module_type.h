@@ -2,9 +2,6 @@
 #define INCLUDED_TODO_NESTED_MODULE_TYPE
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename M>
 concept INNER = requires {
@@ -40,7 +37,7 @@ struct TodoNestedModuleType {
 
   struct NatOuter {
     using Inner = NatInner;
-    static Inner::t step(const unsigned int n);
+    static Inner::t step(unsigned int n);
   };
 
   using UseNat = Make<NatOuter>;

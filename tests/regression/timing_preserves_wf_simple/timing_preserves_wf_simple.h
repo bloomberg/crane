@@ -1,16 +1,13 @@
 #ifndef INCLUDED_TIMING_PRESERVES_WF_SIMPLE
 #define INCLUDED_TIMING_PRESERVES_WF_SIMPLE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct TimingPreservesWfSimple {
   enum class Instr { e_NOP, e_ADD, e_WRM, e_FIM, e_JMS };
 
   template <typename T1>
-  static T1 instr_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, const Instr i) {
+  static T1 instr_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instr i) {
     switch (i) {
     case Instr::e_NOP: {
       return f;
@@ -33,7 +30,7 @@ struct TimingPreservesWfSimple {
   }
 
   template <typename T1>
-  static T1 instr_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, const Instr i) {
+  static T1 instr_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instr i) {
     switch (i) {
     case Instr::e_NOP: {
       return f;
@@ -63,14 +60,14 @@ struct TimingPreservesWfSimple {
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).regs_len, (*(this)).rom_len, (*(this)).pc,
-                   (*(this)).stack_len};
+      return state{(*this).regs_len, (*this).rom_len, (*this).pc,
+                   (*this).stack_len};
     }
   };
 
   static bool wf(const state &s);
-  static unsigned int cycles(const Instr i);
-  static state execute(const state &s, const Instr i);
+  static unsigned int cycles(Instr i);
+  static state execute(const state &s, Instr i);
   static inline const state sample = state{4u, 4u, 100u, 2u};
   static inline const bool t =
       (wf(sample) &&

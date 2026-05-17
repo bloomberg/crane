@@ -2,8 +2,6 @@
 #define INCLUDED_SEPEXTUPTRCLONEQUAL
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -140,7 +138,7 @@ template <OrderedType X> struct FMap {
       const auto &[d_a0, d_a1] =
           std::get<typename MyList<std::pair<typename X::t, T1>>::Mycons>(
               l.v());
-      return *(d_a1);
+      return *d_a1;
     }
   }
 };

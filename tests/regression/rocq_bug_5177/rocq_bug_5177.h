@@ -3,8 +3,6 @@
 
 #include <concepts>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -125,7 +123,7 @@ struct RocqBug5177 {
     using t1 = Nat;
     using t2 = Nat;
 
-    static t1 bar(const typename MT::t, Nat x) { return x; }
+    static t1 bar(typename MT::t, Nat x) { return x; }
   };
 };
 

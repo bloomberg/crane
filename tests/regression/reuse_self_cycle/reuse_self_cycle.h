@@ -2,7 +2,6 @@
 #define INCLUDED_REUSE_SELF_CYCLE
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -81,8 +80,7 @@ struct ReuseSelfCycle {
 
     // CREATORS
     static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     static mylist mynil() { return mylist(Mynil{}); }
@@ -120,7 +118,7 @@ struct ReuseSelfCycle {
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rect<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -131,7 +129,7 @@ struct ReuseSelfCycle {
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
+      return f(d_a0, *d_a1, mylist_rec<T1>(f, f0, *d_a1));
     } else {
       return f0;
     }
@@ -153,7 +151,7 @@ struct ReuseSelfCycle {
   /// 2. mycons branch tail is mycons with arity 2 = 2
   /// 3. mycons is index 0 -> List.hd picks it
   /// 4. use_count() == 1 for fresh values
-  static mylist prepend_self(mylist l, const bool b);
+  static mylist prepend_self(mylist l, bool b);
   /// test1: prepend_self(1, 2, true) should produce 1, 1, 2.
   /// In Rocq: mycons 1 (mycons 1 (mycons 2 mynil)), length = 3.
   /// With reuse bug: mycons 1 -> itself (cycle), length = infinite loop.

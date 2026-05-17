@@ -1,8 +1,6 @@
 #ifndef INCLUDED_GENERATED_METHOD_NAME_CLASH
 #define INCLUDED_GENERATED_METHOD_NAME_CLASH
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -56,13 +54,12 @@ struct GeneratedMethodNameClash {
 
     // ACCESSORS
     token clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Clone>(_sv.v())) {
+      if (std::holds_alternative<Clone>(this->v())) {
         return token(Clone{});
-      } else if (std::holds_alternative<V>(_sv.v())) {
+      } else if (std::holds_alternative<V>(this->v())) {
         return token(V{});
       } else {
-        const auto &[d_a0] = std::get<Other>(_sv.v());
+        const auto &[d_a0] = std::get<Other>(this->v());
         return token(Other{d_a0});
       }
     }
@@ -72,7 +69,7 @@ struct GeneratedMethodNameClash {
 
     static token V_() { return token(V{}); }
 
-    static token other(bool a0) { return token(Other{std::move(a0)}); }
+    static token other(bool a0) { return token(Other{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return d_v_; }

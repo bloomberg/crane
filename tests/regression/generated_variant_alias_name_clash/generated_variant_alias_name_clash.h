@@ -1,8 +1,6 @@
 #ifndef INCLUDED_GENERATED_VARIANT_ALIAS_NAME_CLASH
 #define INCLUDED_GENERATED_VARIANT_ALIAS_NAME_CLASH
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -51,11 +49,10 @@ struct GeneratedVariantAliasNameClash {
 
     // ACCESSORS
     variant_t clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Empty>(_sv.v())) {
+      if (std::holds_alternative<Empty>(this->v())) {
         return variant_t(Empty{});
       } else {
-        const auto &[d_a0] = std::get<Flag>(_sv.v());
+        const auto &[d_a0] = std::get<Flag>(this->v());
         return variant_t(Flag{d_a0});
       }
     }
@@ -63,7 +60,7 @@ struct GeneratedVariantAliasNameClash {
     // CREATORS
     static variant_t empty() { return variant_t(Empty{}); }
 
-    static variant_t flag(bool a0) { return variant_t(Flag{std::move(a0)}); }
+    static variant_t flag(bool a0) { return variant_t(Flag{a0}); }
 
     // MANIPULATORS
     inline variant_t_ &v_mut() { return d_v_; }

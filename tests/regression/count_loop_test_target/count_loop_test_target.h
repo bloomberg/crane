@@ -1,8 +1,6 @@
 #ifndef INCLUDED_COUNT_LOOP_TEST_TARGET
 #define INCLUDED_COUNT_LOOP_TEST_TARGET
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -48,9 +46,8 @@ struct CountLoopTestTarget {
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<ISZ>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<ISZ>(_sv.v());
+      if (std::holds_alternative<ISZ>(this->v())) {
+        const auto &[d_a0, d_a1] = std::get<ISZ>(this->v());
         return instruction(ISZ{d_a0, d_a1});
       } else {
         return instruction(NOP{});
@@ -59,7 +56,7 @@ struct CountLoopTestTarget {
 
     // CREATORS
     static instruction isz(unsigned int a0, unsigned int a1) {
-      return instruction(ISZ{std::move(a0), std::move(a1)});
+      return instruction(ISZ{a0, a1});
     }
 
     static instruction nop() { return instruction(NOP{}); }
@@ -93,7 +90,7 @@ struct CountLoopTestTarget {
     }
   }
 
-  static instruction count_loop_test(const unsigned int loop_addr);
+  static instruction count_loop_test(unsigned int loop_addr);
   static unsigned int target_of(const instruction &i);
   static inline const unsigned int t = target_of(count_loop_test(37u));
 };

@@ -7,7 +7,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -129,34 +128,33 @@ public:
   const variant_t &v() const { return d_v_; }
 
   unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return ((*d_a1).length() + 1);
     }
   }
 };
 
 struct EffectDirPath {
   /// 1. list_directory result matched — exercises IIFE + list match
-  static std::optional<std::string> first_file(const std::string path);
+  static std::optional<std::string> first_file(std::string path);
   /// 2. current_path (zero args) chained to env
   static void save_cwd();
   /// 3. is_directory bool result used in conditional with effects in arms
-  static std::optional<std::string> check_and_list(const std::string path);
+  static std::optional<std::string> check_and_list(std::string path);
   /// 4. Path effect result chained to print
-  static void show_absolute(const std::string path);
+  static void show_absolute(std::string path);
   /// 5. Multiple bool effects composed
-  static std::string classify_path(const std::string path);
+  static std::string classify_path(std::string path);
   /// 6. create_directory bool result explicitly bound and used
-  static std::string create_and_report(const std::string path);
+  static std::string create_and_report(std::string path);
   /// 7. Recursive function counting list items from list_directory
   static unsigned int count_entries(const List<std::string> &dirs,
-                                    const unsigned int acc);
+                                    unsigned int acc);
   /// 8. remove_directory (returns bool but treated as unit in bind)
-  static void cleanup(const std::string path);
+  static void cleanup(std::string path);
 };
 
 #endif // INCLUDED_EFFECT_DIR_PATH

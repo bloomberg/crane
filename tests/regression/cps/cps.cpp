@@ -1,19 +1,19 @@
 #include "cps.h"
 
-unsigned int CPS::factorial(const unsigned int n) {
-  return fact_cps(n, [](const unsigned int x) { return x; });
+unsigned int CPS::factorial(unsigned int n) {
+  return fact_cps(n, [](unsigned int x) { return x; });
 }
 
-unsigned int CPS::fibonacci(const unsigned int n) {
-  return fib_cps(n, [](const unsigned int x) { return x; });
+unsigned int CPS::fibonacci(unsigned int n) {
+  return fib_cps(n, [](unsigned int x) { return x; });
 }
 
 unsigned int CPS::tree_sum(const CPS::tree &t) {
-  return tree_sum_cps(t, [](const unsigned int x) { return x; });
+  return tree_sum_cps(t, [](unsigned int x) { return x; });
 }
 
 unsigned int CPS::list_sum(const List<unsigned int> &l) {
-  return sum_cps(l, [](const unsigned int x) { return x; });
+  return sum_cps(l, [](unsigned int x) { return x; });
 }
 
 unsigned int CPS::count_evens(const List<unsigned int> &l) {
@@ -22,7 +22,7 @@ unsigned int CPS::count_evens(const List<unsigned int> &l) {
                           const List<unsigned int> &) { return yes.length(); });
 }
 
-bool Nat::even(const unsigned int n) {
+bool Nat::even(unsigned int n) {
   if (n <= 0) {
     return true;
   } else {

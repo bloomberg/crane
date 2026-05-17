@@ -2,7 +2,6 @@
 #define INCLUDED_MEM_SAFETY_PROBE22
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -213,7 +212,7 @@ struct MemSafetyProbe22 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -256,8 +255,8 @@ struct MemSafetyProbe22 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1>(f, f0, *d_a2));
     }
   }
 
@@ -269,8 +268,8 @@ struct MemSafetyProbe22 {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1>(f, f0, *d_a2));
     }
   }
 
@@ -289,13 +288,13 @@ struct MemSafetyProbe22 {
       double_tree(tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 5u,
                              tree::node(tree::leaf(), 7u, tree::leaf()))));
   /// TEST 3: Two recursive calls with child + value in result.
-  static unsigned int weighted_sum(const tree &t, const unsigned int w);
+  static unsigned int weighted_sum(const tree &t, unsigned int w);
   static inline const unsigned int test_weighted_sum =
       weighted_sum(tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 5u,
                               tree::node(tree::leaf(), 7u, tree::leaf())),
                    1u);
   /// TEST 4: Function with constructed-tree recursive calls.
-  static unsigned int split_sum(const tree &t, const unsigned int n);
+  static unsigned int split_sum(const tree &t, unsigned int n);
   static inline const unsigned int test_split_sum =
       split_sum(tree::node(tree::leaf(), 10u, tree::leaf()), 1u);
 
@@ -307,12 +306,12 @@ struct MemSafetyProbe22 {
       return tree::leaf();
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return tree::node(tree_map(f, *(d_a0)), f(d_a1), tree_map(f, *(d_a2)));
+      return tree::node(tree_map(f, *d_a0), f(d_a1), tree_map(f, *d_a2));
     }
   }
 
   static inline const unsigned int test_tree_map = tree_sum(
-      tree_map([](const unsigned int n) { return (n + 10u); },
+      tree_map([](unsigned int n) { return (n + 10u); },
                tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
                           tree::node(tree::leaf(), 3u, tree::leaf()))));
   /// TEST 6: Mirror tree (swap children). Two recursive calls.
@@ -322,7 +321,7 @@ struct MemSafetyProbe22 {
                                  tree::node(tree::leaf(), 3u, tree::leaf()))));
   /// TEST 7: Insert into BST (non-pointer-safe because constructed tree
   /// in recursive call).
-  static tree insert(const tree &t, const unsigned int x);
+  static tree insert(const tree &t, unsigned int x);
   static tree insert_all(tree t, const List<unsigned int> &xs);
   static inline const unsigned int test_insert = tree_sum(insert_all(
       tree::leaf(),
@@ -333,7 +332,7 @@ struct MemSafetyProbe22 {
                                   1u, List<unsigned int>::cons(
                                           9u, List<unsigned int>::nil())))))));
   /// TEST 8: Deep tree transformation with two recursive calls.
-  static tree label_depth(const tree &t, const unsigned int d);
+  static tree label_depth(const tree &t, unsigned int d);
   static inline const unsigned int test_label_depth = tree_sum(
       label_depth(tree::node(tree::node(tree::leaf(), 0u, tree::leaf()), 0u,
                              tree::node(tree::leaf(), 0u, tree::leaf())),

@@ -4,7 +4,6 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -277,13 +276,13 @@ public:
       const auto &[d_a0, d_a1] =
           std::get<typename Colist<t_A>::Cocons>(this->v());
       return Colist<T1>::lazy_([=]() mutable -> Colist<T1> {
-        return Colist<T1>::cocons(f(d_a0), (*(d_a1)).template comap<T1>(f));
+        return Colist<T1>::cocons(f(d_a0), (*d_a1).template comap<T1>(f));
       });
     }
   }
 
   template <typename T1>
-  static List<T1> list_of_colist(const Nat &fuel, const Colist<T1> l) {
+  static List<T1> list_of_colist(const Nat &fuel, Colist<T1> l) {
     if (std::holds_alternative<typename Nat::O>(fuel.v())) {
       return List<T1>::nil();
     } else {
@@ -293,7 +292,7 @@ public:
       } else {
         const auto &[d_a00, d_a10] =
             std::get<typename Colist<T1>::Cocons>(l.v());
-        return List<T1>::cons(d_a00, list_of_colist<T1>(*(d_a0), *(d_a10)));
+        return List<T1>::cons(d_a00, list_of_colist<T1>(*d_a0, *d_a10));
       }
     }
   }

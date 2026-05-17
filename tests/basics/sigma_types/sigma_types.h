@@ -3,8 +3,6 @@
 
 #include <any>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -158,8 +156,7 @@ public:
 
   // ACCESSORS
   Sig<t_A> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
+    const auto &[d_x] = std::get<Exist>(this->v());
     return Sig<t_A>(Exist{d_x});
   }
 
@@ -213,8 +210,7 @@ public:
 
   // ACCESSORS
   SigT<t_A, t_P> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x, d_a1] = std::get<ExistT>(_sv.v());
+    const auto &[d_x, d_a1] = std::get<ExistT>(this->v());
     return SigT<t_A, t_P>(ExistT{d_x, d_a1});
   }
 
@@ -237,20 +233,19 @@ public:
   const variant_t &v() const { return d_v_; }
 
   t_A projT1() const {
-    auto &&_sv = *(this);
     const auto &[d_x, d_a1] =
-        std::get<typename SigT<t_A, t_P>::ExistT>(_sv.v());
+        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
     return d_x;
   }
 };
 
 struct SigmaTypes {
-  static SigT<unsigned int, std::any> nat_with_double(const unsigned int n);
-  static Sig<unsigned int> positive_succ(const unsigned int n);
-  static unsigned int get_positive(const unsigned int n);
-  static Sig<unsigned int> double_positive(const unsigned int n);
-  static unsigned int use_nat_double(const unsigned int n);
-  static List<unsigned int> positives_up_to(const unsigned int k);
+  static SigT<unsigned int, std::any> nat_with_double(unsigned int n);
+  static Sig<unsigned int> positive_succ(unsigned int n);
+  static unsigned int get_positive(unsigned int n);
+  static Sig<unsigned int> double_positive(unsigned int n);
+  static unsigned int use_nat_double(unsigned int n);
+  static List<unsigned int> positives_up_to(unsigned int k);
   static inline const unsigned int test_double_5 = use_nat_double(5u);
   static inline const unsigned int test_positive_3 = get_positive(3u);
   static inline const unsigned int test_double_pos = []() {

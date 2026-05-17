@@ -3,7 +3,7 @@
 /// Complex control flow and pattern matching edge cases.
 /// multi_let n multiple sequential let bindings before recursion.
 unsigned int LoopifyPatterns::multi_let(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -26,7 +26,7 @@ unsigned int LoopifyPatterns::multi_let(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -45,11 +45,11 @@ unsigned int LoopifyPatterns::multi_let(
 }
 
 /// nested_if n deeply nested if-then-else with recursion at different depths.
-unsigned int LoopifyPatterns::nested_if_fuel(const unsigned int fuel,
-                                             const unsigned int n) {
+unsigned int LoopifyPatterns::nested_if_fuel(unsigned int fuel,
+                                             unsigned int n) {
   unsigned int _result;
-  unsigned int _loop_n = n;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_n = std::move(n);
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       _result = 0u;
@@ -85,13 +85,13 @@ unsigned int LoopifyPatterns::nested_if_fuel(const unsigned int fuel,
   return _result;
 }
 
-unsigned int LoopifyPatterns::nested_if(const unsigned int n) {
+unsigned int LoopifyPatterns::nested_if(unsigned int n) {
   return nested_if_fuel(1000u, n);
 }
 
 /// deep_nest n deeply nested function application.
 unsigned int LoopifyPatterns::deep_nest(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -117,7 +117,7 @@ unsigned int LoopifyPatterns::deep_nest(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -135,9 +135,9 @@ unsigned int LoopifyPatterns::deep_nest(
 
 /// bool_chain n target multiple recursive calls in || chain.
 bool LoopifyPatterns::bool_chain_fuel(
-    const unsigned int fuel, const unsigned int n,
-    const unsigned int target) { /// _Enter: captures varying parameters for
-                                 /// each recursive call.
+    unsigned int fuel, unsigned int n,
+    unsigned int target) { /// _Enter: captures varying parameters for each
+                           /// recursive call.
 
   struct _Enter {
     unsigned int n;
@@ -146,10 +146,10 @@ bool LoopifyPatterns::bool_chain_fuel(
 
   /// _After2: saves [_s0, f], dispatches next recursive call.
   struct _After2 {
-    decltype((((std::declval<const unsigned int &>() - 1u) >
-                       std::declval<const unsigned int &>()
-                   ? 0
-                   : (std::declval<const unsigned int &>() - 1u)))) _s0;
+    decltype((
+        ((std::declval<unsigned int &>() - 1u) > std::declval<unsigned int &>()
+             ? 0
+             : (std::declval<unsigned int &>() - 1u)))) _s0;
     unsigned int f;
   };
 
@@ -170,8 +170,8 @@ bool LoopifyPatterns::bool_chain_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = false;
       } else {
@@ -203,14 +203,13 @@ bool LoopifyPatterns::bool_chain_fuel(
   return _result;
 }
 
-bool LoopifyPatterns::bool_chain(const unsigned int n,
-                                 const unsigned int target) {
+bool LoopifyPatterns::bool_chain(unsigned int n, unsigned int target) {
   return bool_chain_fuel(1000u, n, target);
 }
 
 /// chained_comp n boolean result with double recursion.
 bool LoopifyPatterns::chained_comp(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -239,7 +238,7 @@ bool LoopifyPatterns::chained_comp(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = true;
       } else {
@@ -267,7 +266,7 @@ bool LoopifyPatterns::chained_comp(
 /// tuple_constr n recursive calls in multiple tuple positions.
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyPatterns::tuple_constr(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -290,7 +289,7 @@ LoopifyPatterns::tuple_constr(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
       } else {
@@ -300,7 +299,7 @@ LoopifyPatterns::tuple_constr(
       }
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &c = _result.second;
       const unsigned int &a = p.first;
@@ -314,13 +313,12 @@ LoopifyPatterns::tuple_constr(
 /// sum_prod_count l a_sum a_prod a_count multiple accumulator updates.
 std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
 LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<unsigned int> &l,
-                                const unsigned int a_sum,
-                                const unsigned int a_prod,
-                                const unsigned int a_count) {
+                                unsigned int a_sum, unsigned int a_prod,
+                                unsigned int a_count) {
   std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result;
-  unsigned int _loop_a_count = a_count;
-  unsigned int _loop_a_prod = a_prod;
-  unsigned int _loop_a_sum = a_sum;
+  unsigned int _loop_a_count = std::move(a_count);
+  unsigned int _loop_a_prod = std::move(a_prod);
+  unsigned int _loop_a_sum = std::move(a_sum);
   const LoopifyPatterns::list<unsigned int> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
@@ -345,7 +343,7 @@ LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<unsigned int> &l,
 std::pair<LoopifyPatterns::list<unsigned int>,
           LoopifyPatterns::list<unsigned int>>
 LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<unsigned int> &l,
-                                   const unsigned int base,
+                                   unsigned int base,
                                    LoopifyPatterns::list<unsigned int> pos,
                                    LoopifyPatterns::list<unsigned int> neg) {
   std::pair<LoopifyPatterns::list<unsigned int>,
@@ -378,18 +376,18 @@ LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<unsigned int> &l,
 std::pair<LoopifyPatterns::list<unsigned int>,
           LoopifyPatterns::list<unsigned int>>
 LoopifyPatterns::split_by_sign(const LoopifyPatterns::list<unsigned int> &l,
-                               const unsigned int base) {
+                               unsigned int base) {
   return split_by_sign_aux(l, base, list<unsigned int>::nil(),
                            list<unsigned int>::nil());
 }
 
 /// guard_accum acc l multiple when-style guards with different logic.
 unsigned int
-LoopifyPatterns::guard_accum(const unsigned int acc,
+LoopifyPatterns::guard_accum(unsigned int acc,
                              const LoopifyPatterns::list<unsigned int> &l) {
   unsigned int _result;
   const LoopifyPatterns::list<unsigned int> *_loop_l = &l;
-  unsigned int _loop_acc = acc;
+  unsigned int _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<
             typename LoopifyPatterns::list<unsigned int>::Nil>(_loop_l->v())) {
@@ -422,16 +420,16 @@ LoopifyPatterns::guard_accum(const unsigned int acc,
 
 /// cons_computed n l cons with conditional parameter change.
 LoopifyPatterns::list<unsigned int>
-LoopifyPatterns::cons_computed(const unsigned int n,
+LoopifyPatterns::cons_computed(unsigned int n,
                                const LoopifyPatterns::list<unsigned int> &l) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> *_write = &_head;
   const LoopifyPatterns::list<unsigned int> *_loop_l = &l;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<
             typename LoopifyPatterns::list<unsigned int>::Nil>(_loop_l->v())) {
-      *(_write) = std::make_unique<LoopifyPatterns::list<unsigned int>>(
+      *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
@@ -446,7 +444,7 @@ LoopifyPatterns::cons_computed(const unsigned int n,
       }
       auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
           typename list<unsigned int>::Cons(d_a0, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_l = d_a1.get();
@@ -454,12 +452,12 @@ LoopifyPatterns::cons_computed(const unsigned int n,
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// mod_pattern n recursive call in mod expression.
 unsigned int LoopifyPatterns::mod_pattern(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -482,7 +480,7 @@ unsigned int LoopifyPatterns::mod_pattern(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 1u;
       } else {
@@ -505,7 +503,7 @@ unsigned int LoopifyPatterns::mod_pattern(
 
 /// alternating_ops n alternating operations based on modulo.
 unsigned int LoopifyPatterns::alternating_ops(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -533,7 +531,7 @@ unsigned int LoopifyPatterns::alternating_ops(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -559,16 +557,16 @@ unsigned int LoopifyPatterns::alternating_ops(
 
 /// replace_at idx value l replace element at index.
 LoopifyPatterns::list<unsigned int>
-LoopifyPatterns::replace_at(const unsigned int idx, const unsigned int value,
+LoopifyPatterns::replace_at(unsigned int idx, unsigned int value,
                             const LoopifyPatterns::list<unsigned int> &l) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> *_write = &_head;
   const LoopifyPatterns::list<unsigned int> *_loop_l = &l;
-  unsigned int _loop_idx = idx;
+  unsigned int _loop_idx = std::move(idx);
   while (true) {
     if (std::holds_alternative<
             typename LoopifyPatterns::list<unsigned int>::Nil>(_loop_l->v())) {
-      *(_write) = std::make_unique<LoopifyPatterns::list<unsigned int>>(
+      *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
@@ -576,14 +574,14 @@ LoopifyPatterns::replace_at(const unsigned int idx, const unsigned int value,
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l->v());
       if (_loop_idx <= 0) {
-        *(_write) = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-            list<unsigned int>::cons(value, *(d_a1)));
+        *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
+            list<unsigned int>::cons(value, *d_a1));
         break;
       } else {
         unsigned int i = _loop_idx - 1;
         auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
             typename list<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -593,7 +591,7 @@ LoopifyPatterns::replace_at(const unsigned int idx, const unsigned int value,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// nested_pattern l three-element tuple pattern.
@@ -627,7 +625,7 @@ unsigned int LoopifyPatterns::nested_pattern(
       auto _f = std::move(std::get<_Enter>(_frame));
       const LoopifyPatterns::list<
           std::pair<std::pair<unsigned int, unsigned int>, unsigned int>> &l =
-          *(_f.l);
+          *_f.l;
       if (std::holds_alternative<typename LoopifyPatterns::list<std::pair<
               std::pair<unsigned int, unsigned int>, unsigned int>>::Nil>(
               l.v())) {
@@ -654,7 +652,7 @@ unsigned int LoopifyPatterns::nested_pattern(
 
 /// let_nested n let with nested let in binding.
 unsigned int LoopifyPatterns::let_nested(
-    const unsigned int
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -677,7 +675,7 @@ unsigned int LoopifyPatterns::let_nested(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = 0u;
       } else {
@@ -717,7 +715,7 @@ unsigned int LoopifyPatterns::list_len(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPatterns::list<unsigned int> &l = *(_f.l);
+      const LoopifyPatterns::list<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
@@ -737,7 +735,7 @@ unsigned int LoopifyPatterns::list_len(
 
 /// process_twice l applies recursion twice: process(process(xs)).
 LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
-    const unsigned int fuel,
+    unsigned int fuel,
     LoopifyPatterns::list<unsigned int>
         l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -771,7 +769,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       LoopifyPatterns::list<unsigned int> l = std::move(_f.l);
-      const unsigned int fuel = _f.fuel;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -784,7 +782,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
           _stack.emplace_back(_Cont_Cons{d_a0, f});
-          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
+          _stack.emplace_back(_Enter{std::move(*d_a1), f});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
@@ -811,15 +809,15 @@ LoopifyPatterns::process_twice(const LoopifyPatterns::list<unsigned int> &l) {
 
 /// as_guard l uses as-pattern with guard (length check).
 LoopifyPatterns::list<unsigned int>
-LoopifyPatterns::as_guard_fuel(const unsigned int fuel,
+LoopifyPatterns::as_guard_fuel(unsigned int fuel,
                                const LoopifyPatterns::list<unsigned int> &l) {
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> _head{};
   std::unique_ptr<LoopifyPatterns::list<unsigned int>> *_write = &_head;
   const LoopifyPatterns::list<unsigned int> *_loop_l = &l;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<LoopifyPatterns::list<unsigned int>>(
+      *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
           list<unsigned int>::nil());
       break;
     } else {
@@ -827,7 +825,7 @@ LoopifyPatterns::as_guard_fuel(const unsigned int fuel,
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(
               _loop_l->v())) {
-        *(_write) = std::make_unique<LoopifyPatterns::list<unsigned int>>(
+        *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
             list<unsigned int>::nil());
         break;
       } else {
@@ -835,11 +833,11 @@ LoopifyPatterns::as_guard_fuel(const unsigned int fuel,
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 _loop_l->v());
         LoopifyPatterns::list<unsigned int> all =
-            list<unsigned int>::cons(d_a0, *(d_a1));
+            list<unsigned int>::cons(d_a0, *d_a1);
         if (3u < list_len(std::move(all))) {
           auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
               typename list<unsigned int>::Cons(d_a0, nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                    .d_a1;
@@ -854,7 +852,7 @@ LoopifyPatterns::as_guard_fuel(const unsigned int fuel,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 LoopifyPatterns::list<unsigned int>
@@ -888,14 +886,14 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPatterns::list<unsigned int> &l = *(_f.l);
+      const LoopifyPatterns::list<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        auto &&_sv0 = *(d_a1);
+        auto &&_sv0 = *d_a1;
         if (std::holds_alternative<
                 typename LoopifyPatterns::list<unsigned int>::Nil>(_sv0.v())) {
           _result = d_a0;
@@ -903,7 +901,7 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   _sv0.v());
-          auto &&_sv1 = *(d_a10);
+          auto &&_sv1 = *d_a10;
           if (std::holds_alternative<
                   typename LoopifyPatterns::list<unsigned int>::Nil>(
                   _sv1.v())) {
@@ -912,7 +910,7 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
             const auto &[d_a01, d_a11] =
                 std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                     _sv1.v());
-            auto &&_sv2 = *(d_a11);
+            auto &&_sv2 = *d_a11;
             if (std::holds_alternative<
                     typename LoopifyPatterns::list<unsigned int>::Nil>(
                     _sv2.v())) {
@@ -962,7 +960,7 @@ unsigned int LoopifyPatterns::multi_guard(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPatterns::list<unsigned int> &l = *(_f.l);
+      const LoopifyPatterns::list<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
@@ -1001,7 +999,7 @@ LoopifyPatterns::append_lists(const LoopifyPatterns::list<unsigned int> &l1,
   while (true) {
     if (std::holds_alternative<
             typename LoopifyPatterns::list<unsigned int>::Nil>(_loop_l1->v())) {
-      *(_write) = std::make_unique<LoopifyPatterns::list<unsigned int>>(
+      *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
           std::move(_loop_l2));
       break;
     } else {
@@ -1010,14 +1008,14 @@ LoopifyPatterns::append_lists(const LoopifyPatterns::list<unsigned int> &l1,
               _loop_l1->v());
       auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
           typename list<unsigned int>::Cons(d_a0, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_l1 = d_a1.get();
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// double_append l1 l2 uses recursive result twice: h :: (rest @ rest).
@@ -1049,7 +1047,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::double_append(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       LoopifyPatterns::list<unsigned int> l2 = std::move(_f.l2);
-      const LoopifyPatterns::list<unsigned int> &l1 = *(_f.l1);
+      const LoopifyPatterns::list<unsigned int> &l1 = *_f.l1;
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(l1.v())) {
         _result = std::move(l2);
@@ -1072,7 +1070,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::double_append(
 
 /// process_twice_alt l applies transformation twice on recursive result.
 LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
-    const unsigned int fuel,
+    unsigned int fuel,
     LoopifyPatterns::list<unsigned int>
         l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -1106,7 +1104,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       LoopifyPatterns::list<unsigned int> l = std::move(_f.l);
-      const unsigned int fuel = _f.fuel;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = std::move(l);
       } else {
@@ -1119,7 +1117,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
           _stack.emplace_back(_Cont_Cons{d_a0, f});
-          _stack.emplace_back(_Enter{std::move(*(d_a1)), f});
+          _stack.emplace_back(_Enter{std::move(*d_a1), f});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
@@ -1170,7 +1168,7 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPatterns::list<unsigned int> &l = *(_f.l);
+      const LoopifyPatterns::list<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
@@ -1206,7 +1204,7 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
     if (std::holds_alternative<
             typename LoopifyPatterns::list<unsigned int>::Nil>(
             _loop_l1.v_mut())) {
-      *(_write) = std::make_unique<LoopifyPatterns::list<unsigned int>>(
+      *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
           std::move(_loop_l2));
       break;
     } else {
@@ -1216,7 +1214,7 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(
               _loop_l2.v_mut())) {
-        *(_write) =
+        *_write =
             std::make_unique<LoopifyPatterns::list<unsigned int>>(_loop_l1);
         break;
       } else {
@@ -1229,19 +1227,19 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
             typename list<unsigned int>::Cons(d_a00, nullptr));
         std::get<typename list<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename list<unsigned int>::Cons>(
                  std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
                      .d_a1->v_mut())
                  .d_a1;
-        _loop_l2 = std::move(*(d_a10));
-        _loop_l1 = std::move(*(d_a1));
+        _loop_l2 = std::move(*d_a10);
+        _loop_l1 = std::move(*d_a1);
         continue;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// four_elem l four-element destructuring pattern with fallback cases.
@@ -1273,14 +1271,14 @@ unsigned int LoopifyPatterns::four_elem(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyPatterns::list<unsigned int> &l = *(_f.l);
+      const LoopifyPatterns::list<unsigned int> &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
         const auto &[d_a0, d_a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        auto &&_sv0 = *(d_a1);
+        auto &&_sv0 = *d_a1;
         if (std::holds_alternative<
                 typename LoopifyPatterns::list<unsigned int>::Nil>(_sv0.v())) {
           _result = 1u;
@@ -1288,7 +1286,7 @@ unsigned int LoopifyPatterns::four_elem(
           const auto &[d_a00, d_a10] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   _sv0.v());
-          auto &&_sv1 = *(d_a10);
+          auto &&_sv1 = *d_a10;
           if (std::holds_alternative<
                   typename LoopifyPatterns::list<unsigned int>::Nil>(
                   _sv1.v())) {
@@ -1297,7 +1295,7 @@ unsigned int LoopifyPatterns::four_elem(
             const auto &[d_a01, d_a11] =
                 std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                     _sv1.v());
-            auto &&_sv2 = *(d_a11);
+            auto &&_sv2 = *d_a11;
             if (std::holds_alternative<
                     typename LoopifyPatterns::list<unsigned int>::Nil>(
                     _sv2.v())) {

@@ -74,7 +74,7 @@ struct OptionalSelfDeepCopy {
           _dst->d_v_ = More{
               _alt.d_a0
                   ? std::make_unique<std::optional<std::unique_ptr<chain>>>(
-                        *(_alt.d_a0)
+                        *_alt.d_a0
                             ? std::make_optional(std::make_unique<chain>())
                             : std::nullopt)
                   : nullptr};
@@ -103,8 +103,8 @@ struct OptionalSelfDeepCopy {
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<More>(_node.d_v_)) {
           auto &_alt = std::get<More>(_node.d_v_);
-          if (_alt.d_a0 && *(_alt.d_a0)) {
-            _stack.push_back(std::move(*(*(_alt.d_a0))));
+          if (_alt.d_a0 && *_alt.d_a0) {
+            _stack.push_back(std::move(*(*_alt.d_a0)));
           }
         }
       };
@@ -131,7 +131,7 @@ struct OptionalSelfDeepCopy {
       return f;
     } else {
       const auto &[d_a0] = std::get<typename chain::More>(c.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 
@@ -142,7 +142,7 @@ struct OptionalSelfDeepCopy {
       return f;
     } else {
       const auto &[d_a0] = std::get<typename chain::More>(c.v());
-      return f0(*(d_a0));
+      return f0(*d_a0);
     }
   }
 

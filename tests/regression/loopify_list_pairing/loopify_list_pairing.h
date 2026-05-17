@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_LIST_PAIRING
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -145,7 +143,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -171,11 +169,11 @@ struct LoopifyListPairing {
   static std::pair<List<unsigned int>, List<unsigned int>>
   partition(const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
-  zip_longest_fuel(const unsigned int fuel, const List<unsigned int> &l1,
-                   const List<unsigned int> &l2, const unsigned int default0);
+  zip_longest_fuel(unsigned int fuel, const List<unsigned int> &l1,
+                   const List<unsigned int> &l2, unsigned int default0);
   static List<std::pair<unsigned int, unsigned int>>
   zip_longest(const List<unsigned int> &l1, const List<unsigned int> &l2,
-              const unsigned int default0);
+              unsigned int default0);
   static List<unsigned int> zipWith(const List<unsigned int> &l1,
                                     const List<unsigned int> &l2);
   static std::pair<List<unsigned int>, List<unsigned int>>

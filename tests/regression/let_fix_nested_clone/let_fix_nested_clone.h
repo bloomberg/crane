@@ -2,8 +2,6 @@
 #define INCLUDED_LET_FIX_NESTED_CLONE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -131,18 +129,18 @@ unsigned int _count_nested_outer(const List<List<T1>> xss,
   } else {
     const auto &[d_a0, d_a1] = std::get<typename List<List<T1>>::Cons>(xss.v());
     auto inner_impl = [](auto &_self_inner, const List<T1> &ys,
-                         const unsigned int n) -> unsigned int {
+                         unsigned int n) -> unsigned int {
       if (std::holds_alternative<typename List<T1>::Nil>(ys.v())) {
         return n;
       } else {
         const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(ys.v());
-        return _self_inner(_self_inner, *(d_a10), (1u + n));
+        return _self_inner(_self_inner, *d_a10, (1u + n));
       }
     };
-    auto inner = [&](const List<T1> &ys, const unsigned int n) -> unsigned int {
+    auto inner = [&](const List<T1> &ys, unsigned int n) -> unsigned int {
       return inner_impl(inner_impl, ys, n);
     };
-    return _count_nested_outer<T1>(*(d_a1), (inner(d_a0, 0u) + acc));
+    return _count_nested_outer<T1>(*d_a1, (inner(d_a0, 0u) + acc));
   }
 }
 

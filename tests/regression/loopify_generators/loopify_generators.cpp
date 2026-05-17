@@ -3,7 +3,7 @@
 /// Consolidated list generator functions.
 /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
 List<unsigned int> LoopifyGenerators::cycle(
-    const unsigned int n,
+    unsigned int n,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -27,7 +27,7 @@ List<unsigned int> LoopifyGenerators::cycle(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      unsigned int n = _f.n;
       if (n <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -44,17 +44,18 @@ List<unsigned int> LoopifyGenerators::cycle(
 }
 
 /// zip_longest l1 l2 default zips, using default for missing elements.
-List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
-    const List<unsigned int> &l1, const List<unsigned int> &l2,
-    const unsigned int default0, const unsigned int fuel) {
+List<std::pair<unsigned int, unsigned int>>
+LoopifyGenerators::zip_longest_aux(const List<unsigned int> &l1,
+                                   const List<unsigned int> &l2,
+                                   unsigned int default0, unsigned int fuel) {
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
   std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
-  unsigned int _loop_fuel = fuel;
+  unsigned int _loop_fuel = std::move(fuel);
   List<unsigned int> _loop_l2 = l2;
   List<unsigned int> _loop_l1 = l1;
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
+      *_write = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
@@ -63,7 +64,7 @@ List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
               _loop_l1.v())) {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2.v())) {
-          *(_write) =
+          *_write =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   List<std::pair<unsigned int, unsigned int>>::nil());
           break;
@@ -74,14 +75,14 @@ List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
                       std::make_pair(default0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
           _loop_fuel = f;
-          _loop_l2 = std::move(*(d_a10));
+          _loop_l2 = std::move(*d_a10);
           _loop_l1 = List<unsigned int>::nil();
           continue;
         }
@@ -94,7 +95,7 @@ List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
                       std::make_pair(d_a0, default0), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
@@ -102,7 +103,7 @@ List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
                    .d_a1;
           _loop_fuel = f;
           _loop_l2 = List<unsigned int>::nil();
-          _loop_l1 = std::move(*(d_a1));
+          _loop_l1 = std::move(*d_a1);
           continue;
         } else {
           const auto &[d_a00, d_a10] =
@@ -111,21 +112,21 @@ List<std::pair<unsigned int, unsigned int>> LoopifyGenerators::zip_longest_aux(
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
                       std::make_pair(d_a0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
                    .d_a1;
           _loop_fuel = f;
-          _loop_l2 = std::move(*(d_a10));
-          _loop_l1 = std::move(*(d_a1));
+          _loop_l2 = std::move(*d_a10);
+          _loop_l1 = std::move(*d_a1);
           continue;
         }
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int LoopifyGenerators::len_impl(
@@ -150,7 +151,7 @@ unsigned int LoopifyGenerators::len_impl(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
@@ -170,14 +171,14 @@ unsigned int LoopifyGenerators::len_impl(
 List<std::pair<unsigned int, unsigned int>>
 LoopifyGenerators::zip_longest(const List<unsigned int> &l1,
                                const List<unsigned int> &l2,
-                               const unsigned int default0) {
+                               unsigned int default0) {
   return zip_longest_aux(l1, l2, default0, (len_impl(l1) + len_impl(l2)));
 }
 
 /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
 List<unsigned int> LoopifyGenerators::build_list_fuel(
-    const unsigned int fuel,
-    const unsigned int
+    unsigned int fuel,
+    unsigned int
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -201,8 +202,8 @@ List<unsigned int> LoopifyGenerators::build_list_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      unsigned int n = _f.n;
+      unsigned int fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<unsigned int>::nil();
       } else {
@@ -231,34 +232,33 @@ List<unsigned int> LoopifyGenerators::build_list_fuel(
   return _result;
 }
 
-List<unsigned int> LoopifyGenerators::build_list(const unsigned int n) {
+List<unsigned int> LoopifyGenerators::build_list(unsigned int n) {
   return build_list_fuel(100u, n);
 }
 
 /// take n l returns first n elements.
-List<unsigned int> LoopifyGenerators::take(const unsigned int n,
+List<unsigned int> LoopifyGenerators::take(unsigned int n,
                                            const List<unsigned int> &l) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
   const List<unsigned int> *_loop_l = &l;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       const auto &[d_a0, d_a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
-        *(_write) =
+        *_write =
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
+        *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
                  .d_a1;
@@ -268,63 +268,60 @@ List<unsigned int> LoopifyGenerators::take(const unsigned int n,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// repeat x n creates list with n copies of x.
-List<unsigned int> LoopifyGenerators::repeat(const unsigned int x,
-                                             const unsigned int n) {
+List<unsigned int> LoopifyGenerators::repeat(unsigned int x, unsigned int n) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       unsigned int m = _loop_n - 1;
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(x, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_n = m;
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// Helper: replicate single element n times.
-List<unsigned int> LoopifyGenerators::replicate_single(const unsigned int x,
-                                                       const unsigned int n) {
+List<unsigned int> LoopifyGenerators::replicate_single(unsigned int x,
+                                                       unsigned int n) {
   std::unique_ptr<List<unsigned int>> _head{};
   std::unique_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_n = n;
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
       unsigned int m = _loop_n - 1;
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(x, nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
       _loop_n = m;
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 /// replicate_each n l replicates each element n times: replicate_each 2 1,2 ->
 /// 1,1,2,2.
 List<unsigned int> LoopifyGenerators::replicate_each(
-    const unsigned int n,
+    unsigned int n,
     const List<unsigned int>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -335,7 +332,7 @@ List<unsigned int> LoopifyGenerators::replicate_each(
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
     decltype(replicate_single(std::declval<unsigned int &>(),
-                              std::declval<const unsigned int &>())) _s0;
+                              std::declval<unsigned int &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -349,7 +346,7 @@ List<unsigned int> LoopifyGenerators::replicate_each(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
+      const List<unsigned int> &l = *_f.l;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {

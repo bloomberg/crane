@@ -2,8 +2,6 @@
 #define INCLUDED_POLYMORPHIC_HELPER
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -108,12 +106,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   Nat add(Nat m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (std::holds_alternative<typename Nat::O>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_a0)).add(std::move(m)));
+      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
+      return Nat::s((*d_a0).add(std::move(m)));
     }
   }
 };
@@ -233,12 +230,11 @@ public:
   const variant_t &v() const { return d_v_; }
 
   Nat length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
       return Nat::o();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return Nat::s((*(d_a1)).length());
+      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
+      return Nat::s((*d_a1).length());
     }
   }
 };
@@ -251,14 +247,14 @@ template <typename T1> Nat _foo_aux(const T1 a, const Nat n) {
   return ListDef::template repeat<T1>(a, n).length();
 }
 
-Nat foo(Nat n, const bool b);
+Nat foo(Nat n, bool b);
 
 template <typename T1> List<T1> ListDef::repeat(T1 x, const Nat &n) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
     return List<T1>::nil();
   } else {
     const auto &[d_a0] = std::get<typename Nat::S>(n.v());
-    return List<T1>::cons(x, ListDef::template repeat<T1>(x, *(d_a0)));
+    return List<T1>::cons(x, ListDef::template repeat<T1>(x, *d_a0));
   }
 }
 

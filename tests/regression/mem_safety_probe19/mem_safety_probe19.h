@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -97,7 +96,7 @@ struct MemSafetyProbe19 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -132,13 +131,12 @@ struct MemSafetyProbe19 {
     const variant_t &v() const { return d_v_; }
 
     /// TEST 7: Nested match returning closures at multiple levels.
-    unsigned int nested_match_fn(const bool b1, const bool b2,
-                                 const unsigned int n) const {
+    unsigned int nested_match_fn(bool b1, bool b2, unsigned int n) const {
       if (b1) {
         if (b2) {
-          return ((*(this)).tree_sum() + n);
+          return ((*this).tree_sum() + n);
         } else {
-          return (((*(this)).tree_sum() + (*(this)).tree_sum()) + n);
+          return (((*this).tree_sum() + (*this).tree_sum()) + n);
         }
       } else {
         return n;
@@ -148,9 +146,9 @@ struct MemSafetyProbe19 {
     /// TEST 1: Return closure from if-branch.
     /// The if becomes a top-level Sif in the function body.
     /// return_captures_by_value won't recurse into it.
-    unsigned int choose_fn(const bool b, const unsigned int n) const {
+    unsigned int choose_fn(bool b, unsigned int n) const {
       if (b) {
-        return ((*(this)).tree_sum() + n);
+        return ((*this).tree_sum() + n);
       } else {
         return n;
       }
@@ -189,7 +187,7 @@ struct MemSafetyProbe19 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = 0u;
           } else {
@@ -251,14 +249,13 @@ struct MemSafetyProbe19 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -315,14 +312,13 @@ struct MemSafetyProbe19 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -382,11 +378,10 @@ struct MemSafetyProbe19 {
 
     // ACCESSORS
     myopt<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynone>(_sv.v())) {
+      if (std::holds_alternative<Mynone>(this->v())) {
         return myopt<t_A>(Mynone{});
       } else {
-        const auto &[d_a0] = std::get<Mysome>(_sv.v());
+        const auto &[d_a0] = std::get<Mysome>(this->v());
         return myopt<t_A>(Mysome{d_a0});
       }
     }
@@ -414,11 +409,10 @@ struct MemSafetyProbe19 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
     T1 myopt_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename myopt<t_A>::Mynone>(_sv.v())) {
+      if (std::holds_alternative<typename myopt<t_A>::Mynone>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename myopt<t_A>::Mysome>(_sv.v());
+        const auto &[d_a0] = std::get<typename myopt<t_A>::Mysome>(this->v());
         return f0(d_a0);
       }
     }
@@ -426,26 +420,24 @@ struct MemSafetyProbe19 {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, t_A &>
     T1 myopt_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename myopt<t_A>::Mynone>(_sv.v())) {
+      if (std::holds_alternative<typename myopt<t_A>::Mynone>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename myopt<t_A>::Mysome>(_sv.v());
+        const auto &[d_a0] = std::get<typename myopt<t_A>::Mysome>(this->v());
         return f0(d_a0);
       }
     }
   };
 
   static unsigned int option_fn(const tree &t, const myopt<unsigned int> &o,
-                                const unsigned int n);
+                                unsigned int n);
   static inline const unsigned int test_option_fn =
       option_fn(tree::node(tree::leaf(), 10u, tree::leaf()),
                 myopt<unsigned int>::mysome(5u), 3u);
   /// TEST 3: Return closure from match on custom 3-constructor type.
   enum class Choice { e_CLEFT, e_CRIGHT, e_CBOTH };
 
-  template <typename T1>
-  static T1 choice_rect(T1 f, T1 f0, T1 f1, const Choice c) {
+  template <typename T1> static T1 choice_rect(T1 f, T1 f0, T1 f1, Choice c) {
     switch (c) {
     case Choice::e_CLEFT: {
       return f;
@@ -461,8 +453,7 @@ struct MemSafetyProbe19 {
     }
   }
 
-  template <typename T1>
-  static T1 choice_rec(T1 f, T1 f0, T1 f1, const Choice c) {
+  template <typename T1> static T1 choice_rec(T1 f, T1 f0, T1 f1, Choice c) {
     switch (c) {
     case Choice::e_CLEFT: {
       return f;
@@ -478,8 +469,7 @@ struct MemSafetyProbe19 {
     }
   }
 
-  static unsigned int choice_fn(const tree &t, const Choice c,
-                                const unsigned int n);
+  static unsigned int choice_fn(const tree &t, Choice c, unsigned int n);
   static inline const unsigned int test_choice_left = choice_fn(
       tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u, tree::leaf()),
       Choice::e_CLEFT, 0u);
@@ -489,8 +479,7 @@ struct MemSafetyProbe19 {
   /// TEST 4: Closure returned from if, capturing a locally-built tree.
   /// The let-bound tree is on the stack. If the returned lambda
   /// captures by &, it holds a reference to the dead stack frame.
-  static unsigned int make_adder(const unsigned int n, const bool b,
-                                 const unsigned int _x0);
+  static unsigned int make_adder(unsigned int n, bool b, unsigned int _x0);
   static inline const unsigned int test_make_adder = make_adder(20u, true, 5u);
   /// TEST 5: Double use of returned closure.
   /// Ensures the closure is a real std::function, not inlined.
@@ -505,7 +494,7 @@ struct MemSafetyProbe19 {
   /// TEST 6: Pass returned closure to a higher-order function.
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int apply_to(F0 &&f, const unsigned int _x0) {
+  static unsigned int apply_to(F0 &&f, unsigned int _x0) {
     return f(_x0);
   }
 

@@ -2,7 +2,6 @@
 #define INCLUDED_DEEP_MAP
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -143,8 +142,8 @@ struct DeepMap {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1, T2>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1, T2>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rect<T1, T2>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rect<T1, T2>(f, f0, *d_a2));
     }
   }
 
@@ -156,15 +155,14 @@ struct DeepMap {
       return f;
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1, T2>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1, T2>(f, f0, *(d_a2)));
+      return f0(*d_a0, tree_rec<T1, T2>(f, f0, *d_a0), d_a1, *d_a2,
+                tree_rec<T1, T2>(f, f0, *d_a2));
     }
   }
 
   /// Build a maximally-unbalanced tree (right spine = linked list).
   /// Tail-recursive via accumulator, should be loopified.
-  static tree<unsigned int> build_right(const unsigned int n,
-                                        tree<unsigned int> acc);
+  static tree<unsigned int> build_right(unsigned int n, tree<unsigned int> acc);
 
   /// Recursive tree map — visits every node.
   template <typename T1, typename T2, typename F0>
@@ -174,8 +172,8 @@ struct DeepMap {
       return tree<T2>::leaf();
     } else {
       const auto &[d_a0, d_a1, d_a2] = std::get<typename tree<T1>::Node>(t.v());
-      return tree<T2>::node(tmap<T1, T2>(f, *(d_a0)), f(d_a1),
-                            tmap<T1, T2>(f, *(d_a2)));
+      return tree<T2>::node(tmap<T1, T2>(f, *d_a0), f(d_a1),
+                            tmap<T1, T2>(f, *d_a2));
     }
   }
 

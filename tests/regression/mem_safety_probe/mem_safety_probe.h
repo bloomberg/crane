@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -88,7 +87,7 @@ struct MemSafetyProbe {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -125,8 +124,8 @@ struct MemSafetyProbe {
     /// ---- TEST 11: Closure captures two different tree values ----
     /// A function that creates a closure capturing TWO different trees.
     /// Both must be correctly cloned or captured by value.
-    unsigned int combine_trees(const tree &t2, const unsigned int x) const {
-      return ((*(this)).sum_values(x) + t2.sum_values(x));
+    unsigned int combine_trees(const tree &t2, unsigned int x) const {
+      return ((*this).sum_values(x) + t2.sum_values(x));
     }
 
     /// ---- TEST 9: Map tree with closure ----
@@ -167,7 +166,7 @@ struct MemSafetyProbe {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = tree::leaf();
           } else {
@@ -194,28 +193,28 @@ struct MemSafetyProbe {
     std::pair<std::function<unsigned int(unsigned int)>,
               std::function<unsigned int(unsigned int)>>
     pair_of_closures() const {
-      tree _self_val = *(this);
+      tree _self_val = *this;
       return std::make_pair(
           [=](unsigned int _x0) mutable -> unsigned int {
             return _self_val.sum_values(_x0);
           },
-          [](const unsigned int n) { return n; });
+          [](unsigned int n) { return n; });
     }
 
     /// Sum all values in a tree, plus an accumulator.
-    unsigned int sum_values(const unsigned int x) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+    unsigned int sum_values(unsigned int x) const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        auto &&_sv0 = *(d_a0);
+        const auto &[d_a0, d_a1, d_a2] =
+            std::get<typename tree::Node>(this->v());
+        auto &&_sv0 = *d_a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (d_a1 + x);
         } else {
           const auto &[d_a00, d_a10, d_a20] =
               std::get<typename tree::Node>(_sv0.v());
-          auto &&_sv1 = *(d_a2);
+          auto &&_sv1 = *d_a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (d_a10 + x);
           } else {
@@ -268,14 +267,13 @@ struct MemSafetyProbe {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -332,14 +330,13 @@ struct MemSafetyProbe {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1, d_a2] =
                 std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
+            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
             _stack.emplace_back(_Enter{d_a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -391,8 +388,7 @@ struct MemSafetyProbe {
 
     // ACCESSORS
     fn_box clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Box>(_sv.v());
+      const auto &[d_a0] = std::get<Box>(this->v());
       return fn_box(Box{d_a0});
     }
 
@@ -407,9 +403,8 @@ struct MemSafetyProbe {
     // ACCESSORS
     const variant_t &v() const { return d_v_; }
 
-    unsigned int apply_box(const unsigned int x) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
+    unsigned int apply_box(unsigned int x) const {
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
       return d_a0(x);
     }
 
@@ -417,8 +412,7 @@ struct MemSafetyProbe {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
       return f(d_a0);
     }
 
@@ -426,8 +420,7 @@ struct MemSafetyProbe {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<typename fn_box::Box>(_sv.v());
+      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
       return f(d_a0);
     }
   }; /// Custom list type.
@@ -577,13 +570,13 @@ struct MemSafetyProbe {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -624,13 +617,13 @@ struct MemSafetyProbe {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[d_a0, d_a1] =
                 std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *(d_a1), d_a0});
+            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
             _stack.emplace_back(_Enter{d_a1.get()});
           }
         } else {
@@ -647,7 +640,7 @@ struct MemSafetyProbe {
   /// it twice, the second call would use a moved-from value.
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int apply_twice(F0 &&f, const unsigned int x) {
+  static unsigned int apply_twice(F0 &&f, unsigned int x) {
     return f(f(x));
   }
 
@@ -669,7 +662,7 @@ struct MemSafetyProbe {
   build_adders(const mylist<tree> &trees);
   static unsigned int
   apply_all(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-            const unsigned int x);
+            unsigned int x);
   static inline const unsigned int test_closure_list = []() {
     tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
     tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
@@ -695,9 +688,9 @@ struct MemSafetyProbe {
   /// a tree value. Tests deep closure chaining with value type captures.
   static unsigned int
   fold_compose(const mylist<tree> &trees,
-               const std::function<unsigned int(unsigned int)> acc,
-               const unsigned int _x0) { /// _Enter: captures varying parameters
-                                         /// for each recursive call.
+               std::function<unsigned int(unsigned int)> acc,
+               unsigned int _x0) { /// _Enter: captures varying parameters for
+                                   /// each recursive call.
 
     struct _Enter {
       std::function<unsigned int(unsigned int)> acc;
@@ -714,7 +707,7 @@ struct MemSafetyProbe {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
-      const std::function<unsigned int(unsigned int)> &acc = _f.acc;
+      std::function<unsigned int(unsigned int)> acc = std::move(_f.acc);
       const mylist<tree> &trees = _f.trees;
       _result = [=]() mutable -> std::function<unsigned int(unsigned int)> {
         if (std::holds_alternative<typename mylist<tree>::Mynil>(trees.v())) {
@@ -722,13 +715,11 @@ struct MemSafetyProbe {
         } else {
           const auto &[d_a0, d_a1] =
               std::get<typename mylist<tree>::Mycons>(trees.v());
-          mylist<tree> d_a1_value = *(d_a1);
+          mylist<tree> d_a1_value = *d_a1;
           return [=](unsigned int _x0) mutable -> unsigned int {
             return fold_compose(
                 d_a1_value,
-                [=](const unsigned int n) mutable {
-                  return acc(d_a0.sum_values(n));
-                },
+                [=](unsigned int n) mutable { return acc(d_a0.sum_values(n)); },
                 _x0);
           };
         }
@@ -744,7 +735,7 @@ struct MemSafetyProbe {
         mylist<tree>::mycons(
             std::move(t1),
             mylist<tree>::mycons(std::move(t2), mylist<tree>::mynil())),
-        [](const unsigned int n) { return n; }, 5u);
+        [](unsigned int n) { return n; }, 5u);
   }();
   /// ---- TEST 5: Partial application + match scrutinee reuse ----
   /// f captures t by partial application, then t is used as a match
@@ -755,8 +746,7 @@ struct MemSafetyProbe {
                                tree::node(tree::leaf(), 30u, tree::leaf())));
   /// ---- TEST 6: Deep currying chain ----
   /// Multi-level partial application where each level binds a new value.
-  static unsigned int add3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
+  static unsigned int add3(unsigned int a, unsigned int b, unsigned int c);
   static inline const unsigned int test_deep_curry = []() {
     tree t = tree::node(tree::leaf(), 10u, tree::leaf());
     unsigned int v = std::move(t).sum_values(0u);
@@ -792,8 +782,7 @@ struct MemSafetyProbe {
   static inline const unsigned int test_map_tree = []() {
     tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    tree t2 =
-        std::move(t).map_tree([](const unsigned int n) { return (n + 1u); });
+    tree t2 = std::move(t).map_tree([](unsigned int n) { return (n + 1u); });
     return std::move(t2).sum_values(0u);
   }();
   /// ---- TEST 10: Partial application stored in Box via match ----

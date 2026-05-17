@@ -3,8 +3,6 @@
 
 #include <any>
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -46,8 +44,7 @@ struct MemSafetyProbe12 {
 
     // ACCESSORS
     wrap clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a] = std::get<Wrap0>(_sv.v());
+      const auto &[d_a] = std::get<Wrap0>(this->v());
       return wrap(Wrap0{d_a});
     }
 
@@ -90,7 +87,7 @@ struct MemSafetyProbe12 {
   /// let f := fun x => x + base in Wrap (nat -> nat) f
   /// This should work because f has type std::function<...>
   /// by the time it's passed to Wrap.
-  static wrap pack_fn_let(const unsigned int base);
+  static wrap pack_fn_let(unsigned int base);
   static inline const unsigned int test_pack_fn_let = []() {
     wrap w = pack_fn_let(10u);
     return unwrap<std::function<unsigned int(unsigned int)>>(std::move(w))(5u);
@@ -99,7 +96,7 @@ struct MemSafetyProbe12 {
   /// Wrap (nat -> nat) (fun x => x + base)
   /// BUG: The raw lambda type is stored in std::any,
   /// but unwrap tries any_cast<std::function<...>>.
-  static wrap pack_fn_direct(const unsigned int base);
+  static wrap pack_fn_direct(unsigned int base);
   static inline const unsigned int test_pack_fn_direct = []() {
     wrap w = pack_fn_direct(10u);
     return unwrap<std::function<unsigned int(unsigned int)>>(std::move(w))(5u);
@@ -108,14 +105,15 @@ struct MemSafetyProbe12 {
   /// TEST 5: Pack a composed closure (let-bound, safe path).
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static wrap pack_composed(F0 &&f, const unsigned int base) {
-    std::function<unsigned int(unsigned int)> g =
-        [=](const unsigned int x) mutable { return (f(x) + base); };
+  static wrap pack_composed(F0 &&f, unsigned int base) {
+    std::function<unsigned int(unsigned int)> g = [=](unsigned int x) mutable {
+      return (f(x) + base);
+    };
     return wrap::wrap0(g);
   }
 
   static inline const unsigned int test_pack_composed = []() {
-    wrap w = pack_composed([](const unsigned int x) { return (x * 2u); }, 5u);
+    wrap w = pack_composed([](unsigned int x) { return (x * 2u); }, 5u);
     return unwrap<std::function<unsigned int(unsigned int)>>(std::move(w))(10u);
   }();
   /// TEST 6: Multiple wraps and unwraps.

@@ -2,9 +2,6 @@
 #define INCLUDED_PATHOLOGICAL_RECORD
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct PathologicalRecord {
   struct Rec {
@@ -13,15 +10,15 @@ struct PathologicalRecord {
     unsigned int f3;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3}; }
+    Rec clone() const { return Rec{(*this).f1, (*this).f2, (*this).f3}; }
   };
 
   static unsigned int hof_access(const Rec &r);
   static unsigned int nested_lets(const Rec &r);
-  static unsigned int conditional_access(const Rec &r, const bool flag);
-  static unsigned int countdown(const unsigned int n, const Rec &r);
+  static unsigned int conditional_access(const Rec &r, bool flag);
+  static unsigned int countdown(unsigned int n, const Rec &r);
   static unsigned int double_match(const Rec &r1, const Rec &r2);
-  static unsigned int closure_over_fields(const Rec &r, const unsigned int x);
+  static unsigned int closure_over_fields(const Rec &r, unsigned int x);
   static inline const unsigned int use_closure =
       closure_over_fields(Rec{1u, 2u, 3u}, 10u);
   static unsigned int guarded_pattern(const Rec &r);
@@ -35,8 +32,8 @@ struct PathologicalRecord {
 
     // ACCESSORS
     BigRec clone() const {
-      return BigRec{(*(this)).bf1, (*(this)).bf2, (*(this)).bf3, (*(this)).bf4,
-                    (*(this)).bf5};
+      return BigRec{(*this).bf1, (*this).bf2, (*this).bf3, (*this).bf4,
+                    (*this).bf5};
     }
   };
 

@@ -3,8 +3,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -146,7 +144,7 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
+        auto &&_sv = *_self;
         if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
@@ -166,29 +164,25 @@ public:
 
 struct LoopifySearchOpt {
   static List<unsigned int> lis(const List<unsigned int> &l);
-  static List<unsigned int> longest_run_fuel(const unsigned int fuel,
+  static List<unsigned int> longest_run_fuel(unsigned int fuel,
                                              List<unsigned int> current,
                                              List<unsigned int> best,
                                              const List<unsigned int> &l);
   static List<unsigned int> longest_run(const List<unsigned int> &l);
   static unsigned int
-  knapsack_fuel(const unsigned int fuel, const unsigned int capacity,
+  knapsack_fuel(unsigned int fuel, unsigned int capacity,
                 const List<std::pair<unsigned int, unsigned int>> &items);
   static unsigned int
-  knapsack(const unsigned int capacity,
+  knapsack(unsigned int capacity,
            const List<std::pair<unsigned int, unsigned int>> &items);
-  static bool subset_sum_fuel(const unsigned int fuel,
-                              const unsigned int target,
+  static bool subset_sum_fuel(unsigned int fuel, unsigned int target,
                               const List<unsigned int> &l);
-  static bool subset_sum(const unsigned int target,
-                         const List<unsigned int> &l);
+  static bool subset_sum(unsigned int target, const List<unsigned int> &l);
   static std::pair<unsigned int, unsigned int>
   majority(const List<unsigned int> &l);
-  static bool binary_search_fuel(const unsigned int fuel,
-                                 const unsigned int target,
+  static bool binary_search_fuel(unsigned int fuel, unsigned int target,
                                  const List<unsigned int> &l);
-  static bool binary_search(const unsigned int target,
-                            const List<unsigned int> &l);
+  static bool binary_search(unsigned int target, const List<unsigned int> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SEARCH_OPT

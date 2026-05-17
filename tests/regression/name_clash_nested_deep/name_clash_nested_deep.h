@@ -2,7 +2,6 @@
 #define INCLUDED_NAME_CLASH_NESTED_DEEP
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -84,8 +83,7 @@ struct NameClashNestedDeep {
     static mylist mynil() { return mylist(MyNil{}); }
 
     static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          MyCons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+      return mylist(MyCons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -123,7 +121,7 @@ struct NameClashNestedDeep {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist::MyCons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rect<T1>(f, f0, *d_a1));
     }
   }
 
@@ -134,7 +132,7 @@ struct NameClashNestedDeep {
       return f;
     } else {
       const auto &[d_a0, d_a1] = std::get<typename mylist::MyCons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
+      return f0(d_a0, *d_a1, mylist_rec<T1>(f, f0, *d_a1));
     }
   }
 

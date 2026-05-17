@@ -1,10 +1,6 @@
 #ifndef INCLUDED_VALID_LAYOUT_WINDOW
 #define INCLUDED_VALID_LAYOUT_WINDOW
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct ValidLayoutWindow {
   struct layout {
     unsigned int base_addr;
@@ -12,7 +8,7 @@ struct ValidLayoutWindow {
 
     // ACCESSORS
     layout clone() const {
-      return layout{(*(this)).base_addr, (*(this)).code_size};
+      return layout{(*this).base_addr, (*this).code_size};
     }
   };
 

@@ -1,8 +1,8 @@
 #include "count_down.h"
 
 /// Single effect then recurse: effect ;; recursive_call
-void CountDown::count_down(const unsigned int n) {
-  unsigned int _loop_n = n;
+void CountDown::count_down(unsigned int n) {
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
@@ -16,8 +16,8 @@ void CountDown::count_down(const unsigned int n) {
 }
 
 /// Two effects then recurse: effect ;; effect ;; recursive_call
-void CountDown::two_prints(const unsigned int n) {
-  unsigned int _loop_n = n;
+void CountDown::two_prints(unsigned int n) {
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
@@ -32,8 +32,8 @@ void CountDown::two_prints(const unsigned int n) {
 }
 
 /// Read from user, echo back, then recurse
-void CountDown::echo_loop(const unsigned int n) {
-  unsigned int _loop_n = n;
+void CountDown::echo_loop(unsigned int n) {
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
@@ -49,8 +49,8 @@ void CountDown::echo_loop(const unsigned int n) {
 }
 
 /// Effect in base case too: both branches do IO
-void CountDown::announce(const unsigned int n) {
-  unsigned int _loop_n = n;
+void CountDown::announce(unsigned int n) {
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       std::cout << "done"s << '\n';
@@ -65,8 +65,8 @@ void CountDown::announce(const unsigned int n) {
 }
 
 /// Multiple arguments: two nat params, recurse on first
-void CountDown::repeat_msg(const unsigned int n, const std::string msg) {
-  unsigned int _loop_n = n;
+void CountDown::repeat_msg(unsigned int n, std::string msg) {
+  unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
@@ -89,7 +89,7 @@ void CountDown::run_fixpoint() {
 }
 
 /// Helper: compare two strings
-bool CountDown::string_eq(const std::string s1, const std::string s2) {
+bool CountDown::string_eq(std::string s1, std::string s2) {
   switch ((s1 == s2 ? Comparison::e_EQ
                     : (s1 < s2 ? Comparison::e_LT : Comparison::e_GT))) {
   case Comparison::e_EQ: {
@@ -141,8 +141,8 @@ void CountDown::co_echo_loop() {
   return;
 }
 
-void CountDown::co_announce(const unsigned int round) {
-  unsigned int _loop_round = round;
+void CountDown::co_announce(unsigned int round) {
+  unsigned int _loop_round = std::move(round);
   while (true) {
     std::string line;
     std::getline(std::cin, line);
@@ -157,7 +157,7 @@ void CountDown::co_announce(const unsigned int round) {
   return;
 }
 
-void CountDown::co_repeat(const std::string msg) {
+void CountDown::co_repeat(std::string msg) {
   while (true) {
     std::string line;
     std::getline(std::cin, line);

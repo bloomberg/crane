@@ -2,8 +2,6 @@
 #define INCLUDED_ROCQ_BUG_4844
 
 #include <any>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -48,12 +46,11 @@ public:
 
   // ACCESSORS
   Sum<t_A, t_B> clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Inl>(_sv.v())) {
-      const auto &[d_a0] = std::get<Inl>(_sv.v());
+    if (std::holds_alternative<Inl>(this->v())) {
+      const auto &[d_a0] = std::get<Inl>(this->v());
       return Sum<t_A, t_B>(Inl{d_a0});
     } else {
-      const auto &[d_a0] = std::get<Inr>(_sv.v());
+      const auto &[d_a0] = std::get<Inr>(this->v());
       return Sum<t_A, t_B>(Inr{d_a0});
     }
   }
@@ -124,8 +121,7 @@ struct RocqBug4844 {
 
     // ACCESSORS
     box clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Box0>(_sv.v());
+      const auto &[d_a0] = std::get<Box0>(this->v());
       return box(Box0{d_a0.clone()});
     }
 
@@ -141,14 +137,14 @@ struct RocqBug4844 {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
-  static T1 box_rect(const SomeType, F1 &&f, const box &b) {
+  static T1 box_rect(SomeType, F1 &&f, const box &b) {
     const auto &[d_a0] = std::get<typename box::Box0>(b.v());
     return f(d_a0);
   }
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
-  static T1 box_rec(const SomeType, F1 &&f, const box &b) {
+  static T1 box_rec(SomeType, F1 &&f, const box &b) {
     const auto &[d_a0] = std::get<typename box::Box0>(b.v());
     return f(d_a0);
   }

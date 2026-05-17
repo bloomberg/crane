@@ -1,8 +1,6 @@
 #ifndef INCLUDED_EMPTY_MATCH
 #define INCLUDED_EMPTY_MATCH
 
-#include <memory>
-#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -68,12 +66,11 @@ struct EmptyMatch {
 
     // ACCESSORS
     either<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Left>(_sv.v())) {
-        const auto &[d_a0] = std::get<Left>(_sv.v());
+      if (std::holds_alternative<Left>(this->v())) {
+        const auto &[d_a0] = std::get<Left>(this->v());
         return either<t_A, t_B>(Left{d_a0});
       } else {
-        const auto &[d_a0] = std::get<Right>(_sv.v());
+        const auto &[d_a0] = std::get<Right>(this->v());
         return either<t_A, t_B>(Right{d_a0});
       }
     }

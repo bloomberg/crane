@@ -4,7 +4,6 @@
 #include <any>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -64,19 +63,18 @@ struct FreeMonad {
 
     // ACCESSORS
     IO clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Pure>(_sv.v())) {
-        const auto &[d_a] = std::get<Pure>(_sv.v());
+      if (std::holds_alternative<Pure>(this->v())) {
+        const auto &[d_a] = std::get<Pure>(this->v());
         return IO(Pure{d_a});
-      } else if (std::holds_alternative<Bind>(_sv.v())) {
-        const auto &[d_a, d_b] = std::get<Bind>(_sv.v());
+      } else if (std::holds_alternative<Bind>(this->v())) {
+        const auto &[d_a, d_b] = std::get<Bind>(this->v());
         return IO(
             Bind{d_a ? std::make_unique<FreeMonad::IO>(d_a->clone()) : nullptr,
                  d_b});
-      } else if (std::holds_alternative<Get_line>(_sv.v())) {
+      } else if (std::holds_alternative<Get_line>(this->v())) {
         return IO(Get_line{});
       } else {
-        const auto &[d_a0] = std::get<Print>(_sv.v());
+        const auto &[d_a0] = std::get<Print>(this->v());
         return IO(Print{d_a0});
       }
     }
@@ -107,7 +105,7 @@ struct FreeMonad {
       return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
-      IO d_a_value = *(d_a);
+      IO d_a_value = *d_a;
       return std::any_cast<T1>(
           f0(d_a_value, IO_rect<T1, T2>(f, f0, f1, f2, d_a_value), d_b,
              [=](const auto &a) mutable {
@@ -129,7 +127,7 @@ struct FreeMonad {
       return std::any_cast<T1>(f(std::any_cast<T2>(d_a)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[d_a, d_b] = std::get<typename IO::Bind>(i.v());
-      IO d_a_value = *(d_a);
+      IO d_a_value = *d_a;
       return std::any_cast<T1>(
           f0(d_a_value, IO_rec<T1, T2>(f, f0, f1, f2, d_a_value), d_b,
              [=](const auto &a) mutable {

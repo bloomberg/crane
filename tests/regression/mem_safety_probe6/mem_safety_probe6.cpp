@@ -14,7 +14,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<unsigned int> &l) {
     if (std::holds_alternative<
             typename MemSafetyProbe6::mylist<unsigned int>::Mynil>(
             _loop_l.v())) {
-      *(_write) = std::make_unique<
+      *_write = std::make_unique<
           MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>>(
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
@@ -22,16 +22,14 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<unsigned int> &l) {
       const auto &[d_a0, d_a1] =
           std::get<typename MemSafetyProbe6::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe6::mylist<unsigned int> d_a1_value = *(d_a1);
+      MemSafetyProbe6::mylist<unsigned int> d_a1_value = *d_a1;
       unsigned int rest_len = d_a1_value.length();
       auto _cell = std::make_unique<
           MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-              [=](const unsigned int n) mutable {
-                return ((d_a0 + rest_len) + n);
-              },
+              [=](unsigned int n) mutable { return ((d_a0 + rest_len) + n); },
               nullptr));
-      *(_write) = std::move(_cell);
+      *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
                     (*_write)->v_mut())
@@ -40,13 +38,13 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<unsigned int> &l) {
       continue;
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
 unsigned int MemSafetyProbe6::apply_chain(
     const MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>
         &fns,
-    const unsigned int
+    unsigned int
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -71,7 +69,7 @@ unsigned int MemSafetyProbe6::apply_chain(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>
-          &fns = *(_f.fns);
+          &fns = *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe6::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
         _result = x;
@@ -92,16 +90,17 @@ unsigned int MemSafetyProbe6::apply_chain(
 /// TEST 6: Closure captures tail, then tail is used again
 /// after the closure is created — tests double use.
 unsigned int MemSafetyProbe6::capture_and_reuse(
-    const unsigned int, const MemSafetyProbe6::mylist<unsigned int> &l) {
+    unsigned int, const MemSafetyProbe6::mylist<unsigned int> &l) {
   if (std::holds_alternative<
           typename MemSafetyProbe6::mylist<unsigned int>::Mynil>(l.v())) {
     return 0u;
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename MemSafetyProbe6::mylist<unsigned int>::Mycons>(l.v());
-    MemSafetyProbe6::mylist<unsigned int> d_a1_value = *(d_a1);
-    std::function<unsigned int(unsigned int)> f =
-        [=](const unsigned int n) mutable { return (d_a1_value.length() + n); };
+    MemSafetyProbe6::mylist<unsigned int> d_a1_value = *d_a1;
+    std::function<unsigned int(unsigned int)> f = [=](unsigned int n) mutable {
+      return (d_a1_value.length() + n);
+    };
     unsigned int tail_len = d_a1_value.length();
     return (f(d_a0) + tail_len);
   }

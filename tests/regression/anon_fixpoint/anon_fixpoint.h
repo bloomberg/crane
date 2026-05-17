@@ -1,17 +1,14 @@
 #ifndef INCLUDED_ANON_FIXPOINT
 #define INCLUDED_ANON_FIXPOINT
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct AnonFixpoint {
-  static unsigned int sum_to(const unsigned int n);
-  static unsigned int factorial(const unsigned int m);
-  static unsigned int double_sum(const unsigned int m);
-  static unsigned int gcd(const unsigned int a, const unsigned int b);
-  static unsigned int test_shadow(const unsigned int n);
+  static unsigned int sum_to(unsigned int n);
+  static unsigned int factorial(unsigned int m);
+  static unsigned int double_sum(unsigned int m);
+  static unsigned int gcd(unsigned int a, unsigned int b);
+  static unsigned int test_shadow(unsigned int n);
   static inline const unsigned int test_sum_5 = sum_to(5u);
   static inline const unsigned int test_sum_0 = sum_to(0u);
   static inline const unsigned int test_fact_5 = factorial(5u);

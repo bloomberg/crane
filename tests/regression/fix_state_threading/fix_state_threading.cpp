@@ -9,7 +9,7 @@ FixStateThreading::reverse_count(const List<unsigned int> &l,
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
     auto _cs =
-        reverse_count(*(d_a1), List<unsigned int>::cons(d_a0, std::move(acc)));
+        reverse_count(*d_a1, List<unsigned int>::cons(d_a0, std::move(acc)));
     const List<unsigned int> &acc_ = _cs.first;
     const unsigned int &n = _cs.second;
     return std::make_pair(std::move(_cs.first), (n + 1u));
@@ -27,10 +27,10 @@ FixStateThreading::collect_odds_evens(const List<unsigned int> &l,
         std::get<typename List<unsigned int>::Cons>(l.v());
     if (Nat::even(d_a0)) {
       return collect_odds_evens(
-          *(d_a1), std::move(odds),
+          *d_a1, std::move(odds),
           List<unsigned int>::cons(d_a0, std::move(evens)));
     } else {
-      return collect_odds_evens(*(d_a1),
+      return collect_odds_evens(*d_a1,
                                 List<unsigned int>::cons(d_a0, std::move(odds)),
                                 std::move(evens));
     }
@@ -44,14 +44,14 @@ FixStateThreading::sum_with_acc(const List<unsigned int> &l, unsigned int acc) {
   } else {
     const auto &[d_a0, d_a1] =
         std::get<typename List<unsigned int>::Cons>(l.v());
-    auto _cs = sum_with_acc(*(d_a1), (std::move(acc) + d_a0));
+    auto _cs = sum_with_acc(*d_a1, (std::move(acc) + d_a0));
     const unsigned int &acc_ = _cs.first;
     const unsigned int &s = _cs.second;
     return std::make_pair(std::move(_cs.first), (s + 1u));
   }
 }
 
-bool Nat::even(const unsigned int n) {
+bool Nat::even(unsigned int n) {
   if (n <= 0) {
     return true;
   } else {

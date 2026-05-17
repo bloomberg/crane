@@ -2,8 +2,6 @@
 #define INCLUDED_LOOPIFY_LIST_WINDOWS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -126,28 +124,25 @@ public:
 struct LoopifyListWindows {
   static unsigned int len(const List<unsigned int> &l);
   static List<List<unsigned int>>
-  map_cons_helper(const unsigned int x, const List<List<unsigned int>> &ll);
-  static List<unsigned int> drop(const unsigned int m, List<unsigned int> xs);
+  map_cons_helper(unsigned int x, const List<List<unsigned int>> &ll);
+  static List<unsigned int> drop(unsigned int m, List<unsigned int> xs);
   static std::pair<List<unsigned int>, List<unsigned int>>
-  span_eq(const unsigned int first, List<unsigned int> lst);
+  span_eq(unsigned int first, List<unsigned int> lst);
   static List<unsigned int> differences(const List<unsigned int> &l);
   static List<std::pair<unsigned int, unsigned int>>
   sliding_pairs(const List<unsigned int> &l);
   static List<List<unsigned int>> inits(const List<unsigned int> &l);
   static List<List<unsigned int>> tails(List<unsigned int> l);
-  static List<unsigned int> take(const unsigned int n,
-                                 const List<unsigned int> &l);
-  static List<List<unsigned int>> windows_fuel(const unsigned int fuel,
-                                               const unsigned int n,
-                                               const List<unsigned int> &l);
-  static List<List<unsigned int>> windows(const unsigned int n,
+  static List<unsigned int> take(unsigned int n, const List<unsigned int> &l);
+  static List<List<unsigned int>>
+  windows_fuel(unsigned int fuel, unsigned int n, const List<unsigned int> &l);
+  static List<List<unsigned int>> windows(unsigned int n,
                                           const List<unsigned int> &l);
-  static List<List<unsigned int>> chunks_fuel(const unsigned int fuel,
-                                              const unsigned int n,
+  static List<List<unsigned int>> chunks_fuel(unsigned int fuel, unsigned int n,
                                               const List<unsigned int> &l);
-  static List<List<unsigned int>> chunks(const unsigned int n,
+  static List<List<unsigned int>> chunks(unsigned int n,
                                          const List<unsigned int> &l);
-  static List<List<unsigned int>> group_fuel(const unsigned int fuel,
+  static List<List<unsigned int>> group_fuel(unsigned int fuel,
                                              const List<unsigned int> &l);
   static List<List<unsigned int>> group(const List<unsigned int> &l);
 };

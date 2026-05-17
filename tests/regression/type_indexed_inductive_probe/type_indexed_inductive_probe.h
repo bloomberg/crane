@@ -2,9 +2,6 @@
 #define INCLUDED_TYPE_INDEXED_INDUCTIVE_PROBE
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -53,8 +50,7 @@ struct TypeIndexedInductiveProbe {
 
     // ACCESSORS
     wrap clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a] = std::get<Wrap0>(_sv.v());
+      const auto &[d_a] = std::get<Wrap0>(this->v());
       return wrap(Wrap0{d_a});
     }
 
