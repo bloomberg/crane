@@ -192,24 +192,20 @@ List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
 /// rotate_left n l rotates list left by n positions.
 List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
                                                    List<uint64_t> l) {
-  List<uint64_t> _result;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = std::move(_loop_l);
-      break;
+      return _loop_l;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (_loop_n <= UINT64_C(0)) {
-        _result = std::move(_loop_l);
-        break;
+        return _loop_l;
       } else {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l.v_mut())) {
-          _result = List<uint64_t>::nil();
-          break;
+          return List<uint64_t>::nil();
         } else {
           auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
@@ -222,7 +218,6 @@ List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
       }
     }
   }
-  return _result;
 }
 
 List<uint64_t> LoopifyAlgorithms::rotate_left(uint64_t n,
@@ -290,13 +285,11 @@ List<uint64_t> LoopifyAlgorithms::nub(const List<uint64_t> &l) {
 /// Internal helpers for palindrome check.
 List<uint64_t> LoopifyAlgorithms::rev_impl(List<uint64_t> acc,
                                            const List<uint64_t> &l) {
-  List<uint64_t> _result;
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
@@ -304,29 +297,24 @@ List<uint64_t> LoopifyAlgorithms::rev_impl(List<uint64_t> acc,
       _loop_acc = List<uint64_t>::cons(a0, std::move(_loop_acc));
     }
   }
-  return _result;
 }
 
 bool LoopifyAlgorithms::list_eq_impl(const List<uint64_t> &l1,
                                      const List<uint64_t> &l2) {
-  bool _result;
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
-        _result = true;
-        break;
+        return true;
       } else {
-        _result = false;
-        break;
+        return false;
       }
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
-        _result = false;
-        break;
+        return false;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
@@ -334,13 +322,11 @@ bool LoopifyAlgorithms::list_eq_impl(const List<uint64_t> &l1,
           _loop_l2 = a10.get();
           _loop_l1 = a1.get();
         } else {
-          _result = false;
-          break;
+          return false;
         }
       }
     }
   }
-  return _result;
 }
 
 /// is_palindrome l checks if list reads same forwards and backwards.

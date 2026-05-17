@@ -26,37 +26,31 @@ HofTreeLoopify::tree<uint64_t> HofTreeLoopify::depth_tree(uint64_t n) {
 }
 
 uint64_t Nat::tail_add(uint64_t n, uint64_t m) {
-  uint64_t _result;
   uint64_t _loop_m = std::move(m);
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_m);
-      break;
+      return _loop_m;
     } else {
       uint64_t n0 = _loop_n - 1;
       _loop_m = (_loop_m + 1);
       _loop_n = n0;
     }
   }
-  return _result;
 }
 
 uint64_t Nat::tail_addmul(uint64_t r, uint64_t n, uint64_t m) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_r = std::move(r);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_r);
-      break;
+      return _loop_r;
     } else {
       uint64_t n0 = _loop_n - 1;
       _loop_n = n0;
       _loop_r = Nat::tail_add(m, _loop_r);
     }
   }
-  return _result;
 }
 
 uint64_t Nat::tail_mul(uint64_t n, uint64_t m) {
@@ -64,13 +58,11 @@ uint64_t Nat::tail_mul(uint64_t n, uint64_t m) {
 }
 
 uint64_t Nat::of_uint_acc(const Uint &d, uint64_t acc) {
-  uint64_t _result;
   uint64_t _loop_acc = std::move(acc);
   const Uint *_loop_d = &d;
   while (true) {
     if (std::holds_alternative<typename Uint::Nil>(_loop_d->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else if (std::holds_alternative<typename Uint::D0>(_loop_d->v())) {
       const auto &[a0] = std::get<typename Uint::D0>(_loop_d->v());
       _loop_acc = Nat::tail_mul(UINT64_C(10), _loop_acc);
@@ -133,7 +125,6 @@ uint64_t Nat::of_uint_acc(const Uint &d, uint64_t acc) {
       _loop_d = a0.get();
     }
   }
-  return _result;
 }
 
 uint64_t Nat::of_uint(const Uint &d) {
@@ -141,13 +132,11 @@ uint64_t Nat::of_uint(const Uint &d) {
 }
 
 uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
-  uint64_t _result;
   uint64_t _loop_acc = std::move(acc);
   const Uint0 *_loop_d = &d;
   while (true) {
     if (std::holds_alternative<typename Uint0::Nil0>(_loop_d->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else if (std::holds_alternative<typename Uint0::D10>(_loop_d->v())) {
       const auto &[a0] = std::get<typename Uint0::D10>(_loop_d->v());
       _loop_acc = Nat::tail_mul(UINT64_C(16), _loop_acc);
@@ -296,7 +285,6 @@ uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
       _loop_d = a0.get();
     }
   }
-  return _result;
 }
 
 uint64_t Nat::of_hex_uint(const Uint0 &d) {

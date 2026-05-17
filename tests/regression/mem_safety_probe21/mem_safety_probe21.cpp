@@ -58,13 +58,11 @@ uint64_t MemSafetyProbe21::tree_sum(
 /// a constructed tree. The loopifier must store the new tree
 /// somewhere that outlives the iteration.
 uint64_t MemSafetyProbe21::grow_and_sum(MemSafetyProbe21::tree t, uint64_t n) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_t = std::move(t);
   while (true) {
     if (_loop_n <= 0) {
-      _result = tree_sum(std::move(_loop_t));
-      break;
+      return tree_sum(std::move(_loop_t));
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
@@ -72,7 +70,6 @@ uint64_t MemSafetyProbe21::grow_and_sum(MemSafetyProbe21::tree t, uint64_t n) {
       _loop_n = _next_n;
     }
   }
-  return _result;
 }
 
 /// TEST 2: Non-tail recursive with constructed tree argument.
@@ -181,13 +178,11 @@ uint64_t MemSafetyProbe21::branch_grow(
 /// TEST 4: Recursive call where the tree argument is built from
 /// MULTIPLE constructor calls with the original tree embedded.
 uint64_t MemSafetyProbe21::embed_grow(MemSafetyProbe21::tree t, uint64_t n) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_t = std::move(t);
   while (true) {
     if (_loop_n <= 0) {
-      _result = tree_sum(std::move(_loop_t));
-      break;
+      return tree_sum(std::move(_loop_t));
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
@@ -197,19 +192,16 @@ uint64_t MemSafetyProbe21::embed_grow(MemSafetyProbe21::tree t, uint64_t n) {
       _loop_n = _next_n;
     }
   }
-  return _result;
 }
 
 /// TEST 5: Accumulator pattern with tree building.
 MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
                                                     uint64_t n) {
-  MemSafetyProbe21::tree _result;
   uint64_t _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_acc = std::move(acc);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
@@ -217,21 +209,18 @@ MemSafetyProbe21::tree MemSafetyProbe21::accum_tree(MemSafetyProbe21::tree acc,
       _loop_n = _next_n;
     }
   }
-  return _result;
 }
 
 /// TEST 7: Mutually-referencing recursive call with tree
 /// construction at each level.
 uint64_t MemSafetyProbe21::weave(MemSafetyProbe21::tree t1,
                                  MemSafetyProbe21::tree t2, uint64_t n) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   MemSafetyProbe21::tree _loop_t2 = std::move(t2);
   MemSafetyProbe21::tree _loop_t1 = std::move(t1);
   while (true) {
     if (_loop_n <= 0) {
-      _result = (tree_sum(std::move(_loop_t1)) + tree_sum(std::move(_loop_t2)));
-      break;
+      return (tree_sum(std::move(_loop_t1)) + tree_sum(std::move(_loop_t2)));
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
@@ -244,7 +233,6 @@ uint64_t MemSafetyProbe21::weave(MemSafetyProbe21::tree t1,
       _loop_t1 = std::move(_next_t1);
     }
   }
-  return _result;
 }
 
 /// TEST 8: Deep nesting with tree_sum at each level before recursion.

@@ -574,21 +574,18 @@ struct MemSafetyProbe15 {
     /// TEST 6: List reversal using accumulator.
     /// Tests owned parameter match optimization.
     mylist<A> rev_aux(mylist<A> acc) const {
-      mylist<A> _result;
       const mylist *_loop_self = this;
       mylist<A> _loop_acc = std::move(acc);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          _result = std::move(_loop_acc);
-          break;
+          return _loop_acc;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           _loop_self = a1.get();
           _loop_acc = mylist<A>::mycons(a0, std::move(_loop_acc));
         }
       }
-      return _result;
     }
 
     uint64_t length() const {

@@ -115,25 +115,21 @@ LoopifyListOfLists::map_tl(const List<List<uint64_t>> &ll) {
 }
 
 bool LoopifyListOfLists::all_empty(const List<List<uint64_t>> &ll) {
-  bool _result;
   const List<List<uint64_t>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll->v())) {
-      _result = true;
-      break;
+      return true;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
         _loop_ll = a1.get();
       } else {
-        _result = false;
-        break;
+        return false;
       }
     }
   }
-  return _result;
 }
 
 List<List<uint64_t>>
@@ -387,25 +383,21 @@ List<uint64_t> LoopifyListOfLists::firsts(const List<List<uint64_t>> &ll) {
 }
 
 bool LoopifyListOfLists::all_nil(const List<List<uint64_t>> &ll) {
-  bool _result;
   const List<List<uint64_t>> *_loop_ll = &ll;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll->v())) {
-      _result = true;
-      break;
+      return true;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
         _loop_ll = a1.get();
       } else {
-        _result = false;
-        break;
+        return false;
       }
     }
   }
-  return _result;
 }
 
 List<std::pair<List<uint64_t>, List<uint64_t>>>

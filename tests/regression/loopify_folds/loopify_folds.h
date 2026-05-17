@@ -163,13 +163,11 @@ struct LoopifyFolds {
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static uint64_t fold_left(F0 &&f, uint64_t acc, const List<uint64_t> &l) {
-    uint64_t _result;
     const List<uint64_t> *_loop_l = &l;
     uint64_t _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = std::move(_loop_acc);
-        break;
+        return _loop_acc;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
@@ -177,7 +175,6 @@ struct LoopifyFolds {
         _loop_acc = f(_loop_acc, a0);
       }
     }
-    return _result;
   }
 
   template <typename F0>
@@ -273,25 +270,21 @@ struct LoopifyFolds {
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static uint64_t foldl1_fuel(uint64_t fuel, F1 &&f, const List<uint64_t> &l) {
-    uint64_t _result;
     List<uint64_t> _loop_l = l;
     uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        _result = UINT64_C(0);
-        break;
+        return UINT64_C(0);
       } else {
         uint64_t fuel_ = _loop_fuel - 1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
-          _result = UINT64_C(0);
-          break;
+          return UINT64_C(0);
         } else {
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v());
           auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-            _result = std::move(a0);
-            break;
+            return a0;
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
@@ -301,7 +294,6 @@ struct LoopifyFolds {
         }
       }
     }
-    return _result;
   }
 
   template <typename F0>

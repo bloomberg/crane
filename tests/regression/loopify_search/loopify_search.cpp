@@ -144,25 +144,21 @@ LoopifySearch::longest_increasing_subseq(const List<uint64_t> &l) {
 
 /// Helper for binary search: get nth element.
 uint64_t LoopifySearch::nth_impl(uint64_t n, const List<uint64_t> &l) {
-  uint64_t _result;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = UINT64_C(0);
-        break;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        _result = std::move(a0);
-        break;
+        return a0;
       }
     } else {
       uint64_t m = _loop_n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = UINT64_C(0);
-        break;
+        return UINT64_C(0);
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
@@ -171,7 +167,6 @@ uint64_t LoopifySearch::nth_impl(uint64_t n, const List<uint64_t> &l) {
       }
     }
   }
-  return _result;
 }
 
 /// Helper for binary search: take first k elements.
@@ -208,19 +203,16 @@ List<uint64_t> LoopifySearch::take_impl(uint64_t k, const List<uint64_t> &l) {
 
 /// Helper for binary search: drop first k elements.
 List<uint64_t> LoopifySearch::drop_impl(uint64_t k, List<uint64_t> l) {
-  List<uint64_t> _result;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_k = std::move(k);
   while (true) {
     if (_loop_k <= 0) {
-      _result = std::move(_loop_l);
-      break;
+      return _loop_l;
     } else {
       uint64_t m = _loop_k - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        _result = List<uint64_t>::nil();
-        break;
+        return List<uint64_t>::nil();
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
@@ -229,33 +221,28 @@ List<uint64_t> LoopifySearch::drop_impl(uint64_t k, List<uint64_t> l) {
       }
     }
   }
-  return _result;
 }
 
 /// binary_search_fuel target sorted_list searches for target in sorted list.
 /// Returns true if found.
 bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
                                        const List<uint64_t> &l) {
-  bool _result;
   List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = false;
-      break;
+      return false;
     } else {
       uint64_t f = _loop_fuel - 1;
       uint64_t n = len_impl<uint64_t>(_loop_l);
       if (n <= 0) {
-        _result = false;
-        break;
+        return false;
       } else {
         uint64_t _x = n - 1;
         uint64_t mid = (UINT64_C(2) ? n / UINT64_C(2) : 0);
         uint64_t mid_val = nth_impl(mid, _loop_l);
         if (target == mid_val) {
-          _result = true;
-          break;
+          return true;
         } else {
           if (target < mid_val) {
             _loop_l = take_impl(mid, _loop_l);
@@ -268,7 +255,6 @@ bool LoopifySearch::binary_search_fuel(uint64_t fuel, uint64_t target,
       }
     }
   }
-  return _result;
 }
 
 bool LoopifySearch::binary_search(uint64_t target, const List<uint64_t> &l) {
@@ -279,7 +265,6 @@ bool LoopifySearch::binary_search(uint64_t target, const List<uint64_t> &l) {
 List<uint64_t> LoopifySearch::longest_run_aux(List<uint64_t> current_run,
                                               List<uint64_t> best_run,
                                               const List<uint64_t> &l) {
-  List<uint64_t> _result;
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_best_run = std::move(best_run);
   List<uint64_t> _loop_current_run = std::move(current_run);
@@ -287,11 +272,9 @@ List<uint64_t> LoopifySearch::longest_run_aux(List<uint64_t> current_run,
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       if (len_impl<uint64_t>(_loop_current_run) <=
           len_impl<uint64_t>(_loop_best_run)) {
-        _result = std::move(_loop_best_run);
-        break;
+        return _loop_best_run;
       } else {
-        _result = std::move(_loop_current_run);
-        break;
+        return _loop_current_run;
       }
     } else {
       const auto &[a0, a1] =
@@ -301,11 +284,9 @@ List<uint64_t> LoopifySearch::longest_run_aux(List<uint64_t> current_run,
         List<uint64_t> new_run =
             List<uint64_t>::cons(a0, std::move(_loop_current_run));
         if (len_impl<uint64_t>(new_run) <= len_impl<uint64_t>(_loop_best_run)) {
-          _result = std::move(_loop_best_run);
-          break;
+          return _loop_best_run;
         } else {
-          _result = std::move(new_run);
-          break;
+          return new_run;
         }
       } else {
         const auto &[a00, a10] =
@@ -331,7 +312,6 @@ List<uint64_t> LoopifySearch::longest_run_aux(List<uint64_t> current_run,
       }
     }
   }
-  return _result;
 }
 
 List<uint64_t> LoopifySearch::longest_run(const List<uint64_t> &l) {
@@ -511,24 +491,20 @@ List<uint64_t> LoopifySearch::sieve(const List<uint64_t> &l) {
 
 /// Helper: check if element is in list.
 bool LoopifySearch::elem_impl(uint64_t x, const List<uint64_t> &l) {
-  bool _result;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = false;
-      break;
+      return false;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        _result = true;
-        break;
+        return true;
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 /// nub l removes duplicates from list.
@@ -1051,26 +1027,22 @@ List<List<uint64_t>> LoopifySearch::permutations(const List<uint64_t> &l) {
 std::optional<uint64_t>
 LoopifySearch::linear_search_aux(uint64_t x, const List<uint64_t> &l,
                                  uint64_t idx) {
-  std::optional<uint64_t> _result;
   uint64_t _loop_idx = std::move(idx);
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = std::optional<uint64_t>();
-      break;
+      return std::optional<uint64_t>();
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        _result = std::make_optional<uint64_t>(_loop_idx);
-        break;
+        return std::make_optional<uint64_t>(_loop_idx);
       } else {
         _loop_idx = (_loop_idx + 1);
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 std::optional<uint64_t> LoopifySearch::linear_search(uint64_t x,

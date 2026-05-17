@@ -473,27 +473,22 @@ struct LoopifySequences {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> drop_while(F0 &&p, const List<uint64_t> &l) {
-    List<uint64_t> _result;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = List<uint64_t>::nil();
-        break;
+        return List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
           _loop_l = a1.get();
         } else {
-          _result = List<uint64_t>::cons(a0, *a1);
-          break;
+          return List<uint64_t>::cons(a0, *a1);
         }
       }
     }
-    return _result;
-  }
+  } /// Helper: check if element is in list.
 
-  /// Helper: check if element is in list.
   static bool elem(uint64_t x, const List<uint64_t> &l);
   /// Helper: filter list.
   static List<uint64_t> filter_ne(uint64_t x, const List<uint64_t> &l);

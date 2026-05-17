@@ -162,15 +162,13 @@ MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>>
 MemSafetyProbe9::list_accum_closures(
     const MemSafetyProbe9::mylist<uint64_t> &l,
     MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> acc) {
-  MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _result;
   MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _loop_acc =
       std::move(acc);
   MemSafetyProbe9::mylist<uint64_t> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe9::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe9::mylist<uint64_t>::Mycons>(
@@ -185,7 +183,6 @@ MemSafetyProbe9::list_accum_closures(
       _loop_l = a1_value;
     }
   }
-  return _result;
 }
 
 /// TEST 6: Stress test — large tree, many closures.

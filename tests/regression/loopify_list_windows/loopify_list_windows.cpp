@@ -69,19 +69,16 @@ LoopifyListWindows::map_cons_helper(uint64_t x,
 }
 
 List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
-  List<uint64_t> _result;
   List<uint64_t> _loop_xs = std::move(xs);
   uint64_t _loop_m = std::move(m);
   while (true) {
     if (_loop_m <= 0) {
-      _result = std::move(_loop_xs);
-      break;
+      return _loop_xs;
     } else {
       uint64_t m_ = _loop_m - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_xs.v_mut())) {
-        _result = List<uint64_t>::nil();
-        break;
+        return List<uint64_t>::nil();
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
@@ -90,7 +87,6 @@ List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
       }
     }
   }
-  return _result;
 }
 
 std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(

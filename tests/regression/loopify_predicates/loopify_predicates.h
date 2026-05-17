@@ -155,25 +155,21 @@ struct LoopifyPredicates {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> drop_while(F0 &&p, List<uint64_t> l) {
-    List<uint64_t> _result;
     List<uint64_t> _loop_l = std::move(l);
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        _result = List<uint64_t>::nil();
-        break;
+        return List<uint64_t>::nil();
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
         if (p(std::move(a0))) {
           _loop_l = std::move(*a1);
         } else {
-          _result = std::move(_loop_l);
-          break;
+          return _loop_l;
         }
       }
     }
-    return _result;
   }
 
   template <typename F0>
@@ -399,26 +395,22 @@ struct LoopifyPredicates {
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::optional<uint64_t> find_index_aux(F0 &&p, const List<uint64_t> &l,
                                                 uint64_t idx) {
-    std::optional<uint64_t> _result;
     uint64_t _loop_idx = std::move(idx);
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = std::optional<uint64_t>();
-        break;
+        return std::optional<uint64_t>();
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<uint64_t>(_loop_idx);
-          break;
+          return std::make_optional<uint64_t>(_loop_idx);
         } else {
           _loop_idx = (_loop_idx + UINT64_C(1));
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   template <typename F0>

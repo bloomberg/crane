@@ -43,22 +43,18 @@ uint64_t LoopifyNestedConstructs::multi_let(
 }
 
 uint64_t LoopifyNestedConstructs::nested_if_fuel(uint64_t fuel, uint64_t n) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = UINT64_C(0);
-      break;
+      return UINT64_C(0);
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (_loop_n <= UINT64_C(0)) {
-        _result = UINT64_C(0);
-        break;
+        return UINT64_C(0);
       } else {
         if (_loop_n == UINT64_C(1)) {
-          _result = UINT64_C(1);
-          break;
+          return UINT64_C(1);
         } else {
           if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
             if (UINT64_C(10) < _loop_n) {
@@ -80,7 +76,6 @@ uint64_t LoopifyNestedConstructs::nested_if_fuel(uint64_t fuel, uint64_t n) {
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyNestedConstructs::nested_if(uint64_t n) {

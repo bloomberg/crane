@@ -368,13 +368,11 @@ MemSafetyProbe22::insert(const MemSafetyProbe22::tree &t,
 
 MemSafetyProbe22::tree MemSafetyProbe22::insert_all(MemSafetyProbe22::tree t,
                                                     const List<uint64_t> &xs) {
-  MemSafetyProbe22::tree _result;
   const List<uint64_t> *_loop_xs = &xs;
   MemSafetyProbe22::tree _loop_t = std::move(t);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
-      _result = std::move(_loop_t);
-      break;
+      return _loop_t;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
@@ -382,7 +380,6 @@ MemSafetyProbe22::tree MemSafetyProbe22::insert_all(MemSafetyProbe22::tree t,
       _loop_t = insert(std::move(_loop_t), a0);
     }
   }
-  return _result;
 }
 
 /// TEST 8: Deep tree transformation with two recursive calls.

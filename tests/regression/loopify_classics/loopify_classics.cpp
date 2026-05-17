@@ -312,19 +312,16 @@ uint64_t LoopifyClassics::pascal(uint64_t row, uint64_t col) {
 }
 
 uint64_t LoopifyClassics::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
-  uint64_t _result;
   uint64_t _loop_b = std::move(b);
   uint64_t _loop_a = std::move(a);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = std::move(_loop_a);
-      break;
+      return _loop_a;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (_loop_b == UINT64_C(0)) {
-        _result = std::move(_loop_a);
-        break;
+        return _loop_a;
       } else {
         uint64_t _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
         uint64_t _next_a = _loop_b;
@@ -334,7 +331,6 @@ uint64_t LoopifyClassics::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyClassics::gcd(uint64_t a, uint64_t b) {

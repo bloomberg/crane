@@ -108,30 +108,25 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
 
 bool LoopifyListRelations::is_infix_of_aux(const List<uint64_t> &needle,
                                            const List<uint64_t> &haystack) {
-  bool _result;
   const List<uint64_t> *_loop_haystack = &haystack;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(
             _loop_haystack->v())) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(needle.v())) {
-        _result = true;
-        break;
+        return true;
       } else {
-        _result = false;
-        break;
+        return false;
       }
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_haystack->v());
       if (is_prefix_of(needle, *_loop_haystack)) {
-        _result = true;
-        break;
+        return true;
       } else {
         _loop_haystack = a1.get();
       }
     }
   }
-  return _result;
 }
 
 bool LoopifyListRelations::is_infix_of(const List<uint64_t> &_x0,
@@ -235,34 +230,28 @@ bool LoopifyListRelations::list_eq(
 
 uint64_t LoopifyListRelations::list_compare(const List<uint64_t> &l1,
                                             const List<uint64_t> &l2) {
-  uint64_t _result;
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
-        _result = UINT64_C(0);
-        break;
+        return UINT64_C(0);
       } else {
-        _result = UINT64_C(1);
-        break;
+        return UINT64_C(1);
       }
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
-        _result = UINT64_C(2);
-        break;
+        return UINT64_C(2);
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
         if (a0 < a00) {
-          _result = UINT64_C(1);
-          break;
+          return UINT64_C(1);
         } else {
           if (a00 < a0) {
-            _result = UINT64_C(2);
-            break;
+            return UINT64_C(2);
           } else {
             _loop_l2 = a10.get();
             _loop_l1 = a1.get();
@@ -271,7 +260,6 @@ uint64_t LoopifyListRelations::list_compare(const List<uint64_t> &l1,
       }
     }
   }
-  return _result;
 }
 
 List<std::pair<uint64_t, uint64_t>>

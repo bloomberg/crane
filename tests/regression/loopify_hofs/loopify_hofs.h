@@ -189,20 +189,17 @@ struct LoopifyHofs {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 foldl1_aux(F0 &&f, T1 acc, const List<T1> &l) {
-    T1 _result;
     const List<T1> *_loop_l = &l;
     T1 _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = std::move(_loop_acc);
-        break;
+        return _loop_acc;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         _loop_l = a1.get();
         _loop_acc = f(_loop_acc, a0);
       }
     }
-    return _result;
   }
 
   template <typename T1, typename F0>
@@ -220,72 +217,58 @@ struct LoopifyHofs {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static bool forall_(F0 &&p, const List<T1> &l) {
-    bool _result;
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = true;
-        break;
+        return true;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
           _loop_l = a1.get();
         } else {
-          _result = false;
-          break;
+          return false;
         }
       }
     }
-    return _result;
   }
 
   /// exists_fn p l checks if any element satisfies predicate p.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static bool exists_fn(F0 &&p, const List<T1> &l) {
-    bool _result;
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = false;
-        break;
+        return false;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = true;
-          break;
+          return true;
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
-  }
+  } /// drop_while p l drops elements while predicate holds.
 
-  /// drop_while p l drops elements while predicate holds.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> drop_while(F0 &&p, const List<T1> &l) {
-    List<T1> _result;
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = List<T1>::nil();
-        break;
+        return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
           _loop_l = a1.get();
         } else {
-          _result = List<T1>::cons(a0, *a1);
-          break;
+          return List<T1>::cons(a0, *a1);
         }
       }
     }
-    return _result;
-  }
+  } /// take_while p l takes elements while predicate holds.
 
-  /// take_while p l takes elements while predicate holds.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> take_while(F0 &&p, const List<T1> &l) {
@@ -1157,24 +1140,20 @@ struct LoopifyHofs {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static bool any(F0 &&p, const List<uint64_t> &l) {
-    bool _result;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = false;
-        break;
+        return false;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = true;
-          break;
+          return true;
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   /// all p l checks if all elements satisfy predicate (same as forall_ but
@@ -1182,24 +1161,20 @@ struct LoopifyHofs {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static bool all(F0 &&p, const List<uint64_t> &l) {
-    bool _result;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = true;
-        break;
+        return true;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
           _loop_l = a1.get();
         } else {
-          _result = false;
-          break;
+          return false;
         }
       }
     }
-    return _result;
   }
 
   /// filter_not p l filters elements that don't satisfy predicate.

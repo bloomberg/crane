@@ -329,15 +329,13 @@ uint64_t MemSafetyProbe4::process_list(
 /// TEST 7: Nested recursion with closure capture across calls.
 uint64_t MemSafetyProbe4::nested_apply(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l, uint64_t base) {
-  uint64_t _result;
   uint64_t _loop_base = std::move(base);
   const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
             _loop_l->v())) {
-      _result = std::move(_loop_base);
-      break;
+      return _loop_base;
     } else {
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
@@ -349,5 +347,4 @@ uint64_t MemSafetyProbe4::nested_apply(
       _loop_l = a1.get();
     }
   }
-  return _result;
 }

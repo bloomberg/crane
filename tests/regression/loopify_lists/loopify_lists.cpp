@@ -633,21 +633,18 @@ LoopifyLists::windows(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
 /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
 bool LoopifyLists::is_prefix_of(const LoopifyLists::list<uint64_t> &l1,
                                 const LoopifyLists::list<uint64_t> &l2) {
-  bool _result;
   const LoopifyLists::list<uint64_t> *_loop_l2 = &l2;
   const LoopifyLists::list<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l1->v())) {
-      _result = true;
-      break;
+      return true;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _loop_l2->v())) {
-        _result = false;
-        break;
+        return false;
       } else {
         const auto &[a00, a10] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(
@@ -656,13 +653,11 @@ bool LoopifyLists::is_prefix_of(const LoopifyLists::list<uint64_t> &l1,
           _loop_l2 = a10.get();
           _loop_l1 = a1.get();
         } else {
-          _result = false;
-          break;
+          return false;
         }
       }
     }
   }
-  return _result;
 }
 
 /// lookup_all key l finds all values for key in association list.
@@ -703,25 +698,21 @@ LoopifyLists::list<uint64_t> LoopifyLists::lookup_all(
 
 /// member x l checks if x is in the list.
 bool LoopifyLists::member(uint64_t x, const LoopifyLists::list<uint64_t> &l) {
-  bool _result;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = false;
-      break;
+      return false;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        _result = true;
-        break;
+        return true;
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 /// product l multiplies all elements in the list.
@@ -1046,27 +1037,23 @@ LoopifyLists::swizzle(
 uint64_t LoopifyLists::index_of_aux(uint64_t x,
                                     const LoopifyLists::list<uint64_t> &l,
                                     uint64_t i) {
-  uint64_t _result;
   uint64_t _loop_i = std::move(i);
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = UINT64_C(0);
-      break;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        _result = std::move(_loop_i);
-        break;
+        return _loop_i;
       } else {
         _loop_i = (_loop_i + 1);
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyLists::index_of(uint64_t x,
@@ -1123,14 +1110,12 @@ LoopifyLists::interleave(LoopifyLists::list<uint64_t> l1,
 /// lookup key l finds value for key in association list.
 uint64_t LoopifyLists::lookup(
     uint64_t key, const LoopifyLists::list<std::pair<uint64_t, uint64_t>> &l) {
-  uint64_t _result;
   const LoopifyLists::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Nil>(
             _loop_l->v())) {
-      _result = UINT64_C(0);
-      break;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<
           typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Cons>(
@@ -1138,14 +1123,12 @@ uint64_t LoopifyLists::lookup(
       const uint64_t &k = a0.first;
       const uint64_t &v = a0.second;
       if (k == key) {
-        _result = std::move(v);
-        break;
+        return v;
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 /// group l groups consecutive equal elements: 1,1,2,2,2,3 -> [1,1],[2,2,2],[3].
@@ -1202,14 +1185,12 @@ LoopifyLists::group(const LoopifyLists::list<uint64_t> &l) {
 LoopifyLists::list<uint64_t>
 LoopifyLists::rev_helper(LoopifyLists::list<uint64_t> acc,
                          const LoopifyLists::list<uint64_t> &l) {
-  LoopifyLists::list<uint64_t> _result;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   LoopifyLists::list<uint64_t> _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
@@ -1217,7 +1198,6 @@ LoopifyLists::rev_helper(LoopifyLists::list<uint64_t> acc,
       _loop_acc = list<uint64_t>::cons(a0, std::move(_loop_acc));
     }
   }
-  return _result;
 }
 
 /// reverse_insert x l inserts x and reverses at each step.
@@ -1499,20 +1479,17 @@ LoopifyLists::unzip(
 /// nth n l default returns nth element or default if out of bounds.
 uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
                            uint64_t default0) {
-  uint64_t _result;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = std::move(default0);
-      break;
+      return default0;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        _result = std::move(a0);
-        break;
+        return a0;
       } else {
         _loop_l = a1.get();
         _loop_n =
@@ -1520,52 +1497,44 @@ uint64_t LoopifyLists::nth(uint64_t n, const LoopifyLists::list<uint64_t> &l,
       }
     }
   }
-  return _result;
 }
 
 /// last l default returns last element or default if empty.
 uint64_t LoopifyLists::last(const LoopifyLists::list<uint64_t> &l,
                             uint64_t default0) {
-  uint64_t _result;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = std::move(default0);
-      break;
+      return default0;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv.v())) {
-        _result = std::move(a0);
-        break;
+        return a0;
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 /// drop n l drops first n elements.
 LoopifyLists::list<uint64_t>
 LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
-  LoopifyLists::list<uint64_t> _result;
   LoopifyLists::list<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l.v_mut())) {
-      _result = list<uint64_t>::nil();
-      break;
+      return list<uint64_t>::nil();
     } else {
       auto &[a0, a1] = std::get<typename LoopifyLists::list<uint64_t>::Cons>(
           _loop_l.v_mut());
       if (_loop_n == UINT64_C(0)) {
-        _result = std::move(_loop_l);
-        break;
+        return _loop_l;
       } else {
         _loop_l = std::move(*a1);
         _loop_n =
@@ -1573,7 +1542,6 @@ LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
       }
     }
   }
-  return _result;
 }
 
 /// init l returns all but last element.
@@ -1768,24 +1736,20 @@ std::pair<uint64_t, uint64_t> LoopifyLists::minmax(
 LoopifyLists::list<uint64_t>
 LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
                                LoopifyLists::list<uint64_t> l) {
-  LoopifyLists::list<uint64_t> _result;
   LoopifyLists::list<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = std::move(_loop_l);
-      break;
+      return _loop_l;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (_loop_n == UINT64_C(0)) {
-        _result = std::move(_loop_l);
-        break;
+        return _loop_l;
       } else {
         if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
                 _loop_l.v_mut())) {
-          _result = list<uint64_t>::nil();
-          break;
+          return list<uint64_t>::nil();
         } else {
           auto &[a0, a1] =
               std::get<typename LoopifyLists::list<uint64_t>::Cons>(
@@ -1799,7 +1763,6 @@ LoopifyLists::rotate_left_fuel(uint64_t fuel, uint64_t n,
       }
     }
   }
-  return _result;
 }
 
 /// rotate_left n l rotates list left by n positions: rotate 2 1,2,3,4 ->
@@ -2041,20 +2004,17 @@ std::pair<uint64_t, uint64_t> LoopifyLists::sum_and_count(
 /// elem_at n l returns element at index n (like nth but with different name).
 std::optional<uint64_t>
 LoopifyLists::elem_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
-  std::optional<uint64_t> _result;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = std::optional<uint64_t>();
-      break;
+      return std::optional<uint64_t>();
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        _result = std::make_optional<uint64_t>(a0);
-        break;
+        return std::make_optional<uint64_t>(a0);
       } else {
         _loop_l = a1.get();
         _loop_n =
@@ -2062,5 +2022,4 @@ LoopifyLists::elem_at(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
       }
     }
   }
-  return _result;
 }

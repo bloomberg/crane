@@ -204,19 +204,16 @@ List<uint64_t> LoopifyListTransforms::take(uint64_t n,
 }
 
 List<uint64_t> LoopifyListTransforms::drop(uint64_t n, List<uint64_t> l) {
-  List<uint64_t> _result;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_l);
-      break;
+      return _loop_l;
     } else {
       uint64_t n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        _result = List<uint64_t>::nil();
-        break;
+        return List<uint64_t>::nil();
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
@@ -225,7 +222,6 @@ List<uint64_t> LoopifyListTransforms::drop(uint64_t n, List<uint64_t> l) {
       }
     }
   }
-  return _result;
 }
 
 List<List<uint64_t>>
@@ -277,24 +273,20 @@ List<List<uint64_t>> LoopifyListTransforms::chunks_of(uint64_t n,
 List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
                                                        uint64_t n,
                                                        List<uint64_t> l) {
-  List<uint64_t> _result;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = std::move(_loop_l);
-      break;
+      return _loop_l;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (_loop_n <= UINT64_C(0)) {
-        _result = std::move(_loop_l);
-        break;
+        return _loop_l;
       } else {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l.v_mut())) {
-          _result = List<uint64_t>::nil();
-          break;
+          return List<uint64_t>::nil();
         } else {
           auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
@@ -308,7 +300,6 @@ List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
       }
     }
   }
-  return _result;
 }
 
 List<uint64_t> LoopifyListTransforms::rotate_left(uint64_t n,

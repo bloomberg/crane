@@ -394,14 +394,12 @@ uint64_t LoopifyNumericSequences::dec_to_bin(uint64_t n) {
 
 uint64_t LoopifyNumericSequences::alternate_sum(bool sign, uint64_t acc,
                                                 const List<uint64_t> &l) {
-  uint64_t _result;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_acc = std::move(acc);
   bool _loop_sign = std::move(sign);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
@@ -422,7 +420,6 @@ uint64_t LoopifyNumericSequences::alternate_sum(bool sign, uint64_t acc,
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyNumericSequences::sum_divisors_aux(

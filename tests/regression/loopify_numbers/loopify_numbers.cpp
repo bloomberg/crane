@@ -185,19 +185,16 @@ uint64_t LoopifyNumbers::tribonacci(uint64_t n) {
 }
 
 uint64_t LoopifyNumbers::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
-  uint64_t _result;
   uint64_t _loop_b = std::move(b);
   uint64_t _loop_a = std::move(a);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = std::move(_loop_a);
-      break;
+      return _loop_a;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (_loop_b <= 0) {
-        _result = std::move(_loop_a);
-        break;
+        return _loop_a;
       } else {
         uint64_t _x = _loop_b - 1;
         uint64_t _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
@@ -208,7 +205,6 @@ uint64_t LoopifyNumbers::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyNumbers::gcd(uint64_t a, uint64_t b) {
@@ -649,14 +645,12 @@ uint64_t LoopifyNumbers::sum_squares(
 }
 
 uint64_t LoopifyNumbers::alternating_sum(bool sign, uint64_t acc, uint64_t n) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_acc = std::move(acc);
   bool _loop_sign = std::move(sign);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       uint64_t m = _loop_n - 1;
       uint64_t new_acc;
@@ -671,7 +665,6 @@ uint64_t LoopifyNumbers::alternating_sum(bool sign, uint64_t acc, uint64_t n) {
       _loop_sign = !(_loop_sign);
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyNumbers::staircase_fuel(
@@ -970,30 +963,25 @@ uint64_t LoopifyNumbers::mixed_arith(uint64_t n) {
 
 /// is_even n checks if n is even (mutually recursive with is_odd).
 bool LoopifyNumbers::is_even_fuel(uint64_t fuel, uint64_t n) {
-  bool _result;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = true;
-      break;
+      return true;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (_loop_n == UINT64_C(0)) {
-        _result = true;
-        break;
+        return true;
       } else {
         uint64_t _inl_n =
             (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         uint64_t _inl_fuel = f;
         if (_inl_fuel <= 0) {
-          _result = false;
-          break;
+          return false;
         } else {
           uint64_t f = _inl_fuel - 1;
           if (_inl_n == UINT64_C(0)) {
-            _result = false;
-            break;
+            return false;
           } else {
             _loop_n = ((
                 (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
@@ -1003,34 +991,28 @@ bool LoopifyNumbers::is_even_fuel(uint64_t fuel, uint64_t n) {
       }
     }
   }
-  return _result;
 }
 
 bool LoopifyNumbers::is_odd_fuel(uint64_t fuel, uint64_t n) {
-  bool _result;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = false;
-      break;
+      return false;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (_loop_n == UINT64_C(0)) {
-        _result = false;
-        break;
+        return false;
       } else {
         uint64_t _inl_n =
             (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         uint64_t _inl_fuel = f;
         if (_inl_fuel <= 0) {
-          _result = true;
-          break;
+          return true;
         } else {
           uint64_t f = _inl_fuel - 1;
           if (_inl_n == UINT64_C(0)) {
-            _result = true;
-            break;
+            return true;
           } else {
             _loop_n = ((
                 (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
@@ -1040,7 +1022,6 @@ bool LoopifyNumbers::is_odd_fuel(uint64_t fuel, uint64_t n) {
       }
     }
   }
-  return _result;
 }
 
 bool LoopifyNumbers::is_even(uint64_t n) {

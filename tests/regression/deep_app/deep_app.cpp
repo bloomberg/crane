@@ -3,13 +3,11 @@
 /// Tail-recursive builder — loopified.
 DeepApp::mylist<uint64_t> DeepApp::build(uint64_t n,
                                          DeepApp::mylist<uint64_t> acc) {
-  DeepApp::mylist<uint64_t> _result;
   DeepApp::mylist<uint64_t> _loop_acc = std::move(acc);
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
@@ -17,7 +15,6 @@ DeepApp::mylist<uint64_t> DeepApp::build(uint64_t n,
       _loop_n = _next_n;
     }
   }
-  return _result;
 }
 
 /// Identity map to force traversal.

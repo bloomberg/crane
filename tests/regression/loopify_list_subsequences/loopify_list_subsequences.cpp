@@ -163,42 +163,35 @@ List<uint64_t> LoopifyListSubsequences::snoc(const List<uint64_t> &l,
 }
 
 uint64_t LoopifyListSubsequences::last_elem(const List<uint64_t> &l) {
-  uint64_t _result;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = UINT64_C(0);
-      break;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        _result = std::move(a0);
-        break;
+        return a0;
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyListSubsequences::nth_elem(uint64_t n,
                                            const List<uint64_t> &l) {
-  uint64_t _result;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = UINT64_C(0);
-      break;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        _result = std::move(a0);
-        break;
+        return a0;
       } else {
         _loop_l = a1.get();
         _loop_n =
@@ -206,7 +199,6 @@ uint64_t LoopifyListSubsequences::nth_elem(uint64_t n,
       }
     }
   }
-  return _result;
 }
 
 std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(

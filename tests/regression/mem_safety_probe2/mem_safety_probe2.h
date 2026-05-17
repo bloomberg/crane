@@ -531,21 +531,18 @@ struct MemSafetyProbe2 {
     /// TEST 17: Build a list of closures, reverse it, and apply all.
     /// Probes whether closures survive list operations.
     mylist<A> myrev_append(mylist<A> acc) const {
-      mylist<A> _result;
       const mylist *_loop_self = this;
       mylist<A> _loop_acc = std::move(acc);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          _result = std::move(_loop_acc);
-          break;
+          return _loop_acc;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           _loop_self = a1.get();
           _loop_acc = mylist<A>::mycons(a0, std::move(_loop_acc));
         }
       }
-      return _result;
     }
 
     uint64_t mylength() const {

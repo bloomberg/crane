@@ -252,24 +252,20 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1> static std::optional<T1> poly_last(const List<T1> &l) {
-    std::optional<T1> _result;
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         auto &&_sv = *a1;
         if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-          _result = std::make_optional<T1>(a0);
-          break;
+          return std::make_optional<T1>(a0);
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   template <typename T1>
@@ -304,18 +300,15 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1> static List<T1> poly_drop(uint64_t n, List<T1> l) {
-    List<T1> _result;
     List<T1> _loop_l = std::move(l);
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        _result = std::move(_loop_l);
-        break;
+        return _loop_l;
       } else {
         uint64_t n_ = _loop_n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v_mut())) {
-          _result = List<T1>::nil();
-          break;
+          return List<T1>::nil();
         } else {
           auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l.v_mut());
           _loop_l = std::move(*a1);
@@ -323,23 +316,19 @@ struct LoopifyPolymorphic {
         }
       }
     }
-    return _result;
   }
 
   template <typename T1>
   static std::optional<T1> poly_nth(uint64_t n, const List<T1> &l) {
-    std::optional<T1> _result;
     const List<T1> *_loop_l = &l;
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (_loop_n == UINT64_C(0)) {
-          _result = std::make_optional<T1>(a0);
-          break;
+          return std::make_optional<T1>(a0);
         } else {
           _loop_l = a1.get();
           _loop_n = ((
@@ -347,7 +336,6 @@ struct LoopifyPolymorphic {
         }
       }
     }
-    return _result;
   }
 
   template <typename T1, typename F0>
@@ -532,23 +520,19 @@ struct LoopifyPolymorphic {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static bool poly_member(F0 &&eq, const T1 &x, const List<T1> &l) {
-    bool _result;
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = false;
-        break;
+        return false;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         if (eq(x, a0)) {
-          _result = true;
-          break;
+          return true;
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   template <typename T1> static List<T1> poly_replicate(uint64_t n, T1 x) {

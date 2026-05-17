@@ -229,13 +229,11 @@ struct TailrecReorderProbe {
   /// loopify pass.
   template <typename T1>
   static mylist<T1> my_rev_append(const mylist<T1> &l, mylist<T1> acc) {
-    mylist<T1> _result;
     mylist<T1> _loop_acc = std::move(acc);
     const mylist<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
-        _result = std::move(_loop_acc);
-        break;
+        return _loop_acc;
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l->v());
@@ -243,7 +241,6 @@ struct TailrecReorderProbe {
         _loop_l = a1.get();
       }
     }
-    return _result;
   }
 
   template <typename T1> static mylist<T1> my_reverse(const mylist<T1> &l) {

@@ -41,26 +41,22 @@ List<uint64_t> LoopifySearchOpt::longest_run_fuel(uint64_t fuel,
                                                   List<uint64_t> current,
                                                   List<uint64_t> best,
                                                   const List<uint64_t> &l) {
-  List<uint64_t> _result;
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_best = std::move(best);
   List<uint64_t> _loop_current = std::move(current);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = std::move(_loop_best);
-      break;
+      return _loop_best;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         uint64_t len_curr = _loop_current.length();
         uint64_t len_best = _loop_best.length();
         if (len_best < len_curr) {
-          _result = std::move(_loop_current);
-          break;
+          return _loop_current;
         } else {
-          _result = std::move(_loop_best);
-          break;
+          return _loop_best;
         }
       } else {
         const auto &[a0, a1] =
@@ -95,7 +91,6 @@ List<uint64_t> LoopifySearchOpt::longest_run_fuel(uint64_t fuel,
       }
     }
   }
-  return _result;
 }
 
 List<uint64_t> LoopifySearchOpt::longest_run(const List<uint64_t> &l) {
@@ -314,35 +309,29 @@ std::pair<uint64_t, uint64_t> LoopifySearchOpt::majority(
 
 bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                                           const List<uint64_t> &l) {
-  bool _result;
   List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = false;
-      break;
+      return false;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
-        _result = false;
-        break;
+        return false;
       } else {
         uint64_t len = _loop_l.length();
         if (len <= UINT64_C(1)) {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
                   _loop_l.v())) {
-            _result = false;
-            break;
+            return false;
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_loop_l.v());
             auto &&_sv = *a10;
             if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-              _result = a00 == target;
-              break;
+              return a00 == target;
             } else {
-              _result = false;
-              break;
+              return false;
             }
           }
         } else {
@@ -427,15 +416,13 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
               _loop_l = std::move(right);
               _loop_fuel = fuel_;
             } else {
-              _result = true;
-              break;
+              return true;
             }
           }
         }
       }
     }
   }
-  return _result;
 }
 
 bool LoopifySearchOpt::binary_search(uint64_t target, const List<uint64_t> &l) {

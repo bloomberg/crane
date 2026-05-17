@@ -319,13 +319,11 @@ List<uint64_t> LoopifySorting::quicksort(const List<uint64_t> &l) {
 }
 
 bool LoopifySorting::is_sorted_aux(uint64_t prev, const List<uint64_t> &l) {
-  bool _result;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_prev = std::move(prev);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = true;
-      break;
+      return true;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
@@ -333,12 +331,10 @@ bool LoopifySorting::is_sorted_aux(uint64_t prev, const List<uint64_t> &l) {
         _loop_l = a1.get();
         _loop_prev = a0;
       } else {
-        _result = false;
-        break;
+        return false;
       }
     }
   }
-  return _result;
 }
 
 bool LoopifySorting::is_sorted(const List<uint64_t> &l) {

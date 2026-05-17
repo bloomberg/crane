@@ -219,62 +219,51 @@ struct LoopifyOption {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<T1> find_opt(F0 &&p, const list<T1> &l) {
-    std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<T1>(a0);
-          break;
+          return std::make_optional<T1>(a0);
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   /// last_opt l returns the last element, or None for empty.
   template <typename T1> static std::optional<T1> last_opt(const list<T1> &l) {
-    std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         auto &&_sv = *a1;
         if (std::holds_alternative<typename list<T1>::Nil>(_sv.v())) {
-          _result = std::make_optional<T1>(a0);
-          break;
+          return std::make_optional<T1>(a0);
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   /// nth_opt n l returns the nth element, or None for out of bounds.
   template <typename T1>
   static std::optional<T1> nth_opt(uint64_t n, const list<T1> &l) {
-    std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (_loop_n == UINT64_C(0)) {
-          _result = std::make_optional<T1>(a0);
-          break;
+          return std::make_optional<T1>(a0);
         } else {
           _loop_l = a1.get();
           _loop_n = ((
@@ -282,7 +271,6 @@ struct LoopifyOption {
         }
       }
     }
-    return _result;
   }
 
   /// lookup_opt key l looks up key in an association list.
@@ -312,25 +300,21 @@ struct LoopifyOption {
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<uint64_t> find_index_aux(F0 &&p, const list<T1> &l,
                                                 uint64_t i) {
-    std::optional<uint64_t> _result;
     uint64_t _loop_i = std::move(i);
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<uint64_t>();
-        break;
+        return std::optional<uint64_t>();
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<uint64_t>(_loop_i);
-          break;
+          return std::make_optional<uint64_t>(_loop_i);
         } else {
           _loop_i = (_loop_i + 1);
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   template <typename T1, typename F0>

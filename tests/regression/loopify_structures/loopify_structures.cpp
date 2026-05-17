@@ -205,24 +205,20 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
 /// find_first_some l finds first Some value in list of options.
 std::optional<uint64_t>
 LoopifyStructures::find_first_some(const List<std::optional<uint64_t>> &l) {
-  std::optional<uint64_t> _result;
   const List<std::optional<uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<std::optional<uint64_t>>::Nil>(
             _loop_l->v())) {
-      _result = std::optional<uint64_t>();
-      break;
+      return std::optional<uint64_t>();
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::optional<uint64_t>>::Cons>(_loop_l->v());
       if (a0.has_value()) {
         const uint64_t &v = *a0;
-        _result = std::make_optional<uint64_t>(v);
-        break;
+        return std::make_optional<uint64_t>(v);
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }

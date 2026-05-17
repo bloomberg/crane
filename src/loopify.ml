@@ -1188,11 +1188,10 @@ let move_if_lvalue = function
 let assign_result expr =
   [Sexpr (CPPbinop ("=", CPPvar (id_result), move_if_lvalue expr))]
 
-(** Assign [expr] to [_result] and set [_continue = false] to exit
-    the tail-recursion while loop.  Used only in tail-recursion rewriting. *)
+(** Return [expr] directly from the tail-recursion while loop.
+    Used only in tail-recursion rewriting. *)
 let assign_result_and_stop expr =
-  [ Sexpr (CPPbinop ("=", CPPvar (id_result), move_if_lvalue expr));
-    Sbreak ]
+  [ Sreturn (Some (move_if_lvalue expr)) ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For
     a recursive call like [f b (a mod b)], we must evaluate all argument
@@ -1361,7 +1360,7 @@ type loop_rewrite_config = {
 
   rc_on_other_return : cpp_expr -> cpp_stmt list;
   (** Emit code for a non-tail-call return ([rc_check] returned [None]).
-      - Tail: {!assign_result_and_stop} (assign [_result], break).
+      - Tail: {!assign_result_and_stop} (return directly).
       - TMC inner: dispatch on call count — base cases patch the write
         pointer and break; TMC branches allocate cells with holes.
       - TMC top: same but appends [Scontinue] after TMC branches. *)
@@ -1800,18 +1799,16 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
   in
   let body'' = strip_unnecessary_blocks body'' in
   (* Assemble the loop body.
-     - Non-void: [T _result; ... while (true) { ... break; } return _result;]
+     - Non-void: [... while (true) { ... return val; }]
      - Void:     [... while (true) { ... } return;]
-     Non-void base cases exit via [Sbreak] (from [assign_result_and_stop]).
+     Non-void base cases return directly via [Sreturn] (from
+     [assign_result_and_stop]); no [_result] variable or trailing return needed
+     since [while (true)] without [break] never falls through.
      Void base cases exit via [Sreturn None] (plain [return;]).
      Both use [while (true)] for the loop condition. *)
-  (if is_void then [] else [Sdecl (id_result, ret_ty)])
-  @ shadow_decls
-  @ [
-      Swhile (CPPbool true, body'');
-      (if is_void then Sreturn None else
-       Sreturn (Some (CPPvar (id_result))));
-    ]
+  shadow_decls
+  @ [Swhile (CPPbool true, body'')]
+  @ (if is_void then [Sreturn None] else [])
 
 (* {2 Non-tail recursion transformation}
 

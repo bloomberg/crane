@@ -135,24 +135,20 @@ struct LoopifyListAccess {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static uint64_t find(F0 &&p, const List<uint64_t> &l) {
-    uint64_t _result;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = UINT64_C(0);
-        break;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::move(a0);
-          break;
+          return a0;
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   static uint64_t count(uint64_t x, const List<uint64_t> &l);

@@ -78,18 +78,15 @@ List<uint64_t> LoopifyItreeSeq::countdown_list(
 }
 
 uint64_t LoopifyItreeSeq::delay_ret(uint64_t n, uint64_t v) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(v);
-      break;
+      return v;
     } else {
       uint64_t n_ = _loop_n - 1;
       _loop_n = n_;
     }
   }
-  return _result;
 }
 
 void LoopifyItreeSeq::spin() {

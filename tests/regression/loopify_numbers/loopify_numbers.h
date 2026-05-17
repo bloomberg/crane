@@ -189,20 +189,17 @@ struct LoopifyNumbers {
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
-    uint64_t _result;
     uint64_t _loop_x = std::move(x);
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        _result = std::move(_loop_x);
-        break;
+        return _loop_x;
       } else {
         uint64_t m = _loop_n - 1;
         _loop_x = f(_loop_x);
         _loop_n = m;
       }
     }
-    return _result;
   }
 
   /// iterate_pred n applies predecessor n times, starting from n.

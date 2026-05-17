@@ -102,14 +102,12 @@ MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
 MemSafetyProbe24::tree
 MemSafetyProbe24::list_to_tree(const MemSafetyProbe24::mylist<uint64_t> &l,
                                MemSafetyProbe24::tree acc) {
-  MemSafetyProbe24::tree _result;
   MemSafetyProbe24::tree _loop_acc = std::move(acc);
   const MemSafetyProbe24::mylist<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe24::mylist<uint64_t>::Mynil>(_loop_l->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(
@@ -118,7 +116,6 @@ MemSafetyProbe24::list_to_tree(const MemSafetyProbe24::mylist<uint64_t> &l,
       _loop_l = a1.get();
     }
   }
-  return _result;
 }
 
 /// TEST 8: Zip two trees, producing a list of pairs.

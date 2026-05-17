@@ -88,24 +88,20 @@ List<List<uint64_t>> LoopifyGrouping::group(const List<uint64_t> &l) {
 }
 
 bool LoopifyGrouping::elem(uint64_t x, const List<uint64_t> &l) {
-  bool _result;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = false;
-      break;
+      return false;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        _result = true;
-        break;
+        return true;
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 List<uint64_t> LoopifyGrouping::nub(

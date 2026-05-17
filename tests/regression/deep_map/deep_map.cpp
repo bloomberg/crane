@@ -4,13 +4,11 @@
 /// Tail-recursive via accumulator, should be loopified.
 DeepMap::tree<uint64_t> DeepMap::build_right(uint64_t n,
                                              DeepMap::tree<uint64_t> acc) {
-  DeepMap::tree<uint64_t> _result;
   DeepMap::tree<uint64_t> _loop_acc = std::move(acc);
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       uint64_t n_ = _loop_n - 1;
       uint64_t _next_n = n_;
@@ -19,7 +17,6 @@ DeepMap::tree<uint64_t> DeepMap::build_right(uint64_t n,
       _loop_n = _next_n;
     }
   }
-  return _result;
 }
 
 DeepMap::tree<uint64_t> DeepMap::map_inc(const DeepMap::tree<uint64_t> &t) {

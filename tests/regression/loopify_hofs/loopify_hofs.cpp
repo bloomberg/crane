@@ -3,19 +3,16 @@
 /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
 bool LoopifyHofs::is_prefix_of(const List<uint64_t> &l1,
                                const List<uint64_t> &l2) {
-  bool _result;
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
-      _result = true;
-      break;
+      return true;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
-        _result = false;
-        break;
+        return false;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
@@ -23,13 +20,11 @@ bool LoopifyHofs::is_prefix_of(const List<uint64_t> &l1,
           _loop_l2 = a10.get();
           _loop_l1 = a1.get();
         } else {
-          _result = false;
-          break;
+          return false;
         }
       }
     }
   }
-  return _result;
 }
 
 /// lookup_all key l finds all values associated with key in association list.

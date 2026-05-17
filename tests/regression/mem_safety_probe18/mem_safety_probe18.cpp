@@ -47,14 +47,12 @@ uint64_t MemSafetyProbe18::sum_list(
 MemSafetyProbe18::tree
 MemSafetyProbe18::fold_left_tree(const MemSafetyProbe18::mylist<uint64_t> &l,
                                  MemSafetyProbe18::tree acc) {
-  MemSafetyProbe18::tree _result;
   MemSafetyProbe18::tree _loop_acc = std::move(acc);
   const MemSafetyProbe18::mylist<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe18::mylist<uint64_t>::Mynil>(_loop_l->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe18::mylist<uint64_t>::Mycons>(
@@ -63,7 +61,6 @@ MemSafetyProbe18::fold_left_tree(const MemSafetyProbe18::mylist<uint64_t> &l,
       _loop_l = a1.get();
     }
   }
-  return _result;
 }
 
 /// TEST 8: Nested constructor building: build a list of trees

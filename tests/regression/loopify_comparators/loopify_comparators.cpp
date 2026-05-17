@@ -234,25 +234,21 @@ List<uint64_t> LoopifyComparators::insertion_sort(
 
 bool LoopifyComparators::is_sorted_fuel(uint64_t fuel,
                                         const List<uint64_t> &l) {
-  bool _result;
   List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = true;
-      break;
+      return true;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
-        _result = true;
-        break;
+        return true;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
         auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-          _result = true;
-          break;
+          return true;
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
@@ -260,14 +256,12 @@ bool LoopifyComparators::is_sorted_fuel(uint64_t fuel,
             _loop_l = List<uint64_t>::cons(a00, *a10);
             _loop_fuel = fuel_;
           } else {
-            _result = false;
-            break;
+            return false;
           }
         }
       }
     }
   }
-  return _result;
 }
 
 bool LoopifyComparators::is_sorted(const List<uint64_t> &l) {

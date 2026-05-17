@@ -46,23 +46,19 @@ LoopifyPatterns::multi_let(uint64_t n) { /// _Enter: captures varying parameters
 
 /// nested_if n deeply nested if-then-else with recursion at different depths.
 uint64_t LoopifyPatterns::nested_if_fuel(uint64_t fuel, uint64_t n) {
-  uint64_t _result;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = UINT64_C(0);
-      break;
+      return UINT64_C(0);
     } else {
       uint64_t f = _loop_fuel - 1;
       if (_loop_n <= 0) {
-        _result = UINT64_C(0);
-        break;
+        return UINT64_C(0);
       } else {
         uint64_t n_ = _loop_n - 1;
         if (n_ <= 0) {
-          _result = UINT64_C(1);
-          break;
+          return UINT64_C(1);
         } else {
           uint64_t m = n_ - 1;
           if ((UINT64_C(2) ? n_ % UINT64_C(2) : n_) == UINT64_C(0)) {
@@ -83,7 +79,6 @@ uint64_t LoopifyPatterns::nested_if_fuel(uint64_t fuel, uint64_t n) {
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyPatterns::nested_if(uint64_t n) {
@@ -319,7 +314,6 @@ std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
 LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<uint64_t> &l,
                                 uint64_t a_sum, uint64_t a_prod,
                                 uint64_t a_count) {
-  std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result;
   uint64_t _loop_a_count = std::move(a_count);
   uint64_t _loop_a_prod = std::move(a_prod);
   uint64_t _loop_a_sum = std::move(a_sum);
@@ -327,9 +321,8 @@ LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<uint64_t> &l,
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = std::make_pair(std::make_pair(_loop_a_sum, _loop_a_prod),
-                               _loop_a_count);
-      break;
+      return std::make_pair(std::make_pair(_loop_a_sum, _loop_a_prod),
+                            _loop_a_count);
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
@@ -340,7 +333,6 @@ LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<uint64_t> &l,
       _loop_l = a1.get();
     }
   }
-  return _result;
 }
 
 /// split_by_sign l pos neg partition with dual accumulators.
@@ -349,16 +341,13 @@ LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<uint64_t> &l,
                                    uint64_t base,
                                    LoopifyPatterns::list<uint64_t> pos,
                                    LoopifyPatterns::list<uint64_t> neg) {
-  std::pair<LoopifyPatterns::list<uint64_t>, LoopifyPatterns::list<uint64_t>>
-      _result;
   LoopifyPatterns::list<uint64_t> _loop_neg = std::move(neg);
   LoopifyPatterns::list<uint64_t> _loop_pos = std::move(pos);
   const LoopifyPatterns::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
-      break;
+      return std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
@@ -372,7 +361,6 @@ LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<uint64_t> &l,
       }
     }
   }
-  return _result;
 }
 
 std::pair<LoopifyPatterns::list<uint64_t>, LoopifyPatterns::list<uint64_t>>
@@ -386,14 +374,12 @@ LoopifyPatterns::split_by_sign(const LoopifyPatterns::list<uint64_t> &l,
 uint64_t
 LoopifyPatterns::guard_accum(uint64_t acc,
                              const LoopifyPatterns::list<uint64_t> &l) {
-  uint64_t _result;
   const LoopifyPatterns::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
@@ -416,7 +402,6 @@ LoopifyPatterns::guard_accum(uint64_t acc,
       }
     }
   }
-  return _result;
 }
 
 /// cons_computed n l cons with conditional parameter change.

@@ -285,24 +285,20 @@ struct LoopifyAdvancedLists {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::optional<uint64_t> find_first(F0 &&p, const List<uint64_t> &l) {
-    std::optional<uint64_t> _result;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = std::optional<uint64_t>();
-        break;
+        return std::optional<uint64_t>();
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<uint64_t>(a0);
-          break;
+          return std::make_optional<uint64_t>(a0);
         } else {
           _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 };
 

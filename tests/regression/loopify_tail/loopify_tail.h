@@ -215,38 +215,32 @@ struct LoopifyTail {
   } /// Tail-recursive: last element of a list
 
   template <typename T1> static T1 last(T1 x, const list<T1> &l) {
-    T1 _result;
     const list<T1> *_loop_l = &l;
     T1 _loop_x = std::move(x);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::move(_loop_x);
-        break;
+        return _loop_x;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         _loop_l = a1.get();
         _loop_x = a0;
       }
     }
-    return _result;
   } /// Tail-recursive: length with accumulator
 
   template <typename T1>
   static uint64_t length_acc(uint64_t acc, const list<T1> &l) {
-    uint64_t _result;
     const list<T1> *_loop_l = &l;
     uint64_t _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::move(_loop_acc);
-        break;
+        return _loop_acc;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         _loop_l = a1.get();
         _loop_acc = (_loop_acc + 1);
       }
     }
-    return _result;
   }
 
   template <typename T1> static uint64_t length(const list<T1> &l) {
@@ -261,20 +255,17 @@ struct LoopifyTail {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
   static T2 fold_left(F0 &&f, T2 acc, const list<T1> &l) {
-    T2 _result;
     const list<T1> *_loop_l = &l;
     T2 _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::move(_loop_acc);
-        break;
+        return _loop_acc;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         _loop_l = a1.get();
         _loop_acc = f(_loop_acc, a0);
       }
     }
-    return _result;
   }
 
   /// Tail-recursive: lookup in association list

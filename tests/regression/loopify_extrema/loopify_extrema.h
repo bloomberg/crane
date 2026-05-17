@@ -368,32 +368,27 @@ struct LoopifyExtrema {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
   static bool adjacent_all(F0 &&p, const List<uint64_t> &l) {
-    bool _result;
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        _result = true;
-        break;
+        return true;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-          _result = true;
-          break;
+          return true;
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (p(a0, a00)) {
             _loop_l = a1.get();
           } else {
-            _result = false;
-            break;
+            return false;
           }
         }
       }
     }
-    return _result;
   }
 };
 

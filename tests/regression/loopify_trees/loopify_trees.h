@@ -502,48 +502,40 @@ struct LoopifyTrees {
     }
 
     A rightmost(A default0) const {
-      A _result;
       const tree *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-          _result = std::move(default0);
-          break;
+          return default0;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a2;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = std::move(a1);
-            break;
+            return a1;
           } else {
             _loop_self = a2.get();
           }
         }
       }
-      return _result;
     }
 
     /// leftmost/rightmost finds edge values.
     A leftmost(A default0) const {
-      A _result;
       const tree *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-          _result = std::move(default0);
-          break;
+          return default0;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a0;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = std::move(a1);
-            break;
+            return a1;
           } else {
             _loop_self = a0.get();
           }
         }
       }
-      return _result;
     }
 
     /// same_shape tests structural equality.

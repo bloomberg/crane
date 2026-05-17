@@ -1,58 +1,48 @@
 #include "loopify_option_maybe.h"
 
 std::optional<uint64_t> LoopifyOptionMaybe::find_even(const List<uint64_t> &l) {
-  std::optional<uint64_t> _result;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = std::optional<uint64_t>();
-      break;
+      return std::optional<uint64_t>();
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
-        _result = std::make_optional<uint64_t>(a0);
-        break;
+        return std::make_optional<uint64_t>(a0);
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 std::optional<uint64_t>
 LoopifyOptionMaybe::find_greater(uint64_t threshold, const List<uint64_t> &l) {
-  std::optional<uint64_t> _result;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = std::optional<uint64_t>();
-      break;
+      return std::optional<uint64_t>();
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (threshold < a0) {
-        _result = std::make_optional<uint64_t>(a0);
-        break;
+        return std::make_optional<uint64_t>(a0);
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 std::optional<uint64_t>
 LoopifyOptionMaybe::lookup(uint64_t key,
                            const List<std::pair<uint64_t, uint64_t>> &l) {
-  std::optional<uint64_t> _result;
   const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
-      _result = std::optional<uint64_t>();
-      break;
+      return std::optional<uint64_t>();
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
@@ -60,14 +50,12 @@ LoopifyOptionMaybe::lookup(uint64_t key,
       const uint64_t &k = a0.first;
       const uint64_t &v = a0.second;
       if (key == k) {
-        _result = std::make_optional<uint64_t>(v);
-        break;
+        return std::make_optional<uint64_t>(v);
       } else {
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 List<uint64_t>
@@ -156,26 +144,22 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<uint64_t>> &l) {
 
 std::optional<uint64_t>
 LoopifyOptionMaybe::find_index_even_aux(const List<uint64_t> &l, uint64_t idx) {
-  std::optional<uint64_t> _result;
   uint64_t _loop_idx = std::move(idx);
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      _result = std::optional<uint64_t>();
-      break;
+      return std::optional<uint64_t>();
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
-        _result = std::make_optional<uint64_t>(_loop_idx);
-        break;
+        return std::make_optional<uint64_t>(_loop_idx);
       } else {
         _loop_idx = (_loop_idx + UINT64_C(1));
         _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }
 
 std::optional<uint64_t>
