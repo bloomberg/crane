@@ -141,7 +141,7 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListWindows::span_eq(
       unsigned int d_a0 = _f.d_a0;
       const List<unsigned int> &s = _result.first;
       const List<unsigned int> &r = _result.second;
-      _result = std::make_pair(List<unsigned int>::cons(d_a0, s), r);
+      _result = std::make_pair(List<unsigned int>::cons(std::move(d_a0), s), r);
     }
   }
   return _result;

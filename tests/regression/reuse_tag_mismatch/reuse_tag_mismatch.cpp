@@ -13,11 +13,11 @@ ReuseTagMismatch::id_or_flip(ReuseTagMismatch::direction d, bool flip_flag) {
             d.v_mut())) {
       auto &[d_a0] =
           std::get<typename ReuseTagMismatch::direction::GoUp>(d.v_mut());
-      return direction::godown(d_a0);
+      return direction::godown(std::move(d_a0));
     } else {
       auto &[d_a0] =
           std::get<typename ReuseTagMismatch::direction::GoDown>(d.v_mut());
-      return direction::goup(d_a0);
+      return direction::goup(std::move(d_a0));
     }
   } else {
     return d;

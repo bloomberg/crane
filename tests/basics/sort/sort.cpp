@@ -17,7 +17,7 @@ Sig<List<unsigned int>> Sort::sort_cons_prog(unsigned int a,
           List<unsigned int>::cons(a, List<unsigned int>::cons(d_a0, *d_a1)));
     } else {
       return Sig<List<unsigned int>>::exist(
-          List<unsigned int>::cons(d_a0, d_x0));
+          List<unsigned int>::cons(d_a0, std::move(d_x0)));
     }
   }
 }
@@ -54,7 +54,7 @@ List<unsigned int> Sort::merge(List<unsigned int> l1,
           return List<unsigned int>::cons(d_a0, merge(*d_a1, l3));
         } else {
           return List<unsigned int>::cons(
-              d_a00, _self_merge_aux(_self_merge_aux, *d_a10));
+              std::move(d_a00), _self_merge_aux(_self_merge_aux, *d_a10));
         }
       }
     }

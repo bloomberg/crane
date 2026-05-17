@@ -583,7 +583,7 @@ List<unsigned int> LoopifySearch::nub_fuel(unsigned int fuel,
           continue;
         } else {
           auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(d_a0, nullptr));
+              typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -704,7 +704,8 @@ List<unsigned int> LoopifySearch::quicksort_fuel(
               [=](unsigned int y) mutable { return y < d_a0; }, d_a1_value);
           List<unsigned int> greater = filter_impl(
               [=](unsigned int y) mutable { return d_a0 <= y; }, d_a1_value);
-          _stack.emplace_back(_After_Cons{std::move(smaller), f, d_a0});
+          _stack.emplace_back(
+              _After_Cons{std::move(smaller), f, std::move(d_a0)});
           _stack.emplace_back(_Enter{std::move(greater), f});
         }
       }
@@ -816,7 +817,7 @@ List<unsigned int> LoopifySearch::merge_sorted_fuel(unsigned int fuel,
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
           if (d_a0 <= d_a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a0, nullptr));
+                typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -826,7 +827,7 @@ List<unsigned int> LoopifySearch::merge_sorted_fuel(unsigned int fuel,
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a00, nullptr));
+                typename List<unsigned int>::Cons(std::move(d_a00), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())

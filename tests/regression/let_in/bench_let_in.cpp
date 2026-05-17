@@ -15,7 +15,7 @@ unsigned int BenchLetIn::add_via_pair(unsigned int a, unsigned int b) {
   auto &[d_a0, d_a1] =
       std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
           p.v_mut());
-  return (d_a0 + d_a1);
+  return (std::move(d_a0) + std::move(d_a1));
 }
 
 unsigned int BenchLetIn::nested_swap(unsigned int a, unsigned int b,
@@ -30,7 +30,7 @@ unsigned int BenchLetIn::nested_swap(unsigned int a, unsigned int b,
   auto &[d_a00, d_a10] =
       std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
           p2.v_mut());
-  return (d_a0 + d_a10);
+  return (std::move(d_a0) + std::move(d_a10));
 }
 
 unsigned int BenchLetIn::sum_via_pairs(unsigned int n) {
@@ -43,7 +43,7 @@ unsigned int BenchLetIn::sum_via_pairs(unsigned int n) {
     auto &[d_a0, d_a1] =
         std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
             p.v_mut());
-    return (d_a0 + sum_via_pairs(d_a1));
+    return (std::move(d_a0) + sum_via_pairs(std::move(d_a1)));
   }
 }
 
@@ -62,7 +62,7 @@ unsigned int BenchLetIn::sum3(unsigned int a, unsigned int b, unsigned int c) {
   auto &[d_a0, d_a1, d_a2] =
       std::get<typename BenchLetIn::triple<unsigned int, unsigned int,
                                            unsigned int>::Triple0>(t.v_mut());
-  return (d_a0 + (d_a1 + d_a2));
+  return (std::move(d_a0) + (std::move(d_a1) + std::move(d_a2)));
 }
 
 unsigned int BenchLetIn::chain_pairs(unsigned int a, unsigned int b,
@@ -73,9 +73,9 @@ unsigned int BenchLetIn::chain_pairs(unsigned int a, unsigned int b,
       std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
           p1.v_mut());
   BenchLetIn::pair<unsigned int, unsigned int> p2 =
-      pair<unsigned int, unsigned int>::pair0(d_a0, c);
+      pair<unsigned int, unsigned int>::pair0(std::move(d_a0), c);
   auto &[d_a00, d_a10] =
       std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
           p2.v_mut());
-  return (d_a00 + d_a10);
+  return (std::move(d_a00) + std::move(d_a10));
 }

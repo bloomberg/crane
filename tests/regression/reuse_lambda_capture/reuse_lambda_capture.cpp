@@ -31,7 +31,7 @@ ReuseLambdaCapture::add_length_to_each(ReuseLambdaCapture::mylist l, bool b) {
           std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v_mut());
       ReuseLambdaCapture::mylist d_a1_value = *d_a1;
       return mylist::mycons(
-          (d_a0 + 1u),
+          (std::move(d_a0) + 1u),
           map([=](unsigned int x) mutable { return (x + length(l)); },
               d_a1_value));
     } else {

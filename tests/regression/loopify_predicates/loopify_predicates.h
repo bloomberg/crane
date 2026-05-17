@@ -171,7 +171,7 @@ struct LoopifyPredicates {
       } else {
         auto &[d_a0, d_a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        if (p(d_a0)) {
+        if (p(std::move(d_a0))) {
           _loop_l = std::move(*d_a1);
         } else {
           _result = _loop_l;
@@ -229,7 +229,8 @@ struct LoopifyPredicates {
         unsigned int d_a0 = _f.d_a0;
         const List<unsigned int> &yes = _result.first;
         const List<unsigned int> &no = _result.second;
-        _result = std::make_pair(List<unsigned int>::cons(d_a0, yes), no);
+        _result =
+            std::make_pair(List<unsigned int>::cons(std::move(d_a0), yes), no);
       }
     }
     return _result;
@@ -282,7 +283,8 @@ struct LoopifyPredicates {
         unsigned int d_a0 = _f.d_a0;
         const List<unsigned int> &before = _result.first;
         const List<unsigned int> &after = _result.second;
-        _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);
+        _result = std::make_pair(
+            List<unsigned int>::cons(std::move(d_a0), before), after);
       }
     }
     return _result;

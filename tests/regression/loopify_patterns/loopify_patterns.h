@@ -421,10 +421,10 @@ struct LoopifyPatterns {
           auto &[d_a00, d_a10] =
               std::get<typename list<unsigned int>::Cons>(l2.v_mut());
           if (cmp(d_a0, d_a00) <= 0u) {
-            return list<unsigned int>::cons(d_a0,
+            return list<unsigned int>::cons(std::move(d_a0),
                                             merge_by_fuel(f, cmp, *d_a1, l2));
           } else {
-            return list<unsigned int>::cons(d_a00,
+            return list<unsigned int>::cons(std::move(d_a00),
                                             merge_by_fuel(f, cmp, l1, *d_a10));
           }
         }

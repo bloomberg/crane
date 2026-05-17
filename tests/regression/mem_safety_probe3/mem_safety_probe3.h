@@ -711,7 +711,7 @@ struct MemSafetyProbe3 {
             [&](unsigned int _x0) -> unsigned int {
           return (*d_a2).sum_values(_x0);
         };
-        unsigned int vr = fr(d_a1);
+        unsigned int vr = fr(std::move(d_a1));
         return (vl + vr);
       }
     }();

@@ -698,7 +698,8 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
         } else {
           auto &[d_a00, d_a10, d_a20] =
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v_mut());
-          _stack.emplace_back(_After_Node{*d_a00, d_a0.get(), (d_a1 + d_a10)});
+          _stack.emplace_back(
+              _After_Node{*d_a00, d_a0.get(), (d_a1 + std::move(d_a10))});
           _stack.emplace_back(_Enter{std::move(*d_a20), d_a2.get()});
         }
       }

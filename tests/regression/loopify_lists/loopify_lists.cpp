@@ -1133,9 +1133,9 @@ LoopifyLists::interleave(LoopifyLists::list<unsigned int> l1,
             std::get<typename LoopifyLists::list<unsigned int>::Cons>(
                 _loop_l2.v_mut());
         auto _cell = std::make_unique<LoopifyLists::list<unsigned int>>(
-            typename list<unsigned int>::Cons(d_a0, nullptr));
+            typename list<unsigned int>::Cons(std::move(d_a0), nullptr));
         auto _cell1 = std::make_unique<LoopifyLists::list<unsigned int>>(
-            typename list<unsigned int>::Cons(d_a00, nullptr));
+            typename list<unsigned int>::Cons(std::move(d_a00), nullptr));
         std::get<typename list<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
         *_write = std::move(_cell);
@@ -1475,7 +1475,7 @@ LoopifyLists::split_at(
       unsigned int d_a0 = _f.d_a0;
       const LoopifyLists::list<unsigned int> &a = _result.first;
       const LoopifyLists::list<unsigned int> &b = _result.second;
-      _result = std::make_pair(list<unsigned int>::cons(d_a0, a), b);
+      _result = std::make_pair(list<unsigned int>::cons(std::move(d_a0), a), b);
     }
   }
   return _result;
@@ -1839,7 +1839,8 @@ LoopifyLists::rotate_left_fuel(unsigned int fuel, unsigned int n,
               std::get<typename LoopifyLists::list<unsigned int>::Cons>(
                   _loop_l.v_mut());
           _loop_l = app_helper(
-              *d_a1, list<unsigned int>::cons(d_a0, list<unsigned int>::nil()));
+              *d_a1, list<unsigned int>::cons(std::move(d_a0),
+                                              list<unsigned int>::nil()));
           _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
           _loop_fuel = f;
         }

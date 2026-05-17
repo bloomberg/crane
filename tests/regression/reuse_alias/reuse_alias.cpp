@@ -38,7 +38,7 @@ ReuseAlias::alias_and_match(ReuseAlias::mylist<unsigned int> l) {
   } else {
     auto &[d_a0, d_a1] =
         std::get<typename ReuseAlias::mylist<unsigned int>::Mycons>(l.v_mut());
-    return std::make_pair(std::move(l), d_a0);
+    return std::make_pair(std::move(l), std::move(d_a0));
   }
 }
 

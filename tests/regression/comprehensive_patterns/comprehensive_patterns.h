@@ -765,10 +765,10 @@ struct ComprehensivePatterns {
     Tree flip_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
         auto &[d_a0] = std::get<typename Tree::Leaf>(this->v());
-        return Tree::node(*this, d_a0, *this);
+        return Tree::node(*this, std::move(d_a0), *this);
       } else {
         auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(this->v());
-        return Tree::leaf(d_a1);
+        return Tree::leaf(std::move(d_a1));
       }
     }
 

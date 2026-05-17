@@ -273,7 +273,8 @@ LoopifyListSubsequences::split_at(
       unsigned int d_a0 = _f.d_a0;
       const List<unsigned int> &before = _result.first;
       const List<unsigned int> &after = _result.second;
-      _result = std::make_pair(List<unsigned int>::cons(d_a0, before), after);
+      _result = std::make_pair(
+          List<unsigned int>::cons(std::move(d_a0), before), after);
     }
   }
   return _result;

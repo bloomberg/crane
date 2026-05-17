@@ -18,7 +18,8 @@ List<unsigned int> LoadProgramHeadWrite::update_nth(unsigned int n,
     } else {
       auto &[d_a00, d_a10] =
           std::get<typename List<unsigned int>::Cons>(l.v_mut());
-      return List<unsigned int>::cons(d_a00, update_nth(n_, x, *d_a10));
+      return List<unsigned int>::cons(std::move(d_a00),
+                                      update_nth(n_, x, *d_a10));
     }
   }
 }

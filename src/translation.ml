@@ -1547,7 +1547,8 @@ let with_escape_analysis body f =
       [std::move(scrutinee)] from being emitted inside the branch while
       pattern-variable structured bindings ([const auto& [d_a0, d_a1] = ...])
       still hold const references into it — which would cause use-after-move. *)
-let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned ?exclude_owned f =
+let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned
+    ?(add_owned_set = Escape.IntSet.empty) ?exclude_owned f =
   let saved_owned = tctx.move_owned_vars in
   let saved_dead = tctx.move_dead_after in
   tctx.move_owned_vars <-
@@ -1555,6 +1556,8 @@ let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned ?exclude_owned
   ( match add_owned with
   | Some idx -> tctx.move_owned_vars <- Escape.IntSet.add idx tctx.move_owned_vars
   | None -> () );
+  tctx.move_owned_vars <-
+    Escape.IntSet.union tctx.move_owned_vars add_owned_set;
   ( match exclude_owned with
   | Some idx -> tctx.move_owned_vars <- Escape.IntSet.remove idx tctx.move_owned_vars
   | None -> () );
@@ -3402,7 +3405,8 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
       && Escape.IntSet.mem i tctx.move_dead_after
       && Escape.IntSet.mem i tctx.move_owned_vars
     in
-    if move_candidate then CPPmove var_expr else var_expr
+    if move_candidate then CPPmove var_expr
+    else var_expr
   | MLapp (MLmagic t, args) -> gen_expr env (MLapp (t, args))
   | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
@@ -5929,62 +5933,21 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     if is_owned then Option.map (fun db -> db + n_pat_vars) scrut_db
     else None
   in
-  let body_stmts =
-    with_shifted_move_tracking n_pat_vars ~clear_dead:true
-      ?exclude_owned:exclude_scrutinee
-      (fun () ->
-      let saved_match_counter = tctx.match_param_counter in
-      let saved_cs_counter = tctx.cs_counter in
-      let saved_return_type = tctx.current_cpp_return_type in
-      (* Prevent void optimisation from leaking into match branches: the branch
-         body lives inside an IIFE that returns the match result type, not the
-         enclosing function's void.  Clear return type to stop gen_stmts from
-         emitting bare [return;] for unit values. *)
-      ( if tctx.current_cpp_return_type = Some Tvoid then
-          tctx.current_cpp_return_type <- None );
-      let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
-      tctx.current_cpp_return_type <- saved_return_type;
-      tctx.match_param_counter <- saved_match_counter;
-      tctx.cs_counter <- saved_cs_counter;
-      body_stmts)
-  in
-  (* Compute structured binding names for ALL constructor fields.
-     For match_i=0 the binding name equals the struct field name (e.g. [d_a0]);
-     for deeper nesting a numeric suffix avoids shadowing outer bindings
-     (e.g. [d_a00] at level 1, [d_a01] at level 2). *)
-  let suffix =
-    if match_i = 0 then "" else string_of_int (match_i - 1)
-  in
-  let tvars = get_current_type_vars () in
-  let rev_ids = List.rev ids in
-  let dummies_arr = Array.of_list dummies in
-  (* Convert field types using the inductive's ns to correctly identify
-     unique_ptr fields (self-references). *)
+  (* Compute ind_ref and field self-reference info early so pat_var_owned
+     can exclude unique_ptr fields from move tracking. *)
   let ind_ref =
     match cname with
     | GlobRef.ConstructRef ((kn, i), _) -> GlobRef.IndRef (kn, i)
     | r -> r
   in
-  (* To detect which fields are unique_ptr in the struct definition,
-     check the definition-site field types (ip_types) for self-references.
-     A field is unique_ptr iff its definition-site type starts with
-     Tglob(parent_ref, ...). Using ind_ns on the concrete match type is
-     wrong for parametric types like pair(A, B) where a field B could
-     happen to be pair<C,D> without being recursive. *)
   let def_site_field_tys =
     match Table.get_ctor_ip_types_opt cname with
     | Some tys -> tys
     | None -> []
   in
-  (* ip_types includes ALL constructor argument types, including Prop-erased
-     ones (Tdummy).  The struct fields and pattern variables skip erased
-     entries.  So the i-th pattern variable corresponds to the i-th NON-ERASED
-     entry in def_site_field_tys, not def_site_field_tys[i] directly.
-     Pre-filter Tdummy entries so field_is_self/is_uniform use the right index. *)
   let non_erased_def_site_field_tys =
     List.filter (fun t -> not (isTdummy t)) def_site_field_tys
   in
-  (* Extract the MutInd key from ind_ref for mutual sibling detection *)
   let ind_kn_opt =
     match ind_ref with
     | GlobRef.IndRef (kn, _) -> Some kn
@@ -6004,8 +5967,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       is_self_or_mutual r
     | _ -> false
   in
-  (* Does the def-site ML type contain a self/mutual reference nested
-     inside type arguments (e.g. list(tree(A)) when defining tree)? *)
   let rec ml_has_self_ref = function
     | Miniml.Tglob (r, args, _) ->
       is_self_or_mutual r || List.exists ml_has_self_ref args
@@ -6023,6 +5984,51 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       List.exists ml_has_self_ref args
     | _ -> false
   in
+  let field_is_uptr i =
+    not (Table.is_coinductive ind_ref)
+    && (field_is_self_or_mutual_ref_at_def i
+        || field_has_nested_self_ref_at_def i)
+  in
+  let pat_var_owned =
+    if is_owned then
+      List.fold_left (fun (acc, j) _ ->
+          let db = j + 1 in
+          let def_field_idx = n_pat_vars - 1 - j in
+          let acc' =
+            if not (field_is_uptr def_field_idx) then
+              Escape.IntSet.add db acc
+            else acc
+          in
+          (acc', j + 1))
+        (Escape.IntSet.empty, 0) ids
+      |> fst
+    else Escape.IntSet.empty
+  in
+  let body_stmts =
+    with_shifted_move_tracking n_pat_vars ~clear_dead:true
+      ~add_owned_set:pat_var_owned ?exclude_owned:exclude_scrutinee
+      (fun () ->
+      let saved_match_counter = tctx.match_param_counter in
+      let saved_cs_counter = tctx.cs_counter in
+      let saved_return_type = tctx.current_cpp_return_type in
+      ( if tctx.current_cpp_return_type = Some Tvoid then
+          tctx.current_cpp_return_type <- None );
+      let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) body in
+      tctx.current_cpp_return_type <- saved_return_type;
+      tctx.match_param_counter <- saved_match_counter;
+      tctx.cs_counter <- saved_cs_counter;
+      body_stmts)
+  in
+  (* Compute structured binding names for ALL constructor fields.
+     For match_i=0 the binding name equals the struct field name (e.g. [d_a0]);
+     for deeper nesting a numeric suffix avoids shadowing outer bindings
+     (e.g. [d_a00] at level 1, [d_a01] at level 2). *)
+  let suffix =
+    if match_i = 0 then "" else string_of_int (match_i - 1)
+  in
+  let tvars = get_current_type_vars () in
+  let rev_ids = List.rev ids in
+  let dummies_arr = Array.of_list dummies in
   let field_bindings =
     List.mapi
       (fun i (_var_name, ml_ty) ->

@@ -21,7 +21,7 @@ List<unsigned int> LoopifySorting::insert(unsigned int x,
         break;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -105,7 +105,7 @@ List<unsigned int> LoopifySorting::merge_fuel(unsigned int fuel,
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
           if (d_a0 <= d_a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a0, nullptr));
+                typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -115,7 +115,7 @@ List<unsigned int> LoopifySorting::merge_fuel(unsigned int fuel,
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a00, nullptr));
+                typename List<unsigned int>::Cons(std::move(d_a00), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -314,7 +314,7 @@ List<unsigned int> LoopifySorting::quicksort_fuel(
           auto _cs = partition(d_a0, *d_a1);
           const List<unsigned int> &lo = _cs.first;
           const List<unsigned int> &hi = _cs.second;
-          _stack.emplace_back(_After_lo{lo, f, d_a0});
+          _stack.emplace_back(_After_lo{lo, f, std::move(d_a0)});
           _stack.emplace_back(_Enter{hi, f});
         }
       }

@@ -76,7 +76,7 @@ List<unsigned int> LoopifySearchOpt::longest_run_fuel(
         } else {
           auto &[d_a00, d_a10] = std::get<typename List<unsigned int>::Cons>(
               _loop_current.v_mut());
-          if (d_a0 == d_a00) {
+          if (d_a0 == std::move(d_a00)) {
             _loop_l = d_a1.get();
             _loop_current = List<unsigned int>::cons(d_a0, _loop_current);
             _loop_fuel = fuel_;

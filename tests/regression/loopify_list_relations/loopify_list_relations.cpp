@@ -419,9 +419,9 @@ List<unsigned int> LoopifyListRelations::interleave(List<unsigned int> l1,
         auto &[d_a00, d_a10] =
             std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
         auto _cell1 = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a00, nullptr));
+            typename List<unsigned int>::Cons(std::move(d_a00), nullptr));
         std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
         *_write = std::move(_cell);
@@ -469,7 +469,7 @@ List<unsigned int> LoopifyListRelations::merge_fuel(unsigned int fuel,
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
           if (d_a0 <= d_a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a0, nullptr));
+                typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -479,7 +479,7 @@ List<unsigned int> LoopifyListRelations::merge_fuel(unsigned int fuel,
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a00, nullptr));
+                typename List<unsigned int>::Cons(std::move(d_a00), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())

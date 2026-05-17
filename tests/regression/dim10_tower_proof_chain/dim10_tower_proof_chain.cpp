@@ -104,7 +104,7 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
   SigT<unsigned int, std::any> e = D_n_measure_eventually_zero(base_dim);
   auto &[d_x, d_a1] =
       std::get<typename SigT<unsigned int, std::any>::ExistT>(e.v_mut());
-  return SigT<unsigned int, std::any>::existt(d_x, std::any{});
+  return SigT<unsigned int, std::any>::existt(std::move(d_x), std::any{});
 }
 
 SigT<unsigned int, std::any>

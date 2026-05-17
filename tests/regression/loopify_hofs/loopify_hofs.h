@@ -552,8 +552,9 @@ struct LoopifyHofs {
           auto &&_sv0 = *d_a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv0.v())) {
-            *_write = std::make_unique<List<unsigned int>>(
-                List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+            *_write =
+                std::make_unique<List<unsigned int>>(List<unsigned int>::cons(
+                    std::move(d_a0), List<unsigned int>::nil()));
             break;
           } else {
             const auto &[d_a00, d_a10] =
@@ -921,10 +922,10 @@ struct LoopifyHofs {
           auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v_mut());
           if (cmp(d_a0, d_a00) <= 0u) {
-            return List<unsigned int>::cons(d_a0,
+            return List<unsigned int>::cons(std::move(d_a0),
                                             merge_by_fuel(f, cmp, *d_a1, l2));
           } else {
-            return List<unsigned int>::cons(d_a00,
+            return List<unsigned int>::cons(std::move(d_a00),
                                             merge_by_fuel(f, cmp, l1, *d_a10));
           }
         }

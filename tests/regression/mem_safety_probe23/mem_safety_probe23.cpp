@@ -123,7 +123,8 @@ MemSafetyProbe23::sum_with_original(MemSafetyProbe23::tree t) {
         sum_with_original(*d_a0);
     std::pair<MemSafetyProbe23::tree, unsigned int> pr =
         sum_with_original(*d_a2);
-    return std::make_pair(std::move(t), ((pl.second + d_a1) + pr.second));
+    return std::make_pair(std::move(t),
+                          ((pl.second + std::move(d_a1)) + pr.second));
   }
 }
 
@@ -141,8 +142,8 @@ MemSafetyProbe23::dup_and_double(MemSafetyProbe23::tree t) {
         dup_and_double(*d_a0);
     std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pr =
         dup_and_double(*d_a2);
-    return std::make_pair(std::move(t),
-                          tree::node(pl.second, (d_a1 * 2u), pr.second));
+    return std::make_pair(
+        std::move(t), tree::node(pl.second, (std::move(d_a1) * 2u), pr.second));
   }
 }
 
@@ -300,7 +301,8 @@ unsigned int MemSafetyProbe23::mixed_recurse(
   struct _After_Node {
     unsigned int n_;
     decltype(tree::node(std::declval<MemSafetyProbe23::tree &>(),
-                        std::declval<unsigned int &>(), tree::leaf())) _s1;
+                        std::move(std::declval<unsigned int &>()),
+                        tree::leaf())) _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
@@ -333,7 +335,7 @@ unsigned int MemSafetyProbe23::mixed_recurse(
           auto &[d_a0, d_a1, d_a2] =
               std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
           _stack.emplace_back(
-              _After_Node{n_, tree::node(t, d_a1, tree::leaf())});
+              _After_Node{n_, tree::node(t, std::move(d_a1), tree::leaf())});
           _stack.emplace_back(_Enter{n_, std::move(*d_a2)});
         }
       }

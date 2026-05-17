@@ -260,10 +260,10 @@ Z BinInt::add(Z x, Z y) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
       auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(d_a0, d_a00));
+      return Z::zpos(Pos::add(std::move(d_a0), std::move(d_a00)));
     } else {
       auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(d_a0, d_a00);
+      return BinInt::pos_sub(std::move(d_a0), std::move(d_a00));
     }
   } else {
     auto &[d_a0] = std::get<typename Z::Zneg>(x.v_mut());
@@ -271,10 +271,10 @@ Z BinInt::add(Z x, Z y) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
       auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(d_a00, d_a0);
+      return BinInt::pos_sub(std::move(d_a00), std::move(d_a0));
     } else {
       auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(d_a0, d_a00));
+      return Z::zneg(Pos::add(std::move(d_a0), std::move(d_a00)));
     }
   }
 }
@@ -455,7 +455,7 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
-      return BinInt::pos_div_eucl(d_a0, b);
+      return BinInt::pos_div_eucl(std::move(d_a0), b);
     } else {
       const auto &[d_a00] = std::get<typename Z::Zneg>(b.v());
       auto _cs = BinInt::pos_div_eucl(d_a0, Z::zpos(d_a00));

@@ -41,7 +41,7 @@ ReuseMoveShadow::tree ReuseMoveShadow::dup_left(ReuseMoveShadow::tree t,
             t.v_mut())) {
       auto &[d_a0, d_a1, d_a2] =
           std::get<typename ReuseMoveShadow::tree::Node>(t.v_mut());
-      return tree::node(d_a0, *d_a1, *d_a1);
+      return tree::node(std::move(d_a0), *d_a1, *d_a1);
     } else {
       return tree::leaf();
     }

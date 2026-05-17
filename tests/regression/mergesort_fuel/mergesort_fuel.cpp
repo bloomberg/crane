@@ -44,7 +44,7 @@ List<unsigned int> MergesortFuel::merge(List<unsigned int> l1,
           return List<unsigned int>::cons(d_a0, merge(*d_a1, l3));
         } else {
           return List<unsigned int>::cons(
-              d_a00, _self_merge_aux(_self_merge_aux, *d_a10));
+              std::move(d_a00), _self_merge_aux(_self_merge_aux, *d_a10));
         }
       }
     }
@@ -69,7 +69,8 @@ List<unsigned int> MergesortFuel::msort_go(unsigned int fuel,
           std::get<typename List<unsigned int>::Cons>(l.v_mut());
       auto &&_sv = *d_a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-        return List<unsigned int>::cons(d_a0, List<unsigned int>::nil());
+        return List<unsigned int>::cons(std::move(d_a0),
+                                        List<unsigned int>::nil());
       } else {
         auto _cs = split(l);
         const List<unsigned int> &l1 = _cs.first;

@@ -176,7 +176,7 @@ LoopifySpecialRecursion::reverse_insert(unsigned int x, List<unsigned int> l) {
           std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
       if (d_a0 < x) {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())

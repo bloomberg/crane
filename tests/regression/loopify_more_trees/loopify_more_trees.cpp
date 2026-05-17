@@ -252,16 +252,16 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   struct _After_Node {
     LoopifyMoreTrees::tree d_a00;
     LoopifyMoreTrees::tree d_a0;
-    decltype(std::max(std::declval<unsigned int &>(),
-                      std::declval<unsigned int &>())) _s2;
+    decltype(std::max(std::move(std::declval<unsigned int &>()),
+                      std::move(std::declval<unsigned int &>()))) _s2;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     LoopifyMoreTrees::tree _result;
-    decltype(std::max(std::declval<unsigned int &>(),
-                      std::declval<unsigned int &>())) _s1;
+    decltype(std::max(std::move(std::declval<unsigned int &>()),
+                      std::move(std::declval<unsigned int &>()))) _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -289,8 +289,8 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
         } else {
           auto &[d_a00, d_a10, d_a20] =
               std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());
-          _stack.emplace_back(
-              _After_Node{*d_a00, *d_a0, std::max(d_a1, d_a10)});
+          _stack.emplace_back(_After_Node{
+              *d_a00, *d_a0, std::max(std::move(d_a1), std::move(d_a10))});
           _stack.emplace_back(_Enter{std::move(*d_a20), std::move(*d_a2)});
         }
       }

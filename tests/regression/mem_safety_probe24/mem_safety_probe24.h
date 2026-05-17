@@ -214,7 +214,8 @@ struct MemSafetyProbe24 {
         const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
         std::pair<tree, unsigned int> pl = (*d_a0).tag_tree();
         std::pair<tree, unsigned int> pr = (*d_a2).tag_tree();
-        return std::make_pair(*_self, ((d_a1 + pl.second) + pr.second));
+        return std::make_pair(*_self,
+                              ((std::move(d_a1) + pl.second) + pr.second));
       }
     }
 
@@ -766,7 +767,7 @@ struct MemSafetyProbe24 {
       if (std::holds_alternative<
               typename mylist<std::pair<unsigned int, unsigned int>>::Mynil>(
               _sv0.v())) {
-        return mylist<unsigned int>::mycons(add_pair(d_a0),
+        return mylist<unsigned int>::mycons(add_pair(std::move(d_a0)),
                                             mylist<unsigned int>::mynil());
       } else {
         const auto &[d_a00, d_a10] = std::get<
@@ -777,7 +778,7 @@ struct MemSafetyProbe24 {
                 typename mylist<std::pair<unsigned int, unsigned int>>::Mynil>(
                 _sv1.v())) {
           return mylist<unsigned int>::mycons(
-              add_pair(d_a0),
+              add_pair(std::move(d_a0)),
               mylist<unsigned int>::mycons(add_pair(d_a00),
                                            mylist<unsigned int>::mynil()));
         } else {
@@ -785,7 +786,7 @@ struct MemSafetyProbe24 {
               typename mylist<std::pair<unsigned int, unsigned int>>::Mycons>(
               _sv1.v());
           return mylist<unsigned int>::mycons(
-              add_pair(d_a0),
+              add_pair(std::move(d_a0)),
               mylist<unsigned int>::mycons(
                   add_pair(d_a00),
                   mylist<unsigned int>::mycons(add_pair(d_a01),

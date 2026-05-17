@@ -1316,7 +1316,8 @@ struct LoopifyLists {
         unsigned int d_a0 = _f.d_a0;
         const list<unsigned int> &a = _result.first;
         const list<unsigned int> &b = _result.second;
-        _result = std::make_pair(list<unsigned int>::cons(d_a0, a), b);
+        _result =
+            std::make_pair(list<unsigned int>::cons(std::move(d_a0), a), b);
       }
     }
     return _result;

@@ -121,7 +121,7 @@ struct ClosureInCtor {
     box b = make_box_fix(42u);
     if (std::holds_alternative<typename box::Box0>(b.v_mut())) {
       auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
-      return d_a0(10u);
+      return std::move(d_a0)(10u);
     } else {
       return 999u;
     }
@@ -135,7 +135,7 @@ struct ClosureInCtor {
       auto &[d_a0] = std::get<typename box::Box0>(b1.v_mut());
       if (std::holds_alternative<typename box::Box0>(b2.v_mut())) {
         auto &[d_a00] = std::get<typename box::Box0>(b2.v_mut());
-        return (d_a0(0u) + d_a00(0u));
+        return (std::move(d_a0)(0u) + std::move(d_a00)(0u));
       } else {
         return 999u;
       }

@@ -14,7 +14,7 @@ NameClashReturnThis::maybe_transform(bool flag, NameClashReturnThis::shape s) {
     } else {
       auto &[d_a0, d_a1] =
           std::get<typename NameClashReturnThis::shape::Square>(s.v_mut());
-      return shape::circle((d_a0 + d_a1));
+      return shape::circle((std::move(d_a0) + std::move(d_a1)));
     }
   } else {
     return s;

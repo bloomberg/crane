@@ -413,7 +413,7 @@ struct LoopifyPairs {
         T1 d_a0 = _f.d_a0;
         const list<T1> &taken = _result.first;
         const list<T1> &rest = _result.second;
-        _result = std::make_pair(list<T1>::cons(d_a0, taken), rest);
+        _result = std::make_pair(list<T1>::cons(std::move(d_a0), taken), rest);
       }
     }
     return _result;

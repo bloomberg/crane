@@ -796,7 +796,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       unsigned int d_a0 = _f.d_a0;
       LoopifyPatterns::list<unsigned int> second = _result;
-      _result = list<unsigned int>::cons(d_a0, std::move(second));
+      _result = list<unsigned int>::cons(std::move(d_a0), std::move(second));
     }
   }
   return _result;
@@ -1131,7 +1131,7 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       unsigned int d_a0 = _f.d_a0;
       LoopifyPatterns::list<unsigned int> twice = _result;
-      _result = list<unsigned int>::cons(d_a0, std::move(twice));
+      _result = list<unsigned int>::cons(std::move(d_a0), std::move(twice));
     }
   }
   return _result;
@@ -1222,9 +1222,9 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 _loop_l2.v_mut());
         auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-            typename list<unsigned int>::Cons(d_a0, nullptr));
+            typename list<unsigned int>::Cons(std::move(d_a0), nullptr));
         auto _cell1 = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-            typename list<unsigned int>::Cons(d_a00, nullptr));
+            typename list<unsigned int>::Cons(std::move(d_a00), nullptr));
         std::get<typename list<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
             std::move(_cell1);
         *_write = std::move(_cell);

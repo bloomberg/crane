@@ -43,7 +43,7 @@ ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l,
             l.v_mut())) {
       auto &[d_a0, d_a1] =
           std::get<typename ReuseFnInBody::mylist::Mycons>(l.v_mut());
-      return mylist::mycons((sum(l) + d_a0), *d_a1);
+      return mylist::mycons((sum(l) + std::move(d_a0)), *d_a1);
     } else {
       return mylist::mynil();
     }

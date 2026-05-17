@@ -12,8 +12,8 @@ LoopifyGrouping::prepend_to_groups(unsigned int x, bool same,
     } else {
       auto &[d_a0, d_a1] =
           std::get<typename List<List<unsigned int>>::Cons>(groups.v_mut());
-      return List<List<unsigned int>>::cons(List<unsigned int>::cons(x, d_a0),
-                                            *d_a1);
+      return List<List<unsigned int>>::cons(
+          List<unsigned int>::cons(x, std::move(d_a0)), *d_a1);
     }
   } else {
     return List<List<unsigned int>>::cons(

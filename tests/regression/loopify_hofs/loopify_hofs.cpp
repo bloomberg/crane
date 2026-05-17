@@ -247,15 +247,16 @@ List<unsigned int> LoopifyHofs::longest_run_fuel(unsigned int fuel,
         auto &&_sv0 = *d_a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
-          *_write = std::make_unique<List<unsigned int>>(
-              List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+          *_write =
+              std::make_unique<List<unsigned int>>(List<unsigned int>::cons(
+                  std::move(d_a0), List<unsigned int>::nil()));
           break;
         } else {
           const auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           if (d_a0 == d_a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a0, nullptr));
+                typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
@@ -268,14 +269,15 @@ List<unsigned int> LoopifyHofs::longest_run_fuel(unsigned int fuel,
                 longest_run_fuel(f, List<unsigned int>::cons(d_a00, *d_a10));
             if (std::holds_alternative<typename List<unsigned int>::Nil>(
                     rec_result.v_mut())) {
-              *_write = std::make_unique<List<unsigned int>>(
-                  List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+              *_write =
+                  std::make_unique<List<unsigned int>>(List<unsigned int>::cons(
+                      std::move(d_a0), List<unsigned int>::nil()));
               break;
             } else {
               auto &[d_a01, d_a11] =
                   std::get<typename List<unsigned int>::Cons>(
                       rec_result.v_mut());
-              if (d_a0 == d_a01) {
+              if (std::move(d_a0) == std::move(d_a01)) {
                 *_write = std::make_unique<List<unsigned int>>(rec_result);
                 break;
               } else {

@@ -1151,7 +1151,8 @@ struct LoopifyStructures {
             const auto &[d_a0] = std::get<typename ltree::LLeaf>(_sv.v());
             if (std::holds_alternative<typename ltree::LLeaf>(t2.v_mut())) {
               auto &[d_a00] = std::get<typename ltree::LLeaf>(t2.v_mut());
-              _result = ltree::lleaf((d_a0 <= d_a00 ? d_a00 : d_a0));
+              _result = ltree::lleaf(
+                  (d_a0 <= d_a00 ? std::move(d_a00) : std::move(d_a0)));
             } else {
               _result = t2;
             }

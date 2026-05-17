@@ -139,8 +139,8 @@ List<unsigned int> LoopifySequences::rotate_left_fuel(unsigned int fuel,
         } else {
           auto &[d_a0, d_a1] =
               std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-          _loop_l = (*d_a1).app(
-              List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+          _loop_l = (*d_a1).app(List<unsigned int>::cons(
+              std::move(d_a0), List<unsigned int>::nil()));
           _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
           _loop_fuel = f;
         }
@@ -777,7 +777,7 @@ List<unsigned int> LoopifySequences::lis(List<unsigned int> l) {
             std::get<typename List<unsigned int>::Cons>(_sv0.v());
         if (d_a0 < d_a00) {
           auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(d_a0, nullptr));
+              typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())

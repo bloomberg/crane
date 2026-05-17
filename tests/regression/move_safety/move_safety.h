@@ -404,7 +404,7 @@ struct MoveSafety {
         return f(0u);
       } else {
         auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t2.v_mut());
-        return f(d_a1);
+        return f(std::move(d_a1));
       }
     }();
   }();

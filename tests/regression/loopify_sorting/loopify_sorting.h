@@ -283,10 +283,10 @@ struct LoopifySorting {
           auto &[d_a00, d_a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v_mut());
           if (cmp(d_a0, d_a00)) {
-            return List<unsigned int>::cons(d_a0,
+            return List<unsigned int>::cons(std::move(d_a0),
                                             merge_by_fuel(f, cmp, *d_a1, l2));
           } else {
-            return List<unsigned int>::cons(d_a00,
+            return List<unsigned int>::cons(std::move(d_a00),
                                             merge_by_fuel(f, cmp, l1, *d_a10));
           }
         }
