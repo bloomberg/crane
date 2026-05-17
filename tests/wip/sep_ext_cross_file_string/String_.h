@@ -35,14 +35,14 @@ public:
 
   String(const String &_other) : v_(std::move(_other.clone().v_)) {}
 
-  String(String &&_other) : v_(std::move(_other.v_)) {}
+  String(String &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   String &operator=(const String &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  String &operator=(String &&_other) {
+  String &operator=(String &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }

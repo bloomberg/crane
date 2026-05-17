@@ -229,6 +229,9 @@ and smatch_branch = {
   smb_is_owned : bool;
       (** When [true], the scrutinee is owned.  Owned value types use
           [auto [...] = std::move(std::get<T>(scrut.v_mut()))]. *)
+  smb_is_flat : bool;
+      (** When [true], flat single-constructor type: bind directly from
+          scrutinee, no [std::get] and no [holds_alternative]. *)
   smb_body : cpp_stmt list;
       (** Branch body statements. *)
 }
@@ -344,8 +347,10 @@ and cpp_field =
   | Ffundecl of Id.t * cpp_type * (Id.t * cpp_type) list
       (** Member function declaration without body *)
   | Fmethod of method_field  (** Method with full descriptor *)
-  | Fconstructor of (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool
-      (** Constructor: parameters, member initializer list, explicit flag *)
+  | Fconstructor of
+      (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool * bool
+      (** Constructor: parameters, member initializer list, explicit flag,
+          noexcept flag *)
   | Fdestructor of cpp_stmt list  (** Destructor body for the enclosing struct *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
@@ -381,6 +386,9 @@ and method_field = {
           method.  Set for methods whose ML return type is monadic — they
           perform side effects even though the C++ return type may look pure
           after type erasure. *)
+  mf_is_noexcept : bool;
+      (** When true, emit [noexcept] after the parameter list.  Set for
+          move assignment operators. *)
 }
 
 (** {2 Type schemas} *)

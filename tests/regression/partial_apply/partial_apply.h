@@ -34,14 +34,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -154,72 +154,28 @@ struct PartialApply {
   prepend_each(const List<unsigned int> &l);
 
   template <typename A> struct tagged {
-    // TYPES
-    struct Tag {
-      unsigned int a0;
-      A a1;
-    };
-
-    using variant_t = std::variant<Tag>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    tagged() {}
-
-    explicit tagged(Tag _v) : v_(std::move(_v)) {}
-
-    tagged(const tagged<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tagged(tagged<A> &&_other) : v_(std::move(_other.v_)) {}
-
-    tagged<A> &operator=(const tagged<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tagged<A> &operator=(tagged<A> &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    unsigned int a0;
+    A a1;
 
     // ACCESSORS
-    tagged<A> clone() const {
-      const auto &[a0, a1] = std::get<Tag>(this->v());
-      return tagged<A>(Tag{a0, a1});
-    }
+    tagged<A> clone() const { return {a0, a1}; }
 
     // CREATORS
-    template <typename _U> explicit tagged(const tagged<_U> &_other) {
-      const auto &[a0, a1] = std::get<typename tagged<_U>::Tag>(_other.v());
-      this->v_ = Tag{a0, A(a1)};
-    }
-
-    static tagged<A> tag(unsigned int a0, A a1) {
-      return tagged(Tag{a0, std::move(a1)});
-    }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static tagged<A> tag(unsigned int a0, A a1) { return {a0, std::move(a1)}; }
   };
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, unsigned int &, T1 &>
   static T2 tagged_rect(F0 &&f, const tagged<T1> &t) {
-    const auto &[a0, a1] = std::get<typename tagged<T1>::Tag>(t.v());
+    const auto &[a0, a1] = t;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, unsigned int &, T1 &>
   static T2 tagged_rec(F0 &&f, const tagged<T1> &t) {
-    const auto &[a0, a1] = std::get<typename tagged<T1>::Tag>(t.v());
+    const auto &[a0, a1] = t;
     return f(a0, a1);
   }
 

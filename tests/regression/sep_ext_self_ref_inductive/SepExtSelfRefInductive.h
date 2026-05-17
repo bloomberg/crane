@@ -40,14 +40,14 @@ template <S X> struct HashTrie {
 
     Trie(const Trie<V> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Trie(Trie<V> &&_other) : v_(std::move(_other.v_)) {}
+    Trie(Trie<V> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Trie<V> &operator=(const Trie<V> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Trie<V> &operator=(Trie<V> &&_other) {
+    Trie<V> &operator=(Trie<V> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

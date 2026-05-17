@@ -36,14 +36,14 @@ struct MatchRefAfterMove {
 
     mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist<A> &operator=(const mylist<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<A> &operator=(mylist<A> &&_other) {
+    mylist<A> &operator=(mylist<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -162,73 +162,31 @@ struct MatchRefAfterMove {
   };
 
   template <typename A, typename B> struct mypair {
-    // TYPES
-    struct Mkpair {
-      A a0;
-      B a1;
-    };
-
-    using variant_t = std::variant<Mkpair>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    mypair() {}
-
-    explicit mypair(Mkpair _v) : v_(std::move(_v)) {}
-
-    mypair(const mypair<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mypair(mypair<A, B> &&_other) : v_(std::move(_other.v_)) {}
-
-    mypair<A, B> &operator=(const mypair<A, B> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mypair<A, B> &operator=(mypair<A, B> &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    A a0;
+    B a1;
 
     // ACCESSORS
-    mypair<A, B> clone() const {
-      const auto &[a0, a1] = std::get<Mkpair>(this->v());
-      return mypair<A, B>(Mkpair{a0, a1});
-    }
+    mypair<A, B> clone() const { return {a0, a1}; }
 
     // CREATORS
-    template <typename _U0, typename _U1>
-    explicit mypair(const mypair<_U0, _U1> &_other) {
-      const auto &[a0, a1] =
-          std::get<typename mypair<_U0, _U1>::Mkpair>(_other.v());
-      this->v_ = Mkpair{A(a0), B(a1)};
-    }
-
     static mypair<A, B> mkpair(A a0, B a1) {
-      return mypair(Mkpair{std::move(a0), std::move(a1)});
+      return {std::move(a0), std::move(a1)};
     }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 mypair_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename mypair<A, B>::Mkpair>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 mypair_rect(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename mypair<A, B>::Mkpair>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return f(a0, a1);
     }
   };
@@ -257,12 +215,11 @@ struct MatchRefAfterMove {
   static unsigned int mylist_sum(const mylist<unsigned int> &l);
   /// test1: head_and_tail_length 10,20,30 = (10, 2)
   static inline const unsigned int test1 = []() {
-    auto &&_sv0 = head_and_tail_length(mylist<unsigned int>::mycons(
+    const auto &_sv0 = head_and_tail_length(mylist<unsigned int>::mycons(
         10u, mylist<unsigned int>::mycons(
                  20u, mylist<unsigned int>::mycons(
                           30u, mylist<unsigned int>::mynil()))));
-    const auto &[a00, a10] =
-        std::get<typename mypair<unsigned int, unsigned int>::Mkpair>(_sv0.v());
+    const auto &[a00, a10] = _sv0;
     return (a00 + a10);
   }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
@@ -273,22 +230,18 @@ struct MatchRefAfterMove {
                             30u, mylist<unsigned int>::mynil()))));
   /// test3: match_into_pair 5,10 = (5, 6,10)
   static inline const unsigned int test3 = []() {
-    auto &&_sv1 = match_into_pair(mylist<unsigned int>::mycons(
+    const auto &_sv1 = match_into_pair(mylist<unsigned int>::mycons(
         5u, mylist<unsigned int>::mycons(10u, mylist<unsigned int>::mynil())));
-    const auto &[a01, a11] =
-        std::get<typename mypair<unsigned int, mylist<unsigned int>>::Mkpair>(
-            _sv1.v());
+    const auto &[a01, a11] = _sv1;
     return (a01 + mylist_sum(a11));
   }();
   /// test4: double_match 7,8,9 = (7, 8,9)
   static inline const unsigned int test4 = []() {
-    auto &&_sv2 = double_match(mylist<unsigned int>::mycons(
+    const auto &_sv2 = double_match(mylist<unsigned int>::mycons(
         7u, mylist<unsigned int>::mycons(
                 8u, mylist<unsigned int>::mycons(
                         9u, mylist<unsigned int>::mynil()))));
-    const auto &[a02, a12] =
-        std::get<typename mypair<unsigned int, mylist<unsigned int>>::Mkpair>(
-            _sv2.v());
+    const auto &[a02, a12] = _sv2;
     return (a02 + mylist_sum(a12));
   }();
 
@@ -342,16 +295,16 @@ struct MatchRefAfterMove {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    either(const either<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
+    either(const either<A, B> &_other) : v_(_other.v_) {}
 
-    either(either<A, B> &&_other) : v_(std::move(_other.v_)) {}
+    either(either<A, B> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     either<A, B> &operator=(const either<A, B> &_other) {
-      v_ = std::move(_other.clone().v_);
+      v_ = _other.v_;
       return *this;
     }
 
-    either<A, B> &operator=(either<A, B> &&_other) {
+    either<A, B> &operator=(either<A, B> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -35,14 +35,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -124,56 +124,14 @@ public:
 };
 
 template <typename A> struct Sig {
-  // TYPES
-  struct Exist {
-    A x;
-  };
-
-  using variant_t = std::variant<Exist>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Sig() {}
-
-  explicit Sig(Exist _v) : v_(std::move(_v)) {}
-
-  Sig(const Sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Sig(Sig<A> &&_other) : v_(std::move(_other.v_)) {}
-
-  Sig<A> &operator=(const Sig<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Sig<A> &operator=(Sig<A> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
 
   // ACCESSORS
-  Sig<A> clone() const {
-    const auto &[x] = std::get<Exist>(this->v());
-    return Sig<A>(Exist{x});
-  }
+  Sig<A> clone() const { return {x}; }
 
   // CREATORS
-  template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->v_ = Exist{A(x)};
-  }
-
-  static Sig<A> exist(A x) { return Sig(Exist{std::move(x)}); }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 struct ComprehensivePatterns {
@@ -322,14 +280,14 @@ struct ComprehensivePatterns {
 
     Either(const Either &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Either(Either &&_other) : v_(std::move(_other.v_)) {}
+    Either(Either &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Either &operator=(const Either &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Either &operator=(Either &&_other) {
+    Either &operator=(Either &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -668,14 +626,14 @@ struct ComprehensivePatterns {
 
     Tree(const Tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Tree(Tree &&_other) : v_(std::move(_other.v_)) {}
+    Tree(Tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Tree &operator=(const Tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Tree &operator=(Tree &&_other) {
+    Tree &operator=(Tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1049,14 +1007,14 @@ struct ComprehensivePatterns {
 
     Container(const Container &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Container(Container &&_other) : v_(std::move(_other.v_)) {}
+    Container(Container &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Container &operator=(const Container &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Container &operator=(Container &&_other) {
+    Container &operator=(Container &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

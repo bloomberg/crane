@@ -46,14 +46,14 @@ struct LoopifyMultiRecursion {
 
     quadtree(const quadtree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    quadtree(quadtree &&_other) : v_(std::move(_other.v_)) {}
+    quadtree(quadtree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     quadtree &operator=(const quadtree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    quadtree &operator=(quadtree &&_other) {
+    quadtree &operator=(quadtree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

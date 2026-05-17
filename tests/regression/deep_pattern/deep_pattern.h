@@ -35,14 +35,14 @@ struct DeepPattern {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -419,14 +419,14 @@ struct DeepPattern {
 
     list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    list(list<A> &&_other) : v_(std::move(_other.v_)) {}
+    list(list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     list<A> &operator=(const list<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    list<A> &operator=(list<A> &&_other) {
+    list<A> &operator=(list<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

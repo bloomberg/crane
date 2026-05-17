@@ -31,14 +31,14 @@ struct ClosureInCtor {
 
     box(const box &_other) : v_(std::move(_other.clone().v_)) {}
 
-    box(box &&_other) : v_(std::move(_other.v_)) {}
+    box(box &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     box &operator=(const box &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    box &operator=(box &&_other) {
+    box &operator=(box &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

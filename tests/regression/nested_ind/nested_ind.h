@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -157,14 +157,14 @@ struct NestedInd {
     custom_list(const custom_list<A> &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    custom_list(custom_list<A> &&_other) : v_(std::move(_other.v_)) {}
+    custom_list(custom_list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     custom_list<A> &operator=(const custom_list<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    custom_list<A> &operator=(custom_list<A> &&_other) {
+    custom_list<A> &operator=(custom_list<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -303,14 +303,14 @@ struct NestedInd {
 
     rose(const rose<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    rose(rose<A> &&_other) : v_(std::move(_other.v_)) {}
+    rose(rose<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     rose<A> &operator=(const rose<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    rose<A> &operator=(rose<A> &&_other) {
+    rose<A> &operator=(rose<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -420,14 +420,14 @@ struct NestedInd {
 
     expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    expr(expr &&_other) : v_(std::move(_other.v_)) {}
+    expr(expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     expr &operator=(const expr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    expr &operator=(expr &&_other) {
+    expr &operator=(expr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

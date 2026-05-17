@@ -2042,13 +2042,20 @@ and pp_cpp_stmt env args = function
         let binding_qual =
           if br.smb_is_owned then "auto& [" else "const auto& ["
         in
-        str binding_qual
-        ++ prlist_with_sep (fun () -> str ", ")
-             (fun (bname, _ty, _used) -> Id.print bname)
-             br.smb_field_bindings
-        ++ str "] = " ++ str (sn ()).get ++ str "<"
-        ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
-        ++ scrut_var_pp ++ str ");"
+        if br.smb_is_flat then
+          str binding_qual
+          ++ prlist_with_sep (fun () -> str ", ")
+               (fun (bname, _ty, _used) -> Id.print bname)
+               br.smb_field_bindings
+          ++ str "] = " ++ scrut_var_pp ++ str ";"
+        else
+          str binding_qual
+          ++ prlist_with_sep (fun () -> str ", ")
+               (fun (bname, _ty, _used) -> Id.print bname)
+               br.smb_field_bindings
+          ++ str "] = " ++ str (sn ()).get ++ str "<"
+          ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
+          ++ scrut_var_pp ++ str ");"
       | [] ->
         ( match br.smb_var with
         | Some var_id ->
@@ -2622,8 +2629,10 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         mf_is_static;
         mf_is_inline;
         mf_no_pure;
+        mf_is_noexcept;
       } ->
     let const_s = if mf_is_const then str " const" else mt () in
+    let noexcept_s = if mf_is_noexcept then str " noexcept" else mt () in
     let static_s = if mf_is_static then str "static " else mt () in
     let inline_s = if mf_is_inline then str "inline " else mt () in
     let saved_any_params = !current_any_typed_params in
@@ -2672,11 +2681,12 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
          ++ Id.print mf_name
          ++ pp_par true params_s
          ++ const_s
+         ++ noexcept_s
          ++ str " {" )
     ++ fnl ()
     ++ body_s
     ++ str "}"
-  | Fconstructor (params, init_list, is_explicit) ->
+  | Fconstructor (params, init_list, is_explicit, is_noexcept) ->
     let sname =
       match struct_name with
       | Some s -> s
@@ -2698,7 +2708,8 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
              init_list
     in
     let explicit_s = if is_explicit then str "explicit " else mt () in
-    h (explicit_s ++ sname ++ pp_par true params_s ++ init_s ++ str " {}")
+    let noexcept_s = if is_noexcept then str " noexcept" else mt () in
+    h (explicit_s ++ sname ++ pp_par true params_s ++ noexcept_s ++ init_s ++ str " {}")
   | Fdestructor body ->
     let sname =
       match struct_name with

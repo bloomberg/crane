@@ -77,27 +77,19 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
         const auto &[a00, a10] = std::get<typename String::String0>(t.v());
         switch (a0.ascii_dec(a00)) {
         case Sumbool::LEFT: {
-          auto &&_sv1 = levenshtein_chain(*a1, *a10);
-          const auto &[x1, a11] =
-              std::get<typename SigT<Nat, Levenshtein::chain>::ExistT>(
-                  _sv1.v());
+          const auto &_sv1 = levenshtein_chain(*a1, *a10);
+          const auto &[x1, a11] = _sv1;
           return SigT<Nat, Levenshtein::chain>::existt(
               x1, a11.aux_eq_char(s, t, a0, *a1, a00, *a10, x1));
         }
         case Sumbool::RIGHT: {
-          auto &&_sv2 =
+          const auto &_sv2 =
               _self_levenshtein_chain1(_self_levenshtein_chain1, *a10);
-          const auto &[x2, a12] =
-              std::get<typename SigT<Nat, Levenshtein::chain>::ExistT>(
-                  _sv2.v());
-          auto &&_sv3 = levenshtein_chain(*a1, String::string0(a00, *a10));
-          const auto &[x3, a13] =
-              std::get<typename SigT<Nat, Levenshtein::chain>::ExistT>(
-                  _sv3.v());
-          auto &&_sv4 = levenshtein_chain(*a1, *a10);
-          const auto &[x4, a14] =
-              std::get<typename SigT<Nat, Levenshtein::chain>::ExistT>(
-                  _sv4.v());
+          const auto &[x2, a12] = _sv2;
+          const auto &_sv3 = levenshtein_chain(*a1, String::string0(a00, *a10));
+          const auto &[x3, a13] = _sv3;
+          const auto &_sv4 = levenshtein_chain(*a1, *a10);
+          const auto &[x4, a14] = _sv4;
           Levenshtein::chain r1_ = a12.aux_insert(s, t, a0, *a1, a00, *a10, x2);
           Levenshtein::chain r2_ = a13.aux_delete(s, t, a0, *a1, a00, *a10, x3);
           Levenshtein::chain r3_ = a14.aux_update(s, t, a0, *a1, a00, *a10, x4);

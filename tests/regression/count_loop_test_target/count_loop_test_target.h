@@ -31,14 +31,14 @@ struct CountLoopTestTarget {
 
     instruction(const instruction &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instruction(instruction &&_other) : v_(std::move(_other.v_)) {}
+    instruction(instruction &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instruction &operator=(const instruction &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instruction &operator=(instruction &&_other) {
+    instruction &operator=(instruction &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

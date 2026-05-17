@@ -45,14 +45,14 @@ struct ReuseTagMismatch {
 
     direction(const direction &_other) : v_(std::move(_other.clone().v_)) {}
 
-    direction(direction &&_other) : v_(std::move(_other.v_)) {}
+    direction(direction &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     direction &operator=(const direction &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    direction &operator=(direction &&_other) {
+    direction &operator=(direction &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

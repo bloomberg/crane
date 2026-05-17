@@ -36,14 +36,14 @@ struct VisitMatchBug {
 
     Tree(const Tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Tree(Tree &&_other) : v_(std::move(_other.v_)) {}
+    Tree(Tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Tree &operator=(const Tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Tree &operator=(Tree &&_other) {
+    Tree &operator=(Tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

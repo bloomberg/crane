@@ -9,155 +9,76 @@
 
 struct PolyInductive {
   template <typename A> struct pbox {
-    // TYPES
-    struct PBox {
-      A a0;
-    };
-
-    using variant_t = std::variant<PBox>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    pbox() {}
-
-    explicit pbox(PBox _v) : v_(std::move(_v)) {}
-
-    pbox(const pbox<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    pbox(pbox<A> &&_other) : v_(std::move(_other.v_)) {}
-
-    pbox<A> &operator=(const pbox<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    pbox<A> &operator=(pbox<A> &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    A a0;
 
     // ACCESSORS
-    pbox<A> clone() const {
-      const auto &[a0] = std::get<PBox>(this->v());
-      return pbox<A>(PBox{a0});
-    }
+    pbox<A> clone() const { return {a0}; }
 
     // CREATORS
-    template <typename _U> explicit pbox(const pbox<_U> &_other) {
-      const auto &[a0] = std::get<typename pbox<_U>::PBox>(_other.v());
-      this->v_ = PBox{A(a0)};
-    }
-
-    static pbox<A> PBox_(A a0) { return pbox(PBox{std::move(a0)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static pbox<A> PBox_(A a0) { return {std::move(a0)}; }
 
     A punbox() const {
-      const auto &[a0] = std::get<typename pbox<A>::PBox>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return a0;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &>
     T1 pbox_rec(F0 &&f) const {
-      const auto &[a0] = std::get<typename pbox<A>::PBox>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &>
     T1 pbox_rect(F0 &&f) const {
-      const auto &[a0] = std::get<typename pbox<A>::PBox>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
   };
 
   template <typename A, typename B> struct ppair {
-    // TYPES
-    struct PPair {
-      A a0;
-      B a1;
-    };
-
-    using variant_t = std::variant<PPair>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    ppair() {}
-
-    explicit ppair(PPair _v) : v_(std::move(_v)) {}
-
-    ppair(const ppair<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    ppair(ppair<A, B> &&_other) : v_(std::move(_other.v_)) {}
-
-    ppair<A, B> &operator=(const ppair<A, B> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    ppair<A, B> &operator=(ppair<A, B> &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    A a0;
+    B a1;
 
     // ACCESSORS
-    ppair<A, B> clone() const {
-      const auto &[a0, a1] = std::get<PPair>(this->v());
-      return ppair<A, B>(PPair{a0, a1});
-    }
+    ppair<A, B> clone() const { return {a0, a1}; }
 
     // CREATORS
-    template <typename _U0, typename _U1>
-    explicit ppair(const ppair<_U0, _U1> &_other) {
-      const auto &[a0, a1] =
-          std::get<typename ppair<_U0, _U1>::PPair>(_other.v());
-      this->v_ = PPair{A(a0), B(a1)};
-    }
-
     static ppair<A, B> PPair_(A a0, B a1) {
-      return ppair(PPair{std::move(a0), std::move(a1)});
+      return {std::move(a0), std::move(a1)};
     }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
 
     B psnd() const {
-      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return a1;
     }
 
     A pfst() const {
-      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return a0;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 ppair_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 ppair_rect(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return f(a0, a1);
     }
   };
@@ -184,16 +105,16 @@ struct PolyInductive {
 
     explicit pmaybe(PJust _v) : v_(std::move(_v)) {}
 
-    pmaybe(const pmaybe<A> &_other) : v_(std::move(_other.clone().v_)) {}
+    pmaybe(const pmaybe<A> &_other) : v_(_other.v_) {}
 
-    pmaybe(pmaybe<A> &&_other) : v_(std::move(_other.v_)) {}
+    pmaybe(pmaybe<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     pmaybe<A> &operator=(const pmaybe<A> &_other) {
-      v_ = std::move(_other.clone().v_);
+      v_ = _other.v_;
       return *this;
     }
 
-    pmaybe<A> &operator=(pmaybe<A> &&_other) {
+    pmaybe<A> &operator=(pmaybe<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -298,14 +219,14 @@ struct PolyInductive {
 
     ptree(const ptree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    ptree(ptree<A> &&_other) : v_(std::move(_other.v_)) {}
+    ptree(ptree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     ptree<A> &operator=(const ptree<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    ptree<A> &operator=(ptree<A> &&_other) {
+    ptree<A> &operator=(ptree<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

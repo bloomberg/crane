@@ -51,14 +51,14 @@ template <Elem E> struct MutualTree {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -143,14 +143,14 @@ template <Elem E> struct MutualTree {
 
     forest(const forest &_other) : v_(std::move(_other.clone().v_)) {}
 
-    forest(forest &&_other) : v_(std::move(_other.v_)) {}
+    forest(forest &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     forest &operator=(const forest &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    forest &operator=(forest &&_other) {
+    forest &operator=(forest &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

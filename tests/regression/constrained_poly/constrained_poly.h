@@ -50,16 +50,16 @@ struct ConstrainedPoly {
 
     explicit UOption(UNone _v) : v_(_v) {}
 
-    UOption(const UOption<A> &_other) : v_(std::move(_other.clone().v_)) {}
+    UOption(const UOption<A> &_other) : v_(_other.v_) {}
 
-    UOption(UOption<A> &&_other) : v_(std::move(_other.v_)) {}
+    UOption(UOption<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     UOption<A> &operator=(const UOption<A> &_other) {
-      v_ = std::move(_other.clone().v_);
+      v_ = _other.v_;
       return *this;
     }
 
-    UOption<A> &operator=(UOption<A> &&_other) {
+    UOption<A> &operator=(UOption<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

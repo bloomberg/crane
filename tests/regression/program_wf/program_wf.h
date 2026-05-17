@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -152,14 +152,14 @@ struct ProgramWf {
 
     instruction(const instruction &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instruction(instruction &&_other) : v_(std::move(_other.v_)) {}
+    instruction(instruction &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instruction &operator=(const instruction &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instruction &operator=(instruction &&_other) {
+    instruction &operator=(instruction &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

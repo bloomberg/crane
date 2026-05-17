@@ -31,14 +31,14 @@ public:
 
   Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -109,62 +109,25 @@ public:
 
 struct RocqBug7228 {
   struct data {
-    // TYPES
-    struct Data0 {
-      std::any t;
-    };
-
-    using variant_t = std::variant<Data0>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    data() {}
-
-    explicit data(Data0 _v) : v_(std::move(_v)) {}
-
-    data(const data &_other) : v_(std::move(_other.clone().v_)) {}
-
-    data(data &&_other) : v_(std::move(_other.v_)) {}
-
-    data &operator=(const data &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    data &operator=(data &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    std::any t;
 
     // ACCESSORS
-    data clone() const {
-      const auto &[t] = std::get<Data0>(this->v());
-      return data(Data0{t});
-    }
+    data clone() const { return {t}; }
 
     // CREATORS
-    static data data0(std::any t) { return data(Data0{std::move(t)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static data data0(std::any t) { return {std::move(t)}; }
   };
 
   template <typename T1, typename F0>
   static T1 data_rect(F0 &&f, const data &d) {
-    const auto &[t0] = std::get<typename data::Data0>(d.v());
+    const auto &[t0] = d;
     return std::any_cast<T1>(f(t0));
   }
 
   template <typename T1, typename F0>
   static T1 data_rec(F0 &&f, const data &d) {
-    const auto &[t0] = std::get<typename data::Data0>(d.v());
+    const auto &[t0] = d;
     return std::any_cast<T1>(f(t0));
   }
 

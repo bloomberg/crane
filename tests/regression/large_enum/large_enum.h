@@ -183,14 +183,14 @@ struct LargeEnum {
 
     tok(const tok &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tok(tok &&_other) : v_(std::move(_other.v_)) {}
+    tok(tok &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tok &operator=(const tok &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tok &operator=(tok &&_other) {
+    tok &operator=(tok &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

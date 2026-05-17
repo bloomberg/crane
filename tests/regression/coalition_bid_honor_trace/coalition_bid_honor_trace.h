@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -213,14 +213,14 @@ public:
 
   Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Positive(Positive &&_other) : v_(std::move(_other.v_)) {}
+  Positive(Positive &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Positive &operator=(const Positive &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Positive &operator=(Positive &&_other) {
+  Positive &operator=(Positive &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -338,14 +338,14 @@ public:
 
   Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Z(Z &&_other) : v_(std::move(_other.v_)) {}
+  Z(Z &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Z &operator=(const Z &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Z &operator=(Z &&_other) {
+  Z &operator=(Z &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -747,14 +747,14 @@ struct CoalitionBidHonorTraceCase {
 
     Prize(const Prize &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Prize(Prize &&_other) : v_(std::move(_other.v_)) {}
+    Prize(Prize &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Prize &operator=(const Prize &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Prize &operator=(Prize &&_other) {
+    Prize &operator=(Prize &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -834,14 +834,14 @@ struct CoalitionBidHonorTraceCase {
 
     Location(const Location &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Location(Location &&_other) : v_(std::move(_other.v_)) {}
+    Location(Location &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Location &operator=(const Location &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Location &operator=(Location &&_other) {
+    Location &operator=(Location &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -979,14 +979,14 @@ struct CoalitionBidHonorTraceCase {
     RefusalReason(const RefusalReason &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    RefusalReason(RefusalReason &&_other) : v_(std::move(_other.v_)) {}
+    RefusalReason(RefusalReason &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     RefusalReason &operator=(const RefusalReason &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    RefusalReason &operator=(RefusalReason &&_other) {
+    RefusalReason &operator=(RefusalReason &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1112,14 +1112,15 @@ struct CoalitionBidHonorTraceCase {
     ProtocolAction(const ProtocolAction &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    ProtocolAction(ProtocolAction &&_other) : v_(std::move(_other.v_)) {}
+    ProtocolAction(ProtocolAction &&_other) noexcept
+        : v_(std::move(_other.v_)) {}
 
     ProtocolAction &operator=(const ProtocolAction &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    ProtocolAction &operator=(ProtocolAction &&_other) {
+    ProtocolAction &operator=(ProtocolAction &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1428,14 +1429,14 @@ struct CoalitionBidHonorTraceCase {
     BatchallPhase(const BatchallPhase &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    BatchallPhase(BatchallPhase &&_other) : v_(std::move(_other.v_)) {}
+    BatchallPhase(BatchallPhase &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     BatchallPhase &operator=(const BatchallPhase &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    BatchallPhase &operator=(BatchallPhase &&_other) {
+    BatchallPhase &operator=(BatchallPhase &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -72,16 +72,16 @@ struct InductiveInModule {
 
         explicit option(Some _v) : v_(std::move(_v)) {}
 
-        option(const option<A> &_other) : v_(std::move(_other.clone().v_)) {}
+        option(const option<A> &_other) : v_(_other.v_) {}
 
-        option(option<A> &&_other) : v_(std::move(_other.v_)) {}
+        option(option<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
         option<A> &operator=(const option<A> &_other) {
-          v_ = std::move(_other.clone().v_);
+          v_ = _other.v_;
           return *this;
         }
 
-        option<A> &operator=(option<A> &&_other) {
+        option<A> &operator=(option<A> &&_other) noexcept {
           v_ = std::move(_other.v_);
           return *this;
         }

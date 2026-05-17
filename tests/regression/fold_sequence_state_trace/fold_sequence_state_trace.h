@@ -34,14 +34,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -144,70 +144,34 @@ struct FoldSequenceStateTraceCase {
   };
 
   struct Fold {
-    // TYPES
-    struct Fold_line_ctor {
-      Line a0;
-    };
-
-    using variant_t = std::variant<Fold_line_ctor>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    Fold() {}
-
-    explicit Fold(Fold_line_ctor _v) : v_(std::move(_v)) {}
-
-    Fold(const Fold &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Fold(Fold &&_other) : v_(std::move(_other.v_)) {}
-
-    Fold &operator=(const Fold &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Fold &operator=(Fold &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    Line a0;
 
     // ACCESSORS
-    Fold clone() const {
-      const auto &[a0] = std::get<Fold_line_ctor>(this->v());
-      return Fold(Fold_line_ctor{a0.clone()});
-    }
+    Fold clone() const { return {a0}; }
 
     // CREATORS
-    static Fold fold_line_ctor(Line a0) {
-      return Fold(Fold_line_ctor{std::move(a0)});
-    }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static Fold fold_line_ctor(Line a0) { return {std::move(a0)}; }
 
     Line fold_line() const {
-      const auto &[a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return a0;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Line &>
     T1 Fold_rec(F0 &&f) const {
-      const auto &[a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Line &>
     T1 Fold_rect(F0 &&f) const {
-      const auto &[a0] = std::get<typename Fold::Fold_line_ctor>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
   };
@@ -270,14 +234,14 @@ struct FoldSequenceStateTraceCase {
 
     FoldStep(const FoldStep &_other) : v_(std::move(_other.clone().v_)) {}
 
-    FoldStep(FoldStep &&_other) : v_(std::move(_other.v_)) {}
+    FoldStep(FoldStep &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     FoldStep &operator=(const FoldStep &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    FoldStep &operator=(FoldStep &&_other) {
+    FoldStep &operator=(FoldStep &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

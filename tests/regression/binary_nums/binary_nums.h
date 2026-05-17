@@ -39,14 +39,14 @@ public:
 
   Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Positive(Positive &&_other) : v_(std::move(_other.v_)) {}
+  Positive(Positive &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Positive &operator=(const Positive &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Positive &operator=(Positive &&_other) {
+  Positive &operator=(Positive &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -158,14 +158,14 @@ public:
 
   N(const N &_other) : v_(std::move(_other.clone().v_)) {}
 
-  N(N &&_other) : v_(std::move(_other.v_)) {}
+  N(N &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   N &operator=(const N &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  N &operator=(N &&_other) {
+  N &operator=(N &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -222,14 +222,14 @@ public:
 
   Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Z(Z &&_other) : v_(std::move(_other.v_)) {}
+  Z(Z &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Z &operator=(const Z &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Z &operator=(Z &&_other) {
+  Z &operator=(Z &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -296,14 +296,14 @@ struct Pos {
 
     mask(const mask &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mask(mask &&_other) : v_(std::move(_other.v_)) {}
+    mask(mask &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mask &operator=(const mask &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mask &operator=(mask &&_other) {
+    mask &operator=(mask &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

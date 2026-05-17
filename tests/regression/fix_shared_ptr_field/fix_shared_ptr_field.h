@@ -51,14 +51,14 @@ struct FixSharedPtrField {
 
     mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist &operator=(mylist &&_other) {
+    mylist &operator=(mylist &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -198,64 +198,27 @@ struct FixSharedPtrField {
 
   /// A second inductive to prevent methodification of make_list_fn.
   struct wrapper {
-    // TYPES
-    struct Wrap {
-      mylist a0;
-    };
-
-    using variant_t = std::variant<Wrap>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    wrapper() {}
-
-    explicit wrapper(Wrap _v) : v_(std::move(_v)) {}
-
-    wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
-
-    wrapper(wrapper &&_other) : v_(std::move(_other.v_)) {}
-
-    wrapper &operator=(const wrapper &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    wrapper &operator=(wrapper &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    mylist a0;
 
     // ACCESSORS
-    wrapper clone() const {
-      const auto &[a0] = std::get<Wrap>(this->v());
-      return wrapper(Wrap{a0.clone()});
-    }
+    wrapper clone() const { return {a0}; }
 
     // CREATORS
-    static wrapper wrap(mylist a0) { return wrapper(Wrap{std::move(a0)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static wrapper wrap(mylist a0) { return {std::move(a0)}; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, mylist &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
-    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    const auto &[a0] = w;
     return f(a0);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, mylist &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
-    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    const auto &[a0] = w;
     return f(a0);
   }
 

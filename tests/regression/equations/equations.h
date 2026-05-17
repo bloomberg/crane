@@ -104,14 +104,14 @@ struct Equations {
 
     gcd_graph(const gcd_graph &_other) : v_(std::move(_other.clone().v_)) {}
 
-    gcd_graph(gcd_graph &&_other) : v_(std::move(_other.v_)) {}
+    gcd_graph(gcd_graph &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     gcd_graph &operator=(const gcd_graph &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    gcd_graph &operator=(gcd_graph &&_other) {
+    gcd_graph &operator=(gcd_graph &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -230,7 +230,7 @@ struct Equations {
     gcd_clause_3_graph(const gcd_clause_3_graph &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    gcd_clause_3_graph(gcd_clause_3_graph &&_other)
+    gcd_clause_3_graph(gcd_clause_3_graph &&_other) noexcept
         : v_(std::move(_other.v_)) {}
 
     gcd_clause_3_graph &operator=(const gcd_clause_3_graph &_other) {
@@ -238,7 +238,7 @@ struct Equations {
       return *this;
     }
 
-    gcd_clause_3_graph &operator=(gcd_clause_3_graph &&_other) {
+    gcd_clause_3_graph &operator=(gcd_clause_3_graph &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -612,7 +612,7 @@ struct Equations {
     collatz_steps_graph(const collatz_steps_graph &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    collatz_steps_graph(collatz_steps_graph &&_other)
+    collatz_steps_graph(collatz_steps_graph &&_other) noexcept
         : v_(std::move(_other.v_)) {}
 
     collatz_steps_graph &operator=(const collatz_steps_graph &_other) {
@@ -620,7 +620,7 @@ struct Equations {
       return *this;
     }
 
-    collatz_steps_graph &operator=(collatz_steps_graph &&_other) {
+    collatz_steps_graph &operator=(collatz_steps_graph &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -744,7 +744,7 @@ struct Equations {
     collatz_steps_clause_3_graph(const collatz_steps_clause_3_graph &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&_other)
+    collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&_other) noexcept
         : v_(std::move(_other.v_)) {}
 
     collatz_steps_clause_3_graph &
@@ -754,7 +754,7 @@ struct Equations {
     }
 
     collatz_steps_clause_3_graph &
-    operator=(collatz_steps_clause_3_graph &&_other) {
+    operator=(collatz_steps_clause_3_graph &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

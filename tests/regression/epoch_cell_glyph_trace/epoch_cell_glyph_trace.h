@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -151,14 +151,14 @@ public:
 
   Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Positive(Positive &&_other) : v_(std::move(_other.v_)) {}
+  Positive(Positive &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Positive &operator=(const Positive &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Positive &operator=(Positive &&_other) {
+  Positive &operator=(Positive &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -276,14 +276,14 @@ public:
 
   Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Z(Z &&_other) : v_(std::move(_other.v_)) {}
+  Z(Z &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Z &operator=(const Z &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Z &operator=(Z &&_other) {
+  Z &operator=(Z &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }

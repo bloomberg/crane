@@ -35,14 +35,14 @@ public:
 
   Forest(const Forest<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Forest(Forest<A> &&_other) : v_(std::move(_other.v_)) {}
+  Forest(Forest<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Forest<A> &operator=(const Forest<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Forest<A> &operator=(Forest<A> &&_other) {
+  Forest<A> &operator=(Forest<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }

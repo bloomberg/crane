@@ -41,14 +41,14 @@ struct SimpleLambdaFieldCapture {
 
     mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist &operator=(mylist &&_other) {
+    mylist &operator=(mylist &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -169,63 +169,28 @@ struct SimpleLambdaFieldCapture {
 
   /// A second inductive to prevent methodification.
   struct tag {
-    // TYPES
-    struct MkTag {
-      unsigned int a0;
-    };
-
-    using variant_t = std::variant<MkTag>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    tag() {}
-
-    explicit tag(MkTag _v) : v_(std::move(_v)) {}
-
-    tag(const tag &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tag(tag &&_other) : v_(std::move(_other.v_)) {}
-
-    tag &operator=(const tag &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tag &operator=(tag &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    unsigned int a0;
 
     // ACCESSORS
-    tag clone() const {
-      const auto &[a0] = std::get<MkTag>(this->v());
-      return tag(MkTag{a0});
-    }
+    tag clone() const { return {a0}; }
 
     // CREATORS
-    static tag mktag(unsigned int a0) { return tag(MkTag{a0}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static tag mktag(unsigned int a0) { return {a0}; }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rec(F0 &&f) const {
-      const auto &[a0] = std::get<typename tag::MkTag>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
     T1 tag_rect(F0 &&f) const {
-      const auto &[a0] = std::get<typename tag::MkTag>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
   };

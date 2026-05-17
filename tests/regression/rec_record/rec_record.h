@@ -34,14 +34,14 @@ struct RecRecord {
 
     rlist(const rlist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    rlist(rlist<A> &&_other) : v_(std::move(_other.v_)) {}
+    rlist(rlist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     rlist<A> &operator=(const rlist<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    rlist<A> &operator=(rlist<A> &&_other) {
+    rlist<A> &operator=(rlist<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

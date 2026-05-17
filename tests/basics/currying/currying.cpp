@@ -14,9 +14,7 @@ unsigned int Currying::add3_partial2(unsigned int _x0) {
 
 unsigned int
 Currying::pair_add(const Currying::pair<unsigned int, unsigned int> &p) {
-  const auto &[a0, a1] =
-      std::get<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
-          p.v());
+  const auto &[a0, a1] = p;
   return (a0 + a1);
 }
 
@@ -27,11 +25,8 @@ unsigned int Currying::curried_add(unsigned int _x0, unsigned int _x1) {
 unsigned int Currying::uncurried_add3(
     const Currying::pair<unsigned int,
                          Currying::pair<unsigned int, unsigned int>> &p) {
-  const auto &[a0, a1] = std::get<typename Currying::pair<
-      unsigned int, Currying::pair<unsigned int, unsigned int>>::Pair0>(p.v());
-  const auto &[a00, a10] =
-      std::get<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
-          a1.v());
+  const auto &[a0, a1] = p;
+  const auto &[a00, a10] = a1;
   return add3(a0, a00, a10);
 }
 

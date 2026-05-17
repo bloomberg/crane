@@ -30,14 +30,14 @@ public:
 
   Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -107,60 +107,15 @@ public:
 };
 
 template <typename A, typename B> struct Prod {
-  // TYPES
-  struct Pair {
-    A a0;
-    B a1;
-  };
-
-  using variant_t = std::variant<Pair>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Prod() {}
-
-  explicit Prod(Pair _v) : v_(std::move(_v)) {}
-
-  Prod(const Prod<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Prod(Prod<A, B> &&_other) : v_(std::move(_other.v_)) {}
-
-  Prod<A, B> &operator=(const Prod<A, B> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Prod<A, B> &operator=(Prod<A, B> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A a0;
+  B a1;
 
   // ACCESSORS
-  Prod<A, B> clone() const {
-    const auto &[a0, a1] = std::get<Pair>(this->v());
-    return Prod<A, B>(Pair{a0, a1});
-  }
+  Prod<A, B> clone() const { return {a0, a1}; }
 
   // CREATORS
-  template <typename _U0, typename _U1>
-  explicit Prod(const Prod<_U0, _U1> &_other) {
-    const auto &[a0, a1] = std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    this->v_ = Pair{A(a0), B(a1)};
-  }
-
-  static Prod<A, B> pair(A a0, B a1) {
-    return Prod(Pair{std::move(a0), std::move(a1)});
-  }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 };
 
 struct Tuple {
@@ -172,18 +127,18 @@ struct Tuple {
   }
 
   template <typename T1, typename T2> static T1 fst(const Prod<T1, T2> &p) {
-    const auto &[a0, a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
+    const auto &[a0, a1] = p;
     return a0;
   }
 
   template <typename T1, typename T2> static T2 snd(const Prod<T1, T2> &p) {
-    const auto &[a0, a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
+    const auto &[a0, a1] = p;
     return a1;
   }
 
   template <typename T1, typename T2>
   static Prod<T2, T1> swap(const Prod<T1, T2> &p) {
-    const auto &[a0, a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
+    const auto &[a0, a1] = p;
     return Prod<T2, T1>::pair(a1, a0);
   }
 

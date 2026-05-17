@@ -46,14 +46,14 @@ struct MemSafetyProbe24 {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -436,14 +436,14 @@ struct MemSafetyProbe24 {
 
     mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist<A> &operator=(const mylist<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<A> &operator=(mylist<A> &&_other) {
+    mylist<A> &operator=(mylist<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -70,12 +70,7 @@ List<T> vector_to_list(const std::vector<T> &vec) {
 // Helper to convert Prod to std::pair
 template <typename A, typename B>
 std::pair<A, B> prod_to_pair(const Prod<A, B> &p) {
-  std::pair<A, B> result;
-  std::visit(Overloaded{[&](const typename Prod<A, B>::Pair &pr) {
-               result = std::make_pair(pr.a0, pr.a1);
-             }},
-             p.v());
-  return result;
+  return std::make_pair(p.a0, p.a1);
 }
 
 // Helper to convert list of prods to vector of pairs

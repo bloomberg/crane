@@ -9,22 +9,21 @@ Sig<unsigned int> SigmaTypes::positive_succ(unsigned int n) {
 }
 
 unsigned int SigmaTypes::get_positive(unsigned int n) {
-  auto &&_sv = positive_succ(n);
-  const auto &[x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
+  const auto &_sv = positive_succ(n);
+  const auto &[x] = _sv;
   return x;
 }
 
 Sig<unsigned int> SigmaTypes::double_positive(unsigned int n) {
   Sig<unsigned int> p = positive_succ(n);
-  return Sig<unsigned int>::exist(
-      ([=]() mutable {
-        auto &[x] = std::get<typename Sig<unsigned int>::Exist>(p.v_mut());
-        return x;
-      }() +
-       [=]() mutable {
-         auto &[x0] = std::get<typename Sig<unsigned int>::Exist>(p.v_mut());
-         return x0;
-       }()));
+  return Sig<unsigned int>::exist(([=]() mutable {
+    auto &[x] = p;
+    return x;
+  }() +
+                                   [=]() mutable {
+                                     auto &[x0] = p;
+                                     return x0;
+                                   }()));
 }
 
 unsigned int SigmaTypes::use_nat_double(unsigned int n) {
@@ -38,9 +37,8 @@ List<unsigned int> SigmaTypes::positives_up_to(unsigned int k) {
     unsigned int k_ = k - 1;
     return List<unsigned int>::cons(
         [&]() {
-          auto &&_sv = positive_succ(k_);
-          const auto &[x] =
-              std::get<typename Sig<unsigned int>::Exist>(_sv.v());
+          const auto &_sv = positive_succ(k_);
+          const auto &[x] = _sv;
           return x;
         }(),
         positives_up_to(k_));

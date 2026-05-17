@@ -43,14 +43,14 @@ struct IndParam {
 
       result(const result &_other) : v_(std::move(_other.clone().v_)) {}
 
-      result(result &&_other) : v_(std::move(_other.v_)) {}
+      result(result &&_other) noexcept : v_(std::move(_other.v_)) {}
 
       result &operator=(const result &_other) {
         v_ = std::move(_other.clone().v_);
         return *this;
       }
 
-      result &operator=(result &&_other) {
+      result &operator=(result &&_other) noexcept {
         v_ = std::move(_other.v_);
         return *this;
       }
@@ -166,14 +166,14 @@ struct IndParam {
 
       t(const t &_other) : v_(std::move(_other.clone().v_)) {}
 
-      t(t &&_other) : v_(std::move(_other.v_)) {}
+      t(t &&_other) noexcept : v_(std::move(_other.v_)) {}
 
       t &operator=(const t &_other) {
         v_ = std::move(_other.clone().v_);
         return *this;
       }
 
-      t &operator=(t &&_other) {
+      t &operator=(t &&_other) noexcept {
         v_ = std::move(_other.v_);
         return *this;
       }

@@ -37,14 +37,14 @@ struct AccumClosureCapture {
 
     fn_list(const fn_list &_other) : v_(std::move(_other.clone().v_)) {}
 
-    fn_list(fn_list &&_other) : v_(std::move(_other.v_)) {}
+    fn_list(fn_list &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     fn_list &operator=(const fn_list &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    fn_list &operator=(fn_list &&_other) {
+    fn_list &operator=(fn_list &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -179,14 +179,14 @@ struct AccumClosureCapture {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

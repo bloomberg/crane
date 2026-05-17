@@ -35,14 +35,14 @@ struct GeneratedStorageFieldNameClash {
 
     d_v_(const d_v_ &_other) : v_(std::move(_other.clone().v_)) {}
 
-    d_v_(d_v_ &&_other) : v_(std::move(_other.v_)) {}
+    d_v_(d_v_ &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     d_v_ &operator=(const d_v_ &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    d_v_ &operator=(d_v_ &&_other) {
+    d_v_ &operator=(d_v_ &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

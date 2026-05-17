@@ -40,14 +40,14 @@ struct GeneratedMethodNameClash {
 
     token(const token &_other) : v_(std::move(_other.clone().v_)) {}
 
-    token(token &&_other) : v_(std::move(_other.v_)) {}
+    token(token &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     token &operator=(const token &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    token &operator=(token &&_other) {
+    token &operator=(token &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

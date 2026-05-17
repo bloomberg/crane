@@ -43,14 +43,14 @@ struct HigherKinded {
 
     Tree(const Tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Tree(Tree<A> &&_other) : v_(std::move(_other.v_)) {}
+    Tree(Tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Tree<A> &operator=(const Tree<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Tree<A> &operator=(Tree<A> &&_other) {
+    Tree<A> &operator=(Tree<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

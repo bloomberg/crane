@@ -42,14 +42,14 @@ struct WhereClause {
 
     Expr(const Expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Expr(Expr &&_other) : v_(std::move(_other.v_)) {}
+    Expr(Expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Expr &operator=(const Expr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Expr &operator=(Expr &&_other) {
+    Expr &operator=(Expr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -259,14 +259,14 @@ struct WhereClause {
 
     BExpr(const BExpr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    BExpr(BExpr &&_other) : v_(std::move(_other.v_)) {}
+    BExpr(BExpr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     BExpr &operator=(const BExpr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    BExpr &operator=(BExpr &&_other) {
+    BExpr &operator=(BExpr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -489,14 +489,14 @@ struct WhereClause {
 
     AExpr(const AExpr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    AExpr(AExpr &&_other) : v_(std::move(_other.v_)) {}
+    AExpr(AExpr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     AExpr &operator=(const AExpr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    AExpr &operator=(AExpr &&_other) {
+    AExpr &operator=(AExpr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

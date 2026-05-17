@@ -35,14 +35,14 @@ public:
 
   Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -172,14 +172,14 @@ struct RocqBug13581 {
 
     I(const I<T> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    I(I<T> &&_other) : v_(std::move(_other.v_)) {}
+    I(I<T> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     I<T> &operator=(const I<T> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    I<T> &operator=(I<T> &&_other) {
+    I<T> &operator=(I<T> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -296,14 +296,14 @@ struct RocqBug13581 {
 
     J(const J<T> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    J(J<T> &&_other) : v_(std::move(_other.v_)) {}
+    J(J<T> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     J<T> &operator=(const J<T> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    J<T> &operator=(J<T> &&_other) {
+    J<T> &operator=(J<T> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

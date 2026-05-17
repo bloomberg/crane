@@ -36,12 +36,12 @@ public:
   explicit Nat(O _v) : d_v_(_v) {}
   explicit Nat(S _v) : d_v_(bsl::move(_v)) {}
   Nat(const Nat &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
-  Nat(Nat &&_other) : d_v_(bsl::move(_other.d_v_)) {}
+  Nat(Nat &&_other) noexcept : d_v_(bsl::move(_other.d_v_)) {}
   Nat &operator=(const Nat &_other) {
     d_v_ = bsl::move(_other.clone().d_v_);
     return *this;
   }
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     d_v_ = bsl::move(_other.d_v_);
     return *this;
   }

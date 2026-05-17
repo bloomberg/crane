@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -126,72 +126,30 @@ concept OrderedType = requires { typename M::t; };
 struct DoubleTypename {
   template <OrderedType X> struct MakeMap {
     template <typename A> struct entry {
-      // TYPES
-      struct Entry0 {
-        typename X::t a0;
-        A a1;
-      };
-
-      using variant_t = std::variant<Entry0>;
-
-    private:
       // DATA
-      variant_t v_;
-
-    public:
-      // CREATORS
-      entry() {}
-
-      explicit entry(Entry0 _v) : v_(std::move(_v)) {}
-
-      entry(const entry<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-      entry(entry<A> &&_other) : v_(std::move(_other.v_)) {}
-
-      entry<A> &operator=(const entry<A> &_other) {
-        v_ = std::move(_other.clone().v_);
-        return *this;
-      }
-
-      entry<A> &operator=(entry<A> &&_other) {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
+      typename X::t a0;
+      A a1;
 
       // ACCESSORS
-      entry<A> clone() const {
-        const auto &[a0, a1] = std::get<Entry0>(this->v());
-        return entry<A>(Entry0{a0, a1});
-      }
+      entry<A> clone() const { return {a0, a1}; }
 
       // CREATORS
-      template <typename _U> explicit entry(const entry<_U> &_other) {
-        const auto &[a0, a1] = std::get<typename entry<_U>::Entry0>(_other.v());
-        this->v_ = Entry0{a0, A(a1)};
-      }
-
       static entry<A> entry0(typename X::t a0, A a1) {
-        return entry(Entry0{std::move(a0), std::move(a1)});
+        return {std::move(a0), std::move(a1)};
       }
-
-      // MANIPULATORS
-      inline variant_t &v_mut() { return v_; }
-
-      // ACCESSORS
-      const variant_t &v() const { return v_; }
     };
 
     template <typename T1, typename T2, typename F0>
       requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
     static T2 entry_rect(F0 &&f, const entry<T1> &e) {
-      const auto &[a0, a1] = std::get<typename entry<T1>::Entry0>(e.v());
+      const auto &[a0, a1] = e;
       return f(a0, a1);
     }
 
     template <typename T1, typename T2, typename F0>
       requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
     static T2 entry_rec(F0 &&f, const entry<T1> &e) {
-      const auto &[a0, a1] = std::get<typename entry<T1>::Entry0>(e.v());
+      const auto &[a0, a1] = e;
       return f(a0, a1);
     }
 
@@ -201,7 +159,7 @@ struct DoubleTypename {
         return List<typename X::t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<entry<T1>>::Cons>(l.v());
-        const auto &[a00, a10] = std::get<typename entry<T1>::Entry0>(a0.v());
+        const auto &[a00, a10] = a0;
         return List<typename X::t>::cons(a00, List<typename X::t>::nil());
       }
     }

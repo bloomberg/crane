@@ -30,16 +30,16 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  Sum(const Sum<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
+  Sum(const Sum<A, B> &_other) : v_(_other.v_) {}
 
-  Sum(Sum<A, B> &&_other) : v_(std::move(_other.v_)) {}
+  Sum(Sum<A, B> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Sum<A, B> &operator=(const Sum<A, B> &_other) {
-    v_ = std::move(_other.clone().v_);
+    v_ = _other.v_;
     return *this;
   }
 
-  Sum<A, B> &operator=(Sum<A, B> &&_other) {
+  Sum<A, B> &operator=(Sum<A, B> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -88,64 +88,27 @@ struct RocqBug4844 {
   static inline const abstrSum semilogic_ = std::any_cast<abstrSum>(semilogic);
 
   struct box {
-    // TYPES
-    struct Box0 {
-      Sum<ST, ST> a0;
-    };
-
-    using variant_t = std::variant<Box0>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    box() {}
-
-    explicit box(Box0 _v) : v_(std::move(_v)) {}
-
-    box(const box &_other) : v_(std::move(_other.clone().v_)) {}
-
-    box(box &&_other) : v_(std::move(_other.v_)) {}
-
-    box &operator=(const box &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    box &operator=(box &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    Sum<ST, ST> a0;
 
     // ACCESSORS
-    box clone() const {
-      const auto &[a0] = std::get<Box0>(this->v());
-      return box(Box0{a0.clone()});
-    }
+    box clone() const { return {a0}; }
 
     // CREATORS
-    static box box0(Sum<ST, ST> a0) { return box(Box0{std::move(a0)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static box box0(Sum<ST, ST> a0) { return {std::move(a0)}; }
   };
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
   static T1 box_rect(SomeType, F1 &&f, const box &b) {
-    const auto &[a0] = std::get<typename box::Box0>(b.v());
+    const auto &[a0] = b;
     return f(a0);
   }
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
   static T1 box_rec(SomeType, F1 &&f, const box &b) {
-    const auto &[a0] = std::get<typename box::Box0>(b.v());
+    const auto &[a0] = b;
     return f(a0);
   }
 

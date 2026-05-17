@@ -67,14 +67,14 @@ struct NameClashIifeThis {
 
     shape(const shape &_other) : v_(std::move(_other.clone().v_)) {}
 
-    shape(shape &&_other) : v_(std::move(_other.v_)) {}
+    shape(shape &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     shape &operator=(const shape &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    shape &operator=(shape &&_other) {
+    shape &operator=(shape &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -219,14 +219,14 @@ struct NameClashIifeThis {
 
     wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
 
-    wrapper(wrapper &&_other) : v_(std::move(_other.v_)) {}
+    wrapper(wrapper &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     wrapper &operator=(const wrapper &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    wrapper &operator=(wrapper &&_other) {
+    wrapper &operator=(wrapper &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

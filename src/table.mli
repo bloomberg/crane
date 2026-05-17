@@ -296,6 +296,12 @@ val is_typeclass_type : ml_type -> bool
 (** Check if C++ type is a typeclass. *)
 val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
 
+(** Mark inductive as flat (single-ctor, no variant wrapper). *)
+val add_flat_inductive : GlobRef.t -> unit
+
+(** Check if inductive is flat. *)
+val is_flat_inductive : GlobRef.t -> bool
+
 (** Mark inductive as enum. *)
 val add_enum_inductive : GlobRef.t -> unit
 

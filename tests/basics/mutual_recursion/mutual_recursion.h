@@ -39,14 +39,14 @@ struct MutualRecursion {
 
     tree(const tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree<A> &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree<A> &operator=(const tree<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree<A> &operator=(tree<A> &&_other) {
+    tree<A> &operator=(tree<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -143,14 +143,14 @@ struct MutualRecursion {
 
     forest(const forest<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    forest(forest<A> &&_other) : v_(std::move(_other.v_)) {}
+    forest(forest<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     forest<A> &operator=(const forest<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    forest<A> &operator=(forest<A> &&_other) {
+    forest<A> &operator=(forest<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

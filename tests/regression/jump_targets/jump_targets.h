@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -162,14 +162,15 @@ struct JumpTargets {
     instr_collection(const instr_collection &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    instr_collection(instr_collection &&_other) : v_(std::move(_other.v_)) {}
+    instr_collection(instr_collection &&_other) noexcept
+        : v_(std::move(_other.v_)) {}
 
     instr_collection &operator=(const instr_collection &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_collection &operator=(instr_collection &&_other) {
+    instr_collection &operator=(instr_collection &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -303,14 +304,14 @@ struct JumpTargets {
     instr_region(const instr_region &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    instr_region(instr_region &&_other) : v_(std::move(_other.v_)) {}
+    instr_region(instr_region &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr_region &operator=(const instr_region &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_region &operator=(instr_region &&_other) {
+    instr_region &operator=(instr_region &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -434,14 +435,14 @@ struct JumpTargets {
 
     instr_jms(const instr_jms &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr_jms(instr_jms &&_other) : v_(std::move(_other.v_)) {}
+    instr_jms(instr_jms &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr_jms &operator=(const instr_jms &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_jms &operator=(instr_jms &&_other) {
+    instr_jms &operator=(instr_jms &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -552,14 +553,14 @@ struct JumpTargets {
 
     instr_jun(const instr_jun &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr_jun(instr_jun &&_other) : v_(std::move(_other.v_)) {}
+    instr_jun(instr_jun &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr_jun &operator=(const instr_jun &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_jun &operator=(instr_jun &&_other) {
+    instr_jun &operator=(instr_jun &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

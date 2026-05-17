@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -163,16 +163,16 @@ struct UniversePoly {
 
     explicit poption(Psome _v) : v_(std::move(_v)) {}
 
-    poption(const poption<A> &_other) : v_(std::move(_other.clone().v_)) {}
+    poption(const poption<A> &_other) : v_(_other.v_) {}
 
-    poption(poption<A> &&_other) : v_(std::move(_other.v_)) {}
+    poption(poption<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     poption<A> &operator=(const poption<A> &_other) {
-      v_ = std::move(_other.clone().v_);
+      v_ = _other.v_;
       return *this;
     }
 
-    poption<A> &operator=(poption<A> &&_other) {
+    poption<A> &operator=(poption<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -34,14 +34,14 @@ struct SharedUptrEscape {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -195,64 +195,27 @@ struct SharedUptrEscape {
   /// Pattern 3: Build a value, pass to a function that returns it
   /// wrapped in a constructor, then unwrap and use twice.
   struct wrapper {
-    // TYPES
-    struct Wrap {
-      tree a0;
-    };
-
-    using variant_t = std::variant<Wrap>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    wrapper() {}
-
-    explicit wrapper(Wrap _v) : v_(std::move(_v)) {}
-
-    wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
-
-    wrapper(wrapper &&_other) : v_(std::move(_other.v_)) {}
-
-    wrapper &operator=(const wrapper &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    wrapper &operator=(wrapper &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    tree a0;
 
     // ACCESSORS
-    wrapper clone() const {
-      const auto &[a0] = std::get<Wrap>(this->v());
-      return wrapper(Wrap{a0.clone()});
-    }
+    wrapper clone() const { return {a0}; }
 
     // CREATORS
-    static wrapper wrap(tree a0) { return wrapper(Wrap{std::move(a0)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static wrapper wrap(tree a0) { return {std::move(a0)}; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
-    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    const auto &[a0] = w;
     return f(a0);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
-    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    const auto &[a0] = w;
     return f(a0);
   }
 
@@ -260,7 +223,7 @@ struct SharedUptrEscape {
   static inline const unsigned int unwrap_and_dup = []() {
     tree t = tree::node(tree::leaf(), 42u, tree::leaf());
     wrapper w = wrap_tree(std::move(t));
-    auto &[a0] = std::get<typename wrapper::Wrap>(w.v_mut());
+    auto &[a0] = w;
     return (a0.tree_sum() + a0.tree_sum());
   }();
 };

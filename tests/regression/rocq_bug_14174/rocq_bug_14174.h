@@ -36,14 +36,14 @@ public:
 
   Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -134,16 +134,16 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  Option(const Option<A> &_other) : v_(std::move(_other.clone().v_)) {}
+  Option(const Option<A> &_other) : v_(_other.v_) {}
 
-  Option(Option<A> &&_other) : v_(std::move(_other.v_)) {}
+  Option(Option<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Option<A> &operator=(const Option<A> &_other) {
-    v_ = std::move(_other.clone().v_);
+    v_ = _other.v_;
     return *this;
   }
 
-  Option<A> &operator=(Option<A> &&_other) {
+  Option<A> &operator=(Option<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -180,293 +180,76 @@ public:
 };
 
 template <typename A, typename B> struct Prod {
-  // TYPES
-  struct Pair {
-    A a0;
-    B a1;
-  };
-
-  using variant_t = std::variant<Pair>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Prod() {}
-
-  explicit Prod(Pair _v) : v_(std::move(_v)) {}
-
-  Prod(const Prod<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Prod(Prod<A, B> &&_other) : v_(std::move(_other.v_)) {}
-
-  Prod<A, B> &operator=(const Prod<A, B> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Prod<A, B> &operator=(Prod<A, B> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A a0;
+  B a1;
 
   // ACCESSORS
-  Prod<A, B> clone() const {
-    const auto &[a0, a1] = std::get<Pair>(this->v());
-    return Prod<A, B>(Pair{a0, a1});
-  }
+  Prod<A, B> clone() const { return {a0, a1}; }
 
   // CREATORS
-  template <typename _U0, typename _U1>
-  explicit Prod(const Prod<_U0, _U1> &_other) {
-    const auto &[a0, a1] = std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    this->v_ = Pair{A(a0), B(a1)};
-  }
-
-  static Prod<A, B> pair(A a0, B a1) {
-    return Prod(Pair{std::move(a0), std::move(a1)});
-  }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    const auto &[a0, a1] = std::get<typename Prod<A, B>::Pair>(this->v());
+    const auto &_sv = *this;
+    const auto &[a0, a1] = _sv;
     return a0;
   }
 
   B snd() const {
-    const auto &[a0, a1] = std::get<typename Prod<A, B>::Pair>(this->v());
+    const auto &_sv = *this;
+    const auto &[a0, a1] = _sv;
     return a1;
   }
 };
 
 template <typename A> struct Sig {
-  // TYPES
-  struct Exist0 {
-    A x;
-  };
-
-  using variant_t = std::variant<Exist0>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Sig() {}
-
-  explicit Sig(Exist0 _v) : v_(std::move(_v)) {}
-
-  Sig(const Sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Sig(Sig<A> &&_other) : v_(std::move(_other.v_)) {}
-
-  Sig<A> &operator=(const Sig<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Sig<A> &operator=(Sig<A> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
 
   // ACCESSORS
-  Sig<A> clone() const {
-    const auto &[x] = std::get<Exist0>(this->v());
-    return Sig<A>(Exist0{x});
-  }
+  Sig<A> clone() const { return {x}; }
 
   // CREATORS
-  template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[x] = std::get<typename Sig<_U>::Exist0>(_other.v());
-    this->v_ = Exist0{A(x)};
-  }
-
-  static Sig<A> exist0(A x) { return Sig(Exist0{std::move(x)}); }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static Sig<A> exist0(A x) { return {std::move(x)}; }
 };
 
 template <typename A> struct Sig2 {
-  // TYPES
-  struct Exist1 {
-    A x;
-  };
-
-  using variant_t = std::variant<Exist1>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Sig2() {}
-
-  explicit Sig2(Exist1 _v) : v_(std::move(_v)) {}
-
-  Sig2(const Sig2<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Sig2(Sig2<A> &&_other) : v_(std::move(_other.v_)) {}
-
-  Sig2<A> &operator=(const Sig2<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Sig2<A> &operator=(Sig2<A> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
 
   // ACCESSORS
-  Sig2<A> clone() const {
-    const auto &[x] = std::get<Exist1>(this->v());
-    return Sig2<A>(Exist1{x});
-  }
+  Sig2<A> clone() const { return {x}; }
 
   // CREATORS
-  template <typename _U> explicit Sig2(const Sig2<_U> &_other) {
-    const auto &[x] = std::get<typename Sig2<_U>::Exist1>(_other.v());
-    this->v_ = Exist1{A(x)};
-  }
-
-  static Sig2<A> exist1(A x) { return Sig2(Exist1{std::move(x)}); }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static Sig2<A> exist1(A x) { return {std::move(x)}; }
 };
 
 template <typename A, typename P> struct SigT {
-  // TYPES
-  struct ExistT0 {
-    A x;
-    P a1;
-  };
-
-  using variant_t = std::variant<ExistT0>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  SigT() {}
-
-  explicit SigT(ExistT0 _v) : v_(std::move(_v)) {}
-
-  SigT(const SigT<A, P> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  SigT(SigT<A, P> &&_other) : v_(std::move(_other.v_)) {}
-
-  SigT<A, P> &operator=(const SigT<A, P> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  SigT<A, P> &operator=(SigT<A, P> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
+  P a1;
 
   // ACCESSORS
-  SigT<A, P> clone() const {
-    const auto &[x, a1] = std::get<ExistT0>(this->v());
-    return SigT<A, P>(ExistT0{x, a1});
-  }
+  SigT<A, P> clone() const { return {x, a1}; }
 
   // CREATORS
-  template <typename _U0, typename _U1>
-  explicit SigT(const SigT<_U0, _U1> &_other) {
-    const auto &[x, a1] =
-        std::get<typename SigT<_U0, _U1>::ExistT0>(_other.v());
-    this->v_ = ExistT0{A(x), P(a1)};
-  }
-
-  static SigT<A, P> existt0(A x, P a1) {
-    return SigT(ExistT0{std::move(x), std::move(a1)});
-  }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static SigT<A, P> existt0(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
 
 template <typename A, typename P, typename Q> struct SigT2 {
-  // TYPES
-  struct ExistT1 {
-    A x;
-    P a1;
-    Q a2;
-  };
-
-  using variant_t = std::variant<ExistT1>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  SigT2() {}
-
-  explicit SigT2(ExistT1 _v) : v_(std::move(_v)) {}
-
-  SigT2(const SigT2<A, P, Q> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  SigT2(SigT2<A, P, Q> &&_other) : v_(std::move(_other.v_)) {}
-
-  SigT2<A, P, Q> &operator=(const SigT2<A, P, Q> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  SigT2<A, P, Q> &operator=(SigT2<A, P, Q> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
+  P a1;
+  Q a2;
 
   // ACCESSORS
-  SigT2<A, P, Q> clone() const {
-    const auto &[x, a1, a2] = std::get<ExistT1>(this->v());
-    return SigT2<A, P, Q>(ExistT1{x, a1, a2});
-  }
+  SigT2<A, P, Q> clone() const { return {x, a1, a2}; }
 
   // CREATORS
-  template <typename _U0, typename _U1, typename _U2>
-  explicit SigT2(const SigT2<_U0, _U1, _U2> &_other) {
-    const auto &[x, a1, a2] =
-        std::get<typename SigT2<_U0, _U1, _U2>::ExistT1>(_other.v());
-    this->v_ = ExistT1{A(x), P(a1), Q(a2)};
-  }
-
   static SigT2<A, P, Q> existt1(A x, P a1, Q a2) {
-    return SigT2(ExistT1{std::move(x), std::move(a1), std::move(a2)});
+    return {std::move(x), std::move(a1), std::move(a2)};
   }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
 };
 
 struct SigTNotations {};
@@ -494,16 +277,16 @@ public:
 
   explicit Sumor(Inright _v) : v_(_v) {}
 
-  Sumor(const Sumor<A> &_other) : v_(std::move(_other.clone().v_)) {}
+  Sumor(const Sumor<A> &_other) : v_(_other.v_) {}
 
-  Sumor(Sumor<A> &&_other) : v_(std::move(_other.v_)) {}
+  Sumor(Sumor<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Sumor<A> &operator=(const Sumor<A> &_other) {
-    v_ = std::move(_other.clone().v_);
+    v_ = _other.v_;
     return *this;
   }
 
-  Sumor<A> &operator=(Sumor<A> &&_other) {
+  Sumor<A> &operator=(Sumor<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -542,56 +325,14 @@ public:
 struct RocqBug14174 {
   struct A {
     template <typename A> struct sig {
-      // TYPES
-      struct Exist {
-        A x;
-      };
-
-      using variant_t = std::variant<Exist>;
-
-    private:
       // DATA
-      variant_t v_;
-
-    public:
-      // CREATORS
-      sig() {}
-
-      explicit sig(Exist _v) : v_(std::move(_v)) {}
-
-      sig(const sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-      sig(sig<A> &&_other) : v_(std::move(_other.v_)) {}
-
-      sig<A> &operator=(const sig<A> &_other) {
-        v_ = std::move(_other.clone().v_);
-        return *this;
-      }
-
-      sig<A> &operator=(sig<A> &&_other) {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
+      A x;
 
       // ACCESSORS
-      sig<A> clone() const {
-        const auto &[x] = std::get<Exist>(this->v());
-        return sig<A>(Exist{x});
-      }
+      sig<A> clone() const { return {x}; }
 
       // CREATORS
-      template <typename _U> explicit sig(const sig<_U> &_other) {
-        const auto &[x] = std::get<typename sig<_U>::Exist>(_other.v());
-        this->v_ = Exist{A(x)};
-      }
-
-      static sig<A> exist(A x) { return sig(Exist{std::move(x)}); }
-
-      // MANIPULATORS
-      inline variant_t &v_mut() { return v_; }
-
-      // ACCESSORS
-      const variant_t &v() const { return v_; }
+      static sig<A> exist(A x) { return {std::move(x)}; }
 
       template <typename T1>
       T1 eq_sig_rec_uncurried(const sig<A> &_x1, const T1 &_x2) const {
@@ -621,76 +362,37 @@ struct RocqBug14174 {
       }
 
       A proj1_sig() const {
-        const auto &[x] = std::get<typename sig<A>::Exist>(this->v());
+        const auto &_sv = *this;
+        const auto &[x] = _sv;
         return x;
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig_rec(F0 &&f) const {
-        const auto &[x0] = std::get<typename sig<A>::Exist>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0] = _sv;
         return f(x0);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig_rect(F0 &&f) const {
-        const auto &[x0] = std::get<typename sig<A>::Exist>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0] = _sv;
         return f(x0);
       }
     };
 
     template <typename A> struct sig2 {
-      // TYPES
-      struct Exist2 {
-        A x;
-      };
-
-      using variant_t = std::variant<Exist2>;
-
-    private:
       // DATA
-      variant_t v_;
-
-    public:
-      // CREATORS
-      sig2() {}
-
-      explicit sig2(Exist2 _v) : v_(std::move(_v)) {}
-
-      sig2(const sig2<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-      sig2(sig2<A> &&_other) : v_(std::move(_other.v_)) {}
-
-      sig2<A> &operator=(const sig2<A> &_other) {
-        v_ = std::move(_other.clone().v_);
-        return *this;
-      }
-
-      sig2<A> &operator=(sig2<A> &&_other) {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
+      A x;
 
       // ACCESSORS
-      sig2<A> clone() const {
-        const auto &[x] = std::get<Exist2>(this->v());
-        return sig2<A>(Exist2{x});
-      }
+      sig2<A> clone() const { return {x}; }
 
       // CREATORS
-      template <typename _U> explicit sig2(const sig2<_U> &_other) {
-        const auto &[x] = std::get<typename sig2<_U>::Exist2>(_other.v());
-        this->v_ = Exist2{A(x)};
-      }
-
-      static sig2<A> exist2(A x) { return sig2(Exist2{std::move(x)}); }
-
-      // MANIPULATORS
-      inline variant_t &v_mut() { return v_; }
-
-      // ACCESSORS
-      const variant_t &v() const { return v_; }
+      static sig2<A> exist2(A x) { return {std::move(x)}; }
 
       template <typename T1>
       T1 eq_sig2_rec_uncurried(const sig2<A> &_x1, const T1 &_x2) const {
@@ -723,7 +425,7 @@ struct RocqBug14174 {
       sig<A> sig_of_sig2() const {
         sig2<A> _self_val = *this;
         return sig<A>::exist([=]() mutable {
-          const auto &[x0] = std::get<typename sig2<A>::Exist2>(_self_val.v());
+          const auto &[x0] = _self_val;
           return x0;
         }());
       }
@@ -731,74 +433,32 @@ struct RocqBug14174 {
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig2_rec(F0 &&f) const {
-        const auto &[x0] = std::get<typename sig2<A>::Exist2>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0] = _sv;
         return f(x0);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig2_rect(F0 &&f) const {
-        const auto &[x0] = std::get<typename sig2<A>::Exist2>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0] = _sv;
         return f(x0);
       }
     };
 
     template <typename A, typename P> struct sigT {
-      // TYPES
-      struct ExistT {
-        A x;
-        P a1;
-      };
-
-      using variant_t = std::variant<ExistT>;
-
-    private:
       // DATA
-      variant_t v_;
-
-    public:
-      // CREATORS
-      sigT() {}
-
-      explicit sigT(ExistT _v) : v_(std::move(_v)) {}
-
-      sigT(const sigT<A, P> &_other) : v_(std::move(_other.clone().v_)) {}
-
-      sigT(sigT<A, P> &&_other) : v_(std::move(_other.v_)) {}
-
-      sigT<A, P> &operator=(const sigT<A, P> &_other) {
-        v_ = std::move(_other.clone().v_);
-        return *this;
-      }
-
-      sigT<A, P> &operator=(sigT<A, P> &&_other) {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
+      A x;
+      P a1;
 
       // ACCESSORS
-      sigT<A, P> clone() const {
-        const auto &[x, a1] = std::get<ExistT>(this->v());
-        return sigT<A, P>(ExistT{x, a1});
-      }
+      sigT<A, P> clone() const { return {x, a1}; }
 
       // CREATORS
-      template <typename _U0, typename _U1>
-      explicit sigT(const sigT<_U0, _U1> &_other) {
-        const auto &[x, a1] =
-            std::get<typename sigT<_U0, _U1>::ExistT>(_other.v());
-        this->v_ = ExistT{A(x), P(a1)};
-      }
-
       static sigT<A, P> existt(A x, P a1) {
-        return sigT(ExistT{std::move(x), std::move(a1)});
+        return {std::move(x), std::move(a1)};
       }
-
-      // MANIPULATORS
-      inline variant_t &v_mut() { return v_; }
-
-      // ACCESSORS
-      const variant_t &v() const { return v_; }
 
       template <typename T1>
       T1 eq_sigT_rec_uncurried(const sigT<A, P> &_x1, const T1 &_x2) const {
@@ -835,87 +495,47 @@ struct RocqBug14174 {
       }
 
       P projT2() const {
-        const auto &[x0, a1] = std::get<typename sigT<A, P>::ExistT>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0, a1] = _sv;
         return a1;
       }
 
       A projT1() const {
-        const auto &[x0, a1] = std::get<typename sigT<A, P>::ExistT>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0, a1] = _sv;
         return x0;
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &>
       T1 sigT_rec(F0 &&f) const {
-        const auto &[x0, a1] = std::get<typename sigT<A, P>::ExistT>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0, a1] = _sv;
         return f(x0, a1);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &>
       T1 sigT_rect(F0 &&f) const {
-        const auto &[x0, a1] = std::get<typename sigT<A, P>::ExistT>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0, a1] = _sv;
         return f(x0, a1);
       }
     };
 
     template <typename A, typename P, typename Q> struct sigT2 {
-      // TYPES
-      struct ExistT2 {
-        A x;
-        P a1;
-        Q a2;
-      };
-
-      using variant_t = std::variant<ExistT2>;
-
-    private:
       // DATA
-      variant_t v_;
-
-    public:
-      // CREATORS
-      sigT2() {}
-
-      explicit sigT2(ExistT2 _v) : v_(std::move(_v)) {}
-
-      sigT2(const sigT2<A, P, Q> &_other) : v_(std::move(_other.clone().v_)) {}
-
-      sigT2(sigT2<A, P, Q> &&_other) : v_(std::move(_other.v_)) {}
-
-      sigT2<A, P, Q> &operator=(const sigT2<A, P, Q> &_other) {
-        v_ = std::move(_other.clone().v_);
-        return *this;
-      }
-
-      sigT2<A, P, Q> &operator=(sigT2<A, P, Q> &&_other) {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
+      A x;
+      P a1;
+      Q a2;
 
       // ACCESSORS
-      sigT2<A, P, Q> clone() const {
-        const auto &[x, a1, a2] = std::get<ExistT2>(this->v());
-        return sigT2<A, P, Q>(ExistT2{x, a1, a2});
-      }
+      sigT2<A, P, Q> clone() const { return {x, a1, a2}; }
 
       // CREATORS
-      template <typename _U0, typename _U1, typename _U2>
-      explicit sigT2(const sigT2<_U0, _U1, _U2> &_other) {
-        const auto &[x, a1, a2] =
-            std::get<typename sigT2<_U0, _U1, _U2>::ExistT2>(_other.v());
-        this->v_ = ExistT2{A(x), P(a1), Q(a2)};
-      }
-
       static sigT2<A, P, Q> existt2(A x, P a1, Q a2) {
-        return sigT2(ExistT2{std::move(x), std::move(a1), std::move(a2)});
+        return {std::move(x), std::move(a1), std::move(a2)};
       }
-
-      // MANIPULATORS
-      inline variant_t &v_mut() { return v_; }
-
-      // ACCESSORS
-      const variant_t &v() const { return v_; }
 
       template <typename T1>
       T1 eq_sigT2_rec_uncurried(const sigT2<A, P, Q> &_x1,
@@ -949,8 +569,8 @@ struct RocqBug14174 {
       }
 
       Q projT3() const {
-        const auto &[x, a1, a2] =
-            std::get<typename sigT2<A, P, Q>::ExistT2>(this->v());
+        const auto &_sv = *this;
+        const auto &[x, a1, a2] = _sv;
         return a2;
       }
 
@@ -958,13 +578,11 @@ struct RocqBug14174 {
         sigT2<A, P, Q> _self_val = *this;
         return sigT<A, P>::existt(
             [=]() mutable {
-              const auto &[x0, a1, a2] =
-                  std::get<typename sigT2<A, P, Q>::ExistT2>(_self_val.v());
+              const auto &[x0, a1, a2] = _self_val;
               return x0;
             }(),
             [=]() mutable {
-              const auto &[x0, a10, a20] =
-                  std::get<typename sigT2<A, P, Q>::ExistT2>(_self_val.v());
+              const auto &[x0, a10, a20] = _self_val;
               return a10;
             }());
       }
@@ -972,16 +590,16 @@ struct RocqBug14174 {
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
       T1 sigT2_rec(F0 &&f) const {
-        const auto &[x0, a1, a2] =
-            std::get<typename sigT2<A, P, Q>::ExistT2>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0, a1, a2] = _sv;
         return f(x0, a1, a2);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
       T1 sigT2_rect(F0 &&f) const {
-        const auto &[x0, a1, a2] =
-            std::get<typename sigT2<A, P, Q>::ExistT2>(this->v());
+        const auto &_sv = *this;
+        const auto &[x0, a1, a2] = _sv;
         return f(x0, a1, a2);
       }
     };
@@ -1088,16 +706,16 @@ struct RocqBug14174 {
 
       explicit sumor(Inright _v) : v_(_v) {}
 
-      sumor(const sumor<A> &_other) : v_(std::move(_other.clone().v_)) {}
+      sumor(const sumor<A> &_other) : v_(_other.v_) {}
 
-      sumor(sumor<A> &&_other) : v_(std::move(_other.v_)) {}
+      sumor(sumor<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
       sumor<A> &operator=(const sumor<A> &_other) {
-        v_ = std::move(_other.clone().v_);
+        v_ = _other.v_;
         return *this;
       }
 
-      sumor<A> &operator=(sumor<A> &&_other) {
+      sumor<A> &operator=(sumor<A> &&_other) noexcept {
         v_ = std::move(_other.v_);
         return *this;
       }
@@ -1169,7 +787,7 @@ struct RocqBug14174 {
           [=](const T1 &z) mutable { return h(z).projT1(); },
           [=](const T1 &z) mutable {
             sigT<T2, T3> s = h(z);
-            auto &[x, a1] = std::get<typename sigT<T2, T3>::ExistT>(s.v_mut());
+            auto &[x, a1] = s;
             return a1;
           });
     }

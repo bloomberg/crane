@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -145,14 +145,14 @@ struct MutualRecord {
 
     department(const department &_other) : v_(std::move(_other.clone().v_)) {}
 
-    department(department &&_other) : v_(std::move(_other.v_)) {}
+    department(department &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     department &operator=(const department &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    department &operator=(department &&_other) {
+    department &operator=(department &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -199,14 +199,14 @@ struct MutualRecord {
 
     employee(const employee &_other) : v_(std::move(_other.clone().v_)) {}
 
-    employee(employee &&_other) : v_(std::move(_other.v_)) {}
+    employee(employee &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     employee &operator=(const employee &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    employee &operator=(employee &&_other) {
+    employee &operator=(employee &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -41,12 +41,12 @@ public:
   explicit List(Nil _v) : d_v_(_v) {}
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
   List(const List<t_A> &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
-  List(List<t_A> &&_other) : d_v_(bsl::move(_other.d_v_)) {}
+  List(List<t_A> &&_other) noexcept : d_v_(bsl::move(_other.d_v_)) {}
   List<t_A> &operator=(const List<t_A> &_other) {
     d_v_ = bsl::move(_other.clone().d_v_);
     return *this;
   }
-  List<t_A> &operator=(List<t_A> &&_other) {
+  List<t_A> &operator=(List<t_A> &&_other) noexcept {
     d_v_ = bsl::move(_other.d_v_);
     return *this;
   }

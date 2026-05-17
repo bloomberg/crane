@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -171,14 +171,14 @@ struct LoopifyExpr {
 
     expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    expr(expr &&_other) : v_(std::move(_other.v_)) {}
+    expr(expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     expr &operator=(const expr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    expr &operator=(expr &&_other) {
+    expr &operator=(expr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1412,14 +1412,14 @@ struct LoopifyExpr {
 
     simple_expr(const simple_expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    simple_expr(simple_expr &&_other) : v_(std::move(_other.v_)) {}
+    simple_expr(simple_expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     simple_expr &operator=(const simple_expr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    simple_expr &operator=(simple_expr &&_other) {
+    simple_expr &operator=(simple_expr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1916,14 +1916,14 @@ struct LoopifyExpr {
 
     shape(const shape &_other) : v_(std::move(_other.clone().v_)) {}
 
-    shape(shape &&_other) : v_(std::move(_other.v_)) {}
+    shape(shape &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     shape &operator=(const shape &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    shape &operator=(shape &&_other) {
+    shape &operator=(shape &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -2034,14 +2034,14 @@ struct LoopifyExpr {
 
     cond_expr(const cond_expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    cond_expr(cond_expr &&_other) : v_(std::move(_other.v_)) {}
+    cond_expr(cond_expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     cond_expr &operator=(const cond_expr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    cond_expr &operator=(cond_expr &&_other) {
+    cond_expr &operator=(cond_expr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

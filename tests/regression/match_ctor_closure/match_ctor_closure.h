@@ -35,14 +35,14 @@ struct MatchCtorClosure {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -170,56 +170,20 @@ struct MatchCtorClosure {
   };
 
   struct fn_box {
-    // TYPES
-    struct Box {
-      std::function<unsigned int(unsigned int)> a0;
-    };
-
-    using variant_t = std::variant<Box>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    fn_box() {}
-
-    explicit fn_box(Box _v) : v_(std::move(_v)) {}
-
-    fn_box(const fn_box &_other) : v_(std::move(_other.clone().v_)) {}
-
-    fn_box(fn_box &&_other) : v_(std::move(_other.v_)) {}
-
-    fn_box &operator=(const fn_box &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    fn_box &operator=(fn_box &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    std::function<unsigned int(unsigned int)> a0;
 
     // ACCESSORS
-    fn_box clone() const {
-      const auto &[a0] = std::get<Box>(this->v());
-      return fn_box(Box{a0});
-    }
+    fn_box clone() const { return {a0}; }
 
     // CREATORS
     static fn_box box(std::function<unsigned int(unsigned int)> a0) {
-      return fn_box(Box{std::move(a0)});
+      return {std::move(a0)};
     }
 
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
-
     unsigned int apply_box(unsigned int x) const {
-      const auto &[a0] = std::get<typename fn_box::Box>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return a0(x);
     }
 
@@ -227,7 +191,8 @@ struct MatchCtorClosure {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rec(F0 &&f) const {
-      const auto &[a0] = std::get<typename fn_box::Box>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
 
@@ -235,7 +200,8 @@ struct MatchCtorClosure {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rect(F0 &&f) const {
-      const auto &[a0] = std::get<typename fn_box::Box>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
   };

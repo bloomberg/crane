@@ -42,14 +42,14 @@ struct MemSafetyProbe20 {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -306,56 +306,20 @@ struct MemSafetyProbe20 {
   /// Wrapper type: wraps a closure in a data structure to prevent
   /// the function from being fully uncurried.
   struct wrapped {
-    // TYPES
-    struct Wrap {
-      std::function<unsigned int(unsigned int)> a0;
-    };
-
-    using variant_t = std::variant<Wrap>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    wrapped() {}
-
-    explicit wrapped(Wrap _v) : v_(std::move(_v)) {}
-
-    wrapped(const wrapped &_other) : v_(std::move(_other.clone().v_)) {}
-
-    wrapped(wrapped &&_other) : v_(std::move(_other.v_)) {}
-
-    wrapped &operator=(const wrapped &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    wrapped &operator=(wrapped &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    std::function<unsigned int(unsigned int)> a0;
 
     // ACCESSORS
-    wrapped clone() const {
-      const auto &[a0] = std::get<Wrap>(this->v());
-      return wrapped(Wrap{a0});
-    }
+    wrapped clone() const { return {a0}; }
 
     // CREATORS
     static wrapped wrap(std::function<unsigned int(unsigned int)> a0) {
-      return wrapped(Wrap{std::move(a0)});
+      return {std::move(a0)};
     }
 
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
-
     unsigned int unwrap(unsigned int x) const {
-      const auto &[a0] = std::get<typename wrapped::Wrap>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return a0(x);
     }
 
@@ -363,7 +327,8 @@ struct MemSafetyProbe20 {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 wrapped_rec(F0 &&f) const {
-      const auto &[a0] = std::get<typename wrapped::Wrap>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
 
@@ -371,7 +336,8 @@ struct MemSafetyProbe20 {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 wrapped_rect(F0 &&f) const {
-      const auto &[a0] = std::get<typename wrapped::Wrap>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
   };
@@ -476,14 +442,14 @@ struct MemSafetyProbe20 {
 
     mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist<A> &operator=(const mylist<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<A> &operator=(mylist<A> &&_other) {
+    mylist<A> &operator=(mylist<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

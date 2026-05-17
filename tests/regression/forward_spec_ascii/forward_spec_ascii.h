@@ -32,14 +32,14 @@ struct ForwardSpecAscii {
 
     node(const node &_other) : v_(std::move(_other.clone().v_)) {}
 
-    node(node &&_other) : v_(std::move(_other.v_)) {}
+    node(node &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     node &operator=(const node &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    node &operator=(node &&_other) {
+    node &operator=(node &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

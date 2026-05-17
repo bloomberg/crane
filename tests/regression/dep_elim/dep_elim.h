@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -149,14 +149,14 @@ struct DepElim {
 
     fin(const fin &_other) : v_(std::move(_other.clone().v_)) {}
 
-    fin(fin &&_other) : v_(std::move(_other.v_)) {}
+    fin(fin &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     fin &operator=(const fin &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    fin &operator=(fin &&_other) {
+    fin &operator=(fin &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -289,14 +289,14 @@ struct DepElim {
 
     vec(const vec<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    vec(vec<A> &&_other) : v_(std::move(_other.v_)) {}
+    vec(vec<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     vec<A> &operator=(const vec<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    vec<A> &operator=(vec<A> &&_other) {
+    vec<A> &operator=(vec<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -465,14 +465,14 @@ struct DepElim {
 
     avail(const avail &_other) : v_(std::move(_other.clone().v_)) {}
 
-    avail(avail &&_other) : v_(std::move(_other.v_)) {}
+    avail(avail &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     avail &operator=(const avail &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    avail &operator=(avail &&_other) {
+    avail &operator=(avail &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

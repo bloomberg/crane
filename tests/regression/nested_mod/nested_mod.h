@@ -76,14 +76,14 @@ struct NestedMod {
 
         shape(const shape &_other) : v_(std::move(_other.clone().v_)) {}
 
-        shape(shape &&_other) : v_(std::move(_other.v_)) {}
+        shape(shape &&_other) noexcept : v_(std::move(_other.v_)) {}
 
         shape &operator=(const shape &_other) {
           v_ = std::move(_other.clone().v_);
           return *this;
         }
 
-        shape &operator=(shape &&_other) {
+        shape &operator=(shape &&_other) noexcept {
           v_ = std::move(_other.v_);
           return *this;
         }

@@ -36,14 +36,14 @@ public:
 
   MyList(const MyList<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  MyList(MyList<A> &&_other) : v_(std::move(_other.v_)) {}
+  MyList(MyList<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   MyList<A> &operator=(const MyList<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  MyList<A> &operator=(MyList<A> &&_other) {
+  MyList<A> &operator=(MyList<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }

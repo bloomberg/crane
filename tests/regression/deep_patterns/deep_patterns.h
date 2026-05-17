@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -166,14 +166,14 @@ struct DeepPatterns {
 
     outer(const outer &_other) : v_(std::move(_other.clone().v_)) {}
 
-    outer(outer &&_other) : v_(std::move(_other.v_)) {}
+    outer(outer &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     outer &operator=(const outer &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    outer &operator=(outer &&_other) {
+    outer &operator=(outer &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -250,14 +250,14 @@ struct DeepPatterns {
 
     inner(const inner &_other) : v_(std::move(_other.clone().v_)) {}
 
-    inner(inner &&_other) : v_(std::move(_other.v_)) {}
+    inner(inner &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     inner &operator=(const inner &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    inner &operator=(inner &&_other) {
+    inner &operator=(inner &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -344,73 +344,31 @@ struct DeepPatterns {
   guarded_match(const std::pair<unsigned int, unsigned int> &p);
 
   template <typename A, typename B> struct pair {
-    // TYPES
-    struct Pair0 {
-      A a0;
-      B a1;
-    };
-
-    using variant_t = std::variant<Pair0>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    pair() {}
-
-    explicit pair(Pair0 _v) : v_(std::move(_v)) {}
-
-    pair(const pair<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    pair(pair<A, B> &&_other) : v_(std::move(_other.v_)) {}
-
-    pair<A, B> &operator=(const pair<A, B> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    pair<A, B> &operator=(pair<A, B> &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    A a0;
+    B a1;
 
     // ACCESSORS
-    pair<A, B> clone() const {
-      const auto &[a0, a1] = std::get<Pair0>(this->v());
-      return pair<A, B>(Pair0{a0, a1});
-    }
+    pair<A, B> clone() const { return {a0, a1}; }
 
     // CREATORS
-    template <typename _U0, typename _U1>
-    explicit pair(const pair<_U0, _U1> &_other) {
-      const auto &[a0, a1] =
-          std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      this->v_ = Pair0{A(a0), B(a1)};
-    }
-
     static pair<A, B> pair0(A a0, B a1) {
-      return pair(Pair0{std::move(a0), std::move(a1)});
+      return {std::move(a0), std::move(a1)};
     }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 pair_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename pair<A, B>::Pair0>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 pair_rect(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename pair<A, B>::Pair0>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
       return f(a0, a1);
     }
   };
@@ -440,14 +398,14 @@ struct DeepPatterns {
 
     mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist<A> &operator=(const mylist<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<A> &operator=(mylist<A> &&_other) {
+    mylist<A> &operator=(mylist<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

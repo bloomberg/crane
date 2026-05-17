@@ -34,14 +34,14 @@ struct DeepMap {
 
     tree(const tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree<A> &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree<A> &operator=(const tree<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree<A> &operator=(tree<A> &&_other) {
+    tree<A> &operator=(tree<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

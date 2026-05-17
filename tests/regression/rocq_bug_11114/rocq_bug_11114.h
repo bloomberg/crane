@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -122,64 +122,27 @@ public:
 
 struct RocqBug11114 {
   struct t {
-    // TYPES
-    struct T0 {
-      unsigned int k;
-    };
-
-    using variant_t = std::variant<T0>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    t() {}
-
-    explicit t(T0 _v) : v_(std::move(_v)) {}
-
-    t(const t &_other) : v_(std::move(_other.clone().v_)) {}
-
-    t(t &&_other) : v_(std::move(_other.v_)) {}
-
-    t &operator=(const t &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    t &operator=(t &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    unsigned int k;
 
     // ACCESSORS
-    t clone() const {
-      const auto &[k] = std::get<T0>(this->v());
-      return t(T0{k});
-    }
+    t clone() const { return {k}; }
 
     // CREATORS
-    static t t0(unsigned int k) { return t(T0{k}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
+    static t t0(unsigned int k) { return {k}; }
   };
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 t_rect(const List<unsigned int> &, F1 &&f, const t &t0) {
-    const auto &[k0] = std::get<typename t::T0>(t0.v());
+    const auto &[k0] = t0;
     return f(k0);
   }
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 t_rec(const List<unsigned int> &, F1 &&f, const t &t0) {
-    const auto &[k0] = std::get<typename t::T0>(t0.v());
+    const auto &[k0] = t0;
     return f(k0);
   }
 
@@ -195,8 +158,8 @@ struct RocqBug11114 {
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static pkg map(F0 &&f, const pkg &p) {
     return pkg{p._sig, [=]() mutable {
-                 auto &&_sv = p._t;
-                 const auto &[k0] = std::get<typename t::T0>(_sv.v());
+                 const auto &_sv = p._t;
+                 const auto &[k0] = _sv;
                  return t::t0(f(k0));
                }()};
   }

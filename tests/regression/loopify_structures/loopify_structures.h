@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -173,14 +173,14 @@ struct LoopifyStructures {
 
     nested(const nested &_other) : v_(std::move(_other.clone().v_)) {}
 
-    nested(nested &&_other) : v_(std::move(_other.v_)) {}
+    nested(nested &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     nested &operator=(const nested &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    nested &operator=(nested &&_other) {
+    nested &operator=(nested &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -386,14 +386,14 @@ struct LoopifyStructures {
 
     quadtree(const quadtree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    quadtree(quadtree &&_other) : v_(std::move(_other.v_)) {}
+    quadtree(quadtree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     quadtree &operator=(const quadtree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    quadtree &operator=(quadtree &&_other) {
+    quadtree &operator=(quadtree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1015,14 +1015,14 @@ struct LoopifyStructures {
 
     ltree(const ltree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    ltree(ltree &&_other) : v_(std::move(_other.v_)) {}
+    ltree(ltree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     ltree &operator=(const ltree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    ltree &operator=(ltree &&_other) {
+    ltree &operator=(ltree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

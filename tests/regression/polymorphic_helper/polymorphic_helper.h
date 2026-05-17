@@ -30,14 +30,14 @@ public:
 
   Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -140,14 +140,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }

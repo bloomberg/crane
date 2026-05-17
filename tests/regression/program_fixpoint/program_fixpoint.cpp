@@ -10,8 +10,7 @@ List<unsigned int> ProgFix::interleave_func(
             Sig<SigT<List<unsigned int>, List<unsigned int>>>::exist(
                 SigT<List<unsigned int>, List<unsigned int>>::existt(l3, l4));
         return interleave_func([=]() mutable {
-          auto &[x0] = std::get<typename Sig<
-              SigT<List<unsigned int>, List<unsigned int>>>::Exist>(y.v_mut());
+          auto &[x0] = y;
           return x0;
         }());
       };

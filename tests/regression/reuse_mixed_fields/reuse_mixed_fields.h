@@ -35,14 +35,14 @@ struct ReuseMixedFields {
 
     payload(const payload &_other) : v_(std::move(_other.clone().v_)) {}
 
-    payload(payload &&_other) : v_(std::move(_other.v_)) {}
+    payload(payload &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     payload &operator=(const payload &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    payload &operator=(payload &&_other) {
+    payload &operator=(payload &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

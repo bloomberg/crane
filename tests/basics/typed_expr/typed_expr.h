@@ -58,14 +58,14 @@ public:
 
   Expr(const Expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Expr(Expr &&_other) : v_(std::move(_other.v_)) {}
+  Expr(Expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Expr &operator=(const Expr &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Expr &operator=(Expr &&_other) {
+  Expr &operator=(Expr &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }

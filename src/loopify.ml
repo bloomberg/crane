@@ -5647,6 +5647,7 @@ let make_frame_branch frame_name body =
     smb_reuse = None;
     smb_is_value_type = false;
     smb_is_owned = true;
+    smb_is_flat = false;
     smb_body = body }
 
 (** Generate the while-loop body and surrounding boilerplate for the
@@ -6410,6 +6411,7 @@ let try_inline_mutual_into names body =
                   br.smb_reuse;
               smb_is_value_type = br.smb_is_value_type;
               smb_is_owned = br.smb_is_owned;
+              smb_is_flat = br.smb_is_flat;
               smb_body = List.map rename_stmt br.smb_body })
             branches,
           Option.map (List.map rename_stmt) default)

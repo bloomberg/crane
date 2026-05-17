@@ -5919,7 +5919,7 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     @param match_i  nesting level counter for name suffixing
     @param scrut_v  the [scrut->v()] or [scrut.v()] accessor expression *)
 and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
-    match_i scrut_v ~is_value_type ~is_owned ~scrut_db =
+    match_i scrut_v ~is_value_type ~is_owned ~scrut_db ~is_flat =
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
@@ -6305,6 +6305,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     smb_reuse = None;
     smb_is_value_type = is_value_type;
     smb_is_owned = is_owned;
+    smb_is_flat = is_flat;
     smb_body = body_stmts }
 
 (** Generate C++ pattern matching for an [MLcase].
@@ -6382,6 +6383,12 @@ and gen_cpp_case (typ : ml_type) t env pv =
     match typ with
     | Miniml.Tglob (GlobRef.IndRef (kn, i), _, _) ->
       is_enum_inductive (GlobRef.IndRef (kn, i))
+    | _ -> false
+  in
+  (* Check if this is a flat single-constructor inductive type *)
+  let is_flat_match =
+    match typ with
+    | Miniml.Tglob (r, _, _) -> Table.is_flat_inductive r
     | _ -> false
   in
   if is_enum then (* Generate switch-based matching wrapped in IIFE *)
@@ -6502,12 +6509,15 @@ and gen_cpp_case (typ : ml_type) t env pv =
     in
     (* Build variant accessor.  All inductives (including coinductives)
        are value types and use [scrut.v()] (dot access).  Exception:
-       [this] is always a pointer, so method bodies use [this->v()]. *)
+       [this] is always a pointer, so method bodies use [this->v()].
+       For flat types (no variant wrapper), use the scrutinee directly. *)
     let scrut_is_ptr =
       match scrut_expr with CPPthis -> true | _ -> false
     in
     let scrut_v =
-      if scrut_is_ptr then
+      if is_flat_match then
+        scrut_expr
+      else if scrut_is_ptr then
         CPPmethod_call (scrut_expr, Id.of_string "v", [])
       else
         CPPfun_call (CPPmember (scrut_expr, Id.of_string "v"), [])
@@ -6544,6 +6554,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             ~is_value_type:true
             ~is_owned:scrut_is_owned
             ~scrut_db
+            ~is_flat:is_flat_match
         in
         tctx.env_types <- saved_env_types;
         let rest, wild = gen_branches cs in
@@ -9265,6 +9276,7 @@ let gen_record_cpp name fields ind =
             mf_is_inline = false;
             mf_this_pos = 0;
             mf_no_pure = false;
+                  mf_is_noexcept = false;
           },
         VPublic,
         SAccessors )
@@ -9902,6 +9914,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = false;
+                  mf_is_noexcept = false;
                 },
               VPublic,
               SNoTag )
@@ -12914,6 +12927,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_is_inline = false;
         mf_this_pos = this_pos;
         mf_no_pure = no_pure;
+                  mf_is_noexcept = false;
       },
     VPublic,
     SNoTag )
@@ -13078,6 +13092,102 @@ let gen_ind_header_v2
       (* The main struct type: all inductives (including coinductives)
          are value types. *)
       let self_ty = Tglob (name, ty_vars, []) in
+      let ind_type_name_str = Common.pp_global_name Type name in
+      let n_ctors = Array.length cnames in
+
+      (* Flat single-constructor check: no self-references in any field type,
+         including transitive ones (e.g. custom_list<rose<A>>). *)
+      let has_simple_self_ref_for_flat =
+        Array.exists (List.exists (fun ty ->
+          let rec check = function
+            | Miniml.Tglob (r, args, _) ->
+              globref_equal r name || List.exists check args
+            | Miniml.Tmeta {contents = Some t} -> check t
+            | _ -> false
+          in check ty)) tys
+      in
+      let is_flat =
+        n_ctors = 1 && not is_coinductive && mutual_partners = []
+        && not has_simple_self_ref_for_flat
+      in
+      if is_flat then begin
+        Table.add_flat_inductive name;
+        let tys_list = tys.(0) in
+        let c = cnames.(0) in
+        let cname_str = ctor_struct_name_of_ref ~fallback_idx:0 c in
+        let ctor_consarg_names =
+          if 0 < Array.length consarg_names then consarg_names.(0) else [] in
+        let n_fields = List.length tys_list in
+        let field_ids =
+          compute_and_register_field_names cname_str ctor_consarg_names n_fields in
+        let erase_if_needed cpp_ty =
+          if vars = [] then
+            match cpp_ty with
+            | Tunique_ptr _ | Tshared_ptr _ -> tvar_erase_type cpp_ty
+            | _ when has_unnamed_tvar cpp_ty -> Tany
+            | _ -> cpp_ty
+          else cpp_ty
+        in
+        let flat_fields =
+          List.mapi (fun j ty ->
+            let cpp_ty =
+              erase_if_needed
+                (convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty vars ty) in
+            let field_id = List.nth field_ids j in
+            (Fvar (field_id, cpp_ty), VPublic, SData)
+          ) tys_list
+        in
+        let field_exprs = List.map (fun fid -> CPPvar fid) field_ids in
+        let clone_body = [Sreturn (Some (CPPbraced field_exprs))] in
+        let clone_field =
+          ( Fmethod
+              { mf_name = Id.of_string "clone";
+                mf_tparams = [];
+                mf_ret_type = self_ty;
+                mf_params = [];
+                mf_body = clone_body;
+                mf_is_const = true;
+                mf_is_static = false;
+                mf_is_inline = false;
+                mf_this_pos = 0;
+                mf_no_pure = true;
+                mf_is_noexcept = false; },
+            VPublic, SAccessors )
+        in
+        let factory_name =
+          Id.of_string (factory_name_of_ctor ~type_name:ind_type_name_str cname_str)
+        in
+        let factory_params =
+          List.mapi (fun j ty ->
+            let cpp_ty =
+              erase_if_needed
+                (convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty vars ty) in
+            let fid = List.nth field_ids j in
+            (fid, cpp_ty)
+          ) tys_list
+        in
+        let factory_args =
+          List.map (fun (param_name, cpp_ty) ->
+            if is_trivially_copyable_type cpp_ty then CPPvar param_name
+            else CPPmove (CPPvar param_name)
+          ) factory_params
+        in
+        let factory_body = [Sreturn (Some (CPPbraced factory_args))] in
+        let factory_field =
+          ( Ffundef (factory_name, Tmod (TMstatic, self_ty), factory_params, factory_body),
+            VPublic, SCreators )
+        in
+        let method_fields = List.map (gen_single_method name vars) method_candidates in
+        let all_flat_fields = flat_fields @ [clone_field; factory_field] @ method_fields in
+        Dstruct
+          { ds_ref = name;
+            ds_fields = all_flat_fields;
+            ds_tparams = templates;
+            ds_constraint = None;
+            ds_needs_shared_from_this = false; }
+      end else
+
+      let _ = ind_type_name_str in (* suppress unused warning if non-flat path also needs it *)
 
       (* 1. Constructor alternative structs (simple, just fields, no make) *)
       let constructor_structs =
@@ -13211,7 +13321,7 @@ let gen_ind_header_v2
                        ] )
                  in
                  let init_list = [(vmn_id, init_expr)] in
-                 ( Fconstructor ([(param_name, param_ty)], init_list, true),
+                 ( Fconstructor ([(param_name, param_ty)], init_list, true, false),
                    VPublic,
                    SCreators )
                else
@@ -13230,7 +13340,7 @@ let gen_ind_header_v2
                  let init_list =
                    [(vmn_id, init_v)]
                  in
-                 ( Fconstructor ([(param_name, param_ty)], init_list, true),
+                 ( Fconstructor ([(param_name, param_ty)], init_list, true, false),
                    VPublic,
                    SCreators ) )
              cnames )
@@ -13241,7 +13351,7 @@ let gen_ind_header_v2
          loopify declare [T _result{};] for stack-based iteration. *)
       let default_ctor =
         if not is_coinductive then
-          [( Fconstructor ([], [], false),
+          [( Fconstructor ([], [], false, false),
              VPublic,
              SCreators )]
         else
@@ -13698,7 +13808,7 @@ let gen_ind_header_v2
           in
           let init_list = [(vmn_id, init_expr)] in
           [
-            ( Fconstructor ([(param_name, param_ty)], init_list, true),
+            ( Fconstructor ([(param_name, param_ty)], init_list, true, false),
               VPublic,
               SCreators );
           ]
@@ -14058,6 +14168,7 @@ let gen_ind_header_v2
                      smb_reuse = None;
                      smb_is_value_type = true;
                      smb_is_owned = false;
+                     smb_is_flat = false;
                      smb_body =
                        [ Sreturn
                            (Some
@@ -14540,6 +14651,7 @@ let gen_ind_header_v2
                          smb_reuse = None;
                          smb_is_value_type = false;
                          smb_is_owned = false;
+                         smb_is_flat = false;
                          smb_body = body;
                        })
                      tys)
@@ -14593,6 +14705,7 @@ let gen_ind_header_v2
                     mf_is_inline = false;
                     mf_this_pos = 0;
                     mf_no_pure = true;
+                  mf_is_noexcept = false;
                   },
                 VPublic,
                 SAccessors )
@@ -14609,21 +14722,32 @@ let gen_ind_header_v2
                     mf_is_inline = false;
                     mf_this_pos = 0;
                     mf_no_pure = true;
+                  mf_is_noexcept = false;
                   },
                 VPublic,
                 SAccessors )
 	          in
+          let all_fields_are_type_vars =
+            Array.for_all
+              (List.for_all (function
+                 | Miniml.Tvar _ | Miniml.Tvar' _ -> true
+                 | _ -> false))
+              tys
+          in
           let copy_ctor =
-            let cloned_v =
-              CPPmember
-                ( CPPfun_call
-                    (CPPmember (CPPvar other_id, clone_id), []),
-                  vmn_id )
+            let init_expr =
+              if has_any_self_ref_field || mutual_partners <> []
+                 || not all_fields_are_type_vars then
+                CPPmove (CPPmember
+                  (CPPfun_call (CPPmember (CPPvar other_id, clone_id), []),
+                   vmn_id))
+              else
+                CPPmember (CPPvar other_id, vmn_id)
             in
             ( Fconstructor
                 ( [ (other_id, Tref (Tmod (TMconst, self_ty))) ],
-                  [(vmn_id, CPPmove cloned_v)],
-                  false ),
+                  [(vmn_id, init_expr)],
+                  false, false ),
               VPublic,
               SCreators )
           in
@@ -14631,11 +14755,20 @@ let gen_ind_header_v2
             ( Fconstructor
                 ( [(other_id, Tref (Tref self_ty))],
                   [(vmn_id, CPPmove (CPPmember (CPPvar other_id, vmn_id)))],
-                  false ),
+                  false, true ),
               VPublic,
               SCreators )
           in
           let copy_assign =
+            let assign_expr =
+              if has_any_self_ref_field || mutual_partners <> []
+                 || not all_fields_are_type_vars then
+                CPPmove (CPPmember
+                  (CPPfun_call (CPPmember (CPPvar other_id, clone_id), []),
+                   vmn_id))
+              else
+                CPPmember (CPPvar other_id, vmn_id)
+            in
             ( Fmethod
                 {
                   mf_name = Id.of_string_soft "operator=";
@@ -14644,11 +14777,7 @@ let gen_ind_header_v2
                   mf_params = [(other_id, Tref (Tmod (TMconst, self_ty)))];
                   mf_body =
                     [
-                      Sasgn (vmn_id, None,
-                        CPPmove (CPPmember
-                          (CPPfun_call
-                            (CPPmember (CPPvar other_id, clone_id), []),
-                           vmn_id)));
+                      Sasgn (vmn_id, None, assign_expr);
                       Sreturn (Some (CPPunop ("*", CPPthis)));
                     ];
                   mf_is_const = false;
@@ -14656,6 +14785,7 @@ let gen_ind_header_v2
                   mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = true;
+                  mf_is_noexcept = false;
                 },
               VPublic,
               SCreators )
@@ -14678,6 +14808,7 @@ let gen_ind_header_v2
                   mf_is_inline = false;
                   mf_this_pos = 0;
                   mf_no_pure = true;
+                  mf_is_noexcept = true;
                 },
               VPublic,
               SCreators )
@@ -14869,6 +15000,7 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
+                  mf_is_noexcept = false;
               },
             VPublic,
             SAccessors )
@@ -14886,6 +15018,7 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
+                  mf_is_noexcept = false;
               },
             VPublic,
             SAccessors )
@@ -14911,6 +15044,7 @@ let gen_ind_header_v2
                   mf_is_inline = true;
                   mf_this_pos = 0;
                   mf_no_pure = true;
+                  mf_is_noexcept = false;
                 },
               VPublic,
               SManipulators );

@@ -69,14 +69,14 @@ struct PatternImpossible {
 
     nested(const nested &_other) : v_(std::move(_other.clone().v_)) {}
 
-    nested(nested &&_other) : v_(std::move(_other.v_)) {}
+    nested(nested &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     nested &operator=(const nested &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    nested &operator=(nested &&_other) {
+    nested &operator=(nested &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

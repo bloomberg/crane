@@ -1,8 +1,8 @@
 #include "pendant_sumtree_roundtrip.h"
 
 unsigned int PendantSumtreeRoundtripCase::digit_to_nat(const T &d) {
-  auto &&_sv = d.to_nat(10u);
-  const auto &[x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
+  const auto &_sv = d.to_nat(10u);
+  const auto &[x] = _sv;
   return x;
 }
 
@@ -133,9 +133,7 @@ List<std::optional<unsigned int>> PendantSumtreeRoundtripCase::ledger_values(
     const auto &[a0, a1] = std::get<typename List<SigT<
         unsigned int, PendantSumtreeRoundtripCase::CertifiedPendant>>::Cons0>(
         l.v());
-    const auto &[x0, a10] = std::get<typename SigT<
-        unsigned int, PendantSumtreeRoundtripCase::CertifiedPendant>::ExistT>(
-        a0.v());
+    const auto &[x0, a10] = a0;
     return List<std::optional<unsigned int>>::cons0(pendant_value(x0, a10),
                                                     ledger_values(*a1));
   }

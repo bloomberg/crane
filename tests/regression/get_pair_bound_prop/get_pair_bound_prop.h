@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -367,14 +367,14 @@ struct GetPairBoundProp {
 
     instr(const instr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr(instr &&_other) : v_(std::move(_other.v_)) {}
+    instr(instr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr &operator=(const instr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr &operator=(instr &&_other) {
+    instr &operator=(instr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

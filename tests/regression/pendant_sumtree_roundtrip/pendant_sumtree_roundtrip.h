@@ -35,14 +35,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -185,113 +185,26 @@ public:
 };
 
 template <typename A> struct Sig {
-  // TYPES
-  struct Exist {
-    A x;
-  };
-
-  using variant_t = std::variant<Exist>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Sig() {}
-
-  explicit Sig(Exist _v) : v_(std::move(_v)) {}
-
-  Sig(const Sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Sig(Sig<A> &&_other) : v_(std::move(_other.v_)) {}
-
-  Sig<A> &operator=(const Sig<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Sig<A> &operator=(Sig<A> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
 
   // ACCESSORS
-  Sig<A> clone() const {
-    const auto &[x] = std::get<Exist>(this->v());
-    return Sig<A>(Exist{x});
-  }
+  Sig<A> clone() const { return {x}; }
 
   // CREATORS
-  template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->v_ = Exist{A(x)};
-  }
-
-  static Sig<A> exist(A x) { return Sig(Exist{std::move(x)}); }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 template <typename A, typename P> struct SigT {
-  // TYPES
-  struct ExistT {
-    A x;
-    P a1;
-  };
-
-  using variant_t = std::variant<ExistT>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  SigT() {}
-
-  explicit SigT(ExistT _v) : v_(std::move(_v)) {}
-
-  SigT(const SigT<A, P> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  SigT(SigT<A, P> &&_other) : v_(std::move(_other.v_)) {}
-
-  SigT<A, P> &operator=(const SigT<A, P> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  SigT<A, P> &operator=(SigT<A, P> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
+  P a1;
 
   // ACCESSORS
-  SigT<A, P> clone() const {
-    const auto &[x, a1] = std::get<ExistT>(this->v());
-    return SigT<A, P>(ExistT{x, a1});
-  }
+  SigT<A, P> clone() const { return {x, a1}; }
 
   // CREATORS
-  template <typename _U0, typename _U1>
-  explicit SigT(const SigT<_U0, _U1> &_other) {
-    const auto &[x, a1] = std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->v_ = ExistT{A(x), P(a1)};
-  }
-
-  static SigT<A, P> existt(A x, P a1) {
-    return SigT(ExistT{std::move(x), std::move(a1)});
-  }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
 
 template <typename A> struct T0 {
@@ -320,14 +233,14 @@ public:
 
   T0(const T0<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  T0(T0<A> &&_other) : v_(std::move(_other.v_)) {}
+  T0(T0<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   T0<A> &operator=(const T0<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  T0<A> &operator=(T0<A> &&_other) {
+  T0<A> &operator=(T0<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -393,14 +306,14 @@ public:
 
   T(const T &_other) : v_(std::move(_other.clone().v_)) {}
 
-  T(T &&_other) : v_(std::move(_other.v_)) {}
+  T(T &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   T &operator=(const T &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  T &operator=(T &&_other) {
+  T &operator=(T &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -476,8 +389,8 @@ public:
       return Sig<unsigned int>::exist(0u);
     } else {
       const auto &[n1, a1] = std::get<typename T::FS>(this->v());
-      auto &&_sv0 = (*a1).to_nat(n1);
-      const auto &[x0] = std::get<typename Sig<unsigned int>::Exist>(_sv0.v());
+      const auto &_sv0 = (*a1).to_nat(n1);
+      const auto &[x0] = _sv0;
       return Sig<unsigned int>::exist((x0 + 1));
     }
   }
@@ -685,14 +598,14 @@ struct PendantSumtreeRoundtripCase {
 
     SumTree(const SumTree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    SumTree(SumTree &&_other) : v_(std::move(_other.v_)) {}
+    SumTree(SumTree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     SumTree &operator=(const SumTree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    SumTree &operator=(SumTree &&_other) {
+    SumTree &operator=(SumTree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

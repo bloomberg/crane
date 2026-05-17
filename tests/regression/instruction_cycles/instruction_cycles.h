@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -169,14 +169,14 @@ struct InstructionCycles {
     instruction1(const instruction1 &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    instruction1(instruction1 &&_other) : v_(std::move(_other.v_)) {}
+    instruction1(instruction1 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instruction1 &operator=(const instruction1 &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instruction1 &operator=(instruction1 &&_other) {
+    instruction1 &operator=(instruction1 &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -281,14 +281,14 @@ struct InstructionCycles {
     instruction2(const instruction2 &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    instruction2(instruction2 &&_other) : v_(std::move(_other.v_)) {}
+    instruction2(instruction2 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instruction2 &operator=(const instruction2 &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instruction2 &operator=(instruction2 &&_other) {
+    instruction2 &operator=(instruction2 &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -602,14 +602,14 @@ struct InstructionCycles {
     instruction5(const instruction5 &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    instruction5(instruction5 &&_other) : v_(std::move(_other.v_)) {}
+    instruction5(instruction5 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instruction5 &operator=(const instruction5 &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instruction5 &operator=(instruction5 &&_other) {
+    instruction5 &operator=(instruction5 &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

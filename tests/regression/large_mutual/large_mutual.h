@@ -59,14 +59,14 @@ struct LargeMutual {
 
     stmt(const stmt &_other) : v_(std::move(_other.clone().v_)) {}
 
-    stmt(stmt &&_other) : v_(std::move(_other.v_)) {}
+    stmt(stmt &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     stmt &operator=(const stmt &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    stmt &operator=(stmt &&_other) {
+    stmt &operator=(stmt &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -253,14 +253,14 @@ struct LargeMutual {
 
     expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    expr(expr &&_other) : v_(std::move(_other.v_)) {}
+    expr(expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     expr &operator=(const expr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    expr &operator=(expr &&_other) {
+    expr &operator=(expr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -455,14 +455,14 @@ struct LargeMutual {
 
     bexpr(const bexpr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    bexpr(bexpr &&_other) : v_(std::move(_other.v_)) {}
+    bexpr(bexpr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     bexpr &operator=(const bexpr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    bexpr &operator=(bexpr &&_other) {
+    bexpr &operator=(bexpr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

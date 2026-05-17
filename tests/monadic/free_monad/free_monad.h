@@ -49,14 +49,14 @@ struct FreeMonad {
 
     IO(const IO &_other) : v_(std::move(_other.clone().v_)) {}
 
-    IO(IO &&_other) : v_(std::move(_other.v_)) {}
+    IO(IO &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     IO &operator=(const IO &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    IO &operator=(IO &&_other) {
+    IO &operator=(IO &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

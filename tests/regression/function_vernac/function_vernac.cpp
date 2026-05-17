@@ -9,16 +9,16 @@ Sig<unsigned int> FunctionVernac::div2_terminate(unsigned int n) {
       return Sig<unsigned int>::exist(0u);
     } else {
       unsigned int n1 = n0 - 1;
-      auto &&_sv = div2_terminate(n1);
-      const auto &[x0] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
+      const auto &_sv = div2_terminate(n1);
+      const auto &[x0] = _sv;
       return Sig<unsigned int>::exist((x0 + 1));
     }
   }
 }
 
 unsigned int FunctionVernac::div2(unsigned int n) {
-  auto &&_sv = div2_terminate(n);
-  const auto &[x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
+  const auto &_sv = div2_terminate(n);
+  const auto &[x] = _sv;
   return x;
 }
 
@@ -49,15 +49,15 @@ FunctionVernac::list_sum_terminate(const List<unsigned int> &l) {
     return Sig<unsigned int>::exist(0u);
   } else {
     const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = list_sum_terminate(*a1);
-    const auto &[x0] = std::get<typename Sig<unsigned int>::Exist>(_sv0.v());
+    const auto &_sv0 = list_sum_terminate(*a1);
+    const auto &[x0] = _sv0;
     return Sig<unsigned int>::exist((a0 + x0));
   }
 }
 
 unsigned int FunctionVernac::list_sum(const List<unsigned int> &l) {
-  auto &&_sv = list_sum_terminate(l);
-  const auto &[x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
+  const auto &_sv = list_sum_terminate(l);
+  const auto &[x] = _sv;
   return x;
 }
 

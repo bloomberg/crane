@@ -22,14 +22,12 @@ NameClashLetMatch::same_name_branches(const NameClashLetMatch::either &e,
   if (std::holds_alternative<typename NameClashLetMatch::either::Left>(e.v())) {
     const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Left>(e.v());
-    const auto &[a00, a10, a20] =
-        std::get<typename NameClashLetMatch::triple::MkTriple>(t.v());
+    const auto &[a00, a10, a20] = t;
     return (((a0 + a00) + a10) + a20);
   } else {
     const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Right>(e.v());
-    const auto &[a00, a10, a20] =
-        std::get<typename NameClashLetMatch::triple::MkTriple>(t.v());
+    const auto &[a00, a10, a20] = t;
     return (((a0 * a00) * a10) * a20);
   }
 }

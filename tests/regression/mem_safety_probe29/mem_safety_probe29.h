@@ -35,14 +35,14 @@ struct MemSafetyProbe29 {
 
     inner(const inner &_other) : v_(std::move(_other.clone().v_)) {}
 
-    inner(inner &&_other) : v_(std::move(_other.v_)) {}
+    inner(inner &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     inner &operator=(const inner &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    inner &operator=(inner &&_other) {
+    inner &operator=(inner &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -378,14 +378,14 @@ struct MemSafetyProbe29 {
 
     outer(const outer &_other) : v_(std::move(_other.clone().v_)) {}
 
-    outer(outer &&_other) : v_(std::move(_other.v_)) {}
+    outer(outer &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     outer &operator=(const outer &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    outer &operator=(outer &&_other) {
+    outer &operator=(outer &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -739,14 +739,14 @@ struct MemSafetyProbe29 {
 
     expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    expr(expr &&_other) : v_(std::move(_other.v_)) {}
+    expr(expr &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     expr &operator=(const expr &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    expr &operator=(expr &&_other) {
+    expr &operator=(expr &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1357,14 +1357,14 @@ struct MemSafetyProbe29 {
 
     tree3(const tree3 &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree3(tree3 &&_other) : v_(std::move(_other.v_)) {}
+    tree3(tree3 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree3 &operator=(const tree3 &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree3 &operator=(tree3 &&_other) {
+    tree3 &operator=(tree3 &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

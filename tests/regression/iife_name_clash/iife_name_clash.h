@@ -30,14 +30,14 @@ struct IifeNameClash {
 
     wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
 
-    wrapper(wrapper &&_other) : v_(std::move(_other.v_)) {}
+    wrapper(wrapper &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     wrapper &operator=(const wrapper &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    wrapper &operator=(wrapper &&_other) {
+    wrapper &operator=(wrapper &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

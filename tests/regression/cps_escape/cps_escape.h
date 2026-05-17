@@ -35,14 +35,14 @@ struct CpsEscape {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -164,59 +164,23 @@ struct CpsEscape {
   };
 
   struct box {
-    // TYPES
-    struct Box0 {
-      std::function<unsigned int(unsigned int)> a0;
-    };
-
-    using variant_t = std::variant<Box0>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    box() {}
-
-    explicit box(Box0 _v) : v_(std::move(_v)) {}
-
-    box(const box &_other) : v_(std::move(_other.clone().v_)) {}
-
-    box(box &&_other) : v_(std::move(_other.v_)) {}
-
-    box &operator=(const box &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    box &operator=(box &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    std::function<unsigned int(unsigned int)> a0;
 
     // ACCESSORS
-    box clone() const {
-      const auto &[a0] = std::get<Box0>(this->v());
-      return box(Box0{a0});
-    }
+    box clone() const { return {a0}; }
 
     // CREATORS
     static box box0(std::function<unsigned int(unsigned int)> a0) {
-      return box(Box0{std::move(a0)});
+      return {std::move(a0)};
     }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 box_rec(F0 &&f) const {
-      const auto &[a0] = std::get<typename box::Box0>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
 
@@ -224,7 +188,8 @@ struct CpsEscape {
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 box_rect(F0 &&f) const {
-      const auto &[a0] = std::get<typename box::Box0>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0] = _sv;
       return f(a0);
     }
   };
@@ -253,7 +218,7 @@ struct CpsEscape {
         return t.make_adder(_x0);
       };
       box b = store_in_box(adder);
-      auto &[a0] = std::get<typename box::Box0>(b.v_mut());
+      auto &[a0] = b;
       return std::move(a0)(5u);
     }();
   }();
@@ -266,7 +231,7 @@ struct CpsEscape {
       box b = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
         return t.make_adder(_x0);
       });
-      auto &[a0] = std::get<typename box::Box0>(b.v_mut());
+      auto &[a0] = b;
       return std::move(a0)(5u);
     }();
   }();
@@ -283,8 +248,8 @@ struct CpsEscape {
       box b2 = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
         return t2.make_adder(_x0);
       });
-      auto &[a0] = std::get<typename box::Box0>(b1.v_mut());
-      auto &[a00] = std::get<typename box::Box0>(b2.v_mut());
+      auto &[a0] = b1;
+      auto &[a00] = b2;
       return (std::move(a0)(0u) + std::move(a00)(0u));
     }();
   }();

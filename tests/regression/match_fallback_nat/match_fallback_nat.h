@@ -30,14 +30,14 @@ struct MatchFallbackNat {
 
     maybe_nat(const maybe_nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-    maybe_nat(maybe_nat &&_other) : v_(std::move(_other.v_)) {}
+    maybe_nat(maybe_nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     maybe_nat &operator=(const maybe_nat &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    maybe_nat &operator=(maybe_nat &&_other) {
+    maybe_nat &operator=(maybe_nat &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

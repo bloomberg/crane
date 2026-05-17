@@ -37,14 +37,14 @@ public:
 
   Trie(const Trie<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Trie(Trie<A> &&_other) : v_(std::move(_other.v_)) {}
+  Trie(Trie<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Trie<A> &operator=(const Trie<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Trie<A> &operator=(Trie<A> &&_other) {
+  Trie<A> &operator=(Trie<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }

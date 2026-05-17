@@ -33,14 +33,14 @@ struct DeepApp {
 
     mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist<A> &operator=(const mylist<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<A> &operator=(mylist<A> &&_other) {
+    mylist<A> &operator=(mylist<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

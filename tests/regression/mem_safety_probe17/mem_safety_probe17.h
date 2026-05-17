@@ -45,14 +45,14 @@ struct MemSafetyProbe17 {
 
     qtree(const qtree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    qtree(qtree &&_other) : v_(std::move(_other.v_)) {}
+    qtree(qtree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     qtree &operator=(const qtree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    qtree &operator=(qtree &&_other) {
+    qtree &operator=(qtree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -951,14 +951,14 @@ struct MemSafetyProbe17 {
 
     mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist<A> &operator=(const mylist<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<A> &operator=(mylist<A> &&_other) {
+    mylist<A> &operator=(mylist<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

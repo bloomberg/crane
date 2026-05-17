@@ -30,16 +30,16 @@ struct Sum {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    either(const either<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
+    either(const either<A, B> &_other) : v_(_other.v_) {}
 
-    either(either<A, B> &&_other) : v_(std::move(_other.v_)) {}
+    either(either<A, B> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     either<A, B> &operator=(const either<A, B> &_other) {
-      v_ = std::move(_other.clone().v_);
+      v_ = _other.v_;
       return *this;
     }
 
-    either<A, B> &operator=(either<A, B> &&_other) {
+    either<A, B> &operator=(either<A, B> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -175,16 +175,16 @@ struct Sum {
 
     explicit triple(Third _v) : v_(std::move(_v)) {}
 
-    triple(const triple<A, B, C> &_other) : v_(std::move(_other.clone().v_)) {}
+    triple(const triple<A, B, C> &_other) : v_(_other.v_) {}
 
-    triple(triple<A, B, C> &&_other) : v_(std::move(_other.v_)) {}
+    triple(triple<A, B, C> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     triple<A, B, C> &operator=(const triple<A, B, C> &_other) {
-      v_ = std::move(_other.clone().v_);
+      v_ = _other.v_;
       return *this;
     }
 
-    triple<A, B, C> &operator=(triple<A, B, C> &&_other) {
+    triple<A, B, C> &operator=(triple<A, B, C> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -39,14 +39,14 @@ template <OrderedType X> struct Make {
 
     Fmap(const Fmap<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Fmap(Fmap<A> &&_other) : v_(std::move(_other.v_)) {}
+    Fmap(Fmap<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     Fmap<A> &operator=(const Fmap<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Fmap<A> &operator=(Fmap<A> &&_other) {
+    Fmap<A> &operator=(Fmap<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

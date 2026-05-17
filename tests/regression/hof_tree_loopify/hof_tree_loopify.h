@@ -85,14 +85,14 @@ public:
 
   Uint(const Uint &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint(Uint &&_other) : v_(std::move(_other.v_)) {}
+  Uint(Uint &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint &operator=(const Uint &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint &operator=(Uint &&_other) {
+  Uint &operator=(Uint &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -431,14 +431,14 @@ public:
 
   Uint0(const Uint0 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint0(Uint0 &&_other) : v_(std::move(_other.v_)) {}
+  Uint0(Uint0 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint0 &operator=(const Uint0 &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint0 &operator=(Uint0 &&_other) {
+  Uint0 &operator=(Uint0 &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -790,14 +790,14 @@ public:
 
   Uint1(const Uint1 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint1(Uint1 &&_other) : v_(std::move(_other.v_)) {}
+  Uint1(Uint1 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint1 &operator=(const Uint1 &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint1 &operator=(Uint1 &&_other) {
+  Uint1 &operator=(Uint1 &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -866,14 +866,14 @@ struct HofTreeLoopify {
 
     tree(const tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree<A> &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree<A> &operator=(const tree<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree<A> &operator=(tree<A> &&_other) {
+    tree<A> &operator=(tree<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

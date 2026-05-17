@@ -33,14 +33,14 @@ struct NameClashLetMatch {
 
     either(const either &_other) : v_(std::move(_other.clone().v_)) {}
 
-    either(either &&_other) : v_(std::move(_other.v_)) {}
+    either(either &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     either &operator=(const either &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    either &operator=(either &&_other) {
+    either &operator=(either &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -161,59 +161,23 @@ struct NameClashLetMatch {
   };
 
   struct triple {
-    // TYPES
-    struct MkTriple {
-      unsigned int a0;
-      unsigned int a1;
-      unsigned int a2;
-    };
-
-    using variant_t = std::variant<MkTriple>;
-
-  private:
     // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    triple() {}
-
-    explicit triple(MkTriple _v) : v_(std::move(_v)) {}
-
-    triple(const triple &_other) : v_(std::move(_other.clone().v_)) {}
-
-    triple(triple &&_other) : v_(std::move(_other.v_)) {}
-
-    triple &operator=(const triple &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    triple &operator=(triple &&_other) {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
+    unsigned int a0;
+    unsigned int a1;
+    unsigned int a2;
 
     // ACCESSORS
-    triple clone() const {
-      const auto &[a0, a1, a2] = std::get<MkTriple>(this->v());
-      return triple(MkTriple{a0, a1, a2});
-    }
+    triple clone() const { return {a0, a1, a2}; }
 
     // CREATORS
     static triple mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
-      return triple(MkTriple{a0, a1, a2});
+      return {a0, a1, a2};
     }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
 
     /// Match on a triple, then match on an either, same-ish names
     unsigned int triple_then_either(const either &e) const {
-      const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1, a2] = _sv;
       unsigned int from_either = [&]() {
         if (std::holds_alternative<typename either::Left>(e.v())) {
           const auto &[a00] = std::get<typename either::Left>(e.v());
@@ -230,7 +194,8 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_rec(F0 &&f) const {
-      const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1, a2] = _sv;
       return f(a0, a1, a2);
     }
 
@@ -238,7 +203,8 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_rect(F0 &&f) const {
-      const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(this->v());
+      const auto &_sv = *this;
+      const auto &[a0, a1, a2] = _sv;
       return f(a0, a1, a2);
     }
   };

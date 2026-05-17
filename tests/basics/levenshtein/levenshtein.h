@@ -33,14 +33,14 @@ public:
 
   Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -124,63 +124,19 @@ public:
 };
 
 template <typename A, typename P> struct SigT {
-  // TYPES
-  struct ExistT {
-    A x;
-    P a1;
-  };
-
-  using variant_t = std::variant<ExistT>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  SigT() {}
-
-  explicit SigT(ExistT _v) : v_(std::move(_v)) {}
-
-  SigT(const SigT<A, P> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  SigT(SigT<A, P> &&_other) : v_(std::move(_other.v_)) {}
-
-  SigT<A, P> &operator=(const SigT<A, P> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  SigT<A, P> &operator=(SigT<A, P> &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  A x;
+  P a1;
 
   // ACCESSORS
-  SigT<A, P> clone() const {
-    const auto &[x, a1] = std::get<ExistT>(this->v());
-    return SigT<A, P>(ExistT{x, a1});
-  }
+  SigT<A, P> clone() const { return {x, a1}; }
 
   // CREATORS
-  template <typename _U0, typename _U1>
-  explicit SigT(const SigT<_U0, _U1> &_other) {
-    const auto &[x, a1] = std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->v_ = ExistT{A(x), P(a1)};
-  }
-
-  static SigT<A, P> existt(A x, P a1) {
-    return SigT(ExistT{std::move(x), std::move(a1)});
-  }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
+  static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
   A projT1() const {
-    const auto &[x0, a1] = std::get<typename SigT<A, P>::ExistT>(this->v());
+    const auto &_sv = *this;
+    const auto &[x0, a1] = _sv;
     return x0;
   }
 };
@@ -191,67 +147,29 @@ struct Bool {
 };
 
 struct Ascii {
-  // TYPES
-  struct Ascii0 {
-    Bool0 a0;
-    Bool0 a1;
-    Bool0 a2;
-    Bool0 a3;
-    Bool0 a4;
-    Bool0 a5;
-    Bool0 a6;
-    Bool0 a7;
-  };
-
-  using variant_t = std::variant<Ascii0>;
-
-private:
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  Ascii() {}
-
-  explicit Ascii(Ascii0 _v) : v_(std::move(_v)) {}
-
-  Ascii(const Ascii &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Ascii(Ascii &&_other) : v_(std::move(_other.v_)) {}
-
-  Ascii &operator=(const Ascii &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Ascii &operator=(Ascii &&_other) {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
+  Bool0 a0;
+  Bool0 a1;
+  Bool0 a2;
+  Bool0 a3;
+  Bool0 a4;
+  Bool0 a5;
+  Bool0 a6;
+  Bool0 a7;
 
   // ACCESSORS
-  Ascii clone() const {
-    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = std::get<Ascii0>(this->v());
-    return Ascii(Ascii0{a0, a1, a2, a3, a4, a5, a6, a7});
-  }
+  Ascii clone() const { return {a0, a1, a2, a3, a4, a5, a6, a7}; }
 
   // CREATORS
   static Ascii ascii0(Bool0 a0, Bool0 a1, Bool0 a2, Bool0 a3, Bool0 a4,
                       Bool0 a5, Bool0 a6, Bool0 a7) {
-    return Ascii(Ascii0{a0, a1, a2, a3, a4, a5, a6, a7});
+    return {a0, a1, a2, a3, a4, a5, a6, a7};
   }
 
-  // MANIPULATORS
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
-
   Sumbool ascii_dec(const Ascii &b) const {
-    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] =
-        std::get<typename Ascii::Ascii0>(this->v());
-    const auto &[a00, a10, a20, a30, a40, a50, a60, a70] =
-        std::get<typename Ascii::Ascii0>(b.v());
+    const auto &_sv = *this;
+    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = _sv;
+    const auto &[a00, a10, a20, a30, a40, a50, a60, a70] = b;
     switch (Bool::bool_dec(a0, a00)) {
     case Sumbool::LEFT: {
       switch (Bool::bool_dec(a1, a10)) {
@@ -353,14 +271,14 @@ public:
 
   String(const String &_other) : v_(std::move(_other.clone().v_)) {}
 
-  String(String &&_other) : v_(std::move(_other.v_)) {}
+  String(String &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   String &operator=(const String &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  String &operator=(String &&_other) {
+  String &operator=(String &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -488,14 +406,14 @@ struct Levenshtein {
 
     edit(const edit &_other) : v_(std::move(_other.clone().v_)) {}
 
-    edit(edit &&_other) : v_(std::move(_other.v_)) {}
+    edit(edit &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     edit &operator=(const edit &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    edit &operator=(edit &&_other) {
+    edit &operator=(edit &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -609,14 +527,14 @@ struct Levenshtein {
 
     chain(const chain &_other) : v_(std::move(_other.clone().v_)) {}
 
-    chain(chain &&_other) : v_(std::move(_other.v_)) {}
+    chain(chain &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     chain &operator=(const chain &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    chain &operator=(chain &&_other) {
+    chain &operator=(chain &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -35,14 +35,14 @@ struct ClosureRecursiveBuild {
 
     fn_list(const fn_list &_other) : v_(std::move(_other.clone().v_)) {}
 
-    fn_list(fn_list &&_other) : v_(std::move(_other.v_)) {}
+    fn_list(fn_list &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     fn_list &operator=(const fn_list &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    fn_list &operator=(fn_list &&_other) {
+    fn_list &operator=(fn_list &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -230,14 +230,14 @@ public:
 
   Uint(const Uint &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint(Uint &&_other) : v_(std::move(_other.v_)) {}
+  Uint(Uint &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint &operator=(const Uint &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint &operator=(Uint &&_other) {
+  Uint &operator=(Uint &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -576,14 +576,14 @@ public:
 
   Uint0(const Uint0 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint0(Uint0 &&_other) : v_(std::move(_other.v_)) {}
+  Uint0(Uint0 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint0 &operator=(const Uint0 &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint0 &operator=(Uint0 &&_other) {
+  Uint0 &operator=(Uint0 &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -935,14 +935,14 @@ public:
 
   Uint1(const Uint1 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint1(Uint1 &&_other) : v_(std::move(_other.v_)) {}
+  Uint1(Uint1 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint1 &operator=(const Uint1 &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint1 &operator=(Uint1 &&_other) {
+  Uint1 &operator=(Uint1 &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -1135,14 +1135,14 @@ struct ValidatedPumpDeliveryTraceCase {
 
     FaultStatus(const FaultStatus &_other) : v_(std::move(_other.clone().v_)) {}
 
-    FaultStatus(FaultStatus &&_other) : v_(std::move(_other.v_)) {}
+    FaultStatus(FaultStatus &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     FaultStatus &operator=(const FaultStatus &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    FaultStatus &operator=(FaultStatus &&_other) {
+    FaultStatus &operator=(FaultStatus &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1352,14 +1352,15 @@ struct ValidatedPumpDeliveryTraceCase {
     SuspendDecision(const SuspendDecision &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    SuspendDecision(SuspendDecision &&_other) : v_(std::move(_other.v_)) {}
+    SuspendDecision(SuspendDecision &&_other) noexcept
+        : v_(std::move(_other.v_)) {}
 
     SuspendDecision &operator=(const SuspendDecision &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    SuspendDecision &operator=(SuspendDecision &&_other) {
+    SuspendDecision &operator=(SuspendDecision &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1521,14 +1522,15 @@ struct ValidatedPumpDeliveryTraceCase {
     PrecisionResult(const PrecisionResult &_other)
         : v_(std::move(_other.clone().v_)) {}
 
-    PrecisionResult(PrecisionResult &&_other) : v_(std::move(_other.v_)) {}
+    PrecisionResult(PrecisionResult &&_other) noexcept
+        : v_(std::move(_other.v_)) {}
 
     PrecisionResult &operator=(const PrecisionResult &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    PrecisionResult &operator=(PrecisionResult &&_other) {
+    PrecisionResult &operator=(PrecisionResult &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

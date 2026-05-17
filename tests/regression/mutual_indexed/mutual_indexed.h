@@ -37,14 +37,14 @@ struct MutualIndexed {
 
     EvenTree(const EvenTree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    EvenTree(EvenTree &&_other) : v_(std::move(_other.v_)) {}
+    EvenTree(EvenTree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     EvenTree &operator=(const EvenTree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    EvenTree &operator=(EvenTree &&_other) {
+    EvenTree &operator=(EvenTree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -156,14 +156,14 @@ struct MutualIndexed {
 
     OddTree(const OddTree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    OddTree(OddTree &&_other) : v_(std::move(_other.v_)) {}
+    OddTree(OddTree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     OddTree &operator=(const OddTree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    OddTree &operator=(OddTree &&_other) {
+    OddTree &operator=(OddTree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

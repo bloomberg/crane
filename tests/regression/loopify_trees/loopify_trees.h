@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -171,14 +171,14 @@ struct LoopifyTrees {
 
     tree(const tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree<A> &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree<A> &operator=(const tree<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree<A> &operator=(tree<A> &&_other) {
+    tree<A> &operator=(tree<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -854,14 +854,14 @@ struct LoopifyTrees {
 
     ternary(const ternary &_other) : v_(std::move(_other.clone().v_)) {}
 
-    ternary(ternary &&_other) : v_(std::move(_other.v_)) {}
+    ternary(ternary &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     ternary &operator=(const ternary &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    ternary &operator=(ternary &&_other) {
+    ternary &operator=(ternary &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1244,14 +1244,14 @@ struct LoopifyTrees {
 
     rose(const rose &_other) : v_(std::move(_other.clone().v_)) {}
 
-    rose(rose &&_other) : v_(std::move(_other.v_)) {}
+    rose(rose &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     rose &operator=(const rose &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    rose &operator=(rose &&_other) {
+    rose &operator=(rose &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1501,14 +1501,14 @@ struct LoopifyTrees {
 
     quadtree(const quadtree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    quadtree(quadtree &&_other) : v_(std::move(_other.v_)) {}
+    quadtree(quadtree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     quadtree &operator=(const quadtree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    quadtree &operator=(quadtree &&_other) {
+    quadtree &operator=(quadtree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -2031,14 +2031,14 @@ struct LoopifyTrees {
 
     simple_tree(const simple_tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    simple_tree(simple_tree &&_other) : v_(std::move(_other.v_)) {}
+    simple_tree(simple_tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     simple_tree &operator=(const simple_tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    simple_tree &operator=(simple_tree &&_other) {
+    simple_tree &operator=(simple_tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

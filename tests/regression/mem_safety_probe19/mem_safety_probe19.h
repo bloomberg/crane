@@ -44,14 +44,14 @@ struct MemSafetyProbe19 {
 
     tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
+    tree &operator=(tree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -356,16 +356,16 @@ struct MemSafetyProbe19 {
 
     explicit myopt(Mysome _v) : v_(std::move(_v)) {}
 
-    myopt(const myopt<A> &_other) : v_(std::move(_other.clone().v_)) {}
+    myopt(const myopt<A> &_other) : v_(_other.v_) {}
 
-    myopt(myopt<A> &&_other) : v_(std::move(_other.v_)) {}
+    myopt(myopt<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     myopt<A> &operator=(const myopt<A> &_other) {
-      v_ = std::move(_other.clone().v_);
+      v_ = _other.v_;
       return *this;
     }
 
-    myopt<A> &operator=(myopt<A> &&_other) {
+    myopt<A> &operator=(myopt<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

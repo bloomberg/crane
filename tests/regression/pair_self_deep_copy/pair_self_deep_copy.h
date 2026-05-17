@@ -37,14 +37,14 @@ struct PairSelfDeepCopy {
 
     chain(const chain &_other) : v_(std::move(_other.clone().v_)) {}
 
-    chain(chain &&_other) : v_(std::move(_other.v_)) {}
+    chain(chain &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     chain &operator=(const chain &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    chain &operator=(chain &&_other) {
+    chain &operator=(chain &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

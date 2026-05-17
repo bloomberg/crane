@@ -47,14 +47,14 @@ struct FixMoveCapture {
 
     mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : v_(std::move(_other.v_)) {}
+    mylist(mylist &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist &operator=(mylist &&_other) {
+    mylist &operator=(mylist &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

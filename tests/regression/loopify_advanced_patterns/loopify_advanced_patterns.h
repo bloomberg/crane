@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -165,14 +165,14 @@ struct LoopifyAdvancedPatterns {
 
     shape(const shape &_other) : v_(std::move(_other.clone().v_)) {}
 
-    shape(shape &&_other) : v_(std::move(_other.v_)) {}
+    shape(shape &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     shape &operator=(const shape &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    shape &operator=(shape &&_other) {
+    shape &operator=(shape &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

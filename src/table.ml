@@ -406,6 +406,11 @@ let rec is_typeclass_type_cpp = function
   | Minicpp.Tunique_ptr t -> is_typeclass_type_cpp t (* Unwrap unique_ptr *)
   | _ -> false
 
+(** {2 Flat inductives table} *)
+
+let (init_flat_inductives, add_flat_inductive, is_flat_inductive) =
+  make_refset ()
+
 (** {2 Enum inductives table} *)
 
 let (init_enum_inductives, add_enum_inductive, is_enum_inductive_registered) =
@@ -2408,6 +2413,7 @@ let reset_tables () =
   init_cst_types ();
   init_inductives ();
   init_inductive_kinds ();
+  init_flat_inductives ();
   init_enum_inductives ();
   init_sigma_assertions ();
   init_recursors ();

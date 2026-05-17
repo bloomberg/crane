@@ -130,8 +130,7 @@ unsigned int DeepPatterns::match_pair_list(
   } else {
     const auto &[a0, a1] = std::get<typename DeepPatterns::mylist<
         DeepPatterns::pair<unsigned int, unsigned int>>::Cons>(l.v());
-    const auto &[a00, a10] = std::get<
-        typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(a0.v());
+    const auto &[a00, a10] = a0;
     return a00;
   }
 }
@@ -181,11 +180,7 @@ unsigned int DeepPatterns::deep_wildcard(
     const DeepPatterns::pair<DeepPatterns::pair<unsigned int, unsigned int>,
                              DeepPatterns::pair<unsigned int, unsigned int>>
         &p) {
-  const auto &[a0, a1] = std::get<typename DeepPatterns::pair<
-      DeepPatterns::pair<unsigned int, unsigned int>,
-      DeepPatterns::pair<unsigned int, unsigned int>>::Pair0>(p.v());
-  const auto &[a00, a10] =
-      std::get<typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(
-          a0.v());
+  const auto &[a0, a1] = p;
+  const auto &[a00, a10] = a0;
   return a00;
 }

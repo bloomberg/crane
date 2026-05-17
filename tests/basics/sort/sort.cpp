@@ -9,7 +9,7 @@ Sig<List<unsigned int>> Sort::sort_cons_prog(unsigned int a,
   } else {
     const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l_.v());
     Sig<List<unsigned int>> s = sort_cons_prog(a, *a1, *a1);
-    auto &[x0] = std::get<typename Sig<List<unsigned int>>::Exist>(s.v_mut());
+    auto &[x0] = s;
     bool s0 = Compare_dec::le_lt_dec(a, a0);
     if (s0) {
       return Sig<List<unsigned int>>::exist(
@@ -26,9 +26,8 @@ Sig<List<unsigned int>> Sort::isort(const List<unsigned int> &l) {
     return Sig<List<unsigned int>>::exist(List<unsigned int>::nil());
   } else {
     const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = isort(*a1);
-    const auto &[x0] =
-        std::get<typename Sig<List<unsigned int>>::Exist>(_sv0.v());
+    const auto &_sv0 = isort(*a1);
+    const auto &[x0] = _sv0;
     return sort_cons_prog(a0, *a1, x0);
   }
 }
@@ -78,10 +77,8 @@ Sig<List<unsigned int>> Sort::msort(const List<unsigned int> &_x0) {
       },
       [](const List<unsigned int> &ls, const Sig<List<unsigned int>> &x,
          const Sig<List<unsigned int>> &x0) {
-        const auto &[x2] =
-            std::get<typename Sig<List<unsigned int>>::Exist>(x.v());
-        const auto &[x3] =
-            std::get<typename Sig<List<unsigned int>>::Exist>(x0.v());
+        const auto &[x2] = x;
+        const auto &[x3] = x0;
         return merge_prog(ls, x2, x3);
       },
       _x0);
@@ -113,10 +110,8 @@ Sig<List<unsigned int>> Sort::psort(const List<unsigned int> &_x0) {
       },
       [](unsigned int a1, unsigned int a2, const List<unsigned int> &l,
          const Sig<List<unsigned int>> &x, const Sig<List<unsigned int>> &x0) {
-        const auto &[x2] =
-            std::get<typename Sig<List<unsigned int>>::Exist>(x.v());
-        const auto &[x3] =
-            std::get<typename Sig<List<unsigned int>>::Exist>(x0.v());
+        const auto &[x2] = x;
+        const auto &[x3] = x0;
         return pair_merge_prog(a1, a2, l, x3, x2);
       },
       _x0);
@@ -128,10 +123,8 @@ Sig<List<unsigned int>> Sort::qsort(const List<unsigned int> &_x0) {
       Sig<List<unsigned int>>::exist(List<unsigned int>::nil()),
       [](unsigned int a, const List<unsigned int> &,
          const Sig<List<unsigned int>> &x, const Sig<List<unsigned int>> &x0) {
-        const auto &[x2] =
-            std::get<typename Sig<List<unsigned int>>::Exist>(x.v());
-        const auto &[x3] =
-            std::get<typename Sig<List<unsigned int>>::Exist>(x0.v());
+        const auto &[x2] = x;
+        const auto &[x3] = x0;
         return Sig<List<unsigned int>>::exist(
             merge(x2, List<unsigned int>::cons(a, x3)));
       },

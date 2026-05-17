@@ -34,14 +34,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -260,14 +260,14 @@ struct Cotree {
 
     tree(const tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree<A> &&_other) : v_(std::move(_other.v_)) {}
+    tree(tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree<A> &operator=(const tree<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree<A> &operator=(tree<A> &&_other) {
+    tree<A> &operator=(tree<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

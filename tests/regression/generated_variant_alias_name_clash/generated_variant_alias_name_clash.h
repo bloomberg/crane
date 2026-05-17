@@ -35,14 +35,14 @@ struct GeneratedVariantAliasNameClash {
 
     variant_t(const variant_t &_other) : v_(std::move(_other.clone().v_)) {}
 
-    variant_t(variant_t &&_other) : v_(std::move(_other.v_)) {}
+    variant_t(variant_t &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     variant_t &operator=(const variant_t &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    variant_t &operator=(variant_t &&_other) {
+    variant_t &operator=(variant_t &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

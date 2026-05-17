@@ -32,14 +32,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -255,14 +255,14 @@ struct InstructionClassifiers {
 
     instr_acc(const instr_acc &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr_acc(instr_acc &&_other) : v_(std::move(_other.v_)) {}
+    instr_acc(instr_acc &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr_acc &operator=(const instr_acc &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_acc &operator=(instr_acc &&_other) {
+    instr_acc &operator=(instr_acc &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -613,14 +613,14 @@ struct InstructionClassifiers {
 
     instr_ram(const instr_ram &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr_ram(instr_ram &&_other) : v_(std::move(_other.v_)) {}
+    instr_ram(instr_ram &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr_ram &operator=(const instr_ram &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_ram &operator=(instr_ram &&_other) {
+    instr_ram &operator=(instr_ram &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -804,14 +804,14 @@ struct InstructionClassifiers {
 
     instr_regs(const instr_regs &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr_regs(instr_regs &&_other) : v_(std::move(_other.v_)) {}
+    instr_regs(instr_regs &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr_regs &operator=(const instr_regs &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_regs &operator=(instr_regs &&_other) {
+    instr_regs &operator=(instr_regs &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -1034,14 +1034,14 @@ struct InstructionClassifiers {
 
     instr_jump(const instr_jump &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr_jump(instr_jump &&_other) : v_(std::move(_other.v_)) {}
+    instr_jump(instr_jump &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instr_jump &operator=(const instr_jump &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instr_jump &operator=(instr_jump &&_other) {
+    instr_jump &operator=(instr_jump &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

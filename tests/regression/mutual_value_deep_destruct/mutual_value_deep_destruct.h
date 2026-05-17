@@ -41,14 +41,14 @@ struct MutualValueDeepDestruct {
 
     a(const a &_other) : v_(std::move(_other.clone().v_)) {}
 
-    a(a &&_other) : v_(std::move(_other.v_)) {}
+    a(a &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     a &operator=(const a &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    a &operator=(a &&_other) {
+    a &operator=(a &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -159,14 +159,14 @@ struct MutualValueDeepDestruct {
 
     b(const b &_other) : v_(std::move(_other.clone().v_)) {}
 
-    b(b &&_other) : v_(std::move(_other.v_)) {}
+    b(b &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     b &operator=(const b &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    b &operator=(b &&_other) {
+    b &operator=(b &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

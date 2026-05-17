@@ -34,14 +34,14 @@ struct LoopifyPairs {
 
     list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    list(list<A> &&_other) : v_(std::move(_other.v_)) {}
+    list(list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     list<A> &operator=(const list<A> &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    list<A> &operator=(list<A> &&_other) {
+    list<A> &operator=(list<A> &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

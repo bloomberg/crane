@@ -45,14 +45,14 @@ template <Elem E> struct Container {
 
     maybe(const maybe &_other) : v_(std::move(_other.clone().v_)) {}
 
-    maybe(maybe &&_other) : v_(std::move(_other.v_)) {}
+    maybe(maybe &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     maybe &operator=(const maybe &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    maybe &operator=(maybe &&_other) {
+    maybe &operator=(maybe &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -126,14 +126,14 @@ template <Elem E> struct Container {
 
     mlist(const mlist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mlist(mlist &&_other) : v_(std::move(_other.v_)) {}
+    mlist(mlist &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mlist &operator=(const mlist &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mlist &operator=(mlist &&_other) {
+    mlist &operator=(mlist &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
@@ -254,14 +254,14 @@ template <Elem E> struct Container {
 
     mtree(const mtree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mtree(mtree &&_other) : v_(std::move(_other.v_)) {}
+    mtree(mtree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mtree &operator=(const mtree &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mtree &operator=(mtree &&_other) {
+    mtree &operator=(mtree &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }

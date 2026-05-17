@@ -33,14 +33,14 @@ public:
 
   List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   List<A> &operator=(const List<A> &_other) {
     v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<A> &operator=(List<A> &&_other) {
+  List<A> &operator=(List<A> &&_other) noexcept {
     v_ = std::move(_other.v_);
     return *this;
   }
@@ -177,14 +177,14 @@ struct Matcher {
 
     regexp(const regexp &_other) : v_(std::move(_other.clone().v_)) {}
 
-    regexp(regexp &&_other) : v_(std::move(_other.v_)) {}
+    regexp(regexp &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     regexp &operator=(const regexp &_other) {
       v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    regexp &operator=(regexp &&_other) {
+    regexp &operator=(regexp &&_other) noexcept {
       v_ = std::move(_other.v_);
       return *this;
     }
