@@ -91,6 +91,17 @@ REPORT="$PROJECT_ROOT/infer-out/report.txt"
 #   auto _cell = std::make_unique<List<T>>(List<T>::Cons(a0, nullptr));
 # Infer cannot trace initialization of `a0` through std::get<> structured
 # bindings, so it flags the Cons constructor parameter as uninitialized.
+#
+# Infer v1.2.0 also reports USE_AFTER_DELETE in two hand-written files due to
+# its inability to model std::shared_ptr reference counting:
+#   - itree_reified.cpp: itree_bind(m, k) calls m->run() then k(); Infer thinks
+#     the shared_ptr destructor deletes the ITree and then k() accesses it, but
+#     k() creates a fresh ITree<void>::ret() and never touches m.  Suppressed by
+#     "invalidated by `delete` during the call to `itree_bind()`".
+#   - stm.cpp: modifyTVar(c, f) takes c by value (copy); when the copy is
+#     destroyed, Infer thinks the shared_ptr<VarControlBlock> is freed, but the
+#     original c still holds a reference so the control block stays alive.
+#     Suppressed by Infer's synthetic field name __infer_backing_count.
 SUPPRESS_PATTERN='DEAD_STORE.*"(&_loop_|&_x[0-9]*`|&n_`|&m_`|&fuel_`|&f`)"'
 
 if [ -f "$REPORT" ] && [ -s "$REPORT" ]; then
@@ -119,6 +130,16 @@ FP_DEAD_STORE_RE = re.compile(
 # in TMC-generated code.  Infer names the constructor parameter __param_0.
 FP_UNINIT_RE = re.compile(r"`__param_0\b")
 
+# False-positive USE_AFTER_DELETE patterns: Infer cannot model shared_ptr
+# reference counting.
+# (1) itree_bind: Infer thinks m is deleted before the continuation runs.
+FP_UAD_ITREE_RE = re.compile(
+    r"invalidated by `delete` during the call to `itree_bind\(\)`"
+)
+# (2) TVar modifyTVar: Infer thinks the by-value TVar copy's destructor frees
+# the shared control block; __infer_backing_count is its synthetic field name.
+FP_UAD_STM_RE = re.compile(r"__infer_backing_count")
+
 kept = []
 for block in blocks:
     if block.strip() == '':
@@ -128,6 +149,11 @@ for block in blocks:
         continue  # suppress
     # Check if this is an UNINITIALIZED_VALUE false positive from TMC Cons init
     if 'Uninitialized Value' in block and FP_UNINIT_RE.search(block):
+        continue  # suppress
+    # Check if this is a USE_AFTER_DELETE false positive from shared_ptr mismodeling
+    if 'Use After Delete' in block and (
+        FP_UAD_ITREE_RE.search(block) or FP_UAD_STM_RE.search(block)
+    ):
         continue  # suppress
     kept.append(block)
 
