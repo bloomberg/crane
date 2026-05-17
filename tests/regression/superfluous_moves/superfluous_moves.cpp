@@ -16,13 +16,13 @@ SuperfluousMoves::lose_one_life(const SuperfluousMoves::game_state &gs) {
 /// Reduced branch reproducer without the outer option * nat wrapper.
 std::pair<bool, SuperfluousMoves::loop_state>
 SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
-  SuperfluousMoves::game_state gs1 = ls.ls_game;
+  const SuperfluousMoves::game_state &gs1 = ls.ls_game;
   bool do_tick = true;
   SuperfluousMoves::game_state gs2;
   if (do_tick) {
-    gs2 = tick(std::move(gs1));
+    gs2 = tick(gs1);
   } else {
-    gs2 = std::move(gs1);
+    gs2 = gs1;
   }
   switch (forced_mode) {
   case Mode::CHASE: {

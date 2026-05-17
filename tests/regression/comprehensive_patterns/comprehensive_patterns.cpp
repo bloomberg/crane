@@ -23,19 +23,17 @@ std::pair<
         ComprehensivePatterns::S>,
     unsigned int>
 ComprehensivePatterns::deep_nest(ComprehensivePatterns::L5 l5) {
-  ComprehensivePatterns::L4 l4 = l5.l5_l4;
-  ComprehensivePatterns::L3 l3 = l4.l4_l3;
-  ComprehensivePatterns::L2 l2 = l3.l3_l2;
-  ComprehensivePatterns::L1 l1 = l2.l2_l1;
-  ComprehensivePatterns::S s = l1.l1_s;
+  const ComprehensivePatterns::L4 &l4 = l5.l5_l4;
+  const ComprehensivePatterns::L3 &l3 = l4.l4_l3;
+  const ComprehensivePatterns::L2 &l2 = l3.l3_l2;
+  const ComprehensivePatterns::L1 &l1 = l2.l2_l1;
+  const ComprehensivePatterns::S &s = l1.l1_s;
   return std::make_pair(
       std::make_pair(
           std::make_pair(
               std::make_pair(
-                  std::make_pair(std::make_pair(std::move(l5), std::move(l4)),
-                                 std::move(l3)),
-                  std::move(l2)),
-              std::move(l1)),
+                  std::make_pair(std::make_pair(std::move(l5), l4), l3), l2),
+              l1),
           s),
       s.s_a);
 }
@@ -214,11 +212,10 @@ std::pair<
               ComprehensivePatterns::R1>,
     unsigned int>
 ComprehensivePatterns::hard_proj_chain(ComprehensivePatterns::R3 r3) {
-  ComprehensivePatterns::R2 r2 = r3.r3_r2;
-  ComprehensivePatterns::R1 r1 = r2.r2_inner;
-  return std::make_pair(
-      std::make_pair(std::make_pair(std::move(r3), std::move(r2)), r1),
-      r1.r1_val);
+  const ComprehensivePatterns::R2 &r2 = r3.r3_r2;
+  const ComprehensivePatterns::R1 &r1 = r2.r2_inner;
+  return std::make_pair(std::make_pair(std::make_pair(std::move(r3), r2), r1),
+                        r1.r1_val);
 }
 
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
@@ -231,9 +228,9 @@ ComprehensivePatterns::multi_path(const ComprehensivePatterns::R3 &r3) {
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
           unsigned int>
 ComprehensivePatterns::let_proj(ComprehensivePatterns::R2 r2) {
-  ComprehensivePatterns::R1 r1 = r2.r2_inner;
+  const ComprehensivePatterns::R1 &r1 = r2.r2_inner;
   unsigned int n = r1.r1_val;
-  return std::make_pair(std::make_pair(std::move(r2), std::move(r1)), n);
+  return std::make_pair(std::make_pair(std::move(r2), r1), n);
 }
 
 unsigned int
@@ -255,10 +252,10 @@ ComprehensivePatterns::multi_proj_let(unsigned int n) {
 
 std::optional<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>
 ComprehensivePatterns::match_proj(ComprehensivePatterns::R2 r2) {
-  ComprehensivePatterns::R1 r1 = r2.r2_inner;
+  const ComprehensivePatterns::R1 &r1 = r2.r2_inner;
   return std::make_optional<
       std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>(
-      std::make_pair(std::move(r2), std::move(r1)));
+      std::make_pair(std::move(r2), r1));
 }
 
 std::pair<std::pair<ComprehensivePatterns::R1, unsigned int>, unsigned int>
@@ -289,7 +286,7 @@ ComprehensivePatterns::from_func(unsigned int n) {
 std::pair<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>,
           std::pair<ComprehensivePatterns::R1, unsigned int>>
 ComprehensivePatterns::pair_of_pairs(ComprehensivePatterns::R2 r2) {
-  ComprehensivePatterns::R1 r1 = r2.r2_inner;
+  const ComprehensivePatterns::R1 &r1 = r2.r2_inner;
   return std::make_pair(std::make_pair(std::move(r2), r1),
                         std::make_pair(r1, r1.r1_val));
 }
@@ -342,10 +339,9 @@ ComprehensivePatterns::repeat_r2(unsigned int n, ComprehensivePatterns::R2 r2) {
 std::pair<std::pair<ComprehensivePatterns::R3, ComprehensivePatterns::R2>,
           ComprehensivePatterns::R1>
 ComprehensivePatterns::nested_lets(ComprehensivePatterns::R3 r3) {
-  ComprehensivePatterns::R2 r2 = r3.r3_r2;
-  ComprehensivePatterns::R1 r1 = r2.r2_inner;
-  return std::make_pair(std::make_pair(std::move(r3), std::move(r2)),
-                        std::move(r1));
+  const ComprehensivePatterns::R2 &r2 = r3.r3_r2;
+  const ComprehensivePatterns::R1 &r1 = r2.r2_inner;
+  return std::make_pair(std::make_pair(std::move(r3), r2), r1);
 }
 
 std::pair<ComprehensivePatterns::R1, unsigned int>
@@ -356,8 +352,8 @@ ComprehensivePatterns::double_proj(const ComprehensivePatterns::R3 &r3) {
 std::pair<std::pair<ComprehensivePatterns::R3, ComprehensivePatterns::R2>,
           ComprehensivePatterns::R2>
 ComprehensivePatterns::mixed_access(ComprehensivePatterns::R3 r3) {
-  ComprehensivePatterns::R2 r2 = r3.r3_r2;
-  return std::make_pair(std::make_pair(r3, std::move(r2)), r3.r3_r2);
+  const ComprehensivePatterns::R2 &r2 = r3.r3_r2;
+  return std::make_pair(std::make_pair(r3, r2), r3.r3_r2);
 }
 
 std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>

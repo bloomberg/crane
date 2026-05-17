@@ -8376,14 +8376,15 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars
       in
       (* Const-ref binding optimisation: when the RHS [a] is a record-field
-         access (single-branch MLcase) on a BORROWED source variable — i.e., a
-         variable that is not in [move_owned_vars] (passed by const ref, not
-         owned) — we can bind the result as [const T&] instead of [T].  This
-         avoids an unnecessary shared_ptr refcount increment at the binding
-         site; any subsequent owned uses still copy from the reference.
+         access (single-branch MLcase) on a source variable that is NOT being
+         moved at this point, we can bind the result as [const T&] instead of
+         [T].  This avoids an unnecessary shared_ptr refcount increment at the
+         binding site; any subsequent owned uses still copy from the reference.
 
-         The source is borrowed iff its de Bruijn index is NOT in the current
-         (pre-shift) [move_owned_vars].  We only apply this when the type is a
+         A variable k is moved only when it is in BOTH [move_owned_vars] (owned
+         value semantics) AND [move_dead_after] (last use at this point).  When
+         the source has further uses in the let body it will not be moved, so
+         the const-ref remains valid.  We only apply this when the type is a
          shared_ptr so that primitive types (int, bool) are left unchanged. *)
       let use_const_ref =
         Escape.is_shared_ptr_type t
@@ -8392,7 +8393,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           | MLcase (_, MLrel k, pv)
             when Array.length pv = 1
                  && (match pv.(0) with (_, _, _, MLrel _) -> true | _ -> false)
-                 && not (Escape.IntSet.mem k tctx.move_owned_vars) ->
+                 && not (Escape.IntSet.mem k tctx.move_owned_vars
+                         && Escape.IntSet.mem k tctx.move_dead_after) ->
             true
           | _ -> false )
       in
