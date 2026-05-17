@@ -127,7 +127,7 @@ public:
       return true;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (f(a0) && (*a1).forallb(f));
+      return (f(a0) && a1->forallb(f));
     }
   }
 
@@ -138,7 +138,7 @@ public:
       return a0;
     } else {
       const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return (*a2).template fold_left<T1>(f, f(a0, a1));
+      return a2->template fold_left<T1>(f, f(a0, a1));
     }
   }
 
@@ -147,7 +147,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return ((*a1).length() + 1);
+      return (a1->length() + 1);
     }
   }
 };

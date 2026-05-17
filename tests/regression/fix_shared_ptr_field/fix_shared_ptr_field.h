@@ -158,7 +158,7 @@ struct FixSharedPtrField {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
-        return (UINT64_C(1) + (*a1).mylist_length());
+        return (UINT64_C(1) + a1->mylist_length());
       }
     }
 
@@ -167,7 +167,7 @@ struct FixSharedPtrField {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
-        return (a0 + (*a1).mylist_sum());
+        return (a0 + a1->mylist_sum());
       }
     }
 
@@ -178,7 +178,7 @@ struct FixSharedPtrField {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
       }
     }
 
@@ -189,7 +189,7 @@ struct FixSharedPtrField {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
       }
     }
   };

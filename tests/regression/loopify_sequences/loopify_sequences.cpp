@@ -134,7 +134,7 @@ List<uint64_t> LoopifySequences::rotate_left_fuel(uint64_t fuel, uint64_t n,
         } else {
           auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-          _loop_l = (*a1).app(
+          _loop_l = a1->app(
               List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil()));
           _loop_n = ((
               (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));

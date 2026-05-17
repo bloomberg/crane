@@ -142,8 +142,8 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe15::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{
-            a0.get(), (((*a0).tree_sum() + a1) + (*a2).tree_sum())});
+        _stack.emplace_back(
+            _After_Node{a0.get(), ((a0->tree_sum() + a1) + a2->tree_sum())});
         _stack.emplace_back(_Enter{a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {

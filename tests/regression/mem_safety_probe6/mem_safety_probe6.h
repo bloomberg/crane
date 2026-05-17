@@ -177,7 +177,7 @@ struct MemSafetyProbe6 {
         return n;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return ((*a1).length() + n);
+        return (a1->length() + n);
       }
     }
 
@@ -652,7 +652,7 @@ struct MemSafetyProbe6 {
       return mylist<uint64_t>::mynil();
     } else {
       const auto &[a0, a1] = std::get<typename mylist<uint64_t>::Mycons>(l.v());
-      return mylist<uint64_t>::mycons(a0, (*a1).template mymap<uint64_t>(x));
+      return mylist<uint64_t>::mycons(a0, a1->template mymap<uint64_t>(x));
     }
   }
 

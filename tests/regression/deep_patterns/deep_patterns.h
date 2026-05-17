@@ -125,7 +125,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return ((*a1).length() + 1);
+      return (a1->length() + 1);
     }
   }
 };
@@ -491,7 +491,7 @@ struct DeepPatterns {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Cons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
       }
     }
 
@@ -502,7 +502,7 @@ struct DeepPatterns {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Cons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
       }
     }
   };

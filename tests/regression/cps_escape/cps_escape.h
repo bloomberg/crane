@@ -122,7 +122,7 @@ struct CpsEscape {
 
     /// CPS-style: take a tree, produce a continuation (nat -> nat)
     /// that adds tree_sum to its argument. The continuation captures t.
-    uint64_t make_adder(uint64_t x) const { return ((*this).tree_sum() + x); }
+    uint64_t make_adder(uint64_t x) const { return (this->tree_sum() + x); }
 
     /// Sum all values in a tree.
     uint64_t tree_sum() const {
@@ -130,7 +130,7 @@ struct CpsEscape {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
+        return ((a0->tree_sum() + a1) + a2->tree_sum());
       }
     }
 
@@ -142,8 +142,8 @@ struct CpsEscape {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rec<T1>(f, f0));
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
       }
     }
 
@@ -155,8 +155,8 @@ struct CpsEscape {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rect<T1>(f, f0));
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
       }
     }
   };

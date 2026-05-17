@@ -128,7 +128,7 @@ public:
       return a0;
     } else {
       const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return (*a2).template fold_left<T1>(f, f(a0, a1));
+      return a2->template fold_left<T1>(f, f(a0, a1));
     }
   }
 
@@ -137,7 +137,7 @@ public:
       return List<A>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (*a1).rev().app(List<A>::cons(a0, List<A>::nil()));
+      return a1->rev().app(List<A>::cons(a0, List<A>::nil()));
     }
   }
 
@@ -146,7 +146,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return ((*a1).length() + 1);
+      return (a1->length() + 1);
     }
   }
 
@@ -155,7 +155,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };

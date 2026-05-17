@@ -298,7 +298,7 @@ List<uint64_t> LoopifyListTransforms::rotate_left_fuel(uint64_t fuel,
         } else {
           auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-          List<uint64_t> rotated = (*a1).app(
+          List<uint64_t> rotated = a1->app(
               List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil()));
           _loop_l = std::move(rotated);
           _loop_n = ((

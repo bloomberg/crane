@@ -344,18 +344,18 @@ struct LoopifyExpr {
         return expr::val(a0);
       } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
         const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
-        return expr::succ((*a0).simplify());
+        return expr::succ(a0->simplify());
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-        auto &&_sv0 = (*a0).simplify();
+        auto &&_sv0 = a0->simplify();
         if (std::holds_alternative<typename expr::Val>(_sv0.v())) {
           const auto &[a00] = std::get<typename expr::Val>(_sv0.v());
           if (a00 <= 0) {
-            return (*a1).simplify();
+            return a1->simplify();
           } else {
             uint64_t n0 = a00 - 1;
             expr s1 = expr::val((n0 + 1));
-            auto &&_sv1 = (*a1).simplify();
+            auto &&_sv1 = a1->simplify();
             if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
               const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
               if (a01 <= 0) {
@@ -382,7 +382,7 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<typename expr::Succ>(_sv0.v())) {
           const auto &[a00] = std::get<typename expr::Succ>(_sv0.v());
           expr s1 = expr::succ(*a00);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -408,7 +408,7 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<typename expr::Add>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename expr::Add>(_sv0.v());
           expr s1 = expr::add(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -434,7 +434,7 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<typename expr::Mul>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename expr::Mul>(_sv0.v());
           expr s1 = expr::mul(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -460,7 +460,7 @@ struct LoopifyExpr {
         } else {
           const auto &[a00, a10, a20] = std::get<typename expr::Cond>(_sv0.v());
           expr s1 = expr::cond(*a00, *a10, *a20);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -486,14 +486,14 @@ struct LoopifyExpr {
         }
       } else if (std::holds_alternative<typename expr::Mul>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
-        auto &&_sv0 = (*a0).simplify();
+        auto &&_sv0 = a0->simplify();
         if (std::holds_alternative<typename expr::Val>(_sv0.v())) {
           const auto &[a00] = std::get<typename expr::Val>(_sv0.v());
           if (a00 <= 0) {
             return expr::val(UINT64_C(0));
           } else {
             uint64_t _x = a00 - 1;
-            auto &&_sv1 = (*a1).simplify();
+            auto &&_sv1 = a1->simplify();
             if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
               const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
               if (a01 <= 0) {
@@ -545,7 +545,7 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<typename expr::Succ>(_sv0.v())) {
           const auto &[a00] = std::get<typename expr::Succ>(_sv0.v());
           expr s1 = expr::succ(*a00);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -575,7 +575,7 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<typename expr::Add>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename expr::Add>(_sv0.v());
           expr s1 = expr::add(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -605,7 +605,7 @@ struct LoopifyExpr {
         } else if (std::holds_alternative<typename expr::Mul>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename expr::Mul>(_sv0.v());
           expr s1 = expr::mul(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -635,7 +635,7 @@ struct LoopifyExpr {
         } else {
           const auto &[a00, a10, a20] = std::get<typename expr::Cond>(_sv0.v());
           expr s1 = expr::cond(*a00, *a10, *a20);
-          auto &&_sv1 = (*a1).simplify();
+          auto &&_sv1 = a1->simplify();
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
@@ -665,7 +665,7 @@ struct LoopifyExpr {
         }
       } else {
         const auto &[a0, a1, a2] = std::get<typename expr::Cond>(_sv.v());
-        return expr::cond((*a0).simplify(), (*a1).simplify(), (*a2).simplify());
+        return expr::cond(a0->simplify(), a1->simplify(), a2->simplify());
       }
     }
 
@@ -1038,19 +1038,19 @@ struct LoopifyExpr {
         return a0;
       } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
         const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
-        return ((*a0).eval() + 1);
+        return (a0->eval() + 1);
       } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-        return ((*a0).eval() + (*a1).eval());
+        return (a0->eval() + a1->eval());
       } else if (std::holds_alternative<typename expr::Mul>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
-        return ((*a0).eval() * (*a1).eval());
+        return (a0->eval() * a1->eval());
       } else {
         const auto &[a0, a1, a2] = std::get<typename expr::Cond>(_sv.v());
-        if (UINT64_C(0) < (*a0).eval()) {
-          return (*a1).eval();
+        if (UINT64_C(0) < a0->eval()) {
+          return a1->eval();
         } else {
-          return (*a2).eval();
+          return a2->eval();
         }
       }
     }
@@ -1632,14 +1632,14 @@ struct LoopifyExpr {
         return a0;
       } else if (std::holds_alternative<typename simple_expr::Plus>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename simple_expr::Plus>(_sv.v());
-        return ((*a0).eval_simple() + (*a1).eval_simple());
+        return (a0->eval_simple() + a1->eval_simple());
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename simple_expr::IfPos>(_sv.v());
-        if (UINT64_C(0) < (*a0).eval_simple()) {
-          return (*a1).eval_simple();
+        if (UINT64_C(0) < a0->eval_simple()) {
+          return a1->eval_simple();
         } else {
-          return (*a2).eval_simple();
+          return a2->eval_simple();
         }
       }
     }
@@ -2253,13 +2253,13 @@ struct LoopifyExpr {
         return a0;
       } else if (std::holds_alternative<typename cond_expr::CPlus>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename cond_expr::CPlus>(_sv.v());
-        return ((*a0).eval_cond() + (*a1).eval_cond());
+        return (a0->eval_cond() + a1->eval_cond());
       } else {
         const auto &[a0, a1, a2] = std::get<typename cond_expr::CCond>(_sv.v());
-        if (UINT64_C(0) < (*a0).eval_cond()) {
-          return (*a1).eval_cond();
+        if (UINT64_C(0) < a0->eval_cond()) {
+          return a1->eval_cond();
         } else {
-          return (*a2).eval_cond();
+          return a2->eval_cond();
         }
       }
     }

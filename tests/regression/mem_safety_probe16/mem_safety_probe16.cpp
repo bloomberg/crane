@@ -180,7 +180,7 @@ uint64_t MemSafetyProbe16::nested_match_closure(
     } else {
       const auto &[a00, a10] =
           std::get<typename MemSafetyProbe16::mylist<uint64_t>::Mycons>(l.v());
-      return (((((*a0).tree_sum() + (*a2).tree_sum()) + a1) + a00) + n);
+      return ((((a0->tree_sum() + a2->tree_sum()) + a1) + a00) + n);
     }
   }
 }

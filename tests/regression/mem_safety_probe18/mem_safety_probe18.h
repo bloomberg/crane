@@ -134,7 +134,7 @@ struct MemSafetyProbe18 {
     /// TEST 9: Triple-use of a tree: compute sum, build a new tree, compute sum
     /// again
     uint64_t triple_use() const {
-      uint64_t s1 = (*this).tree_sum();
+      uint64_t s1 = this->tree_sum();
       tree t2 = tree::node(*this, s1, *this);
       uint64_t s2 = std::move(t2).tree_sum();
       return (s1 + s2);
@@ -152,15 +152,15 @@ struct MemSafetyProbe18 {
     /// TEST 4: Build a tree from a tree, using it at multiple levels.
     tree tree_from_tree() const {
       return tree::node(tree::node(*this, UINT64_C(0), tree::leaf()),
-                        (*this).tree_sum(),
+                        this->tree_sum(),
                         tree::node(tree::leaf(), UINT64_C(0), *this));
     }
 
     /// TEST 2: Let-bind tree_sum, then use the tree again.
     /// The tree should NOT be consumed by tree_sum.
     uint64_t let_reuse() const {
-      uint64_t s = (*this).tree_sum();
-      return (s + (*this).tree_sum());
+      uint64_t s = this->tree_sum();
+      return (s + this->tree_sum());
     }
 
     /// TEST 1: Same tree used in TWO different positions of a single

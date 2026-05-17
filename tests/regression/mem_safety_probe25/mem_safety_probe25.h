@@ -143,7 +143,7 @@ struct MemSafetyProbe25 {
               } else {
                 const auto &[a0, a1, a2] =
                     std::get<typename tree::Node>(_self_val.v());
-                return (((x + (*a0).tree_sum()) + a1) + (*a2).tree_sum());
+                return (((x + a0->tree_sum()) + a1) + a2->tree_sum());
               }
             });
       } else {
@@ -162,7 +162,7 @@ struct MemSafetyProbe25 {
         } else {
           const auto &[a0, a1, a2] =
               std::get<typename tree::Node>(_self_val.v());
-          return ((x + (*a0).tree_sum()) + a1);
+          return ((x + a0->tree_sum()) + a1);
         }
       };
       return std::make_pair(f, std::move(*this).tree_sum());
@@ -180,7 +180,7 @@ struct MemSafetyProbe25 {
           return (x + a1);
         } else {
           const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
-          return (((x + (*a00).tree_sum()) + a10) + a1);
+          return (((x + a00->tree_sum()) + a10) + a1);
         }
       }
     }
@@ -196,7 +196,7 @@ struct MemSafetyProbe25 {
           return (x + a1);
         } else {
           const auto &[a00, a10, a20] = std::get<typename tree::Node>(t2.v());
-          return (((x + (*a0).tree_sum()) + a10) + (*a20).tree_sum());
+          return (((x + a0->tree_sum()) + a10) + a20->tree_sum());
         }
       }
     }
@@ -227,7 +227,7 @@ struct MemSafetyProbe25 {
         return x;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return (((x + (*a0).tree_sum()) + a1) + (*a2).tree_sum());
+        return (((x + a0->tree_sum()) + a1) + a2->tree_sum());
       }
     }
 
@@ -235,7 +235,7 @@ struct MemSafetyProbe25 {
     /// The closure body calls tree_sum on t. If t is passed by const ref
     /// and the closure uses &, t's binding dangles when function returns.
     /// The test calls the closure AFTER the tree temporary is destroyed.
-    uint64_t make_sum_fn(uint64_t x) const { return (x + (*this).tree_sum()); }
+    uint64_t make_sum_fn(uint64_t x) const { return (x + this->tree_sum()); }
 
     uint64_t tree_sum() const {
       const tree *_self = this;

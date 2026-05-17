@@ -110,7 +110,7 @@ public:
       return m;
     } else {
       const auto &[a0] = std::get<typename Nat::S>(this->v());
-      return Nat::s((*a0).add(std::move(m)));
+      return Nat::s(a0->add(std::move(m)));
     }
   }
 };
@@ -232,7 +232,7 @@ public:
       return Nat::o();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return Nat::s((*a1).length());
+      return Nat::s(a1->length());
     }
   }
 };

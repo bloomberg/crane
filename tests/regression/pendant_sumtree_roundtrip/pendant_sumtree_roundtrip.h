@@ -129,7 +129,7 @@ public:
       return true;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return (f(a0) && (*a1).forallb(f));
+      return (f(a0) && a1->forallb(f));
     }
   }
 
@@ -140,7 +140,7 @@ public:
       return a0;
     } else {
       const auto &[a1, a2] = std::get<typename List<A>::Cons0>(this->v());
-      return f(a1, (*a2).template fold_right<T1>(f, a0));
+      return f(a1, a2->template fold_right<T1>(f, a0));
     }
   }
 
@@ -150,7 +150,7 @@ public:
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<T1>>::Cons0>(this->v());
-      return a0.app((*a1).template concat<T1>());
+      return a0.app(a1->template concat<T1>());
     }
   }
 
@@ -161,7 +161,7 @@ public:
       return List<T1>::nil0();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return List<T1>::cons0(f(a0), (*a1).template map<T1>(f));
+      return List<T1>::cons0(f(a0), a1->template map<T1>(f));
     }
   }
 
@@ -170,7 +170,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return ((*a1).length() + 1);
+      return (a1->length() + 1);
     }
   }
 
@@ -179,7 +179,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return List<A>::cons0(a0, (*a1).app(std::move(m)));
+      return List<A>::cons0(a0, a1->app(std::move(m)));
     }
   }
 };
@@ -389,7 +389,7 @@ public:
       return Sig<uint64_t>::exist(UINT64_C(0));
     } else {
       const auto &[n1, a1] = std::get<typename T::FS>(this->v());
-      const auto &_sv0 = (*a1).to_nat(n1);
+      const auto &_sv0 = a1->to_nat(n1);
       const auto &[x0] = _sv0;
       return Sig<uint64_t>::exist((x0 + 1));
     }

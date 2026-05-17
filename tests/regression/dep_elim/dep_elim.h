@@ -232,7 +232,7 @@ struct DepElim {
         return UINT64_C(0);
       } else {
         const auto &[n, a1] = std::get<typename fin::FS>(this->v());
-        return ((*a1).fin_to_nat(n) + 1);
+        return (a1->fin_to_nat(n) + 1);
       }
     }
 
@@ -245,7 +245,7 @@ struct DepElim {
         return f(n0);
       } else {
         const auto &[n0, a1] = std::get<typename fin::FS>(this->v());
-        return f0(n0, *a1, (*a1).template fin_rec<T1>(f, f0, n0));
+        return f0(n0, *a1, a1->template fin_rec<T1>(f, f0, n0));
       }
     }
 
@@ -258,7 +258,7 @@ struct DepElim {
         return f(n0);
       } else {
         const auto &[n0, a1] = std::get<typename fin::FS>(this->v());
-        return f0(n0, *a1, (*a1).template fin_rect<T1>(f, f0, n0));
+        return f0(n0, *a1, a1->template fin_rect<T1>(f, f0, n0));
       }
     }
   };
@@ -403,7 +403,7 @@ struct DepElim {
         return vec<T1>::vnil();
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
-        return vec<T1>::vcons(n, f(a1), (*a2).template vec_map<T1>(n, f));
+        return vec<T1>::vcons(n, f(a1), a2->template vec_map<T1>(n, f));
       }
     }
 
@@ -412,7 +412,7 @@ struct DepElim {
         return List<A>::nil();
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
-        return List<A>::cons(a1, (*a2).vec_to_list(n));
+        return List<A>::cons(a1, a2->vec_to_list(n));
       }
     }
 
@@ -423,7 +423,7 @@ struct DepElim {
         return f;
       } else {
         const auto &[n0, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
-        return f0(n0, a1, *a2, (*a2).template vec_rec<T1>(f, f0, n0));
+        return f0(n0, a1, *a2, a2->template vec_rec<T1>(f, f0, n0));
       }
     }
 
@@ -434,7 +434,7 @@ struct DepElim {
         return f;
       } else {
         const auto &[n0, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
-        return f0(n0, a1, *a2, (*a2).template vec_rect<T1>(f, f0, n0));
+        return f0(n0, a1, *a2, a2->template vec_rect<T1>(f, f0, n0));
       }
     }
   };

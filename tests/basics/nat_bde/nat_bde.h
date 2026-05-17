@@ -107,7 +107,7 @@ public:
       return f;
     } else {
       const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
-      return f0(*d_n, (*d_n).template nat_rect<T1>(f, f0));
+      return f0(*d_n, d_n->template nat_rect<T1>(f, f0));
     }
   }
   template <typename T1, typename F1>
@@ -117,7 +117,7 @@ public:
       return f;
     } else {
       const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
-      return f0(*d_n, (*d_n).template nat_rec<T1>(f, f0));
+      return f0(*d_n, d_n->template nat_rec<T1>(f, f0));
     }
   }
   Nat add(Nat n) const {
@@ -125,7 +125,7 @@ public:
       return n;
     } else {
       const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
-      return Nat::s((*d_n).add(bsl::move(n)));
+      return Nat::s(d_n->add(bsl::move(n)));
     }
   }
   int nat_to_int() const {
@@ -133,7 +133,7 @@ public:
       return 0;
     } else {
       const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
-      return 1 + (*d_n).nat_to_int();
+      return 1 + d_n->nat_to_int();
     }
   }
 };

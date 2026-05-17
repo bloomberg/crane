@@ -117,7 +117,7 @@ public:
         return *this;
       } else {
         auto &[a00] = std::get<typename Nat::S>(m.v_mut());
-        return Nat::s((*a0).max(*a00));
+        return Nat::s(a0->max(*a00));
       }
     }
   }
@@ -127,7 +127,7 @@ public:
       return m;
     } else {
       const auto &[a0] = std::get<typename Nat::S>(this->v());
-      return Nat::s((*a0).add(std::move(m)));
+      return Nat::s(a0->add(std::move(m)));
     }
   }
 };
@@ -249,7 +249,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };
@@ -386,8 +386,8 @@ public:
       return f;
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
-                (*a2).template tree_rect<T1>(f, f0));
+      return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                a2->template tree_rect<T1>(f, f0));
     }
   }
 
@@ -399,8 +399,8 @@ public:
       return f;
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
-                (*a2).template tree_rec<T1>(f, f0));
+      return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                a2->template tree_rec<T1>(f, f0));
     }
   }
 
@@ -419,7 +419,7 @@ public:
       return Nat::s(Nat::o());
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return Nat::s(Nat::o()).add((*a0).size()).add((*a2).size());
+      return Nat::s(Nat::o()).add(a0->size()).add(a2->size());
     }
   }
 
@@ -429,7 +429,7 @@ public:
       return Nat::s(Nat::o());
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return Nat::s(Nat::o()).add((*a0).height().max((*a2).height()));
+      return Nat::s(Nat::o()).add(a0->height().max(a2->height()));
     }
   }
 
@@ -439,7 +439,7 @@ public:
       return List<A>::nil();
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return (*a0).flatten().app(List<A>::cons(a1, (*a2).flatten()));
+      return a0->flatten().app(List<A>::cons(a1, a2->flatten()));
     }
   }
 
@@ -461,8 +461,8 @@ public:
         return Tree<A>::node(Tree<A>::leaf(), a2, Tree<A>::leaf());
       } else {
         const auto &[a00, a10, a20] = std::get<typename Tree<A>::Node>(t2.v());
-        return Tree<A>::node((*a0).merge(combine, *a00), combine(a2, a10),
-                             (*a3).merge(combine, *a20));
+        return Tree<A>::node(a0->merge(combine, *a00), combine(a2, a10),
+                             a3->merge(combine, *a20));
       }
     }
   }

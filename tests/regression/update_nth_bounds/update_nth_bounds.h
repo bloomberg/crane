@@ -127,7 +127,7 @@ public:
         return List<A>::nil();
       } else {
         auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-        return (*a1).skipn(n0);
+        return a1->skipn(n0);
       }
     }
   }
@@ -141,7 +141,7 @@ public:
         return List<A>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-        return List<A>::cons(a0, (*a1).firstn(n0));
+        return List<A>::cons(a0, a1->firstn(n0));
       }
     }
   }
@@ -151,7 +151,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return ((*a1).length() + 1);
+      return (a1->length() + 1);
     }
   }
 
@@ -160,7 +160,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };

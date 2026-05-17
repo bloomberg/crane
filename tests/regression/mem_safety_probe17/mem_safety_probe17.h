@@ -215,10 +215,10 @@ struct MemSafetyProbe17 {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             uint64_t local_weight =
-                (((((*a0).qtree_sum() + (UINT64_C(2) * (*a1).qtree_sum())) +
+                ((((a0->qtree_sum() + (UINT64_C(2) * a1->qtree_sum())) +
                    (UINT64_C(3) * a2)) +
-                  (UINT64_C(4) * (*a3).qtree_sum())) +
-                 (UINT64_C(5) * (*a4).qtree_sum()));
+                  (UINT64_C(4) * a3->qtree_sum())) +
+                 (UINT64_C(5) * a4->qtree_sum()));
             _stack.emplace_back(
                 _After_QNode{a3.get(), a1.get(), a0.get(), local_weight});
             _stack.emplace_back(_Enter{a4.get()});
@@ -551,10 +551,10 @@ struct MemSafetyProbe17 {
       } else {
         const auto &[a0, a1, a2, a3, a4] =
             std::get<typename qtree::QNode>(_sv.v());
-        uint64_t da = (*a0).qtree_depth();
-        uint64_t db = (*a1).qtree_depth();
-        uint64_t dc = (*a3).qtree_depth();
-        uint64_t dd = (*a4).qtree_depth();
+        uint64_t da = a0->qtree_depth();
+        uint64_t db = a1->qtree_depth();
+        uint64_t dc = a3->qtree_depth();
+        uint64_t dd = a4->qtree_depth();
         uint64_t m1;
         if (da <= db) {
           m1 = db;

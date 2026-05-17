@@ -124,7 +124,7 @@ public:
       return List<A>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (*a1).rev().app(List<A>::cons(a0, List<A>::nil()));
+      return a1->rev().app(List<A>::cons(a0, List<A>::nil()));
     }
   }
 
@@ -133,7 +133,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };

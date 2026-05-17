@@ -123,7 +123,7 @@ struct MemSafetyProbe2 {
 
     /// TEST 18: Construct a tree using partial app results, then traverse it.
     tree build_from_partial() const {
-      uint64_t v = (*this).sum_values(UINT64_C(0));
+      uint64_t v = this->sum_values(UINT64_C(0));
       return tree::node(tree::node(tree::leaf(), v, tree::leaf()), v,
                         tree::node(tree::leaf(), v, tree::leaf()));
     }
@@ -136,9 +136,9 @@ struct MemSafetyProbe2 {
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
-          return (*a0).sum_values(_x0);
+          return a0->sum_values(_x0);
         };
-        return (f(a1) + (*a2).sum_values(a1));
+        return (f(a1) + a2->sum_values(a1));
       }
     }
 
@@ -213,10 +213,10 @@ struct MemSafetyProbe2 {
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         std::function<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
-          return (*a0).sum_values(_x0);
+          return a0->sum_values(_x0);
         };
         std::function<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
-          return (*a2).sum_values(_x0);
+          return a2->sum_values(_x0);
         };
         return (fl(a1) + fr(a1));
       }
@@ -244,7 +244,7 @@ struct MemSafetyProbe2 {
 
     /// TEST 3: Compose two closures, each capturing a different tree.
     uint64_t compose_adders(const tree &t2, uint64_t x) const {
-      return (*this).sum_values(t2.sum_values(x));
+      return this->sum_values(t2.sum_values(x));
     }
 
     /// TEST 2: CPS-style: pass a continuation that captures value types.
@@ -263,7 +263,7 @@ struct MemSafetyProbe2 {
     /// double-use.
     std::pair<tree, uint64_t> dup_tree() const {
       return std::make_pair(tree::node(*this, UINT64_C(0), tree::leaf()),
-                            (*this).sum_values(UINT64_C(0)));
+                            this->sum_values(UINT64_C(0)));
     }
 
     uint64_t sum_values(uint64_t x) const {
@@ -526,7 +526,7 @@ struct MemSafetyProbe2 {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    mylist<A> myrev() const { return (*this).myrev_append(mylist<A>::mynil()); }
+    mylist<A> myrev() const { return this->myrev_append(mylist<A>::mynil()); }
 
     /// TEST 17: Build a list of closures, reverse it, and apply all.
     /// Probes whether closures survive list operations.

@@ -115,7 +115,7 @@ public:
       return m;
     } else {
       const auto &[a0] = std::get<typename Nat::S>(this->v());
-      return Nat::s((*a0).add(std::move(m)));
+      return Nat::s(a0->add(std::move(m)));
     }
   }
 };

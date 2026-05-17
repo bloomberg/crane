@@ -134,12 +134,12 @@ template <typename K, typename V> struct CHT {
     return (*this).cht_buckets.at(i);
   }
   bsl::optional<V> stm_get(const K &k) const {
-    stm::TVar<List<bsl::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     return CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
   }
   std::monostate stm_put(const K &k, const V &v) const {
-    stm::TVar<List<bsl::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
@@ -148,7 +148,7 @@ template <typename K, typename V> struct CHT {
     return std::monostate{};
   }
   bsl::optional<V> stm_delete(const K &k) const {
-    stm::TVar<List<bsl::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::pair<bsl::optional<V>, List<bsl::pair<K, V>>> p =
         CHT<int, int>::template assoc_remove<K, V>((*this).cht_eqb, k,
@@ -165,7 +165,7 @@ template <typename K, typename V> struct CHT {
   template <typename F1>
     requires bsl::is_invocable_r_v<V, F1 &, bsl::optional<V> &>
   V stm_update(const K &k, F1 &&f) const {
-    stm::TVar<List<bsl::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
@@ -177,7 +177,7 @@ template <typename K, typename V> struct CHT {
     return v;
   }
   V stm_get_or(const K &k, const V &dflt) const {
-    bsl::optional<V> v = (*this).stm_get(k);
+    bsl::optional<V> v = this->stm_get(k);
     if (v.has_value()) {
       V x = *v;
       return x;
@@ -195,18 +195,18 @@ template <typename K, typename V> struct CHT {
     });
   }
   bsl::optional<V> get(const K &k) const {
-    return stm::atomically([&] { return (*this).stm_get(k); });
+    return stm::atomically([&] { return this->stm_get(k); });
   }
   bsl::optional<V> hash_delete(const K &k) const {
-    return stm::atomically([&] { return (*this).stm_delete(k); });
+    return stm::atomically([&] { return this->stm_delete(k); });
   }
   template <typename F1>
     requires bsl::is_invocable_r_v<V, F1 &, bsl::optional<V> &>
   V hash_update(const K &k, F1 &&f) const {
-    return stm::atomically([&] { return (*this).stm_update(k, f); });
+    return stm::atomically([&] { return this->stm_update(k, f); });
   }
   V get_or(const K &k, const V &dflt) const {
-    return stm::atomically([&] { return (*this).stm_get_or(k, dflt); });
+    return stm::atomically([&] { return this->stm_get_or(k, dflt); });
   }
   template <typename T1, typename T2, typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>

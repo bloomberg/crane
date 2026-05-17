@@ -132,7 +132,7 @@ struct MemSafetyProbe14 {
     /// TEST 7: Closure stored in PAIR, then extracted and called.
     /// Tests pair construction + closure capture interaction.
     std::pair<std::function<uint64_t(uint64_t)>, uint64_t> fn_and_val() const {
-      uint64_t s = (*this).tree_sum();
+      uint64_t s = this->tree_sum();
       return std::make_pair([=](uint64_t n) mutable { return (s + n); }, s);
     }
 
@@ -175,7 +175,7 @@ struct MemSafetyProbe14 {
     /// Tests evaluation order safety.
     uint64_t use_tree_twice() const {
       tree _self_val = *this;
-      uint64_t ts = (*this).tree_sum();
+      uint64_t ts = this->tree_sum();
       std::function<uint64_t(uint64_t)> f = [=](uint64_t n) mutable {
         return (_self_val.tree_sum() + n);
       };
@@ -186,7 +186,7 @@ struct MemSafetyProbe14 {
     /// The closure captures tree_sum t. After the closure is created,
     /// t is dead in the caller, so Crane might move t.
     /// But the closure must hold a valid copy.
-    uint64_t make_adder(uint64_t n) const { return ((*this).tree_sum() + n); }
+    uint64_t make_adder(uint64_t n) const { return (this->tree_sum() + n); }
 
     uint64_t tree_sum() const {
       const tree *_self = this;

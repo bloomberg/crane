@@ -245,7 +245,7 @@ struct AxiomTypes {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename list<A>::Cons>(this->v());
-        return f0(a0, *a1, (*a1).template list_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template list_rec<T1>(f, f0));
       }
     }
 
@@ -256,7 +256,7 @@ struct AxiomTypes {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename list<A>::Cons>(this->v());
-        return f0(a0, *a1, (*a1).template list_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template list_rect<T1>(f, f0));
       }
     }
   };

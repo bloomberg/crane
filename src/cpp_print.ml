@@ -1218,19 +1218,16 @@ and pp_cpp_expr env args t =
             str "<" ++ pp_list (pp_cpp_type false []) filtered_tys ++ str ">" )
       in
       (* All inductives (including coinductives) are value types, so use
-         dot access.  Exception: [this] is always a pointer, so method
-         bodies use arrow. *)
+         dot access.  Exceptions: [this] is a raw pointer and [CPPderef e]
+         dereferences a smart pointer — both use arrow. *)
       let use_arrow =
-        match this_arg with CPPthis -> true | _ -> false
+        match this_arg with CPPthis | CPPderef _ -> true | _ -> false
       in
       let accessor = if use_arrow then "->" else "." in
-      (* Parenthesize deref expressions for correct precedence. *)
       let obj_pp =
-        if not use_arrow then
-          match this_arg with
-          | CPPderef _ -> str "(" ++ obj_s ++ str ")"
-          | _ -> obj_s
-        else obj_s
+        match this_arg with
+        | CPPderef e -> pp_cpp_expr env args e
+        | _ -> obj_s
       in
       obj_pp
       ++ str accessor

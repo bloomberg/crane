@@ -1009,8 +1009,8 @@ struct LoopifyTreeVariants {
         return a0;
       } else {
         const auto &[a0, a1] = std::get<typename leaf_tree::LNode>(_sv.v());
-        uint64_t lmax = (*a0).leaf_tree_max();
-        uint64_t rmax = (*a1).leaf_tree_max();
+        uint64_t lmax = a0->leaf_tree_max();
+        uint64_t rmax = a1->leaf_tree_max();
         if (lmax < rmax) {
           return rmax;
         } else {

@@ -134,7 +134,7 @@ struct MemSafetyProbe24 {
     /// TEST 6: Store a tree AND its sum in a pair, then transform
     /// both. Tests that clone is independent of original.
     uint64_t clone_and_transform() const {
-      std::pair<tree, uint64_t> p = std::make_pair(*this, (*this).tree_sum());
+      std::pair<tree, uint64_t> p = std::make_pair(*this, this->tree_sum());
       tree t2 = p.first;
       uint64_t s = p.second;
       tree t3 =
@@ -209,8 +209,8 @@ struct MemSafetyProbe24 {
         return std::make_pair(tree::leaf(), UINT64_C(0));
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-        std::pair<tree, uint64_t> pl = (*a0).tag_tree();
-        std::pair<tree, uint64_t> pr = (*a2).tag_tree();
+        std::pair<tree, uint64_t> pl = a0->tag_tree();
+        std::pair<tree, uint64_t> pr = a2->tag_tree();
         return std::make_pair(*_self,
                               ((std::move(a1) + pl.second) + pr.second));
       }
@@ -218,20 +218,20 @@ struct MemSafetyProbe24 {
 
     /// TEST 3: Triple use of t in one expression.
     std::pair<std::pair<tree, tree>, uint64_t> triple_use() const {
-      return std::make_pair(std::make_pair(*this, *this), (*this).tree_sum());
+      return std::make_pair(std::make_pair(*this, *this), this->tree_sum());
     }
 
     /// TEST 2: Pair where BOTH elements use t, one as value
     /// and one through a function.
     std::pair<tree, uint64_t> pair_self() const {
-      return std::make_pair(*this, (*this).tree_sum());
+      return std::make_pair(*this, this->tree_sum());
     }
 
     /// TEST 1: Variable used as BOTH whole value AND for field access
     /// in the same constructor. In C++, tree::node(t, tree_sum(t), Leaf)
     /// where t must be cloned and tree_sum accesses t's children.
     tree self_annotate() const {
-      return tree::node(*this, (*this).tree_sum(), tree::leaf());
+      return tree::node(*this, this->tree_sum(), tree::leaf());
     }
 
     uint64_t tree_sum() const {

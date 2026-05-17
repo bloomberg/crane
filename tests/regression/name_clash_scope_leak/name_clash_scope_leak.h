@@ -123,7 +123,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };

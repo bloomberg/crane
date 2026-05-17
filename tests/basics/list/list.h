@@ -126,7 +126,7 @@ public:
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return f0(a0, *a1, (*a1).template list_rect<T1>(f, f0));
+      return f0(a0, *a1, a1->template list_rect<T1>(f, f0));
     }
   }
 
@@ -137,7 +137,7 @@ public:
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return f0(a0, *a1, (*a1).template list_rec<T1>(f, f0));
+      return f0(a0, *a1, a1->template list_rec<T1>(f, f0));
     }
   }
 
@@ -164,7 +164,7 @@ public:
       return x;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (*a1).last(a0);
+      return a1->last(a0);
     }
   }
 
@@ -173,7 +173,7 @@ public:
       return l2;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(l2)));
+      return List<A>::cons(a0, a1->app(std::move(l2)));
     }
   }
 
@@ -184,7 +184,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<T1>::cons(f(a0), (*a1).template map<T1>(f));
+      return List<T1>::cons(f(a0), a1->template map<T1>(f));
     }
   }
 

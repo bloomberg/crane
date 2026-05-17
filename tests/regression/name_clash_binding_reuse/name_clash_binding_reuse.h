@@ -84,7 +84,7 @@ struct NameClashBindingReuse {
     }
 
     uint64_t cascade_and_match() const {
-      const auto &_sv = (*this).cascade();
+      const auto &_sv = this->cascade();
       const auto &[a0, a1] = _sv;
       return (a0 + a1);
     }

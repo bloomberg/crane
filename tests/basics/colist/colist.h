@@ -273,7 +273,7 @@ public:
     } else {
       const auto &[a0, a1] = std::get<typename Colist<A>::Cocons>(this->v());
       return Colist<T1>::lazy_([=]() mutable -> Colist<T1> {
-        return Colist<T1>::cocons(f(a0), (*a1).template comap<T1>(f));
+        return Colist<T1>::cocons(f(a0), a1->template comap<T1>(f));
       });
     }
   }

@@ -127,7 +127,7 @@ public:
       return true;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (f(a0) && (*a1).forallb(f));
+      return (f(a0) && a1->forallb(f));
     }
   }
 };

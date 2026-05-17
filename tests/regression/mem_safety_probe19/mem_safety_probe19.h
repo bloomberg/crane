@@ -133,9 +133,9 @@ struct MemSafetyProbe19 {
     uint64_t nested_match_fn(bool b1, bool b2, uint64_t n) const {
       if (b1) {
         if (b2) {
-          return ((*this).tree_sum() + n);
+          return (this->tree_sum() + n);
         } else {
-          return (((*this).tree_sum() + (*this).tree_sum()) + n);
+          return ((this->tree_sum() + this->tree_sum()) + n);
         }
       } else {
         return n;
@@ -147,7 +147,7 @@ struct MemSafetyProbe19 {
     /// return_captures_by_value won't recurse into it.
     uint64_t choose_fn(bool b, uint64_t n) const {
       if (b) {
-        return ((*this).tree_sum() + n);
+        return (this->tree_sum() + n);
       } else {
         return n;
       }

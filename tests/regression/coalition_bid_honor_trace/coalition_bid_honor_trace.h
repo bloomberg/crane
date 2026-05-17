@@ -127,7 +127,7 @@ public:
       return false;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (f(a0) || (*a1).existsb(f));
+      return (f(a0) || a1->existsb(f));
     }
   }
 
@@ -138,7 +138,7 @@ public:
       return a0;
     } else {
       const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return f(a1, (*a2).template fold_right<T1>(f, a0));
+      return f(a1, a2->template fold_right<T1>(f, a0));
     }
   }
 
@@ -149,7 +149,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return f(a0).app((*a1).template flat_map<T1>(f));
+      return f(a0).app(a1->template flat_map<T1>(f));
     }
   }
 
@@ -160,7 +160,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<T1>::cons(f(a0), (*a1).template map<T1>(f));
+      return List<T1>::cons(f(a0), a1->template map<T1>(f));
     }
   }
 
@@ -169,7 +169,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return ((*a1).length() + 1);
+      return (a1->length() + 1);
     }
   }
 
@@ -178,7 +178,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };
@@ -1543,12 +1543,12 @@ struct CoalitionBidHonorTraceCase {
                      action.v())) {
         const auto &[side0] =
             std::get<typename ProtocolAction::ActWithdraw>(action.v());
-        return (*this).get_side_commander(side0);
+        return this->get_side_commander(side0);
       } else if (std::holds_alternative<typename ProtocolAction::ActBreakBid>(
                      action.v())) {
         const auto &[side0] =
             std::get<typename ProtocolAction::ActBreakBid>(action.v());
-        return (*this).get_side_commander(side0);
+        return this->get_side_commander(side0);
       } else {
         return std::optional<Commander>();
       }

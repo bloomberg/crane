@@ -563,8 +563,8 @@ struct LoopifyTrees {
         } else {
           const auto &[a00, a10, a20] =
               std::get<typename tree<T1>::Node>(t2.v());
-          if ((*a0).template same_shape<T1>(*a00)) {
-            return (*a2).template same_shape<T1>(*a20);
+          if (a0->template same_shape<T1>(*a00)) {
+            return a2->template same_shape<T1>(*a20);
           } else {
             return false;
           }
@@ -685,8 +685,8 @@ struct LoopifyTrees {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
-        uint64_t lh = (*a0).tree_height();
-        uint64_t rh = (*a2).tree_height();
+        uint64_t lh = a0->tree_height();
+        uint64_t rh = a2->tree_height();
         return ((lh <= rh ? rh : lh) + 1);
       }
     }
@@ -955,9 +955,9 @@ struct LoopifyTrees {
       } else {
         const auto &[a0, a1, a2, a3] =
             std::get<typename ternary::TNode>(_sv.v());
-        uint64_t d1 = (*a0).ternary_depth();
-        uint64_t d2 = (*a1).ternary_depth();
-        uint64_t d3 = (*a2).ternary_depth();
+        uint64_t d1 = a0->ternary_depth();
+        uint64_t d2 = a1->ternary_depth();
+        uint64_t d3 = a2->ternary_depth();
         return ([&]() -> uint64_t {
           if ((d1 <= d2 ? d2 : d1) <= d3) {
             return d3;

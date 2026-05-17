@@ -706,7 +706,7 @@ struct ComprehensivePatterns {
     const variant_t &v() const { return v_; }
 
     Tree nested_reuse() const {
-      Tree t2 = (*this).transform_tree();
+      Tree t2 = this->transform_tree();
       return std::move(t2).transform_tree();
     }
 

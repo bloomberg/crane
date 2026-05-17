@@ -586,10 +586,10 @@ struct LoopifyStructures {
       } else {
         const auto &[a0, a1, a2, a3] =
             std::get<typename quadtree::Quad>(_sv.v());
-        uint64_t d1 = (*a0).quad_depth();
-        uint64_t d2 = (*a1).quad_depth();
-        uint64_t d3 = (*a2).quad_depth();
-        uint64_t d4 = (*a3).quad_depth();
+        uint64_t d1 = a0->quad_depth();
+        uint64_t d2 = a1->quad_depth();
+        uint64_t d3 = a2->quad_depth();
+        uint64_t d4 = a3->quad_depth();
         return ([&]() -> uint64_t {
           if ((d1 <= d2 ? d2 : d1) <= (d3 <= d4 ? d4 : d3)) {
             if (d3 <= d4) {

@@ -114,7 +114,7 @@ public:
       return f;
     } else {
       const auto &[n1] = std::get<typename Nat::S>(this->v());
-      return f0(*n1, (*n1).template nat_rect<T1>(f, f0));
+      return f0(*n1, n1->template nat_rect<T1>(f, f0));
     }
   }
 
@@ -125,7 +125,7 @@ public:
       return f;
     } else {
       const auto &[n1] = std::get<typename Nat::S>(this->v());
-      return f0(*n1, (*n1).template nat_rec<T1>(f, f0));
+      return f0(*n1, n1->template nat_rec<T1>(f, f0));
     }
   }
 
@@ -135,7 +135,7 @@ public:
       return n;
     } else {
       const auto &[n0] = std::get<typename Nat::S>(this->v());
-      return Nat::s((*n0).add(std::move(n)));
+      return Nat::s(n0->add(std::move(n)));
     }
   }
 
@@ -145,7 +145,7 @@ public:
       return 0;
     } else {
       const auto &[n0] = std::get<typename Nat::S>(this->v());
-      return 1 + (*n0).nat_to_int();
+      return 1 + n0->nat_to_int();
     }
   }
 };

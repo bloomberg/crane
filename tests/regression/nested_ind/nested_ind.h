@@ -125,7 +125,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };
@@ -253,7 +253,7 @@ struct NestedInd {
       } else {
         const auto &[a0, a1] =
             std::get<typename custom_list<A>::Ccons>(this->v());
-        return (UINT64_C(1) + (*a1).custom_list_length());
+        return (UINT64_C(1) + a1->custom_list_length());
       }
     }
 
@@ -265,7 +265,7 @@ struct NestedInd {
       } else {
         const auto &[a0, a1] =
             std::get<typename custom_list<A>::Ccons>(this->v());
-        return f0(a0, *a1, (*a1).template custom_list_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template custom_list_rec<T1>(f, f0));
       }
     }
 
@@ -277,7 +277,7 @@ struct NestedInd {
       } else {
         const auto &[a0, a1] =
             std::get<typename custom_list<A>::Ccons>(this->v());
-        return f0(a0, *a1, (*a1).template custom_list_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template custom_list_rect<T1>(f, f0));
       }
     }
   };
@@ -345,7 +345,7 @@ struct NestedInd {
 
     uint64_t children_count() const {
       const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
-      return (*a1).custom_list_length();
+      return a1->custom_list_length();
     }
 
     A root() const {

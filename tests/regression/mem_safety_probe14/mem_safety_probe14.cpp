@@ -56,7 +56,7 @@ uint64_t MemSafetyProbe14::capture_then_match(MemSafetyProbe14::tree t) {
   } else {
     auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe14::tree::Node>(t.v_mut());
-    return ((f(std::move(a1)) + (*a0).tree_sum()) + (*a2).tree_sum());
+    return ((f(std::move(a1)) + a0->tree_sum()) + a2->tree_sum());
   }
 }
 

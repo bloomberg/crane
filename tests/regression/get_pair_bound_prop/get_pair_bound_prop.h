@@ -128,7 +128,7 @@ public:
         return List<A>::nil();
       } else {
         auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-        return (*a1).skipn(n0);
+        return a1->skipn(n0);
       }
     }
   }
@@ -142,7 +142,7 @@ public:
         return List<A>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-        return List<A>::cons(a0, (*a1).firstn(n0));
+        return List<A>::cons(a0, a1->firstn(n0));
       }
     }
   }

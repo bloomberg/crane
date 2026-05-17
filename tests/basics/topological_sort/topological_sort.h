@@ -134,7 +134,7 @@ public:
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l_.v());
         return List<std::pair<A, T1>>::cons(std::make_pair(a0, a00),
-                                            (*a1).template combine<T1>(*a10));
+                                            a1->template combine<T1>(*a10));
       }
     }
   }
@@ -149,7 +149,7 @@ public:
       if (f(a0)) {
         return std::make_optional<A>(a0);
       } else {
-        return (*a1).find(f);
+        return a1->find(f);
       }
     }
   }
@@ -162,9 +162,9 @@ public:
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       if (f(a0)) {
-        return List<A>::cons(a0, (*a1).filter(f));
+        return List<A>::cons(a0, a1->filter(f));
       } else {
-        return (*a1).filter(f);
+        return a1->filter(f);
       }
     }
   }
@@ -176,7 +176,7 @@ public:
       return a0;
     } else {
       const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return f(a1, (*a2).template fold_right<T1>(f, a0));
+      return f(a1, a2->template fold_right<T1>(f, a0));
     }
   }
 
@@ -185,7 +185,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<List<T1>>::Cons>(this->v());
-      return a0.app((*a1).template concat<T1>());
+      return a0.app(a1->template concat<T1>());
     }
   }
 
@@ -196,7 +196,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<T1>::cons(f(a0), (*a1).template map<T1>(f));
+      return List<T1>::cons(f(a0), a1->template map<T1>(f));
     }
   }
 
@@ -205,7 +205,7 @@ public:
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return ((*a1).length() + 1);
+      return (a1->length() + 1);
     }
   }
 
@@ -214,7 +214,7 @@ public:
       return m;
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, (*a1).app(std::move(m)));
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };

@@ -127,7 +127,7 @@ public:
       return a0;
     } else {
       const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return f(a1, (*a2).template fold_right<T1>(f, a0));
+      return f(a1, a2->template fold_right<T1>(f, a0));
     }
   }
 };

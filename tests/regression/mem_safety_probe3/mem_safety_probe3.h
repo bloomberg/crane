@@ -127,7 +127,7 @@ struct MemSafetyProbe3 {
       return std::make_pair(
           (b ? std::make_optional<std::function<uint64_t(uint64_t)>>(
                    [&](uint64_t _x0) -> uint64_t {
-                     return (*this).sum_values(_x0);
+                     return this->sum_values(_x0);
                    })
              : std::optional<std::function<uint64_t(uint64_t)>>()),
           *this);
@@ -213,7 +213,7 @@ struct MemSafetyProbe3 {
                                   return _self_val.sum_values(_x0);
                                 },
                                 [](uint64_t x) { return x; }),
-                            (*this).sum_values(UINT64_C(0)));
+                            this->sum_values(UINT64_C(0)));
     }
 
     /// TEST 5: Mutual use: tree used BOTH as partial application arg
@@ -690,11 +690,11 @@ struct MemSafetyProbe3 {
       } else {
         auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v_mut());
         std::function<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
-          return (*a0).sum_values(_x0);
+          return a0->sum_values(_x0);
         };
         uint64_t vl = fl(a1);
         std::function<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
-          return (*a2).sum_values(_x0);
+          return a2->sum_values(_x0);
         };
         uint64_t vr = fr(std::move(a1));
         return (vl + vr);

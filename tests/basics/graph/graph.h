@@ -229,9 +229,9 @@ public:
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       if (f(a0)) {
-        return List<A>::cons(a0, (*a1).filter(f));
+        return List<A>::cons(a0, a1->filter(f));
       } else {
-        return (*a1).filter(f);
+        return a1->filter(f);
       }
     }
   }

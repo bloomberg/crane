@@ -376,13 +376,13 @@ struct LoopifyTreePaths {
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
         uint64_t new_acc = (acc + a1);
-        auto _cs = (*a0).find_path_sum(new_acc, target);
+        auto _cs = a0->find_path_sum(new_acc, target);
         if (_cs.has_value()) {
           const List<uint64_t> &path = *_cs;
           return std::make_optional<List<uint64_t>>(
               List<uint64_t>::cons(a1, path));
         } else {
-          auto _cs1 = (*a2).find_path_sum(new_acc, target);
+          auto _cs1 = a2->find_path_sum(new_acc, target);
           if (_cs1.has_value()) {
             const List<uint64_t> &path = *_cs1;
             return std::make_optional<List<uint64_t>>(
@@ -395,7 +395,7 @@ struct LoopifyTreePaths {
     }
 
     uint64_t count_paths_sum(uint64_t target) const {
-      return (*this).count_paths_sum_aux(UINT64_C(0), target);
+      return this->count_paths_sum_aux(UINT64_C(0), target);
     }
 
     uint64_t count_paths_sum_aux(uint64_t acc, uint64_t target) const {

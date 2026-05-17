@@ -137,7 +137,7 @@ struct AccumClosureEscape {
         return l2;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return mylist<A>::mycons(a0, (*a1).mylist_append(std::move(l2)));
+        return mylist<A>::mycons(a0, a1->mylist_append(std::move(l2)));
       }
     }
 
@@ -148,7 +148,7 @@ struct AccumClosureEscape {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
       }
     }
 
@@ -159,7 +159,7 @@ struct AccumClosureEscape {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -298,7 +298,7 @@ struct AccumClosureEscape {
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
         return mylist<uint64_t>::mycons(
-            a1, (*a0).tree_to_list().mylist_append((*a2).tree_to_list()));
+            a1, a0->tree_to_list().mylist_append(a2->tree_to_list()));
       }
     }
 
@@ -310,8 +310,8 @@ struct AccumClosureEscape {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
-        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rec<T1>(f, f0));
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
       }
     }
 
@@ -323,8 +323,8 @@ struct AccumClosureEscape {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
-        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rect<T1>(f, f0));
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
       }
     }
   };

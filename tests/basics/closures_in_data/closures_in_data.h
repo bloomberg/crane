@@ -128,7 +128,7 @@ public:
       return a0;
     } else {
       const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return (*a2).template fold_left<T1>(f, f(a0, a1));
+      return a2->template fold_left<T1>(f, f(a0, a1));
     }
   }
 
@@ -139,7 +139,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<T1>::cons(f(a0), (*a1).template map<T1>(f));
+      return List<T1>::cons(f(a0), a1->template map<T1>(f));
     }
   }
 };

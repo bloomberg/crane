@@ -9,7 +9,7 @@ MatchRefAfterMove::head_and_tail_length(
   } else {
     const auto &[a0, a1] =
         std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
-    return mypair<uint64_t, uint64_t>::mkpair(a0, (*a1).mylist_length());
+    return mypair<uint64_t, uint64_t>::mkpair(a0, a1->mylist_length());
   }
 }
 
@@ -37,7 +37,7 @@ uint64_t MatchRefAfterMove::nested_match_probe(
       const auto &[a00, a10] =
           std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
               _sv0.v());
-      return ((a0 + a00) + (*a10).mylist_length());
+      return ((a0 + a00) + a10->mylist_length());
     }
   }
 }
@@ -130,7 +130,7 @@ uint64_t MatchRefAfterMove::complex_match(
       const auto &[a00, a10] =
           std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
               a0.v());
-      return (a00 + (*a10).mylist_length());
+      return (a00 + a10->mylist_length());
     }
   }
 }

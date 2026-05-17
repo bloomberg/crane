@@ -134,7 +134,7 @@ struct MatchRefAfterMove {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return (UINT64_C(1) + (*a1).mylist_length());
+        return (UINT64_C(1) + a1->mylist_length());
       }
     }
 
@@ -145,7 +145,7 @@ struct MatchRefAfterMove {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
       }
     }
 
@@ -156,7 +156,7 @@ struct MatchRefAfterMove {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -258,7 +258,7 @@ struct MatchRefAfterMove {
       return k(UINT64_C(0), UINT64_C(0));
     } else {
       const auto &[a0, a1] = std::get<typename mylist<uint64_t>::Mycons>(l.v());
-      return k(a0, (*a1).mylist_length());
+      return k(a0, a1->mylist_length());
     }
   }
 

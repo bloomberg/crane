@@ -140,7 +140,7 @@ struct MemSafetyProbe11 {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return (UINT64_C(1) + (*a1).length());
+        return (UINT64_C(1) + a1->length());
       }
     }
 
@@ -151,7 +151,7 @@ struct MemSafetyProbe11 {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
       }
     }
 
@@ -162,7 +162,7 @@ struct MemSafetyProbe11 {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -305,7 +305,7 @@ struct MemSafetyProbe11 {
         } else {
           const auto &[a00, a10] =
               std::get<typename mylist<uint64_t>::Mycons>(l.v());
-          return (((((*a0).tree_sum() + (*a2).tree_sum()) + a00) + a1) + n);
+          return ((((a0->tree_sum() + a2->tree_sum()) + a00) + a1) + n);
         }
       }
     }
@@ -315,8 +315,8 @@ struct MemSafetyProbe11 {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        uint64_t dl = (*a0).tree_depth();
-        uint64_t dr = (*a2).tree_depth();
+        uint64_t dl = a0->tree_depth();
+        uint64_t dr = a2->tree_depth();
         return (UINT64_C(1) + (dl <= dr ? dr : dl));
       }
     }
@@ -326,7 +326,7 @@ struct MemSafetyProbe11 {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
+        return ((a0->tree_sum() + a1) + a2->tree_sum());
       }
     }
 
@@ -338,8 +338,8 @@ struct MemSafetyProbe11 {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rec<T1>(f, f0));
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
       }
     }
 
@@ -351,8 +351,8 @@ struct MemSafetyProbe11 {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rect<T1>(f, f0));
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
       }
     }
   };

@@ -136,7 +136,7 @@ struct ThisCaptureDangling {
     /// Note: option is custom-extracted to std::optional.
     std::optional<std::function<uint64_t(uint64_t)>> get_fn() const {
       tree _self_val = *this;
-      auto _cs = (*this).tree_sum();
+      auto _cs = this->tree_sum();
       if (_cs <= 0) {
         return std::optional<std::function<uint64_t(uint64_t)>>();
       } else {
@@ -151,7 +151,7 @@ struct ThisCaptureDangling {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
+        return ((a0->tree_sum() + a1) + a2->tree_sum());
       }
     }
 
@@ -163,8 +163,8 @@ struct ThisCaptureDangling {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rec<T1>(f, f0));
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
       }
     }
 
@@ -176,8 +176,8 @@ struct ThisCaptureDangling {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rect<T1>(f, f0));
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
       }
     }
   };

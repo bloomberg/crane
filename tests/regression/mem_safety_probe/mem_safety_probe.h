@@ -124,7 +124,7 @@ struct MemSafetyProbe {
     /// A function that creates a closure capturing TWO different trees.
     /// Both must be correctly cloned or captured by value.
     uint64_t combine_trees(const tree &t2, uint64_t x) const {
-      return ((*this).sum_values(x) + t2.sum_values(x));
+      return (this->sum_values(x) + t2.sum_values(x));
     }
 
     /// ---- TEST 9: Map tree with closure ----

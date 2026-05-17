@@ -128,7 +128,7 @@ struct MemSafetyProbe10 {
     /// The tree is a value type with unique_ptr self-references.
     /// Tests whether = capture correctly deep-copies the tree.
     uint64_t make_tree_summer(uint64_t n) const {
-      return ((*this).tree_sum() + n);
+      return (this->tree_sum() + n);
     }
 
     /// TEST 5: Closure capturing value from OUTER match,
@@ -140,9 +140,9 @@ struct MemSafetyProbe10 {
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         if (b) {
-          return (((*a0).tree_sum() + a1) + n);
+          return ((a0->tree_sum() + a1) + n);
         } else {
-          return (((*a2).tree_sum() + a1) + n);
+          return ((a2->tree_sum() + a1) + n);
         }
       }
     }

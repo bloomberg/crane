@@ -119,7 +119,7 @@ public:
       return s2;
     } else {
       const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-      return String::string0(a0, (*a1).append(std::move(s2)));
+      return String::string0(a0, a1->append(std::move(s2)));
     }
   }
 };

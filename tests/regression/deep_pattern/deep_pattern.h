@@ -161,7 +161,7 @@ struct DeepPattern {
         }
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-        if ((*this).has_value(target)) {
+        if (this->has_value(target)) {
           return UINT64_C(200);
         } else {
           auto &&_sv0 = *a0;
@@ -181,7 +181,7 @@ struct DeepPattern {
         return a0 == target;
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-        return ((*a0).has_value(target) || (*a1).has_value(target));
+        return (a0->has_value(target) || a1->has_value(target));
       }
     }
 
@@ -374,8 +374,8 @@ struct DeepPattern {
         return f(a0);
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), *a1,
-                  (*a1).template tree_rec<T1>(f, f0));
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), *a1,
+                  a1->template tree_rec<T1>(f, f0));
       }
     }
 
@@ -388,8 +388,8 @@ struct DeepPattern {
         return f(a0);
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), *a1,
-                  (*a1).template tree_rect<T1>(f, f0));
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), *a1,
+                  a1->template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -514,7 +514,7 @@ struct DeepPattern {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename list<A>::Cons>(this->v());
-        return f0(a0, *a1, (*a1).template list_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template list_rec<T1>(f, f0));
       }
     }
 
@@ -525,7 +525,7 @@ struct DeepPattern {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename list<A>::Cons>(this->v());
-        return f0(a0, *a1, (*a1).template list_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template list_rect<T1>(f, f0));
       }
     }
   };

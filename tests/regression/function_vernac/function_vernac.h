@@ -288,7 +288,7 @@ struct FunctionVernac {
         const auto &[n0, p0, a2, _res0] =
             std::get<typename R_div2::R_div2_2>(this->v());
         return f1(n0, p0, a2, *_res0,
-                  (*_res0).template R_div2_rec<T1>(f, f0, f1, p0, a2));
+                  _res0->template R_div2_rec<T1>(f, f0, f1, p0, a2));
       }
     }
 
@@ -308,7 +308,7 @@ struct FunctionVernac {
         const auto &[n0, p0, a2, _res0] =
             std::get<typename R_div2::R_div2_2>(this->v());
         return f1(n0, p0, a2, *_res0,
-                  (*_res0).template R_div2_rect<T1>(f, f0, f1, p0, a2));
+                  _res0->template R_div2_rect<T1>(f, f0, f1, p0, a2));
       }
     }
   };
@@ -495,7 +495,7 @@ struct FunctionVernac {
         const auto &[l0, x0, xs0, a3, _res0] =
             std::get<typename R_list_sum::R_list_sum_1>(this->v());
         return f0(l0, x0, xs0, a3, *_res0,
-                  (*_res0).template R_list_sum_rec<T1>(f, f0, xs0, a3));
+                  _res0->template R_list_sum_rec<T1>(f, f0, xs0, a3));
       }
     }
 
@@ -515,7 +515,7 @@ struct FunctionVernac {
         const auto &[l0, x0, xs0, a3, _res0] =
             std::get<typename R_list_sum::R_list_sum_1>(this->v());
         return f0(l0, x0, xs0, a3, *_res0,
-                  (*_res0).template R_list_sum_rect<T1>(f, f0, xs0, a3));
+                  _res0->template R_list_sum_rect<T1>(f, f0, xs0, a3));
       }
     }
   };

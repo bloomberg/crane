@@ -117,7 +117,7 @@ public:
         return Bool0::FALSE_;
       } else {
         const auto &[a00] = std::get<typename Nat::S>(m.v());
-        return (*a0).leb(*a00);
+        return a0->leb(*a00);
       }
     }
   }
@@ -355,7 +355,7 @@ public:
       return s2;
     } else {
       const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-      return String::string0(a0, (*a1).append(std::move(s2)));
+      return String::string0(a0, a1->append(std::move(s2)));
     }
   }
 
@@ -364,7 +364,7 @@ public:
       return Nat::o();
     } else {
       const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-      return Nat::s((*a1).length());
+      return Nat::s(a1->length());
     }
   }
 };
@@ -639,19 +639,19 @@ struct Levenshtein {
     chain aux_update(const String &, const String &, const Ascii &x,
                      const String &xs, const Ascii &y, const String &ys,
                      const Nat &n) const {
-      return (*this).update_chain(x, y, xs, ys, n);
+      return this->update_chain(x, y, xs, ys, n);
     }
 
     chain aux_delete(const String &, const String &, const Ascii &x,
                      const String &xs, Ascii y, String ys, const Nat &n) const {
-      return (*this).delete_chain(
+      return this->delete_chain(
           x, xs, String::string0(std::move(y), std::move(ys)), n);
     }
 
     chain aux_insert(const String &, const String &, Ascii x, String xs,
                      const Ascii &y, const String &ys, const Nat &n) const {
-      return (*this).insert_chain(
-          y, String::string0(std::move(x), std::move(xs)), ys, n);
+      return this->insert_chain(y, String::string0(std::move(x), std::move(xs)),
+                                ys, n);
     }
 
     chain update_chain(Ascii c, Ascii c_, String s1, String s2, Nat n) const {
@@ -685,12 +685,12 @@ struct Levenshtein {
         const auto &[a0, s0, t0, n0, a4] =
             std::get<typename chain::Skip>(this->v());
         return f0(a0, s0, t0, n0, *a4,
-                  (*a4).template chain_rec<T1>(f, f0, f1, s0, t0, n0));
+                  a4->template chain_rec<T1>(f, f0, f1, s0, t0, n0));
       } else {
         const auto &[s0, t0, u0, n0, a4, a5] =
             std::get<typename chain::Change>(this->v());
         return f1(s0, t0, u0, n0, a4, *a5,
-                  (*a5).template chain_rec<T1>(f, f0, f1, t0, u0, n0));
+                  a5->template chain_rec<T1>(f, f0, f1, t0, u0, n0));
       }
     }
 
@@ -707,12 +707,12 @@ struct Levenshtein {
         const auto &[a0, s0, t0, n0, a4] =
             std::get<typename chain::Skip>(this->v());
         return f0(a0, s0, t0, n0, *a4,
-                  (*a4).template chain_rect<T1>(f, f0, f1, s0, t0, n0));
+                  a4->template chain_rect<T1>(f, f0, f1, s0, t0, n0));
       } else {
         const auto &[s0, t0, u0, n0, a4, a5] =
             std::get<typename chain::Change>(this->v());
         return f1(s0, t0, u0, n0, a4, *a5,
-                  (*a5).template chain_rect<T1>(f, f0, f1, t0, u0, n0));
+                  a5->template chain_rect<T1>(f, f0, f1, t0, u0, n0));
       }
     }
   };

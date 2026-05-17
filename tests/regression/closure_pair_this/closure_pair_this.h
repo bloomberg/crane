@@ -147,7 +147,7 @@ struct ClosurePairThis {
         return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
+        return ((a0->tree_sum() + a1) + a2->tree_sum());
       }
     }
 
@@ -159,8 +159,8 @@ struct ClosurePairThis {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rec<T1>(f, f0));
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
       }
     }
 
@@ -172,8 +172,8 @@ struct ClosurePairThis {
         return f;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
-                  (*a2).template tree_rect<T1>(f, f0));
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
       }
     }
   };

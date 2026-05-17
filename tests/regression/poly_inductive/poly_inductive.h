@@ -321,7 +321,7 @@ struct PolyInductive {
         return UINT64_C(1);
       } else {
         const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(this->v());
-        return (((*a0).ptree_size() + (*a1).ptree_size()) + 1);
+        return ((a0->ptree_size() + a1->ptree_size()) + 1);
       }
     }
 
@@ -335,8 +335,8 @@ struct PolyInductive {
         return f(a0);
       } else {
         const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(this->v());
-        return f0(*a0, (*a0).template ptree_rec<T1>(f, f0), *a1,
-                  (*a1).template ptree_rec<T1>(f, f0));
+        return f0(*a0, a0->template ptree_rec<T1>(f, f0), *a1,
+                  a1->template ptree_rec<T1>(f, f0));
       }
     }
 
@@ -350,8 +350,8 @@ struct PolyInductive {
         return f(a0);
       } else {
         const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(this->v());
-        return f0(*a0, (*a0).template ptree_rect<T1>(f, f0), *a1,
-                  (*a1).template ptree_rect<T1>(f, f0));
+        return f0(*a0, a0->template ptree_rect<T1>(f, f0), *a1,
+                  a1->template ptree_rect<T1>(f, f0));
       }
     }
   };

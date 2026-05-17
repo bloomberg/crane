@@ -6,7 +6,7 @@ List<uint64_t> NameClashScopeLeak::rotate(const List<uint64_t> &l) {
     return List<uint64_t>::nil();
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    return (*a1).app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
+    return a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
   }
 }
 

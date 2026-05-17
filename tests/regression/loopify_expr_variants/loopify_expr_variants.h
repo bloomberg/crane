@@ -404,13 +404,13 @@ struct LoopifyExprVariants {
         return a0;
       } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename cond_expr::Add>(_sv.v());
-        return ((*a0).eval_cond() + (*a1).eval_cond());
+        return (a0->eval_cond() + a1->eval_cond());
       } else {
         const auto &[a0, a1, a2] = std::get<typename cond_expr::Cond>(_sv.v());
-        if (UINT64_C(0) < (*a0).eval_cond()) {
-          return (*a1).eval_cond();
+        if (UINT64_C(0) < a0->eval_cond()) {
+          return a1->eval_cond();
         } else {
-          return (*a2).eval_cond();
+          return a2->eval_cond();
         }
       }
     }
@@ -938,18 +938,18 @@ struct LoopifyExprVariants {
         return a0;
       } else if (std::holds_alternative<typename arith_expr::AAdd>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename arith_expr::AAdd>(_sv.v());
-        return ((*a0).eval_arith() + (*a1).eval_arith());
+        return (a0->eval_arith() + a1->eval_arith());
       } else if (std::holds_alternative<typename arith_expr::AMul>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename arith_expr::AMul>(_sv.v());
-        return ((*a0).eval_arith() * (*a1).eval_arith());
+        return (a0->eval_arith() * a1->eval_arith());
       } else {
         const auto &[a0, a1] = std::get<typename arith_expr::ADiv>(_sv.v());
-        auto _cs = (*a1).eval_arith();
+        auto _cs = a1->eval_arith();
         if (_cs <= 0) {
           return UINT64_C(0);
         } else {
           uint64_t n = _cs - 1;
-          return ((n + 1) ? (*a0).eval_arith() / (n + 1) : 0);
+          return ((n + 1) ? a0->eval_arith() / (n + 1) : 0);
         }
       }
     }
@@ -1383,9 +1383,9 @@ struct LoopifyExprVariants {
         return bool_expr::bfalse();
       } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
-        auto &&_sv0 = (*a0).simplify_bool();
+        auto &&_sv0 = a0->simplify_bool();
         if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1411,7 +1411,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename bool_expr::BAnd>(_sv0.v());
           bool_expr a_ = bool_expr::band(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1434,7 +1434,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename bool_expr::BOr>(_sv0.v());
           bool_expr a_ = bool_expr::bor(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1457,7 +1457,7 @@ struct LoopifyExprVariants {
         } else {
           const auto &[a00] = std::get<typename bool_expr::BNot>(_sv0.v());
           bool_expr a_ = bool_expr::bnot(*a00);
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return a_;
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1480,12 +1480,12 @@ struct LoopifyExprVariants {
         }
       } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename bool_expr::BOr>(_sv.v());
-        auto &&_sv0 = (*a0).simplify_bool();
+        auto &&_sv0 = a0->simplify_bool();
         if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
           return bool_expr::btrue();
         } else if (std::holds_alternative<typename bool_expr::BFalse>(
                        _sv0.v())) {
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1508,7 +1508,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename bool_expr::BAnd>(_sv0.v());
           bool_expr a_ = bool_expr::band(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1531,7 +1531,7 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
           const auto &[a00, a10] = std::get<typename bool_expr::BOr>(_sv0.v());
           bool_expr a_ = bool_expr::bor(*a00, *a10);
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1554,7 +1554,7 @@ struct LoopifyExprVariants {
         } else {
           const auto &[a00] = std::get<typename bool_expr::BNot>(_sv0.v());
           bool_expr a_ = bool_expr::bnot(*a00);
-          auto &&_sv1 = (*a1).simplify_bool();
+          auto &&_sv1 = a1->simplify_bool();
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
             return bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
@@ -1577,7 +1577,7 @@ struct LoopifyExprVariants {
         }
       } else {
         const auto &[a0] = std::get<typename bool_expr::BNot>(_sv.v());
-        auto &&_sv0 = (*a0).simplify_bool();
+        auto &&_sv0 = a0->simplify_bool();
         if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
           return bool_expr::bfalse();
         } else if (std::holds_alternative<typename bool_expr::BFalse>(

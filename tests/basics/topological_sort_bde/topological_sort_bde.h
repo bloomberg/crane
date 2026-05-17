@@ -129,7 +129,7 @@ public:
       } else {
         const auto &[d_a00, d_a10] = bsl::get<typename List<T1>::Cons>(l_.v());
         return List<bsl::pair<t_A, T1>>::cons(
-            bsl::make_pair(d_a0, d_a00), (*d_a1).template combine<T1>(*d_a10));
+            bsl::make_pair(d_a0, d_a00), d_a1->template combine<T1>(*d_a10));
       }
     }
   }
@@ -143,7 +143,7 @@ public:
       if (f(d_a0)) {
         return bsl::make_optional<t_A>(d_a0);
       } else {
-        return (*d_a1).find(f);
+        return d_a1->find(f);
       }
     }
   }
@@ -155,9 +155,9 @@ public:
     } else {
       const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
       if (f(d_a0)) {
-        return List<t_A>::cons(d_a0, (*d_a1).filter(f));
+        return List<t_A>::cons(d_a0, d_a1->filter(f));
       } else {
-        return (*d_a1).filter(f);
+        return d_a1->filter(f);
       }
     }
   }
@@ -168,7 +168,7 @@ public:
       return a0;
     } else {
       const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return f(d_a0, (*d_a1).template fold_right<T1>(f, a0));
+      return f(d_a0, d_a1->template fold_right<T1>(f, a0));
     }
   }
   template <typename T1> List<T1> concat() const {
@@ -177,7 +177,7 @@ public:
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<List<T1>>::Cons>(this->v());
-      return d_a0.app((*d_a1).template concat<T1>());
+      return d_a0.app(d_a1->template concat<T1>());
     }
   }
   template <typename T1, typename F0>
@@ -187,7 +187,7 @@ public:
       return List<T1>::nil();
     } else {
       const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
+      return List<T1>::cons(f(d_a0), d_a1->template map<T1>(f));
     }
   }
   unsigned int length() const {
@@ -195,7 +195,7 @@ public:
       return 0u;
     } else {
       const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return ((*d_a1).length() + 1);
+      return (d_a1->length() + 1);
     }
   }
   List<t_A> app(List<t_A> m) const {
@@ -203,7 +203,7 @@ public:
       return m;
     } else {
       const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return List<t_A>::cons(d_a0, (*d_a1).app(bsl::move(m)));
+      return List<t_A>::cons(d_a0, d_a1->app(bsl::move(m)));
     }
   }
 };

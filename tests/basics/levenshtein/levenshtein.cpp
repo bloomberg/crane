@@ -15,8 +15,8 @@ Levenshtein::chain Levenshtein::inserts_chain(const String &s1,
     return _inserts_chain_F<Levenshtein::chain>(s2);
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
-    return inserts_chain(*a1, s2).insert_chain(a0, s2, (*a1).append(s2),
-                                               (*a1).length());
+    return inserts_chain(*a1, s2).insert_chain(a0, s2, a1->append(s2),
+                                               a1->length());
   }
 }
 
@@ -26,7 +26,7 @@ Levenshtein::chain Levenshtein::inserts_chain_empty(const String &s) {
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s.v());
     return inserts_chain_empty(*a1).insert_chain(a0, String::emptystring(), *a1,
-                                                 (*a1).length());
+                                                 a1->length());
   }
 }
 
@@ -36,8 +36,8 @@ Levenshtein::chain Levenshtein::deletes_chain(const String &s1,
     return same_chain(s2);
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
-    return deletes_chain(*a1, s2).delete_chain(a0, (*a1).append(s2), s2,
-                                               (*a1).length());
+    return deletes_chain(*a1, s2).delete_chain(a0, a1->append(s2), s2,
+                                               a1->length());
   }
 }
 
@@ -47,7 +47,7 @@ Levenshtein::chain Levenshtein::deletes_chain_empty(const String &s) {
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s.v());
     return deletes_chain_empty(*a1).delete_chain(a0, *a1, String::emptystring(),
-                                                 (*a1).length());
+                                                 a1->length());
   }
 }
 

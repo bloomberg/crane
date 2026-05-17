@@ -142,13 +142,13 @@ template <typename K, typename V> struct CHT {
   }
 
   std::optional<V> stm_get(const K &k) const {
-    stm::TVar<List<std::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     return CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
   }
 
   std::monostate stm_put(const K &k, const V &v) const {
-    stm::TVar<List<std::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     List<std::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(
@@ -158,7 +158,7 @@ template <typename K, typename V> struct CHT {
   }
 
   std::optional<V> stm_delete(const K &k) const {
-    stm::TVar<List<std::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     std::pair<std::optional<V>, List<std::pair<K, V>>> p =
         CHT<int, int>::template assoc_remove<K, V>((*this).cht_eqb, k,
@@ -176,7 +176,7 @@ template <typename K, typename V> struct CHT {
   template <typename F1>
     requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
   V stm_update(const K &k, F1 &&f) const {
-    stm::TVar<List<std::pair<K, V>>> b = (*this).bucket_of(k);
+    stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     std::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
@@ -189,7 +189,7 @@ template <typename K, typename V> struct CHT {
   }
 
   V stm_get_or(const K &k, const V &dflt) const {
-    std::optional<V> v = (*this).stm_get(k);
+    std::optional<V> v = this->stm_get(k);
     if (v.has_value()) {
       const V &x = *v;
       return x;
@@ -209,21 +209,21 @@ template <typename K, typename V> struct CHT {
   }
 
   std::optional<V> get(const K &k) const {
-    return stm::atomically([&] { return (*this).stm_get(k); });
+    return stm::atomically([&] { return this->stm_get(k); });
   }
 
   std::optional<V> hash_delete(const K &k) const {
-    return stm::atomically([&] { return (*this).stm_delete(k); });
+    return stm::atomically([&] { return this->stm_delete(k); });
   }
 
   template <typename F1>
     requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
   V hash_update(const K &k, F1 &&f) const {
-    return stm::atomically([&] { return (*this).stm_update(k, f); });
+    return stm::atomically([&] { return this->stm_update(k, f); });
   }
 
   V get_or(const K &k, const V &dflt) const {
-    return stm::atomically([&] { return (*this).stm_get_or(k, dflt); });
+    return stm::atomically([&] { return this->stm_get_or(k, dflt); });
   }
 
   template <typename T1, typename T2, typename F0>

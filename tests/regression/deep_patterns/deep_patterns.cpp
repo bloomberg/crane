@@ -55,7 +55,7 @@ uint64_t DeepPatterns::list_shape(const List<uint64_t> &l) {
         } else {
           const auto &[a02, a12] =
               std::get<typename List<uint64_t>::Cons>(_sv2.v());
-          return (((a0 + a00) + a01) + (*a12).length());
+          return (((a0 + a00) + a01) + a12->length());
         }
       }
     }
@@ -101,7 +101,7 @@ uint64_t DeepPatterns::complex_match(
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        return ((n + a0) + (*a10).length());
+        return ((n + a0) + a10->length());
       }
     }
   } else {
