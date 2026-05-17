@@ -96,25 +96,25 @@ int main() {
 
   // ===== snoc =====
   {
-    auto result = LoopifyTmc::snoc(l3, 99ULL);
+    auto result = LoopifyTmc::snoc(l3, UINT64_C(99));
     auto v = to_vec(result);
     ASSERT(v.size() == 4);
     ASSERT(v[0] == 1 && v[3] == 99);
 
     // snoc on empty
-    auto r2 = LoopifyTmc::snoc(empty, 42ULL);
+    auto r2 = LoopifyTmc::snoc(empty, UINT64_C(42));
     auto v2 = to_vec(r2);
     ASSERT(v2.size() == 1 && v2[0] == 42);
   }
 
   // ===== replicate =====
   {
-    auto result = LoopifyTmc::replicate(5ULL, 7ULL);
+    auto result = LoopifyTmc::replicate(UINT64_C(5), UINT64_C(7));
     auto v = to_vec(result);
     ASSERT(v.size() == 5);
     for (auto x : v) ASSERT(x == 7);
 
-    auto r0 = LoopifyTmc::replicate(0ULL, 1ULL);
+    auto r0 = LoopifyTmc::replicate(UINT64_C(0), UINT64_C(1));
     ASSERT(to_vec(r0).empty());
   }
 
@@ -129,7 +129,7 @@ int main() {
 
   // ===== prefix_sums =====
   {
-    auto result = LoopifyTmc::prefix_sums(0ULL, l3);
+    auto result = LoopifyTmc::prefix_sums(UINT64_C(0), l3);
     auto v = to_vec(result);
     ASSERT(v.size() == 3);
     ASSERT(v[0] == 1 && v[1] == 3 && v[2] == 6); // 1, 1+2, 1+2+3
@@ -156,7 +156,7 @@ int main() {
     }
 
     // app on large lists
-    auto appended = LoopifyTmc::app(big, List::cons(999ULL, List::nil()));
+    auto appended = LoopifyTmc::app(big, List::cons(UINT64_C(999), List::nil()));
     ASSERT(!to_vec(appended).empty());
 
     // map on large list
@@ -170,11 +170,11 @@ int main() {
     ASSERT(!to_vec(filtered).empty());
 
     // snoc on large list
-    auto snocced = LoopifyTmc::snoc(big, 42ULL);
+    auto snocced = LoopifyTmc::snoc(big, UINT64_C(42));
     ASSERT(!to_vec(snocced).empty());
 
     // replicate large
-    auto repl = LoopifyTmc::replicate(N, 1ULL);
+    auto repl = LoopifyTmc::replicate(N, UINT64_C(1));
     ASSERT(!to_vec(repl).empty());
 
     // stutter large

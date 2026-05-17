@@ -555,7 +555,7 @@ inline RandGen::RandGen(int startSeed) : d_seed(startSeed) {
 
 // MANIPULATOR
 inline unsigned RandGen::operator()() {
-  d_seed = d_seed * 6364136223846793005ULL + 1442695040888963407ULL;
+  d_seed = d_seed * UINT64_C(6364136223846793005) + UINT64_C(1442695040888963407);
   return static_cast<unsigned>(d_seed >> 32);
 }
 

@@ -76,10 +76,10 @@ make_list_of_lists(std::initializer_list<std::initializer_list<uint64_t>> vals) 
 
 int main() {
   // product
-  ASSERT(LoopifyAdvancedLists::product(make_list({})) == 1ULL);
-  ASSERT(LoopifyAdvancedLists::product(make_list({1, 2, 3, 4})) == 24ULL);
-  ASSERT(LoopifyAdvancedLists::product(make_list({5, 2, 3})) == 30ULL);
-  ASSERT(LoopifyAdvancedLists::product(make_list({0, 5, 10})) == 0ULL);
+  ASSERT(LoopifyAdvancedLists::product(make_list({})) == UINT64_C(1));
+  ASSERT(LoopifyAdvancedLists::product(make_list({1, 2, 3, 4})) == UINT64_C(24));
+  ASSERT(LoopifyAdvancedLists::product(make_list({5, 2, 3})) == UINT64_C(30));
+  ASSERT(LoopifyAdvancedLists::product(make_list({0, 5, 10})) == UINT64_C(0));
 
   // compress
   ASSERT(to_vec(LoopifyAdvancedLists::compress(make_list({}))) ==
@@ -150,7 +150,7 @@ int main() {
   ASSERT(LoopifyAdvancedLists::find_first(is_even, make_list({1, 3, 5})) ==
          std::optional<uint64_t>());
   ASSERT(LoopifyAdvancedLists::find_first(is_even, make_list({1, 2, 3, 4})) ==
-         std::optional<uint64_t>{2ULL});
+         std::optional<uint64_t>{UINT64_C(2)});
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;
