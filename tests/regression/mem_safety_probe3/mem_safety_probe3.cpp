@@ -16,7 +16,7 @@ MemSafetyProbe3::tree MemSafetyProbe3::build_deep(unsigned int n) {
           nullptr, _loop_n,
           std::make_unique<MemSafetyProbe3::tree>(tree::leaf())));
       *_write = std::move(_cell);
-      _write = &std::get<typename tree::Node>((*_write)->v_mut()).d_a0;
+      _write = &std::get<typename tree::Node>((*_write)->v_mut()).a0;
       _loop_n = n_;
       continue;
     }

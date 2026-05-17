@@ -16,34 +16,34 @@ struct GeneratedVariantAliasNameClash {
     struct Empty {};
 
     struct Flag {
-      bool d_a0;
+      bool a0;
     };
 
     using variant_t_ = std::variant<Empty, Flag>;
 
   private:
     // DATA
-    variant_t_ d_v_;
+    variant_t_ v_;
 
   public:
     // CREATORS
     variant_t() {}
 
-    explicit variant_t(Empty _v) : d_v_(_v) {}
+    explicit variant_t(Empty _v) : v_(_v) {}
 
-    explicit variant_t(Flag _v) : d_v_(std::move(_v)) {}
+    explicit variant_t(Flag _v) : v_(std::move(_v)) {}
 
-    variant_t(const variant_t &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    variant_t(const variant_t &_other) : v_(std::move(_other.clone().v_)) {}
 
-    variant_t(variant_t &&_other) : d_v_(std::move(_other.d_v_)) {}
+    variant_t(variant_t &&_other) : v_(std::move(_other.v_)) {}
 
     variant_t &operator=(const variant_t &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     variant_t &operator=(variant_t &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -52,8 +52,8 @@ struct GeneratedVariantAliasNameClash {
       if (std::holds_alternative<Empty>(this->v())) {
         return variant_t(Empty{});
       } else {
-        const auto &[d_a0] = std::get<Flag>(this->v());
-        return variant_t(Flag{d_a0});
+        const auto &[a0] = std::get<Flag>(this->v());
+        return variant_t(Flag{a0});
       }
     }
 
@@ -63,10 +63,10 @@ struct GeneratedVariantAliasNameClash {
     static variant_t flag(bool a0) { return variant_t(Flag{a0}); }
 
     // MANIPULATORS
-    inline variant_t_ &v_mut() { return d_v_; }
+    inline variant_t_ &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t_ &v() const { return d_v_; }
+    const variant_t_ &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
@@ -75,8 +75,8 @@ struct GeneratedVariantAliasNameClash {
     if (std::holds_alternative<typename variant_t::Empty>(v.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename variant_t::Flag>(v.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename variant_t::Flag>(v.v());
+      return f0(a0);
     }
   }
 
@@ -86,8 +86,8 @@ struct GeneratedVariantAliasNameClash {
     if (std::holds_alternative<typename variant_t::Empty>(v.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename variant_t::Flag>(v.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename variant_t::Flag>(v.v());
+      return f0(a0);
     }
   }
 

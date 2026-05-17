@@ -19,36 +19,36 @@ struct GeneratedMethodNameClash {
     struct V {};
 
     struct Other {
-      bool d_a0;
+      bool a0;
     };
 
     using variant_t = std::variant<Clone, V, Other>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     token() {}
 
-    explicit token(Clone _v) : d_v_(_v) {}
+    explicit token(Clone _v) : v_(_v) {}
 
-    explicit token(V _v) : d_v_(_v) {}
+    explicit token(V _v) : v_(_v) {}
 
-    explicit token(Other _v) : d_v_(std::move(_v)) {}
+    explicit token(Other _v) : v_(std::move(_v)) {}
 
-    token(const token &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    token(const token &_other) : v_(std::move(_other.clone().v_)) {}
 
-    token(token &&_other) : d_v_(std::move(_other.d_v_)) {}
+    token(token &&_other) : v_(std::move(_other.v_)) {}
 
     token &operator=(const token &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     token &operator=(token &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -59,8 +59,8 @@ struct GeneratedMethodNameClash {
       } else if (std::holds_alternative<V>(this->v())) {
         return token(V{});
       } else {
-        const auto &[d_a0] = std::get<Other>(this->v());
-        return token(Other{d_a0});
+        const auto &[a0] = std::get<Other>(this->v());
+        return token(Other{a0});
       }
     }
 
@@ -72,10 +72,10 @@ struct GeneratedMethodNameClash {
     static token other(bool a0) { return token(Other{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F2>
@@ -86,8 +86,8 @@ struct GeneratedMethodNameClash {
     } else if (std::holds_alternative<typename token::V>(t.v())) {
       return f0;
     } else {
-      const auto &[d_a0] = std::get<typename token::Other>(t.v());
-      return f1(d_a0);
+      const auto &[a0] = std::get<typename token::Other>(t.v());
+      return f1(a0);
     }
   }
 
@@ -99,8 +99,8 @@ struct GeneratedMethodNameClash {
     } else if (std::holds_alternative<typename token::V>(t.v())) {
       return f0;
     } else {
-      const auto &[d_a0] = std::get<typename token::Other>(t.v());
-      return f1(d_a0);
+      const auto &[a0] = std::get<typename token::Other>(t.v());
+      return f1(a0);
     }
   }
 

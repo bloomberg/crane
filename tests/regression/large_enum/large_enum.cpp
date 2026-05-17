@@ -2,40 +2,40 @@
 
 unsigned int LargeEnum::color_to_nat(LargeEnum::Color c) {
   switch (c) {
-  case Color::e_RED: {
+  case Color::RED: {
     return 0u;
   }
-  case Color::e_ORANGE: {
+  case Color::ORANGE: {
     return 1u;
   }
-  case Color::e_YELLOW: {
+  case Color::YELLOW: {
     return 2u;
   }
-  case Color::e_GREEN: {
+  case Color::GREEN: {
     return 3u;
   }
-  case Color::e_BLUE: {
+  case Color::BLUE: {
     return 4u;
   }
-  case Color::e_INDIGO: {
+  case Color::INDIGO: {
     return 5u;
   }
-  case Color::e_VIOLET: {
+  case Color::VIOLET: {
     return 6u;
   }
-  case Color::e_BLACK: {
+  case Color::BLACK: {
     return 7u;
   }
-  case Color::e_WHITE: {
+  case Color::WHITE: {
     return 8u;
   }
-  case Color::e_GRAY: {
+  case Color::GRAY: {
     return 9u;
   }
-  case Color::e_BROWN: {
+  case Color::BROWN: {
     return 10u;
   }
-  case Color::e_PINK: {
+  case Color::PINK: {
     return 11u;
   }
   default:
@@ -45,19 +45,19 @@ unsigned int LargeEnum::color_to_nat(LargeEnum::Color c) {
 
 bool LargeEnum::is_warm(LargeEnum::Color c) {
   switch (c) {
-  case Color::e_RED: {
+  case Color::RED: {
     return true;
   }
-  case Color::e_ORANGE: {
+  case Color::ORANGE: {
     return true;
   }
-  case Color::e_YELLOW: {
+  case Color::YELLOW: {
     return true;
   }
-  case Color::e_BROWN: {
+  case Color::BROWN: {
     return true;
   }
-  case Color::e_PINK: {
+  case Color::PINK: {
     return true;
   }
   default: {
@@ -68,13 +68,13 @@ bool LargeEnum::is_warm(LargeEnum::Color c) {
 
 bool LargeEnum::is_neutral(LargeEnum::Color c) {
   switch (c) {
-  case Color::e_BLACK: {
+  case Color::BLACK: {
     return true;
   }
-  case Color::e_WHITE: {
+  case Color::WHITE: {
     return true;
   }
-  case Color::e_GRAY: {
+  case Color::GRAY: {
     return true;
   }
   default: {
@@ -85,8 +85,8 @@ bool LargeEnum::is_neutral(LargeEnum::Color c) {
 
 unsigned int LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
   if (std::holds_alternative<typename LargeEnum::tok::TNum>(t.v())) {
-    const auto &[d_a0] = std::get<typename LargeEnum::tok::TNum>(t.v());
-    return d_a0;
+    const auto &[a0] = std::get<typename LargeEnum::tok::TNum>(t.v());
+    return a0;
   } else if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t.v())) {
     return 100u;
   } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t.v())) {
@@ -107,8 +107,8 @@ unsigned int LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
                  t.v())) {
     return 108u;
   } else if (std::holds_alternative<typename LargeEnum::tok::TIdent>(t.v())) {
-    const auto &[d_a0] = std::get<typename LargeEnum::tok::TIdent>(t.v());
-    return (200u + d_a0);
+    const auto &[a0] = std::get<typename LargeEnum::tok::TIdent>(t.v());
+    return (200u + a0);
   } else {
     return 999u;
   }

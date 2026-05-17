@@ -8,9 +8,9 @@ unsigned int MemSafetyProbe17::sum_list(
     const MemSafetyProbe17::mylist<unsigned int> *l;
   };
 
-  /// _Resume_Mycons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -29,15 +29,15 @@ unsigned int MemSafetyProbe17::sum_list(
               typename MemSafetyProbe17::mylist<unsigned int>::Mynil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename MemSafetyProbe17::mylist<unsigned int>::Mycons>(
                 l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.d_a0 + _result);
+      _result = (_f.a0 + _result);
     }
   }
   return _result;
@@ -51,31 +51,30 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
     const MemSafetyProbe17::qtree *t;
   };
 
-  /// _After_QNode: saves [d_a3, d_a1, d_a0, d_a2], dispatches next recursive
-  /// call.
+  /// _After_QNode: saves [a3, a1, a0, a2], dispatches next recursive call.
   struct _After_QNode {
-    const MemSafetyProbe17::qtree *d_a3;
-    const MemSafetyProbe17::qtree *d_a1;
-    const MemSafetyProbe17::qtree *d_a0;
-    unsigned int d_a2;
+    const MemSafetyProbe17::qtree *a3;
+    const MemSafetyProbe17::qtree *a1;
+    const MemSafetyProbe17::qtree *a0;
+    unsigned int a2;
   };
 
-  /// _After_QNode_1: saves [_result, d_a1, d_a0, d_a2], dispatches next
-  /// recursive call.
+  /// _After_QNode_1: saves [_result, a1, a0, a2], dispatches next recursive
+  /// call.
   struct _After_QNode_1 {
     MemSafetyProbe17::mylist<unsigned int> _result;
-    const MemSafetyProbe17::qtree *d_a1;
-    const MemSafetyProbe17::qtree *d_a0;
-    unsigned int d_a2;
+    const MemSafetyProbe17::qtree *a1;
+    const MemSafetyProbe17::qtree *a0;
+    unsigned int a2;
   };
 
-  /// _After_QNode_2: saves [_result_0, _result_1, d_a0, d_a2], dispatches next
+  /// _After_QNode_2: saves [_result_0, _result_1, a0, a2], dispatches next
   /// recursive call.
   struct _After_QNode_2 {
     MemSafetyProbe17::mylist<unsigned int> _result_0;
     MemSafetyProbe17::mylist<unsigned int> _result_1;
-    const MemSafetyProbe17::qtree *d_a0;
-    unsigned int d_a2;
+    const MemSafetyProbe17::qtree *a0;
+    unsigned int a2;
   };
 
   /// _Combine_QNode: receives partial results, combines with _result from final
@@ -84,7 +83,7 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
     MemSafetyProbe17::mylist<unsigned int> _result_0;
     MemSafetyProbe17::mylist<unsigned int> _result_1;
     MemSafetyProbe17::mylist<unsigned int> _result_2;
-    unsigned int d_a2;
+    unsigned int a2;
   };
 
   using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
@@ -105,32 +104,31 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
               t.v())) {
         _result = mylist<unsigned int>::mynil();
       } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+        const auto &[a0, a1, a2, a3, a4] =
             std::get<typename MemSafetyProbe17::qtree::QNode>(t.v());
-        _stack.emplace_back(
-            _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), d_a2});
-        _stack.emplace_back(_Enter{d_a4.get()});
+        _stack.emplace_back(_After_QNode{a3.get(), a1.get(), a0.get(), a2});
+        _stack.emplace_back(_Enter{a4.get()});
       }
     } else if (std::holds_alternative<_After_QNode>(_frame)) {
       auto _f = std::move(std::get<_After_QNode>(_frame));
       _stack.emplace_back(
-          _After_QNode_1{std::move(_result), _f.d_a1, _f.d_a0, _f.d_a2});
-      _stack.emplace_back(_Enter{_f.d_a3});
+          _After_QNode_1{std::move(_result), _f.a1, _f.a0, _f.a2});
+      _stack.emplace_back(_Enter{_f.a3});
     } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
       auto _f = std::move(std::get<_After_QNode_1>(_frame));
       _stack.emplace_back(_After_QNode_2{std::move(_f._result),
-                                         std::move(_result), _f.d_a0, _f.d_a2});
-      _stack.emplace_back(_Enter{_f.d_a1});
+                                         std::move(_result), _f.a0, _f.a2});
+      _stack.emplace_back(_Enter{_f.a1});
     } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
       auto _f = std::move(std::get<_After_QNode_2>(_frame));
       _stack.emplace_back(_Combine_QNode{std::move(_f._result_0),
                                          std::move(_f._result_1),
-                                         std::move(_result), _f.d_a2});
-      _stack.emplace_back(_Enter{_f.d_a0});
+                                         std::move(_result), _f.a2});
+      _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QNode>(_frame));
       _result = _result.myapp(_f._result_2.myapp(mylist<unsigned int>::mycons(
-          _f.d_a2, _f._result_1.myapp(_f._result_0))));
+          _f.a2, _f._result_1.myapp(_f._result_0))));
     }
   }
   return _result;

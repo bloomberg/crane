@@ -66,7 +66,7 @@ void test_list_dir() {
   const List<std::string> *cur = &entries;
   while (std::holds_alternative<List<std::string>::Cons>(cur->v())) {
     ++count;
-    cur = std::get<List<std::string>::Cons>(cur->v()).d_a1.get();
+    cur = std::get<List<std::string>::Cons>(cur->v()).a1.get();
   }
   ASSERT(count == 2);
 

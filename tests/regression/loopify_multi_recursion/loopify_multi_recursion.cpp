@@ -240,27 +240,26 @@ unsigned int LoopifyMultiRecursion::quad_count_leaves(
     const LoopifyMultiRecursion::quadtree *t;
   };
 
-  /// _After_QQuad: saves [d_a2, d_a1, d_a0], dispatches next recursive call.
+  /// _After_QQuad: saves [a2, a1, a0], dispatches next recursive call.
   struct _After_QQuad {
-    const LoopifyMultiRecursion::quadtree *d_a2;
-    const LoopifyMultiRecursion::quadtree *d_a1;
-    const LoopifyMultiRecursion::quadtree *d_a0;
+    const LoopifyMultiRecursion::quadtree *a2;
+    const LoopifyMultiRecursion::quadtree *a1;
+    const LoopifyMultiRecursion::quadtree *a0;
   };
 
-  /// _After_QQuad_1: saves [_result, d_a1, d_a0], dispatches next recursive
-  /// call.
+  /// _After_QQuad_1: saves [_result, a1, a0], dispatches next recursive call.
   struct _After_QQuad_1 {
     unsigned int _result;
-    const LoopifyMultiRecursion::quadtree *d_a1;
-    const LoopifyMultiRecursion::quadtree *d_a0;
+    const LoopifyMultiRecursion::quadtree *a1;
+    const LoopifyMultiRecursion::quadtree *a0;
   };
 
-  /// _After_QQuad_2: saves [_result_0, _result_1, d_a0], dispatches next
+  /// _After_QQuad_2: saves [_result_0, _result_1, a0], dispatches next
   /// recursive call.
   struct _After_QQuad_2 {
     unsigned int _result_0;
     unsigned int _result_1;
-    const LoopifyMultiRecursion::quadtree *d_a0;
+    const LoopifyMultiRecursion::quadtree *a0;
   };
 
   /// _Combine_QQuad: receives partial results, combines with _result from final
@@ -289,23 +288,23 @@ unsigned int LoopifyMultiRecursion::quad_count_leaves(
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 1u;
       } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3] =
+        const auto &[a0, a1, a2, a3] =
             std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t.v());
-        _stack.emplace_back(_After_QQuad{d_a2.get(), d_a1.get(), d_a0.get()});
-        _stack.emplace_back(_Enter{d_a3.get()});
+        _stack.emplace_back(_After_QQuad{a2.get(), a1.get(), a0.get()});
+        _stack.emplace_back(_Enter{a3.get()});
       }
     } else if (std::holds_alternative<_After_QQuad>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad>(_frame));
-      _stack.emplace_back(_After_QQuad_1{_result, _f.d_a1, _f.d_a0});
-      _stack.emplace_back(_Enter{_f.d_a2});
+      _stack.emplace_back(_After_QQuad_1{_result, _f.a1, _f.a0});
+      _stack.emplace_back(_Enter{_f.a2});
     } else if (std::holds_alternative<_After_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_1>(_frame));
-      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.d_a0});
-      _stack.emplace_back(_Enter{_f.d_a1});
+      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.a0});
+      _stack.emplace_back(_Enter{_f.a1});
     } else if (std::holds_alternative<_After_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_2>(_frame));
       _stack.emplace_back(_Combine_QQuad{_f._result_0, _f._result_1, _result});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QQuad>(_frame));
       _result = (((_result + _f._result_2) + _f._result_1) + _f._result_0);
@@ -322,30 +321,29 @@ unsigned int LoopifyMultiRecursion::quad_depth(
     const LoopifyMultiRecursion::quadtree *t;
   };
 
-  /// _After_QQuad: saves [d_a2, d_a1, d_a0, _s3], dispatches next recursive
-  /// call.
+  /// _After_QQuad: saves [a2, a1, a0, _s3], dispatches next recursive call.
   struct _After_QQuad {
-    const LoopifyMultiRecursion::quadtree *d_a2;
-    const LoopifyMultiRecursion::quadtree *d_a1;
-    const LoopifyMultiRecursion::quadtree *d_a0;
+    const LoopifyMultiRecursion::quadtree *a2;
+    const LoopifyMultiRecursion::quadtree *a1;
+    const LoopifyMultiRecursion::quadtree *a0;
     decltype(1u) _s3;
   };
 
-  /// _After_QQuad_1: saves [_result, d_a1, d_a0, _s3], dispatches next
-  /// recursive call.
+  /// _After_QQuad_1: saves [_result, a1, a0, _s3], dispatches next recursive
+  /// call.
   struct _After_QQuad_1 {
     unsigned int _result;
-    const LoopifyMultiRecursion::quadtree *d_a1;
-    const LoopifyMultiRecursion::quadtree *d_a0;
+    const LoopifyMultiRecursion::quadtree *a1;
+    const LoopifyMultiRecursion::quadtree *a0;
     decltype(1u) _s3;
   };
 
-  /// _After_QQuad_2: saves [_result_0, _result_1, d_a0, _s3], dispatches next
+  /// _After_QQuad_2: saves [_result_0, _result_1, a0, _s3], dispatches next
   /// recursive call.
   struct _After_QQuad_2 {
     unsigned int _result_0;
     unsigned int _result_1;
-    const LoopifyMultiRecursion::quadtree *d_a0;
+    const LoopifyMultiRecursion::quadtree *a0;
     decltype(1u) _s3;
   };
 
@@ -376,25 +374,24 @@ unsigned int LoopifyMultiRecursion::quad_depth(
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3] =
+        const auto &[a0, a1, a2, a3] =
             std::get<typename LoopifyMultiRecursion::quadtree::QQuad>(t.v());
-        _stack.emplace_back(
-            _After_QQuad{d_a2.get(), d_a1.get(), d_a0.get(), 1u});
-        _stack.emplace_back(_Enter{d_a3.get()});
+        _stack.emplace_back(_After_QQuad{a2.get(), a1.get(), a0.get(), 1u});
+        _stack.emplace_back(_Enter{a3.get()});
       }
     } else if (std::holds_alternative<_After_QQuad>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad>(_frame));
-      _stack.emplace_back(_After_QQuad_1{_result, _f.d_a1, _f.d_a0, _f._s3});
-      _stack.emplace_back(_Enter{_f.d_a2});
+      _stack.emplace_back(_After_QQuad_1{_result, _f.a1, _f.a0, _f._s3});
+      _stack.emplace_back(_Enter{_f.a2});
     } else if (std::holds_alternative<_After_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_1>(_frame));
-      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.d_a0, _f._s3});
-      _stack.emplace_back(_Enter{_f.d_a1});
+      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.a0, _f._s3});
+      _stack.emplace_back(_Enter{_f.a1});
     } else if (std::holds_alternative<_After_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_2>(_frame));
       _stack.emplace_back(
           _Combine_QQuad{_f._result_0, _f._result_1, _result, _f._s3});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QQuad>(_frame));
       _result = (_f._s3 + std::max(std::max(_result, _f._result_2),

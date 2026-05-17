@@ -10,17 +10,17 @@ List<unsigned int> LoopifySpecialRecursion::process_twice_fuel(
     unsigned int fuel;
   };
 
-  /// _Cont_Cons: saves [d_a0, fuel_], resumes after recursive call, then
+  /// _Cont_Cons: saves [a0, fuel_], resumes after recursive call, then
   /// processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
     unsigned int fuel_;
   };
 
-  /// _Cont_Cons_1: saves [d_a0], resumes after recursive call, then processes
+  /// _Cont_Cons_1: saves [a0], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Cons_1 {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
@@ -43,24 +43,24 @@ List<unsigned int> LoopifySpecialRecursion::process_twice_fuel(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{d_a0, fuel_});
-          _stack.emplace_back(_Enter{std::move(*d_a1), fuel_});
+          _stack.emplace_back(_Cont_Cons{a0, fuel_});
+          _stack.emplace_back(_Enter{std::move(*a1), fuel_});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int fuel_ = _f.fuel_;
       List<unsigned int> first = _result;
-      _stack.emplace_back(_Cont_Cons_1{d_a0});
+      _stack.emplace_back(_Cont_Cons_1{a0});
       _stack.emplace_back(_Enter{std::move(first), fuel_});
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       List<unsigned int> second = _result;
-      _result = List<unsigned int>::cons(d_a0, std::move(second));
+      _result = List<unsigned int>::cons(a0, std::move(second));
     }
   }
   return _result;
@@ -81,10 +81,9 @@ List<unsigned int> LoopifySpecialRecursion::double_append(
     const List<unsigned int> *l1;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -103,16 +102,16 @@ List<unsigned int> LoopifySpecialRecursion::double_append(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         _result = std::move(l2);
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{std::move(l2), a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       List<unsigned int> rest = _result;
-      _result = List<unsigned int>::cons(d_a0, rest.app(rest));
+      _result = List<unsigned int>::cons(a0, rest.app(rest));
     }
   }
   return _result;
@@ -129,30 +128,29 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<unsigned int> &l) {
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       unsigned int next_val = [&]() {
-        auto &&_sv0 = *d_a1;
+        auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
           return 0u;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
-          return d_a00;
+          return a00;
         }
       }();
-      if ((2u ? (d_a0 + next_val) % 2u : (d_a0 + next_val)) == 0u) {
-        _loop_l = d_a1.get();
+      if ((2u ? (a0 + next_val) % 2u : (a0 + next_val)) == 0u) {
+        _loop_l = a1.get();
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = a1.get();
         continue;
       }
     }
@@ -172,16 +170,15 @@ LoopifySpecialRecursion::reverse_insert(unsigned int x, List<unsigned int> l) {
           List<unsigned int>::cons(x, List<unsigned int>::nil()));
       break;
     } else {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-      if (d_a0 < x) {
+      if (a0 < x) {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
+            typename List<unsigned int>::Cons(std::move(a0), nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = std::move(*d_a1);
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = std::move(*a1);
         continue;
       } else {
         *_write = std::make_unique<List<unsigned int>>(
@@ -201,17 +198,17 @@ List<unsigned int> LoopifySpecialRecursion::collect_sorted(
     const LoopifySpecialRecursion::tree *t;
   };
 
-  /// _After_Node: saves [d_a0, d_a1], dispatches next recursive call.
+  /// _After_Node: saves [a0, a1], dispatches next recursive call.
   struct _After_Node {
-    const LoopifySpecialRecursion::tree *d_a0;
-    unsigned int d_a1;
+    const LoopifySpecialRecursion::tree *a0;
+    unsigned int a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     List<unsigned int> _result;
-    unsigned int d_a1;
+    unsigned int a1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -230,18 +227,18 @@ List<unsigned int> LoopifySpecialRecursion::collect_sorted(
               t.v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
+        const auto &[a0, a1, a2] =
             std::get<typename LoopifySpecialRecursion::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-        _stack.emplace_back(_Enter{d_a2.get()});
+        _stack.emplace_back(_After_Node{a0.get(), a1});
+        _stack.emplace_back(_Enter{a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{std::move(_result), _f.d_a1});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
+      _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = _result.app(List<unsigned int>::cons(_f.d_a1, _f._result));
+      _result = _result.app(List<unsigned int>::cons(_f.a1, _f._result));
     }
   }
   return _result;
@@ -257,9 +254,9 @@ unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
     const List<unsigned int> *l;
   };
 
-  /// _Resume1: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
   struct _Resume1 {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -278,18 +275,18 @@ unsigned int LoopifySpecialRecursion::sum_odd_indices_aux(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         if ((2u ? idx % 2u : idx) == 1u) {
-          _stack.emplace_back(_Resume1{d_a0});
-          _stack.emplace_back(_Enter{(idx + 1u), d_a1.get()});
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Enter{(idx + 1u), a1.get()});
         } else {
-          _stack.emplace_back(_Enter{(idx + 1u), d_a1.get()});
+          _stack.emplace_back(_Enter{(idx + 1u), a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.d_a0 + _result);
+      _result = (_f.a0 + _result);
     }
   }
   return _result;
@@ -339,18 +336,18 @@ unsigned int LoopifySpecialRecursion::categorize_by(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        if (k < d_a0) {
+        if (k < a0) {
           _stack.emplace_back(_Resume1{3u});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         } else {
-          if (d_a0 == k) {
+          if (a0 == k) {
             _stack.emplace_back(_Resume2{2u});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Enter{a1.get()});
           } else {
             _stack.emplace_back(_Resume3{1u});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         }
       }
@@ -380,24 +377,24 @@ LoopifySpecialRecursion::between(unsigned int lo, unsigned int hi,
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if (lo <= d_a0) {
-        if (d_a0 <= hi) {
+      if (lo <= a0) {
+        if (a0 <= hi) {
           auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(d_a0, nullptr));
+              typename List<unsigned int>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = d_a1.get();
+                   .a1;
+          _loop_l = a1.get();
           continue;
         } else {
-          _loop_l = d_a1.get();
+          _loop_l = a1.get();
           continue;
         }
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
         continue;
       }
     }
@@ -413,9 +410,9 @@ List<unsigned int> LoopifySpecialRecursion::merge_levels(
     const List<List<unsigned int>> *ll;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    List<unsigned int> d_a0;
+    List<unsigned int> a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -434,14 +431,14 @@ List<unsigned int> LoopifySpecialRecursion::merge_levels(
               ll.v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f.d_a0.app(_result);
+      _result = _f.a0.app(_result);
     }
   }
   return _result;

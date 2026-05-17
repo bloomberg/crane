@@ -9,50 +9,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -61,17 +61,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -81,30 +81,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -118,10 +116,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct BinomialHeap {
@@ -130,9 +128,9 @@ struct BinomialHeap {
   struct tree {
     // TYPES
     struct Node {
-      key d_a0;
-      std::unique_ptr<tree> d_a1;
-      std::unique_ptr<tree> d_a2;
+      key a0;
+      std::unique_ptr<tree> a1;
+      std::unique_ptr<tree> a2;
     };
 
     struct Leaf {};
@@ -141,27 +139,27 @@ struct BinomialHeap {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -184,18 +182,17 @@ struct BinomialHeap {
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Node>(_src->v())) {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0, _alt.d_a1 ? std::make_unique<tree>() : nullptr,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Node{_alt.a0, _alt.a1 ? std::make_unique<tree>() : nullptr,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         } else {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         }
       }
       return _out;
@@ -214,13 +211,13 @@ struct BinomialHeap {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -234,10 +231,10 @@ struct BinomialHeap {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
@@ -245,9 +242,9 @@ struct BinomialHeap {
                                    tree &, T1 &>
   static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *d_a1, tree_rect<T1>(f, f0, *d_a1), *d_a2,
-               tree_rect<T1>(f, f0, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f(a0, *a1, tree_rect<T1>(f, f0, *a1), *a2,
+               tree_rect<T1>(f, f0, *a2));
     } else {
       return f0;
     }
@@ -258,9 +255,9 @@ struct BinomialHeap {
                                    tree &, T1 &>
   static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *d_a1, tree_rec<T1>(f, f0, *d_a1), *d_a2,
-               tree_rec<T1>(f, f0, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f(a0, *a1, tree_rec<T1>(f, f0, *a1), *a2,
+               tree_rec<T1>(f, f0, *a2));
     } else {
       return f0;
     }
@@ -276,15 +273,15 @@ struct BinomialHeap {
   static priqueue unzip(const tree &t,
                         std::function<List<tree>(List<tree>)> cont) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      tree d_a1_value = *d_a1;
-      tree d_a2_value = *d_a2;
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      tree a1_value = *a1;
+      tree a2_value = *a2;
       std::function<List<tree>(List<tree>)> f =
           [=](const List<tree> &q) mutable {
-            return List<tree>::cons(tree::node(d_a0, d_a1_value, tree::leaf()),
+            return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
                                     cont(q));
           };
-      return unzip(d_a2_value, f);
+      return unzip(a2_value, f);
     } else {
       return cont(List<tree>::nil());
     }

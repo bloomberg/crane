@@ -30,9 +30,9 @@ unsigned int LoopifyDecltype::count_true(
       if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
-        _stack.emplace_back(_Resume_Cons{(d_a0 ? 1u : 0u)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        const auto &[a0, a1] = std::get<typename List<bool>::Cons>(xs.v());
+        _stack.emplace_back(_Resume_Cons{(a0 ? 1u : 0u)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -71,11 +71,10 @@ unsigned int LoopifyDecltype::sum_flagged(
               xs.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
-        _stack.emplace_back(
-            _Resume_Cons{(d_a0.item_flag ? d_a0.item_val : 0u)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons{(a0.item_flag ? a0.item_val : 0u)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

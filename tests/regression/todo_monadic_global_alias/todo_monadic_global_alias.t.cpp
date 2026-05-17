@@ -11,7 +11,7 @@ unsigned int nat_to_uint(const Nat &n) {
     return 0u;
   } else {
     const auto &s = std::get<Nat::S>(n.v());
-    return 1u + nat_to_uint(*s.d_a0);
+    return 1u + nat_to_uint(*s.a0);
   }
 }
 

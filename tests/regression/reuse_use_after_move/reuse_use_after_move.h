@@ -16,8 +16,8 @@ struct ReuseUseAfterMove {
   struct mylist {
     // TYPES
     struct Mycons {
-      unsigned int d_a0;
-      std::unique_ptr<mylist> d_a1;
+      unsigned int a0;
+      std::unique_ptr<mylist> a1;
     };
 
     struct Mynil {};
@@ -26,27 +26,27 @@ struct ReuseUseAfterMove {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist &&_other) : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     mylist &operator=(mylist &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -69,14 +69,14 @@ struct ReuseUseAfterMove {
         mylist *_dst = _frame._dst;
         if (std::holds_alternative<Mycons>(_src->v())) {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Mycons{_alt.a0, _alt.a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         } else {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         }
       }
       return _out;
@@ -94,10 +94,10 @@ struct ReuseUseAfterMove {
       std::vector<std::unique_ptr<mylist>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -111,18 +111,18 @@ struct ReuseUseAfterMove {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *d_a1, mylist_rect<T1>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
+      return f(a0, *a1, mylist_rect<T1>(f, f0, *a1));
     } else {
       return f0;
     }
@@ -132,8 +132,8 @@ struct ReuseUseAfterMove {
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *d_a1, mylist_rec<T1>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
+      return f(a0, *a1, mylist_rec<T1>(f, f0, *a1));
     } else {
       return f0;
     }
@@ -168,8 +168,8 @@ struct ReuseUseAfterMove {
                        mylist::mycons(2u, mylist::mycons(3u, mylist::mynil()))),
         true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv0.v())) {
-      const auto &[d_a00, d_a10] = std::get<typename mylist::Mycons>(_sv0.v());
-      return d_a00;
+      const auto &[a00, a10] = std::get<typename mylist::Mycons>(_sv0.v());
+      return a00;
     } else {
       return 999u;
     }
@@ -182,8 +182,8 @@ struct ReuseUseAfterMove {
             10u, mylist::mycons(20u, mylist::mycons(30u, mylist::mynil()))),
         true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv0.v())) {
-      const auto &[d_a00, d_a10] = std::get<typename mylist::Mycons>(_sv0.v());
-      return d_a00;
+      const auto &[a00, a10] = std::get<typename mylist::Mycons>(_sv0.v());
+      return a00;
     } else {
       return 999u;
     }

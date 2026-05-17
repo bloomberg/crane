@@ -27,35 +27,35 @@ struct FixMoveCapture {
     struct Mynil {};
 
     struct Mycons {
-      unsigned int d_a0;
-      std::unique_ptr<mylist> d_a1;
+      unsigned int a0;
+      std::unique_ptr<mylist> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist &&_other) : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     mylist &operator=(mylist &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -77,14 +77,14 @@ struct FixMoveCapture {
         const mylist *_src = _frame._src;
         mylist *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Mycons{_alt.a0, _alt.a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -103,10 +103,10 @@ struct FixMoveCapture {
       std::vector<std::unique_ptr<mylist>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -120,10 +120,10 @@ struct FixMoveCapture {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
@@ -132,8 +132,8 @@ struct FixMoveCapture {
     if (std::holds_alternative<typename mylist::Mynil>(m.v())) {
       return f0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f1(d_a0, *d_a1, mylist_rect<T1>(f0, f1, *d_a1));
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
+      return f1(a0, *a1, mylist_rect<T1>(f0, f1, *a1));
     }
   }
 
@@ -143,8 +143,8 @@ struct FixMoveCapture {
     if (std::holds_alternative<typename mylist::Mynil>(m.v())) {
       return f0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f1(d_a0, *d_a1, mylist_rec<T1>(f0, f1, *d_a1));
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
+      return f1(a0, *a1, mylist_rec<T1>(f0, f1, *a1));
     }
   }
 

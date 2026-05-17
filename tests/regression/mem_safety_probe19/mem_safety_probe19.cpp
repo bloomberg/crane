@@ -8,9 +8,9 @@ MemSafetyProbe19::option_fn(const MemSafetyProbe19::tree &t,
           typename MemSafetyProbe19::myopt<unsigned int>::Mynone>(o.v())) {
     return n;
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename MemSafetyProbe19::myopt<unsigned int>::Mysome>(o.v());
-    return ((t.tree_sum() + d_a0) + n);
+    return ((t.tree_sum() + a0) + n);
   }
 }
 
@@ -18,13 +18,13 @@ unsigned int MemSafetyProbe19::choice_fn(const MemSafetyProbe19::tree &t,
                                          MemSafetyProbe19::Choice c,
                                          unsigned int n) {
   switch (c) {
-  case Choice::e_CLEFT: {
+  case Choice::CLEFT: {
     return (t.tree_sum() + n);
   }
-  case Choice::e_CRIGHT: {
+  case Choice::CRIGHT: {
     return n;
   }
-  case Choice::e_CBOTH: {
+  case Choice::CBOTH: {
     return ((t.tree_sum() + t.tree_sum()) + n);
   }
   default:

@@ -3,25 +3,25 @@
 unsigned int RecordErasedProofFieldsCase::kind_code(
     RecordErasedProofFieldsCase::ItemKind k) {
   switch (k) {
-  case ItemKind::e_KINDA: {
+  case ItemKind::KINDA: {
     return 0u;
   }
-  case ItemKind::e_KINDB: {
+  case ItemKind::KINDB: {
     return 1u;
   }
-  case ItemKind::e_KINDC: {
+  case ItemKind::KINDC: {
     return 2u;
   }
-  case ItemKind::e_KINDD: {
+  case ItemKind::KINDD: {
     return 3u;
   }
-  case ItemKind::e_KINDE: {
+  case ItemKind::KINDE: {
     return 4u;
   }
-  case ItemKind::e_KINDF: {
+  case ItemKind::KINDF: {
     return 5u;
   }
-  case ItemKind::e_KINDG: {
+  case ItemKind::KINDG: {
     return 6u;
   }
   default:
@@ -33,28 +33,28 @@ unsigned int RecordErasedProofFieldsCase::tag_code(
     const RecordErasedProofFieldsCase::StoredTag &t) {
   if (std::holds_alternative<
           typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(t.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
             t.v());
-    return (10u + kind_code(d_a0));
+    return (10u + kind_code(a0));
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(
             t.v());
-    return (20u + kind_code(d_a0));
+    return (20u + kind_code(a0));
   }
 }
 
 unsigned int RecordErasedProofFieldsCase::bucket_code(
     RecordErasedProofFieldsCase::TraceBucket b) {
   switch (b) {
-  case TraceBucket::e_BUCKETA: {
+  case TraceBucket::BUCKETA: {
     return 30u;
   }
-  case TraceBucket::e_BUCKETB: {
+  case TraceBucket::BUCKETB: {
     return 31u;
   }
-  case TraceBucket::e_BUCKETC: {
+  case TraceBucket::BUCKETC: {
     return 32u;
   }
   default:
@@ -66,14 +66,14 @@ RecordErasedProofFieldsCase::StoredTag
 RecordErasedProofFieldsCase::bucket_to_tag(
     RecordErasedProofFieldsCase::TraceBucket b) {
   switch (b) {
-  case TraceBucket::e_BUCKETA: {
-    return StoredTag::tagsecondary(ItemKind::e_KINDD);
+  case TraceBucket::BUCKETA: {
+    return StoredTag::tagsecondary(ItemKind::KINDD);
   }
-  case TraceBucket::e_BUCKETB: {
-    return StoredTag::tagsecondary(ItemKind::e_KINDE);
+  case TraceBucket::BUCKETB: {
+    return StoredTag::tagsecondary(ItemKind::KINDE);
   }
-  case TraceBucket::e_BUCKETC: {
-    return StoredTag::tagsecondary(ItemKind::e_KINDB);
+  case TraceBucket::BUCKETC: {
+    return StoredTag::tagsecondary(ItemKind::KINDB);
   }
   default:
     std::unreachable();

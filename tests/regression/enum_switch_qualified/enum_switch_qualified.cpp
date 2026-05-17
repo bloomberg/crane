@@ -3,11 +3,11 @@
 EnumSwitchQualified::Outer::Color
 EnumSwitchQualified::Outer::flip(EnumSwitchQualified::Outer::Color c) {
   switch (c) {
-  case Color::e_RED: {
-    return Color::e_BLUE;
+  case Color::RED: {
+    return Color::BLUE;
   }
-  case Color::e_BLUE: {
-    return Color::e_RED;
+  case Color::BLUE: {
+    return Color::RED;
   }
   default:
     std::unreachable();
@@ -17,10 +17,10 @@ EnumSwitchQualified::Outer::flip(EnumSwitchQualified::Outer::Color c) {
 unsigned int
 EnumSwitchQualified::Outer::code(EnumSwitchQualified::Outer::Color c) {
   switch (c) {
-  case Color::e_RED: {
+  case Color::RED: {
     return 1u;
   }
-  case Color::e_BLUE: {
+  case Color::BLUE: {
     return 2u;
   }
   default:

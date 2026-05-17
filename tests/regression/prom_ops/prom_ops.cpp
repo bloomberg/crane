@@ -9,14 +9,13 @@ bool PromOps::nat_list_eqb(const List<unsigned int> &xs,
       return false;
     }
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(xs.v());
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(xs.v());
     if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {
       return false;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(ys.v());
-      return (d_a0 == d_a00 && nat_list_eqb(*d_a1, *d_a10));
+      return (a0 == a00 && nat_list_eqb(*a1, *a10));
     }
   }
 }

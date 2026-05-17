@@ -19,9 +19,9 @@ void NoMappingEventProbe::loop(unsigned int x, unsigned int y,
   if (std::holds_alternative<typename List<bool>::Nil>(cells.v())) {
     return;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(cells.v());
+    const auto &[a0, a1] = std::get<typename List<bool>::Cons>(cells.v());
     [&]() -> void {
-      if (d_a0) {
+      if (a0) {
         draw_revealed_tile(x, y);
         return;
       } else {
@@ -29,7 +29,7 @@ void NoMappingEventProbe::loop(unsigned int x, unsigned int y,
         return;
       }
     }();
-    loop((x + cell_size), y, *d_a1);
+    loop((x + cell_size), y, *a1);
     return;
   }
 }

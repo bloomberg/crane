@@ -47,8 +47,8 @@ std::vector<T> list_to_vector(const List<T> &l) {
     bool done = false;
     std::visit(Overloaded{[&](const typename List<T>::Nil &) { done = true; },
                           [&](const typename List<T>::Cons &c) {
-                            result.push_back(c.d_a0);
-                            current = c.d_a1.get();
+                            result.push_back(c.a0);
+                            current = c.a1.get();
                           }},
                current->v());
     if (done)
@@ -72,7 +72,7 @@ template <typename A, typename B>
 std::pair<A, B> prod_to_pair(const Prod<A, B> &p) {
   std::pair<A, B> result;
   std::visit(Overloaded{[&](const typename Prod<A, B>::Pair &pr) {
-               result = std::make_pair(pr.d_a0, pr.d_a1);
+               result = std::make_pair(pr.a0, pr.a1);
              }},
              p.v());
   return result;

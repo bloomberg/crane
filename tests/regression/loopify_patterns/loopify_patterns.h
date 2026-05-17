@@ -10,50 +10,50 @@
 
 /// Complex control flow and pattern matching edge cases.
 struct LoopifyPatterns {
-  template <typename t_A> struct list {
+  template <typename A> struct list {
     // TYPES
     struct Nil {};
 
     struct Cons {
-      t_A d_a0;
-      std::unique_ptr<list<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<list<A>> a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     list() {}
 
-    explicit list(Nil _v) : d_v_(_v) {}
+    explicit list(Nil _v) : v_(_v) {}
 
-    explicit list(Cons _v) : d_v_(std::move(_v)) {}
+    explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    list(const list<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    list(list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    list(list<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    list<t_A> &operator=(const list<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    list<A> &operator=(const list<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    list<t_A> &operator=(list<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    list<A> &operator=(list<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    list<t_A> clone() const {
-      list<t_A> _out{};
+    list<A> clone() const {
+      list<A> _out{};
 
       struct _CloneFrame {
-        const list<t_A> *_src;
-        list<t_A> *_dst;
+        const list<A> *_src;
+        list<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -62,17 +62,17 @@ struct LoopifyPatterns {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const list<t_A> *_src = _frame._src;
-        list<t_A> *_dst = _frame._dst;
+        const list<A> *_src = _frame._src;
+        list<A> *_dst = _frame._dst;
         if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->d_v_ = Nil{};
+          _dst->v_ = Nil{};
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
-          _dst->d_v_ = Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
-                                                 : nullptr};
-          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Cons{_alt.a0, _alt.a1 ? std::make_unique<list<A>>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -82,31 +82,29 @@ struct LoopifyPatterns {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->d_v_ = Nil{};
+        this->v_ = Nil{};
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<_U>::Cons>(_other.v());
-        this->d_v_ = Cons{t_A(d_a0),
-                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
+        this->v_ = Cons{A(a0), a1 ? std::make_unique<list<A>>(*a1) : nullptr};
       }
     }
 
-    static list<t_A> nil() { return list(Nil{}); }
+    static list<A> nil() { return list(Nil{}); }
 
-    static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<A> cons(A a0, list<A> a1) {
       return list(
-          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
+          Cons{std::move(a0), std::make_unique<list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      std::vector<std::unique_ptr<list<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](list<t_A> &_node) {
-        if (std::holds_alternative<Cons>(_node.d_v_)) {
-          auto &_alt = std::get<Cons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](list<A> &_node) {
+        if (std::holds_alternative<Cons>(_node.v_)) {
+          auto &_alt = std::get<Cons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -120,10 +118,10 @@ struct LoopifyPatterns {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -137,12 +135,12 @@ struct LoopifyPatterns {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
     /// _result.
     struct _Resume_Cons {
       F1 f0;
-      list<T1> d_a1;
-      T1 d_a0;
+      list<T1> a1;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -160,13 +158,13 @@ struct LoopifyPatterns {
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+        _result = _f.f0(_f.a0, _f.a1, _result);
       }
     }
     return _result;
@@ -183,12 +181,12 @@ struct LoopifyPatterns {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
     /// _result.
     struct _Resume_Cons {
       F1 f0;
-      list<T1> d_a1;
-      T1 d_a0;
+      list<T1> a1;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -206,13 +204,13 @@ struct LoopifyPatterns {
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *d_a1, d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+        _result = _f.f0(_f.a0, _f.a1, _result);
       }
     }
     return _result;
@@ -267,10 +265,10 @@ struct LoopifyPatterns {
       const list<unsigned int> *l;
     };
 
-    /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// rest.
     struct _Cont_Cons {
-      unsigned int d_a0;
+      unsigned int a0;
       F0 f;
     };
 
@@ -289,23 +287,23 @@ struct LoopifyPatterns {
         if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename list<unsigned int>::Cons>(l.v());
-          auto &&_sv = *d_a1;
+          auto &&_sv = *a1;
           if (std::holds_alternative<typename list<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = f(d_a0);
+            _result = f(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{d_a0, f});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont_Cons{a0, f});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int d_a0 = _f.d_a0;
+        unsigned int a0 = _f.a0;
         F0 f = _f.f;
         unsigned int rest_max = _result;
-        unsigned int fx = f(d_a0);
+        unsigned int fx = f(a0);
         if (fx < rest_max) {
           _result = rest_max;
         } else {
@@ -363,7 +361,7 @@ struct LoopifyPatterns {
           _result = list<list<T1>>::cons(list<T1>::cons(x, list<T1>::nil()),
                                          list<list<T1>>::nil());
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           auto map_cons_h_impl =
               [&](auto &_self_map_cons_h,
                   const list<list<T1>> &lsts) -> list<list<T1>> {
@@ -371,20 +369,20 @@ struct LoopifyPatterns {
                     lsts.v())) {
               return list<list<T1>>::nil();
             } else {
-              const auto &[d_a00, d_a10] =
+              const auto &[a00, a10] =
                   std::get<typename list<list<T1>>::Cons>(lsts.v());
               return list<list<T1>>::cons(
-                  list<T1>::cons(d_a0, d_a00),
-                  _self_map_cons_h(_self_map_cons_h, *d_a10));
+                  list<T1>::cons(a0, a00),
+                  _self_map_cons_h(_self_map_cons_h, *a10));
             }
           };
           auto map_cons_h = [&](const list<list<T1>> &lsts) -> list<list<T1>> {
             return map_cons_h_impl(map_cons_h_impl, lsts);
           };
           _stack.emplace_back(
-              _Resume_Cons{list<T1>::cons(x, list<T1>::cons(d_a0, *d_a1)),
+              _Resume_Cons{list<T1>::cons(x, list<T1>::cons(a0, *a1)),
                            std::move(map_cons_h)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -412,20 +410,20 @@ struct LoopifyPatterns {
               l1.v_mut())) {
         return l2;
       } else {
-        auto &[d_a0, d_a1] =
+        auto &[a0, a1] =
             std::get<typename list<unsigned int>::Cons>(l1.v_mut());
         if (std::holds_alternative<typename list<unsigned int>::Nil>(
                 l2.v_mut())) {
           return l1;
         } else {
-          auto &[d_a00, d_a10] =
+          auto &[a00, a10] =
               std::get<typename list<unsigned int>::Cons>(l2.v_mut());
-          if (cmp(d_a0, d_a00) <= 0u) {
-            return list<unsigned int>::cons(std::move(d_a0),
-                                            merge_by_fuel(f, cmp, *d_a1, l2));
+          if (cmp(a0, a00) <= 0u) {
+            return list<unsigned int>::cons(std::move(a0),
+                                            merge_by_fuel(f, cmp, *a1, l2));
           } else {
-            return list<unsigned int>::cons(std::move(d_a00),
-                                            merge_by_fuel(f, cmp, l1, *d_a10));
+            return list<unsigned int>::cons(std::move(a00),
+                                            merge_by_fuel(f, cmp, l1, *a10));
           }
         }
       }
@@ -479,20 +477,20 @@ struct LoopifyPatterns {
             std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename list<unsigned int>::Cons>(_loop_l->v());
-        if (p(d_a0)) {
+        if (p(a0)) {
           *_write =
               std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
           break;
         } else {
           auto _cell = std::make_unique<list<unsigned int>>(
-              typename list<unsigned int>::Cons(d_a0, nullptr));
+              typename list<unsigned int>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = d_a1.get();
+                   .a1;
+          _loop_l = a1.get();
           continue;
         }
       }
@@ -515,10 +513,10 @@ struct LoopifyPatterns {
       const list<unsigned int> *l;
     };
 
-    /// _Cont_Cons: saves [d_a0, p, q], resumes after recursive call, then
+    /// _Cont_Cons: saves [a0, p, q], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
-      unsigned int d_a0;
+      unsigned int a0;
       F0 p;
       F1 q;
     };
@@ -542,14 +540,14 @@ struct LoopifyPatterns {
                                                   list<unsigned int>::nil()),
                                    list<unsigned int>::nil());
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename list<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{d_a0, p, q});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons{a0, p, q});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int d_a0 = _f.d_a0;
+        unsigned int a0 = _f.a0;
         F0 p = _f.p;
         F1 q = _f.q;
         const std::pair<list<unsigned int>, list<unsigned int>> &p0 =
@@ -557,16 +555,16 @@ struct LoopifyPatterns {
         const list<unsigned int> &cs = _result.second;
         const list<unsigned int> &as_ = p0.first;
         const list<unsigned int> &bs = p0.second;
-        if (p(d_a0)) {
+        if (p(a0)) {
           _result = std::make_pair(
-              std::make_pair(list<unsigned int>::cons(d_a0, as_), bs), cs);
+              std::make_pair(list<unsigned int>::cons(a0, as_), bs), cs);
         } else {
-          if (q(d_a0)) {
+          if (q(a0)) {
             _result = std::make_pair(
-                std::make_pair(as_, list<unsigned int>::cons(d_a0, bs)), cs);
+                std::make_pair(as_, list<unsigned int>::cons(a0, bs)), cs);
           } else {
             _result = std::make_pair(std::make_pair(as_, bs),
-                                     list<unsigned int>::cons(d_a0, cs));
+                                     list<unsigned int>::cons(a0, cs));
           }
         }
       }
@@ -589,13 +587,12 @@ struct LoopifyPatterns {
     if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
       return list<unsigned int>::nil();
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename list<unsigned int>::Cons>(l.v());
-      if (p(idx, d_a0)) {
+      const auto &[a0, a1] = std::get<typename list<unsigned int>::Cons>(l.v());
+      if (p(idx, a0)) {
         return list<unsigned int>::cons(
-            f(d_a0), filter_map_indexed_aux(p, f, *d_a1, (idx + 1)));
+            f(a0), filter_map_indexed_aux(p, f, *a1, (idx + 1)));
       } else {
-        return filter_map_indexed_aux(p, f, *d_a1, (idx + 1));
+        return filter_map_indexed_aux(p, f, *a1, (idx + 1));
       }
     }
   }

@@ -17,9 +17,8 @@ List<unsigned int> DisassembleOps::drop_(unsigned int n, List<unsigned int> l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return List<unsigned int>::nil();
     } else {
-      auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v_mut());
-      return drop_(n_, *d_a1);
+      auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v_mut());
+      return drop_(n_, *a1);
     }
   }
 }
@@ -32,18 +31,17 @@ DisassembleOps::disassemble1(const List<unsigned int> &rom0,
     return std::optional<
         std::pair<DisassembleOps::instruction, unsigned int>>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    auto &&_sv0 = *d_a1;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(_sv.v());
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return std::optional<
           std::pair<DisassembleOps::instruction, unsigned int>>();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
       return std::make_optional<
           std::pair<DisassembleOps::instruction, unsigned int>>(
-          std::make_pair(decode1(d_a0, d_a00), (addr + 2u)));
+          std::make_pair(decode1(a0, a00), (addr + 2u)));
     }
   }
 }
@@ -65,18 +63,17 @@ DisassembleOps::disassemble2(const List<unsigned int> &rom0,
     return std::optional<
         std::pair<DisassembleOps::instruction, unsigned int>>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    auto &&_sv0 = *d_a1;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(_sv.v());
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return std::optional<
           std::pair<DisassembleOps::instruction, unsigned int>>();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
       return std::make_optional<
           std::pair<DisassembleOps::instruction, unsigned int>>(
-          std::make_pair(decode2(d_a0, d_a00), (addr + 2u)));
+          std::make_pair(decode2(a0, a00), (addr + 2u)));
     }
   }
 }
@@ -98,18 +95,17 @@ DisassembleOps::disassemble3(const List<unsigned int> &rom0,
     return std::optional<
         std::pair<DisassembleOps::instruction, unsigned int>>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    auto &&_sv0 = *d_a1;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(_sv.v());
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return std::optional<
           std::pair<DisassembleOps::instruction, unsigned int>>();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
       return std::make_optional<
           std::pair<DisassembleOps::instruction, unsigned int>>(
-          std::make_pair(decode3(d_a0, d_a00), (addr + 2u)));
+          std::make_pair(decode3(a0, a00), (addr + 2u)));
     }
   }
 }
@@ -131,18 +127,17 @@ DisassembleOps::disassemble4(const List<unsigned int> &rom0,
     return std::optional<
         std::pair<DisassembleOps::instruction, unsigned int>>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    auto &&_sv0 = *d_a1;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(_sv.v());
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return std::optional<
           std::pair<DisassembleOps::instruction, unsigned int>>();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
       return std::make_optional<
           std::pair<DisassembleOps::instruction, unsigned int>>(
-          std::make_pair(decode4(d_a0, d_a00), (addr + 2u)));
+          std::make_pair(decode4(a0, a00), (addr + 2u)));
     }
   }
 }

@@ -10,12 +10,12 @@ int main() {
                            20u,
                            NS::tree::node(NS::tree::leaf(), 30u, NS::tree::leaf()));
 
-  assert(NS::subtree_value(NS::Dir::e_GOLEFT, t) == 10u);
-  assert(NS::subtree_value(NS::Dir::e_GORIGHT, t) == 30u);
-  assert(NS::subtree_value(NS::Dir::e_GOLEFT, leaf) == 0u);
+  assert(NS::subtree_value(NS::Dir::GOLEFT, t) == 10u);
+  assert(NS::subtree_value(NS::Dir::GORIGHT, t) == 30u);
+  assert(NS::subtree_value(NS::Dir::GOLEFT, leaf) == 0u);
 
-  assert(NS::inline_match_match(NS::Dir::e_GOLEFT, t) == 20u);
-  assert(NS::inline_match_match(NS::Dir::e_GORIGHT, t) == 100u);
+  assert(NS::inline_match_match(NS::Dir::GOLEFT, t) == 20u);
+  assert(NS::inline_match_match(NS::Dir::GORIGHT, t) == 100u);
 
   assert(NS::double_match(t) == 30u);
   assert(NS::double_match(leaf) == 1u);

@@ -8,50 +8,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +60,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -80,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -117,28 +115,28 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  List<t_A> app(List<t_A> m) const {
-    std::unique_ptr<List<t_A>> _head{};
-    std::unique_ptr<List<t_A>> *_write = &_head;
+  List<A> app(List<A> m) const {
+    std::unique_ptr<List<A>> _head{};
+    std::unique_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
-    List<t_A> _loop_m = std::move(m);
+    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *_write = std::make_unique<List<t_A>>(std::move(_loop_m));
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_unique<List<A>>(std::move(_loop_m));
         break;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = std::make_unique<List<t_A>>(
-            typename List<t_A>::Cons(d_a0, nullptr));
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).a1;
+        _loop_self = a1.get();
         continue;
       }
     }
@@ -176,9 +174,9 @@ struct LoopifySearch {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -219,11 +217,11 @@ struct LoopifySearch {
       const List<unsigned int> *l;
     };
 
-    /// _Cont_Cons: saves [cmp, d_a0], resumes after recursive call, then
+    /// _Cont_Cons: saves [a0, cmp], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
+      unsigned int a0;
       F0 cmp;
-      unsigned int d_a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -241,24 +239,24 @@ struct LoopifySearch {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *d_a1;
+          auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = d_a0;
+            _result = a0;
           } else {
-            _stack.emplace_back(_Cont_Cons{cmp, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont_Cons{a0, cmp});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        unsigned int a0 = _f.a0;
         F0 cmp = _f.cmp;
-        unsigned int d_a0 = _f.d_a0;
         unsigned int m = _result;
-        if (cmp(d_a0, m) == 1u) {
-          _result = d_a0;
+        if (cmp(a0, m) == 1u) {
+          _result = a0;
         } else {
           _result = m;
         }
@@ -302,12 +300,11 @@ struct LoopifySearch {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      if (p(d_a0)) {
-        return List<unsigned int>::cons(d_a0, filter_impl(p, *d_a1));
+      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      if (p(a0)) {
+        return List<unsigned int>::cons(a0, filter_impl(p, *a1));
       } else {
-        return filter_impl(p, *d_a1);
+        return filter_impl(p, *a1);
       }
     }
   }
@@ -358,9 +355,9 @@ struct LoopifySearch {
       const List<unsigned int> *l;
     };
 
-    /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<List<unsigned int>> d_a0;
+      List<List<unsigned int>> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -378,14 +375,14 @@ struct LoopifySearch {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<List<unsigned int>>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons{f(a0)});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.d_a0.app(_result);
+        _result = _f.a0.app(_result);
       }
     }
     return _result;
@@ -423,39 +420,39 @@ struct LoopifySearch {
   struct btree {
     // TYPES
     struct BLeaf {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct BNode {
-      std::unique_ptr<btree> d_a0;
-      std::unique_ptr<btree> d_a1;
+      std::unique_ptr<btree> a0;
+      std::unique_ptr<btree> a1;
     };
 
     using variant_t = std::variant<BLeaf, BNode>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     btree() {}
 
-    explicit btree(BLeaf _v) : d_v_(std::move(_v)) {}
+    explicit btree(BLeaf _v) : v_(std::move(_v)) {}
 
-    explicit btree(BNode _v) : d_v_(std::move(_v)) {}
+    explicit btree(BNode _v) : v_(std::move(_v)) {}
 
-    btree(const btree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    btree(const btree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    btree(btree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    btree(btree &&_other) : v_(std::move(_other.v_)) {}
 
     btree &operator=(const btree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     btree &operator=(btree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -478,17 +475,17 @@ struct LoopifySearch {
         btree *_dst = _frame._dst;
         if (std::holds_alternative<BLeaf>(_src->v())) {
           const auto &_alt = std::get<BLeaf>(_src->v());
-          _dst->d_v_ = BLeaf{_alt.d_a0};
+          _dst->v_ = BLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<BNode>(_src->v());
-          _dst->d_v_ = BNode{_alt.d_a0 ? std::make_unique<btree>() : nullptr,
-                             _alt.d_a1 ? std::make_unique<btree>() : nullptr};
-          auto &_dst_alt = std::get<BNode>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = BNode{_alt.a0 ? std::make_unique<btree>() : nullptr,
+                           _alt.a1 ? std::make_unique<btree>() : nullptr};
+          auto &_dst_alt = std::get<BNode>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -508,13 +505,13 @@ struct LoopifySearch {
       std::vector<std::unique_ptr<btree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](btree &_node) {
-        if (std::holds_alternative<BNode>(_node.d_v_)) {
-          auto &_alt = std::get<BNode>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<BNode>(_node.v_)) {
+          auto &_alt = std::get<BNode>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -528,10 +525,10 @@ struct LoopifySearch {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1>
@@ -539,12 +536,12 @@ struct LoopifySearch {
              std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
   static T1 btree_rect(F0 &&f, F1 &&f0, const btree &b) {
     if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
-      const auto &[d_a0] = std::get<typename btree::BLeaf>(b.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename btree::BLeaf>(b.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename btree::BNode>(b.v());
-      return f0(*d_a0, btree_rect<T1>(f, f0, *d_a0), *d_a1,
-                btree_rect<T1>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename btree::BNode>(b.v());
+      return f0(*a0, btree_rect<T1>(f, f0, *a0), *a1,
+                btree_rect<T1>(f, f0, *a1));
     }
   }
 
@@ -553,12 +550,11 @@ struct LoopifySearch {
              std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
   static T1 btree_rec(F0 &&f, F1 &&f0, const btree &b) {
     if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
-      const auto &[d_a0] = std::get<typename btree::BLeaf>(b.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename btree::BLeaf>(b.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename btree::BNode>(b.v());
-      return f0(*d_a0, btree_rec<T1>(f, f0, *d_a0), *d_a1,
-                btree_rec<T1>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename btree::BNode>(b.v());
+      return f0(*a0, btree_rec<T1>(f, f0, *a0), *a1, btree_rec<T1>(f, f0, *a1));
     }
   } /// or_search p t searches tree with || recursion.
 
@@ -566,11 +562,11 @@ struct LoopifySearch {
     requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
   static bool or_search(F0 &&p, const btree &t) {
     if (std::holds_alternative<typename btree::BLeaf>(t.v())) {
-      const auto &[d_a0] = std::get<typename btree::BLeaf>(t.v());
-      return p(d_a0);
+      const auto &[a0] = std::get<typename btree::BLeaf>(t.v());
+      return p(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename btree::BNode>(t.v());
-      return (or_search(p, *d_a0) || or_search(p, *d_a1));
+      const auto &[a0, a1] = std::get<typename btree::BNode>(t.v());
+      return (or_search(p, *a0) || or_search(p, *a1));
     }
   }
 
@@ -582,13 +578,12 @@ struct LoopifySearch {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::nil();
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      if (p(d_a0)) {
+      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      if (p(a0)) {
         return List<unsigned int>::cons(idx,
-                                        find_indices_aux(p, *d_a1, (idx + 1)));
+                                        find_indices_aux(p, *a1, (idx + 1)));
       } else {
-        return find_indices_aux(p, *d_a1, (idx + 1));
+        return find_indices_aux(p, *a1, (idx + 1));
       }
     }
   }

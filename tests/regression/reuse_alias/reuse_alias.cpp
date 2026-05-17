@@ -7,9 +7,9 @@ ReuseAlias::inc_head(const ReuseAlias::mylist<unsigned int> &l) {
           l.v())) {
     return mylist<unsigned int>::mynil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseAlias::mylist<unsigned int>::Mycons>(l.v());
-    return mylist<unsigned int>::mycons((d_a0 + 1u), *d_a1);
+    return mylist<unsigned int>::mycons((a0 + 1u), *a1);
   }
 }
 
@@ -36,9 +36,9 @@ ReuseAlias::alias_and_match(ReuseAlias::mylist<unsigned int> l) {
           l.v_mut())) {
     return std::make_pair(std::move(l), 0u);
   } else {
-    auto &[d_a0, d_a1] =
+    auto &[a0, a1] =
         std::get<typename ReuseAlias::mylist<unsigned int>::Mycons>(l.v_mut());
-    return std::make_pair(std::move(l), std::move(d_a0));
+    return std::make_pair(std::move(l), std::move(a0));
   }
 }
 
@@ -51,9 +51,9 @@ ReuseAlias::scrutinee_in_branch(ReuseAlias::mylist<unsigned int> l) {
     return std::make_pair(mylist<unsigned int>::mynil(),
                           mylist<unsigned int>::mynil());
   } else {
-    auto &[d_a0, d_a1] =
+    auto &[a0, a1] =
         std::get<typename ReuseAlias::mylist<unsigned int>::Mycons>(l.v_mut());
-    return std::make_pair(std::move(l), *d_a1);
+    return std::make_pair(std::move(l), *a1);
   }
 }
 

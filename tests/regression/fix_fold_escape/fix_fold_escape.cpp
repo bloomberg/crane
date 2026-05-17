@@ -38,9 +38,9 @@ unsigned int FixFoldEscape::apply_head(
           l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<std::function<unsigned int(unsigned int)>>::Cons>(l.v());
-    return d_a0(x);
+    return a0(x);
   }
 }
 
@@ -51,8 +51,8 @@ unsigned int FixFoldEscape::sum_apply(
           l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<std::function<unsigned int(unsigned int)>>::Cons>(l.v());
-    return (d_a0(x) + sum_apply(*d_a1, x));
+    return (a0(x) + sum_apply(*a1, x));
   }
 }

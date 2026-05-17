@@ -44,8 +44,8 @@ int main() {
       auto &vr = l->v();
       ASSERT(std::holds_alternative<List<unsigned int>::Cons>(vr));
       auto &c = std::get<List<unsigned int>::Cons>(vr);
-      ASSERT(c.d_a0 == expected[i]);
-      l = c.d_a1.get();
+      ASSERT(c.a0 == expected[i]);
+      l = c.a1.get();
     }
     ASSERT(std::holds_alternative<List<unsigned int>::Nil>(l->v()));
     std::cout << "Test 3 (takeA 5): PASSED" << std::endl;

@@ -32,12 +32,12 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::unzip(
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
       } else {
-        const auto &[d_a0, d_a1] = std::get<
+        const auto &[a0, a1] = std::get<
             typename List<std::pair<unsigned int, unsigned int>>::Cons>(l.v());
-        const unsigned int &a = d_a0.first;
-        const unsigned int &b = d_a0.second;
+        const unsigned int &a = a0.first;
+        const unsigned int &b = a0.second;
         _stack.emplace_back(_Cont_a{a, b});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_a>(_frame));
@@ -60,10 +60,9 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::swizzle(
     const List<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -82,17 +81,17 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::swizzle(
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       const List<unsigned int> &odds = _result.first;
       const List<unsigned int> &evens = _result.second;
-      _result = std::make_pair(List<unsigned int>::cons(d_a0, evens), odds);
+      _result = std::make_pair(List<unsigned int>::cons(a0, evens), odds);
     }
   }
   return _result;
@@ -106,10 +105,9 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::partition(
     const List<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -128,20 +126,20 @@ std::pair<List<unsigned int>, List<unsigned int>> LoopifyListPairing::partition(
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       const List<unsigned int> &yes = _result.first;
       const List<unsigned int> &no = _result.second;
-      if ((2u ? d_a0 % 2u : d_a0) == 0u) {
-        _result = std::make_pair(List<unsigned int>::cons(d_a0, yes), no);
+      if ((2u ? a0 % 2u : a0) == 0u) {
+        _result = std::make_pair(List<unsigned int>::cons(a0, yes), no);
       } else {
-        _result = std::make_pair(yes, List<unsigned int>::cons(d_a0, no));
+        _result = std::make_pair(yes, List<unsigned int>::cons(a0, no));
       }
     }
   }
@@ -174,57 +172,57 @@ LoopifyListPairing::zip_longest_fuel(unsigned int fuel,
                   List<std::pair<unsigned int, unsigned int>>::nil());
           break;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(default0, d_a00), nullptr));
+                      std::make_pair(default0, a00), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
-          _loop_l2 = std::move(*d_a10);
+                   .a1;
+          _loop_l2 = std::move(*a10);
           _loop_l1 = List<unsigned int>::nil();
           _loop_fuel = fuel_;
           continue;
         }
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2.v())) {
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(d_a0, default0), nullptr));
+                      std::make_pair(a0, default0), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
+                   .a1;
           _loop_l2 = List<unsigned int>::nil();
-          _loop_l1 = std::move(*d_a1);
+          _loop_l1 = std::move(*a1);
           _loop_fuel = fuel_;
           continue;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(d_a0, d_a00), nullptr));
+                      std::make_pair(a0, a00), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
-          _loop_l2 = std::move(*d_a10);
-          _loop_l1 = std::move(*d_a1);
+                   .a1;
+          _loop_l2 = std::move(*a10);
+          _loop_l1 = std::move(*a1);
           _loop_fuel = fuel_;
           continue;
         }
@@ -261,7 +259,7 @@ List<unsigned int> LoopifyListPairing::zipWith(const List<unsigned int> &l1,
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2->v())) {
@@ -269,16 +267,15 @@ List<unsigned int> LoopifyListPairing::zipWith(const List<unsigned int> &l1,
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons((d_a0 + d_a00), nullptr));
+            typename List<unsigned int>::Cons((a0 + a00), nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l2 = d_a10.get();
-        _loop_l1 = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l2 = a10.get();
+        _loop_l1 = a1.get();
         continue;
       }
     }
@@ -295,10 +292,9 @@ LoopifyListPairing::split_even_odd(
     const List<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -317,20 +313,20 @@ LoopifyListPairing::split_even_odd(
         _result = std::make_pair(List<unsigned int>::nil(),
                                  List<unsigned int>::nil());
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       const List<unsigned int> &evens = _result.first;
       const List<unsigned int> &odds = _result.second;
-      if ((2u ? d_a0 % 2u : d_a0) == 0u) {
-        _result = std::make_pair(List<unsigned int>::cons(d_a0, evens), odds);
+      if ((2u ? a0 % 2u : a0) == 0u) {
+        _result = std::make_pair(List<unsigned int>::cons(a0, evens), odds);
       } else {
-        _result = std::make_pair(evens, List<unsigned int>::cons(d_a0, odds));
+        _result = std::make_pair(evens, List<unsigned int>::cons(a0, odds));
       }
     }
   }

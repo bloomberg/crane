@@ -10,10 +10,9 @@ FunctorComp::Stack::pop(const List<unsigned int> &s) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(s.v())) {
     return std::optional<std::pair<unsigned int, List<unsigned int>>>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(s.v());
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(s.v());
     return std::make_optional<std::pair<unsigned int, List<unsigned int>>>(
-        std::make_pair(d_a0, *d_a1));
+        std::make_pair(a0, *a1));
   }
 }
 
@@ -40,19 +39,18 @@ FunctorComp::Queue::pop(
       return std::optional<std::pair<
           unsigned int, std::pair<List<unsigned int>, List<unsigned int>>>>();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
       return std::make_optional<std::pair<
           unsigned int, std::pair<List<unsigned int>, List<unsigned int>>>>(
-          std::make_pair(d_a00,
-                         std::make_pair(*d_a10, List<unsigned int>::nil())));
+          std::make_pair(a00, std::make_pair(*a10, List<unsigned int>::nil())));
     }
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<unsigned int>::Cons>(front.v());
     return std::make_optional<std::pair<
         unsigned int, std::pair<List<unsigned int>, List<unsigned int>>>>(
-        std::make_pair(d_a0, std::make_pair(*d_a1, back)));
+        std::make_pair(a0, std::make_pair(*a1, back)));
   }
 }
 

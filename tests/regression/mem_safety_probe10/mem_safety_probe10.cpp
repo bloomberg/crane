@@ -31,10 +31,10 @@ unsigned int MemSafetyProbe10::sum_fns(
               std::function<unsigned int(unsigned int)>>::Mynil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe10::mylist<
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe10::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0(0u)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons{a0(0u)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -63,36 +63,32 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
+      const auto &[a0, a1, a2] =
           std::get<typename MemSafetyProbe10::tree::Node>(_loop_t.v());
-      MemSafetyProbe10::tree d_a0_value = *d_a0;
-      MemSafetyProbe10::tree d_a2_value = *d_a2;
+      MemSafetyProbe10::tree a0_value = *a0;
+      MemSafetyProbe10::tree a2_value = *a2;
       auto _cell = std::make_unique<
           MemSafetyProbe10::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-              [=](unsigned int n) mutable { return (d_a1 + n); }, nullptr));
+              [=](unsigned int n) mutable { return (a1 + n); }, nullptr));
       auto _cell1 = std::make_unique<
           MemSafetyProbe10::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-              [=](unsigned int n) mutable {
-                return (d_a0_value.tree_sum() + n);
-              },
+              [=](unsigned int n) mutable { return (a0_value.tree_sum() + n); },
               nullptr));
       auto _cell2 = std::make_unique<
           MemSafetyProbe10::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-              [=](unsigned int n) mutable {
-                return (d_a2_value.tree_sum() + n);
-              },
+              [=](unsigned int n) mutable { return (a2_value.tree_sum() + n); },
               nullptr));
       std::get<
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons>(
           _cell1->v_mut())
-          .d_a1 = std::move(_cell2);
+          .a1 = std::move(_cell2);
       std::get<
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons>(
           _cell->v_mut())
-          .d_a1 = std::move(_cell1);
+          .a1 = std::move(_cell1);
       *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
@@ -101,10 +97,10 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
                         std::get<typename mylist<
                             std::function<unsigned int(unsigned int)>>::Mycons>(
                             (*_write)->v_mut())
-                            .d_a1->v_mut())
-                        .d_a1->v_mut())
-                    .d_a1;
-      _loop_t = d_a0_value;
+                            .a1->v_mut())
+                        .a1->v_mut())
+                    .a1;
+      _loop_t = a0_value;
       continue;
     }
   }
@@ -165,35 +161,35 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
                 mylist<std::function<unsigned int(unsigned int)>>::mynil()));
         break;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
+        const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe10::tree::Node>(_loop_t.v());
-        MemSafetyProbe10::tree d_a0_value = *d_a0;
-        MemSafetyProbe10::tree d_a2_value = *d_a2;
+        MemSafetyProbe10::tree a0_value = *a0;
+        MemSafetyProbe10::tree a2_value = *a2;
         auto _cell = std::make_unique<MemSafetyProbe10::mylist<
             std::function<unsigned int(unsigned int)>>>(
             typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-                [=](unsigned int n) mutable { return (d_a1 + n); }, nullptr));
+                [=](unsigned int n) mutable { return (a1 + n); }, nullptr));
         auto _cell1 = std::make_unique<MemSafetyProbe10::mylist<
             std::function<unsigned int(unsigned int)>>>(
             typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
                 [=](unsigned int n) mutable {
-                  return ((d_a0_value.tree_sum() + d_a2_value.tree_sum()) + n);
+                  return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
                 },
                 nullptr));
         std::get<
             typename mylist<std::function<unsigned int(unsigned int)>>::Mycons>(
             _cell->v_mut())
-            .d_a1 = std::move(_cell1);
+            .a1 = std::move(_cell1);
         *_write = std::move(_cell);
         _write = &std::get<typename mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(
                       std::get<typename mylist<
                           std::function<unsigned int(unsigned int)>>::Mycons>(
                           (*_write)->v_mut())
-                          .d_a1->v_mut())
-                      .d_a1;
+                          .a1->v_mut())
+                      .a1;
         _loop_depth = d;
-        _loop_t = d_a0_value;
+        _loop_t = a0_value;
         continue;
       }
     }

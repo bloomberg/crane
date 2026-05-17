@@ -26,21 +26,21 @@ struct LetMatchType {
   /// 7. let-bound match in monadic context
   static std::string let_match_monadic(bool b);
   /// 8. let-bound match of custom type
-  enum class Direction { e_NORTH, e_SOUTH, e_EAST, e_WEST };
+  enum class Direction { NORTH, SOUTH, EAST, WEST };
 
   template <typename T1>
   static T1 direction_rect(T1 f, T1 f0, T1 f1, T1 f2, Direction d) {
     switch (d) {
-    case Direction::e_NORTH: {
+    case Direction::NORTH: {
       return f;
     }
-    case Direction::e_SOUTH: {
+    case Direction::SOUTH: {
       return f0;
     }
-    case Direction::e_EAST: {
+    case Direction::EAST: {
       return f1;
     }
-    case Direction::e_WEST: {
+    case Direction::WEST: {
       return f2;
     }
     default:
@@ -51,16 +51,16 @@ struct LetMatchType {
   template <typename T1>
   static T1 direction_rec(T1 f, T1 f0, T1 f1, T1 f2, Direction d) {
     switch (d) {
-    case Direction::e_NORTH: {
+    case Direction::NORTH: {
       return f;
     }
-    case Direction::e_SOUTH: {
+    case Direction::SOUTH: {
       return f0;
     }
-    case Direction::e_EAST: {
+    case Direction::EAST: {
       return f1;
     }
-    case Direction::e_WEST: {
+    case Direction::WEST: {
       return f2;
     }
     default:

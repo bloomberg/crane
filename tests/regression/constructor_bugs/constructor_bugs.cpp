@@ -215,12 +215,11 @@ ConstructorBugs::match_option_record(
 std::pair<ConstructorBugs::Inner, unsigned int>
 ConstructorBugs::match_sum(const ConstructorBugs::MySum &s) {
   if (std::holds_alternative<typename ConstructorBugs::MySum::Left>(s.v())) {
-    const auto &[d_a0] = std::get<typename ConstructorBugs::MySum::Left>(s.v());
-    return std::make_pair(d_a0, d_a0.inner_val);
+    const auto &[a0] = std::get<typename ConstructorBugs::MySum::Left>(s.v());
+    return std::make_pair(a0, a0.inner_val);
   } else {
-    const auto &[d_a0] =
-        std::get<typename ConstructorBugs::MySum::Right>(s.v());
-    return std::make_pair(Inner{d_a0}, d_a0);
+    const auto &[a0] = std::get<typename ConstructorBugs::MySum::Right>(s.v());
+    return std::make_pair(Inner{a0}, a0);
   }
 }
 

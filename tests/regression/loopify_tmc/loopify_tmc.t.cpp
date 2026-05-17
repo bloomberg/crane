@@ -24,8 +24,8 @@ std::vector<T> to_vec(const LoopifyTmc::list<T> &l) {
   const LoopifyTmc::list<T> *cur = &l;
   while (std::holds_alternative<typename LoopifyTmc::list<T>::Cons>(cur->v())) {
     auto &c = std::get<typename LoopifyTmc::list<T>::Cons>(cur->v());
-    result.push_back(c.d_a0);
-    cur = c.d_a1.get();
+    result.push_back(c.a0);
+    cur = c.a1.get();
   }
   return result;
 }

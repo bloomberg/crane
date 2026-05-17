@@ -121,7 +121,7 @@ ComprehensivePatterns::make_list(unsigned int n, ComprehensivePatterns::S s) {
       _write = &std::get<typename List<
           std::pair<ComprehensivePatterns::S, unsigned int>>::Cons>(
                     (*_write)->v_mut())
-                    .d_a1;
+                    .a1;
       _loop_n = m;
       continue;
     }
@@ -155,13 +155,13 @@ std::pair<ComprehensivePatterns::S, unsigned int>
 ComprehensivePatterns::match_three(ComprehensivePatterns::Three t,
                                    ComprehensivePatterns::S s) {
   switch (t) {
-  case Three::e_A: {
+  case Three::A: {
     return std::make_pair(s, s.s_a);
   }
-  case Three::e_B: {
+  case Three::B: {
     return std::make_pair(s, s.s_b);
   }
-  case Three::e_C: {
+  case Three::C: {
     return std::make_pair(s, s.s_c);
   }
   default:
@@ -331,7 +331,7 @@ ComprehensivePatterns::repeat_r2(unsigned int n, ComprehensivePatterns::R2 r2) {
           &std::get<typename List<std::pair<ComprehensivePatterns::R2,
                                             ComprehensivePatterns::R1>>::Cons>(
                (*_write)->v_mut())
-               .d_a1;
+               .a1;
       _loop_n = m;
       continue;
     }
@@ -493,7 +493,7 @@ ComprehensivePatterns::repeat_pair(unsigned int n, ComprehensivePatterns::R r) {
       _write = &std::get<typename List<
           std::pair<ComprehensivePatterns::R, unsigned int>>::Cons>(
                     (*_write)->v_mut())
-                    .d_a1;
+                    .a1;
       _loop_n = m;
       continue;
     }

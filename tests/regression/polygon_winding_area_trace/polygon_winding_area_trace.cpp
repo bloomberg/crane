@@ -39,20 +39,20 @@ Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
           typename List<PolygonWindingAreaTraceCase::Point>::Nil>(pts.v())) {
     return Real::from_z(INT64_C(0));
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
             pts.v());
     unsigned int n = all_pts.length();
     Real lambda_prev =
         nth_cyclic<PolygonWindingAreaTraceCase::Point>(
-            d_a0, all_pts,
+            a0, all_pts,
             ((((idx + n) - 1u) > (idx + n) ? 0 : ((idx + n) - 1u))))
             .lambda;
-    Real lambda_next = nth_cyclic<PolygonWindingAreaTraceCase::Point>(
-                           d_a0, all_pts, (idx + 1u))
-                           .lambda;
-    Real term = (lon_diff(lambda_prev, lambda_next) * r_sin(d_a0.phi));
-    return (term + spherical_shoelace_aux(*d_a1, all_pts, (idx + 1u)));
+    Real lambda_next =
+        nth_cyclic<PolygonWindingAreaTraceCase::Point>(a0, all_pts, (idx + 1u))
+            .lambda;
+    Real term = (lon_diff(lambda_prev, lambda_next) * r_sin(a0.phi));
+    return (term + spherical_shoelace_aux(*a1, all_pts, (idx + 1u)));
   }
 }
 
@@ -110,18 +110,18 @@ Real PolygonWindingAreaTraceCase::winding_sum_aux(
           typename List<PolygonWindingAreaTraceCase::Point>::Nil>(pts.v())) {
     return Real::from_z(INT64_C(0));
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
             pts.v());
-    auto &&_sv0 = *d_a1;
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<
             typename List<PolygonWindingAreaTraceCase::Point>::Nil>(_sv0.v())) {
-      return segment_angle(p, d_a0, first);
+      return segment_angle(p, a0, first);
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
               _sv0.v());
-      return (segment_angle(p, d_a0, d_a00) + winding_sum_aux(p, *d_a1, first));
+      return (segment_angle(p, a0, a00) + winding_sum_aux(p, *a1, first));
     }
   }
 }
@@ -133,10 +133,10 @@ Real PolygonWindingAreaTraceCase::winding_sum(
           typename List<PolygonWindingAreaTraceCase::Point>::Nil>(poly.v())) {
     return Real::from_z(INT64_C(0));
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
             poly.v());
-    return winding_sum_aux(p, poly, d_a0);
+    return winding_sum_aux(p, poly, a0);
   }
 }
 

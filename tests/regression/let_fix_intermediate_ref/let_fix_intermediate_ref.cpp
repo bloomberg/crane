@@ -8,19 +8,18 @@ LetFixIntermediateRef::sum_heads(const List<List<unsigned int>> &ll) {
             xss.v())) {
       return acc;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<List<unsigned int>>::Cons>(xss.v());
       unsigned int hd = [&]() {
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                d_a0.v())) {
+        if (std::holds_alternative<typename List<unsigned int>::Nil>(a0.v())) {
           return 0u;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(d_a0.v());
-          return d_a00;
+          const auto &[a00, a10] =
+              std::get<typename List<unsigned int>::Cons>(a0.v());
+          return a00;
         }
       }();
-      return _self_go(_self_go, *d_a1, (acc + hd));
+      return _self_go(_self_go, *a1, (acc + hd));
     }
   };
   auto go = [&](const List<List<unsigned int>> &xss,
@@ -35,14 +34,13 @@ unsigned int LetFixIntermediateRef::zip_sum(const List<unsigned int> &l1,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l1.v());
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l1.v());
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
       return 0u;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(l2.v());
-      return ((d_a0 + d_a00) + zip_sum(*d_a1, *d_a10));
+      return ((a0 + a00) + zip_sum(*a1, *a10));
     }
   }
 }

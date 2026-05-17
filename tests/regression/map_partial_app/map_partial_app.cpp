@@ -4,9 +4,9 @@ unsigned int MapPartialApp::tree_sum(const MapPartialApp::tree &t) {
   if (std::holds_alternative<typename MapPartialApp::tree::Leaf>(t.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename MapPartialApp::tree::Node>(t.v());
-    return ((tree_sum(*d_a0) + d_a1) + tree_sum(*d_a2));
+    return ((tree_sum(*a0) + a1) + tree_sum(*a2));
   }
 }
 
@@ -20,8 +20,7 @@ unsigned int MapPartialApp::sum_list(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    return (d_a0 + sum_list(*d_a1));
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+    return (a0 + sum_list(*a1));
   }
 }

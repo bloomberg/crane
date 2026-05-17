@@ -8,50 +8,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +60,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -80,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -117,70 +115,70 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+    requires std::is_invocable_r_v<bool, F0 &, A &>
   bool existsb(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return false;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (f(d_a0) || (*d_a1).existsb(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (f(a0) || (*a1).existsb(f));
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return f(d_a0, (*d_a1).template fold_right<T1>(f, a0));
+      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
+      return f(a1, (*a2).template fold_right<T1>(f, a0));
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<List<T1>, F0 &, t_A &>
+    requires std::is_invocable_r_v<List<T1>, F0 &, A &>
   List<T1> flat_map(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return f(d_a0).app((*d_a1).template flat_map<T1>(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return f(a0).app((*a1).template flat_map<T1>(f));
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+    requires std::is_invocable_r_v<T1, F0 &, A &>
   List<T1> map(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return List<T1>::cons(f(d_a0), (*d_a1).template map<T1>(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<T1>::cons(f(a0), (*a1).template map<T1>(f));
     }
   }
 
   unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return ((*d_a1).length() + 1);
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return ((*a1).length() + 1);
     }
   }
 
-  List<t_A> app(List<t_A> m) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  List<A> app(List<A> m) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<A>::cons(a0, (*a1).app(std::move(m)));
     }
   }
 };
@@ -188,11 +186,11 @@ public:
 struct Positive {
   // TYPES
   struct XI {
-    std::unique_ptr<Positive> d_a0;
+    std::unique_ptr<Positive> a0;
   };
 
   struct XO {
-    std::unique_ptr<Positive> d_a0;
+    std::unique_ptr<Positive> a0;
   };
 
   struct XH {};
@@ -201,29 +199,29 @@ struct Positive {
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Positive() {}
 
-  explicit Positive(XI _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XI _v) : v_(std::move(_v)) {}
 
-  explicit Positive(XO _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XO _v) : v_(std::move(_v)) {}
 
-  explicit Positive(XH _v) : d_v_(_v) {}
+  explicit Positive(XH _v) : v_(_v) {}
 
-  Positive(const Positive &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Positive(Positive &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Positive(Positive &&_other) : v_(std::move(_other.v_)) {}
 
   Positive &operator=(const Positive &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Positive &operator=(Positive &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -246,20 +244,20 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XI>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = XI{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XI>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XO>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = XO{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XO>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
-        _dst->d_v_ = XH{};
+        _dst->v_ = XH{};
       }
     }
     return _out;
@@ -281,16 +279,16 @@ public:
     std::vector<std::unique_ptr<Positive>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
-      if (std::holds_alternative<XI>(_node.d_v_)) {
-        auto &_alt = std::get<XI>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<XI>(_node.v_)) {
+        auto &_alt = std::get<XI>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<XO>(_node.d_v_)) {
-        auto &_alt = std::get<XO>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<XO>(_node.v_)) {
+        auto &_alt = std::get<XO>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -304,10 +302,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Z {
@@ -315,40 +313,40 @@ struct Z {
   struct Z0 {};
 
   struct Zpos {
-    Positive d_a0;
+    Positive a0;
   };
 
   struct Zneg {
-    Positive d_a0;
+    Positive a0;
   };
 
   using variant_t = std::variant<Z0, Zpos, Zneg>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Z() {}
 
-  explicit Z(Z0 _v) : d_v_(_v) {}
+  explicit Z(Z0 _v) : v_(_v) {}
 
-  explicit Z(Zpos _v) : d_v_(std::move(_v)) {}
+  explicit Z(Zpos _v) : v_(std::move(_v)) {}
 
-  explicit Z(Zneg _v) : d_v_(std::move(_v)) {}
+  explicit Z(Zneg _v) : v_(std::move(_v)) {}
 
-  Z(const Z &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Z(Z &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Z(Z &&_other) : v_(std::move(_other.v_)) {}
 
   Z &operator=(const Z &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Z &operator=(Z &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -357,11 +355,11 @@ public:
     if (std::holds_alternative<Z0>(this->v())) {
       return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(this->v())) {
-      const auto &[d_a0] = std::get<Zpos>(this->v());
-      return Z(Zpos{d_a0.clone()});
+      const auto &[a0] = std::get<Zpos>(this->v());
+      return Z(Zpos{a0.clone()});
     } else {
-      const auto &[d_a0] = std::get<Zneg>(this->v());
-      return Z(Zneg{d_a0.clone()});
+      const auto &[a0] = std::get<Zneg>(this->v());
+      return Z(Zneg{a0.clone()});
     }
   }
 
@@ -373,10 +371,10 @@ public:
   static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Pos {
@@ -402,17 +400,17 @@ struct ListDef {
 };
 
 struct CoalitionBidHonorTraceCase {
-  enum class Clan { e_CLANWOLF, e_CLANJADEFALCON, e_CLANGHOSTBEAR };
+  enum class Clan { CLANWOLF, CLANJADEFALCON, CLANGHOSTBEAR };
 
   template <typename T1> static T1 Clan_rect(T1 f, T1 f0, T1 f1, Clan c) {
     switch (c) {
-    case Clan::e_CLANWOLF: {
+    case Clan::CLANWOLF: {
       return f;
     }
-    case Clan::e_CLANJADEFALCON: {
+    case Clan::CLANJADEFALCON: {
       return f0;
     }
-    case Clan::e_CLANGHOSTBEAR: {
+    case Clan::CLANGHOSTBEAR: {
       return f1;
     }
     default:
@@ -422,13 +420,13 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1> static T1 Clan_rec(T1 f, T1 f0, T1 f1, Clan c) {
     switch (c) {
-    case Clan::e_CLANWOLF: {
+    case Clan::CLANWOLF: {
       return f;
     }
-    case Clan::e_CLANJADEFALCON: {
+    case Clan::CLANJADEFALCON: {
       return f0;
     }
-    case Clan::e_CLANGHOSTBEAR: {
+    case Clan::CLANGHOSTBEAR: {
       return f1;
     }
     default:
@@ -438,17 +436,17 @@ struct CoalitionBidHonorTraceCase {
 
   static bool clan_eq_dec(Clan c1, Clan c2);
   static bool clan_eqb(Clan c1, Clan c2);
-  enum class Rank { e_WARRIOR, e_STARCAPTAIN, e_STARCOLONEL };
+  enum class Rank { WARRIOR, STARCAPTAIN, STARCOLONEL };
 
   template <typename T1> static T1 Rank_rect(T1 f, T1 f0, T1 f1, Rank r) {
     switch (r) {
-    case Rank::e_WARRIOR: {
+    case Rank::WARRIOR: {
       return f;
     }
-    case Rank::e_STARCAPTAIN: {
+    case Rank::STARCAPTAIN: {
       return f0;
     }
-    case Rank::e_STARCOLONEL: {
+    case Rank::STARCOLONEL: {
       return f1;
     }
     default:
@@ -458,13 +456,13 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1> static T1 Rank_rec(T1 f, T1 f0, T1 f1, Rank r) {
     switch (r) {
-    case Rank::e_WARRIOR: {
+    case Rank::WARRIOR: {
       return f;
     }
-    case Rank::e_STARCAPTAIN: {
+    case Rank::STARCAPTAIN: {
       return f0;
     }
-    case Rank::e_STARCOLONEL: {
+    case Rank::STARCOLONEL: {
       return f1;
     }
     default:
@@ -489,18 +487,18 @@ struct CoalitionBidHonorTraceCase {
   };
 
   static bool may_issue_batchall(const Commander &c);
-  enum class UnitClass { e_OMNIMECH, e_BATTLEMECH, e_ELEMENTAL };
+  enum class UnitClass { OMNIMECH, BATTLEMECH, ELEMENTAL };
 
   template <typename T1>
   static T1 UnitClass_rect(T1 f, T1 f0, T1 f1, UnitClass u) {
     switch (u) {
-    case UnitClass::e_OMNIMECH: {
+    case UnitClass::OMNIMECH: {
       return f;
     }
-    case UnitClass::e_BATTLEMECH: {
+    case UnitClass::BATTLEMECH: {
       return f0;
     }
-    case UnitClass::e_ELEMENTAL: {
+    case UnitClass::ELEMENTAL: {
       return f1;
     }
     default:
@@ -511,31 +509,31 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1>
   static T1 UnitClass_rec(T1 f, T1 f0, T1 f1, UnitClass u) {
     switch (u) {
-    case UnitClass::e_OMNIMECH: {
+    case UnitClass::OMNIMECH: {
       return f;
     }
-    case UnitClass::e_BATTLEMECH: {
+    case UnitClass::BATTLEMECH: {
       return f0;
     }
-    case UnitClass::e_ELEMENTAL: {
+    case UnitClass::ELEMENTAL: {
       return f1;
     }
     default:
       std::unreachable();
     }
   }
-  enum class WeightClass { e_LIGHT, e_HEAVY, e_ASSAULT };
+  enum class WeightClass { LIGHT, HEAVY, ASSAULT };
 
   template <typename T1>
   static T1 WeightClass_rect(T1 f, T1 f0, T1 f1, WeightClass w) {
     switch (w) {
-    case WeightClass::e_LIGHT: {
+    case WeightClass::LIGHT: {
       return f;
     }
-    case WeightClass::e_HEAVY: {
+    case WeightClass::HEAVY: {
       return f0;
     }
-    case WeightClass::e_ASSAULT: {
+    case WeightClass::ASSAULT: {
       return f1;
     }
     default:
@@ -546,13 +544,13 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1>
   static T1 WeightClass_rec(T1 f, T1 f0, T1 f1, WeightClass w) {
     switch (w) {
-    case WeightClass::e_LIGHT: {
+    case WeightClass::LIGHT: {
       return f;
     }
-    case WeightClass::e_HEAVY: {
+    case WeightClass::HEAVY: {
       return f0;
     }
-    case WeightClass::e_ASSAULT: {
+    case WeightClass::ASSAULT: {
       return f1;
     }
     default:
@@ -613,14 +611,14 @@ struct CoalitionBidHonorTraceCase {
                                   const ForceMetrics &m2);
   static ForceMetrics force_metrics(const List<Unit> &f);
   static bool metrics_total_lt(const ForceMetrics &m1, const ForceMetrics &m2);
-  enum class Side { e_ATTACKER, e_DEFENDER };
+  enum class Side { ATTACKER, DEFENDER };
 
   template <typename T1> static T1 Side_rect(T1 f, T1 f0, Side s) {
     switch (s) {
-    case Side::e_ATTACKER: {
+    case Side::ATTACKER: {
       return f;
     }
-    case Side::e_DEFENDER: {
+    case Side::DEFENDER: {
       return f0;
     }
     default:
@@ -630,10 +628,10 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1> static T1 Side_rec(T1 f, T1 f0, Side s) {
     switch (s) {
-    case Side::e_ATTACKER: {
+    case Side::ATTACKER: {
       return f;
     }
-    case Side::e_DEFENDER: {
+    case Side::DEFENDER: {
       return f0;
     }
     default:
@@ -697,14 +695,14 @@ struct CoalitionBidHonorTraceCase {
                                               const CoalitionMemberBid &cbid);
   static bool valid_coalition_member_bid_b(const List<CoalitionMember> &c,
                                            const CoalitionMemberBid &cbid);
-  enum class TrialType { e_TRIALOFPOSSESSION, e_TRIALOFANNIHILATION };
+  enum class TrialType { TRIALOFPOSSESSION, TRIALOFANNIHILATION };
 
   template <typename T1> static T1 TrialType_rect(T1 f, T1 f0, TrialType t) {
     switch (t) {
-    case TrialType::e_TRIALOFPOSSESSION: {
+    case TrialType::TRIALOFPOSSESSION: {
       return f;
     }
-    case TrialType::e_TRIALOFANNIHILATION: {
+    case TrialType::TRIALOFANNIHILATION: {
       return f0;
     }
     default:
@@ -714,10 +712,10 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1> static T1 TrialType_rec(T1 f, T1 f0, TrialType t) {
     switch (t) {
-    case TrialType::e_TRIALOFPOSSESSION: {
+    case TrialType::TRIALOFPOSSESSION: {
       return f;
     }
-    case TrialType::e_TRIALOFANNIHILATION: {
+    case TrialType::TRIALOFANNIHILATION: {
       return f0;
     }
     default:
@@ -730,34 +728,34 @@ struct CoalitionBidHonorTraceCase {
     struct PrizeHonor {};
 
     struct PrizeEnclave {
-      unsigned int d_enclave_id;
+      unsigned int enclave_id;
     };
 
     using variant_t = std::variant<PrizeHonor, PrizeEnclave>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Prize() {}
 
-    explicit Prize(PrizeHonor _v) : d_v_(_v) {}
+    explicit Prize(PrizeHonor _v) : v_(_v) {}
 
-    explicit Prize(PrizeEnclave _v) : d_v_(std::move(_v)) {}
+    explicit Prize(PrizeEnclave _v) : v_(std::move(_v)) {}
 
-    Prize(const Prize &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    Prize(const Prize &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Prize(Prize &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Prize(Prize &&_other) : v_(std::move(_other.v_)) {}
 
     Prize &operator=(const Prize &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     Prize &operator=(Prize &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -766,8 +764,8 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<PrizeHonor>(this->v())) {
         return Prize(PrizeHonor{});
       } else {
-        const auto &[d_enclave_id] = std::get<PrizeEnclave>(this->v());
-        return Prize(PrizeEnclave{d_enclave_id});
+        const auto &[enclave_id] = std::get<PrizeEnclave>(this->v());
+        return Prize(PrizeEnclave{enclave_id});
       }
     }
 
@@ -779,10 +777,10 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
@@ -790,9 +788,9 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<typename Prize::PrizeHonor>(this->v())) {
         return f;
       } else {
-        const auto &[d_enclave_id] =
+        const auto &[enclave_id0] =
             std::get<typename Prize::PrizeEnclave>(this->v());
-        return f0(d_enclave_id);
+        return f0(enclave_id0);
       }
     }
 
@@ -802,9 +800,9 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<typename Prize::PrizeHonor>(this->v())) {
         return f;
       } else {
-        const auto &[d_enclave_id] =
+        const auto &[enclave_id0] =
             std::get<typename Prize::PrizeEnclave>(this->v());
-        return f0(d_enclave_id);
+        return f0(enclave_id0);
       }
     }
   };
@@ -812,51 +810,51 @@ struct CoalitionBidHonorTraceCase {
   struct Location {
     // TYPES
     struct LocPlanetSurface {
-      unsigned int d_world_id;
-      unsigned int d_region_id;
+      unsigned int world_id;
+      unsigned int region_id;
     };
 
     struct LocEnclave {
-      unsigned int d_enclave_id;
+      unsigned int enclave_id;
     };
 
     using variant_t = std::variant<LocPlanetSurface, LocEnclave>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Location() {}
 
-    explicit Location(LocPlanetSurface _v) : d_v_(std::move(_v)) {}
+    explicit Location(LocPlanetSurface _v) : v_(std::move(_v)) {}
 
-    explicit Location(LocEnclave _v) : d_v_(std::move(_v)) {}
+    explicit Location(LocEnclave _v) : v_(std::move(_v)) {}
 
-    Location(const Location &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    Location(const Location &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Location(Location &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Location(Location &&_other) : v_(std::move(_other.v_)) {}
 
     Location &operator=(const Location &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     Location &operator=(Location &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     Location clone() const {
       if (std::holds_alternative<LocPlanetSurface>(this->v())) {
-        const auto &[d_world_id, d_region_id] =
+        const auto &[world_id, region_id] =
             std::get<LocPlanetSurface>(this->v());
-        return Location(LocPlanetSurface{d_world_id, d_region_id});
+        return Location(LocPlanetSurface{world_id, region_id});
       } else {
-        const auto &[d_enclave_id] = std::get<LocEnclave>(this->v());
-        return Location(LocEnclave{d_enclave_id});
+        const auto &[enclave_id] = std::get<LocEnclave>(this->v());
+        return Location(LocEnclave{enclave_id});
       }
     }
 
@@ -871,10 +869,10 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
@@ -883,13 +881,13 @@ struct CoalitionBidHonorTraceCase {
     T1 Location_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Location::LocPlanetSurface>(
               this->v())) {
-        const auto &[d_world_id, d_region_id] =
+        const auto &[world_id0, region_id0] =
             std::get<typename Location::LocPlanetSurface>(this->v());
-        return f(d_world_id, d_region_id);
+        return f(world_id0, region_id0);
       } else {
-        const auto &[d_enclave_id] =
+        const auto &[enclave_id0] =
             std::get<typename Location::LocEnclave>(this->v());
-        return f0(d_enclave_id);
+        return f0(enclave_id0);
       }
     }
 
@@ -900,13 +898,13 @@ struct CoalitionBidHonorTraceCase {
     T1 Location_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Location::LocPlanetSurface>(
               this->v())) {
-        const auto &[d_world_id, d_region_id] =
+        const auto &[world_id0, region_id0] =
             std::get<typename Location::LocPlanetSurface>(this->v());
-        return f(d_world_id, d_region_id);
+        return f(world_id0, region_id0);
       } else {
-        const auto &[d_enclave_id] =
+        const auto &[enclave_id0] =
             std::get<typename Location::LocEnclave>(this->v());
-        return f0(d_enclave_id);
+        return f0(enclave_id0);
       }
     }
   };
@@ -961,35 +959,35 @@ struct CoalitionBidHonorTraceCase {
     struct RefusalInsufficientRank {};
 
     struct RefusalOther {
-      unsigned int d_note;
+      unsigned int note;
     };
 
     using variant_t = std::variant<RefusalInsufficientRank, RefusalOther>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     RefusalReason() {}
 
-    explicit RefusalReason(RefusalInsufficientRank _v) : d_v_(_v) {}
+    explicit RefusalReason(RefusalInsufficientRank _v) : v_(_v) {}
 
-    explicit RefusalReason(RefusalOther _v) : d_v_(std::move(_v)) {}
+    explicit RefusalReason(RefusalOther _v) : v_(std::move(_v)) {}
 
     RefusalReason(const RefusalReason &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+        : v_(std::move(_other.clone().v_)) {}
 
-    RefusalReason(RefusalReason &&_other) : d_v_(std::move(_other.d_v_)) {}
+    RefusalReason(RefusalReason &&_other) : v_(std::move(_other.v_)) {}
 
     RefusalReason &operator=(const RefusalReason &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     RefusalReason &operator=(RefusalReason &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -998,8 +996,8 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<RefusalInsufficientRank>(this->v())) {
         return RefusalReason(RefusalInsufficientRank{});
       } else {
-        const auto &[d_note] = std::get<RefusalOther>(this->v());
-        return RefusalReason(RefusalOther{d_note});
+        const auto &[note] = std::get<RefusalOther>(this->v());
+        return RefusalReason(RefusalOther{note});
       }
     }
 
@@ -1013,10 +1011,10 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
@@ -1025,9 +1023,9 @@ struct CoalitionBidHonorTraceCase {
               typename RefusalReason::RefusalInsufficientRank>(this->v())) {
         return f;
       } else {
-        const auto &[d_note] =
+        const auto &[note0] =
             std::get<typename RefusalReason::RefusalOther>(this->v());
-        return f0(d_note);
+        return f0(note0);
       }
     }
 
@@ -1038,9 +1036,9 @@ struct CoalitionBidHonorTraceCase {
               typename RefusalReason::RefusalInsufficientRank>(this->v())) {
         return f;
       } else {
-        const auto &[d_note] =
+        const auto &[note0] =
             std::get<typename RefusalReason::RefusalOther>(this->v());
-        return f0(d_note);
+        return f0(note0);
       }
     }
   };
@@ -1048,37 +1046,37 @@ struct CoalitionBidHonorTraceCase {
   struct ProtocolAction {
     // TYPES
     struct ActChallenge {
-      BatchallChallenge d_chal;
+      BatchallChallenge chal;
     };
 
     struct ActRespond {
-      BatchallResponse d_resp;
+      BatchallResponse resp;
     };
 
     struct ActRefuse {
-      RefusalReason d_reason;
+      RefusalReason reason;
     };
 
     struct ActBid {
-      ForceBid d_bid;
+      ForceBid bid;
     };
 
     struct ActCoalitionBid {
-      CoalitionMemberBid d_cbid;
+      CoalitionMemberBid cbid;
     };
 
     struct ActPass {
-      Side d_side;
+      Side side;
     };
 
     struct ActClose {};
 
     struct ActWithdraw {
-      Side d_side;
+      Side side;
     };
 
     struct ActBreakBid {
-      Side d_side;
+      Side side;
     };
 
     using variant_t = std::variant<ActChallenge, ActRespond, ActRefuse, ActBid,
@@ -1087,73 +1085,73 @@ struct CoalitionBidHonorTraceCase {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     ProtocolAction() {}
 
-    explicit ProtocolAction(ActChallenge _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActChallenge _v) : v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActRespond _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActRespond _v) : v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActRefuse _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActRefuse _v) : v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActBid _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActBid _v) : v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActCoalitionBid _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActCoalitionBid _v) : v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActPass _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActPass _v) : v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActClose _v) : d_v_(_v) {}
+    explicit ProtocolAction(ActClose _v) : v_(_v) {}
 
-    explicit ProtocolAction(ActWithdraw _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActWithdraw _v) : v_(std::move(_v)) {}
 
-    explicit ProtocolAction(ActBreakBid _v) : d_v_(std::move(_v)) {}
+    explicit ProtocolAction(ActBreakBid _v) : v_(std::move(_v)) {}
 
     ProtocolAction(const ProtocolAction &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+        : v_(std::move(_other.clone().v_)) {}
 
-    ProtocolAction(ProtocolAction &&_other) : d_v_(std::move(_other.d_v_)) {}
+    ProtocolAction(ProtocolAction &&_other) : v_(std::move(_other.v_)) {}
 
     ProtocolAction &operator=(const ProtocolAction &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     ProtocolAction &operator=(ProtocolAction &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     ProtocolAction clone() const {
       if (std::holds_alternative<ActChallenge>(this->v())) {
-        const auto &[d_chal] = std::get<ActChallenge>(this->v());
-        return ProtocolAction(ActChallenge{d_chal.clone()});
+        const auto &[chal] = std::get<ActChallenge>(this->v());
+        return ProtocolAction(ActChallenge{chal.clone()});
       } else if (std::holds_alternative<ActRespond>(this->v())) {
-        const auto &[d_resp] = std::get<ActRespond>(this->v());
-        return ProtocolAction(ActRespond{d_resp.clone()});
+        const auto &[resp] = std::get<ActRespond>(this->v());
+        return ProtocolAction(ActRespond{resp.clone()});
       } else if (std::holds_alternative<ActRefuse>(this->v())) {
-        const auto &[d_reason] = std::get<ActRefuse>(this->v());
-        return ProtocolAction(ActRefuse{d_reason.clone()});
+        const auto &[reason] = std::get<ActRefuse>(this->v());
+        return ProtocolAction(ActRefuse{reason.clone()});
       } else if (std::holds_alternative<ActBid>(this->v())) {
-        const auto &[d_bid] = std::get<ActBid>(this->v());
-        return ProtocolAction(ActBid{d_bid.clone()});
+        const auto &[bid] = std::get<ActBid>(this->v());
+        return ProtocolAction(ActBid{bid.clone()});
       } else if (std::holds_alternative<ActCoalitionBid>(this->v())) {
-        const auto &[d_cbid] = std::get<ActCoalitionBid>(this->v());
-        return ProtocolAction(ActCoalitionBid{d_cbid.clone()});
+        const auto &[cbid] = std::get<ActCoalitionBid>(this->v());
+        return ProtocolAction(ActCoalitionBid{cbid.clone()});
       } else if (std::holds_alternative<ActPass>(this->v())) {
-        const auto &[d_side] = std::get<ActPass>(this->v());
-        return ProtocolAction(ActPass{d_side});
+        const auto &[side] = std::get<ActPass>(this->v());
+        return ProtocolAction(ActPass{side});
       } else if (std::holds_alternative<ActClose>(this->v())) {
         return ProtocolAction(ActClose{});
       } else if (std::holds_alternative<ActWithdraw>(this->v())) {
-        const auto &[d_side] = std::get<ActWithdraw>(this->v());
-        return ProtocolAction(ActWithdraw{d_side});
+        const auto &[side] = std::get<ActWithdraw>(this->v());
+        return ProtocolAction(ActWithdraw{side});
       } else {
-        const auto &[d_side] = std::get<ActBreakBid>(this->v());
-        return ProtocolAction(ActBreakBid{d_side});
+        const auto &[side] = std::get<ActBreakBid>(this->v());
+        return ProtocolAction(ActBreakBid{side});
       }
     }
 
@@ -1193,10 +1191,10 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
@@ -1213,43 +1211,43 @@ struct CoalitionBidHonorTraceCase {
                                 F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
                                 const ProtocolAction &p) {
     if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p.v())) {
-      const auto &[d_chal] =
+      const auto &[chal0] =
           std::get<typename ProtocolAction::ActChallenge>(p.v());
-      return f(d_chal);
+      return f(chal0);
     } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
                    p.v())) {
-      const auto &[d_resp] =
+      const auto &[resp0] =
           std::get<typename ProtocolAction::ActRespond>(p.v());
-      return f0(d_resp);
+      return f0(resp0);
     } else if (std::holds_alternative<typename ProtocolAction::ActRefuse>(
                    p.v())) {
-      const auto &[d_reason] =
+      const auto &[reason0] =
           std::get<typename ProtocolAction::ActRefuse>(p.v());
-      return f1(d_reason);
+      return f1(reason0);
     } else if (std::holds_alternative<typename ProtocolAction::ActBid>(p.v())) {
-      const auto &[d_bid] = std::get<typename ProtocolAction::ActBid>(p.v());
-      return f2(d_bid);
+      const auto &[bid0] = std::get<typename ProtocolAction::ActBid>(p.v());
+      return f2(bid0);
     } else if (std::holds_alternative<typename ProtocolAction::ActCoalitionBid>(
                    p.v())) {
-      const auto &[d_cbid] =
+      const auto &[cbid0] =
           std::get<typename ProtocolAction::ActCoalitionBid>(p.v());
-      return f3(d_cbid);
+      return f3(cbid0);
     } else if (std::holds_alternative<typename ProtocolAction::ActPass>(
                    p.v())) {
-      const auto &[d_side] = std::get<typename ProtocolAction::ActPass>(p.v());
-      return f4(d_side);
+      const auto &[side0] = std::get<typename ProtocolAction::ActPass>(p.v());
+      return f4(side0);
     } else if (std::holds_alternative<typename ProtocolAction::ActClose>(
                    p.v())) {
       return f5;
     } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
                    p.v())) {
-      const auto &[d_side] =
+      const auto &[side0] =
           std::get<typename ProtocolAction::ActWithdraw>(p.v());
-      return f6(d_side);
+      return f6(side0);
     } else {
-      const auto &[d_side] =
+      const auto &[side0] =
           std::get<typename ProtocolAction::ActBreakBid>(p.v());
-      return f7(d_side);
+      return f7(side0);
     }
   }
 
@@ -1267,65 +1265,65 @@ struct CoalitionBidHonorTraceCase {
                                F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
                                const ProtocolAction &p) {
     if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p.v())) {
-      const auto &[d_chal] =
+      const auto &[chal0] =
           std::get<typename ProtocolAction::ActChallenge>(p.v());
-      return f(d_chal);
+      return f(chal0);
     } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
                    p.v())) {
-      const auto &[d_resp] =
+      const auto &[resp0] =
           std::get<typename ProtocolAction::ActRespond>(p.v());
-      return f0(d_resp);
+      return f0(resp0);
     } else if (std::holds_alternative<typename ProtocolAction::ActRefuse>(
                    p.v())) {
-      const auto &[d_reason] =
+      const auto &[reason0] =
           std::get<typename ProtocolAction::ActRefuse>(p.v());
-      return f1(d_reason);
+      return f1(reason0);
     } else if (std::holds_alternative<typename ProtocolAction::ActBid>(p.v())) {
-      const auto &[d_bid] = std::get<typename ProtocolAction::ActBid>(p.v());
-      return f2(d_bid);
+      const auto &[bid0] = std::get<typename ProtocolAction::ActBid>(p.v());
+      return f2(bid0);
     } else if (std::holds_alternative<typename ProtocolAction::ActCoalitionBid>(
                    p.v())) {
-      const auto &[d_cbid] =
+      const auto &[cbid0] =
           std::get<typename ProtocolAction::ActCoalitionBid>(p.v());
-      return f3(d_cbid);
+      return f3(cbid0);
     } else if (std::holds_alternative<typename ProtocolAction::ActPass>(
                    p.v())) {
-      const auto &[d_side] = std::get<typename ProtocolAction::ActPass>(p.v());
-      return f4(d_side);
+      const auto &[side0] = std::get<typename ProtocolAction::ActPass>(p.v());
+      return f4(side0);
     } else if (std::holds_alternative<typename ProtocolAction::ActClose>(
                    p.v())) {
       return f5;
     } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
                    p.v())) {
-      const auto &[d_side] =
+      const auto &[side0] =
           std::get<typename ProtocolAction::ActWithdraw>(p.v());
-      return f6(d_side);
+      return f6(side0);
     } else {
-      const auto &[d_side] =
+      const auto &[side0] =
           std::get<typename ProtocolAction::ActBreakBid>(p.v());
-      return f7(d_side);
+      return f7(side0);
     }
   }
   enum class ReadyStatus {
-    e_NEITHERREADY,
-    e_ATTACKERREADY,
-    e_DEFENDERREADY,
-    e_BOTHREADY
+    NEITHERREADY,
+    ATTACKERREADY,
+    DEFENDERREADY,
+    BOTHREADY
   };
 
   template <typename T1>
   static T1 ReadyStatus_rect(T1 f, T1 f0, T1 f1, T1 f2, ReadyStatus r) {
     switch (r) {
-    case ReadyStatus::e_NEITHERREADY: {
+    case ReadyStatus::NEITHERREADY: {
       return f;
     }
-    case ReadyStatus::e_ATTACKERREADY: {
+    case ReadyStatus::ATTACKERREADY: {
       return f0;
     }
-    case ReadyStatus::e_DEFENDERREADY: {
+    case ReadyStatus::DEFENDERREADY: {
       return f1;
     }
-    case ReadyStatus::e_BOTHREADY: {
+    case ReadyStatus::BOTHREADY: {
       return f2;
     }
     default:
@@ -1336,16 +1334,16 @@ struct CoalitionBidHonorTraceCase {
   template <typename T1>
   static T1 ReadyStatus_rec(T1 f, T1 f0, T1 f1, T1 f2, ReadyStatus r) {
     switch (r) {
-    case ReadyStatus::e_NEITHERREADY: {
+    case ReadyStatus::NEITHERREADY: {
       return f;
     }
-    case ReadyStatus::e_ATTACKERREADY: {
+    case ReadyStatus::ATTACKERREADY: {
       return f0;
     }
-    case ReadyStatus::e_DEFENDERREADY: {
+    case ReadyStatus::DEFENDERREADY: {
       return f1;
     }
-    case ReadyStatus::e_BOTHREADY: {
+    case ReadyStatus::BOTHREADY: {
       return f2;
     }
     default:
@@ -1366,39 +1364,39 @@ struct CoalitionBidHonorTraceCase {
     struct PhaseIdle {};
 
     struct PhaseChallenged {
-      BatchallChallenge d_challenge;
+      BatchallChallenge challenge;
     };
 
     struct PhaseResponded {
-      BatchallChallenge d_challenge;
-      BatchallResponse d_response;
+      BatchallChallenge challenge;
+      BatchallResponse response;
     };
 
     struct PhaseBidding {
-      BatchallChallenge d_challenge;
-      BatchallResponse d_response;
-      ForceBid d_attacker_bid;
-      ForceBid d_defender_bid;
-      CoalitionState d_attacker_coalition;
-      CoalitionState d_defender_coalition;
-      List<ForceBid> d_bid_history;
-      ReadyStatus d_ready;
+      BatchallChallenge challenge;
+      BatchallResponse response;
+      ForceBid attacker_bid;
+      ForceBid defender_bid;
+      CoalitionState attacker_coalition;
+      CoalitionState defender_coalition;
+      List<ForceBid> bid_history;
+      ReadyStatus ready;
     };
 
     struct PhaseAgreed {
-      BatchallChallenge d_challenge;
-      BatchallResponse d_response;
-      ForceBid d_final_attacker;
-      ForceBid d_final_defender;
+      BatchallChallenge challenge;
+      BatchallResponse response;
+      ForceBid final_attacker;
+      ForceBid final_defender;
     };
 
     struct PhaseRefused {
-      BatchallChallenge d_challenge;
-      RefusalReason d_reason;
+      BatchallChallenge challenge;
+      RefusalReason reason;
     };
 
     struct PhaseAborted {
-      ProtocolAction d_reason;
+      ProtocolAction reason;
     };
 
     using variant_t =
@@ -1407,38 +1405,38 @@ struct CoalitionBidHonorTraceCase {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     BatchallPhase() {}
 
-    explicit BatchallPhase(PhaseIdle _v) : d_v_(_v) {}
+    explicit BatchallPhase(PhaseIdle _v) : v_(_v) {}
 
-    explicit BatchallPhase(PhaseChallenged _v) : d_v_(std::move(_v)) {}
+    explicit BatchallPhase(PhaseChallenged _v) : v_(std::move(_v)) {}
 
-    explicit BatchallPhase(PhaseResponded _v) : d_v_(std::move(_v)) {}
+    explicit BatchallPhase(PhaseResponded _v) : v_(std::move(_v)) {}
 
-    explicit BatchallPhase(PhaseBidding _v) : d_v_(std::move(_v)) {}
+    explicit BatchallPhase(PhaseBidding _v) : v_(std::move(_v)) {}
 
-    explicit BatchallPhase(PhaseAgreed _v) : d_v_(std::move(_v)) {}
+    explicit BatchallPhase(PhaseAgreed _v) : v_(std::move(_v)) {}
 
-    explicit BatchallPhase(PhaseRefused _v) : d_v_(std::move(_v)) {}
+    explicit BatchallPhase(PhaseRefused _v) : v_(std::move(_v)) {}
 
-    explicit BatchallPhase(PhaseAborted _v) : d_v_(std::move(_v)) {}
+    explicit BatchallPhase(PhaseAborted _v) : v_(std::move(_v)) {}
 
     BatchallPhase(const BatchallPhase &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+        : v_(std::move(_other.clone().v_)) {}
 
-    BatchallPhase(BatchallPhase &&_other) : d_v_(std::move(_other.d_v_)) {}
+    BatchallPhase(BatchallPhase &&_other) : v_(std::move(_other.v_)) {}
 
     BatchallPhase &operator=(const BatchallPhase &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     BatchallPhase &operator=(BatchallPhase &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -1447,34 +1445,32 @@ struct CoalitionBidHonorTraceCase {
       if (std::holds_alternative<PhaseIdle>(this->v())) {
         return BatchallPhase(PhaseIdle{});
       } else if (std::holds_alternative<PhaseChallenged>(this->v())) {
-        const auto &[d_challenge] = std::get<PhaseChallenged>(this->v());
-        return BatchallPhase(PhaseChallenged{d_challenge.clone()});
+        const auto &[challenge] = std::get<PhaseChallenged>(this->v());
+        return BatchallPhase(PhaseChallenged{challenge.clone()});
       } else if (std::holds_alternative<PhaseResponded>(this->v())) {
-        const auto &[d_challenge, d_response] =
-            std::get<PhaseResponded>(this->v());
+        const auto &[challenge, response] = std::get<PhaseResponded>(this->v());
         return BatchallPhase(
-            PhaseResponded{d_challenge.clone(), d_response.clone()});
+            PhaseResponded{challenge.clone(), response.clone()});
       } else if (std::holds_alternative<PhaseBidding>(this->v())) {
-        const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
-                     d_attacker_coalition, d_defender_coalition, d_bid_history,
-                     d_ready] = std::get<PhaseBidding>(this->v());
+        const auto &[challenge, response, attacker_bid, defender_bid,
+                     attacker_coalition, defender_coalition, bid_history,
+                     ready] = std::get<PhaseBidding>(this->v());
         return BatchallPhase(PhaseBidding{
-            d_challenge.clone(), d_response.clone(), d_attacker_bid.clone(),
-            d_defender_bid.clone(), d_attacker_coalition, d_defender_coalition,
-            d_bid_history.clone(), d_ready});
+            challenge.clone(), response.clone(), attacker_bid.clone(),
+            defender_bid.clone(), attacker_coalition, defender_coalition,
+            bid_history.clone(), ready});
       } else if (std::holds_alternative<PhaseAgreed>(this->v())) {
-        const auto &[d_challenge, d_response, d_final_attacker,
-                     d_final_defender] = std::get<PhaseAgreed>(this->v());
-        return BatchallPhase(
-            PhaseAgreed{d_challenge.clone(), d_response.clone(),
-                        d_final_attacker.clone(), d_final_defender.clone()});
+        const auto &[challenge, response, final_attacker, final_defender] =
+            std::get<PhaseAgreed>(this->v());
+        return BatchallPhase(PhaseAgreed{challenge.clone(), response.clone(),
+                                         final_attacker.clone(),
+                                         final_defender.clone()});
       } else if (std::holds_alternative<PhaseRefused>(this->v())) {
-        const auto &[d_challenge, d_reason] = std::get<PhaseRefused>(this->v());
-        return BatchallPhase(
-            PhaseRefused{d_challenge.clone(), d_reason.clone()});
+        const auto &[challenge, reason] = std::get<PhaseRefused>(this->v());
+        return BatchallPhase(PhaseRefused{challenge.clone(), reason.clone()});
       } else {
-        const auto &[d_reason] = std::get<PhaseAborted>(this->v());
-        return BatchallPhase(PhaseAborted{d_reason.clone()});
+        const auto &[reason] = std::get<PhaseAborted>(this->v());
+        return BatchallPhase(PhaseAborted{reason.clone()});
       }
     }
 
@@ -1523,38 +1519,38 @@ struct CoalitionBidHonorTraceCase {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     std::optional<Commander>
     action_actor_in_phase(const ProtocolAction &action) const {
       if (std::holds_alternative<typename ProtocolAction::ActChallenge>(
               action.v())) {
-        const auto &[d_chal] =
+        const auto &[chal0] =
             std::get<typename ProtocolAction::ActChallenge>(action.v());
-        return std::make_optional<Commander>(d_chal.chal_challenger);
+        return std::make_optional<Commander>(chal0.chal_challenger);
       } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
                      action.v())) {
-        const auto &[d_resp] =
+        const auto &[resp0] =
             std::get<typename ProtocolAction::ActRespond>(action.v());
-        return std::make_optional<Commander>(d_resp.resp_defender);
+        return std::make_optional<Commander>(resp0.resp_defender);
       } else if (std::holds_alternative<typename ProtocolAction::ActBid>(
                      action.v())) {
-        const auto &[d_bid] =
+        const auto &[bid0] =
             std::get<typename ProtocolAction::ActBid>(action.v());
-        return std::make_optional<Commander>(d_bid.bid_commander);
+        return std::make_optional<Commander>(bid0.bid_commander);
       } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
                      action.v())) {
-        const auto &[d_side] =
+        const auto &[side0] =
             std::get<typename ProtocolAction::ActWithdraw>(action.v());
-        return (*this).get_side_commander(d_side);
+        return (*this).get_side_commander(side0);
       } else if (std::holds_alternative<typename ProtocolAction::ActBreakBid>(
                      action.v())) {
-        const auto &[d_side] =
+        const auto &[side0] =
             std::get<typename ProtocolAction::ActBreakBid>(action.v());
-        return (*this).get_side_commander(d_side);
+        return (*this).get_side_commander(side0);
       } else {
         return std::optional<Commander>();
       }
@@ -1563,16 +1559,16 @@ struct CoalitionBidHonorTraceCase {
     std::optional<Commander> get_side_commander(Side side) const {
       if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
               this->v())) {
-        const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
-                     d_attacker_coalition, d_defender_coalition, d_bid_history,
-                     d_ready] =
+        const auto &[challenge, response, attacker_bid, defender_bid,
+                     attacker_coalition0, defender_coalition0, bid_history,
+                     ready] =
             std::get<typename BatchallPhase::PhaseBidding>(this->v());
         switch (side) {
-        case Side::e_ATTACKER: {
-          return std::make_optional<Commander>(d_attacker_bid.bid_commander);
+        case Side::ATTACKER: {
+          return std::make_optional<Commander>(attacker_bid.bid_commander);
         }
-        case Side::e_DEFENDER: {
-          return std::make_optional<Commander>(d_defender_bid.bid_commander);
+        case Side::DEFENDER: {
+          return std::make_optional<Commander>(defender_bid.bid_commander);
         }
         default:
           std::unreachable();
@@ -1585,18 +1581,18 @@ struct CoalitionBidHonorTraceCase {
     unsigned int get_bidding_measure() const {
       if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
               this->v())) {
-        const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
-                     d_attacker_coalition, d_defender_coalition, d_bid_history,
-                     d_ready] =
+        const auto &[challenge, response, attacker_bid, defender_bid,
+                     attacker_coalition0, defender_coalition0, bid_history,
+                     ready0] =
             std::get<typename BatchallPhase::PhaseBidding>(this->v());
-        return ((bid_metrics(d_attacker_bid).fm_total_ecr +
-                 bid_metrics(d_defender_bid).fm_total_ecr) +
+        return ((bid_metrics(attacker_bid).fm_total_ecr +
+                 bid_metrics(defender_bid).fm_total_ecr) +
                 [&]() {
-                  switch (d_ready) {
-                  case ReadyStatus::e_NEITHERREADY: {
+                  switch (ready0) {
+                  case ReadyStatus::NEITHERREADY: {
                     return 2u;
                   }
-                  case ReadyStatus::e_BOTHREADY: {
+                  case ReadyStatus::BOTHREADY: {
                     return 0u;
                   }
                   default: {
@@ -1674,38 +1670,36 @@ struct CoalitionBidHonorTraceCase {
       return f;
     } else if (std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
                    b.v())) {
-      const auto &[d_challenge] =
+      const auto &[challenge0] =
           std::get<typename BatchallPhase::PhaseChallenged>(b.v());
-      return f0(d_challenge);
+      return f0(challenge0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
                    b.v())) {
-      const auto &[d_challenge, d_response] =
+      const auto &[challenge0, response0] =
           std::get<typename BatchallPhase::PhaseResponded>(b.v());
-      return f1(d_challenge, d_response);
+      return f1(challenge0, response0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
                    b.v())) {
-      const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
-                   d_attacker_coalition, d_defender_coalition, d_bid_history,
-                   d_ready] =
+      const auto &[challenge0, response0, attacker_bid0, defender_bid0,
+                   attacker_coalition1, defender_coalition1, bid_history0,
+                   ready0] =
           std::get<typename BatchallPhase::PhaseBidding>(b.v());
-      return f2(d_challenge, d_response, d_attacker_bid, d_defender_bid,
-                d_attacker_coalition, d_defender_coalition, d_bid_history,
-                d_ready);
+      return f2(challenge0, response0, attacker_bid0, defender_bid0,
+                attacker_coalition1, defender_coalition1, bid_history0, ready0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
                    b.v())) {
-      const auto &[d_challenge, d_response, d_final_attacker,
-                   d_final_defender] =
+      const auto &[challenge0, response0, final_attacker0, final_defender0] =
           std::get<typename BatchallPhase::PhaseAgreed>(b.v());
-      return f3(d_challenge, d_response, d_final_attacker, d_final_defender);
+      return f3(challenge0, response0, final_attacker0, final_defender0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
                    b.v())) {
-      const auto &[d_challenge, d_reason] =
+      const auto &[challenge0, reason0] =
           std::get<typename BatchallPhase::PhaseRefused>(b.v());
-      return f4(d_challenge, d_reason);
+      return f4(challenge0, reason0);
     } else {
-      const auto &[d_reason] =
+      const auto &[reason0] =
           std::get<typename BatchallPhase::PhaseAborted>(b.v());
-      return f5(d_reason);
+      return f5(reason0);
     }
   }
 
@@ -1731,38 +1725,36 @@ struct CoalitionBidHonorTraceCase {
       return f;
     } else if (std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
                    b.v())) {
-      const auto &[d_challenge] =
+      const auto &[challenge0] =
           std::get<typename BatchallPhase::PhaseChallenged>(b.v());
-      return f0(d_challenge);
+      return f0(challenge0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
                    b.v())) {
-      const auto &[d_challenge, d_response] =
+      const auto &[challenge0, response0] =
           std::get<typename BatchallPhase::PhaseResponded>(b.v());
-      return f1(d_challenge, d_response);
+      return f1(challenge0, response0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
                    b.v())) {
-      const auto &[d_challenge, d_response, d_attacker_bid, d_defender_bid,
-                   d_attacker_coalition, d_defender_coalition, d_bid_history,
-                   d_ready] =
+      const auto &[challenge0, response0, attacker_bid0, defender_bid0,
+                   attacker_coalition1, defender_coalition1, bid_history0,
+                   ready0] =
           std::get<typename BatchallPhase::PhaseBidding>(b.v());
-      return f2(d_challenge, d_response, d_attacker_bid, d_defender_bid,
-                d_attacker_coalition, d_defender_coalition, d_bid_history,
-                d_ready);
+      return f2(challenge0, response0, attacker_bid0, defender_bid0,
+                attacker_coalition1, defender_coalition1, bid_history0, ready0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
                    b.v())) {
-      const auto &[d_challenge, d_response, d_final_attacker,
-                   d_final_defender] =
+      const auto &[challenge0, response0, final_attacker0, final_defender0] =
           std::get<typename BatchallPhase::PhaseAgreed>(b.v());
-      return f3(d_challenge, d_response, d_final_attacker, d_final_defender);
+      return f3(challenge0, response0, final_attacker0, final_defender0);
     } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
                    b.v())) {
-      const auto &[d_challenge, d_reason] =
+      const auto &[challenge0, reason0] =
           std::get<typename BatchallPhase::PhaseRefused>(b.v());
-      return f4(d_challenge, d_reason);
+      return f4(challenge0, reason0);
     } else {
-      const auto &[d_reason] =
+      const auto &[reason0] =
           std::get<typename BatchallPhase::PhaseAborted>(b.v());
-      return f5(d_reason);
+      return f5(reason0);
     }
   }
 
@@ -1797,26 +1789,22 @@ struct CoalitionBidHonorTraceCase {
   static HonorLedger apply_action_honor(const BatchallState &state,
                                         const ProtocolAction &action);
   static inline const Commander malthus =
-      Commander{1u, Clan::e_CLANJADEFALCON, Rank::e_STARCOLONEL, true};
+      Commander{1u, Clan::CLANJADEFALCON, Rank::STARCOLONEL, true};
   static inline const Commander radick =
-      Commander{2u, Clan::e_CLANWOLF, Rank::e_STARCAPTAIN, true};
+      Commander{2u, Clan::CLANWOLF, Rank::STARCAPTAIN, true};
   static inline const Commander bear_ally =
-      Commander{3u, Clan::e_CLANGHOSTBEAR, Rank::e_STARCAPTAIN, false};
-  static inline const Unit timberwolf =
-      Unit{101u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 75u, 2u, 3u, true,
+      Commander{3u, Clan::CLANGHOSTBEAR, Rank::STARCAPTAIN, false};
+  static inline const Unit timberwolf = Unit{
+      101u, UnitClass::OMNIMECH, WeightClass::HEAVY, 75u, 2u, 3u, true, true};
+  static inline const Unit direwolf =
+      Unit{102u, UnitClass::OMNIMECH, WeightClass::ASSAULT, 100u, 2u, 3u, true,
            true};
-  static inline const Unit direwolf = Unit{
-      102u, UnitClass::e_OMNIMECH, WeightClass::e_ASSAULT, 100u, 2u, 3u, true,
-      true};
   static inline const Unit summoner = Unit{
-      103u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 70u, 3u, 4u, false,
-      true};
+      103u, UnitClass::OMNIMECH, WeightClass::HEAVY, 70u, 3u, 4u, false, true};
   static inline const Unit mad_dog = Unit{
-      104u, UnitClass::e_OMNIMECH, WeightClass::e_HEAVY, 60u, 3u, 4u, false,
-      true};
+      104u, UnitClass::OMNIMECH, WeightClass::HEAVY, 60u, 3u, 4u, false, true};
   static inline const Unit elementals = Unit{
-      105u, UnitClass::e_ELEMENTAL, WeightClass::e_LIGHT, 5u, 3u, 4u, false,
-      true};
+      105u, UnitClass::ELEMENTAL, WeightClass::LIGHT, 5u, 3u, 4u, false, true};
   static inline const Force falcon_trinary = List<Unit>::cons(
       direwolf,
       List<Unit>::cons(
@@ -1829,51 +1817,51 @@ struct CoalitionBidHonorTraceCase {
       elementals, List<Unit>::cons(elementals, List<Unit>::nil()));
   static inline const Coalition attacker_coalition =
       List<CoalitionMember>::cons(
-          CoalitionMember{Clan::e_CLANJADEFALCON, malthus, falcon_trinary},
+          CoalitionMember{Clan::CLANJADEFALCON, malthus, falcon_trinary},
           List<CoalitionMember>::cons(
-              CoalitionMember{Clan::e_CLANGHOSTBEAR, bear_ally, bear_support},
+              CoalitionMember{Clan::CLANGHOSTBEAR, bear_ally, bear_support},
               List<CoalitionMember>::nil()));
   static inline const Coalition defender_coalition =
       List<CoalitionMember>::cons(
-          CoalitionMember{Clan::e_CLANWOLF, radick, wolf_binary},
+          CoalitionMember{Clan::CLANWOLF, radick, wolf_binary},
           List<CoalitionMember>::nil());
   static inline const BatchallChallenge sample_challenge =
       BatchallChallenge{malthus,
-                        Clan::e_CLANJADEFALCON,
+                        Clan::CLANJADEFALCON,
                         Prize::prizeenclave(42u),
                         coalition_force(attacker_coalition),
                         Location::locplanetsurface(7u, 3u),
-                        TrialType::e_TRIALOFPOSSESSION,
+                        TrialType::TRIALOFPOSSESSION,
                         standard_possession_context};
   static inline const BatchallResponse sample_response = BatchallResponse{
-      radick, Clan::e_CLANWOLF, coalition_force(defender_coalition)};
+      radick, Clan::CLANWOLF, coalition_force(defender_coalition)};
   static inline const ForceBid sample_attacker_bid = []() -> ForceBid {
-    auto _cs = coalition_to_bid(attacker_coalition, Side::e_ATTACKER);
+    auto _cs = coalition_to_bid(attacker_coalition, Side::ATTACKER);
     if (_cs.has_value()) {
       const ForceBid &bid = *_cs;
       return bid;
     } else {
-      return ForceBid{List<Unit>::nil(), Side::e_ATTACKER, malthus};
+      return ForceBid{List<Unit>::nil(), Side::ATTACKER, malthus};
     }
   }();
   static inline const ForceBid sample_defender_bid = []() -> ForceBid {
-    auto _cs = coalition_to_bid(defender_coalition, Side::e_DEFENDER);
+    auto _cs = coalition_to_bid(defender_coalition, Side::DEFENDER);
     if (_cs.has_value()) {
       const ForceBid &bid = *_cs;
       return bid;
     } else {
-      return ForceBid{List<Unit>::nil(), Side::e_DEFENDER, radick};
+      return ForceBid{List<Unit>::nil(), Side::DEFENDER, radick};
     }
   }();
   static inline const Force reduced_support_force =
       List<Unit>::cons(elementals, List<Unit>::nil());
   static inline const CoalitionMemberBid sample_coalition_member_bid =
-      CoalitionMemberBid{1u, reduced_support_force, Side::e_ATTACKER};
+      CoalitionMemberBid{1u, reduced_support_force, Side::ATTACKER};
   static inline const Coalition updated_attacker_coalition =
       apply_coalition_member_bid(attacker_coalition,
                                  sample_coalition_member_bid);
   static inline const ForceBid updated_attacker_bid = []() -> ForceBid {
-    auto _cs = coalition_to_bid(updated_attacker_coalition, Side::e_ATTACKER);
+    auto _cs = coalition_to_bid(updated_attacker_coalition, Side::ATTACKER);
     if (_cs.has_value()) {
       const ForceBid &bid = *_cs;
       return bid;
@@ -1887,14 +1875,14 @@ struct CoalitionBidHonorTraceCase {
           sample_defender_bid,
           std::make_optional<List<CoalitionMember>>(attacker_coalition),
           std::make_optional<List<CoalitionMember>>(defender_coalition),
-          List<ForceBid>::nil(), ReadyStatus::e_NEITHERREADY);
+          List<ForceBid>::nil(), ReadyStatus::NEITHERREADY);
   static inline const BatchallPhase phase_after_attacker_pass =
       BatchallPhase::phasebidding(
           sample_challenge, sample_response, sample_attacker_bid,
           sample_defender_bid,
           std::make_optional<List<CoalitionMember>>(attacker_coalition),
           std::make_optional<List<CoalitionMember>>(defender_coalition),
-          List<ForceBid>::nil(), ReadyStatus::e_ATTACKERREADY);
+          List<ForceBid>::nil(), ReadyStatus::ATTACKERREADY);
   static inline const BatchallPhase phase_after_coalition_bid =
       BatchallPhase::phasebidding(
           sample_challenge, sample_response, updated_attacker_bid,
@@ -1902,7 +1890,7 @@ struct CoalitionBidHonorTraceCase {
           std::make_optional<List<CoalitionMember>>(updated_attacker_coalition),
           std::make_optional<List<CoalitionMember>>(defender_coalition),
           List<ForceBid>::cons(sample_attacker_bid, List<ForceBid>::nil()),
-          ReadyStatus::e_NEITHERREADY);
+          ReadyStatus::NEITHERREADY);
   static inline const BatchallPhase phase_agreed =
       BatchallPhase::phaseagreed(sample_challenge, sample_response,
                                  updated_attacker_bid, sample_defender_bid);
@@ -1913,23 +1901,21 @@ struct CoalitionBidHonorTraceCase {
                          ProtocolAction::actchallenge(sample_challenge));
   static inline const HonorLedger sample_break_bid_honor_ledger =
       apply_action_honor(state_after_initial_bid,
-                         ProtocolAction::actbreakbid(Side::e_ATTACKER));
+                         ProtocolAction::actbreakbid(Side::ATTACKER));
   static inline const bool sample_challenger_may_issue =
       may_issue_batchall(malthus);
   static inline const bool sample_coalition_bid_is_valid =
       valid_coalition_member_bid_b(attacker_coalition,
                                    sample_coalition_member_bid);
   static inline const bool sample_coalition_contains_bear =
-      coalition_contains_clan(attacker_coalition, Clan::e_CLANGHOSTBEAR);
+      coalition_contains_clan(attacker_coalition, Clan::CLANGHOSTBEAR);
   static inline const bool sample_updated_tonnage_reduced =
       coalition_tonnage(updated_attacker_coalition) <
       coalition_tonnage(attacker_coalition);
-  static inline const bool sample_attacker_ready_after_pass =
-      is_ready(set_ready(ReadyStatus::e_NEITHERREADY, Side::e_ATTACKER),
-               Side::e_ATTACKER);
-  static inline const bool sample_attacker_not_ready_after_clear =
-      !(is_ready(clear_ready(ReadyStatus::e_BOTHREADY, Side::e_ATTACKER),
-                 Side::e_ATTACKER));
+  static inline const bool sample_attacker_ready_after_pass = is_ready(
+      set_ready(ReadyStatus::NEITHERREADY, Side::ATTACKER), Side::ATTACKER);
+  static inline const bool sample_attacker_not_ready_after_clear = !(is_ready(
+      clear_ready(ReadyStatus::BOTHREADY, Side::ATTACKER), Side::ATTACKER));
   static inline const bool sample_phase_is_bidding =
       phase_after_initial_bid.is_bidding();
   static inline const bool sample_agreed_terminal = phase_agreed.is_terminal();
@@ -1952,7 +1938,7 @@ struct CoalitionBidHonorTraceCase {
   static inline const unsigned int sample_break_bid_actor_id =
       []() -> unsigned int {
     auto _cs = phase_after_initial_bid.action_actor_in_phase(
-        ProtocolAction::actbreakbid(Side::e_ATTACKER));
+        ProtocolAction::actbreakbid(Side::ATTACKER));
     if (_cs.has_value()) {
       const Commander &cmd = *_cs;
       return cmd.cmd_id;
@@ -1977,16 +1963,16 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      return a0;
     }
   } else {
     unsigned int m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *d_a10, default0);
+      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      return ListDef::template nth<T1>(m, *a10, default0);
     }
   }
 }

@@ -8,10 +8,9 @@ unsigned int LoopifyComparators::maximum_by(
     const List<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -29,22 +28,22 @@ unsigned int LoopifyComparators::maximum_by(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        auto &&_sv = *d_a1;
+        auto &&_sv = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = d_a0;
+          _result = a0;
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int m = _result;
-      if (m < d_a0) {
-        _result = d_a0;
+      if (m < a0) {
+        _result = a0;
       } else {
         _result = m;
       }
@@ -61,10 +60,9 @@ unsigned int LoopifyComparators::minimum_by(
     const List<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -82,22 +80,22 @@ unsigned int LoopifyComparators::minimum_by(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        auto &&_sv = *d_a1;
+        auto &&_sv = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = d_a0;
+          _result = a0;
         } else {
-          _stack.emplace_back(_Cont_Cons{d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int m = _result;
-      if (d_a0 < m) {
-        _result = d_a0;
+      if (a0 < m) {
+        _result = a0;
       } else {
         _result = m;
       }
@@ -125,33 +123,33 @@ List<unsigned int> LoopifyComparators::merge_by_fuel(unsigned int fuel,
         *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
-        auto &[d_a0, d_a1] =
+        auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2.v_mut())) {
           *_write = std::make_unique<List<unsigned int>>(_loop_l1);
           break;
         } else {
-          auto &[d_a00, d_a10] =
+          auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
-          if (d_a0 <= d_a00) {
+          if (a0 <= a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
+                typename List<unsigned int>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
-            _loop_l1 = std::move(*d_a1);
+                     .a1;
+            _loop_l1 = std::move(*a1);
             _loop_fuel = fuel_;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(std::move(d_a00), nullptr));
+                typename List<unsigned int>::Cons(std::move(a00), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
-            _loop_l2 = std::move(*d_a10);
+                     .a1;
+            _loop_l2 = std::move(*a10);
             _loop_fuel = fuel_;
             continue;
           }
@@ -181,20 +179,19 @@ List<unsigned int> LoopifyComparators::insert_sorted(unsigned int x,
           List<unsigned int>::cons(x, List<unsigned int>::nil()));
       break;
     } else {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-      if (x <= d_a0) {
+      if (x <= a0) {
         *_write = std::make_unique<List<unsigned int>>(
             List<unsigned int>::cons(x, _loop_l));
         break;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
+            typename List<unsigned int>::Cons(std::move(a0), nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = std::move(*d_a1);
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = std::move(*a1);
         continue;
       }
     }
@@ -210,9 +207,9 @@ List<unsigned int> LoopifyComparators::insertion_sort(
     const List<unsigned int> *l;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -230,14 +227,14 @@ List<unsigned int> LoopifyComparators::insertion_sort(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = insert_sorted(_f.d_a0, _result);
+      _result = insert_sorted(_f.a0, _result);
     }
   }
   return _result;
@@ -259,18 +256,18 @@ bool LoopifyComparators::is_sorted_fuel(unsigned int fuel,
         _result = true;
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-        auto &&_sv0 = *d_a1;
+        auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
           _result = true;
           break;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
-          if (d_a0 <= d_a00) {
-            _loop_l = List<unsigned int>::cons(d_a00, *d_a10);
+          if (a0 <= a00) {
+            _loop_l = List<unsigned int>::cons(a00, *a10);
             _loop_fuel = fuel_;
           } else {
             _result = false;

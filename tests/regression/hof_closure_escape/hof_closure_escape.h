@@ -15,36 +15,36 @@ struct HofClosureEscape {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      unsigned int a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -66,18 +66,17 @@ struct HofClosureEscape {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -97,13 +96,13 @@ struct HofClosureEscape {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -117,10 +116,10 @@ struct HofClosureEscape {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
@@ -130,9 +129,9 @@ struct HofClosureEscape {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*d_a0, tree_rect<T1>(f, f0, *d_a0), d_a1, *d_a2,
-                tree_rect<T1>(f, f0, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f0(*a0, tree_rect<T1>(f, f0, *a0), a1, *a2,
+                tree_rect<T1>(f, f0, *a2));
     }
   }
 
@@ -143,9 +142,9 @@ struct HofClosureEscape {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*d_a0, tree_rec<T1>(f, f0, *d_a0), d_a1, *d_a2,
-                tree_rec<T1>(f, f0, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
+                tree_rec<T1>(f, f0, *a2));
     }
   }
 

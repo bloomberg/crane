@@ -8,50 +8,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +60,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -80,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -117,63 +115,63 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
-template <typename t_A> struct Sig {
+template <typename A> struct Sig {
   // TYPES
   struct Exist {
-    t_A d_x;
+    A x;
   };
 
   using variant_t = std::variant<Exist>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Sig() {}
 
-  explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
+  explicit Sig(Exist _v) : v_(std::move(_v)) {}
 
-  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Sig(const Sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Sig(Sig<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  Sig<t_A> &operator=(const Sig<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  Sig<A> &operator=(const Sig<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Sig<t_A> &operator=(Sig<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Sig<A> &operator=(Sig<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  Sig<t_A> clone() const {
-    const auto &[d_x] = std::get<Exist>(this->v());
-    return Sig<t_A>(Exist{d_x});
+  Sig<A> clone() const {
+    const auto &[x] = std::get<Exist>(this->v());
+    return Sig<A>(Exist{x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist{t_A(d_x)};
+    const auto &[x] = std::get<typename Sig<_U>::Exist>(_other.v());
+    this->v_ = Exist{A(x)};
   }
 
-  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
+  static Sig<A> exist(A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct FunctionVernac {
@@ -199,47 +197,47 @@ struct FunctionVernac {
   struct R_div2 {
     // TYPES
     struct R_div2_0 {
-      unsigned int d_n;
+      unsigned int n;
     };
 
     struct R_div2_1 {
-      unsigned int d_n;
+      unsigned int n;
     };
 
     struct R_div2_2 {
-      unsigned int d_n;
-      unsigned int d_p;
-      unsigned int d_a2;
-      std::unique_ptr<R_div2> d__res;
+      unsigned int n;
+      unsigned int p;
+      unsigned int a2;
+      std::unique_ptr<R_div2> _res;
     };
 
     using variant_t = std::variant<R_div2_0, R_div2_1, R_div2_2>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     R_div2() {}
 
-    explicit R_div2(R_div2_0 _v) : d_v_(std::move(_v)) {}
+    explicit R_div2(R_div2_0 _v) : v_(std::move(_v)) {}
 
-    explicit R_div2(R_div2_1 _v) : d_v_(std::move(_v)) {}
+    explicit R_div2(R_div2_1 _v) : v_(std::move(_v)) {}
 
-    explicit R_div2(R_div2_2 _v) : d_v_(std::move(_v)) {}
+    explicit R_div2(R_div2_2 _v) : v_(std::move(_v)) {}
 
-    R_div2(const R_div2 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    R_div2(const R_div2 &_other) : v_(std::move(_other.clone().v_)) {}
 
-    R_div2(R_div2 &&_other) : d_v_(std::move(_other.d_v_)) {}
+    R_div2(R_div2 &&_other) : v_(std::move(_other.v_)) {}
 
     R_div2 &operator=(const R_div2 &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     R_div2 &operator=(R_div2 &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -262,18 +260,17 @@ struct FunctionVernac {
         R_div2 *_dst = _frame._dst;
         if (std::holds_alternative<R_div2_0>(_src->v())) {
           const auto &_alt = std::get<R_div2_0>(_src->v());
-          _dst->d_v_ = R_div2_0{_alt.d_n};
+          _dst->v_ = R_div2_0{_alt.n};
         } else if (std::holds_alternative<R_div2_1>(_src->v())) {
           const auto &_alt = std::get<R_div2_1>(_src->v());
-          _dst->d_v_ = R_div2_1{_alt.d_n};
+          _dst->v_ = R_div2_1{_alt.n};
         } else {
           const auto &_alt = std::get<R_div2_2>(_src->v());
-          _dst->d_v_ =
-              R_div2_2{_alt.d_n, _alt.d_p, _alt.d_a2,
-                       _alt.d__res ? std::make_unique<R_div2>() : nullptr};
-          auto &_dst_alt = std::get<R_div2_2>(_dst->d_v_);
-          if (_alt.d__res) {
-            _stack.push_back({_alt.d__res.get(), _dst_alt.d__res.get()});
+          _dst->v_ = R_div2_2{_alt.n, _alt.p, _alt.a2,
+                              _alt._res ? std::make_unique<R_div2>() : nullptr};
+          auto &_dst_alt = std::get<R_div2_2>(_dst->v_);
+          if (_alt._res) {
+            _stack.push_back({_alt._res.get(), _dst_alt._res.get()});
           }
         }
       }
@@ -296,10 +293,10 @@ struct FunctionVernac {
       std::vector<std::unique_ptr<R_div2>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](R_div2 &_node) {
-        if (std::holds_alternative<R_div2_2>(_node.d_v_)) {
-          auto &_alt = std::get<R_div2_2>(_node.d_v_);
-          if (_alt.d__res) {
-            _stack.push_back(std::move(_alt.d__res));
+        if (std::holds_alternative<R_div2_2>(_node.v_)) {
+          auto &_alt = std::get<R_div2_2>(_node.v_);
+          if (_alt._res) {
+            _stack.push_back(std::move(_alt._res));
           }
         }
       };
@@ -313,10 +310,10 @@ struct FunctionVernac {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
@@ -325,16 +322,16 @@ struct FunctionVernac {
                                      unsigned int &, R_div2 &, T1 &>
     T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, unsigned int, unsigned int) const {
       if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
-        const auto &[d_n] = std::get<typename R_div2::R_div2_0>(this->v());
-        return f(d_n);
+        const auto &[n0] = std::get<typename R_div2::R_div2_0>(this->v());
+        return f(n0);
       } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
-        const auto &[d_n] = std::get<typename R_div2::R_div2_1>(this->v());
-        return f0(d_n);
+        const auto &[n0] = std::get<typename R_div2::R_div2_1>(this->v());
+        return f0(n0);
       } else {
-        const auto &[d_n, d_p, d_a2, d__res] =
+        const auto &[n0, p0, a2, _res0] =
             std::get<typename R_div2::R_div2_2>(this->v());
-        return f1(d_n, d_p, d_a2, *d__res,
-                  (*d__res).template R_div2_rec<T1>(f, f0, f1, d_p, d_a2));
+        return f1(n0, p0, a2, *_res0,
+                  (*_res0).template R_div2_rec<T1>(f, f0, f1, p0, a2));
       }
     }
 
@@ -345,16 +342,16 @@ struct FunctionVernac {
                                      unsigned int &, R_div2 &, T1 &>
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, unsigned int, unsigned int) const {
       if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
-        const auto &[d_n] = std::get<typename R_div2::R_div2_0>(this->v());
-        return f(d_n);
+        const auto &[n0] = std::get<typename R_div2::R_div2_0>(this->v());
+        return f(n0);
       } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
-        const auto &[d_n] = std::get<typename R_div2::R_div2_1>(this->v());
-        return f0(d_n);
+        const auto &[n0] = std::get<typename R_div2::R_div2_1>(this->v());
+        return f0(n0);
       } else {
-        const auto &[d_n, d_p, d_a2, d__res] =
+        const auto &[n0, p0, a2, _res0] =
             std::get<typename R_div2::R_div2_2>(this->v());
-        return f1(d_n, d_p, d_a2, *d__res,
-                  (*d__res).template R_div2_rect<T1>(f, f0, f1, d_p, d_a2));
+        return f1(n0, p0, a2, *_res0,
+                  (*_res0).template R_div2_rect<T1>(f, f0, f1, p0, a2));
       }
     }
   };
@@ -403,9 +400,8 @@ struct FunctionVernac {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      return (d_a0 + list_sum0(*d_a1));
+      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      return (a0 + list_sum0(*a1));
     }
   }
 
@@ -415,43 +411,42 @@ struct FunctionVernac {
   struct R_list_sum {
     // TYPES
     struct R_list_sum_0 {
-      List<unsigned int> d_l;
+      List<unsigned int> l;
     };
 
     struct R_list_sum_1 {
-      List<unsigned int> d_l;
-      unsigned int d_x;
-      List<unsigned int> d_xs;
-      unsigned int d_a3;
-      std::unique_ptr<R_list_sum> d__res;
+      List<unsigned int> l;
+      unsigned int x;
+      List<unsigned int> xs;
+      unsigned int a3;
+      std::unique_ptr<R_list_sum> _res;
     };
 
     using variant_t = std::variant<R_list_sum_0, R_list_sum_1>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     R_list_sum() {}
 
-    explicit R_list_sum(R_list_sum_0 _v) : d_v_(std::move(_v)) {}
+    explicit R_list_sum(R_list_sum_0 _v) : v_(std::move(_v)) {}
 
-    explicit R_list_sum(R_list_sum_1 _v) : d_v_(std::move(_v)) {}
+    explicit R_list_sum(R_list_sum_1 _v) : v_(std::move(_v)) {}
 
-    R_list_sum(const R_list_sum &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    R_list_sum(const R_list_sum &_other) : v_(std::move(_other.clone().v_)) {}
 
-    R_list_sum(R_list_sum &&_other) : d_v_(std::move(_other.d_v_)) {}
+    R_list_sum(R_list_sum &&_other) : v_(std::move(_other.v_)) {}
 
     R_list_sum &operator=(const R_list_sum &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     R_list_sum &operator=(R_list_sum &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -474,15 +469,15 @@ struct FunctionVernac {
         R_list_sum *_dst = _frame._dst;
         if (std::holds_alternative<R_list_sum_0>(_src->v())) {
           const auto &_alt = std::get<R_list_sum_0>(_src->v());
-          _dst->d_v_ = R_list_sum_0{_alt.d_l.clone()};
+          _dst->v_ = R_list_sum_0{_alt.l.clone()};
         } else {
           const auto &_alt = std::get<R_list_sum_1>(_src->v());
-          _dst->d_v_ = R_list_sum_1{
-              _alt.d_l.clone(), _alt.d_x, _alt.d_xs.clone(), _alt.d_a3,
-              _alt.d__res ? std::make_unique<R_list_sum>() : nullptr};
-          auto &_dst_alt = std::get<R_list_sum_1>(_dst->d_v_);
-          if (_alt.d__res) {
-            _stack.push_back({_alt.d__res.get(), _dst_alt.d__res.get()});
+          _dst->v_ = R_list_sum_1{
+              _alt.l.clone(), _alt.x, _alt.xs.clone(), _alt.a3,
+              _alt._res ? std::make_unique<R_list_sum>() : nullptr};
+          auto &_dst_alt = std::get<R_list_sum_1>(_dst->v_);
+          if (_alt._res) {
+            _stack.push_back({_alt._res.get(), _dst_alt._res.get()});
           }
         }
       }
@@ -507,10 +502,10 @@ struct FunctionVernac {
       std::vector<std::unique_ptr<R_list_sum>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](R_list_sum &_node) {
-        if (std::holds_alternative<R_list_sum_1>(_node.d_v_)) {
-          auto &_alt = std::get<R_list_sum_1>(_node.d_v_);
-          if (_alt.d__res) {
-            _stack.push_back(std::move(_alt.d__res));
+        if (std::holds_alternative<R_list_sum_1>(_node.v_)) {
+          auto &_alt = std::get<R_list_sum_1>(_node.v_);
+          if (_alt._res) {
+            _stack.push_back(std::move(_alt._res));
           }
         }
       };
@@ -524,10 +519,10 @@ struct FunctionVernac {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
@@ -538,14 +533,14 @@ struct FunctionVernac {
                       unsigned int) const {
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
               this->v())) {
-        const auto &[d_l] =
+        const auto &[l0] =
             std::get<typename R_list_sum::R_list_sum_0>(this->v());
-        return f(d_l);
+        return f(l0);
       } else {
-        const auto &[d_l, d_x, d_xs, d_a3, d__res] =
+        const auto &[l0, x0, xs0, a3, _res0] =
             std::get<typename R_list_sum::R_list_sum_1>(this->v());
-        return f0(d_l, d_x, d_xs, d_a3, *d__res,
-                  (*d__res).template R_list_sum_rec<T1>(f, f0, d_xs, d_a3));
+        return f0(l0, x0, xs0, a3, *_res0,
+                  (*_res0).template R_list_sum_rec<T1>(f, f0, xs0, a3));
       }
     }
 
@@ -558,14 +553,14 @@ struct FunctionVernac {
                        unsigned int) const {
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
               this->v())) {
-        const auto &[d_l] =
+        const auto &[l0] =
             std::get<typename R_list_sum::R_list_sum_0>(this->v());
-        return f(d_l);
+        return f(l0);
       } else {
-        const auto &[d_l, d_x, d_xs, d_a3, d__res] =
+        const auto &[l0, x0, xs0, a3, _res0] =
             std::get<typename R_list_sum::R_list_sum_1>(this->v());
-        return f0(d_l, d_x, d_xs, d_a3, *d__res,
-                  (*d__res).template R_list_sum_rect<T1>(f, f0, d_xs, d_a3));
+        return f0(l0, x0, xs0, a3, *_res0,
+                  (*_res0).template R_list_sum_rect<T1>(f, f0, xs0, a3));
       }
     }
   };
@@ -583,13 +578,12 @@ struct FunctionVernac {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return f2;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> d_a1_value = *d_a1;
+      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      List<unsigned int> a1_value = *a1;
       std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
-        return f1(d_a0, d_a1_value, _pa0);
+        return f1(a0, a1_value, _pa0);
       };
-      T1 hrec = list_sum_rect<T1>(f, f0, d_a1_value);
+      T1 hrec = list_sum_rect<T1>(f, f0, a1_value);
       return f3(hrec);
     }
   }

@@ -22,13 +22,13 @@ TailrecReorderProbe::dual_accum(
       _result = std::make_pair(std::move(_loop_acc1), std::move(_loop_acc2));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
               _loop_l->v());
       _loop_acc2 =
-          mylist<unsigned int>::mycons((d_a0 + 1u), std::move(_loop_acc2));
-      _loop_acc1 = mylist<unsigned int>::mycons(d_a0, std::move(_loop_acc1));
-      _loop_l = d_a1.get();
+          mylist<unsigned int>::mycons((a0 + 1u), std::move(_loop_acc2));
+      _loop_acc1 = mylist<unsigned int>::mycons(a0, std::move(_loop_acc1));
+      _loop_l = a1.get();
     }
   }
   return _result;
@@ -51,7 +51,7 @@ TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
       _result = my_rev_append<unsigned int>(std::move(_loop_acc), *_loop_l2);
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
               _loop_l1->v());
       if (std::holds_alternative<
@@ -60,13 +60,13 @@ TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
         _result = my_rev_append<unsigned int>(std::move(_loop_acc), *_loop_l1);
         break;
       } else {
-        const auto &[d_a00, d_a10] = std::get<
+        const auto &[a00, a10] = std::get<
             typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
             _loop_l2->v());
         _loop_acc = mylist<unsigned int>::mycons(
-            d_a00, mylist<unsigned int>::mycons(d_a0, std::move(_loop_acc)));
-        _loop_l2 = d_a10.get();
-        _loop_l1 = d_a1.get();
+            a00, mylist<unsigned int>::mycons(a0, std::move(_loop_acc)));
+        _loop_l2 = a10.get();
+        _loop_l1 = a1.get();
       }
     }
   }

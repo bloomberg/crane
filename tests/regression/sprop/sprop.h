@@ -15,11 +15,11 @@ struct SPropTest {
     return v;
   }
 
-  template <typename t_A> struct Box {
-    t_A box_value;
+  template <typename A> struct Box {
+    A box_value;
 
     // ACCESSORS
-    Box<t_A> clone() const { return Box<t_A>{(*this).box_value}; }
+    Box<A> clone() const { return Box<A>{(*this).box_value}; }
   };
 
   static unsigned int guarded_pred(unsigned int n);

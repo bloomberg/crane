@@ -7,50 +7,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -59,17 +59,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -79,30 +79,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -116,17 +114,17 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return ((*d_a1).length() + 1);
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return ((*a1).length() + 1);
     }
   }
 };
@@ -141,16 +139,16 @@ struct EncodeOps {
     struct DAA {};
 
     struct FIM {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      unsigned int a0;
+      unsigned int a1;
     };
 
     struct JUN {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct LDM1 {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct NOP1 {};
@@ -168,46 +166,46 @@ struct EncodeOps {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     instruction1() {}
 
-    explicit instruction1(CLB _v) : d_v_(_v) {}
+    explicit instruction1(CLB _v) : v_(_v) {}
 
-    explicit instruction1(CMC _v) : d_v_(_v) {}
+    explicit instruction1(CMC _v) : v_(_v) {}
 
-    explicit instruction1(DAA _v) : d_v_(_v) {}
+    explicit instruction1(DAA _v) : v_(_v) {}
 
-    explicit instruction1(FIM _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(FIM _v) : v_(std::move(_v)) {}
 
-    explicit instruction1(JUN _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(JUN _v) : v_(std::move(_v)) {}
 
-    explicit instruction1(LDM1 _v) : d_v_(std::move(_v)) {}
+    explicit instruction1(LDM1 _v) : v_(std::move(_v)) {}
 
-    explicit instruction1(NOP1 _v) : d_v_(_v) {}
+    explicit instruction1(NOP1 _v) : v_(_v) {}
 
-    explicit instruction1(RDM _v) : d_v_(_v) {}
+    explicit instruction1(RDM _v) : v_(_v) {}
 
-    explicit instruction1(TCS _v) : d_v_(_v) {}
+    explicit instruction1(TCS _v) : v_(_v) {}
 
-    explicit instruction1(WPM _v) : d_v_(_v) {}
+    explicit instruction1(WPM _v) : v_(_v) {}
 
-    explicit instruction1(WR0 _v) : d_v_(_v) {}
+    explicit instruction1(WR0 _v) : v_(_v) {}
 
     instruction1(const instruction1 &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+        : v_(std::move(_other.clone().v_)) {}
 
-    instruction1(instruction1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+    instruction1(instruction1 &&_other) : v_(std::move(_other.v_)) {}
 
     instruction1 &operator=(const instruction1 &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     instruction1 &operator=(instruction1 &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -220,14 +218,14 @@ struct EncodeOps {
       } else if (std::holds_alternative<DAA>(this->v())) {
         return instruction1(DAA{});
       } else if (std::holds_alternative<FIM>(this->v())) {
-        const auto &[d_a0, d_a1] = std::get<FIM>(this->v());
-        return instruction1(FIM{d_a0, d_a1});
+        const auto &[a0, a1] = std::get<FIM>(this->v());
+        return instruction1(FIM{a0, a1});
       } else if (std::holds_alternative<JUN>(this->v())) {
-        const auto &[d_a0] = std::get<JUN>(this->v());
-        return instruction1(JUN{d_a0});
+        const auto &[a0] = std::get<JUN>(this->v());
+        return instruction1(JUN{a0});
       } else if (std::holds_alternative<LDM1>(this->v())) {
-        const auto &[d_a0] = std::get<LDM1>(this->v());
-        return instruction1(LDM1{d_a0});
+        const auto &[a0] = std::get<LDM1>(this->v());
+        return instruction1(LDM1{a0});
       } else if (std::holds_alternative<NOP1>(this->v())) {
         return instruction1(NOP1{});
       } else if (std::holds_alternative<RDM>(this->v())) {
@@ -267,10 +265,10 @@ struct EncodeOps {
     static instruction1 wr0() { return instruction1(WR0{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     std::pair<unsigned int, unsigned int> encode1() const {
       if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
@@ -283,22 +281,20 @@ struct EncodeOps {
         return std::make_pair(251u, 0u);
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(this->v());
-        return std::make_pair(
-            (32u + (((d_a0 - (2u ? d_a0 % 2u : d_a0)) > d_a0
-                         ? 0
-                         : (d_a0 - (2u ? d_a0 % 2u : d_a0))))),
-            (256u ? d_a1 % 256u : d_a1));
+        const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
+        return std::make_pair((32u + (((a0 - (2u ? a0 % 2u : a0)) > a0
+                                           ? 0
+                                           : (a0 - (2u ? a0 % 2u : a0))))),
+                              (256u ? a1 % 256u : a1));
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
-        return std::make_pair((64u + (256u ? d_a0 / 256u : 0)),
-                              (256u ? d_a0 % 256u : d_a0));
+        const auto &[a0] = std::get<typename instruction1::JUN>(this->v());
+        return std::make_pair((64u + (256u ? a0 / 256u : 0)),
+                              (256u ? a0 % 256u : a0));
       } else if (std::holds_alternative<typename instruction1::LDM1>(
                      this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
-        return std::make_pair((208u + (16u ? d_a0 % 16u : d_a0)), 0u);
+        const auto &[a0] = std::get<typename instruction1::LDM1>(this->v());
+        return std::make_pair((208u + (16u ? a0 % 16u : a0)), 0u);
       } else if (std::holds_alternative<typename instruction1::NOP1>(
                      this->v())) {
         return std::make_pair(0u, 0u);
@@ -333,17 +329,16 @@ struct EncodeOps {
         return f1;
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(this->v());
-        return f2(d_a0, d_a1);
+        const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
+        return f2(a0, a1);
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
-        return f3(d_a0);
+        const auto &[a0] = std::get<typename instruction1::JUN>(this->v());
+        return f3(a0);
       } else if (std::holds_alternative<typename instruction1::LDM1>(
                      this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
-        return f4(d_a0);
+        const auto &[a0] = std::get<typename instruction1::LDM1>(this->v());
+        return f4(a0);
       } else if (std::holds_alternative<typename instruction1::NOP1>(
                      this->v())) {
         return f5;
@@ -378,17 +373,16 @@ struct EncodeOps {
         return f1;
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
-        const auto &[d_a0, d_a1] =
-            std::get<typename instruction1::FIM>(this->v());
-        return f2(d_a0, d_a1);
+        const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
+        return f2(a0, a1);
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::JUN>(this->v());
-        return f3(d_a0);
+        const auto &[a0] = std::get<typename instruction1::JUN>(this->v());
+        return f3(a0);
       } else if (std::holds_alternative<typename instruction1::LDM1>(
                      this->v())) {
-        const auto &[d_a0] = std::get<typename instruction1::LDM1>(this->v());
-        return f4(d_a0);
+        const auto &[a0] = std::get<typename instruction1::LDM1>(this->v());
+        return f4(a0);
       } else if (std::holds_alternative<typename instruction1::NOP1>(
                      this->v())) {
         return f5;
@@ -426,35 +420,35 @@ struct EncodeOps {
     struct NOP2 {};
 
     struct LDM2 {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     using variant_t = std::variant<NOP2, LDM2>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     instruction2() {}
 
-    explicit instruction2(NOP2 _v) : d_v_(_v) {}
+    explicit instruction2(NOP2 _v) : v_(_v) {}
 
-    explicit instruction2(LDM2 _v) : d_v_(std::move(_v)) {}
+    explicit instruction2(LDM2 _v) : v_(std::move(_v)) {}
 
     instruction2(const instruction2 &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+        : v_(std::move(_other.clone().v_)) {}
 
-    instruction2(instruction2 &&_other) : d_v_(std::move(_other.d_v_)) {}
+    instruction2(instruction2 &&_other) : v_(std::move(_other.v_)) {}
 
     instruction2 &operator=(const instruction2 &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     instruction2 &operator=(instruction2 &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -463,8 +457,8 @@ struct EncodeOps {
       if (std::holds_alternative<NOP2>(this->v())) {
         return instruction2(NOP2{});
       } else {
-        const auto &[d_a0] = std::get<LDM2>(this->v());
-        return instruction2(LDM2{d_a0});
+        const auto &[a0] = std::get<LDM2>(this->v());
+        return instruction2(LDM2{a0});
       }
     }
 
@@ -474,17 +468,17 @@ struct EncodeOps {
     static instruction2 ldm2(unsigned int a0) { return instruction2(LDM2{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     std::pair<unsigned int, unsigned int> encode2() const {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
-        return std::make_pair(13u, (16u ? d_a0 % 16u : d_a0));
+        const auto &[a0] = std::get<typename instruction2::LDM2>(this->v());
+        return std::make_pair(13u, (16u ? a0 % 16u : a0));
       }
     }
 
@@ -494,8 +488,8 @@ struct EncodeOps {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename instruction2::LDM2>(this->v());
+        return f0(a0);
       }
     }
 
@@ -505,8 +499,8 @@ struct EncodeOps {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction2::LDM2>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename instruction2::LDM2>(this->v());
+        return f0(a0);
       }
     }
   };
@@ -527,35 +521,35 @@ struct EncodeOps {
     struct NOP3 {};
 
     struct LDM3 {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     using variant_t = std::variant<NOP3, LDM3>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     instruction3() {}
 
-    explicit instruction3(NOP3 _v) : d_v_(_v) {}
+    explicit instruction3(NOP3 _v) : v_(_v) {}
 
-    explicit instruction3(LDM3 _v) : d_v_(std::move(_v)) {}
+    explicit instruction3(LDM3 _v) : v_(std::move(_v)) {}
 
     instruction3(const instruction3 &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+        : v_(std::move(_other.clone().v_)) {}
 
-    instruction3(instruction3 &&_other) : d_v_(std::move(_other.d_v_)) {}
+    instruction3(instruction3 &&_other) : v_(std::move(_other.v_)) {}
 
     instruction3 &operator=(const instruction3 &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     instruction3 &operator=(instruction3 &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -564,8 +558,8 @@ struct EncodeOps {
       if (std::holds_alternative<NOP3>(this->v())) {
         return instruction3(NOP3{});
       } else {
-        const auto &[d_a0] = std::get<LDM3>(this->v());
-        return instruction3(LDM3{d_a0});
+        const auto &[a0] = std::get<LDM3>(this->v());
+        return instruction3(LDM3{a0});
       }
     }
 
@@ -575,17 +569,17 @@ struct EncodeOps {
     static instruction3 ldm3(unsigned int a0) { return instruction3(LDM3{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     std::pair<unsigned int, unsigned int> encode3() const {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return std::make_pair(0u, 0u);
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
-        return std::make_pair(((13u * 16u) + (16u ? d_a0 % 16u : d_a0)), 0u);
+        const auto &[a0] = std::get<typename instruction3::LDM3>(this->v());
+        return std::make_pair(((13u * 16u) + (16u ? a0 % 16u : a0)), 0u);
       }
     }
 
@@ -595,8 +589,8 @@ struct EncodeOps {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename instruction3::LDM3>(this->v());
+        return f0(a0);
       }
     }
 
@@ -606,8 +600,8 @@ struct EncodeOps {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename instruction3::LDM3>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename instruction3::LDM3>(this->v());
+        return f0(a0);
       }
     }
   };

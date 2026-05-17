@@ -3,13 +3,13 @@
 unsigned int
 InductiveInModule::Inner::color_to_nat(InductiveInModule::Inner::Color c) {
   switch (c) {
-  case Color::e_RED: {
+  case Color::RED: {
     return 0u;
   }
-  case Color::e_GREEN: {
+  case Color::GREEN: {
     return 1u;
   }
-  case Color::e_BLUE: {
+  case Color::BLUE: {
     return 2u;
   }
   default:

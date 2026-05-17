@@ -5,13 +5,13 @@ NameClashIifeThis::match_of_match(NameClashIifeThis::Color c,
                                   const NameClashIifeThis::shape &s) {
   auto &&_sv = [&]() {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return shape::circle(5u);
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       return shape::square(3u, 4u);
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return s;
     }
     default:
@@ -20,12 +20,12 @@ NameClashIifeThis::match_of_match(NameClashIifeThis::Color c,
   }();
   if (std::holds_alternative<typename NameClashIifeThis::shape::Circle>(
           _sv.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename NameClashIifeThis::shape::Circle>(_sv.v());
-    return (d_a0 * 2u);
+    return (a0 * 2u);
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename NameClashIifeThis::shape::Square>(_sv.v());
-    return (d_a0 + d_a1);
+    return (a0 + a1);
   }
 }

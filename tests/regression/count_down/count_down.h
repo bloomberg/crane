@@ -10,7 +10,7 @@
 
 using namespace std::string_literals;
 
-enum class Comparison { e_EQ, e_LT, e_GT };
+enum class Comparison { EQ, LT, GT };
 
 struct CountDown {
   /// Single effect then recurse: effect ;; recursive_call

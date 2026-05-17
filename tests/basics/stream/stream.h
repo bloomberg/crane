@@ -13,34 +13,34 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> d_a0;
+    std::unique_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Nat() {}
 
-  explicit Nat(O _v) : d_v_(_v) {}
+  explicit Nat(O _v) : v_(_v) {}
 
-  explicit Nat(S _v) : d_v_(std::move(_v)) {}
+  explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Nat &operator=(Nat &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -62,13 +62,13 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -85,10 +85,10 @@ public:
     std::vector<std::unique_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.d_v_)) {
-        auto &_alt = std::get<S>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<S>(_node.v_)) {
+        auto &_alt = std::get<S>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -102,56 +102,56 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -160,17 +160,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -180,30 +180,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -217,51 +215,51 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
-template <typename t_A> struct Stream {
+template <typename A> struct Stream {
   // TYPES
   struct Scons {
-    t_A d_a0;
-    std::shared_ptr<Stream<t_A>> d_a1;
+    A a0;
+    std::shared_ptr<Stream<A>> a1;
   };
 
   using variant_t = std::variant<Scons>;
 
 private:
   // DATA
-  crane::lazy<variant_t> d_lazyV_;
+  crane::lazy<variant_t> lazy_v_;
 
 public:
   // CREATORS
   explicit Stream(Scons _v)
-      : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
+      : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
   explicit Stream(std::function<variant_t()> _thunk)
-      : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
+      : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static Stream<t_A> scons(t_A a0, const Stream<t_A> &a1) {
-    return Stream(Scons{std::move(a0), std::make_shared<Stream<t_A>>(a1)});
+  static Stream<A> scons(A a0, const Stream<A> &a1) {
+    return Stream(Scons{std::move(a0), std::make_shared<Stream<A>>(a1)});
   }
 
-  static Stream<t_A> lazy_(std::function<Stream<t_A>()> thunk) {
-    return Stream<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
-      Stream<t_A> _tmp = thunk();
+  static Stream<A> lazy_(std::function<Stream<A>()> thunk) {
+    return Stream<A>(std::function<variant_t()>([=]() mutable -> variant_t {
+      Stream<A> _tmp = thunk();
       return _tmp.v();
     }));
   }
 
   // ACCESSORS
-  const variant_t &v() const { return d_lazyV_.force(); }
+  const variant_t &v() const { return lazy_v_.force(); }
 
-  Stream<t_A> interleave(Stream<t_A> sb) const {
-    const auto &[d_a0, d_a1] = std::get<typename Stream<t_A>::Scons>(this->v());
-    return Stream<t_A>::lazy_([=]() mutable -> Stream<t_A> {
-      return Stream<t_A>::scons(d_a0, sb.interleave(*d_a1));
+  Stream<A> interleave(Stream<A> sb) const {
+    const auto &[a0, a1] = std::get<typename Stream<A>::Scons>(this->v());
+    return Stream<A>::lazy_([=]() mutable -> Stream<A> {
+      return Stream<A>::scons(a0, sb.interleave(*a1));
     });
   }
 
@@ -269,9 +267,9 @@ public:
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(n.v());
-      const auto &[d_a00, d_a10] = std::get<typename Stream<T1>::Scons>(s.v());
-      return List<T1>::cons(d_a00, take<T1>(*d_a0, *d_a10));
+      const auto &[a0] = std::get<typename Nat::S>(n.v());
+      const auto &[a00, a10] = std::get<typename Stream<T1>::Scons>(s.v());
+      return List<T1>::cons(a00, take<T1>(*a0, *a10));
     }
   }
 

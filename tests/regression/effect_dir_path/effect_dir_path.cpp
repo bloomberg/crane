@@ -13,9 +13,8 @@ std::optional<std::string> EffectDirPath::first_file(std::string path) {
   if (std::holds_alternative<typename List<std::string>::Nil>(files.v_mut())) {
     return std::optional<std::string>();
   } else {
-    auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(files.v_mut());
-    return std::make_optional<std::string>(d_a0);
+    auto &[a0, a1] = std::get<typename List<std::string>::Cons>(files.v_mut());
+    return std::make_optional<std::string>(a0);
   }
 }
 
@@ -77,18 +76,17 @@ unsigned int EffectDirPath::count_entries(const List<std::string> &dirs,
   if (std::holds_alternative<typename List<std::string>::Nil>(dirs.v())) {
     return acc;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(dirs.v());
+    const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(dirs.v());
     List<std::string> files = [&]() -> List<std::string> {
       auto result = List<std::string>::nil();
-      for (const auto &entry : std::filesystem::directory_iterator(d_a0)) {
+      for (const auto &entry : std::filesystem::directory_iterator(a0)) {
         result = List<std::string>::cons(entry.path().filename().string(),
                                          std::move(result));
       }
       return result;
     }();
     unsigned int n = std::move(files).length();
-    return count_entries(*d_a1, (acc + n));
+    return count_entries(*a1, (acc + n));
   }
 }
 

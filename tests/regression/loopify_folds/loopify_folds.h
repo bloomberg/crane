@@ -7,50 +7,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -59,17 +59,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -79,30 +79,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -116,10 +114,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   unsigned int length() const {
     const List *_self = this;
@@ -145,13 +143,12 @@ public:
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
         auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<t_A>::Cons>(_sv.v());
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -177,10 +174,10 @@ struct LoopifyFolds {
         _result = _loop_acc;
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        _loop_l = d_a1.get();
-        _loop_acc = f(_loop_acc, d_a0);
+        _loop_l = a1.get();
+        _loop_acc = f(_loop_acc, a0);
       }
     }
     return _result;
@@ -198,11 +195,10 @@ struct LoopifyFolds {
       const List<unsigned int> *l;
     };
 
-    /// _Resume_Cons: saves [f, d_a0], resumes after recursive call with
-    /// _result.
+    /// _Resume_Cons: saves [f, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       F0 f;
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -220,14 +216,14 @@ struct LoopifyFolds {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = acc;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f, d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons{f, a0});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f(_f.d_a0, _result);
+        _result = _f.f(_f.a0, _result);
       }
     }
     return _result;
@@ -249,16 +245,15 @@ struct LoopifyFolds {
             List<unsigned int>::cons(_loop_acc, List<unsigned int>::nil()));
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(_loop_acc, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
-        _loop_acc = f(_loop_acc, d_a0);
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = a1.get();
+        _loop_acc = f(_loop_acc, a0);
         continue;
       }
     }
@@ -273,15 +268,14 @@ struct LoopifyFolds {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return List<unsigned int>::cons(acc, List<unsigned int>::nil());
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      auto &&_sv0 = scanr(f, acc, *d_a1);
+      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      auto &&_sv0 = scanr(f, acc, *a1);
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
         return List<unsigned int>::cons(acc, List<unsigned int>::nil());
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(_sv0.v());
-        return List<unsigned int>::cons(f(d_a0, d_a00), *d_a10);
+        return List<unsigned int>::cons(f(a0, a00), *a10);
       }
     }
   }
@@ -305,17 +299,17 @@ struct LoopifyFolds {
           _result = 0u;
           break;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(_loop_l.v());
-          auto &&_sv0 = *d_a1;
+          auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv0.v())) {
-            _result = d_a0;
+            _result = a0;
             break;
           } else {
-            const auto &[d_a00, d_a10] =
+            const auto &[a00, a10] =
                 std::get<typename List<unsigned int>::Cons>(_sv0.v());
-            _loop_l = List<unsigned int>::cons(f(d_a0, d_a00), *d_a10);
+            _loop_l = List<unsigned int>::cons(f(a0, a00), *a10);
             _loop_fuel = fuel_;
           }
         }
@@ -343,11 +337,10 @@ struct LoopifyFolds {
       const List<unsigned int> *l;
     };
 
-    /// _Resume_Cons: saves [f, d_a0], resumes after recursive call with
-    /// _result.
+    /// _Resume_Cons: saves [f, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
       F0 f;
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -365,20 +358,20 @@ struct LoopifyFolds {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *d_a1;
+          auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = d_a0;
+            _result = a0;
           } else {
-            _stack.emplace_back(_Resume_Cons{f, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Resume_Cons{f, a0});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f(_f.d_a0, _result);
+        _result = _f.f(_f.a0, _result);
       }
     }
     return _result;
@@ -419,13 +412,13 @@ struct LoopifyFolds {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = std::make_pair(std::move(acc), List<unsigned int>::nil());
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto _cs = f(acc, d_a0);
+          auto _cs = f(acc, a0);
           const unsigned int &acc_ = _cs.first;
           const unsigned int &y = _cs.second;
           _stack.emplace_back(_Cont_acc_{y});
-          _stack.emplace_back(_Enter{d_a1.get(), std::move(_cs.first)});
+          _stack.emplace_back(_Enter{a1.get(), std::move(_cs.first)});
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
@@ -458,8 +451,7 @@ struct LoopifyFolds {
             typename List<unsigned int>::Cons(_loop_x, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
         _loop_x = f(_loop_x);
         _loop_n = n_;
         continue;
@@ -491,8 +483,7 @@ struct LoopifyFolds {
             typename List<unsigned int>::Cons(x, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
         _loop_seed = next_seed;
         _loop_fuel = fuel_;
         continue;

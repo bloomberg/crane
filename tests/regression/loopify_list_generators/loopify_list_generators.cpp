@@ -73,7 +73,7 @@ List<unsigned int> LoopifyListGenerators::range(unsigned int start,
           typename List<unsigned int>::Cons(_loop_start, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
       _loop_count = count_;
       _loop_start = (_loop_start + 1u);
       continue;
@@ -97,7 +97,7 @@ List<unsigned int> LoopifyListGenerators::replicate_elem(unsigned int n,
           typename List<unsigned int>::Cons(x, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
       _loop_n = n_;
       continue;
     }
@@ -134,11 +134,11 @@ List<unsigned int> LoopifyListGenerators::replicate_each(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        List<unsigned int> reps = replicate_elem(n, d_a0);
+        List<unsigned int> reps = replicate_elem(n, a0);
         _stack.emplace_back(_Resume_Cons{std::move(reps)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -162,18 +162,18 @@ LoopifyListGenerators::enumerate_aux(unsigned int idx,
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell =
           std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
               typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                  std::make_pair(_loop_idx, d_a0), nullptr));
+                  std::make_pair(_loop_idx, a0), nullptr));
       *_write = std::move(_cell);
       _write =
           &std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                (*_write)->v_mut())
-               .d_a1;
-      _loop_l = d_a1.get();
+               .a1;
+      _loop_l = a1.get();
       _loop_idx = (_loop_idx + 1u);
       continue;
     }

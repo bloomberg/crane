@@ -20,41 +20,41 @@ struct LoopifyMultiRecursion {
   struct quadtree {
     // TYPES
     struct QLeaf {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct QQuad {
-      std::unique_ptr<quadtree> d_a0;
-      std::unique_ptr<quadtree> d_a1;
-      std::unique_ptr<quadtree> d_a2;
-      std::unique_ptr<quadtree> d_a3;
+      std::unique_ptr<quadtree> a0;
+      std::unique_ptr<quadtree> a1;
+      std::unique_ptr<quadtree> a2;
+      std::unique_ptr<quadtree> a3;
     };
 
     using variant_t = std::variant<QLeaf, QQuad>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     quadtree() {}
 
-    explicit quadtree(QLeaf _v) : d_v_(std::move(_v)) {}
+    explicit quadtree(QLeaf _v) : v_(std::move(_v)) {}
 
-    explicit quadtree(QQuad _v) : d_v_(std::move(_v)) {}
+    explicit quadtree(QQuad _v) : v_(std::move(_v)) {}
 
-    quadtree(const quadtree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    quadtree(const quadtree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    quadtree(quadtree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    quadtree(quadtree &&_other) : v_(std::move(_other.v_)) {}
 
     quadtree &operator=(const quadtree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     quadtree &operator=(quadtree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -77,26 +77,25 @@ struct LoopifyMultiRecursion {
         quadtree *_dst = _frame._dst;
         if (std::holds_alternative<QLeaf>(_src->v())) {
           const auto &_alt = std::get<QLeaf>(_src->v());
-          _dst->d_v_ = QLeaf{_alt.d_a0};
+          _dst->v_ = QLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<QQuad>(_src->v());
-          _dst->d_v_ =
-              QQuad{_alt.d_a0 ? std::make_unique<quadtree>() : nullptr,
-                    _alt.d_a1 ? std::make_unique<quadtree>() : nullptr,
-                    _alt.d_a2 ? std::make_unique<quadtree>() : nullptr,
-                    _alt.d_a3 ? std::make_unique<quadtree>() : nullptr};
-          auto &_dst_alt = std::get<QQuad>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = QQuad{_alt.a0 ? std::make_unique<quadtree>() : nullptr,
+                           _alt.a1 ? std::make_unique<quadtree>() : nullptr,
+                           _alt.a2 ? std::make_unique<quadtree>() : nullptr,
+                           _alt.a3 ? std::make_unique<quadtree>() : nullptr};
+          auto &_dst_alt = std::get<QQuad>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
-          if (_alt.d_a3) {
-            _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+          if (_alt.a3) {
+            _stack.push_back({_alt.a3.get(), _dst_alt.a3.get()});
           }
         }
       }
@@ -118,19 +117,19 @@ struct LoopifyMultiRecursion {
       std::vector<std::unique_ptr<quadtree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](quadtree &_node) {
-        if (std::holds_alternative<QQuad>(_node.d_v_)) {
-          auto &_alt = std::get<QQuad>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<QQuad>(_node.v_)) {
+          auto &_alt = std::get<QQuad>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
-          if (_alt.d_a3) {
-            _stack.push_back(std::move(_alt.d_a3));
+          if (_alt.a3) {
+            _stack.push_back(std::move(_alt.a3));
           }
         }
       };
@@ -144,10 +143,10 @@ struct LoopifyMultiRecursion {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1>
@@ -156,15 +155,14 @@ struct LoopifyMultiRecursion {
                                    quadtree &, T1 &, quadtree &, T1 &>
   static T1 quadtree_rect(F0 &&f, F1 &&f0, const quadtree &q) {
     if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
-      const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1, d_a2, d_a3] =
-          std::get<typename quadtree::QQuad>(q.v());
-      return f0(*d_a0, quadtree_rect<T1>(f, f0, *d_a0), *d_a1,
-                quadtree_rect<T1>(f, f0, *d_a1), *d_a2,
-                quadtree_rect<T1>(f, f0, *d_a2), *d_a3,
-                quadtree_rect<T1>(f, f0, *d_a3));
+      const auto &[a0, a1, a2, a3] = std::get<typename quadtree::QQuad>(q.v());
+      return f0(*a0, quadtree_rect<T1>(f, f0, *a0), *a1,
+                quadtree_rect<T1>(f, f0, *a1), *a2,
+                quadtree_rect<T1>(f, f0, *a2), *a3,
+                quadtree_rect<T1>(f, f0, *a3));
     }
   }
 
@@ -174,15 +172,13 @@ struct LoopifyMultiRecursion {
                                    quadtree &, T1 &, quadtree &, T1 &>
   static T1 quadtree_rec(F0 &&f, F1 &&f0, const quadtree &q) {
     if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
-      const auto &[d_a0] = std::get<typename quadtree::QLeaf>(q.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1, d_a2, d_a3] =
-          std::get<typename quadtree::QQuad>(q.v());
-      return f0(*d_a0, quadtree_rec<T1>(f, f0, *d_a0), *d_a1,
-                quadtree_rec<T1>(f, f0, *d_a1), *d_a2,
-                quadtree_rec<T1>(f, f0, *d_a2), *d_a3,
-                quadtree_rec<T1>(f, f0, *d_a3));
+      const auto &[a0, a1, a2, a3] = std::get<typename quadtree::QQuad>(q.v());
+      return f0(*a0, quadtree_rec<T1>(f, f0, *a0), *a1,
+                quadtree_rec<T1>(f, f0, *a1), *a2, quadtree_rec<T1>(f, f0, *a2),
+                *a3, quadtree_rec<T1>(f, f0, *a3));
     }
   }
 

@@ -36,9 +36,9 @@ ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
           fl.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
-    return d_a0(x);
+    return a0(x);
   }
 }
 
@@ -49,8 +49,8 @@ ClosureRecursiveBuild::apply_all_sum(const ClosureRecursiveBuild::fn_list &fl,
           fl.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
-    return (d_a0(x) + apply_all_sum(*d_a1, x));
+    return (a0(x) + apply_all_sum(*a1, x));
   }
 }

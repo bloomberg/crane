@@ -10,50 +10,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -62,17 +62,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -82,30 +82,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -119,63 +117,63 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
-template <typename t_A> struct Sig {
+template <typename A> struct Sig {
   // TYPES
   struct Exist {
-    t_A d_x;
+    A x;
   };
 
   using variant_t = std::variant<Exist>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Sig() {}
 
-  explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
+  explicit Sig(Exist _v) : v_(std::move(_v)) {}
 
-  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Sig(const Sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Sig(Sig<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  Sig<t_A> &operator=(const Sig<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  Sig<A> &operator=(const Sig<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Sig<t_A> &operator=(Sig<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Sig<A> &operator=(Sig<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  Sig<t_A> clone() const {
-    const auto &[d_x] = std::get<Exist>(this->v());
-    return Sig<t_A>(Exist{d_x});
+  Sig<A> clone() const {
+    const auto &[x] = std::get<Exist>(this->v());
+    return Sig<A>(Exist{x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist{t_A(d_x)};
+    const auto &[x] = std::get<typename Sig<_U>::Exist>(_other.v());
+    this->v_ = Exist{A(x)};
   }
 
-  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
+  static Sig<A> exist(A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct ComprehensivePatterns {
@@ -253,17 +251,17 @@ struct ComprehensivePatterns {
   static List<std::pair<S, unsigned int>> make_list(unsigned int n, S s);
   static std::optional<std::pair<S, S>> multi_match(const std::optional<S> &o1,
                                                     const std::optional<S> &o2);
-  enum class Three { e_A, e_B, e_C };
+  enum class Three { A, B, C };
 
   template <typename T1> static T1 Three_rect(T1 f, T1 f0, T1 f3, Three t) {
     switch (t) {
-    case Three::e_A: {
+    case Three::A: {
       return f;
     }
-    case Three::e_B: {
+    case Three::B: {
       return f0;
     }
-    case Three::e_C: {
+    case Three::C: {
       return f3;
     }
     default:
@@ -273,13 +271,13 @@ struct ComprehensivePatterns {
 
   template <typename T1> static T1 Three_rec(T1 f, T1 f0, T1 f3, Three t) {
     switch (t) {
-    case Three::e_A: {
+    case Three::A: {
       return f;
     }
-    case Three::e_B: {
+    case Three::B: {
       return f0;
     }
-    case Three::e_C: {
+    case Three::C: {
       return f3;
     }
     default:
@@ -301,49 +299,49 @@ struct ComprehensivePatterns {
   struct Either {
     // TYPES
     struct Left_S {
-      S d_s;
+      S s;
     };
 
     struct Right_N {
-      unsigned int d_n;
+      unsigned int n;
     };
 
     using variant_t = std::variant<Left_S, Right_N>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Either() {}
 
-    explicit Either(Left_S _v) : d_v_(std::move(_v)) {}
+    explicit Either(Left_S _v) : v_(std::move(_v)) {}
 
-    explicit Either(Right_N _v) : d_v_(std::move(_v)) {}
+    explicit Either(Right_N _v) : v_(std::move(_v)) {}
 
-    Either(const Either &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    Either(const Either &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Either(Either &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Either(Either &&_other) : v_(std::move(_other.v_)) {}
 
     Either &operator=(const Either &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     Either &operator=(Either &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     Either clone() const {
       if (std::holds_alternative<Left_S>(this->v())) {
-        const auto &[d_s] = std::get<Left_S>(this->v());
-        return Either(Left_S{d_s.clone()});
+        const auto &[s] = std::get<Left_S>(this->v());
+        return Either(Left_S{s.clone()});
       } else {
-        const auto &[d_n] = std::get<Right_N>(this->v());
-        return Either(Right_N{d_n});
+        const auto &[n] = std::get<Right_N>(this->v());
+        return Either(Right_N{n});
       }
     }
 
@@ -353,21 +351,21 @@ struct ComprehensivePatterns {
     static Either right_n(unsigned int n) { return Either(Right_N{n}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, S &> &&
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
-        const auto &[d_s] = std::get<typename Either::Left_S>(this->v());
-        return f(d_s);
+        const auto &[s0] = std::get<typename Either::Left_S>(this->v());
+        return f(s0);
       } else {
-        const auto &[d_n] = std::get<typename Either::Right_N>(this->v());
-        return f0(d_n);
+        const auto &[n0] = std::get<typename Either::Right_N>(this->v());
+        return f0(n0);
       }
     }
 
@@ -376,11 +374,11 @@ struct ComprehensivePatterns {
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
-        const auto &[d_s] = std::get<typename Either::Left_S>(this->v());
-        return f(d_s);
+        const auto &[s0] = std::get<typename Either::Left_S>(this->v());
+        return f(s0);
       } else {
-        const auto &[d_n] = std::get<typename Either::Right_N>(this->v());
-        return f0(d_n);
+        const auto &[n0] = std::get<typename Either::Right_N>(this->v());
+        return f0(n0);
       }
     }
   };
@@ -645,40 +643,40 @@ struct ComprehensivePatterns {
   struct Tree {
     // TYPES
     struct Leaf {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct Node {
-      std::unique_ptr<Tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<Tree> d_a2;
+      std::unique_ptr<Tree> a0;
+      unsigned int a1;
+      std::unique_ptr<Tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Tree() {}
 
-    explicit Tree(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit Tree(Leaf _v) : v_(std::move(_v)) {}
 
-    explicit Tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-    Tree(const Tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    Tree(const Tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Tree(Tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Tree(Tree &&_other) : v_(std::move(_other.v_)) {}
 
     Tree &operator=(const Tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     Tree &operator=(Tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -701,18 +699,17 @@ struct ComprehensivePatterns {
         Tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
           const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->d_v_ = Leaf{_alt.d_a0};
+          _dst->v_ = Leaf{_alt.a0};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<Tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<Tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<Tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<Tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -732,13 +729,13 @@ struct ComprehensivePatterns {
       std::vector<std::unique_ptr<Tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](Tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -752,10 +749,10 @@ struct ComprehensivePatterns {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     Tree nested_reuse() const {
       Tree t2 = (*this).transform_tree();
@@ -764,22 +761,21 @@ struct ComprehensivePatterns {
 
     Tree flip_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
-        auto &[d_a0] = std::get<typename Tree::Leaf>(this->v());
-        return Tree::node(*this, std::move(d_a0), *this);
+        auto &[a0] = std::get<typename Tree::Leaf>(this->v());
+        return Tree::node(*this, std::move(a0), *this);
       } else {
-        auto &[d_a0, d_a1, d_a2] = std::get<typename Tree::Node>(this->v());
-        return Tree::leaf(std::move(d_a1));
+        auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
+        return Tree::leaf(std::move(a1));
       }
     }
 
     Tree transform_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename Tree::Leaf>(this->v());
-        return Tree::leaf((d_a0 + 1u));
+        const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
+        return Tree::leaf((a0 + 1u));
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename Tree::Node>(this->v());
-        return Tree::node(*d_a0, (d_a1 + 1u), *d_a2);
+        const auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
+        return Tree::node(*a0, (a1 + 1u), *a2);
       }
     }
 
@@ -819,13 +815,12 @@ struct ComprehensivePatterns {
           const Tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = (d_a0 + s.lb_value);
+            const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
+            _result = (a0 + s.lb_value);
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), (d_a1 + s.lb_value)});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), (a1 + s.lb_value)});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
@@ -847,17 +842,17 @@ struct ComprehensivePatterns {
         const Tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a1], dispatches next recursive call.
+      /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         Tree *_s0;
-        unsigned int d_a1;
+        unsigned int a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         unsigned int _result;
-        unsigned int d_a1;
+        unsigned int a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -874,21 +869,20 @@ struct ComprehensivePatterns {
           const Tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = d_a0;
+            const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
+            _result = a0;
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), a1});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, _f.d_a1});
+          _stack.emplace_back(_Combine_Node{_result, _f.a1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = ((_f.d_a1 + _result) + _f._result);
+          _result = ((_f.a1 + _result) + _f._result);
         }
       }
       return _result;
@@ -906,22 +900,21 @@ struct ComprehensivePatterns {
         const Tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
-      /// call.
+      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
       struct _After_Node {
         Tree *_s0;
-        Tree d_a2;
-        unsigned int d_a1;
-        Tree d_a0;
+        Tree a2;
+        unsigned int a1;
+        Tree a0;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         T1 _result;
-        Tree d_a2;
-        unsigned int d_a1;
-        Tree d_a0;
+        Tree a2;
+        unsigned int a1;
+        Tree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -938,22 +931,21 @@ struct ComprehensivePatterns {
           const Tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = f(d_a0);
+            const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
+            _result = f(a0);
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+                                            std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
+          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
         }
       }
       return _result;
@@ -971,22 +963,21 @@ struct ComprehensivePatterns {
         const Tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
-      /// call.
+      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
       struct _After_Node {
         Tree *_s0;
-        Tree d_a2;
-        unsigned int d_a1;
-        Tree d_a0;
+        Tree a2;
+        unsigned int a1;
+        Tree a0;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         T1 _result;
-        Tree d_a2;
-        unsigned int d_a1;
-        Tree d_a0;
+        Tree a2;
+        unsigned int a1;
+        Tree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -1003,22 +994,21 @@ struct ComprehensivePatterns {
           const Tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-            const auto &[d_a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = f(d_a0);
+            const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
+            _result = f(a0);
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+                                            std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
+          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
         }
       }
       return _result;
@@ -1040,34 +1030,34 @@ struct ComprehensivePatterns {
     struct Empty {};
 
     struct Full {
-      StateRO d_a0;
+      StateRO a0;
     };
 
     using variant_t = std::variant<Empty, Full>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Container() {}
 
-    explicit Container(Empty _v) : d_v_(_v) {}
+    explicit Container(Empty _v) : v_(_v) {}
 
-    explicit Container(Full _v) : d_v_(std::move(_v)) {}
+    explicit Container(Full _v) : v_(std::move(_v)) {}
 
-    Container(const Container &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    Container(const Container &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Container(Container &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Container(Container &&_other) : v_(std::move(_other.v_)) {}
 
     Container &operator=(const Container &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     Container &operator=(Container &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -1076,8 +1066,8 @@ struct ComprehensivePatterns {
       if (std::holds_alternative<Empty>(this->v())) {
         return Container(Empty{});
       } else {
-        const auto &[d_a0] = std::get<Full>(this->v());
-        return Container(Full{d_a0.clone()});
+        const auto &[a0] = std::get<Full>(this->v());
+        return Container(Full{a0.clone()});
       }
     }
 
@@ -1087,17 +1077,17 @@ struct ComprehensivePatterns {
     static Container full(StateRO a0) { return Container(Full{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     unsigned int extract_from_container() const {
       if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
-        return (d_a0.ro_value + d_a0.ro_data);
+        const auto &[a0] = std::get<typename Container::Full>(this->v());
+        return (a0.ro_value + a0.ro_data);
       }
     }
 
@@ -1107,8 +1097,8 @@ struct ComprehensivePatterns {
       if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename Container::Full>(this->v());
+        return f0(a0);
       }
     }
 
@@ -1118,8 +1108,8 @@ struct ComprehensivePatterns {
       if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename Container::Full>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename Container::Full>(this->v());
+        return f0(a0);
       }
     }
   };

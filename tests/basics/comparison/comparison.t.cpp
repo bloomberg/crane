@@ -34,9 +34,9 @@ int main() {
   ASSERT(Comparison::test_gt_nat == 2u);
 
   // Test compare_nats returns correct cmp value
-  ASSERT(Comparison::test_compare_lt == Comparison::Cmp::e_CMPLT);
-  ASSERT(Comparison::test_compare_eq == Comparison::Cmp::e_CMPEQ);
-  ASSERT(Comparison::test_compare_gt == Comparison::Cmp::e_CMPGT);
+  ASSERT(Comparison::test_compare_lt == Comparison::Cmp::CMPLT);
+  ASSERT(Comparison::test_compare_eq == Comparison::Cmp::CMPEQ);
+  ASSERT(Comparison::test_compare_gt == Comparison::Cmp::CMPGT);
 
   // Test max/min
   ASSERT(Comparison::test_max == 7u);
@@ -48,7 +48,7 @@ int main() {
   ASSERT(Comparison::test_clamp_hi == 7u);  // 9 clamped to 7
 
   // Test flip
-  ASSERT(Comparison::test_flip == Comparison::Cmp::e_CMPGT);
+  ASSERT(Comparison::test_flip == Comparison::Cmp::CMPGT);
 
   return testStatus;
 }

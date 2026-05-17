@@ -9,7 +9,7 @@ struct MatchFallbackNat {
   struct maybe_nat {
     // TYPES
     struct SomeNat {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct NoneNat {};
@@ -18,35 +18,35 @@ struct MatchFallbackNat {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     maybe_nat() {}
 
-    explicit maybe_nat(SomeNat _v) : d_v_(std::move(_v)) {}
+    explicit maybe_nat(SomeNat _v) : v_(std::move(_v)) {}
 
-    explicit maybe_nat(NoneNat _v) : d_v_(_v) {}
+    explicit maybe_nat(NoneNat _v) : v_(_v) {}
 
-    maybe_nat(const maybe_nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    maybe_nat(const maybe_nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-    maybe_nat(maybe_nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+    maybe_nat(maybe_nat &&_other) : v_(std::move(_other.v_)) {}
 
     maybe_nat &operator=(const maybe_nat &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     maybe_nat &operator=(maybe_nat &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     maybe_nat clone() const {
       if (std::holds_alternative<SomeNat>(this->v())) {
-        const auto &[d_a0] = std::get<SomeNat>(this->v());
-        return maybe_nat(SomeNat{d_a0});
+        const auto &[a0] = std::get<SomeNat>(this->v());
+        return maybe_nat(SomeNat{a0});
       } else {
         return maybe_nat(NoneNat{});
       }
@@ -58,18 +58,18 @@ struct MatchFallbackNat {
     static maybe_nat nonenat() { return maybe_nat(NoneNat{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static T1 maybe_nat_rect(F0 &&f, T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
-      const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename maybe_nat::SomeNat>(m.v());
+      return f(a0);
     } else {
       return f0;
     }
@@ -79,8 +79,8 @@ struct MatchFallbackNat {
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
   static T1 maybe_nat_rec(F0 &&f, T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
-      const auto &[d_a0] = std::get<typename maybe_nat::SomeNat>(m.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename maybe_nat::SomeNat>(m.v());
+      return f(a0);
     } else {
       return f0;
     }

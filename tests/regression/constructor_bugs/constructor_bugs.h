@@ -9,50 +9,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -61,17 +61,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -81,30 +81,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -118,63 +116,63 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
-template <typename t_A> struct Sig {
+template <typename A> struct Sig {
   // TYPES
   struct Exist {
-    t_A d_x;
+    A x;
   };
 
   using variant_t = std::variant<Exist>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Sig() {}
 
-  explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
+  explicit Sig(Exist _v) : v_(std::move(_v)) {}
 
-  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Sig(const Sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Sig(Sig<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  Sig<t_A> &operator=(const Sig<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  Sig<A> &operator=(const Sig<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Sig<t_A> &operator=(Sig<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Sig<A> &operator=(Sig<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  Sig<t_A> clone() const {
-    const auto &[d_x] = std::get<Exist>(this->v());
-    return Sig<t_A>(Exist{d_x});
+  Sig<A> clone() const {
+    const auto &[x] = std::get<Exist>(this->v());
+    return Sig<A>(Exist{x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist{t_A(d_x)};
+    const auto &[x] = std::get<typename Sig<_U>::Exist>(_other.v());
+    this->v_ = Exist{A(x)};
   }
 
-  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
+  static Sig<A> exist(A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct ConstructorBugs {
@@ -321,49 +319,49 @@ struct ConstructorBugs {
   struct MySum {
     // TYPES
     struct Left {
-      Inner d_a0;
+      Inner a0;
     };
 
     struct Right {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     using variant_t = std::variant<Left, Right>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     MySum() {}
 
-    explicit MySum(Left _v) : d_v_(std::move(_v)) {}
+    explicit MySum(Left _v) : v_(std::move(_v)) {}
 
-    explicit MySum(Right _v) : d_v_(std::move(_v)) {}
+    explicit MySum(Right _v) : v_(std::move(_v)) {}
 
-    MySum(const MySum &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    MySum(const MySum &_other) : v_(std::move(_other.clone().v_)) {}
 
-    MySum(MySum &&_other) : d_v_(std::move(_other.d_v_)) {}
+    MySum(MySum &&_other) : v_(std::move(_other.v_)) {}
 
     MySum &operator=(const MySum &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     MySum &operator=(MySum &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     MySum clone() const {
       if (std::holds_alternative<Left>(this->v())) {
-        const auto &[d_a0] = std::get<Left>(this->v());
-        return MySum(Left{d_a0.clone()});
+        const auto &[a0] = std::get<Left>(this->v());
+        return MySum(Left{a0.clone()});
       } else {
-        const auto &[d_a0] = std::get<Right>(this->v());
-        return MySum(Right{d_a0});
+        const auto &[a0] = std::get<Right>(this->v());
+        return MySum(Right{a0});
       }
     }
 
@@ -373,10 +371,10 @@ struct ConstructorBugs {
     static MySum right(unsigned int a0) { return MySum(Right{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1>
@@ -384,11 +382,11 @@ struct ConstructorBugs {
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 MySum_rect(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
-      const auto &[d_a0] = std::get<typename MySum::Left>(m.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename MySum::Left>(m.v());
+      return f(a0);
     } else {
-      const auto &[d_a0] = std::get<typename MySum::Right>(m.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename MySum::Right>(m.v());
+      return f0(a0);
     }
   }
 
@@ -397,11 +395,11 @@ struct ConstructorBugs {
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
-      const auto &[d_a0] = std::get<typename MySum::Left>(m.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename MySum::Left>(m.v());
+      return f(a0);
     } else {
-      const auto &[d_a0] = std::get<typename MySum::Right>(m.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename MySum::Right>(m.v());
+      return f0(a0);
     }
   }
 

@@ -14,10 +14,10 @@ int main() {
     auto [first, second] = ReuseAlias::double_use(l);
 
     auto &c1 = std::get<1>(first.v());
-    assert(c1.d_a0 == 2u); // inc_head: 1+1 = 2
+    assert(c1.a0 == 2u); // inc_head: 1+1 = 2
 
     auto &c2 = std::get<1>(second.v());
-    assert(c2.d_a0 == 1u); // original should still be 1
+    assert(c2.a0 == 1u); // original should still be 1
     std::cout << "double_use: OK" << std::endl;
   }
 
@@ -36,7 +36,7 @@ int main() {
     auto [aliased, val] = ReuseAlias::alias_and_match(l);
     assert(val == 42u);
     auto &c = std::get<1>(aliased.v());
-    assert(c.d_a0 == 42u);
+    assert(c.a0 == 42u);
     std::cout << "alias_and_match: OK" << std::endl;
   }
 
@@ -45,9 +45,9 @@ int main() {
     auto l = L::mycons(1u, L::mycons(2u, L::mynil()));
     auto [whole, tail] = ReuseAlias::scrutinee_in_branch(l);
     auto &w = std::get<1>(whole.v());
-    assert(w.d_a0 == 1u);
+    assert(w.a0 == 1u);
     auto &t = std::get<1>(tail.v());
-    assert(t.d_a0 == 2u);
+    assert(t.a0 == 2u);
     std::cout << "scrutinee_in_branch: OK" << std::endl;
   }
 
@@ -56,7 +56,7 @@ int main() {
     auto l = L::mycons(10u, L::mycons(20u, L::mynil()));
     auto result = ReuseAlias::triple_inc(l);
     auto &c = std::get<1>(result.v());
-    assert(c.d_a0 == 13u); // 10 + 3
+    assert(c.a0 == 13u); // 10 + 3
     std::cout << "triple_inc: OK" << std::endl;
   }
 

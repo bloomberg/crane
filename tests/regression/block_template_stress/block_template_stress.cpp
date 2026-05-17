@@ -77,17 +77,17 @@ BlockTemplateStress::read_files(const List<std::string> &paths) {
   if (std::holds_alternative<typename List<std::string>::Nil>(paths.v())) {
     return List<std::string>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::string>::Cons>(paths.v());
     std::string content;
     {
-      std::ifstream _f(d_a0);
+      std::ifstream _f(a0);
       if (_f.good())
         std::getline(_f, content);
       else
-        content = d_a0;
+        content = a0;
     };
-    List<std::string> rest = read_files(*d_a1);
+    List<std::string> rest = read_files(*a1);
     return List<std::string>::cons(content, rest);
   }
 }

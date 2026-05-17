@@ -2,9 +2,9 @@
 
 unsigned int ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
   if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
-    return (1u + length(*d_a1));
+    return (1u + length(*a1));
   } else {
     return 0u;
   }
@@ -30,9 +30,9 @@ ReuseSelfCycle::mylist ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l,
   if (b) {
     if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
             l.v_mut())) {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v_mut());
-      return mylist::mycons(std::move(d_a0), l);
+      return mylist::mycons(std::move(a0), l);
     } else {
       return mylist::mynil();
     }

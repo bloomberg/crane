@@ -18,7 +18,7 @@ HofTreeLoopify::tree<unsigned int> HofTreeLoopify::depth_tree(unsigned int n) {
                   tree<unsigned int>::leaf())));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename tree<unsigned int>::Node>((*_write)->v_mut()).d_a0;
+          &std::get<typename tree<unsigned int>::Node>((*_write)->v_mut()).a0;
       _loop_n = m;
       continue;
     }
@@ -73,55 +73,55 @@ unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
       _result = _loop_acc;
       break;
     } else if (std::holds_alternative<typename Uint::D0>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D0>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D0>(_loop_d->v());
       _loop_acc = Nat::tail_mul(10u, _loop_acc);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D1>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D1>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D1>(_loop_d->v());
       _loop_acc = (Nat::tail_mul(10u, _loop_acc) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D2>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D2>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D2>(_loop_d->v());
       _loop_acc = ((Nat::tail_mul(10u, _loop_acc) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D3>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D3>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D3>(_loop_d->v());
       _loop_acc = (((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D4>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D4>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D4>(_loop_d->v());
       _loop_acc = ((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D5>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D5>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D5>(_loop_d->v());
       _loop_acc = (((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D6>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D6>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D6>(_loop_d->v());
       _loop_acc =
           ((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D7>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D7>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D7>(_loop_d->v());
       _loop_acc =
           (((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint::D8>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint::D8>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D8>(_loop_d->v());
       _loop_acc =
           ((((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else {
-      const auto &[d_a0] = std::get<typename Uint::D9>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint::D9>(_loop_d->v());
       _loop_acc =
           (((((((((Nat::tail_mul(10u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     }
   }
   return _result;
@@ -138,57 +138,57 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
       _result = _loop_acc;
       break;
     } else if (std::holds_alternative<typename Uint0::D10>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D10>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D10>(_loop_d->v());
       _loop_acc = Nat::tail_mul(16u, _loop_acc);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D11>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D11>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D11>(_loop_d->v());
       _loop_acc = (Nat::tail_mul(16u, _loop_acc) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D12>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D12>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D12>(_loop_d->v());
       _loop_acc = ((Nat::tail_mul(16u, _loop_acc) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D13>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D13>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D13>(_loop_d->v());
       _loop_acc = (((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D14>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D14>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D14>(_loop_d->v());
       _loop_acc = ((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D15>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D15>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D15>(_loop_d->v());
       _loop_acc = (((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D16>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D16>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D16>(_loop_d->v());
       _loop_acc =
           ((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D17>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D17>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D17>(_loop_d->v());
       _loop_acc =
           (((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D18>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D18>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D18>(_loop_d->v());
       _loop_acc =
           ((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::D19>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::D19>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::D19>(_loop_d->v());
       _loop_acc =
           (((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::Da>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::Da>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::Da>(_loop_d->v());
       _loop_acc =
           ((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                1) +
@@ -196,9 +196,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::Db>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::Db>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::Db>(_loop_d->v());
       _loop_acc =
           (((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                 1) +
@@ -207,9 +207,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::Dc>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::Dc>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::Dc>(_loop_d->v());
       _loop_acc =
           ((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                  1) +
@@ -219,9 +219,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::Dd>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::Dd>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::Dd>(_loop_d->v());
       _loop_acc =
           (((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                   1) +
@@ -232,9 +232,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else if (std::holds_alternative<typename Uint0::De>(_loop_d->v())) {
-      const auto &[d_a0] = std::get<typename Uint0::De>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::De>(_loop_d->v());
       _loop_acc =
           ((((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) + 1) +
                    1) +
@@ -246,9 +246,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     } else {
-      const auto &[d_a0] = std::get<typename Uint0::Df>(_loop_d->v());
+      const auto &[a0] = std::get<typename Uint0::Df>(_loop_d->v());
       _loop_acc =
           (((((((((((((((Nat::tail_mul(16u, _loop_acc) + 1) + 1) + 1) + 1) +
                      1) +
@@ -262,7 +262,7 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
              1) +
             1) +
            1);
-      _loop_d = d_a0.get();
+      _loop_d = a0.get();
     }
   }
   return _result;
@@ -274,10 +274,10 @@ unsigned int Nat::of_hex_uint(const Uint0 &d) {
 
 unsigned int Nat::of_num_uint(const Uint1 &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
-    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d.v());
-    return Nat::of_uint(d_u);
+    const auto &[u] = std::get<typename Uint1::UIntDecimal>(d.v());
+    return Nat::of_uint(u);
   } else {
-    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d.v());
-    return Nat::of_hex_uint(d_u);
+    const auto &[u] = std::get<typename Uint1::UIntHexadecimal>(d.v());
+    return Nat::of_hex_uint(u);
   }
 }

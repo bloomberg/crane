@@ -36,9 +36,9 @@ ImplicitArgs::sum_with_init(unsigned int init,
           typename ImplicitArgs::mylist<unsigned int>::Mynil>(l.v())) {
     return init;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ImplicitArgs::mylist<unsigned int>::Mycons>(l.v());
-    return (d_a0 + sum_with_init(init, *d_a1));
+    return (a0 + sum_with_init(init, *a1));
   }
 }
 

@@ -102,8 +102,7 @@ EffectUnitStress::safe_head(const List<unsigned int> &xs) {
     std::cout << "empty!"s << '\n';
     return std::optional<unsigned int>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(xs.v());
-    return std::make_optional<unsigned int>(d_a0);
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(xs.v());
+    return std::make_optional<unsigned int>(a0);
   }
 }

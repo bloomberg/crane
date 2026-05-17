@@ -34,10 +34,10 @@ template <OrderedType X> struct FMapList {
             std::pair<typename X::t, T1>>::Nil>(l.v())) {
       return std::optional<typename X::t>();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename Datatypes::template List<
+      const auto &[a0, a1] = std::get<typename Datatypes::template List<
           std::pair<typename X::t, T1>>::Cons>(l.v());
-      const typename X::t &k = d_a0.first;
-      const T1 &_x0 = d_a0.second;
+      const typename X::t &k = a0.first;
+      const T1 &_x0 = a0.second;
       return std::make_optional<typename X::t>(k);
     }
   }

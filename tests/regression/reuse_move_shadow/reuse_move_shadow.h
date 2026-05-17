@@ -13,9 +13,9 @@ struct ReuseMoveShadow {
   struct tree {
     // TYPES
     struct Node {
-      unsigned int d_a0;
-      std::unique_ptr<tree> d_a1;
-      std::unique_ptr<tree> d_a2;
+      unsigned int a0;
+      std::unique_ptr<tree> a1;
+      std::unique_ptr<tree> a2;
     };
 
     struct Leaf {};
@@ -24,27 +24,27 @@ struct ReuseMoveShadow {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -67,18 +67,17 @@ struct ReuseMoveShadow {
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Node>(_src->v())) {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0, _alt.d_a1 ? std::make_unique<tree>() : nullptr,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Node{_alt.a0, _alt.a1 ? std::make_unique<tree>() : nullptr,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         } else {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         }
       }
       return _out;
@@ -97,13 +96,13 @@ struct ReuseMoveShadow {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -117,10 +116,10 @@ struct ReuseMoveShadow {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
@@ -128,9 +127,9 @@ struct ReuseMoveShadow {
                                    tree &, T1 &>
   static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *d_a1, tree_rect<T1>(f, f0, *d_a1), *d_a2,
-               tree_rect<T1>(f, f0, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f(a0, *a1, tree_rect<T1>(f, f0, *a1), *a2,
+               tree_rect<T1>(f, f0, *a2));
     } else {
       return f0;
     }
@@ -141,9 +140,9 @@ struct ReuseMoveShadow {
                                    tree &, T1 &>
   static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f(d_a0, *d_a1, tree_rec<T1>(f, f0, *d_a1), *d_a2,
-               tree_rec<T1>(f, f0, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f(a0, *a1, tree_rec<T1>(f, f0, *a1), *a2,
+               tree_rec<T1>(f, f0, *a2));
     } else {
       return f0;
     }

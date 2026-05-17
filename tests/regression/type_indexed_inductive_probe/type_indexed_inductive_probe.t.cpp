@@ -9,9 +9,9 @@ int main() {
   // Currently fails to compile: the generated match returns d_a (std::any)
   // directly as Bool0 without a cast.
   auto s = TypeIndexedInductiveProbe::sample;
-  std::cout << "sample = " << (s == Bool0::e_TRUE ? "true" : "false")
+  std::cout << "sample = " << (s == Bool0::TRUE_ ? "true" : "false")
             << std::endl;
-  assert(s == Bool0::e_TRUE);
+  assert(s == Bool0::TRUE_);
 
   return 0;
 }

@@ -26,8 +26,8 @@ std::vector<T> to_vec(const List<T> &l) {
     auto &v = cur->v();
     if (std::holds_alternative<typename List<T>::Cons>(v)) {
       auto &cons = std::get<typename List<T>::Cons>(v);
-      result.push_back(cons.d_a0);
-      cur = cons.d_a1.get();
+      result.push_back(cons.a0);
+      cur = cons.a1.get();
     } else {
       break;
     }
@@ -44,8 +44,8 @@ to_vecs(const List<List<unsigned int>> &ll) {
     auto &v = cur->v();
     if (std::holds_alternative<typename List<List<unsigned int>>::Cons>(v)) {
       auto &cons = std::get<typename List<List<unsigned int>>::Cons>(v);
-      result.push_back(to_vec(cons.d_a0));
-      cur = cons.d_a1.get();
+      result.push_back(to_vec(cons.a0));
+      cur = cons.a1.get();
     } else {
       break;
     }

@@ -308,10 +308,10 @@ unsigned int RamOps::read_status0(const RamOps::state_nested_bank &s) {
 
 unsigned int RamOps::score(RamOps::Item x) {
   switch (x) {
-  case Item::e_S_: {
+  case Item::S_: {
     return 1u;
   }
-  case Item::e_S_0: {
+  case Item::S_0: {
     return 2u;
   }
   default:

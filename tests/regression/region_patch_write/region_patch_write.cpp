@@ -7,20 +7,18 @@ RegionPatchWrite::update_region(const List<unsigned int> &rom,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(rom.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(rom.v());
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(rom.v());
     if (base <= 0) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes.v())) {
-        return List<unsigned int>::cons(d_a0, *d_a1);
+        return List<unsigned int>::cons(a0, *a1);
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(bytes.v());
-        return List<unsigned int>::cons(d_a00,
-                                        update_region(*d_a1, 0u, *d_a10));
+        return List<unsigned int>::cons(a00, update_region(*a1, 0u, *a10));
       }
     } else {
       unsigned int n = base - 1;
-      return List<unsigned int>::cons(d_a0, update_region(*d_a1, n, bytes));
+      return List<unsigned int>::cons(a0, update_region(*a1, n, bytes));
     }
   }
 }

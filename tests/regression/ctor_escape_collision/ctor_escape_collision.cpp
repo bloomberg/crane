@@ -2,22 +2,22 @@
 
 unsigned int CtorEscapeCollision::tag(CtorEscapeCollision::Item x) {
   switch (x) {
-  case Item::e_D_: {
+  case Item::D_: {
     return 1u;
   }
-  case Item::e_D_0: {
+  case Item::D_0: {
     return 2u;
   }
-  case Item::e_D__: {
+  case Item::D__: {
     return 3u;
   }
-  case Item::e_D__0: {
+  case Item::D__0: {
     return 4u;
   }
-  case Item::e_D__1: {
+  case Item::D__1: {
     return 5u;
   }
-  case Item::e_D__2: {
+  case Item::D__2: {
     return 6u;
   }
   default:

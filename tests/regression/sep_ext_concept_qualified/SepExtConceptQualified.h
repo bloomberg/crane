@@ -19,7 +19,7 @@ concept OrderedType = requires {
 template <OrderedType X> struct Make {
   constexpr static bool is_eq(typename X::t a, typename X::t b) {
     switch (X::compare(a, b)) {
-    case Datatypes::Comparison::e_EQ: {
+    case Datatypes::Comparison::EQ: {
       return true;
     }
     default: {

@@ -17,50 +17,50 @@ struct AccumClosureEscape {
   /// recursion. Each recursive step adds a new closure to a list.
   /// The closures capture pattern variables from the current match
   /// scope, which may be references into shared_ptr nodes.
-  template <typename t_A> struct mylist {
+  template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
 
     struct Mycons {
-      t_A d_a0;
-      std::unique_ptr<mylist<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    mylist<t_A> &operator=(const mylist<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    mylist<A> &operator=(const mylist<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<t_A> &operator=(mylist<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist<A> &operator=(mylist<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    mylist<t_A> clone() const {
-      mylist<t_A> _out{};
+    mylist<A> clone() const {
+      mylist<A> _out{};
 
       struct _CloneFrame {
-        const mylist<t_A> *_src;
-        mylist<t_A> *_dst;
+        const mylist<A> *_src;
+        mylist<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -69,17 +69,17 @@ struct AccumClosureEscape {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const mylist<t_A> *_src = _frame._src;
-        mylist<t_A> *_dst = _frame._dst;
+        const mylist<A> *_src = _frame._src;
+        mylist<A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Mycons{_alt.a0,
+                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -89,31 +89,31 @@ struct AccumClosureEscape {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil{};
+        this->v_ = Mynil{};
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons{
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->v_ =
+            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist(Mynil{}); }
 
-    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      std::vector<std::unique_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](mylist<t_A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](mylist<A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -127,42 +127,39 @@ struct AccumClosureEscape {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
-    mylist<t_A> mylist_append(mylist<t_A> l2) const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+    mylist<A> mylist_append(mylist<A> l2) const {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
         return l2;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return mylist<t_A>::mycons(d_a0, (*d_a1).mylist_append(std::move(l2)));
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return mylist<A>::mycons(a0, (*a1).mylist_append(std::move(l2)));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -173,36 +170,36 @@ struct AccumClosureEscape {
     struct TLeaf {};
 
     struct TNode {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      unsigned int a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<TLeaf, TNode>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(TLeaf _v) : d_v_(_v) {}
+    explicit tree(TLeaf _v) : v_(_v) {}
 
-    explicit tree(TNode _v) : d_v_(std::move(_v)) {}
+    explicit tree(TNode _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -224,18 +221,18 @@ struct AccumClosureEscape {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<TLeaf>(_src->v())) {
-          _dst->d_v_ = TLeaf{};
+          _dst->v_ = TLeaf{};
         } else {
           const auto &_alt = std::get<TNode>(_src->v());
-          _dst->d_v_ =
-              TNode{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                    _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<TNode>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ =
+              TNode{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                    _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<TNode>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -255,13 +252,13 @@ struct AccumClosureEscape {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<TNode>(_node.d_v_)) {
-          auto &_alt = std::get<TNode>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<TNode>(_node.v_)) {
+          auto &_alt = std::get<TNode>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -275,10 +272,10 @@ struct AccumClosureEscape {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// Build closures from TREE traversal: tree nodes become closures.
     /// Each closure captures pattern variables from tree match.
@@ -286,14 +283,12 @@ struct AccumClosureEscape {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return mylist<std::function<unsigned int(unsigned int)>>::mynil();
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(this->v());
-        tree d_a0_value = *d_a0;
-        tree d_a2_value = *d_a2;
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
+        tree a0_value = *a0;
+        tree a2_value = *a2;
         return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](unsigned int x) mutable { return (d_a1 + x); },
-            d_a0_value.tree_to_adders().mylist_append(
-                d_a2_value.tree_to_adders()));
+            [=](unsigned int x) mutable { return (a1 + x); },
+            a0_value.tree_to_adders().mylist_append(a2_value.tree_to_adders()));
       }
     }
 
@@ -301,10 +296,9 @@ struct AccumClosureEscape {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return mylist<unsigned int>::mynil();
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(this->v());
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
         return mylist<unsigned int>::mycons(
-            d_a1, (*d_a0).tree_to_list().mylist_append((*d_a2).tree_to_list()));
+            a1, (*a0).tree_to_list().mylist_append((*a2).tree_to_list()));
       }
     }
 
@@ -315,10 +309,9 @@ struct AccumClosureEscape {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rec<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
+        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -329,10 +322,9 @@ struct AccumClosureEscape {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::TNode>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rect<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
+        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -385,13 +377,13 @@ struct AccumClosureEscape {
       if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
         return acc;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename mylist<unsigned int>::Mycons>(l.v());
-        mylist<unsigned int> d_a1_value = *d_a1;
+        mylist<unsigned int> a1_value = *a1;
         return [=](unsigned int _x0) mutable -> unsigned int {
           return compose_from_list(
-              d_a1_value,
-              [=](unsigned int x) mutable { return acc((d_a0 + x)); }, _x0);
+              a1_value, [=](unsigned int x) mutable { return acc((a0 + x)); },
+              _x0);
         };
       }
     }()(_x0);

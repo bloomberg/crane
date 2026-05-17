@@ -7,50 +7,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -59,17 +59,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -79,30 +79,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -116,36 +114,35 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  List<t_A> skipn(unsigned int n) const {
+  List<A> skipn(unsigned int n) const {
     if (n <= 0) {
       return std::move(*this);
     } else {
       unsigned int n0 = n - 1;
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return List<t_A>::nil();
+      if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+        return List<A>::nil();
       } else {
-        auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-        return (*d_a1).skipn(n0);
+        auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+        return (*a1).skipn(n0);
       }
     }
   }
 
-  List<t_A> firstn(unsigned int n) const {
+  List<A> firstn(unsigned int n) const {
     if (n <= 0) {
-      return List<t_A>::nil();
+      return List<A>::nil();
     } else {
       unsigned int n0 = n - 1;
-      if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-        return List<t_A>::nil();
+      if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+        return List<A>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<t_A>::Cons>(this->v());
-        return List<t_A>::cons(d_a0, (*d_a1).firstn(n0));
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+        return List<A>::cons(a0, (*a1).firstn(n0));
       }
     }
   }
@@ -163,16 +160,16 @@ struct GetPairBoundProp {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *d_a1);
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(x, *a1);
       }
     } else {
       unsigned int n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *d_a10));
+        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(a00, update_nth<T1>(n_, x, *a10));
       }
     }
   }
@@ -209,27 +206,27 @@ struct GetPairBoundProp {
     struct NOP {};
 
     struct LDM {
-      unsigned int d_n;
+      unsigned int n;
     };
 
     struct LD {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct XCH {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct INC {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct ADD {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct SUB {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct IAC {};
@@ -259,42 +256,42 @@ struct GetPairBoundProp {
     struct KBP {};
 
     struct JUN {
-      unsigned int d_a;
+      unsigned int a;
     };
 
     struct JMS {
-      unsigned int d_a;
+      unsigned int a;
     };
 
     struct JCN {
-      unsigned int d_c;
-      unsigned int d_a;
+      unsigned int c;
+      unsigned int a;
     };
 
     struct FIM {
-      unsigned int d_r;
-      unsigned int d_d;
+      unsigned int r;
+      unsigned int d;
     };
 
     struct SRC {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct FIN {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct JIN {
-      unsigned int d_r;
+      unsigned int r;
     };
 
     struct ISZ {
-      unsigned int d_r;
-      unsigned int d_a;
+      unsigned int r;
+      unsigned int a;
     };
 
     struct BBL {
-      unsigned int d_d;
+      unsigned int d;
     };
 
     using variant_t =
@@ -304,81 +301,81 @@ struct GetPairBoundProp {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     instr() {}
 
-    explicit instr(NOP _v) : d_v_(_v) {}
+    explicit instr(NOP _v) : v_(_v) {}
 
-    explicit instr(LDM _v) : d_v_(std::move(_v)) {}
+    explicit instr(LDM _v) : v_(std::move(_v)) {}
 
-    explicit instr(LD _v) : d_v_(std::move(_v)) {}
+    explicit instr(LD _v) : v_(std::move(_v)) {}
 
-    explicit instr(XCH _v) : d_v_(std::move(_v)) {}
+    explicit instr(XCH _v) : v_(std::move(_v)) {}
 
-    explicit instr(INC _v) : d_v_(std::move(_v)) {}
+    explicit instr(INC _v) : v_(std::move(_v)) {}
 
-    explicit instr(ADD _v) : d_v_(std::move(_v)) {}
+    explicit instr(ADD _v) : v_(std::move(_v)) {}
 
-    explicit instr(SUB _v) : d_v_(std::move(_v)) {}
+    explicit instr(SUB _v) : v_(std::move(_v)) {}
 
-    explicit instr(IAC _v) : d_v_(_v) {}
+    explicit instr(IAC _v) : v_(_v) {}
 
-    explicit instr(DAC _v) : d_v_(_v) {}
+    explicit instr(DAC _v) : v_(_v) {}
 
-    explicit instr(CLC _v) : d_v_(_v) {}
+    explicit instr(CLC _v) : v_(_v) {}
 
-    explicit instr(STC _v) : d_v_(_v) {}
+    explicit instr(STC _v) : v_(_v) {}
 
-    explicit instr(CMC _v) : d_v_(_v) {}
+    explicit instr(CMC _v) : v_(_v) {}
 
-    explicit instr(CMA _v) : d_v_(_v) {}
+    explicit instr(CMA _v) : v_(_v) {}
 
-    explicit instr(CLB _v) : d_v_(_v) {}
+    explicit instr(CLB _v) : v_(_v) {}
 
-    explicit instr(RAL _v) : d_v_(_v) {}
+    explicit instr(RAL _v) : v_(_v) {}
 
-    explicit instr(RAR _v) : d_v_(_v) {}
+    explicit instr(RAR _v) : v_(_v) {}
 
-    explicit instr(TCC _v) : d_v_(_v) {}
+    explicit instr(TCC _v) : v_(_v) {}
 
-    explicit instr(TCS _v) : d_v_(_v) {}
+    explicit instr(TCS _v) : v_(_v) {}
 
-    explicit instr(DAA _v) : d_v_(_v) {}
+    explicit instr(DAA _v) : v_(_v) {}
 
-    explicit instr(KBP _v) : d_v_(_v) {}
+    explicit instr(KBP _v) : v_(_v) {}
 
-    explicit instr(JUN _v) : d_v_(std::move(_v)) {}
+    explicit instr(JUN _v) : v_(std::move(_v)) {}
 
-    explicit instr(JMS _v) : d_v_(std::move(_v)) {}
+    explicit instr(JMS _v) : v_(std::move(_v)) {}
 
-    explicit instr(JCN _v) : d_v_(std::move(_v)) {}
+    explicit instr(JCN _v) : v_(std::move(_v)) {}
 
-    explicit instr(FIM _v) : d_v_(std::move(_v)) {}
+    explicit instr(FIM _v) : v_(std::move(_v)) {}
 
-    explicit instr(SRC _v) : d_v_(std::move(_v)) {}
+    explicit instr(SRC _v) : v_(std::move(_v)) {}
 
-    explicit instr(FIN _v) : d_v_(std::move(_v)) {}
+    explicit instr(FIN _v) : v_(std::move(_v)) {}
 
-    explicit instr(JIN _v) : d_v_(std::move(_v)) {}
+    explicit instr(JIN _v) : v_(std::move(_v)) {}
 
-    explicit instr(ISZ _v) : d_v_(std::move(_v)) {}
+    explicit instr(ISZ _v) : v_(std::move(_v)) {}
 
-    explicit instr(BBL _v) : d_v_(std::move(_v)) {}
+    explicit instr(BBL _v) : v_(std::move(_v)) {}
 
-    instr(const instr &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    instr(const instr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instr(instr &&_other) : d_v_(std::move(_other.d_v_)) {}
+    instr(instr &&_other) : v_(std::move(_other.v_)) {}
 
     instr &operator=(const instr &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     instr &operator=(instr &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -387,23 +384,23 @@ struct GetPairBoundProp {
       if (std::holds_alternative<NOP>(this->v())) {
         return instr(NOP{});
       } else if (std::holds_alternative<LDM>(this->v())) {
-        const auto &[d_n] = std::get<LDM>(this->v());
-        return instr(LDM{d_n});
+        const auto &[n] = std::get<LDM>(this->v());
+        return instr(LDM{n});
       } else if (std::holds_alternative<LD>(this->v())) {
-        const auto &[d_r] = std::get<LD>(this->v());
-        return instr(LD{d_r});
+        const auto &[r] = std::get<LD>(this->v());
+        return instr(LD{r});
       } else if (std::holds_alternative<XCH>(this->v())) {
-        const auto &[d_r] = std::get<XCH>(this->v());
-        return instr(XCH{d_r});
+        const auto &[r] = std::get<XCH>(this->v());
+        return instr(XCH{r});
       } else if (std::holds_alternative<INC>(this->v())) {
-        const auto &[d_r] = std::get<INC>(this->v());
-        return instr(INC{d_r});
+        const auto &[r] = std::get<INC>(this->v());
+        return instr(INC{r});
       } else if (std::holds_alternative<ADD>(this->v())) {
-        const auto &[d_r] = std::get<ADD>(this->v());
-        return instr(ADD{d_r});
+        const auto &[r] = std::get<ADD>(this->v());
+        return instr(ADD{r});
       } else if (std::holds_alternative<SUB>(this->v())) {
-        const auto &[d_r] = std::get<SUB>(this->v());
-        return instr(SUB{d_r});
+        const auto &[r] = std::get<SUB>(this->v());
+        return instr(SUB{r});
       } else if (std::holds_alternative<IAC>(this->v())) {
         return instr(IAC{});
       } else if (std::holds_alternative<DAC>(this->v())) {
@@ -431,32 +428,32 @@ struct GetPairBoundProp {
       } else if (std::holds_alternative<KBP>(this->v())) {
         return instr(KBP{});
       } else if (std::holds_alternative<JUN>(this->v())) {
-        const auto &[d_a] = std::get<JUN>(this->v());
-        return instr(JUN{d_a});
+        const auto &[a] = std::get<JUN>(this->v());
+        return instr(JUN{a});
       } else if (std::holds_alternative<JMS>(this->v())) {
-        const auto &[d_a] = std::get<JMS>(this->v());
-        return instr(JMS{d_a});
+        const auto &[a] = std::get<JMS>(this->v());
+        return instr(JMS{a});
       } else if (std::holds_alternative<JCN>(this->v())) {
-        const auto &[d_c, d_a] = std::get<JCN>(this->v());
-        return instr(JCN{d_c, d_a});
+        const auto &[c, a] = std::get<JCN>(this->v());
+        return instr(JCN{c, a});
       } else if (std::holds_alternative<FIM>(this->v())) {
-        const auto &[d_r, d_d] = std::get<FIM>(this->v());
-        return instr(FIM{d_r, d_d});
+        const auto &[r, d] = std::get<FIM>(this->v());
+        return instr(FIM{r, d});
       } else if (std::holds_alternative<SRC>(this->v())) {
-        const auto &[d_r] = std::get<SRC>(this->v());
-        return instr(SRC{d_r});
+        const auto &[r] = std::get<SRC>(this->v());
+        return instr(SRC{r});
       } else if (std::holds_alternative<FIN>(this->v())) {
-        const auto &[d_r] = std::get<FIN>(this->v());
-        return instr(FIN{d_r});
+        const auto &[r] = std::get<FIN>(this->v());
+        return instr(FIN{r});
       } else if (std::holds_alternative<JIN>(this->v())) {
-        const auto &[d_r] = std::get<JIN>(this->v());
-        return instr(JIN{d_r});
+        const auto &[r] = std::get<JIN>(this->v());
+        return instr(JIN{r});
       } else if (std::holds_alternative<ISZ>(this->v())) {
-        const auto &[d_r, d_a] = std::get<ISZ>(this->v());
-        return instr(ISZ{d_r, d_a});
+        const auto &[r, a] = std::get<ISZ>(this->v());
+        return instr(ISZ{r, a});
       } else {
-        const auto &[d_d] = std::get<BBL>(this->v());
-        return instr(BBL{d_d});
+        const auto &[d] = std::get<BBL>(this->v());
+        return instr(BBL{d});
       }
     }
 
@@ -526,10 +523,10 @@ struct GetPairBoundProp {
     static instr bbl(unsigned int d) { return instr(BBL{d}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1, typename F2, typename F3, typename F4,
@@ -560,23 +557,23 @@ struct GetPairBoundProp {
     if (std::holds_alternative<typename instr::NOP>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instr::LDM>(i.v())) {
-      const auto &[d_n] = std::get<typename instr::LDM>(i.v());
-      return f0(d_n);
+      const auto &[n0] = std::get<typename instr::LDM>(i.v());
+      return f0(n0);
     } else if (std::holds_alternative<typename instr::LD>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::LD>(i.v());
-      return f1(d_r);
+      const auto &[r0] = std::get<typename instr::LD>(i.v());
+      return f1(r0);
     } else if (std::holds_alternative<typename instr::XCH>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::XCH>(i.v());
-      return f2(d_r);
+      const auto &[r0] = std::get<typename instr::XCH>(i.v());
+      return f2(r0);
     } else if (std::holds_alternative<typename instr::INC>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::INC>(i.v());
-      return f3(d_r);
+      const auto &[r0] = std::get<typename instr::INC>(i.v());
+      return f3(r0);
     } else if (std::holds_alternative<typename instr::ADD>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::ADD>(i.v());
-      return f4(d_r);
+      const auto &[r0] = std::get<typename instr::ADD>(i.v());
+      return f4(r0);
     } else if (std::holds_alternative<typename instr::SUB>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::SUB>(i.v());
-      return f5(d_r);
+      const auto &[r0] = std::get<typename instr::SUB>(i.v());
+      return f5(r0);
     } else if (std::holds_alternative<typename instr::IAC>(i.v())) {
       return f6;
     } else if (std::holds_alternative<typename instr::DAC>(i.v())) {
@@ -604,32 +601,32 @@ struct GetPairBoundProp {
     } else if (std::holds_alternative<typename instr::KBP>(i.v())) {
       return f18;
     } else if (std::holds_alternative<typename instr::JUN>(i.v())) {
-      const auto &[d_a] = std::get<typename instr::JUN>(i.v());
-      return f19(d_a);
+      const auto &[a0] = std::get<typename instr::JUN>(i.v());
+      return f19(a0);
     } else if (std::holds_alternative<typename instr::JMS>(i.v())) {
-      const auto &[d_a] = std::get<typename instr::JMS>(i.v());
-      return f20(d_a);
+      const auto &[a0] = std::get<typename instr::JMS>(i.v());
+      return f20(a0);
     } else if (std::holds_alternative<typename instr::JCN>(i.v())) {
-      const auto &[d_c, d_a] = std::get<typename instr::JCN>(i.v());
-      return f21(d_c, d_a);
+      const auto &[c0, a0] = std::get<typename instr::JCN>(i.v());
+      return f21(c0, a0);
     } else if (std::holds_alternative<typename instr::FIM>(i.v())) {
-      const auto &[d_r, d_d] = std::get<typename instr::FIM>(i.v());
-      return f22(d_r, d_d);
+      const auto &[r0, d0] = std::get<typename instr::FIM>(i.v());
+      return f22(r0, d0);
     } else if (std::holds_alternative<typename instr::SRC>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::SRC>(i.v());
-      return f23(d_r);
+      const auto &[r0] = std::get<typename instr::SRC>(i.v());
+      return f23(r0);
     } else if (std::holds_alternative<typename instr::FIN>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::FIN>(i.v());
-      return f24(d_r);
+      const auto &[r0] = std::get<typename instr::FIN>(i.v());
+      return f24(r0);
     } else if (std::holds_alternative<typename instr::JIN>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::JIN>(i.v());
-      return f25(d_r);
+      const auto &[r0] = std::get<typename instr::JIN>(i.v());
+      return f25(r0);
     } else if (std::holds_alternative<typename instr::ISZ>(i.v())) {
-      const auto &[d_r, d_a] = std::get<typename instr::ISZ>(i.v());
-      return f26(d_r, d_a);
+      const auto &[r0, a0] = std::get<typename instr::ISZ>(i.v());
+      return f26(r0, a0);
     } else {
-      const auto &[d_d] = std::get<typename instr::BBL>(i.v());
-      return f27(d_d);
+      const auto &[d0] = std::get<typename instr::BBL>(i.v());
+      return f27(d0);
     }
   }
 
@@ -661,23 +658,23 @@ struct GetPairBoundProp {
     if (std::holds_alternative<typename instr::NOP>(i.v())) {
       return f;
     } else if (std::holds_alternative<typename instr::LDM>(i.v())) {
-      const auto &[d_n] = std::get<typename instr::LDM>(i.v());
-      return f0(d_n);
+      const auto &[n0] = std::get<typename instr::LDM>(i.v());
+      return f0(n0);
     } else if (std::holds_alternative<typename instr::LD>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::LD>(i.v());
-      return f1(d_r);
+      const auto &[r0] = std::get<typename instr::LD>(i.v());
+      return f1(r0);
     } else if (std::holds_alternative<typename instr::XCH>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::XCH>(i.v());
-      return f2(d_r);
+      const auto &[r0] = std::get<typename instr::XCH>(i.v());
+      return f2(r0);
     } else if (std::holds_alternative<typename instr::INC>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::INC>(i.v());
-      return f3(d_r);
+      const auto &[r0] = std::get<typename instr::INC>(i.v());
+      return f3(r0);
     } else if (std::holds_alternative<typename instr::ADD>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::ADD>(i.v());
-      return f4(d_r);
+      const auto &[r0] = std::get<typename instr::ADD>(i.v());
+      return f4(r0);
     } else if (std::holds_alternative<typename instr::SUB>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::SUB>(i.v());
-      return f5(d_r);
+      const auto &[r0] = std::get<typename instr::SUB>(i.v());
+      return f5(r0);
     } else if (std::holds_alternative<typename instr::IAC>(i.v())) {
       return f6;
     } else if (std::holds_alternative<typename instr::DAC>(i.v())) {
@@ -705,32 +702,32 @@ struct GetPairBoundProp {
     } else if (std::holds_alternative<typename instr::KBP>(i.v())) {
       return f18;
     } else if (std::holds_alternative<typename instr::JUN>(i.v())) {
-      const auto &[d_a] = std::get<typename instr::JUN>(i.v());
-      return f19(d_a);
+      const auto &[a0] = std::get<typename instr::JUN>(i.v());
+      return f19(a0);
     } else if (std::holds_alternative<typename instr::JMS>(i.v())) {
-      const auto &[d_a] = std::get<typename instr::JMS>(i.v());
-      return f20(d_a);
+      const auto &[a0] = std::get<typename instr::JMS>(i.v());
+      return f20(a0);
     } else if (std::holds_alternative<typename instr::JCN>(i.v())) {
-      const auto &[d_c, d_a] = std::get<typename instr::JCN>(i.v());
-      return f21(d_c, d_a);
+      const auto &[c0, a0] = std::get<typename instr::JCN>(i.v());
+      return f21(c0, a0);
     } else if (std::holds_alternative<typename instr::FIM>(i.v())) {
-      const auto &[d_r, d_d] = std::get<typename instr::FIM>(i.v());
-      return f22(d_r, d_d);
+      const auto &[r0, d0] = std::get<typename instr::FIM>(i.v());
+      return f22(r0, d0);
     } else if (std::holds_alternative<typename instr::SRC>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::SRC>(i.v());
-      return f23(d_r);
+      const auto &[r0] = std::get<typename instr::SRC>(i.v());
+      return f23(r0);
     } else if (std::holds_alternative<typename instr::FIN>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::FIN>(i.v());
-      return f24(d_r);
+      const auto &[r0] = std::get<typename instr::FIN>(i.v());
+      return f24(r0);
     } else if (std::holds_alternative<typename instr::JIN>(i.v())) {
-      const auto &[d_r] = std::get<typename instr::JIN>(i.v());
-      return f25(d_r);
+      const auto &[r0] = std::get<typename instr::JIN>(i.v());
+      return f25(r0);
     } else if (std::holds_alternative<typename instr::ISZ>(i.v())) {
-      const auto &[d_r, d_a] = std::get<typename instr::ISZ>(i.v());
-      return f26(d_r, d_a);
+      const auto &[r0, a0] = std::get<typename instr::ISZ>(i.v());
+      return f26(r0, a0);
     } else {
-      const auto &[d_d] = std::get<typename instr::BBL>(i.v());
-      return f27(d_d);
+      const auto &[d0] = std::get<typename instr::BBL>(i.v());
+      return f27(d0);
     }
   }
 
@@ -789,16 +786,16 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      return a0;
     }
   } else {
     unsigned int m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *d_a10, default0);
+      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      return ListDef::template nth<T1>(m, *a10, default0);
     }
   }
 }

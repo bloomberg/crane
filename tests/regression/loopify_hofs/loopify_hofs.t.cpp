@@ -43,7 +43,7 @@ int main() {
   // Test drop_while
   auto lt3 = [](unsigned int x) { return x < 3; };
   auto dropped = LoopifyHofs::drop_while(lt3, lst);
-  ASSERT(std::get<List::Cons>(dropped.v()).d_a0 == 3u);
+  ASSERT(std::get<List::Cons>(dropped.v()).a0 == 3u);
 
   // Test take_while
   auto taken = LoopifyHofs::take_while(lt3, lst);

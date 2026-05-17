@@ -3,8 +3,8 @@
 
 #include <concepts>
 
-template <typename I, typename t_A>
-concept Numeric = requires(t_A a0) {
+template <typename I, typename A>
+concept Numeric = requires(A a0) {
   { I::to_nat_val(a0) } -> std::convertible_to<unsigned int>;
 };
 

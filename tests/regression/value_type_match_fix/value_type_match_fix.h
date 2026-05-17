@@ -13,41 +13,41 @@ struct ValueTypeMatchFix {
   struct triple {
     // TYPES
     struct MkTriple {
-      unsigned int d_a0;
-      unsigned int d_a1;
-      unsigned int d_a2;
+      unsigned int a0;
+      unsigned int a1;
+      unsigned int a2;
     };
 
     using variant_t = std::variant<MkTriple>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     triple() {}
 
-    explicit triple(MkTriple _v) : d_v_(std::move(_v)) {}
+    explicit triple(MkTriple _v) : v_(std::move(_v)) {}
 
-    triple(const triple &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    triple(const triple &_other) : v_(std::move(_other.clone().v_)) {}
 
-    triple(triple &&_other) : d_v_(std::move(_other.d_v_)) {}
+    triple(triple &&_other) : v_(std::move(_other.v_)) {}
 
     triple &operator=(const triple &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     triple &operator=(triple &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     triple clone() const {
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(this->v());
-      return triple(MkTriple{d_a0, d_a1, d_a2});
+      const auto &[a0, a1, a2] = std::get<MkTriple>(this->v());
+      return triple(MkTriple{a0, a1, a2});
     }
 
     // CREATORS
@@ -56,26 +56,26 @@ struct ValueTypeMatchFix {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                    unsigned int &>
   static T1 triple_rect(F0 &&f, const triple &t) {
-    const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
-    return f(d_a0, d_a1, d_a2);
+    const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(t.v());
+    return f(a0, a1, a2);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                    unsigned int &>
   static T1 triple_rec(F0 &&f, const triple &t) {
-    const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
-    return f(d_a0, d_a1, d_a2);
+    const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(t.v());
+    return f(a0, a1, a2);
   }
 
   /// A fixpoint that captures a field from a value-type match.

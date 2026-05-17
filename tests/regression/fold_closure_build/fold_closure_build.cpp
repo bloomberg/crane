@@ -46,9 +46,9 @@ unsigned int FoldClosureBuild::apply_all(
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename FoldClosureBuild::mylist<
+    const auto &[a0, a1] = std::get<typename FoldClosureBuild::mylist<
         std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return (d_a0(x) + apply_all(*d_a1, x));
+    return (a0(x) + apply_all(*a1, x));
   }
 }
 

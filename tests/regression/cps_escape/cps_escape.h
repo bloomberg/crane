@@ -14,36 +14,36 @@ struct CpsEscape {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      unsigned int a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -65,18 +65,17 @@ struct CpsEscape {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -96,13 +95,13 @@ struct CpsEscape {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -116,10 +115,10 @@ struct CpsEscape {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// CPS-style: take a tree, produce a continuation (nat -> nat)
     /// that adds tree_sum to its argument. The continuation captures t.
@@ -132,9 +131,8 @@ struct CpsEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
       }
     }
 
@@ -145,10 +143,9 @@ struct CpsEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rec<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -159,10 +156,9 @@ struct CpsEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rect<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -170,39 +166,39 @@ struct CpsEscape {
   struct box {
     // TYPES
     struct Box0 {
-      std::function<unsigned int(unsigned int)> d_a0;
+      std::function<unsigned int(unsigned int)> a0;
     };
 
     using variant_t = std::variant<Box0>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     box() {}
 
-    explicit box(Box0 _v) : d_v_(std::move(_v)) {}
+    explicit box(Box0 _v) : v_(std::move(_v)) {}
 
-    box(const box &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    box(const box &_other) : v_(std::move(_other.clone().v_)) {}
 
-    box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
+    box(box &&_other) : v_(std::move(_other.v_)) {}
 
     box &operator=(const box &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     box &operator=(box &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     box clone() const {
-      const auto &[d_a0] = std::get<Box0>(this->v());
-      return box(Box0{d_a0});
+      const auto &[a0] = std::get<Box0>(this->v());
+      return box(Box0{a0});
     }
 
     // CREATORS
@@ -211,25 +207,25 @@ struct CpsEscape {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 box_rec(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename box::Box0>(this->v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename box::Box0>(this->v());
+      return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 box_rect(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename box::Box0>(this->v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename box::Box0>(this->v());
+      return f(a0);
     }
   };
 
@@ -257,8 +253,8 @@ struct CpsEscape {
         return t.make_adder(_x0);
       };
       box b = store_in_box(adder);
-      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
-      return std::move(d_a0)(5u);
+      auto &[a0] = std::get<typename box::Box0>(b.v_mut());
+      return std::move(a0)(5u);
     }();
   }();
   /// Same but inline: no intermediate let for adder.
@@ -270,8 +266,8 @@ struct CpsEscape {
       box b = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
         return t.make_adder(_x0);
       });
-      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
-      return std::move(d_a0)(5u);
+      auto &[a0] = std::get<typename box::Box0>(b.v_mut());
+      return std::move(a0)(5u);
     }();
   }();
   /// CPS with two stored continuations.
@@ -287,9 +283,9 @@ struct CpsEscape {
       box b2 = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
         return t2.make_adder(_x0);
       });
-      auto &[d_a0] = std::get<typename box::Box0>(b1.v_mut());
-      auto &[d_a00] = std::get<typename box::Box0>(b2.v_mut());
-      return (std::move(d_a0)(0u) + std::move(d_a00)(0u));
+      auto &[a0] = std::get<typename box::Box0>(b1.v_mut());
+      auto &[a00] = std::get<typename box::Box0>(b2.v_mut());
+      return (std::move(a0)(0u) + std::move(a00)(0u));
     }();
   }();
 };

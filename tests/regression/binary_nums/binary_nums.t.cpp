@@ -44,13 +44,13 @@ int main() {
 
   // Test 4: N.compare
   {
-    ASSERT(BinaryNums::n_compare_result == Comparison::e_LT);
+    ASSERT(BinaryNums::n_compare_result == Comparison::LT);
     std::cout << "Test 4 (N.compare 3 5): PASSED" << std::endl;
   }
 
   // Test 5: Z.compare
   {
-    ASSERT(BinaryNums::z_compare_result == Comparison::e_LT);
+    ASSERT(BinaryNums::z_compare_result == Comparison::LT);
     std::cout << "Test 5 (Z.compare -3 5): PASSED" << std::endl;
   }
 

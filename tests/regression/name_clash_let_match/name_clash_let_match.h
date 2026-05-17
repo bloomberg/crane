@@ -10,49 +10,49 @@ struct NameClashLetMatch {
   struct either {
     // TYPES
     struct Left {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct Right {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     using variant_t = std::variant<Left, Right>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     either() {}
 
-    explicit either(Left _v) : d_v_(std::move(_v)) {}
+    explicit either(Left _v) : v_(std::move(_v)) {}
 
-    explicit either(Right _v) : d_v_(std::move(_v)) {}
+    explicit either(Right _v) : v_(std::move(_v)) {}
 
-    either(const either &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    either(const either &_other) : v_(std::move(_other.clone().v_)) {}
 
-    either(either &&_other) : d_v_(std::move(_other.d_v_)) {}
+    either(either &&_other) : v_(std::move(_other.v_)) {}
 
     either &operator=(const either &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     either &operator=(either &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     either clone() const {
       if (std::holds_alternative<Left>(this->v())) {
-        const auto &[d_a0] = std::get<Left>(this->v());
-        return either(Left{d_a0});
+        const auto &[a0] = std::get<Left>(this->v());
+        return either(Left{a0});
       } else {
-        const auto &[d_a0] = std::get<Right>(this->v());
-        return either(Right{d_a0});
+        const auto &[a0] = std::get<Right>(this->v());
+        return either(Right{a0});
       }
     }
 
@@ -62,38 +62,38 @@ struct NameClashLetMatch {
     static either right(unsigned int a0) { return either(Right{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// Deeply nested let-match-let-match chain
     unsigned int deep_let_match(const either &e2, const either &e3) const {
       unsigned int a = [&]() {
         if (std::holds_alternative<typename either::Left>(this->v())) {
-          const auto &[d_a0] = std::get<typename either::Left>(this->v());
-          return d_a0;
+          const auto &[a0] = std::get<typename either::Left>(this->v());
+          return a0;
         } else {
-          const auto &[d_a0] = std::get<typename either::Right>(this->v());
-          return d_a0;
+          const auto &[a0] = std::get<typename either::Right>(this->v());
+          return a0;
         }
       }();
       unsigned int b = [&]() {
         if (std::holds_alternative<typename either::Left>(e2.v())) {
-          const auto &[d_a00] = std::get<typename either::Left>(e2.v());
+          const auto &[a00] = std::get<typename either::Left>(e2.v());
           unsigned int z = [&]() {
             if (std::holds_alternative<typename either::Left>(e3.v())) {
-              const auto &[d_a01] = std::get<typename either::Left>(e3.v());
-              return d_a01;
+              const auto &[a01] = std::get<typename either::Left>(e3.v());
+              return a01;
             } else {
-              const auto &[d_a01] = std::get<typename either::Right>(e3.v());
-              return d_a01;
+              const auto &[a01] = std::get<typename either::Right>(e3.v());
+              return a01;
             }
           }();
-          return (d_a00 + z);
+          return (a00 + z);
         } else {
-          const auto &[d_a00] = std::get<typename either::Right>(e2.v());
-          return d_a00;
+          const auto &[a00] = std::get<typename either::Right>(e2.v());
+          return a00;
         }
       }();
       return (a + b);
@@ -103,20 +103,20 @@ struct NameClashLetMatch {
     unsigned int two_eithers(const either &e2) const {
       unsigned int v1 = [&]() {
         if (std::holds_alternative<typename either::Left>(this->v())) {
-          const auto &[d_a0] = std::get<typename either::Left>(this->v());
-          return d_a0;
+          const auto &[a0] = std::get<typename either::Left>(this->v());
+          return a0;
         } else {
-          const auto &[d_a0] = std::get<typename either::Right>(this->v());
-          return (d_a0 * 2u);
+          const auto &[a0] = std::get<typename either::Right>(this->v());
+          return (a0 * 2u);
         }
       }();
       unsigned int v2 = [&]() {
         if (std::holds_alternative<typename either::Left>(e2.v())) {
-          const auto &[d_a00] = std::get<typename either::Left>(e2.v());
-          return d_a00;
+          const auto &[a00] = std::get<typename either::Left>(e2.v());
+          return a00;
         } else {
-          const auto &[d_a00] = std::get<typename either::Right>(e2.v());
-          return (d_a00 * 3u);
+          const auto &[a00] = std::get<typename either::Right>(e2.v());
+          return (a00 * 3u);
         }
       }();
       return (v1 + v2);
@@ -125,11 +125,11 @@ struct NameClashLetMatch {
     /// Match binding used in a nested let that shadows.
     unsigned int match_then_let() const {
       if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(this->v());
-        return (d_a0 + 1u);
+        const auto &[a0] = std::get<typename either::Left>(this->v());
+        return (a0 + 1u);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(this->v());
-        return d_a0;
+        const auto &[a0] = std::get<typename either::Right>(this->v());
+        return a0;
       }
     }
 
@@ -138,11 +138,11 @@ struct NameClashLetMatch {
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(this->v());
-        return f(d_a0);
+        const auto &[a0] = std::get<typename either::Left>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename either::Right>(this->v());
+        return f0(a0);
       }
     }
 
@@ -151,11 +151,11 @@ struct NameClashLetMatch {
                std::is_invocable_r_v<T1, F1 &, unsigned int &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either::Left>(this->v())) {
-        const auto &[d_a0] = std::get<typename either::Left>(this->v());
-        return f(d_a0);
+        const auto &[a0] = std::get<typename either::Left>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0] = std::get<typename either::Right>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename either::Right>(this->v());
+        return f0(a0);
       }
     }
   };
@@ -163,41 +163,41 @@ struct NameClashLetMatch {
   struct triple {
     // TYPES
     struct MkTriple {
-      unsigned int d_a0;
-      unsigned int d_a1;
-      unsigned int d_a2;
+      unsigned int a0;
+      unsigned int a1;
+      unsigned int a2;
     };
 
     using variant_t = std::variant<MkTriple>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     triple() {}
 
-    explicit triple(MkTriple _v) : d_v_(std::move(_v)) {}
+    explicit triple(MkTriple _v) : v_(std::move(_v)) {}
 
-    triple(const triple &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    triple(const triple &_other) : v_(std::move(_other.clone().v_)) {}
 
-    triple(triple &&_other) : d_v_(std::move(_other.d_v_)) {}
+    triple(triple &&_other) : v_(std::move(_other.v_)) {}
 
     triple &operator=(const triple &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     triple &operator=(triple &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     triple clone() const {
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(this->v());
-      return triple(MkTriple{d_a0, d_a1, d_a2});
+      const auto &[a0, a1, a2] = std::get<MkTriple>(this->v());
+      return triple(MkTriple{a0, a1, a2});
     }
 
     // CREATORS
@@ -206,43 +206,40 @@ struct NameClashLetMatch {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// Match on a triple, then match on an either, same-ish names
     unsigned int triple_then_either(const either &e) const {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(this->v());
+      const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(this->v());
       unsigned int from_either = [&]() {
         if (std::holds_alternative<typename either::Left>(e.v())) {
-          const auto &[d_a00] = std::get<typename either::Left>(e.v());
-          return d_a00;
+          const auto &[a00] = std::get<typename either::Left>(e.v());
+          return a00;
         } else {
-          const auto &[d_a00] = std::get<typename either::Right>(e.v());
-          return d_a00;
+          const auto &[a00] = std::get<typename either::Right>(e.v());
+          return a00;
         }
       }();
-      return (((d_a0 + d_a1) + d_a2) + from_either);
+      return (((a0 + a1) + a2) + from_either);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_rec(F0 &&f) const {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(this->v());
-      return f(d_a0, d_a1, d_a2);
+      const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(this->v());
+      return f(a0, a1, a2);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
                                      unsigned int &>
     T1 triple_rect(F0 &&f) const {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple::MkTriple>(this->v());
-      return f(d_a0, d_a1, d_a2);
+      const auto &[a0, a1, a2] = std::get<typename triple::MkTriple>(this->v());
+      return f(a0, a1, a2);
     }
   };
 

@@ -8,320 +8,315 @@
 #include <vector>
 
 struct PolyInductive {
-  template <typename t_A> struct pbox {
+  template <typename A> struct pbox {
     // TYPES
     struct PBox {
-      t_A d_a0;
+      A a0;
     };
 
     using variant_t = std::variant<PBox>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     pbox() {}
 
-    explicit pbox(PBox _v) : d_v_(std::move(_v)) {}
+    explicit pbox(PBox _v) : v_(std::move(_v)) {}
 
-    pbox(const pbox<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    pbox(const pbox<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    pbox(pbox<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    pbox(pbox<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    pbox<t_A> &operator=(const pbox<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    pbox<A> &operator=(const pbox<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    pbox<t_A> &operator=(pbox<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    pbox<A> &operator=(pbox<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    pbox<t_A> clone() const {
-      const auto &[d_a0] = std::get<PBox>(this->v());
-      return pbox<t_A>(PBox{d_a0});
+    pbox<A> clone() const {
+      const auto &[a0] = std::get<PBox>(this->v());
+      return pbox<A>(PBox{a0});
     }
 
     // CREATORS
     template <typename _U> explicit pbox(const pbox<_U> &_other) {
-      const auto &[d_a0] = std::get<typename pbox<_U>::PBox>(_other.v());
-      this->d_v_ = PBox{t_A(d_a0)};
+      const auto &[a0] = std::get<typename pbox<_U>::PBox>(_other.v());
+      this->v_ = PBox{A(a0)};
     }
 
-    static pbox<t_A> PBox_(t_A a0) { return pbox(PBox{std::move(a0)}); }
+    static pbox<A> PBox_(A a0) { return pbox(PBox{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
-    t_A punbox() const {
-      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
-      return d_a0;
+    A punbox() const {
+      const auto &[a0] = std::get<typename pbox<A>::PBox>(this->v());
+      return a0;
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &>
+      requires std::is_invocable_r_v<T1, F0 &, A &>
     T1 pbox_rec(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename pbox<A>::PBox>(this->v());
+      return f(a0);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &>
+      requires std::is_invocable_r_v<T1, F0 &, A &>
     T1 pbox_rect(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename pbox<t_A>::PBox>(this->v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename pbox<A>::PBox>(this->v());
+      return f(a0);
     }
   };
 
-  template <typename t_A, typename t_B> struct ppair {
+  template <typename A, typename B> struct ppair {
     // TYPES
     struct PPair {
-      t_A d_a0;
-      t_B d_a1;
+      A a0;
+      B a1;
     };
 
     using variant_t = std::variant<PPair>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     ppair() {}
 
-    explicit ppair(PPair _v) : d_v_(std::move(_v)) {}
+    explicit ppair(PPair _v) : v_(std::move(_v)) {}
 
-    ppair(const ppair<t_A, t_B> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    ppair(const ppair<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    ppair(ppair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    ppair(ppair<A, B> &&_other) : v_(std::move(_other.v_)) {}
 
-    ppair<t_A, t_B> &operator=(const ppair<t_A, t_B> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    ppair<A, B> &operator=(const ppair<A, B> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    ppair<t_A, t_B> &operator=(ppair<t_A, t_B> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    ppair<A, B> &operator=(ppair<A, B> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    ppair<t_A, t_B> clone() const {
-      const auto &[d_a0, d_a1] = std::get<PPair>(this->v());
-      return ppair<t_A, t_B>(PPair{d_a0, d_a1});
+    ppair<A, B> clone() const {
+      const auto &[a0, a1] = std::get<PPair>(this->v());
+      return ppair<A, B>(PPair{a0, a1});
     }
 
     // CREATORS
     template <typename _U0, typename _U1>
     explicit ppair(const ppair<_U0, _U1> &_other) {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename ppair<_U0, _U1>::PPair>(_other.v());
-      this->d_v_ = PPair{t_A(d_a0), t_B(d_a1)};
+      this->v_ = PPair{A(a0), B(a1)};
     }
 
-    static ppair<t_A, t_B> PPair_(t_A a0, t_B a1) {
+    static ppair<A, B> PPair_(A a0, B a1) {
       return ppair(PPair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
-    t_B psnd() const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
-      return d_a1;
+    B psnd() const {
+      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      return a1;
     }
 
-    t_A pfst() const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
-      return d_a0;
+    A pfst() const {
+      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      return a0;
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 ppair_rec(F0 &&f) const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 ppair_rect(F0 &&f) const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename ppair<t_A, t_B>::PPair>(this->v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename ppair<A, B>::PPair>(this->v());
+      return f(a0, a1);
     }
   };
 
-  template <typename t_A> struct pmaybe {
+  template <typename A> struct pmaybe {
     // TYPES
     struct PNothing {};
 
     struct PJust {
-      t_A d_a0;
+      A a0;
     };
 
     using variant_t = std::variant<PNothing, PJust>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     pmaybe() {}
 
-    explicit pmaybe(PNothing _v) : d_v_(_v) {}
+    explicit pmaybe(PNothing _v) : v_(_v) {}
 
-    explicit pmaybe(PJust _v) : d_v_(std::move(_v)) {}
+    explicit pmaybe(PJust _v) : v_(std::move(_v)) {}
 
-    pmaybe(const pmaybe<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    pmaybe(const pmaybe<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    pmaybe(pmaybe<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    pmaybe(pmaybe<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    pmaybe<t_A> &operator=(const pmaybe<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    pmaybe<A> &operator=(const pmaybe<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    pmaybe<t_A> &operator=(pmaybe<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    pmaybe<A> &operator=(pmaybe<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    pmaybe<t_A> clone() const {
+    pmaybe<A> clone() const {
       if (std::holds_alternative<PNothing>(this->v())) {
-        return pmaybe<t_A>(PNothing{});
+        return pmaybe<A>(PNothing{});
       } else {
-        const auto &[d_a0] = std::get<PJust>(this->v());
-        return pmaybe<t_A>(PJust{d_a0});
+        const auto &[a0] = std::get<PJust>(this->v());
+        return pmaybe<A>(PJust{a0});
       }
     }
 
     // CREATORS
     template <typename _U> explicit pmaybe(const pmaybe<_U> &_other) {
       if (std::holds_alternative<typename pmaybe<_U>::PNothing>(_other.v())) {
-        this->d_v_ = PNothing{};
+        this->v_ = PNothing{};
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
-        this->d_v_ = PJust{t_A(d_a0)};
+        const auto &[a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
+        this->v_ = PJust{A(a0)};
       }
     }
 
-    static pmaybe<t_A> pnothing() { return pmaybe(PNothing{}); }
+    static pmaybe<A> pnothing() { return pmaybe(PNothing{}); }
 
-    static pmaybe<t_A> pjust(t_A a0) { return pmaybe(PJust{std::move(a0)}); }
+    static pmaybe<A> pjust(A a0) { return pmaybe(PJust{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
-    t_A pmaybe_default(t_A d) const {
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
+    A pmaybe_default(A d) const {
+      if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return d;
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
-        return d_a0;
+        const auto &[a0] = std::get<typename pmaybe<A>::PJust>(this->v());
+        return a0;
       }
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &>
+      requires std::is_invocable_r_v<T1, F0 &, A &>
     pmaybe<T1> pmaybe_map(F0 &&f) const {
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
+      if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return pmaybe<T1>::pnothing();
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
-        return pmaybe<T1>::pjust(f(d_a0));
+        const auto &[a0] = std::get<typename pmaybe<A>::PJust>(this->v());
+        return pmaybe<T1>::pjust(f(a0));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &>
+      requires std::is_invocable_r_v<T1, F1 &, A &>
     T1 pmaybe_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
+      if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename pmaybe<A>::PJust>(this->v());
+        return f0(a0);
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &>
+      requires std::is_invocable_r_v<T1, F1 &, A &>
     T1 pmaybe_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename pmaybe<t_A>::PNothing>(this->v())) {
+      if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename pmaybe<t_A>::PJust>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename pmaybe<A>::PJust>(this->v());
+        return f0(a0);
       }
     }
   };
 
-  template <typename t_A> struct ptree {
+  template <typename A> struct ptree {
     // TYPES
     struct PLeaf {
-      t_A d_a0;
+      A a0;
     };
 
     struct PNode {
-      std::unique_ptr<ptree<t_A>> d_a0;
-      std::unique_ptr<ptree<t_A>> d_a1;
+      std::unique_ptr<ptree<A>> a0;
+      std::unique_ptr<ptree<A>> a1;
     };
 
     using variant_t = std::variant<PLeaf, PNode>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     ptree() {}
 
-    explicit ptree(PLeaf _v) : d_v_(std::move(_v)) {}
+    explicit ptree(PLeaf _v) : v_(std::move(_v)) {}
 
-    explicit ptree(PNode _v) : d_v_(std::move(_v)) {}
+    explicit ptree(PNode _v) : v_(std::move(_v)) {}
 
-    ptree(const ptree<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    ptree(const ptree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    ptree(ptree<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    ptree(ptree<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    ptree<t_A> &operator=(const ptree<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    ptree<A> &operator=(const ptree<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    ptree<t_A> &operator=(ptree<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    ptree<A> &operator=(ptree<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    ptree<t_A> clone() const {
-      ptree<t_A> _out{};
+    ptree<A> clone() const {
+      ptree<A> _out{};
 
       struct _CloneFrame {
-        const ptree<t_A> *_src;
-        ptree<t_A> *_dst;
+        const ptree<A> *_src;
+        ptree<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -330,22 +325,21 @@ struct PolyInductive {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const ptree<t_A> *_src = _frame._src;
-        ptree<t_A> *_dst = _frame._dst;
+        const ptree<A> *_src = _frame._src;
+        ptree<A> *_dst = _frame._dst;
         if (std::holds_alternative<PLeaf>(_src->v())) {
           const auto &_alt = std::get<PLeaf>(_src->v());
-          _dst->d_v_ = PLeaf{_alt.d_a0};
+          _dst->v_ = PLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<PNode>(_src->v());
-          _dst->d_v_ =
-              PNode{_alt.d_a0 ? std::make_unique<ptree<t_A>>() : nullptr,
-                    _alt.d_a1 ? std::make_unique<ptree<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<PNode>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = PNode{_alt.a0 ? std::make_unique<ptree<A>>() : nullptr,
+                           _alt.a1 ? std::make_unique<ptree<A>>() : nullptr};
+          auto &_dst_alt = std::get<PNode>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -355,36 +349,34 @@ struct PolyInductive {
     // CREATORS
     template <typename _U> explicit ptree(const ptree<_U> &_other) {
       if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
-        const auto &[d_a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
-        this->d_v_ = PLeaf{t_A(d_a0)};
+        const auto &[a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
+        this->v_ = PLeaf{A(a0)};
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename ptree<_U>::PNode>(_other.v());
-        this->d_v_ =
-            PNode{d_a0 ? std::make_unique<ptree<t_A>>(*d_a0) : nullptr,
-                  d_a1 ? std::make_unique<ptree<t_A>>(*d_a1) : nullptr};
+        const auto &[a0, a1] = std::get<typename ptree<_U>::PNode>(_other.v());
+        this->v_ = PNode{a0 ? std::make_unique<ptree<A>>(*a0) : nullptr,
+                         a1 ? std::make_unique<ptree<A>>(*a1) : nullptr};
       }
     }
 
-    static ptree<t_A> pleaf(t_A a0) { return ptree(PLeaf{std::move(a0)}); }
+    static ptree<A> pleaf(A a0) { return ptree(PLeaf{std::move(a0)}); }
 
-    static ptree<t_A> pnode(ptree<t_A> a0, ptree<t_A> a1) {
-      return ptree(PNode{std::make_unique<ptree<t_A>>(std::move(a0)),
-                         std::make_unique<ptree<t_A>>(std::move(a1))});
+    static ptree<A> pnode(ptree<A> a0, ptree<A> a1) {
+      return ptree(PNode{std::make_unique<ptree<A>>(std::move(a0)),
+                         std::make_unique<ptree<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~ptree() {
-      std::vector<std::unique_ptr<ptree<t_A>>> _stack{};
+      std::vector<std::unique_ptr<ptree<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](ptree<t_A> &_node) {
-        if (std::holds_alternative<PNode>(_node.d_v_)) {
-          auto &_alt = std::get<PNode>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+      auto _drain = [&](ptree<A> &_node) {
+        if (std::holds_alternative<PNode>(_node.v_)) {
+          auto &_alt = std::get<PNode>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -398,50 +390,47 @@ struct PolyInductive {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     unsigned int ptree_size() const {
-      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
+      if (std::holds_alternative<typename ptree<A>::PLeaf>(this->v())) {
         return 1u;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename ptree<t_A>::PNode>(this->v());
-        return (((*d_a0).ptree_size() + (*d_a1).ptree_size()) + 1);
+        const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(this->v());
+        return (((*a0).ptree_size() + (*a1).ptree_size()) + 1);
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
-               std::is_invocable_r_v<T1, F1 &, ptree<t_A> &, T1 &, ptree<t_A> &,
+      requires std::is_invocable_r_v<T1, F0 &, A &> &&
+               std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
                                      T1 &>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(this->v());
-        return f(d_a0);
+      if (std::holds_alternative<typename ptree<A>::PLeaf>(this->v())) {
+        const auto &[a0] = std::get<typename ptree<A>::PLeaf>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename ptree<t_A>::PNode>(this->v());
-        return f0(*d_a0, (*d_a0).template ptree_rec<T1>(f, f0), *d_a1,
-                  (*d_a1).template ptree_rec<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(this->v());
+        return f0(*a0, (*a0).template ptree_rec<T1>(f, f0), *a1,
+                  (*a1).template ptree_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
-               std::is_invocable_r_v<T1, F1 &, ptree<t_A> &, T1 &, ptree<t_A> &,
+      requires std::is_invocable_r_v<T1, F0 &, A &> &&
+               std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
                                      T1 &>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename ptree<t_A>::PLeaf>(this->v())) {
-        const auto &[d_a0] = std::get<typename ptree<t_A>::PLeaf>(this->v());
-        return f(d_a0);
+      if (std::holds_alternative<typename ptree<A>::PLeaf>(this->v())) {
+        const auto &[a0] = std::get<typename ptree<A>::PLeaf>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename ptree<t_A>::PNode>(this->v());
-        return f0(*d_a0, (*d_a0).template ptree_rect<T1>(f, f0), *d_a1,
-                  (*d_a1).template ptree_rect<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(this->v());
+        return f0(*a0, (*a0).template ptree_rect<T1>(f, f0), *a1,
+                  (*a1).template ptree_rect<T1>(f, f0));
       }
     }
   };

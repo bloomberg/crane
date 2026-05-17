@@ -7,73 +7,70 @@
 #include <utility>
 #include <variant>
 
-template <typename t_A, typename t_P> struct SigT {
+template <typename A, typename P> struct SigT {
   // TYPES
   struct ExistT {
-    t_A d_x;
-    t_P d_a1;
+    A x;
+    P a1;
   };
 
   using variant_t = std::variant<ExistT>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   SigT() {}
 
-  explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
+  explicit SigT(ExistT _v) : v_(std::move(_v)) {}
 
-  SigT(const SigT<t_A, t_P> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  SigT(const SigT<A, P> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  SigT(SigT<A, P> &&_other) : v_(std::move(_other.v_)) {}
 
-  SigT<t_A, t_P> &operator=(const SigT<t_A, t_P> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  SigT<A, P> &operator=(const SigT<A, P> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  SigT<A, P> &operator=(SigT<A, P> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  SigT<t_A, t_P> clone() const {
-    const auto &[d_x, d_a1] = std::get<ExistT>(this->v());
-    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
+  SigT<A, P> clone() const {
+    const auto &[x, a1] = std::get<ExistT>(this->v());
+    return SigT<A, P>(ExistT{x, a1});
   }
 
   // CREATORS
   template <typename _U0, typename _U1>
   explicit SigT(const SigT<_U0, _U1> &_other) {
-    const auto &[d_x, d_a1] =
-        std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    const auto &[x, a1] = std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
+    this->v_ = ExistT{A(x), P(a1)};
   }
 
-  static SigT<t_A, t_P> existt(t_A x, t_P a1) {
+  static SigT<A, P> existt(A x, P a1) {
     return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  t_A projT1() const {
-    const auto &[d_x, d_a1] =
-        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
-    return d_x;
+  A projT1() const {
+    const auto &[x0, a1] = std::get<typename SigT<A, P>::ExistT>(this->v());
+    return x0;
   }
 
-  t_P projT2() const {
-    const auto &[d_x, d_a1] =
-        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
-    return d_a1;
+  P projT2() const {
+    const auto &[x0, a1] = std::get<typename SigT<A, P>::ExistT>(this->v());
+    return a1;
   }
 };
 
@@ -92,7 +89,7 @@ concept PreStableCategory = requires(typename I::base_category::Obj a0) {
 };
 
 struct DoubleOppositeWitnessesCase {
-  template <typename t_A> struct Path {
+  template <typename A> struct Path {
     // TYPES
     struct Path_refl {};
 
@@ -100,39 +97,39 @@ struct DoubleOppositeWitnessesCase {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Path() {}
 
-    explicit Path(Path_refl _v) : d_v_(_v) {}
+    explicit Path(Path_refl _v) : v_(_v) {}
 
-    Path(const Path<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    Path(const Path<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Path(Path<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Path(Path<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    Path<t_A> &operator=(const Path<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    Path<A> &operator=(const Path<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Path<t_A> &operator=(Path<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    Path<A> &operator=(Path<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    Path<t_A> clone() const { return Path<t_A>(Path_refl{}); }
+    Path<A> clone() const { return Path<A>(Path_refl{}); }
 
     // CREATORS
-    static Path<t_A> path_refl() { return Path(Path_refl{}); }
+    static Path<A> path_refl() { return Path(Path_refl{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2>

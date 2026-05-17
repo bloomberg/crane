@@ -8,10 +8,10 @@ void LoopifyUnitVoidRepro::loop(unsigned int x, unsigned int y,
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_cells->v())) {
       return;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<bool>::Cons>(_loop_cells->v());
       [&]() -> void {
-        if (d_a0) {
+        if (a0) {
           ((void)_loop_x, (void)y);
           return;
         } else {
@@ -19,7 +19,7 @@ void LoopifyUnitVoidRepro::loop(unsigned int x, unsigned int y,
           return;
         }
       }();
-      _loop_cells = d_a1.get();
+      _loop_cells = a1.get();
       _loop_x = (_loop_x + cell_size);
     }
   }

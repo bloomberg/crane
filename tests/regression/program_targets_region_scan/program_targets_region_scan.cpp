@@ -4,14 +4,14 @@ std::optional<unsigned int> ProgramTargetsRegionScan::jump_target(
     const ProgramTargetsRegionScan::instruction &i) {
   if (std::holds_alternative<
           typename ProgramTargetsRegionScan::instruction::JUN>(i.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename ProgramTargetsRegionScan::instruction::JUN>(i.v());
-    return std::make_optional<unsigned int>(d_a0);
+    return std::make_optional<unsigned int>(a0);
   } else if (std::holds_alternative<
                  typename ProgramTargetsRegionScan::instruction::JMS>(i.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename ProgramTargetsRegionScan::instruction::JMS>(i.v());
-    return std::make_optional<unsigned int>(d_a0);
+    return std::make_optional<unsigned int>(a0);
   } else {
     return std::optional<unsigned int>();
   }

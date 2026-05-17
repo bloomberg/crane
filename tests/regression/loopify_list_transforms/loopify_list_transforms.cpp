@@ -5,35 +5,34 @@ LoopifyListTransforms::run_length_encode(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<std::pair<unsigned int, unsigned int>>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv = *d_a1;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+    auto &&_sv = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
       return List<std::pair<unsigned int, unsigned int>>::cons(
-          std::make_pair(d_a0, 1u),
+          std::make_pair(a0, 1u),
           List<std::pair<unsigned int, unsigned int>>::nil());
     } else {
-      auto &&_sv1 = run_length_encode(*d_a1);
+      auto &&_sv1 = run_length_encode(*a1);
       if (std::holds_alternative<
               typename List<std::pair<unsigned int, unsigned int>>::Nil>(
               _sv1.v())) {
         return List<std::pair<unsigned int, unsigned int>>::cons(
-            std::make_pair(d_a0, 1u),
+            std::make_pair(a0, 1u),
             List<std::pair<unsigned int, unsigned int>>::nil());
       } else {
-        const auto &[d_a01, d_a11] = std::get<
+        const auto &[a01, a11] = std::get<
             typename List<std::pair<unsigned int, unsigned int>>::Cons>(
             _sv1.v());
-        const unsigned int &y = d_a01.first;
-        const unsigned int &n = d_a01.second;
-        if (d_a0 == y) {
+        const unsigned int &y = a01.first;
+        const unsigned int &n = a01.second;
+        if (a0 == y) {
           return List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(y, (n + 1u)), *d_a11);
+              std::make_pair(y, (n + 1u)), *a11);
         } else {
           return List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(d_a0, 1u),
+              std::make_pair(a0, 1u),
               List<std::pair<unsigned int, unsigned int>>::cons(
-                  std::make_pair(y, n), *d_a11));
+                  std::make_pair(y, n), *a11));
         }
       }
     }
@@ -54,15 +53,15 @@ LoopifyListTransforms::prefix_sums(unsigned int acc,
           List<unsigned int>::cons(_loop_acc, List<unsigned int>::nil()));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = std::make_unique<List<unsigned int>>(
           typename List<unsigned int>::Cons(_loop_acc, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      _loop_l = d_a1.get();
-      _loop_acc = (_loop_acc + d_a0);
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+      _loop_l = a1.get();
+      _loop_acc = (_loop_acc + a0);
       continue;
     }
   }
@@ -89,9 +88,9 @@ LoopifyListTransforms::sliding_pairs_fuel(unsigned int fuel,
             List<std::pair<unsigned int, unsigned int>>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        auto &&_sv0 = *d_a1;
+        auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
           *_write =
@@ -99,19 +98,19 @@ LoopifyListTransforms::sliding_pairs_fuel(unsigned int fuel,
                   List<std::pair<unsigned int, unsigned int>>::nil());
           break;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(d_a0, d_a00), nullptr));
+                      std::make_pair(a0, a00), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
-          _loop_l = d_a1.get();
+                   .a1;
+          _loop_l = a1.get();
           _loop_fuel = fuel_;
           continue;
         }
@@ -154,25 +153,24 @@ LoopifyListTransforms::differences_fuel(unsigned int fuel,
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        auto &&_sv0 = *d_a1;
+        auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
           *_write =
               std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
           break;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
           auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(abs_diff(d_a0, d_a00),
-                                                nullptr));
+              typename List<unsigned int>::Cons(abs_diff(a0, a00), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = d_a1.get();
+                   .a1;
+          _loop_l = a1.get();
           _loop_fuel = fuel_;
           continue;
         }
@@ -206,15 +204,14 @@ List<unsigned int> LoopifyListTransforms::take(unsigned int n,
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = a1.get();
         _loop_n = n_;
         continue;
       }
@@ -239,9 +236,9 @@ List<unsigned int> LoopifyListTransforms::drop(unsigned int n,
         _result = List<unsigned int>::nil();
         break;
       } else {
-        auto &[d_a0, d_a1] =
+        auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        _loop_l = std::move(*d_a1);
+        _loop_l = std::move(*a1);
         _loop_n = n_;
       }
     }
@@ -280,7 +277,7 @@ LoopifyListTransforms::chunks_of_fuel(unsigned int fuel, unsigned int n,
           *_write = std::move(_cell);
           _write = &std::get<typename List<List<unsigned int>>::Cons>(
                         (*_write)->v_mut())
-                        .d_a1;
+                        .a1;
           _loop_l = drop(n, _loop_l);
           _loop_fuel = fuel_;
           continue;
@@ -319,10 +316,10 @@ LoopifyListTransforms::rotate_left_fuel(unsigned int fuel, unsigned int n,
           _result = List<unsigned int>::nil();
           break;
         } else {
-          auto &[d_a0, d_a1] =
+          auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-          List<unsigned int> rotated = (*d_a1).app(List<unsigned int>::cons(
-              std::move(d_a0), List<unsigned int>::nil()));
+          List<unsigned int> rotated = (*a1).app(List<unsigned int>::cons(
+              std::move(a0), List<unsigned int>::nil()));
           _loop_l = std::move(rotated);
           _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
           _loop_fuel = fuel_;
@@ -358,29 +355,29 @@ LoopifyListTransforms::uniq_sorted_fuel(unsigned int fuel,
             std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        auto &&_sv0 = *d_a1;
+        auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv0.v())) {
           *_write = std::make_unique<List<unsigned int>>(
-              List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+              List<unsigned int>::cons(a0, List<unsigned int>::nil()));
           break;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_sv0.v());
-          if (d_a0 == d_a00) {
-            _loop_l = d_a1.get();
+          if (a0 == a00) {
+            _loop_l = a1.get();
             _loop_fuel = fuel_;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(d_a0, nullptr));
+                typename List<unsigned int>::Cons(a0, nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
-            _loop_l = d_a1.get();
+                     .a1;
+            _loop_l = a1.get();
             _loop_fuel = fuel_;
             continue;
           }
@@ -426,16 +423,16 @@ unsigned int LoopifyListTransforms::step_sum(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         unsigned int contribution;
-        if ((2u ? d_a0 % 2u : d_a0) == 0u) {
-          contribution = d_a0;
+        if ((2u ? a0 % 2u : a0) == 0u) {
+          contribution = a0;
         } else {
-          contribution = (d_a0 * 2u);
+          contribution = (a0 * 2u);
         }
         _stack.emplace_back(_Resume_Cons{contribution});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

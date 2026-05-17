@@ -2,9 +2,9 @@
 
 /// Check if two strings are equal using PrimString.compare.
 bool PingPong::string_eq(std::string s1, std::string s2) {
-  switch ((s1 == s2 ? Comparison::e_EQ
-                    : (s1 < s2 ? Comparison::e_LT : Comparison::e_GT))) {
-  case Comparison::e_EQ: {
+  switch ((s1 == s2 ? Comparison::EQ
+                    : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
+  case Comparison::EQ: {
     return true;
   }
   default: {

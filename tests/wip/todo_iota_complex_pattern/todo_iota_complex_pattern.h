@@ -6,80 +6,79 @@
 #include <variant>
 
 struct TodoIotaComplexPattern {
-  template <typename t_A, typename t_B, typename t_C> struct Triple {
+  template <typename A, typename B, typename C> struct Triple {
     // TYPES
     struct MkTriple {
-      t_A d_a0;
-      t_B d_a1;
-      t_C d_a2;
+      A a0;
+      B a1;
+      C a2;
     };
 
     using variant_t = std::variant<MkTriple>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Triple() {}
 
-    explicit Triple(MkTriple _v) : d_v_(std::move(_v)) {}
+    explicit Triple(MkTriple _v) : v_(std::move(_v)) {}
 
-    Triple(const Triple<t_A, t_B, t_C> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    Triple(const Triple<A, B, C> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Triple(Triple<t_A, t_B, t_C> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Triple(Triple<A, B, C> &&_other) : v_(std::move(_other.v_)) {}
 
-    Triple<t_A, t_B, t_C> &operator=(const Triple<t_A, t_B, t_C> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    Triple<A, B, C> &operator=(const Triple<A, B, C> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Triple<t_A, t_B, t_C> &operator=(Triple<t_A, t_B, t_C> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    Triple<A, B, C> &operator=(Triple<A, B, C> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    Triple<t_A, t_B, t_C> clone() const {
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(this->v());
-      return Triple<t_A, t_B, t_C>(MkTriple{d_a0, d_a1, d_a2});
+    Triple<A, B, C> clone() const {
+      const auto &[a0, a1, a2] = std::get<MkTriple>(this->v());
+      return Triple<A, B, C>(MkTriple{a0, a1, a2});
     }
 
     // CREATORS
     template <typename _U0, typename _U1, typename _U2>
     explicit Triple(const Triple<_U0, _U1, _U2> &_other) {
-      const auto &[d_a0, d_a1, d_a2] =
+      const auto &[a0, a1, a2] =
           std::get<typename Triple<_U0, _U1, _U2>::MkTriple>(_other.v());
-      this->d_v_ = MkTriple{t_A(d_a0), t_B(d_a1), t_C(d_a2)};
+      this->v_ = MkTriple{A(a0), B(a1), C(a2)};
     }
 
-    static Triple<t_A, t_B, t_C> mktriple(t_A a0, t_B a1, t_C a2) {
+    static Triple<A, B, C> mktriple(A a0, B a1, C a2) {
       return Triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, typename T4, typename F0>
     requires std::is_invocable_r_v<T4, F0 &, T1 &, T2 &, T3 &>
   static T4 Triple_rect(F0 &&f, const Triple<T1, T2, T3> &t) {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename Triple<T1, T2, T3>::MkTriple>(t.v());
-    return f(d_a0, d_a1, d_a2);
+    return f(a0, a1, a2);
   }
 
   template <typename T1, typename T2, typename T3, typename T4, typename F0>
     requires std::is_invocable_r_v<T4, F0 &, T1 &, T2 &, T3 &>
   static T4 Triple_rec(F0 &&f, const Triple<T1, T2, T3> &t) {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename Triple<T1, T2, T3>::MkTriple>(t.v());
-    return f(d_a0, d_a1, d_a2);
+    return f(a0, a1, a2);
   }
 
   static unsigned int
@@ -87,9 +86,9 @@ struct TodoIotaComplexPattern {
 
   template <typename T1, typename T2, typename T3>
   static Triple<T2, T3, T1> rotate_triple(const Triple<T1, T2, T3> &t) {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename Triple<T1, T2, T3>::MkTriple>(t.v());
-    return Triple<T2, T3, T1>::mktriple(d_a1, d_a2, d_a0);
+    return Triple<T2, T3, T1>::mktriple(a1, a2, a0);
   }
 
   static inline const unsigned int test1 = sum_triple(

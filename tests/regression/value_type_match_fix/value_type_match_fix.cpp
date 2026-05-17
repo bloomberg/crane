@@ -12,9 +12,9 @@
 /// field data lives on the heap and persists as long as the shared_ptr.
 std::optional<std::function<unsigned int(unsigned int)>>
 ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
-  const auto &[d_a0, d_a1, d_a2] =
+  const auto &[a0, a1, a2] =
       std::get<typename ValueTypeMatchFix::triple::MkTriple>(t.v());
-  unsigned int base = ((d_a0 + d_a1) + d_a2);
+  unsigned int base = ((a0 + a1) + a2);
   auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
       return base;
@@ -32,11 +32,11 @@ ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
 /// Direct capture of pattern fields (no intermediate let binding).
 std::optional<std::function<unsigned int(unsigned int)>>
 ValueTypeMatchFix::make_field_adder(const ValueTypeMatchFix::triple &t) {
-  const auto &[d_a0, d_a1, d_a2] =
+  const auto &[a0, a1, a2] =
       std::get<typename ValueTypeMatchFix::triple::MkTriple>(t.v());
   auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
     if (x <= 0) {
-      return d_a0;
+      return a0;
     } else {
       unsigned int x_ = x - 1;
       return (_self_go(_self_go, x_) + 1);

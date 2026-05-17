@@ -15,7 +15,7 @@ int main() {
   auto r = NS::rotate(l1);
   // [1,2,3] -> [2,3,1]
   assert(std::holds_alternative<L::Cons>(r.v()));
-  assert(std::get<L::Cons>(r.v()).d_a0 == 2u);
+  assert(std::get<L::Cons>(r.v()).a0 == 2u);
 
   // heads_sum
   assert(NS::heads_sum(l1, l2) == 11u);

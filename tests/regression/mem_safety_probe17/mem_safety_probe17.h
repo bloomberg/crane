@@ -22,38 +22,38 @@ struct MemSafetyProbe17 {
     struct QLeaf {};
 
     struct QNode {
-      std::unique_ptr<qtree> d_a0;
-      std::unique_ptr<qtree> d_a1;
-      unsigned int d_a2;
-      std::unique_ptr<qtree> d_a3;
-      std::unique_ptr<qtree> d_a4;
+      std::unique_ptr<qtree> a0;
+      std::unique_ptr<qtree> a1;
+      unsigned int a2;
+      std::unique_ptr<qtree> a3;
+      std::unique_ptr<qtree> a4;
     };
 
     using variant_t = std::variant<QLeaf, QNode>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     qtree() {}
 
-    explicit qtree(QLeaf _v) : d_v_(_v) {}
+    explicit qtree(QLeaf _v) : v_(_v) {}
 
-    explicit qtree(QNode _v) : d_v_(std::move(_v)) {}
+    explicit qtree(QNode _v) : v_(std::move(_v)) {}
 
-    qtree(const qtree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    qtree(const qtree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    qtree(qtree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    qtree(qtree &&_other) : v_(std::move(_other.v_)) {}
 
     qtree &operator=(const qtree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     qtree &operator=(qtree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -75,26 +75,26 @@ struct MemSafetyProbe17 {
         const qtree *_src = _frame._src;
         qtree *_dst = _frame._dst;
         if (std::holds_alternative<QLeaf>(_src->v())) {
-          _dst->d_v_ = QLeaf{};
+          _dst->v_ = QLeaf{};
         } else {
           const auto &_alt = std::get<QNode>(_src->v());
-          _dst->d_v_ =
-              QNode{_alt.d_a0 ? std::make_unique<qtree>() : nullptr,
-                    _alt.d_a1 ? std::make_unique<qtree>() : nullptr, _alt.d_a2,
-                    _alt.d_a3 ? std::make_unique<qtree>() : nullptr,
-                    _alt.d_a4 ? std::make_unique<qtree>() : nullptr};
-          auto &_dst_alt = std::get<QNode>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ =
+              QNode{_alt.a0 ? std::make_unique<qtree>() : nullptr,
+                    _alt.a1 ? std::make_unique<qtree>() : nullptr, _alt.a2,
+                    _alt.a3 ? std::make_unique<qtree>() : nullptr,
+                    _alt.a4 ? std::make_unique<qtree>() : nullptr};
+          auto &_dst_alt = std::get<QNode>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
-          if (_alt.d_a3) {
-            _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+          if (_alt.a3) {
+            _stack.push_back({_alt.a3.get(), _dst_alt.a3.get()});
           }
-          if (_alt.d_a4) {
-            _stack.push_back({_alt.d_a4.get(), _dst_alt.d_a4.get()});
+          if (_alt.a4) {
+            _stack.push_back({_alt.a4.get(), _dst_alt.a4.get()});
           }
         }
       }
@@ -117,19 +117,19 @@ struct MemSafetyProbe17 {
       std::vector<std::unique_ptr<qtree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](qtree &_node) {
-        if (std::holds_alternative<QNode>(_node.d_v_)) {
-          auto &_alt = std::get<QNode>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<QNode>(_node.v_)) {
+          auto &_alt = std::get<QNode>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
-          if (_alt.d_a3) {
-            _stack.push_back(std::move(_alt.d_a3));
+          if (_alt.a3) {
+            _stack.push_back(std::move(_alt.a3));
           }
-          if (_alt.d_a4) {
-            _stack.push_back(std::move(_alt.d_a4));
+          if (_alt.a4) {
+            _stack.push_back(std::move(_alt.a4));
           }
         }
       };
@@ -143,10 +143,10 @@ struct MemSafetyProbe17 {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// TEST 6: Compute a value using ALL children non-recursively,
     /// THEN use all children recursively. Tests frame saving with
@@ -213,16 +213,15 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = 0u;
           } else {
-            const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+            const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
             unsigned int local_weight =
-                (((((*d_a0).qtree_sum() + (2u * (*d_a1).qtree_sum())) +
-                   (3u * d_a2)) +
-                  (4u * (*d_a3).qtree_sum())) +
-                 (5u * (*d_a4).qtree_sum()));
+                (((((*a0).qtree_sum() + (2u * (*a1).qtree_sum())) + (3u * a2)) +
+                  (4u * (*a3).qtree_sum())) +
+                 (5u * (*a4).qtree_sum()));
             _stack.emplace_back(
-                _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), local_weight});
-            _stack.emplace_back(_Enter{d_a4.get()});
+                _After_QNode{a3.get(), a1.get(), a0.get(), local_weight});
+            _stack.emplace_back(_Enter{a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
@@ -259,36 +258,36 @@ struct MemSafetyProbe17 {
         qtree t2;
       };
 
-      /// _After_QNode: saves [_s0, d_a30, _s2, d_a10, _s4, d_a00, _s6],
-      /// dispatches next recursive call.
+      /// _After_QNode: saves [_s0, a30, _s2, a10, _s4, a00, _s6], dispatches
+      /// next recursive call.
       struct _After_QNode {
         const qtree *_s0;
-        qtree d_a30;
+        qtree a30;
         const qtree *_s2;
-        qtree d_a10;
+        qtree a10;
         const qtree *_s4;
-        qtree d_a00;
+        qtree a00;
         unsigned int _s6;
       };
 
-      /// _After_QNode_1: saves [_result, _s1, d_a10, _s3, d_a00, _s5],
-      /// dispatches next recursive call.
+      /// _After_QNode_1: saves [_result, _s1, a10, _s3, a00, _s5], dispatches
+      /// next recursive call.
       struct _After_QNode_1 {
         qtree _result;
         const qtree *_s1;
-        qtree d_a10;
+        qtree a10;
         const qtree *_s3;
-        qtree d_a00;
+        qtree a00;
         unsigned int _s5;
       };
 
-      /// _After_QNode_2: saves [_result_0, _result_1, _s2, d_a00, _s4],
+      /// _After_QNode_2: saves [_result_0, _result_1, _s2, a00, _s4],
       /// dispatches next recursive call.
       struct _After_QNode_2 {
         qtree _result_0;
         qtree _result_1;
         const qtree *_s2;
-        qtree d_a00;
+        qtree a00;
         unsigned int _s4;
       };
 
@@ -320,37 +319,37 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = std::move(t2);
           } else {
-            const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+            const auto &[a0, a2, a3, a4, a5] =
                 std::get<typename qtree::QNode>(_sv.v());
             if (std::holds_alternative<typename qtree::QLeaf>(t2.v_mut())) {
               _result = *_self;
             } else {
-              auto &[d_a00, d_a10, d_a20, d_a30, d_a40] =
+              auto &[a00, a10, a20, a30, a40] =
                   std::get<typename qtree::QNode>(t2.v_mut());
-              _stack.emplace_back(_After_QNode{
-                  d_a3.get(), *d_a30, d_a1.get(), *d_a10, d_a0.get(), *d_a00,
-                  (std::move(d_a2) + std::move(d_a20))});
-              _stack.emplace_back(_Enter{d_a4.get(), std::move(*d_a40)});
+              _stack.emplace_back(
+                  _After_QNode{a4.get(), *a30, a2.get(), *a10, a0.get(), *a00,
+                               (std::move(a3) + std::move(a20))});
+              _stack.emplace_back(_Enter{a5.get(), std::move(*a40)});
             }
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
           _stack.emplace_back(_After_QNode_1{std::move(_result), _f._s2,
-                                             std::move(_f.d_a10), _f._s4,
-                                             std::move(_f.d_a00), _f._s6});
-          _stack.emplace_back(_Enter{_f._s0, std::move(_f.d_a30)});
+                                             std::move(_f.a10), _f._s4,
+                                             std::move(_f.a00), _f._s6});
+          _stack.emplace_back(_Enter{_f._s0, std::move(_f.a30)});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(_After_QNode_2{std::move(_f._result),
                                              std::move(_result), _f._s3,
-                                             std::move(_f.d_a00), _f._s5});
-          _stack.emplace_back(_Enter{_f._s1, std::move(_f.d_a10)});
+                                             std::move(_f.a00), _f._s5});
+          _stack.emplace_back(_Enter{_f._s1, std::move(_f.a10)});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
           _stack.emplace_back(_Combine_QNode{std::move(_f._result_0),
                                              std::move(_f._result_1),
                                              std::move(_result), _f._s4});
-          _stack.emplace_back(_Enter{_f._s2, std::move(_f.d_a00)});
+          _stack.emplace_back(_Enter{_f._s2, std::move(_f.a00)});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
           _result = qtree::qnode(_result, _f._result_2, _f._s3, _f._result_1,
@@ -369,31 +368,31 @@ struct MemSafetyProbe17 {
         const qtree *_self;
       };
 
-      /// _After_QNode: saves [_s0, _s1, _s2, d_a2], dispatches next recursive
+      /// _After_QNode: saves [_s0, _s1, _s2, a2], dispatches next recursive
       /// call.
       struct _After_QNode {
         const qtree *_s0;
         const qtree *_s1;
         const qtree *_s2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
-      /// _After_QNode_1: saves [_result, _s1, _s2, d_a2], dispatches next
+      /// _After_QNode_1: saves [_result, _s1, _s2, a2], dispatches next
       /// recursive call.
       struct _After_QNode_1 {
         qtree _result;
         const qtree *_s1;
         const qtree *_s2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
-      /// _After_QNode_2: saves [_result_0, _result_1, _s2, d_a2], dispatches
-      /// next recursive call.
+      /// _After_QNode_2: saves [_result_0, _result_1, _s2, a2], dispatches next
+      /// recursive call.
       struct _After_QNode_2 {
         qtree _result_0;
         qtree _result_1;
         const qtree *_s2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
       /// _Combine_QNode: receives partial results, combines with _result from
@@ -402,7 +401,7 @@ struct MemSafetyProbe17 {
         qtree _result_0;
         qtree _result_1;
         qtree _result_2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
       using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
@@ -423,31 +422,30 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = qtree::qleaf();
           } else {
-            const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+            const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(
-                _After_QNode{d_a1.get(), d_a3.get(), d_a4.get(), d_a2});
-            _stack.emplace_back(_Enter{d_a0.get()});
+            _stack.emplace_back(_After_QNode{a1.get(), a3.get(), a4.get(), a2});
+            _stack.emplace_back(_Enter{a0.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
           _stack.emplace_back(
-              _After_QNode_1{std::move(_result), _f._s1, _f._s2, _f.d_a2});
+              _After_QNode_1{std::move(_result), _f._s1, _f._s2, _f.a2});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(_After_QNode_2{
-              std::move(_f._result), std::move(_result), _f._s2, _f.d_a2});
+              std::move(_f._result), std::move(_result), _f._s2, _f.a2});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
           _stack.emplace_back(_Combine_QNode{std::move(_f._result_0),
                                              std::move(_f._result_1),
-                                             std::move(_result), _f.d_a2});
+                                             std::move(_result), _f.a2});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
-          _result = qtree::qnode(_result, _f._result_2, _f.d_a2, _f._result_1,
+          _result = qtree::qnode(_result, _f._result_2, _f.a2, _f._result_1,
                                  _f._result_0);
         }
       }
@@ -516,11 +514,10 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = 0u;
           } else {
-            const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+            const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(
-                _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), 1u});
-            _stack.emplace_back(_Enter{d_a4.get()});
+            _stack.emplace_back(_After_QNode{a3.get(), a1.get(), a0.get(), 1u});
+            _stack.emplace_back(_Enter{a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
@@ -551,12 +548,12 @@ struct MemSafetyProbe17 {
       if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+        const auto &[a0, a1, a2, a3, a4] =
             std::get<typename qtree::QNode>(_sv.v());
-        unsigned int da = (*d_a0).qtree_depth();
-        unsigned int db = (*d_a1).qtree_depth();
-        unsigned int dc = (*d_a3).qtree_depth();
-        unsigned int dd = (*d_a4).qtree_depth();
+        unsigned int da = (*a0).qtree_depth();
+        unsigned int db = (*a1).qtree_depth();
+        unsigned int dc = (*a3).qtree_depth();
+        unsigned int dd = (*a4).qtree_depth();
         unsigned int m1;
         if (da <= db) {
           m1 = db;
@@ -581,31 +578,31 @@ struct MemSafetyProbe17 {
         const qtree *_self;
       };
 
-      /// _After_QNode: saves [_s0, _s1, _s2, d_a2], dispatches next recursive
+      /// _After_QNode: saves [_s0, _s1, _s2, a2], dispatches next recursive
       /// call.
       struct _After_QNode {
         const qtree *_s0;
         const qtree *_s1;
         const qtree *_s2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
-      /// _After_QNode_1: saves [_result, _s1, _s2, d_a2], dispatches next
+      /// _After_QNode_1: saves [_result, _s1, _s2, a2], dispatches next
       /// recursive call.
       struct _After_QNode_1 {
         unsigned int _result;
         const qtree *_s1;
         const qtree *_s2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
-      /// _After_QNode_2: saves [_result_0, _result_1, _s2, d_a2], dispatches
-      /// next recursive call.
+      /// _After_QNode_2: saves [_result_0, _result_1, _s2, a2], dispatches next
+      /// recursive call.
       struct _After_QNode_2 {
         unsigned int _result_0;
         unsigned int _result_1;
         const qtree *_s2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
       /// _Combine_QNode: receives partial results, combines with _result from
@@ -614,7 +611,7 @@ struct MemSafetyProbe17 {
         unsigned int _result_0;
         unsigned int _result_1;
         unsigned int _result_2;
-        unsigned int d_a2;
+        unsigned int a2;
       };
 
       using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
@@ -635,29 +632,28 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = 0u;
           } else {
-            const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+            const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(
-                _After_QNode{d_a3.get(), d_a1.get(), d_a0.get(), d_a2});
-            _stack.emplace_back(_Enter{d_a4.get()});
+            _stack.emplace_back(_After_QNode{a3.get(), a1.get(), a0.get(), a2});
+            _stack.emplace_back(_Enter{a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
-          _stack.emplace_back(_After_QNode_1{_result, _f._s1, _f._s2, _f.d_a2});
+          _stack.emplace_back(_After_QNode_1{_result, _f._s1, _f._s2, _f.a2});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
           _stack.emplace_back(
-              _After_QNode_2{_f._result, _result, _f._s2, _f.d_a2});
+              _After_QNode_2{_f._result, _result, _f._s2, _f.a2});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
           _stack.emplace_back(
-              _Combine_QNode{_f._result_0, _f._result_1, _result, _f.d_a2});
+              _Combine_QNode{_f._result_0, _f._result_1, _result, _f.a2});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
-          _result = ((((_result + _f._result_2) + _f.d_a2) + _f._result_1) +
+          _result = ((((_result + _f._result_2) + _f.a2) + _f._result_1) +
                      _f._result_0);
         }
       }
@@ -676,43 +672,43 @@ struct MemSafetyProbe17 {
         const qtree *_self;
       };
 
-      /// _After_QNode: saves [_s0, _s1, _s2, d_a4, d_a3, d_a2, d_a1, d_a0],
-      /// dispatches next recursive call.
+      /// _After_QNode: saves [_s0, _s1, _s2, a4, a3, a2, a1, a0], dispatches
+      /// next recursive call.
       struct _After_QNode {
         const qtree *_s0;
         const qtree *_s1;
         const qtree *_s2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
-      /// _After_QNode_1: saves [_result, _s1, _s2, d_a4, d_a3, d_a2, d_a1,
-      /// d_a0], dispatches next recursive call.
+      /// _After_QNode_1: saves [_result, _s1, _s2, a4, a3, a2, a1, a0],
+      /// dispatches next recursive call.
       struct _After_QNode_1 {
         T1 _result;
         const qtree *_s1;
         const qtree *_s2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
-      /// _After_QNode_2: saves [_result_0, _result_1, _s2, d_a4, d_a3, d_a2,
-      /// d_a1, d_a0], dispatches next recursive call.
+      /// _After_QNode_2: saves [_result_0, _result_1, _s2, a4, a3, a2, a1, a0],
+      /// dispatches next recursive call.
       struct _After_QNode_2 {
         T1 _result_0;
         T1 _result_1;
         const qtree *_s2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
       /// _Combine_QNode: receives partial results, combines with _result from
@@ -721,11 +717,11 @@ struct MemSafetyProbe17 {
         T1 _result_0;
         T1 _result_1;
         T1 _result_2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
@@ -746,36 +742,34 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+            const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_After_QNode{d_a3.get(), d_a1.get(), d_a0.get(),
-                                             *d_a4, *d_a3, d_a2, *d_a1, *d_a0});
-            _stack.emplace_back(_Enter{d_a4.get()});
+            _stack.emplace_back(_After_QNode{a3.get(), a1.get(), a0.get(), *a4,
+                                             *a3, a2, *a1, *a0});
+            _stack.emplace_back(_Enter{a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
           _stack.emplace_back(_After_QNode_1{
-              _result, _f._s1, _f._s2, std::move(_f.d_a4), std::move(_f.d_a3),
-              _f.d_a2, std::move(_f.d_a1), std::move(_f.d_a0)});
+              _result, _f._s1, _f._s2, std::move(_f.a4), std::move(_f.a3),
+              _f.a2, std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
-          _stack.emplace_back(
-              _After_QNode_2{_f._result, _result, _f._s2, std::move(_f.d_a4),
-                             std::move(_f.d_a3), _f.d_a2, std::move(_f.d_a1),
-                             std::move(_f.d_a0)});
+          _stack.emplace_back(_After_QNode_2{
+              _f._result, _result, _f._s2, std::move(_f.a4), std::move(_f.a3),
+              _f.a2, std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
-          _stack.emplace_back(
-              _Combine_QNode{_f._result_0, _f._result_1, _result,
-                             std::move(_f.d_a4), std::move(_f.d_a3), _f.d_a2,
-                             std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_QNode{
+              _f._result_0, _f._result_1, _result, std::move(_f.a4),
+              std::move(_f.a3), _f.a2, std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f._result_2, _f.d_a2,
-                       _f.d_a3, _f._result_1, _f.d_a4, _f._result_0);
+          _result = f0(_f.a0, _result, _f.a1, _f._result_2, _f.a2, _f.a3,
+                       _f._result_1, _f.a4, _f._result_0);
         }
       }
       return _result;
@@ -793,43 +787,43 @@ struct MemSafetyProbe17 {
         const qtree *_self;
       };
 
-      /// _After_QNode: saves [_s0, _s1, _s2, d_a4, d_a3, d_a2, d_a1, d_a0],
-      /// dispatches next recursive call.
+      /// _After_QNode: saves [_s0, _s1, _s2, a4, a3, a2, a1, a0], dispatches
+      /// next recursive call.
       struct _After_QNode {
         const qtree *_s0;
         const qtree *_s1;
         const qtree *_s2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
-      /// _After_QNode_1: saves [_result, _s1, _s2, d_a4, d_a3, d_a2, d_a1,
-      /// d_a0], dispatches next recursive call.
+      /// _After_QNode_1: saves [_result, _s1, _s2, a4, a3, a2, a1, a0],
+      /// dispatches next recursive call.
       struct _After_QNode_1 {
         T1 _result;
         const qtree *_s1;
         const qtree *_s2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
-      /// _After_QNode_2: saves [_result_0, _result_1, _s2, d_a4, d_a3, d_a2,
-      /// d_a1, d_a0], dispatches next recursive call.
+      /// _After_QNode_2: saves [_result_0, _result_1, _s2, a4, a3, a2, a1, a0],
+      /// dispatches next recursive call.
       struct _After_QNode_2 {
         T1 _result_0;
         T1 _result_1;
         const qtree *_s2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
       /// _Combine_QNode: receives partial results, combines with _result from
@@ -838,11 +832,11 @@ struct MemSafetyProbe17 {
         T1 _result_0;
         T1 _result_1;
         T1 _result_2;
-        qtree d_a4;
-        qtree d_a3;
-        unsigned int d_a2;
-        qtree d_a1;
-        qtree d_a0;
+        qtree a4;
+        qtree a3;
+        unsigned int a2;
+        qtree a1;
+        qtree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
@@ -863,36 +857,34 @@ struct MemSafetyProbe17 {
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1, d_a2, d_a3, d_a4] =
+            const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_After_QNode{d_a3.get(), d_a1.get(), d_a0.get(),
-                                             *d_a4, *d_a3, d_a2, *d_a1, *d_a0});
-            _stack.emplace_back(_Enter{d_a4.get()});
+            _stack.emplace_back(_After_QNode{a3.get(), a1.get(), a0.get(), *a4,
+                                             *a3, a2, *a1, *a0});
+            _stack.emplace_back(_Enter{a4.get()});
           }
         } else if (std::holds_alternative<_After_QNode>(_frame)) {
           auto _f = std::move(std::get<_After_QNode>(_frame));
           _stack.emplace_back(_After_QNode_1{
-              _result, _f._s1, _f._s2, std::move(_f.d_a4), std::move(_f.d_a3),
-              _f.d_a2, std::move(_f.d_a1), std::move(_f.d_a0)});
+              _result, _f._s1, _f._s2, std::move(_f.a4), std::move(_f.a3),
+              _f.a2, std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_QNode_1>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_1>(_frame));
-          _stack.emplace_back(
-              _After_QNode_2{_f._result, _result, _f._s2, std::move(_f.d_a4),
-                             std::move(_f.d_a3), _f.d_a2, std::move(_f.d_a1),
-                             std::move(_f.d_a0)});
+          _stack.emplace_back(_After_QNode_2{
+              _f._result, _result, _f._s2, std::move(_f.a4), std::move(_f.a3),
+              _f.a2, std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_QNode_2>(_frame)) {
           auto _f = std::move(std::get<_After_QNode_2>(_frame));
-          _stack.emplace_back(
-              _Combine_QNode{_f._result_0, _f._result_1, _result,
-                             std::move(_f.d_a4), std::move(_f.d_a3), _f.d_a2,
-                             std::move(_f.d_a1), std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_QNode{
+              _f._result_0, _f._result_1, _result, std::move(_f.a4),
+              std::move(_f.a3), _f.a2, std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_QNode>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f._result_2, _f.d_a2,
-                       _f.d_a3, _f._result_1, _f.d_a4, _f._result_0);
+          _result = f0(_f.a0, _result, _f.a1, _f._result_2, _f.a2, _f.a3,
+                       _f._result_1, _f.a4, _f._result_0);
         }
       }
       return _result;
@@ -934,50 +926,50 @@ struct MemSafetyProbe17 {
 
   /// TEST 4: Flatten a 4-ary tree to a list (inorder traversal).
   /// Uses all 4 children in recursive calls + value in list construction.
-  template <typename t_A> struct mylist {
+  template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
 
     struct Mycons {
-      t_A d_a0;
-      std::unique_ptr<mylist<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    mylist<t_A> &operator=(const mylist<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    mylist<A> &operator=(const mylist<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<t_A> &operator=(mylist<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist<A> &operator=(mylist<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    mylist<t_A> clone() const {
-      mylist<t_A> _out{};
+    mylist<A> clone() const {
+      mylist<A> _out{};
 
       struct _CloneFrame {
-        const mylist<t_A> *_src;
-        mylist<t_A> *_dst;
+        const mylist<A> *_src;
+        mylist<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -986,17 +978,17 @@ struct MemSafetyProbe17 {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const mylist<t_A> *_src = _frame._src;
-        mylist<t_A> *_dst = _frame._dst;
+        const mylist<A> *_src = _frame._src;
+        mylist<A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Mycons{_alt.a0,
+                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -1006,31 +998,31 @@ struct MemSafetyProbe17 {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil{};
+        this->v_ = Mynil{};
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons{
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->v_ =
+            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist(Mynil{}); }
 
-    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      std::vector<std::unique_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](mylist<t_A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](mylist<A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -1044,30 +1036,28 @@ struct MemSafetyProbe17 {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
-    mylist<t_A> myapp(mylist<t_A> l2) const {
-      std::unique_ptr<mylist<t_A>> _head{};
-      std::unique_ptr<mylist<t_A>> *_write = &_head;
+    mylist<A> myapp(mylist<A> l2) const {
+      std::unique_ptr<mylist<A>> _head{};
+      std::unique_ptr<mylist<A>> *_write = &_head;
       const mylist *_loop_self = this;
-      mylist<t_A> _loop_l2 = std::move(l2);
+      mylist<A> _loop_l2 = std::move(l2);
       while (true) {
         auto &&_sv = *_loop_self;
-        if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
-          *_write = std::make_unique<mylist<t_A>>(std::move(_loop_l2));
+        if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+          *_write = std::make_unique<mylist<A>>(std::move(_loop_l2));
           break;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename mylist<t_A>::Mycons>(_sv.v());
-          auto _cell = std::make_unique<mylist<t_A>>(
-              typename mylist<t_A>::Mycons(d_a0, nullptr));
+          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
+          auto _cell = std::make_unique<mylist<A>>(
+              typename mylist<A>::Mycons(a0, nullptr));
           *_write = std::move(_cell);
-          _write =
-              &std::get<typename mylist<t_A>::Mycons>((*_write)->v_mut()).d_a1;
-          _loop_self = d_a1.get();
+          _write = &std::get<typename mylist<A>::Mycons>((*_write)->v_mut()).a1;
+          _loop_self = a1.get();
           continue;
         }
       }
@@ -1075,7 +1065,7 @@ struct MemSafetyProbe17 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
@@ -1084,12 +1074,12 @@ struct MemSafetyProbe17 {
         const mylist *_self;
       };
 
-      /// _Resume_Mycons: saves [f0, d_a1, d_a0], resumes after recursive call
-      /// with _result.
+      /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
+      /// _result.
       struct _Resume_Mycons {
         F1 f0;
-        mylist<t_A> d_a1;
-        t_A d_a0;
+        mylist<A> a1;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -1105,24 +1095,24 @@ struct MemSafetyProbe17 {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         } else {
           auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+          _result = _f.f0(_f.a0, _f.a1, _result);
         }
       }
       return _result;
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
@@ -1131,12 +1121,12 @@ struct MemSafetyProbe17 {
         const mylist *_self;
       };
 
-      /// _Resume_Mycons: saves [f0, d_a1, d_a0], resumes after recursive call
-      /// with _result.
+      /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
+      /// _result.
       struct _Resume_Mycons {
         F1 f0;
-        mylist<t_A> d_a1;
-        t_A d_a0;
+        mylist<A> a1;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -1152,17 +1142,17 @@ struct MemSafetyProbe17 {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         } else {
           auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+          _result = _f.f0(_f.a0, _f.a1, _result);
         }
       }
       return _result;

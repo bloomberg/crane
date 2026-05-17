@@ -327,13 +327,13 @@ LoopifyPatterns::sum_prod_count(const LoopifyPatterns::list<unsigned int> &l,
                                _loop_a_count);
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l->v());
       _loop_a_count = (_loop_a_count + 1);
-      _loop_a_prod = (_loop_a_prod * d_a0);
-      _loop_a_sum = (_loop_a_sum + d_a0);
-      _loop_l = d_a1.get();
+      _loop_a_prod = (_loop_a_prod * a0);
+      _loop_a_sum = (_loop_a_sum + a0);
+      _loop_l = a1.get();
     }
   }
   return _result;
@@ -358,15 +358,15 @@ LoopifyPatterns::split_by_sign_aux(const LoopifyPatterns::list<unsigned int> &l,
       _result = std::make_pair(std::move(_loop_pos), std::move(_loop_neg));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l->v());
-      if (base <= d_a0) {
-        _loop_pos = list<unsigned int>::cons(d_a0, std::move(_loop_pos));
-        _loop_l = d_a1.get();
+      if (base <= a0) {
+        _loop_pos = list<unsigned int>::cons(a0, std::move(_loop_pos));
+        _loop_l = a1.get();
       } else {
-        _loop_neg = list<unsigned int>::cons(d_a0, std::move(_loop_neg));
-        _loop_l = d_a1.get();
+        _loop_neg = list<unsigned int>::cons(a0, std::move(_loop_neg));
+        _loop_l = a1.get();
       }
     }
   }
@@ -394,22 +394,22 @@ LoopifyPatterns::guard_accum(unsigned int acc,
       _result = _loop_acc;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l->v());
-      if (100u < d_a0) {
-        _loop_l = d_a1.get();
+      if (100u < a0) {
+        _loop_l = a1.get();
         _loop_acc = (_loop_acc * 2u);
       } else {
-        if (50u < d_a0) {
-          _loop_l = d_a1.get();
-          _loop_acc = (_loop_acc + d_a0);
+        if (50u < a0) {
+          _loop_l = a1.get();
+          _loop_acc = (_loop_acc + a0);
         } else {
-          if (0u < d_a0) {
-            _loop_l = d_a1.get();
+          if (0u < a0) {
+            _loop_l = a1.get();
             _loop_acc = (_loop_acc + 1);
           } else {
-            _loop_l = d_a1.get();
+            _loop_l = a1.get();
           }
         }
       }
@@ -433,7 +433,7 @@ LoopifyPatterns::cons_computed(unsigned int n,
           list<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l->v());
       unsigned int next_n;
@@ -443,11 +443,11 @@ LoopifyPatterns::cons_computed(unsigned int n,
         next_n = _loop_n;
       }
       auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-          typename list<unsigned int>::Cons(d_a0, nullptr));
+          typename list<unsigned int>::Cons(a0, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      _loop_l = d_a1.get();
+          &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).a1;
+      _loop_l = a1.get();
       _loop_n = next_n;
       continue;
     }
@@ -570,22 +570,21 @@ LoopifyPatterns::replace_at(unsigned int idx, unsigned int value,
           list<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l->v());
       if (_loop_idx <= 0) {
         *_write = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-            list<unsigned int>::cons(value, *d_a1));
+            list<unsigned int>::cons(value, *a1));
         break;
       } else {
         unsigned int i = _loop_idx - 1;
         auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-            typename list<unsigned int>::Cons(d_a0, nullptr));
+            typename list<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
+            &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = a1.get();
         _loop_idx = i;
         continue;
       }
@@ -631,16 +630,16 @@ unsigned int LoopifyPatterns::nested_pattern(
               l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<std::pair<
                 std::pair<unsigned int, unsigned int>, unsigned int>>::Cons>(
                 l.v());
-        const std::pair<unsigned int, unsigned int> &p0 = d_a0.first;
-        const unsigned int &c = d_a0.second;
+        const std::pair<unsigned int, unsigned int> &p0 = a0.first;
+        const unsigned int &c = a0.second;
         const unsigned int &a = p0.first;
         const unsigned int &b = p0.second;
         _stack.emplace_back(_Resume_a{a, b, c});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_a>(_frame));
@@ -720,10 +719,10 @@ unsigned int LoopifyPatterns::list_len(
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Resume_Cons{});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -744,17 +743,17 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
     unsigned int fuel;
   };
 
-  /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then processes
+  /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
     unsigned int f;
   };
 
-  /// _Cont_Cons_1: saves [d_a0], resumes after recursive call, then processes
+  /// _Cont_Cons_1: saves [a0], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Cons_1 {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
@@ -778,25 +777,25 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_fuel(
                 typename LoopifyPatterns::list<unsigned int>::Nil>(l.v_mut())) {
           _result = list<unsigned int>::nil();
         } else {
-          auto &[d_a0, d_a1] =
+          auto &[a0, a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Cont_Cons{d_a0, f});
-          _stack.emplace_back(_Enter{std::move(*d_a1), f});
+          _stack.emplace_back(_Cont_Cons{a0, f});
+          _stack.emplace_back(_Enter{std::move(*a1), f});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int f = _f.f;
       LoopifyPatterns::list<unsigned int> first = _result;
-      _stack.emplace_back(_Cont_Cons_1{d_a0});
+      _stack.emplace_back(_Cont_Cons_1{a0});
       _stack.emplace_back(_Enter{std::move(first), f});
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       LoopifyPatterns::list<unsigned int> second = _result;
-      _result = list<unsigned int>::cons(std::move(d_a0), std::move(second));
+      _result = list<unsigned int>::cons(std::move(a0), std::move(second));
     }
   }
   return _result;
@@ -829,23 +828,23 @@ LoopifyPatterns::as_guard_fuel(unsigned int fuel,
             list<unsigned int>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 _loop_l->v());
         LoopifyPatterns::list<unsigned int> all =
-            list<unsigned int>::cons(d_a0, *d_a1);
+            list<unsigned int>::cons(a0, *a1);
         if (3u < list_len(std::move(all))) {
           auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-              typename list<unsigned int>::Cons(d_a0, nullptr));
+              typename list<unsigned int>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l = d_a1.get();
+                   .a1;
+          _loop_l = a1.get();
           _loop_fuel = f;
           continue;
         } else {
-          _loop_l = d_a1.get();
+          _loop_l = a1.get();
           _loop_fuel = f;
           continue;
         }
@@ -891,37 +890,36 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        auto &&_sv0 = *d_a1;
+        auto &&_sv0 = *a1;
         if (std::holds_alternative<
                 typename LoopifyPatterns::list<unsigned int>::Nil>(_sv0.v())) {
-          _result = d_a0;
+          _result = a0;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   _sv0.v());
-          auto &&_sv1 = *d_a10;
+          auto &&_sv1 = *a10;
           if (std::holds_alternative<
                   typename LoopifyPatterns::list<unsigned int>::Nil>(
                   _sv1.v())) {
-            _result = (d_a0 + d_a00);
+            _result = (a0 + a00);
           } else {
-            const auto &[d_a01, d_a11] =
+            const auto &[a01, a11] =
                 std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                     _sv1.v());
-            auto &&_sv2 = *d_a11;
+            auto &&_sv2 = *a11;
             if (std::holds_alternative<
                     typename LoopifyPatterns::list<unsigned int>::Nil>(
                     _sv2.v())) {
-              _result = (d_a0 + (d_a00 + d_a01));
+              _result = (a0 + (a00 + a01));
             } else {
-              const auto &[d_a02, d_a12] =
+              const auto &[a02, a12] =
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(
-                  _Resume_Cons{(d_a0 + d_a00), (d_a01 + d_a02)});
-              _stack.emplace_back(_Enter{d_a12.get()});
+              _stack.emplace_back(_Resume_Cons{(a0 + a00), (a01 + a02)});
+              _stack.emplace_back(_Enter{a12.get()});
             }
           }
         }
@@ -943,10 +941,9 @@ unsigned int LoopifyPatterns::multi_guard(
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -965,19 +962,19 @@ unsigned int LoopifyPatterns::multi_guard(
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int rest = _result;
-      if (10u < d_a0) {
-        _result = (d_a0 + rest);
+      if (10u < a0) {
+        _result = (a0 + rest);
       } else {
-        if (0u < d_a0) {
+        if (0u < a0) {
           _result = rest;
         } else {
           _result = (1u + rest);
@@ -1003,15 +1000,15 @@ LoopifyPatterns::append_lists(const LoopifyPatterns::list<unsigned int> &l1,
           std::move(_loop_l2));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l1->v());
       auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-          typename list<unsigned int>::Cons(d_a0, nullptr));
+          typename list<unsigned int>::Cons(a0, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      _loop_l1 = d_a1.get();
+          &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).a1;
+      _loop_l1 = a1.get();
       continue;
     }
   }
@@ -1029,10 +1026,9 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::double_append(
     const LoopifyPatterns::list<unsigned int> *l1;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -1052,17 +1048,17 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::double_append(
               typename LoopifyPatterns::list<unsigned int>::Nil>(l1.v())) {
         _result = std::move(l2);
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 l1.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{std::move(l2), d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{std::move(l2), a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       LoopifyPatterns::list<unsigned int> rest = _result;
-      _result = list<unsigned int>::cons(d_a0, append_lists(rest, rest));
+      _result = list<unsigned int>::cons(a0, append_lists(rest, rest));
     }
   }
   return _result;
@@ -1079,17 +1075,17 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
     unsigned int fuel;
   };
 
-  /// _Cont_Cons: saves [d_a0, f], resumes after recursive call, then processes
+  /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
     unsigned int f;
   };
 
-  /// _Cont_Cons_1: saves [d_a0], resumes after recursive call, then processes
+  /// _Cont_Cons_1: saves [a0], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Cons_1 {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
@@ -1113,25 +1109,25 @@ LoopifyPatterns::list<unsigned int> LoopifyPatterns::process_twice_alt_fuel(
                 typename LoopifyPatterns::list<unsigned int>::Nil>(l.v_mut())) {
           _result = list<unsigned int>::nil();
         } else {
-          auto &[d_a0, d_a1] =
+          auto &[a0, a1] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   l.v_mut());
-          _stack.emplace_back(_Cont_Cons{d_a0, f});
-          _stack.emplace_back(_Enter{std::move(*d_a1), f});
+          _stack.emplace_back(_Cont_Cons{a0, f});
+          _stack.emplace_back(_Enter{std::move(*a1), f});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int f = _f.f;
       LoopifyPatterns::list<unsigned int> once = _result;
-      _stack.emplace_back(_Cont_Cons_1{d_a0});
+      _stack.emplace_back(_Cont_Cons_1{a0});
       _stack.emplace_back(_Enter{std::move(once), f});
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       LoopifyPatterns::list<unsigned int> twice = _result;
-      _result = list<unsigned int>::cons(std::move(d_a0), std::move(twice));
+      _result = list<unsigned int>::cons(std::move(a0), std::move(twice));
     }
   }
   return _result;
@@ -1151,10 +1147,9 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -1173,19 +1168,19 @@ unsigned int LoopifyPatterns::sum_if_positive_else_double(
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int rest = _result;
-      if (d_a0 == 0u) {
-        _result = ((2u * d_a0) + rest);
+      if (a0 == 0u) {
+        _result = ((2u * a0) + rest);
       } else {
-        _result = (d_a0 + rest);
+        _result = (a0 + rest);
       }
     }
   }
@@ -1208,7 +1203,7 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
           std::move(_loop_l2));
       break;
     } else {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
               _loop_l1.v_mut());
       if (std::holds_alternative<
@@ -1218,23 +1213,23 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<unsigned int> l1,
             std::make_unique<LoopifyPatterns::list<unsigned int>>(_loop_l1);
         break;
       } else {
-        auto &[d_a00, d_a10] =
+        auto &[a00, a10] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                 _loop_l2.v_mut());
         auto _cell = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-            typename list<unsigned int>::Cons(std::move(d_a0), nullptr));
+            typename list<unsigned int>::Cons(std::move(a0), nullptr));
         auto _cell1 = std::make_unique<LoopifyPatterns::list<unsigned int>>(
-            typename list<unsigned int>::Cons(std::move(d_a00), nullptr));
-        std::get<typename list<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
+            typename list<unsigned int>::Cons(std::move(a00), nullptr));
+        std::get<typename list<unsigned int>::Cons>(_cell->v_mut()).a1 =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename list<unsigned int>::Cons>(
                  std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1->v_mut())
-                 .d_a1;
-        _loop_l2 = std::move(*d_a10);
-        _loop_l1 = std::move(*d_a1);
+                     .a1->v_mut())
+                 .a1;
+        _loop_l2 = std::move(*a10);
+        _loop_l1 = std::move(*a1);
         continue;
       }
     }
@@ -1251,13 +1246,13 @@ unsigned int LoopifyPatterns::four_elem(
     const LoopifyPatterns::list<unsigned int> *l;
   };
 
-  /// _Resume_Cons: saves [d_a0, d_a00, d_a01, d_a02], resumes after recursive
-  /// call with _result.
+  /// _Resume_Cons: saves [a0, a00, a01, a02], resumes after recursive call with
+  /// _result.
   struct _Resume_Cons {
-    unsigned int d_a0;
-    unsigned int d_a00;
-    unsigned int d_a01;
-    unsigned int d_a02;
+    unsigned int a0;
+    unsigned int a00;
+    unsigned int a01;
+    unsigned int a02;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -1276,43 +1271,43 @@ unsigned int LoopifyPatterns::four_elem(
               typename LoopifyPatterns::list<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(l.v());
-        auto &&_sv0 = *d_a1;
+        auto &&_sv0 = *a1;
         if (std::holds_alternative<
                 typename LoopifyPatterns::list<unsigned int>::Nil>(_sv0.v())) {
           _result = 1u;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                   _sv0.v());
-          auto &&_sv1 = *d_a10;
+          auto &&_sv1 = *a10;
           if (std::holds_alternative<
                   typename LoopifyPatterns::list<unsigned int>::Nil>(
                   _sv1.v())) {
             _result = 2u;
           } else {
-            const auto &[d_a01, d_a11] =
+            const auto &[a01, a11] =
                 std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                     _sv1.v());
-            auto &&_sv2 = *d_a11;
+            auto &&_sv2 = *a11;
             if (std::holds_alternative<
                     typename LoopifyPatterns::list<unsigned int>::Nil>(
                     _sv2.v())) {
               _result = 3u;
             } else {
-              const auto &[d_a02, d_a12] =
+              const auto &[a02, a12] =
                   std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
                       _sv2.v());
-              _stack.emplace_back(_Resume_Cons{d_a0, d_a00, d_a01, d_a02});
-              _stack.emplace_back(_Enter{d_a12.get()});
+              _stack.emplace_back(_Resume_Cons{a0, a00, a01, a02});
+              _stack.emplace_back(_Enter{a12.get()});
             }
           }
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.d_a0 + (_f.d_a00 + (_f.d_a01 + (_f.d_a02 + _result))));
+      _result = (_f.a0 + (_f.a00 + (_f.a01 + (_f.a02 + _result))));
     }
   }
   return _result;

@@ -4,13 +4,12 @@ unsigned int EvenOdd::even_length(const EvenOdd::even_list &e) {
   if (std::holds_alternative<typename EvenOdd::even_list::ENil>(e.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename EvenOdd::even_list::ECons>(e.v());
-    return (odd_length(*d_a1) + 1);
+    const auto &[a0, a1] = std::get<typename EvenOdd::even_list::ECons>(e.v());
+    return (odd_length(*a1) + 1);
   }
 }
 
 unsigned int EvenOdd::odd_length(const EvenOdd::odd_list &o) {
-  const auto &[d_a0, d_a1] = std::get<typename EvenOdd::odd_list::OCons>(o.v());
-  return (even_length(*d_a1) + 1);
+  const auto &[a0, a1] = std::get<typename EvenOdd::odd_list::OCons>(o.v());
+  return (even_length(*a1) + 1);
 }

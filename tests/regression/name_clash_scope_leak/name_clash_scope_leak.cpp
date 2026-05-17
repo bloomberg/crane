@@ -5,10 +5,8 @@ List<unsigned int> NameClashScopeLeak::rotate(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    return (*d_a1).app(
-        List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+    return (*a1).app(List<unsigned int>::cons(a0, List<unsigned int>::nil()));
   }
 }
 
@@ -19,18 +17,18 @@ unsigned int NameClashScopeLeak::heads_sum(const List<unsigned int> &l1,
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(l1.v());
-      return d_a0;
+      return a0;
     }
   }();
   unsigned int h2 = [&]() {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
       return 0u;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(l2.v());
-      return d_a00;
+      return a00;
     }
   }();
   return (h1 + h2);
@@ -41,15 +39,14 @@ unsigned int NameClashScopeLeak::first_two_sum(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = *d_a1;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-      return d_a0;
+      return a0;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      return (d_a0 + d_a00);
+      return (a0 + a00);
     }
   }
 }
@@ -59,9 +56,8 @@ unsigned int NameClashScopeLeak::branch_let_clash(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    return (d_a0 * 2u);
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+    return (a0 * 2u);
   }
 }
 
@@ -73,27 +69,27 @@ unsigned int NameClashScopeLeak::triple_head(const List<unsigned int> &l1,
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(l1.v());
-      return d_a0;
+      return a0;
     }
   }();
   unsigned int b = [&]() {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
       return 0u;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(l2.v());
-      return d_a00;
+      return a00;
     }
   }();
   unsigned int c = [&]() {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l3.v())) {
       return 0u;
     } else {
-      const auto &[d_a01, d_a11] =
+      const auto &[a01, a11] =
           std::get<typename List<unsigned int>::Cons>(l3.v());
-      return d_a01;
+      return a01;
     }
   }();
   return ((a + b) + c);
@@ -108,18 +104,18 @@ unsigned int NameClashScopeLeak::pair_match(
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(l1.v());
-      return d_a0;
+      return a0;
     }
   }();
   unsigned int h2 = [&]() {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
       return 0u;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(l2.v());
-      return d_a00;
+      return a00;
     }
   }();
   return (h1 + h2);

@@ -15,35 +15,35 @@ struct EvenOdd {
     struct ENil {};
 
     struct ECons {
-      unsigned int d_a0;
-      std::unique_ptr<odd_list> d_a1;
+      unsigned int a0;
+      std::unique_ptr<odd_list> a1;
     };
 
     using variant_t = std::variant<ENil, ECons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     even_list() {}
 
-    explicit even_list(ENil _v) : d_v_(_v) {}
+    explicit even_list(ENil _v) : v_(_v) {}
 
-    explicit even_list(ECons _v) : d_v_(std::move(_v)) {}
+    explicit even_list(ECons _v) : v_(std::move(_v)) {}
 
-    even_list(const even_list &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    even_list(const even_list &_other) : v_(std::move(_other.clone().v_)) {}
 
-    even_list(even_list &&_other) : d_v_(std::move(_other.d_v_)) {}
+    even_list(even_list &&_other) : v_(std::move(_other.v_)) {}
 
     even_list &operator=(const even_list &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     even_list &operator=(even_list &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -65,22 +65,22 @@ struct EvenOdd {
         const even_list *_src = _frame._src;
         even_list *_dst = _frame._dst;
         if (std::holds_alternative<ENil>(_src->v())) {
-          _dst->d_v_ = ENil{};
+          _dst->v_ = ENil{};
         } else {
           const auto &_alt = std::get<ECons>(_src->v());
-          _dst->d_v_ = ECons{_alt.d_a0, _alt.d_a1 ? std::make_unique<odd_list>()
-                                                  : nullptr};
-          auto &_dst_alt = std::get<ECons>(_dst->d_v_);
-          if (_alt.d_a1) {
+          _dst->v_ =
+              ECons{_alt.a0, _alt.a1 ? std::make_unique<odd_list>() : nullptr};
+          auto &_dst_alt = std::get<ECons>(_dst->v_);
+          if (_alt.a1) {
             if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
-                    _alt.d_a1->v())) {
+                    _alt.a1->v())) {
               const auto &_psrc =
-                  std::get<typename EvenOdd::odd_list::OCons>(_alt.d_a1->v());
+                  std::get<typename EvenOdd::odd_list::OCons>(_alt.a1->v());
               auto &_pdst = std::get<typename EvenOdd::odd_list::OCons>(
-                  _dst_alt.d_a1->v_mut());
-              if (_psrc.d_a1) {
-                _pdst.d_a1 = std::make_unique<even_list>();
-                _stack.push_back({_psrc.d_a1.get(), _pdst.d_a1.get()});
+                  _dst_alt.a1->v_mut());
+              if (_psrc.a1) {
+                _pdst.a1 = std::make_unique<even_list>();
+                _stack.push_back({_psrc.a1.get(), _pdst.a1.get()});
               }
             }
           }
@@ -101,15 +101,15 @@ struct EvenOdd {
       std::vector<std::unique_ptr<even_list>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](even_list &_node) {
-        if (std::holds_alternative<ECons>(_node.d_v_)) {
-          auto &_alt = std::get<ECons>(_node.d_v_);
-          if (_alt.d_a1) {
+        if (std::holds_alternative<ECons>(_node.v_)) {
+          auto &_alt = std::get<ECons>(_node.v_);
+          if (_alt.a1) {
             if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
-                    _alt.d_a1->v())) {
-              auto &_palt = std::get<typename EvenOdd::odd_list::OCons>(
-                  _alt.d_a1->v_mut());
-              if (_palt.d_a1) {
-                _stack.push_back(std::move(_palt.d_a1));
+                    _alt.a1->v())) {
+              auto &_palt =
+                  std::get<typename EvenOdd::odd_list::OCons>(_alt.a1->v_mut());
+              if (_palt.a1) {
+                _stack.push_back(std::move(_palt.a1));
               }
             }
           }
@@ -125,51 +125,51 @@ struct EvenOdd {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   struct odd_list {
     // TYPES
     struct OCons {
-      unsigned int d_a0;
-      std::unique_ptr<even_list> d_a1;
+      unsigned int a0;
+      std::unique_ptr<even_list> a1;
     };
 
     using variant_t = std::variant<OCons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     odd_list() {}
 
-    explicit odd_list(OCons _v) : d_v_(std::move(_v)) {}
+    explicit odd_list(OCons _v) : v_(std::move(_v)) {}
 
-    odd_list(const odd_list &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    odd_list(const odd_list &_other) : v_(std::move(_other.clone().v_)) {}
 
-    odd_list(odd_list &&_other) : d_v_(std::move(_other.d_v_)) {}
+    odd_list(odd_list &&_other) : v_(std::move(_other.v_)) {}
 
     odd_list &operator=(const odd_list &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     odd_list &operator=(odd_list &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     odd_list clone() const {
-      const auto &[d_a0, d_a1] = std::get<OCons>(this->v());
+      const auto &[a0, a1] = std::get<OCons>(this->v());
       return odd_list(
-          OCons{d_a0, d_a1 ? std::make_unique<EvenOdd::even_list>(d_a1->clone())
-                           : nullptr});
+          OCons{a0, a1 ? std::make_unique<EvenOdd::even_list>(a1->clone())
+                       : nullptr});
     }
 
     // CREATORS
@@ -182,15 +182,15 @@ struct EvenOdd {
       std::vector<std::unique_ptr<odd_list>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](odd_list &_node) {
-        if (std::holds_alternative<OCons>(_node.d_v_)) {
-          auto &_alt = std::get<OCons>(_node.d_v_);
-          if (_alt.d_a1) {
+        if (std::holds_alternative<OCons>(_node.v_)) {
+          auto &_alt = std::get<OCons>(_node.v_);
+          if (_alt.a1) {
             if (std::holds_alternative<typename EvenOdd::even_list::ECons>(
-                    _alt.d_a1->v())) {
+                    _alt.a1->v())) {
               auto &_palt = std::get<typename EvenOdd::even_list::ECons>(
-                  _alt.d_a1->v_mut());
-              if (_palt.d_a1) {
-                _stack.push_back(std::move(_palt.d_a1));
+                  _alt.a1->v_mut());
+              if (_palt.a1) {
+                _stack.push_back(std::move(_palt.a1));
               }
             }
           }
@@ -206,10 +206,10 @@ struct EvenOdd {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   static unsigned int even_length(const even_list &e);

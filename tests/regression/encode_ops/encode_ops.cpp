@@ -12,13 +12,13 @@ EncodeOps::encode_list2(const List<EncodeOps::instruction2> &prog) {
           prog.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<EncodeOps::instruction2>::Cons>(prog.v());
-    auto _cs = d_a0.encode2();
+    auto _cs = a0.encode2();
     const unsigned int &b1 = _cs.first;
     const unsigned int &b2 = _cs.second;
     return List<unsigned int>::cons(
-        b1, List<unsigned int>::cons(b2, encode_list2(*d_a1)));
+        b1, List<unsigned int>::cons(b2, encode_list2(*a1)));
   }
 }
 
@@ -28,10 +28,10 @@ EncodeOps::encode_list3(const List<EncodeOps::instruction3> &prog) {
           prog.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<EncodeOps::instruction3>::Cons>(prog.v());
-    std::pair<unsigned int, unsigned int> p = d_a0.encode3();
+    std::pair<unsigned int, unsigned int> p = a0.encode3();
     return List<unsigned int>::cons(
-        p.first, List<unsigned int>::cons(p.second, encode_list3(*d_a1)));
+        p.first, List<unsigned int>::cons(p.second, encode_list3(*a1)));
   }
 }

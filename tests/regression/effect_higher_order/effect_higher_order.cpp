@@ -35,10 +35,10 @@ EffectHigherOrder::lookup_all(const List<std::string> &names) {
   if (std::holds_alternative<typename List<std::string>::Nil>(names.v())) {
     return List<std::string>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::string>::Cons>(names.v());
-    std::string v = lookup_or_ask(d_a0);
-    List<std::string> vs = lookup_all(*d_a1);
+    std::string v = lookup_or_ask(a0);
+    List<std::string> vs = lookup_all(*a1);
     return List<std::string>::cons(v, vs);
   }
 }

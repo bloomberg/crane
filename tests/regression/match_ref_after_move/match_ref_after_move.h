@@ -11,50 +11,50 @@ struct MatchRefAfterMove {
   /// This test exercises patterns where a value is destructured
   /// and then the original is also used, testing move/reference
   /// interactions in the generated C++.
-  template <typename t_A> struct mylist {
+  template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
 
     struct Mycons {
-      t_A d_a0;
-      std::unique_ptr<mylist<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    mylist<t_A> &operator=(const mylist<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    mylist<A> &operator=(const mylist<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<t_A> &operator=(mylist<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist<A> &operator=(mylist<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    mylist<t_A> clone() const {
-      mylist<t_A> _out{};
+    mylist<A> clone() const {
+      mylist<A> _out{};
 
       struct _CloneFrame {
-        const mylist<t_A> *_src;
-        mylist<t_A> *_dst;
+        const mylist<A> *_src;
+        mylist<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -63,17 +63,17 @@ struct MatchRefAfterMove {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const mylist<t_A> *_src = _frame._src;
-        mylist<t_A> *_dst = _frame._dst;
+        const mylist<A> *_src = _frame._src;
+        mylist<A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Mycons{_alt.a0,
+                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -83,31 +83,31 @@ struct MatchRefAfterMove {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil{};
+        this->v_ = Mynil{};
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons{
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->v_ =
+            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist(Mynil{}); }
 
-    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      std::vector<std::unique_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](mylist<t_A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](mylist<A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -121,121 +121,115 @@ struct MatchRefAfterMove {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// Pattern 1: Match on a list, return head AND apply a function
     /// to the tail that also takes the head as argument.
     /// The generated code must ensure h survives until both uses.
     unsigned int mylist_length() const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return (1u + (*d_a1).mylist_length());
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return (1u + (*a1).mylist_length());
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<t_A>::Mynil>(this->v())) {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename mylist<t_A>::Mycons>(this->v());
-        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
       }
     }
   };
 
-  template <typename t_A, typename t_B> struct mypair {
+  template <typename A, typename B> struct mypair {
     // TYPES
     struct Mkpair {
-      t_A d_a0;
-      t_B d_a1;
+      A a0;
+      B a1;
     };
 
     using variant_t = std::variant<Mkpair>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mypair() {}
 
-    explicit mypair(Mkpair _v) : d_v_(std::move(_v)) {}
+    explicit mypair(Mkpair _v) : v_(std::move(_v)) {}
 
-    mypair(const mypair<t_A, t_B> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    mypair(const mypair<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mypair(mypair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mypair(mypair<A, B> &&_other) : v_(std::move(_other.v_)) {}
 
-    mypair<t_A, t_B> &operator=(const mypair<t_A, t_B> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    mypair<A, B> &operator=(const mypair<A, B> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mypair<t_A, t_B> &operator=(mypair<t_A, t_B> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mypair<A, B> &operator=(mypair<A, B> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    mypair<t_A, t_B> clone() const {
-      const auto &[d_a0, d_a1] = std::get<Mkpair>(this->v());
-      return mypair<t_A, t_B>(Mkpair{d_a0, d_a1});
+    mypair<A, B> clone() const {
+      const auto &[a0, a1] = std::get<Mkpair>(this->v());
+      return mypair<A, B>(Mkpair{a0, a1});
     }
 
     // CREATORS
     template <typename _U0, typename _U1>
     explicit mypair(const mypair<_U0, _U1> &_other) {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename mypair<_U0, _U1>::Mkpair>(_other.v());
-      this->d_v_ = Mkpair{t_A(d_a0), t_B(d_a1)};
+      this->v_ = Mkpair{A(a0), B(a1)};
     }
 
-    static mypair<t_A, t_B> mkpair(t_A a0, t_B a1) {
+    static mypair<A, B> mkpair(A a0, B a1) {
       return mypair(Mkpair{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 mypair_rec(F0 &&f) const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename mypair<t_A, t_B>::Mkpair>(this->v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename mypair<A, B>::Mkpair>(this->v());
+      return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 mypair_rect(F0 &&f) const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename mypair<t_A, t_B>::Mkpair>(this->v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename mypair<A, B>::Mkpair>(this->v());
+      return f(a0, a1);
     }
   };
 
@@ -267,9 +261,9 @@ struct MatchRefAfterMove {
         10u, mylist<unsigned int>::mycons(
                  20u, mylist<unsigned int>::mycons(
                           30u, mylist<unsigned int>::mynil()))));
-    const auto &[d_a00, d_a10] =
+    const auto &[a00, a10] =
         std::get<typename mypair<unsigned int, unsigned int>::Mkpair>(_sv0.v());
-    return (d_a00 + d_a10);
+    return (a00 + a10);
   }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
   static inline const unsigned int test2 =
@@ -281,10 +275,10 @@ struct MatchRefAfterMove {
   static inline const unsigned int test3 = []() {
     auto &&_sv1 = match_into_pair(mylist<unsigned int>::mycons(
         5u, mylist<unsigned int>::mycons(10u, mylist<unsigned int>::mynil())));
-    const auto &[d_a01, d_a11] =
+    const auto &[a01, a11] =
         std::get<typename mypair<unsigned int, mylist<unsigned int>>::Mkpair>(
             _sv1.v());
-    return (d_a01 + mylist_sum(d_a11));
+    return (a01 + mylist_sum(a11));
   }();
   /// test4: double_match 7,8,9 = (7, 8,9)
   static inline const unsigned int test4 = []() {
@@ -292,10 +286,10 @@ struct MatchRefAfterMove {
         7u, mylist<unsigned int>::mycons(
                 8u, mylist<unsigned int>::mycons(
                         9u, mylist<unsigned int>::mynil()))));
-    const auto &[d_a02, d_a12] =
+    const auto &[a02, a12] =
         std::get<typename mypair<unsigned int, mylist<unsigned int>>::Mkpair>(
             _sv2.v());
-    return (d_a02 + mylist_sum(d_a12));
+    return (a02 + mylist_sum(a12));
   }();
 
   /// Pattern 5: CPS with explicit continuation that captures from match.
@@ -307,9 +301,9 @@ struct MatchRefAfterMove {
     if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
       return k(0u, 0u);
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename mylist<unsigned int>::Mycons>(l.v());
-      return k(d_a0, (*d_a1).mylist_length());
+      return k(a0, (*a1).mylist_length());
     }
   }
 
@@ -324,53 +318,52 @@ struct MatchRefAfterMove {
       });
 
   /// Pattern 6: Deep nesting of matches with multiple constructors.
-  template <typename t_A, typename t_B> struct either {
+  template <typename A, typename B> struct either {
     // TYPES
     struct Left {
-      t_A d_a0;
+      A a0;
     };
 
     struct Right {
-      t_B d_a0;
+      B a0;
     };
 
     using variant_t = std::variant<Left, Right>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     either() {}
 
-    explicit either(Left _v) : d_v_(std::move(_v)) {}
+    explicit either(Left _v) : v_(std::move(_v)) {}
 
-    explicit either(Right _v) : d_v_(std::move(_v)) {}
+    explicit either(Right _v) : v_(std::move(_v)) {}
 
-    either(const either<t_A, t_B> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    either(const either<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    either(either<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    either(either<A, B> &&_other) : v_(std::move(_other.v_)) {}
 
-    either<t_A, t_B> &operator=(const either<t_A, t_B> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    either<A, B> &operator=(const either<A, B> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    either<t_A, t_B> &operator=(either<t_A, t_B> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    either<A, B> &operator=(either<A, B> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    either<t_A, t_B> clone() const {
+    either<A, B> clone() const {
       if (std::holds_alternative<Left>(this->v())) {
-        const auto &[d_a0] = std::get<Left>(this->v());
-        return either<t_A, t_B>(Left{d_a0});
+        const auto &[a0] = std::get<Left>(this->v());
+        return either<A, B>(Left{a0});
       } else {
-        const auto &[d_a0] = std::get<Right>(this->v());
-        return either<t_A, t_B>(Right{d_a0});
+        const auto &[a0] = std::get<Right>(this->v());
+        return either<A, B>(Right{a0});
       }
     }
 
@@ -378,55 +371,49 @@ struct MatchRefAfterMove {
     template <typename _U0, typename _U1>
     explicit either(const either<_U0, _U1> &_other) {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
-        const auto &[d_a0] =
+        const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        this->d_v_ = Left{t_A(d_a0)};
+        this->v_ = Left{A(a0)};
       } else {
-        const auto &[d_a0] =
+        const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        this->d_v_ = Right{t_B(d_a0)};
+        this->v_ = Right{B(a0)};
       }
     }
 
-    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
+    static either<A, B> left(A a0) { return either(Left{std::move(a0)}); }
 
-    static either<t_A, t_B> right(t_B a0) {
-      return either(Right{std::move(a0)});
-    }
+    static either<A, B> right(B a0) { return either(Right{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
-               std::is_invocable_r_v<T1, F1 &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &> &&
+               std::is_invocable_r_v<T1, F1 &, B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
-        const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Left>(this->v());
-        return f(d_a0);
+      if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
+        const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename either<A, B>::Right>(this->v());
+        return f0(a0);
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &> &&
-               std::is_invocable_r_v<T1, F1 &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &> &&
+               std::is_invocable_r_v<T1, F1 &, B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either<t_A, t_B>::Left>(this->v())) {
-        const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Left>(this->v());
-        return f(d_a0);
+      if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
+        const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0] =
-            std::get<typename either<t_A, t_B>::Right>(this->v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename either<A, B>::Right>(this->v());
+        return f0(a0);
       }
     }
   };

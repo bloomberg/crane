@@ -31,35 +31,35 @@ struct FixSharedPtrField {
     struct Mynil {};
 
     struct Mycons {
-      unsigned int d_a0;
-      std::unique_ptr<mylist> d_a1;
+      unsigned int a0;
+      std::unique_ptr<mylist> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist &&_other) : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     mylist &operator=(mylist &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -81,14 +81,14 @@ struct FixSharedPtrField {
         const mylist *_src = _frame._src;
         mylist *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Mycons{_alt.a0, _alt.a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -107,10 +107,10 @@ struct FixSharedPtrField {
       std::vector<std::unique_ptr<mylist>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -124,10 +124,10 @@ struct FixSharedPtrField {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// Local fixpoint captures h : nat (POD) and t : shared_ptr<mylist>
     /// from the match on value-type mylist. Both are captured by &.
@@ -136,12 +136,12 @@ struct FixSharedPtrField {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        mylist d_a1_value = *d_a1;
+        const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
+        mylist a1_value = *a1;
         auto compute_impl = [=](auto &_self_compute,
                                 unsigned int x) mutable -> unsigned int {
           if (x <= 0) {
-            return (d_a0 + d_a1_value.mylist_sum());
+            return (a0 + a1_value.mylist_sum());
           } else {
             unsigned int x_ = x - 1;
             return (1u + _self_compute(_self_compute, x_));
@@ -159,8 +159,8 @@ struct FixSharedPtrField {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return (1u + (*d_a1).mylist_length());
+        const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
+        return (1u + (*a1).mylist_length());
       }
     }
 
@@ -168,8 +168,8 @@ struct FixSharedPtrField {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return (d_a0 + (*d_a1).mylist_sum());
+        const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
+        return (a0 + (*a1).mylist_sum());
       }
     }
 
@@ -179,8 +179,8 @@ struct FixSharedPtrField {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(d_a0, *d_a1, (*d_a1).template mylist_rec<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
+        return f0(a0, *a1, (*a1).template mylist_rec<T1>(f, f0));
       }
     }
 
@@ -190,8 +190,8 @@ struct FixSharedPtrField {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(this->v());
-        return f0(d_a0, *d_a1, (*d_a1).template mylist_rect<T1>(f, f0));
+        const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
+        return f0(a0, *a1, (*a1).template mylist_rect<T1>(f, f0));
       }
     }
   };
@@ -200,63 +200,63 @@ struct FixSharedPtrField {
   struct wrapper {
     // TYPES
     struct Wrap {
-      mylist d_a0;
+      mylist a0;
     };
 
     using variant_t = std::variant<Wrap>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     wrapper() {}
 
-    explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
+    explicit wrapper(Wrap _v) : v_(std::move(_v)) {}
 
-    wrapper(const wrapper &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
 
-    wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
+    wrapper(wrapper &&_other) : v_(std::move(_other.v_)) {}
 
     wrapper &operator=(const wrapper &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     wrapper &operator=(wrapper &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     wrapper clone() const {
-      const auto &[d_a0] = std::get<Wrap>(this->v());
-      return wrapper(Wrap{d_a0.clone()});
+      const auto &[a0] = std::get<Wrap>(this->v());
+      return wrapper(Wrap{a0.clone()});
     }
 
     // CREATORS
     static wrapper wrap(mylist a0) { return wrapper(Wrap{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, mylist &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
-    return f(d_a0);
+    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    return f(a0);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, mylist &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
-    return f(d_a0);
+    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    return f(a0);
   }
 
   /// test1: l = 10, 20, 30, h=10, t=20,30, mylist_sum(t)=50.

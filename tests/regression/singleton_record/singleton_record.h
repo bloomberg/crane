@@ -17,11 +17,11 @@ struct SingletonRecord {
   static unsigned int unwrap(const wrapper &w);
   static wrapper double_wrapped(const wrapper &w);
 
-  template <typename t_A> struct box {
-    t_A contents;
+  template <typename A> struct box {
+    A contents;
 
     // ACCESSORS
-    box<t_A> clone() const { return box<t_A>{(*this).contents}; }
+    box<A> clone() const { return box<A>{(*this).contents}; }
   };
 
   static inline const box<unsigned int> boxed_three = box<unsigned int>{3u};

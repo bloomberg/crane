@@ -13,13 +13,13 @@ std::optional<unsigned int> LoopifyOption::lookup_opt(
       _result = std::optional<unsigned int>();
       break;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename LoopifyOption::list<
+      const auto &[a0, a1] = std::get<typename LoopifyOption::list<
           std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
-      if (d_a0.first == key) {
-        _result = std::make_optional<unsigned int>(d_a0.second);
+      if (a0.first == key) {
+        _result = std::make_optional<unsigned int>(a0.second);
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }

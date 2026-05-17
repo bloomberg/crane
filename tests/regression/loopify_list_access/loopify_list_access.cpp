@@ -11,13 +11,13 @@ unsigned int LoopifyListAccess::nth(unsigned int n,
       _result = 0u;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
-        _result = d_a0;
+        _result = a0;
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
         _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
       }
     }
@@ -34,14 +34,14 @@ unsigned int LoopifyListAccess::last(const List<unsigned int> &l) {
       _result = 0u;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv = *d_a1;
+      auto &&_sv = *a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-        _result = d_a0;
+        _result = a0;
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }
@@ -60,14 +60,14 @@ unsigned int LoopifyListAccess::index_of_aux(unsigned int x,
       _result = 0u;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if (x == d_a0) {
+      if (x == a0) {
         _result = _loop_idx;
         break;
       } else {
         _loop_idx = (_loop_idx + 1u);
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }
@@ -88,13 +88,13 @@ bool LoopifyListAccess::member(unsigned int x, const List<unsigned int> &l) {
       _result = false;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if (x == d_a0) {
+      if (x == a0) {
         _result = true;
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }
@@ -112,16 +112,16 @@ unsigned int LoopifyListAccess::lookup(
       _result = 0u;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
               _loop_l->v());
-      const unsigned int &k = d_a0.first;
-      const unsigned int &v = d_a0.second;
+      const unsigned int &k = a0.first;
+      const unsigned int &v = a0.second;
       if (k == key) {
         _result = v;
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }
@@ -140,22 +140,21 @@ List<unsigned int> LoopifyListAccess::lookup_all(
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
               _loop_l->v());
-      const unsigned int &k = d_a0.first;
-      const unsigned int &v = d_a0.second;
+      const unsigned int &k = a0.first;
+      const unsigned int &v = a0.second;
       if (k == key) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(v, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = a1.get();
         continue;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
         continue;
       }
     }
@@ -192,13 +191,13 @@ unsigned int LoopifyListAccess::count(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        if (x == d_a0) {
+        if (x == a0) {
           _stack.emplace_back(_Resume1{1u});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         } else {
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
@@ -220,13 +219,13 @@ bool LoopifyListAccess::elem_at_eq(unsigned int idx, unsigned int val,
       _result = false;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_idx == 0u) {
-        _result = d_a0 == val;
+        _result = a0 == val;
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
         _loop_idx = (((_loop_idx - 1u) > _loop_idx ? 0 : (_loop_idx - 1u)));
       }
     }
@@ -246,13 +245,13 @@ unsigned int LoopifyListAccess::nth_default(unsigned int n,
       _result = default0;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
-        _result = d_a0;
+        _result = a0;
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
         _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
       }
     }

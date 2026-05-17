@@ -32,15 +32,15 @@ bool LoopifyListRelations::is_prefix_of(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
         _result = true;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
           _result = false;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
-          _stack.emplace_back(_Resume_Cons{d_a0 == d_a00});
-          _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
+          _stack.emplace_back(_Resume_Cons{a0 == a00});
+          _stack.emplace_back(_Enter{a10.get(), a1.get()});
         }
       }
     } else {
@@ -70,9 +70,9 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
                 xs.v_mut())) {
           return List<unsigned int>::nil();
         } else {
-          auto &[d_a0, d_a1] =
+          auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(xs.v_mut());
-          return _self_drop(_self_drop, n_, *d_a1);
+          return _self_drop(_self_drop, n_, *a1);
         }
       }
     };
@@ -90,15 +90,15 @@ bool LoopifyListRelations::is_suffix_of(const List<unsigned int> &l1,
           return false;
         }
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(a.v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(b.v())) {
           return false;
         } else {
-          const auto &[d_a01, d_a11] =
+          const auto &[a01, a11] =
               std::get<typename List<unsigned int>::Cons>(b.v());
-          if (d_a00 == d_a01) {
-            return _self_eq(_self_eq, *d_a10, *d_a11);
+          if (a00 == a01) {
+            return _self_eq(_self_eq, *a10, *a11);
           } else {
             return false;
           }
@@ -129,13 +129,13 @@ bool LoopifyListRelations::is_infix_of_aux(const List<unsigned int> &needle,
         break;
       }
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_haystack->v());
       if (is_prefix_of(needle, *_loop_haystack)) {
         _result = true;
         break;
       } else {
-        _loop_haystack = d_a1.get();
+        _loop_haystack = a1.get();
       }
     }
   }
@@ -161,21 +161,20 @@ LoopifyListRelations::find_sublists_aux(const List<unsigned int> &needle,
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_haystack->v());
       if (is_prefix_of(needle, *_loop_haystack)) {
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(_loop_idx, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
         _loop_idx = (_loop_idx + 1u);
-        _loop_haystack = d_a1.get();
+        _loop_haystack = a1.get();
         continue;
       } else {
         _loop_idx = (_loop_idx + 1u);
-        _loop_haystack = d_a1.get();
+        _loop_haystack = a1.get();
         continue;
       }
     }
@@ -225,15 +224,15 @@ bool LoopifyListRelations::list_eq(
           _result = false;
         }
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l1.v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
           _result = false;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(l2.v());
-          _stack.emplace_back(_Resume_Cons{d_a0 == d_a00});
-          _stack.emplace_back(_Enter{d_a10.get(), d_a1.get()});
+          _stack.emplace_back(_Resume_Cons{a0 == a00});
+          _stack.emplace_back(_Enter{a10.get(), a1.get()});
         }
       }
     } else {
@@ -261,25 +260,25 @@ unsigned int LoopifyListRelations::list_compare(const List<unsigned int> &l1,
         break;
       }
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2->v())) {
         _result = 2u;
         break;
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
-        if (d_a0 < d_a00) {
+        if (a0 < a00) {
           _result = 1u;
           break;
         } else {
-          if (d_a00 < d_a0) {
+          if (a00 < a0) {
             _result = 2u;
             break;
           } else {
-            _loop_l2 = d_a10.get();
-            _loop_l1 = d_a1.get();
+            _loop_l2 = a10.get();
+            _loop_l1 = a1.get();
           }
         }
       }
@@ -302,7 +301,7 @@ LoopifyListRelations::zip(const List<unsigned int> &l1,
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2->v())) {
@@ -310,20 +309,20 @@ LoopifyListRelations::zip(const List<unsigned int> &l1,
             List<std::pair<unsigned int, unsigned int>>::nil());
         break;
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
         auto _cell =
             std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                 typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                    std::make_pair(d_a0, d_a00), nullptr));
+                    std::make_pair(a0, a00), nullptr));
         *_write = std::move(_cell);
         _write =
             &std::get<
                  typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                  (*_write)->v_mut())
-                 .d_a1;
-        _loop_l2 = d_a10.get();
-        _loop_l1 = d_a1.get();
+                 .a1;
+        _loop_l2 = a10.get();
+        _loop_l1 = a1.get();
         continue;
       }
     }
@@ -353,7 +352,7 @@ LoopifyListRelations::zip3(const List<unsigned int> &l1,
                          unsigned int>>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2->v())) {
@@ -363,7 +362,7 @@ LoopifyListRelations::zip3(const List<unsigned int> &l1,
                            unsigned int>>::nil());
         break;
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l3->v())) {
@@ -373,22 +372,21 @@ LoopifyListRelations::zip3(const List<unsigned int> &l1,
                              unsigned int>>::nil());
           break;
         } else {
-          const auto &[d_a01, d_a11] =
+          const auto &[a01, a11] =
               std::get<typename List<unsigned int>::Cons>(_loop_l3->v());
           auto _cell = std::make_unique<List<
               std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>>(
               typename List<std::pair<std::pair<unsigned int, unsigned int>,
                                       unsigned int>>::
-                  Cons(std::make_pair(std::make_pair(d_a0, d_a00), d_a01),
-                       nullptr));
+                  Cons(std::make_pair(std::make_pair(a0, a00), a01), nullptr));
           *_write = std::move(_cell);
           _write = &std::get<typename List<std::pair<
               std::pair<unsigned int, unsigned int>, unsigned int>>::Cons>(
                         (*_write)->v_mut())
-                        .d_a1;
-          _loop_l3 = d_a11.get();
-          _loop_l2 = d_a10.get();
-          _loop_l1 = d_a1.get();
+                        .a1;
+          _loop_l3 = a11.get();
+          _loop_l2 = a10.get();
+          _loop_l1 = a1.get();
           continue;
         }
       }
@@ -409,29 +407,29 @@ List<unsigned int> LoopifyListRelations::interleave(List<unsigned int> l1,
       *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l2.v_mut())) {
         *_write = std::make_unique<List<unsigned int>>(_loop_l1);
         break;
       } else {
-        auto &[d_a00, d_a10] =
+        auto &[a00, a10] =
             std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
+            typename List<unsigned int>::Cons(std::move(a0), nullptr));
         auto _cell1 = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(std::move(d_a00), nullptr));
-        std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
+            typename List<unsigned int>::Cons(std::move(a00), nullptr));
+        std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).a1 =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>(
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1->v_mut())
-                 .d_a1;
-        _loop_l2 = std::move(*d_a10);
-        _loop_l1 = std::move(*d_a1);
+                     .a1->v_mut())
+                 .a1;
+        _loop_l2 = std::move(*a10);
+        _loop_l1 = std::move(*a1);
         continue;
       }
     }
@@ -458,33 +456,33 @@ List<unsigned int> LoopifyListRelations::merge_fuel(unsigned int fuel,
         *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
         break;
       } else {
-        auto &[d_a0, d_a1] =
+        auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l1.v_mut());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2.v_mut())) {
           *_write = std::make_unique<List<unsigned int>>(_loop_l1);
           break;
         } else {
-          auto &[d_a00, d_a10] =
+          auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v_mut());
-          if (d_a0 <= d_a00) {
+          if (a0 <= a00) {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(std::move(d_a0), nullptr));
+                typename List<unsigned int>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
-            _loop_l1 = std::move(*d_a1);
+                     .a1;
+            _loop_l1 = std::move(*a1);
             _loop_fuel = fuel_;
             continue;
           } else {
             auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(std::move(d_a00), nullptr));
+                typename List<unsigned int>::Cons(std::move(a00), nullptr));
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
-            _loop_l2 = std::move(*d_a10);
+                     .a1;
+            _loop_l2 = std::move(*a10);
             _loop_fuel = fuel_;
             continue;
           }
@@ -514,7 +512,7 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
       *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if ([&]() {
             auto member_impl = [](auto &_self_member, unsigned int y,
@@ -523,27 +521,26 @@ List<unsigned int> LoopifyListRelations::union_(const List<unsigned int> &l1,
                       ys.v())) {
                 return false;
               } else {
-                const auto &[d_a0, d_a1] =
+                const auto &[a0, a1] =
                     std::get<typename List<unsigned int>::Cons>(ys.v());
-                return (y == d_a0 || _self_member(_self_member, y, *d_a1));
+                return (y == a0 || _self_member(_self_member, y, *a1));
               }
             };
             auto member = [&](unsigned int y,
                               const List<unsigned int> &ys) -> bool {
               return member_impl(member_impl, y, ys);
             };
-            return member(d_a0, _loop_l2);
+            return member(a0, _loop_l2);
           }()) {
-        _loop_l1 = d_a1.get();
+        _loop_l1 = a1.get();
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l1 = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l1 = a1.get();
         continue;
       }
     }
@@ -563,7 +560,7 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
       if ([&]() {
             auto member_impl = [](auto &_self_member, unsigned int y,
@@ -572,27 +569,26 @@ LoopifyListRelations::intersection(const List<unsigned int> &l1,
                       ys.v())) {
                 return false;
               } else {
-                const auto &[d_a0, d_a1] =
+                const auto &[a0, a1] =
                     std::get<typename List<unsigned int>::Cons>(ys.v());
-                return (y == d_a0 || _self_member(_self_member, y, *d_a1));
+                return (y == a0 || _self_member(_self_member, y, *a1));
               }
             };
             auto member = [&](unsigned int y,
                               const List<unsigned int> &ys) -> bool {
               return member_impl(member_impl, y, ys);
             };
-            return member(d_a0, l2);
+            return member(a0, l2);
           }()) {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l1 = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l1 = a1.get();
         continue;
       } else {
-        _loop_l1 = d_a1.get();
+        _loop_l1 = a1.get();
         continue;
       }
     }

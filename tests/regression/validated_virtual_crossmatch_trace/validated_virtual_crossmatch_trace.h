@@ -9,50 +9,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -61,17 +61,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -81,30 +81,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -118,59 +116,59 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+    requires std::is_invocable_r_v<bool, F0 &, A &>
   bool existsb(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return false;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (f(d_a0) || (*d_a1).existsb(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (f(a0) || (*a1).existsb(f));
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return (*d_a1).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
+      return (*a2).template fold_left<T1>(f, f(a0, a1));
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<List<T1>, F0 &, t_A &>
+    requires std::is_invocable_r_v<List<T1>, F0 &, A &>
   List<T1> flat_map(F0 &&f) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return f(d_a0).app((*d_a1).template flat_map<T1>(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return f(a0).app((*a1).template flat_map<T1>(f));
     }
   }
 
   unsigned int length() const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return ((*d_a1).length() + 1);
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return ((*a1).length() + 1);
     }
   }
 
-  List<t_A> app(List<t_A> m) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  List<A> app(List<A> m) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<A>::cons(a0, (*a1).app(std::move(m)));
     }
   }
 };
@@ -180,88 +178,88 @@ struct Uint {
   struct Nil {};
 
   struct D0 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D1 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D2 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D3 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D4 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D5 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D6 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D7 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D8 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D9 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   using variant_t = std::variant<Nil, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Uint() {}
 
-  explicit Uint(Nil _v) : d_v_(_v) {}
+  explicit Uint(Nil _v) : v_(_v) {}
 
-  explicit Uint(D0 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D0 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D1 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D1 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D2 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D2 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D3 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D3 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D4 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D4 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D5 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D5 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D6 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D6 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D7 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D7 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D8 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D8 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D9 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D9 _v) : v_(std::move(_v)) {}
 
-  Uint(const Uint &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Uint(const Uint &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint(Uint &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Uint(Uint &&_other) : v_(std::move(_other.v_)) {}
 
   Uint &operator=(const Uint &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Uint &operator=(Uint &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -283,76 +281,76 @@ public:
       const Uint *_src = _frame._src;
       Uint *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else if (std::holds_alternative<D0>(_src->v())) {
         const auto &_alt = std::get<D0>(_src->v());
-        _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D0>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D0{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D0>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D1>(_src->v())) {
         const auto &_alt = std::get<D1>(_src->v());
-        _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D1>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D1{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D1>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D2>(_src->v())) {
         const auto &_alt = std::get<D2>(_src->v());
-        _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D2>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D2{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D2>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D3>(_src->v())) {
         const auto &_alt = std::get<D3>(_src->v());
-        _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D3>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D3{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D3>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D4>(_src->v())) {
         const auto &_alt = std::get<D4>(_src->v());
-        _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D4>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D4{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D4>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D5>(_src->v())) {
         const auto &_alt = std::get<D5>(_src->v());
-        _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D5>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D5{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D5>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D6>(_src->v())) {
         const auto &_alt = std::get<D6>(_src->v());
-        _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D6>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D6{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D6>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D7>(_src->v())) {
         const auto &_alt = std::get<D7>(_src->v());
-        _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D7>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D7{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D7>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D8>(_src->v())) {
         const auto &_alt = std::get<D8>(_src->v());
-        _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D8>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D8{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D8>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
         const auto &_alt = std::get<D9>(_src->v());
-        _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D9>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D9{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D9>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -407,64 +405,64 @@ public:
     std::vector<std::unique_ptr<Uint>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Uint &_node) {
-      if (std::holds_alternative<D0>(_node.d_v_)) {
-        auto &_alt = std::get<D0>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D0>(_node.v_)) {
+        auto &_alt = std::get<D0>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D1>(_node.d_v_)) {
-        auto &_alt = std::get<D1>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D1>(_node.v_)) {
+        auto &_alt = std::get<D1>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D2>(_node.d_v_)) {
-        auto &_alt = std::get<D2>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D2>(_node.v_)) {
+        auto &_alt = std::get<D2>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D3>(_node.d_v_)) {
-        auto &_alt = std::get<D3>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D3>(_node.v_)) {
+        auto &_alt = std::get<D3>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D4>(_node.d_v_)) {
-        auto &_alt = std::get<D4>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D4>(_node.v_)) {
+        auto &_alt = std::get<D4>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D5>(_node.d_v_)) {
-        auto &_alt = std::get<D5>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D5>(_node.v_)) {
+        auto &_alt = std::get<D5>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D6>(_node.d_v_)) {
-        auto &_alt = std::get<D6>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D6>(_node.v_)) {
+        auto &_alt = std::get<D6>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D7>(_node.d_v_)) {
-        auto &_alt = std::get<D7>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D7>(_node.v_)) {
+        auto &_alt = std::get<D7>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D8>(_node.d_v_)) {
-        auto &_alt = std::get<D8>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D8>(_node.v_)) {
+        auto &_alt = std::get<D8>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D9>(_node.d_v_)) {
-        auto &_alt = std::get<D9>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D9>(_node.v_)) {
+        auto &_alt = std::get<D9>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -478,10 +476,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Uint0 {
@@ -489,67 +487,67 @@ struct Uint0 {
   struct Nil0 {};
 
   struct D10 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D11 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D12 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D13 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D14 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D15 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D16 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D17 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D18 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D19 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Da {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Db {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Dc {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Dd {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct De {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Df {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   using variant_t = std::variant<Nil0, D10, D11, D12, D13, D14, D15, D16, D17,
@@ -557,57 +555,57 @@ struct Uint0 {
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Uint0() {}
 
-  explicit Uint0(Nil0 _v) : d_v_(_v) {}
+  explicit Uint0(Nil0 _v) : v_(_v) {}
 
-  explicit Uint0(D10 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D10 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D11 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D11 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D12 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D12 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D13 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D13 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D14 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D14 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D15 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D15 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D16 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D16 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D17 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D17 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D18 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D18 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D19 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D19 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Da _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Da _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Db _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Db _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Dc _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Dc _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Dd _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Dd _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(De _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(De _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Df _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Df _v) : v_(std::move(_v)) {}
 
-  Uint0(const Uint0 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Uint0(const Uint0 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint0(Uint0 &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Uint0(Uint0 &&_other) : v_(std::move(_other.v_)) {}
 
   Uint0 &operator=(const Uint0 &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Uint0 &operator=(Uint0 &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -629,118 +627,118 @@ public:
       const Uint0 *_src = _frame._src;
       Uint0 *_dst = _frame._dst;
       if (std::holds_alternative<Nil0>(_src->v())) {
-        _dst->d_v_ = Nil0{};
+        _dst->v_ = Nil0{};
       } else if (std::holds_alternative<D10>(_src->v())) {
         const auto &_alt = std::get<D10>(_src->v());
-        _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D10>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D10{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D10>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D11>(_src->v())) {
         const auto &_alt = std::get<D11>(_src->v());
-        _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D11>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D11{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D11>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D12>(_src->v())) {
         const auto &_alt = std::get<D12>(_src->v());
-        _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D12>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D12{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D12>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D13>(_src->v())) {
         const auto &_alt = std::get<D13>(_src->v());
-        _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D13>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D13{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D13>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D14>(_src->v())) {
         const auto &_alt = std::get<D14>(_src->v());
-        _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D14>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D14{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D14>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D15>(_src->v())) {
         const auto &_alt = std::get<D15>(_src->v());
-        _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D15>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D15{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D15>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D16>(_src->v())) {
         const auto &_alt = std::get<D16>(_src->v());
-        _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D16>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D16{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D16>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D17>(_src->v())) {
         const auto &_alt = std::get<D17>(_src->v());
-        _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D17>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D17{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D17>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D18>(_src->v())) {
         const auto &_alt = std::get<D18>(_src->v());
-        _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D18>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D18{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D18>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D19>(_src->v())) {
         const auto &_alt = std::get<D19>(_src->v());
-        _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D19>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D19{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D19>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Da>(_src->v())) {
         const auto &_alt = std::get<Da>(_src->v());
-        _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Da>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Da{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Da>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Db>(_src->v())) {
         const auto &_alt = std::get<Db>(_src->v());
-        _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Db>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Db{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Db>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Dc>(_src->v())) {
         const auto &_alt = std::get<Dc>(_src->v());
-        _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Dc>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Dc{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dc>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Dd>(_src->v())) {
         const auto &_alt = std::get<Dd>(_src->v());
-        _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Dd>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Dd{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dd>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<De>(_src->v())) {
         const auto &_alt = std::get<De>(_src->v());
-        _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<De>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = De{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<De>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
         const auto &_alt = std::get<Df>(_src->v());
-        _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Df>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Df{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Df>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -819,100 +817,100 @@ public:
     std::vector<std::unique_ptr<Uint0>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Uint0 &_node) {
-      if (std::holds_alternative<D10>(_node.d_v_)) {
-        auto &_alt = std::get<D10>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D10>(_node.v_)) {
+        auto &_alt = std::get<D10>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D11>(_node.d_v_)) {
-        auto &_alt = std::get<D11>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D11>(_node.v_)) {
+        auto &_alt = std::get<D11>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D12>(_node.d_v_)) {
-        auto &_alt = std::get<D12>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D12>(_node.v_)) {
+        auto &_alt = std::get<D12>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D13>(_node.d_v_)) {
-        auto &_alt = std::get<D13>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D13>(_node.v_)) {
+        auto &_alt = std::get<D13>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D14>(_node.d_v_)) {
-        auto &_alt = std::get<D14>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D14>(_node.v_)) {
+        auto &_alt = std::get<D14>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D15>(_node.d_v_)) {
-        auto &_alt = std::get<D15>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D15>(_node.v_)) {
+        auto &_alt = std::get<D15>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D16>(_node.d_v_)) {
-        auto &_alt = std::get<D16>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D16>(_node.v_)) {
+        auto &_alt = std::get<D16>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D17>(_node.d_v_)) {
-        auto &_alt = std::get<D17>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D17>(_node.v_)) {
+        auto &_alt = std::get<D17>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D18>(_node.d_v_)) {
-        auto &_alt = std::get<D18>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D18>(_node.v_)) {
+        auto &_alt = std::get<D18>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D19>(_node.d_v_)) {
-        auto &_alt = std::get<D19>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D19>(_node.v_)) {
+        auto &_alt = std::get<D19>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Da>(_node.d_v_)) {
-        auto &_alt = std::get<Da>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Da>(_node.v_)) {
+        auto &_alt = std::get<Da>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Db>(_node.d_v_)) {
-        auto &_alt = std::get<Db>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Db>(_node.v_)) {
+        auto &_alt = std::get<Db>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Dc>(_node.d_v_)) {
-        auto &_alt = std::get<Dc>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Dc>(_node.v_)) {
+        auto &_alt = std::get<Dc>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Dd>(_node.d_v_)) {
-        auto &_alt = std::get<Dd>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Dd>(_node.v_)) {
+        auto &_alt = std::get<Dd>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<De>(_node.d_v_)) {
-        auto &_alt = std::get<De>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<De>(_node.v_)) {
+        auto &_alt = std::get<De>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Df>(_node.d_v_)) {
-        auto &_alt = std::get<Df>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Df>(_node.v_)) {
+        auto &_alt = std::get<Df>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -926,10 +924,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct PeanoNat {
@@ -943,49 +941,49 @@ struct Bool {
 struct Uint1 {
   // TYPES
   struct UIntDecimal {
-    Uint d_u;
+    Uint u;
   };
 
   struct UIntHexadecimal {
-    Uint0 d_u;
+    Uint0 u;
   };
 
   using variant_t = std::variant<UIntDecimal, UIntHexadecimal>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Uint1() {}
 
-  explicit Uint1(UIntDecimal _v) : d_v_(std::move(_v)) {}
+  explicit Uint1(UIntDecimal _v) : v_(std::move(_v)) {}
 
-  explicit Uint1(UIntHexadecimal _v) : d_v_(std::move(_v)) {}
+  explicit Uint1(UIntHexadecimal _v) : v_(std::move(_v)) {}
 
-  Uint1(const Uint1 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Uint1(const Uint1 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint1(Uint1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Uint1(Uint1 &&_other) : v_(std::move(_other.v_)) {}
 
   Uint1 &operator=(const Uint1 &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Uint1 &operator=(Uint1 &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
   Uint1 clone() const {
     if (std::holds_alternative<UIntDecimal>(this->v())) {
-      const auto &[d_u] = std::get<UIntDecimal>(this->v());
-      return Uint1(UIntDecimal{d_u.clone()});
+      const auto &[u] = std::get<UIntDecimal>(this->v());
+      return Uint1(UIntDecimal{u.clone()});
     } else {
-      const auto &[d_u] = std::get<UIntHexadecimal>(this->v());
-      return Uint1(UIntHexadecimal{d_u.clone()});
+      const auto &[u] = std::get<UIntHexadecimal>(this->v());
+      return Uint1(UIntHexadecimal{u.clone()});
     }
   }
 
@@ -997,10 +995,10 @@ public:
   }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Nat {
@@ -1016,18 +1014,18 @@ struct Nat {
 };
 
 struct ValidatedVirtualCrossmatchTraceCase {
-  enum class HLALocus { e_LOCUS_A, e_LOCUS_B, e_LOCUS_DR };
+  enum class HLALocus { LOCUS_A, LOCUS_B, LOCUS_DR };
 
   template <typename T1>
   static T1 HLALocus_rect(T1 f, T1 f0, T1 f1, HLALocus h) {
     switch (h) {
-    case HLALocus::e_LOCUS_A: {
+    case HLALocus::LOCUS_A: {
       return f;
     }
-    case HLALocus::e_LOCUS_B: {
+    case HLALocus::LOCUS_B: {
       return f0;
     }
-    case HLALocus::e_LOCUS_DR: {
+    case HLALocus::LOCUS_DR: {
       return f1;
     }
     default:
@@ -1038,13 +1036,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 HLALocus_rec(T1 f, T1 f0, T1 f1, HLALocus h) {
     switch (h) {
-    case HLALocus::e_LOCUS_A: {
+    case HLALocus::LOCUS_A: {
       return f;
     }
-    case HLALocus::e_LOCUS_B: {
+    case HLALocus::LOCUS_B: {
       return f0;
     }
-    case HLALocus::e_LOCUS_DR: {
+    case HLALocus::LOCUS_DR: {
       return f1;
     }
     default:
@@ -1091,13 +1089,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static bool epitope_eq_dec(const HLAEpitope &x, const HLAEpitope &y);
   static bool epitope_eqb(const HLAEpitope &x, const HLAEpitope &y);
   static inline const HLAEpitope eplet_62GE =
-      HLAEpitope{62u, HLALocus::e_LOCUS_A, true};
+      HLAEpitope{62u, HLALocus::LOCUS_A, true};
   static inline const HLAEpitope eplet_65QIA =
-      HLAEpitope{65u, HLALocus::e_LOCUS_A, true};
+      HLAEpitope{65u, HLALocus::LOCUS_A, true};
   static inline const HLAEpitope eplet_142T =
-      HLAEpitope{142u, HLALocus::e_LOCUS_B, true};
+      HLAEpitope{142u, HLALocus::LOCUS_B, true};
   static inline const HLAEpitope eplet_77N =
-      HLAEpitope{77u, HLALocus::e_LOCUS_DR, true};
+      HLAEpitope{77u, HLALocus::LOCUS_DR, true};
   static List<HLAEpitope> allele_epitopes(const HLAAllele &a);
   static List<HLAEpitope> typing_epitopes(const HLATyping &t);
   static List<HLAEpitope> epitope_dedup(const List<HLAEpitope> &l);
@@ -1161,29 +1159,29 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const ValidatedMFIConfig validated_luminex =
       ValidatedMFIConfig{example_luminex_thresholds};
   enum class MFIStrength {
-    e_MFI_NEGATIVE,
-    e_MFI_WEAKPOSITIVE,
-    e_MFI_MODERATE,
-    e_MFI_STRONG,
-    e_MFI_VERYSTRONG
+    MFI_NEGATIVE,
+    MFI_WEAKPOSITIVE,
+    MFI_MODERATE,
+    MFI_STRONG,
+    MFI_VERYSTRONG
   };
 
   template <typename T1>
   static T1 MFIStrength_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, MFIStrength m) {
     switch (m) {
-    case MFIStrength::e_MFI_NEGATIVE: {
+    case MFIStrength::MFI_NEGATIVE: {
       return f;
     }
-    case MFIStrength::e_MFI_WEAKPOSITIVE: {
+    case MFIStrength::MFI_WEAKPOSITIVE: {
       return f0;
     }
-    case MFIStrength::e_MFI_MODERATE: {
+    case MFIStrength::MFI_MODERATE: {
       return f1;
     }
-    case MFIStrength::e_MFI_STRONG: {
+    case MFIStrength::MFI_STRONG: {
       return f2;
     }
-    case MFIStrength::e_MFI_VERYSTRONG: {
+    case MFIStrength::MFI_VERYSTRONG: {
       return f3;
     }
     default:
@@ -1194,19 +1192,19 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 MFIStrength_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, MFIStrength m) {
     switch (m) {
-    case MFIStrength::e_MFI_NEGATIVE: {
+    case MFIStrength::MFI_NEGATIVE: {
       return f;
     }
-    case MFIStrength::e_MFI_WEAKPOSITIVE: {
+    case MFIStrength::MFI_WEAKPOSITIVE: {
       return f0;
     }
-    case MFIStrength::e_MFI_MODERATE: {
+    case MFIStrength::MFI_MODERATE: {
       return f1;
     }
-    case MFIStrength::e_MFI_STRONG: {
+    case MFIStrength::MFI_STRONG: {
       return f2;
     }
-    case MFIStrength::e_MFI_VERYSTRONG: {
+    case MFIStrength::MFI_VERYSTRONG: {
       return f3;
     }
     default:
@@ -1224,25 +1222,25 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static bool has_complement_fixing_dsa(const VirtualXMProfile &recipient,
                                         const HLATyping &donor);
   enum class VirtualXMResult {
-    e_VXM_NEGATIVE,
-    e_VXM_WEAKPOSITIVE,
-    e_VXM_POSITIVE,
-    e_VXM_STRONGPOSITIVE
+    VXM_NEGATIVE,
+    VXM_WEAKPOSITIVE,
+    VXM_POSITIVE,
+    VXM_STRONGPOSITIVE
   };
 
   template <typename T1>
   static T1 VirtualXMResult_rect(T1 f, T1 f0, T1 f1, T1 f2, VirtualXMResult v) {
     switch (v) {
-    case VirtualXMResult::e_VXM_NEGATIVE: {
+    case VirtualXMResult::VXM_NEGATIVE: {
       return f;
     }
-    case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
+    case VirtualXMResult::VXM_WEAKPOSITIVE: {
       return f0;
     }
-    case VirtualXMResult::e_VXM_POSITIVE: {
+    case VirtualXMResult::VXM_POSITIVE: {
       return f1;
     }
-    case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
+    case VirtualXMResult::VXM_STRONGPOSITIVE: {
       return f2;
     }
     default:
@@ -1253,16 +1251,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 VirtualXMResult_rec(T1 f, T1 f0, T1 f1, T1 f2, VirtualXMResult v) {
     switch (v) {
-    case VirtualXMResult::e_VXM_NEGATIVE: {
+    case VirtualXMResult::VXM_NEGATIVE: {
       return f;
     }
-    case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
+    case VirtualXMResult::VXM_WEAKPOSITIVE: {
       return f0;
     }
-    case VirtualXMResult::e_VXM_POSITIVE: {
+    case VirtualXMResult::VXM_POSITIVE: {
       return f1;
     }
-    case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
+    case VirtualXMResult::VXM_STRONGPOSITIVE: {
       return f2;
     }
     default:
@@ -1275,26 +1273,26 @@ struct ValidatedVirtualCrossmatchTraceCase {
                           const VirtualXMProfile &recipient,
                           const HLATyping &donor);
   enum class TransplantAcceptability {
-    e_ACCEPTABLE,
-    e_ACCEPTABLE_WITH_DESENSITIZATION,
-    e_UNACCEPTABLE_HIGH_RISK,
-    e_ABSOLUTE_CONTRAINDICATION
+    ACCEPTABLE,
+    ACCEPTABLE_WITH_DESENSITIZATION,
+    UNACCEPTABLE_HIGH_RISK,
+    ABSOLUTE_CONTRAINDICATION
   };
 
   template <typename T1>
   static T1 TransplantAcceptability_rect(T1 f, T1 f0, T1 f1, T1 f2,
                                          TransplantAcceptability t) {
     switch (t) {
-    case TransplantAcceptability::e_ACCEPTABLE: {
+    case TransplantAcceptability::ACCEPTABLE: {
       return f;
     }
-    case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
+    case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
       return f0;
     }
-    case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
+    case TransplantAcceptability::UNACCEPTABLE_HIGH_RISK: {
       return f1;
     }
-    case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
+    case TransplantAcceptability::ABSOLUTE_CONTRAINDICATION: {
       return f2;
     }
     default:
@@ -1306,16 +1304,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static T1 TransplantAcceptability_rec(T1 f, T1 f0, T1 f1, T1 f2,
                                         TransplantAcceptability t) {
     switch (t) {
-    case TransplantAcceptability::e_ACCEPTABLE: {
+    case TransplantAcceptability::ACCEPTABLE: {
       return f;
     }
-    case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
+    case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
       return f0;
     }
-    case TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK: {
+    case TransplantAcceptability::UNACCEPTABLE_HIGH_RISK: {
       return f1;
     }
-    case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
+    case TransplantAcceptability::ABSOLUTE_CONTRAINDICATION: {
       return f2;
     }
     default:
@@ -1330,21 +1328,21 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                const VirtualXMProfile &recipient,
                                const HLATyping &donor);
   enum class TestConfidence {
-    e_CONFIDENCE_HIGH,
-    e_CONFIDENCE_MEDIUM,
-    e_CONFIDENCE_LOW
+    CONFIDENCE_HIGH,
+    CONFIDENCE_MEDIUM,
+    CONFIDENCE_LOW
   };
 
   template <typename T1>
   static T1 TestConfidence_rect(T1 f, T1 f0, T1 f1, TestConfidence t) {
     switch (t) {
-    case TestConfidence::e_CONFIDENCE_HIGH: {
+    case TestConfidence::CONFIDENCE_HIGH: {
       return f;
     }
-    case TestConfidence::e_CONFIDENCE_MEDIUM: {
+    case TestConfidence::CONFIDENCE_MEDIUM: {
       return f0;
     }
-    case TestConfidence::e_CONFIDENCE_LOW: {
+    case TestConfidence::CONFIDENCE_LOW: {
       return f1;
     }
     default:
@@ -1355,13 +1353,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 TestConfidence_rec(T1 f, T1 f0, T1 f1, TestConfidence t) {
     switch (t) {
-    case TestConfidence::e_CONFIDENCE_HIGH: {
+    case TestConfidence::CONFIDENCE_HIGH: {
       return f;
     }
-    case TestConfidence::e_CONFIDENCE_MEDIUM: {
+    case TestConfidence::CONFIDENCE_MEDIUM: {
       return f0;
     }
-    case TestConfidence::e_CONFIDENCE_LOW: {
+    case TestConfidence::CONFIDENCE_LOW: {
       return f1;
     }
     default:
@@ -1369,26 +1367,26 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   }
   enum class CrossmatchResult {
-    e_XM_COMPATIBLE,
-    e_XM_INCOMPATIBLE,
-    e_XM_INCONCLUSIVE,
-    e_XM_NOT_DONE
+    XM_COMPATIBLE,
+    XM_INCOMPATIBLE,
+    XM_INCONCLUSIVE,
+    XM_NOT_DONE
   };
 
   template <typename T1>
   static T1 CrossmatchResult_rect(T1 f, T1 f0, T1 f1, T1 f2,
                                   CrossmatchResult c) {
     switch (c) {
-    case CrossmatchResult::e_XM_COMPATIBLE: {
+    case CrossmatchResult::XM_COMPATIBLE: {
       return f;
     }
-    case CrossmatchResult::e_XM_INCOMPATIBLE: {
+    case CrossmatchResult::XM_INCOMPATIBLE: {
       return f0;
     }
-    case CrossmatchResult::e_XM_INCONCLUSIVE: {
+    case CrossmatchResult::XM_INCONCLUSIVE: {
       return f1;
     }
-    case CrossmatchResult::e_XM_NOT_DONE: {
+    case CrossmatchResult::XM_NOT_DONE: {
       return f2;
     }
     default:
@@ -1400,16 +1398,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static T1 CrossmatchResult_rec(T1 f, T1 f0, T1 f1, T1 f2,
                                  CrossmatchResult c) {
     switch (c) {
-    case CrossmatchResult::e_XM_COMPATIBLE: {
+    case CrossmatchResult::XM_COMPATIBLE: {
       return f;
     }
-    case CrossmatchResult::e_XM_INCOMPATIBLE: {
+    case CrossmatchResult::XM_INCOMPATIBLE: {
       return f0;
     }
-    case CrossmatchResult::e_XM_INCONCLUSIVE: {
+    case CrossmatchResult::XM_INCONCLUSIVE: {
       return f1;
     }
-    case CrossmatchResult::e_XM_NOT_DONE: {
+    case CrossmatchResult::XM_NOT_DONE: {
       return f2;
     }
     default:
@@ -1459,12 +1457,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
       CrossmatchWithUncertainty xm, unsigned int sample_time,
       unsigned int current_time, unsigned int authorizer, bool is_emergency);
   static inline const HLATyping donor_hla = HLATyping{List<HLAAllele>::cons(
-      HLAAllele{HLALocus::e_LOCUS_A, 2u},
+      HLAAllele{HLALocus::LOCUS_A, 2u},
       List<HLAAllele>::cons(
-          HLAAllele{HLALocus::e_LOCUS_A, 3u},
+          HLAAllele{HLALocus::LOCUS_A, 3u},
           List<HLAAllele>::cons(
-              HLAAllele{HLALocus::e_LOCUS_B, 7u},
-              List<HLAAllele>::cons(HLAAllele{HLALocus::e_LOCUS_DR, 4u},
+              HLAAllele{HLALocus::LOCUS_B, 7u},
+              List<HLAAllele>::cons(HLAAllele{HLALocus::LOCUS_DR, 4u},
                                     List<HLAAllele>::nil()))))};
   static inline const VirtualXMProfile weak_profile = VirtualXMProfile{
       List<EpitopeAntibody>::cons(
@@ -1479,15 +1477,15 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                       List<EpitopeAntibody>::nil())),
       95u, 98u, 5u};
   static inline const CrossmatchWithUncertainty good_crossmatch =
-      CrossmatchWithUncertainty{CrossmatchResult::e_XM_COMPATIBLE, 1u,
-                                TestConfidence::e_CONFIDENCE_HIGH};
+      CrossmatchWithUncertainty{CrossmatchResult::XM_COMPATIBLE, 1u,
+                                TestConfidence::CONFIDENCE_HIGH};
   static inline const CrossmatchWithUncertainty bad_crossmatch =
-      CrossmatchWithUncertainty{CrossmatchResult::e_XM_INCOMPATIBLE, 1u,
-                                TestConfidence::e_CONFIDENCE_HIGH};
+      CrossmatchWithUncertainty{CrossmatchResult::XM_INCOMPATIBLE, 1u,
+                                TestConfidence::CONFIDENCE_HIGH};
   static bool risk_acceptable(TransplantAcceptability a);
   static inline const bool sample_virtual_zero_negative = []() {
     switch (classify_mfi_safe(validated_luminex, 0u)) {
-    case MFIStrength::e_MFI_NEGATIVE: {
+    case MFIStrength::MFI_NEGATIVE: {
       return true;
     }
     default: {
@@ -1500,7 +1498,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const bool sample_weak_acceptability = []() {
     switch (full_virtual_crossmatch_safe(validated_luminex, weak_profile,
                                          donor_hla)) {
-    case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
+    case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
       return true;
     }
     default: {
@@ -1511,7 +1509,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const bool sample_strong_absolute_contra = []() {
     switch (full_virtual_crossmatch_safe(validated_luminex, strong_profile,
                                          donor_hla)) {
-    case TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION: {
+    case TransplantAcceptability::ABSOLUTE_CONTRAINDICATION: {
       return true;
     }
     default: {

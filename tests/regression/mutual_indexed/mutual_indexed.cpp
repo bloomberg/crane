@@ -5,15 +5,15 @@ unsigned int MutualIndexed::even_val(unsigned int,
   if (std::holds_alternative<typename MutualIndexed::EvenTree::ELeaf>(t.v())) {
     return 0u;
   } else {
-    const auto &[d_n, d_a1, d_a2] =
+    const auto &[n, a1, a2] =
         std::get<typename MutualIndexed::EvenTree::ENode>(t.v());
-    return d_a1;
+    return a1;
   }
 }
 
 unsigned int MutualIndexed::odd_val(unsigned int,
                                     const MutualIndexed::OddTree &t) {
-  const auto &[d_n, d_a1, d_a2] =
+  const auto &[n, a1, a2] =
       std::get<typename MutualIndexed::OddTree::ONode>(t.v());
-  return d_a1;
+  return a1;
 }

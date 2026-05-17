@@ -44,10 +44,9 @@ unsigned int stmtest::stm_dequeue(stm::TVar<List<unsigned int>> q) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v_mut())) {
     return stm::retry<unsigned int>();
   } else {
-    auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(xs.v_mut());
-    stm::writeTVar(q, *d_a1);
-    return d_a0;
+    auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(xs.v_mut());
+    stm::writeTVar(q, *a1);
+    return a0;
   }
 }
 

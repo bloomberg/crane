@@ -4,7 +4,7 @@ using namespace std::string_literals;
 
 int main() {
   // Test 1: color_name — enum-based match with effects
-  auto r1 = MatchMonadic::color_name(Color::e_RED);
+  auto r1 = MatchMonadic::color_name(Color::RED);
 
   // Test 3: nested_match — EXPOSES BUG: let-bound match result typed as std::any
   // auto r3 = MatchMonadic::nested_match(0, true);

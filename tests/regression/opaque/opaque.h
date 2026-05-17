@@ -5,57 +5,57 @@
 #include <utility>
 #include <variant>
 
-template <typename t_A> struct Sig {
+template <typename A> struct Sig {
   // TYPES
   struct Exist {
-    t_A d_x;
+    A x;
   };
 
   using variant_t = std::variant<Exist>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Sig() {}
 
-  explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
+  explicit Sig(Exist _v) : v_(std::move(_v)) {}
 
-  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Sig(const Sig<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Sig(Sig<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  Sig<t_A> &operator=(const Sig<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  Sig<A> &operator=(const Sig<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Sig<t_A> &operator=(Sig<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Sig<A> &operator=(Sig<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  Sig<t_A> clone() const {
-    const auto &[d_x] = std::get<Exist>(this->v());
-    return Sig<t_A>(Exist{d_x});
+  Sig<A> clone() const {
+    const auto &[x] = std::get<Exist>(this->v());
+    return Sig<A>(Exist{x});
   }
 
   // CREATORS
   template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist{t_A(d_x)};
+    const auto &[x] = std::get<typename Sig<_U>::Exist>(_other.v());
+    this->v_ = Exist{A(x)};
   }
 
-  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
+  static Sig<A> exist(A x) { return Sig(Exist{std::move(x)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Opaque {

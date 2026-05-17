@@ -14,36 +14,36 @@ struct MatchClosureEscape {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      unsigned int a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -65,18 +65,17 @@ struct MatchClosureEscape {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -96,13 +95,13 @@ struct MatchClosureEscape {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -116,30 +115,28 @@ struct MatchClosureEscape {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     unsigned int sum_values(unsigned int x) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        auto &&_sv0 = *d_a0;
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return (d_a1 + x);
+          return (a1 + x);
         } else {
-          const auto &[d_a00, d_a10, d_a20] =
-              std::get<typename tree::Node>(_sv0.v());
-          auto &&_sv1 = *d_a2;
+          const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
+          auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return (d_a10 + x);
+            return (a10 + x);
           } else {
-            const auto &[d_a01, d_a11, d_a21] =
+            const auto &[a01, a11, a21] =
                 std::get<typename tree::Node>(_sv1.v());
-            return (((d_a10 + d_a11) + d_a1) + x);
+            return (((a10 + a11) + a1) + x);
           }
         }
       }
@@ -152,10 +149,9 @@ struct MatchClosureEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rec<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -166,10 +162,9 @@ struct MatchClosureEscape {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rect<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -178,39 +173,39 @@ struct MatchClosureEscape {
   struct fn_box {
     // TYPES
     struct Box {
-      std::function<unsigned int(unsigned int)> d_a0;
+      std::function<unsigned int(unsigned int)> a0;
     };
 
     using variant_t = std::variant<Box>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     fn_box() {}
 
-    explicit fn_box(Box _v) : d_v_(std::move(_v)) {}
+    explicit fn_box(Box _v) : v_(std::move(_v)) {}
 
-    fn_box(const fn_box &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    fn_box(const fn_box &_other) : v_(std::move(_other.clone().v_)) {}
 
-    fn_box(fn_box &&_other) : d_v_(std::move(_other.d_v_)) {}
+    fn_box(fn_box &&_other) : v_(std::move(_other.v_)) {}
 
     fn_box &operator=(const fn_box &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     fn_box &operator=(fn_box &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     fn_box clone() const {
-      const auto &[d_a0] = std::get<Box>(this->v());
-      return fn_box(Box{d_a0});
+      const auto &[a0] = std::get<Box>(this->v());
+      return fn_box(Box{a0});
     }
 
     // CREATORS
@@ -219,30 +214,30 @@ struct MatchClosureEscape {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     unsigned int apply_box(unsigned int x) const {
-      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
-      return d_a0(x);
+      const auto &[a0] = std::get<typename fn_box::Box>(this->v());
+      return a0(x);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rec(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename fn_box::Box>(this->v());
+      return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<
           T1, F0 &, std::function<unsigned int(unsigned int)> &>
     T1 fn_box_rect(F0 &&f) const {
-      const auto &[d_a0] = std::get<typename fn_box::Box>(this->v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename fn_box::Box>(this->v());
+      return f(a0);
     }
   };
 

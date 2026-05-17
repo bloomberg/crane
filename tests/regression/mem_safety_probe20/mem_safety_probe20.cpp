@@ -17,11 +17,11 @@ MemSafetyProbe20::wrapped
 MemSafetyProbe20::wrap_match(MemSafetyProbe20::tree t,
                              MemSafetyProbe20::Choice c) {
   switch (c) {
-  case Choice::e_CLEFT: {
+  case Choice::CLEFT: {
     return wrapped::wrap(
         [=](unsigned int n) mutable { return (t.tree_sum() + n); });
   }
-  case Choice::e_CRIGHT: {
+  case Choice::CRIGHT: {
     return wrapped::wrap([](unsigned int n) { return n; });
   }
   default:
@@ -120,10 +120,10 @@ unsigned int MemSafetyProbe20::sum_wrapped(
               MemSafetyProbe20::wrapped>::Mynil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe20::mylist<
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe20::mylist<
             MemSafetyProbe20::wrapped>::Mycons>(l.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0.unwrap(x)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons{a0.unwrap(x)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));

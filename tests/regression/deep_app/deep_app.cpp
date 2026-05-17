@@ -38,8 +38,8 @@ unsigned int DeepApp::head_or_zero(const DeepApp::mylist<unsigned int> &l) {
           l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename DeepApp::mylist<unsigned int>::Mycons>(l.v());
-    return d_a0;
+    return a0;
   }
 }

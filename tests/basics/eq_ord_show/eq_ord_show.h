@@ -6,20 +6,20 @@
 
 using namespace std::string_literals;
 
-template <typename I, typename t_A>
-concept Eq = requires(t_A a0, t_A a1) {
+template <typename I, typename A>
+concept Eq = requires(A a0, A a1) {
   { I::eqb(a0, a1) } -> std::convertible_to<bool>;
   { I::neqb(a0, a1) } -> std::convertible_to<bool>;
 };
-template <typename I, typename t_A>
-concept Ord = requires(t_A a0, t_A a1) {
+template <typename I, typename A>
+concept Ord = requires(A a0, A a1) {
   { I::lt(a0, a1) } -> std::convertible_to<bool>;
   { I::le(a0, a1) } -> std::convertible_to<bool>;
   { I::gt(a0, a1) } -> std::convertible_to<bool>;
   { I::ge(a0, a1) } -> std::convertible_to<bool>;
 };
-template <typename I, typename t_A>
-concept Show = requires(t_A a0) {
+template <typename I, typename A>
+concept Show = requires(A a0) {
   { I::show(a0) } -> std::convertible_to<std::string>;
 };
 
@@ -67,17 +67,17 @@ template <typename _tcI0, typename _tcI1, typename T1>
 bool is_less_or_equal(const T1 &x, const T1 &y) {
   return _tcI0::le(x, y);
 }
-enum class Ordering { e_LT, e_EQ, e_GT };
+enum class Ordering { LT, EQ, GT };
 
 template <typename _tcI0, typename _tcI1, typename T1>
 Ordering compare(const T1 &x, const T1 &y) {
   if (_tcI0::lt(x, y)) {
-    return Ordering::e_LT;
+    return Ordering::LT;
   } else {
     if (_tcI1::eqb(x, y)) {
-      return Ordering::e_EQ;
+      return Ordering::EQ;
     } else {
-      return Ordering::e_GT;
+      return Ordering::GT;
     }
   }
 }

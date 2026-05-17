@@ -8,17 +8,17 @@ unsigned int MemSafetyProbe21::tree_sum(
     const MemSafetyProbe21::tree *t;
   };
 
-  /// _After_Node: saves [d_a0, d_a1], dispatches next recursive call.
+  /// _After_Node: saves [a0, a1], dispatches next recursive call.
   struct _After_Node {
-    const MemSafetyProbe21::tree *d_a0;
-    unsigned int d_a1;
+    const MemSafetyProbe21::tree *a0;
+    unsigned int a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     unsigned int _result;
-    unsigned int d_a1;
+    unsigned int a1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -37,18 +37,18 @@ unsigned int MemSafetyProbe21::tree_sum(
               t.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
+        const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe21::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-        _stack.emplace_back(_Enter{d_a2.get()});
+        _stack.emplace_back(_After_Node{a0.get(), a1});
+        _stack.emplace_back(_Enter{a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.d_a1});
-      _stack.emplace_back(_Enter{_f.d_a0});
+      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_result + _f.d_a1) + _f._result);
+      _result = ((_result + _f.a1) + _f._result);
     }
   }
   return _result;

@@ -7,41 +7,41 @@
 #include <variant>
 #include <vector>
 
-enum class Bool0 { e_TRUE, e_FALSE };
+enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
   // TYPES
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> d_a0;
+    std::unique_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Nat() {}
 
-  explicit Nat(O _v) : d_v_(_v) {}
+  explicit Nat(O _v) : v_(_v) {}
 
-  explicit Nat(S _v) : d_v_(std::move(_v)) {}
+  explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Nat &operator=(Nat &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -63,13 +63,13 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -86,10 +86,10 @@ public:
     std::vector<std::unique_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.d_v_)) {
-        auto &_alt = std::get<S>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<S>(_node.v_)) {
+        auto &_alt = std::get<S>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -103,90 +103,88 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   Bool0 leb(const Nat &m) const {
     if (std::holds_alternative<typename Nat::O>(this->v())) {
-      return Bool0::e_TRUE;
+      return Bool0::TRUE_;
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
+      const auto &[a0] = std::get<typename Nat::S>(this->v());
       if (std::holds_alternative<typename Nat::O>(m.v())) {
-        return Bool0::e_FALSE;
+        return Bool0::FALSE_;
       } else {
-        const auto &[d_a00] = std::get<typename Nat::S>(m.v());
-        return (*d_a0).leb(*d_a00);
+        const auto &[a00] = std::get<typename Nat::S>(m.v());
+        return (*a0).leb(*a00);
       }
     }
   }
 };
 
-template <typename t_A, typename t_P> struct SigT {
+template <typename A, typename P> struct SigT {
   // TYPES
   struct ExistT {
-    t_A d_x;
-    t_P d_a1;
+    A x;
+    P a1;
   };
 
   using variant_t = std::variant<ExistT>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   SigT() {}
 
-  explicit SigT(ExistT _v) : d_v_(std::move(_v)) {}
+  explicit SigT(ExistT _v) : v_(std::move(_v)) {}
 
-  SigT(const SigT<t_A, t_P> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  SigT(const SigT<A, P> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  SigT(SigT<t_A, t_P> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  SigT(SigT<A, P> &&_other) : v_(std::move(_other.v_)) {}
 
-  SigT<t_A, t_P> &operator=(const SigT<t_A, t_P> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  SigT<A, P> &operator=(const SigT<A, P> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  SigT<t_A, t_P> &operator=(SigT<t_A, t_P> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  SigT<A, P> &operator=(SigT<A, P> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  SigT<t_A, t_P> clone() const {
-    const auto &[d_x, d_a1] = std::get<ExistT>(this->v());
-    return SigT<t_A, t_P>(ExistT{d_x, d_a1});
+  SigT<A, P> clone() const {
+    const auto &[x, a1] = std::get<ExistT>(this->v());
+    return SigT<A, P>(ExistT{x, a1});
   }
 
   // CREATORS
   template <typename _U0, typename _U1>
   explicit SigT(const SigT<_U0, _U1> &_other) {
-    const auto &[d_x, d_a1] =
-        std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
-    this->d_v_ = ExistT{t_A(d_x), t_P(d_a1)};
+    const auto &[x, a1] = std::get<typename SigT<_U0, _U1>::ExistT>(_other.v());
+    this->v_ = ExistT{A(x), P(a1)};
   }
 
-  static SigT<t_A, t_P> existt(t_A x, t_P a1) {
+  static SigT<A, P> existt(A x, P a1) {
     return SigT(ExistT{std::move(x), std::move(a1)});
   }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  t_A projT1() const {
-    const auto &[d_x, d_a1] =
-        std::get<typename SigT<t_A, t_P>::ExistT>(this->v());
-    return d_x;
+  A projT1() const {
+    const auto &[x0, a1] = std::get<typename SigT<A, P>::ExistT>(this->v());
+    return x0;
   }
 };
-enum class Sumbool { e_LEFT, e_RIGHT };
+enum class Sumbool { LEFT, RIGHT };
 
 struct Bool {
   static Sumbool bool_dec(Bool0 b1, Bool0 b2);
@@ -195,47 +193,46 @@ struct Bool {
 struct Ascii {
   // TYPES
   struct Ascii0 {
-    Bool0 d_a0;
-    Bool0 d_a1;
-    Bool0 d_a2;
-    Bool0 d_a3;
-    Bool0 d_a4;
-    Bool0 d_a5;
-    Bool0 d_a6;
-    Bool0 d_a7;
+    Bool0 a0;
+    Bool0 a1;
+    Bool0 a2;
+    Bool0 a3;
+    Bool0 a4;
+    Bool0 a5;
+    Bool0 a6;
+    Bool0 a7;
   };
 
   using variant_t = std::variant<Ascii0>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Ascii() {}
 
-  explicit Ascii(Ascii0 _v) : d_v_(std::move(_v)) {}
+  explicit Ascii(Ascii0 _v) : v_(std::move(_v)) {}
 
-  Ascii(const Ascii &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Ascii(const Ascii &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Ascii(Ascii &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Ascii(Ascii &&_other) : v_(std::move(_other.v_)) {}
 
   Ascii &operator=(const Ascii &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Ascii &operator=(Ascii &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
   Ascii clone() const {
-    const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
-        std::get<Ascii0>(this->v());
-    return Ascii(Ascii0{d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7});
+    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = std::get<Ascii0>(this->v());
+    return Ascii(Ascii0{a0, a1, a2, a3, a4, a5, a6, a7});
   }
 
   // CREATORS
@@ -245,85 +242,85 @@ public:
   }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   Sumbool ascii_dec(const Ascii &b) const {
-    const auto &[d_a0, d_a1, d_a2, d_a3, d_a4, d_a5, d_a6, d_a7] =
+    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] =
         std::get<typename Ascii::Ascii0>(this->v());
-    const auto &[d_a00, d_a10, d_a20, d_a30, d_a40, d_a50, d_a60, d_a70] =
+    const auto &[a00, a10, a20, a30, a40, a50, a60, a70] =
         std::get<typename Ascii::Ascii0>(b.v());
-    switch (Bool::bool_dec(d_a0, d_a00)) {
-    case Sumbool::e_LEFT: {
-      switch (Bool::bool_dec(d_a1, d_a10)) {
-      case Sumbool::e_LEFT: {
-        switch (Bool::bool_dec(d_a2, d_a20)) {
-        case Sumbool::e_LEFT: {
-          switch (Bool::bool_dec(d_a3, d_a30)) {
-          case Sumbool::e_LEFT: {
-            switch (Bool::bool_dec(d_a4, d_a40)) {
-            case Sumbool::e_LEFT: {
-              switch (Bool::bool_dec(d_a5, d_a50)) {
-              case Sumbool::e_LEFT: {
-                switch (Bool::bool_dec(d_a6, d_a60)) {
-                case Sumbool::e_LEFT: {
-                  switch (Bool::bool_dec(d_a7, d_a70)) {
-                  case Sumbool::e_LEFT: {
-                    return Sumbool::e_LEFT;
+    switch (Bool::bool_dec(a0, a00)) {
+    case Sumbool::LEFT: {
+      switch (Bool::bool_dec(a1, a10)) {
+      case Sumbool::LEFT: {
+        switch (Bool::bool_dec(a2, a20)) {
+        case Sumbool::LEFT: {
+          switch (Bool::bool_dec(a3, a30)) {
+          case Sumbool::LEFT: {
+            switch (Bool::bool_dec(a4, a40)) {
+            case Sumbool::LEFT: {
+              switch (Bool::bool_dec(a5, a50)) {
+              case Sumbool::LEFT: {
+                switch (Bool::bool_dec(a6, a60)) {
+                case Sumbool::LEFT: {
+                  switch (Bool::bool_dec(a7, a70)) {
+                  case Sumbool::LEFT: {
+                    return Sumbool::LEFT;
                   }
-                  case Sumbool::e_RIGHT: {
-                    return Sumbool::e_RIGHT;
+                  case Sumbool::RIGHT: {
+                    return Sumbool::RIGHT;
                   }
                   default:
                     std::unreachable();
                   }
                 }
-                case Sumbool::e_RIGHT: {
-                  return Sumbool::e_RIGHT;
+                case Sumbool::RIGHT: {
+                  return Sumbool::RIGHT;
                 }
                 default:
                   std::unreachable();
                 }
               }
-              case Sumbool::e_RIGHT: {
-                return Sumbool::e_RIGHT;
+              case Sumbool::RIGHT: {
+                return Sumbool::RIGHT;
               }
               default:
                 std::unreachable();
               }
             }
-            case Sumbool::e_RIGHT: {
-              return Sumbool::e_RIGHT;
+            case Sumbool::RIGHT: {
+              return Sumbool::RIGHT;
             }
             default:
               std::unreachable();
             }
           }
-          case Sumbool::e_RIGHT: {
-            return Sumbool::e_RIGHT;
+          case Sumbool::RIGHT: {
+            return Sumbool::RIGHT;
           }
           default:
             std::unreachable();
           }
         }
-        case Sumbool::e_RIGHT: {
-          return Sumbool::e_RIGHT;
+        case Sumbool::RIGHT: {
+          return Sumbool::RIGHT;
         }
         default:
           std::unreachable();
         }
       }
-      case Sumbool::e_RIGHT: {
-        return Sumbool::e_RIGHT;
+      case Sumbool::RIGHT: {
+        return Sumbool::RIGHT;
       }
       default:
         std::unreachable();
       }
     }
-    case Sumbool::e_RIGHT: {
-      return Sumbool::e_RIGHT;
+    case Sumbool::RIGHT: {
+      return Sumbool::RIGHT;
     }
     default:
       std::unreachable();
@@ -336,35 +333,35 @@ struct String {
   struct EmptyString {};
 
   struct String0 {
-    Ascii d_a0;
-    std::unique_ptr<String> d_a1;
+    Ascii a0;
+    std::unique_ptr<String> a1;
   };
 
   using variant_t = std::variant<EmptyString, String0>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   String() {}
 
-  explicit String(EmptyString _v) : d_v_(_v) {}
+  explicit String(EmptyString _v) : v_(_v) {}
 
-  explicit String(String0 _v) : d_v_(std::move(_v)) {}
+  explicit String(String0 _v) : v_(std::move(_v)) {}
 
-  String(const String &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  String(const String &_other) : v_(std::move(_other.clone().v_)) {}
 
-  String(String &&_other) : d_v_(std::move(_other.d_v_)) {}
+  String(String &&_other) : v_(std::move(_other.v_)) {}
 
   String &operator=(const String &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   String &operator=(String &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -386,14 +383,14 @@ public:
       const String *_src = _frame._src;
       String *_dst = _frame._dst;
       if (std::holds_alternative<EmptyString>(_src->v())) {
-        _dst->d_v_ = EmptyString{};
+        _dst->v_ = EmptyString{};
       } else {
         const auto &_alt = std::get<String0>(_src->v());
-        _dst->d_v_ = String0{_alt.d_a0.clone(),
-                             _alt.d_a1 ? std::make_unique<String>() : nullptr};
-        auto &_dst_alt = std::get<String0>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = String0{_alt.a0.clone(),
+                           _alt.a1 ? std::make_unique<String>() : nullptr};
+        auto &_dst_alt = std::get<String0>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -413,10 +410,10 @@ public:
     std::vector<std::unique_ptr<String>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](String &_node) {
-      if (std::holds_alternative<String0>(_node.d_v_)) {
-        auto &_alt = std::get<String0>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+      if (std::holds_alternative<String0>(_node.v_)) {
+        auto &_alt = std::get<String0>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -430,17 +427,17 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   String append(String s2) const {
     if (std::holds_alternative<typename String::EmptyString>(this->v())) {
       return s2;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename String::String0>(this->v());
-      return String::string0(d_a0, (*d_a1).append(std::move(s2)));
+      const auto &[a0, a1] = std::get<typename String::String0>(this->v());
+      return String::string0(a0, (*a1).append(std::move(s2)));
     }
   }
 
@@ -448,8 +445,8 @@ public:
     if (std::holds_alternative<typename String::EmptyString>(this->v())) {
       return Nat::o();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename String::String0>(this->v());
-      return Nat::s((*d_a1).length());
+      const auto &[a0, a1] = std::get<typename String::String0>(this->v());
+      return Nat::s((*a1).length());
     }
   }
 };
@@ -458,62 +455,62 @@ struct Levenshtein {
   struct edit {
     // TYPES
     struct Insertion {
-      Ascii d_a;
-      String d_s;
+      Ascii a;
+      String s;
     };
 
     struct Deletion {
-      Ascii d_a;
-      String d_s;
+      Ascii a;
+      String s;
     };
 
     struct Update {
-      Ascii d_a;
-      Ascii d_a_1;
-      String d_neq;
+      Ascii a;
+      Ascii a_1;
+      String neq;
     };
 
     using variant_t = std::variant<Insertion, Deletion, Update>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     edit() {}
 
-    explicit edit(Insertion _v) : d_v_(std::move(_v)) {}
+    explicit edit(Insertion _v) : v_(std::move(_v)) {}
 
-    explicit edit(Deletion _v) : d_v_(std::move(_v)) {}
+    explicit edit(Deletion _v) : v_(std::move(_v)) {}
 
-    explicit edit(Update _v) : d_v_(std::move(_v)) {}
+    explicit edit(Update _v) : v_(std::move(_v)) {}
 
-    edit(const edit &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    edit(const edit &_other) : v_(std::move(_other.clone().v_)) {}
 
-    edit(edit &&_other) : d_v_(std::move(_other.d_v_)) {}
+    edit(edit &&_other) : v_(std::move(_other.v_)) {}
 
     edit &operator=(const edit &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     edit &operator=(edit &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     edit clone() const {
       if (std::holds_alternative<Insertion>(this->v())) {
-        const auto &[d_a, d_s] = std::get<Insertion>(this->v());
-        return edit(Insertion{d_a.clone(), d_s.clone()});
+        const auto &[a, s] = std::get<Insertion>(this->v());
+        return edit(Insertion{a.clone(), s.clone()});
       } else if (std::holds_alternative<Deletion>(this->v())) {
-        const auto &[d_a, d_s] = std::get<Deletion>(this->v());
-        return edit(Deletion{d_a.clone(), d_s.clone()});
+        const auto &[a, s] = std::get<Deletion>(this->v());
+        return edit(Deletion{a.clone(), s.clone()});
       } else {
-        const auto &[d_a, d_a_1, d_neq] = std::get<Update>(this->v());
-        return edit(Update{d_a.clone(), d_a_1.clone(), d_neq.clone()});
+        const auto &[a, a_1, neq] = std::get<Update>(this->v());
+        return edit(Update{a.clone(), a_1.clone(), neq.clone()});
       }
     }
 
@@ -531,10 +528,10 @@ struct Levenshtein {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, Ascii &, String &> &&
@@ -543,15 +540,14 @@ struct Levenshtein {
     T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                 const String &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
-        const auto &[d_a, d_s] = std::get<typename edit::Insertion>(this->v());
-        return f(d_a, d_s);
+        const auto &[a0, s0] = std::get<typename edit::Insertion>(this->v());
+        return f(a0, s0);
       } else if (std::holds_alternative<typename edit::Deletion>(this->v())) {
-        const auto &[d_a, d_s] = std::get<typename edit::Deletion>(this->v());
-        return f0(d_a, d_s);
+        const auto &[a0, s0] = std::get<typename edit::Deletion>(this->v());
+        return f0(a0, s0);
       } else {
-        const auto &[d_a, d_a_1, d_neq] =
-            std::get<typename edit::Update>(this->v());
-        return f1(d_a, d_a_1, d_neq);
+        const auto &[a0, a_1, neq] = std::get<typename edit::Update>(this->v());
+        return f1(a0, a_1, neq);
       }
     }
 
@@ -562,15 +558,14 @@ struct Levenshtein {
     T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                  const String &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
-        const auto &[d_a, d_s] = std::get<typename edit::Insertion>(this->v());
-        return f(d_a, d_s);
+        const auto &[a0, s0] = std::get<typename edit::Insertion>(this->v());
+        return f(a0, s0);
       } else if (std::holds_alternative<typename edit::Deletion>(this->v())) {
-        const auto &[d_a, d_s] = std::get<typename edit::Deletion>(this->v());
-        return f0(d_a, d_s);
+        const auto &[a0, s0] = std::get<typename edit::Deletion>(this->v());
+        return f0(a0, s0);
       } else {
-        const auto &[d_a, d_a_1, d_neq] =
-            std::get<typename edit::Update>(this->v());
-        return f1(d_a, d_a_1, d_neq);
+        const auto &[a0, a_1, neq] = std::get<typename edit::Update>(this->v());
+        return f1(a0, a_1, neq);
       }
     }
   };
@@ -580,49 +575,49 @@ struct Levenshtein {
     struct Empty {};
 
     struct Skip {
-      Ascii d_a;
-      String d_s;
-      String d_t;
-      Nat d_n;
-      std::unique_ptr<chain> d_a4;
+      Ascii a;
+      String s;
+      String t;
+      Nat n;
+      std::unique_ptr<chain> a4;
     };
 
     struct Change {
-      String d_s;
-      String d_t;
-      String d_u;
-      Nat d_n;
-      edit d_a4;
-      std::unique_ptr<chain> d_a5;
+      String s;
+      String t;
+      String u;
+      Nat n;
+      edit a4;
+      std::unique_ptr<chain> a5;
     };
 
     using variant_t = std::variant<Empty, Skip, Change>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     chain() {}
 
-    explicit chain(Empty _v) : d_v_(_v) {}
+    explicit chain(Empty _v) : v_(_v) {}
 
-    explicit chain(Skip _v) : d_v_(std::move(_v)) {}
+    explicit chain(Skip _v) : v_(std::move(_v)) {}
 
-    explicit chain(Change _v) : d_v_(std::move(_v)) {}
+    explicit chain(Change _v) : v_(std::move(_v)) {}
 
-    chain(const chain &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    chain(const chain &_other) : v_(std::move(_other.clone().v_)) {}
 
-    chain(chain &&_other) : d_v_(std::move(_other.d_v_)) {}
+    chain(chain &&_other) : v_(std::move(_other.v_)) {}
 
     chain &operator=(const chain &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     chain &operator=(chain &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -644,27 +639,25 @@ struct Levenshtein {
         const chain *_src = _frame._src;
         chain *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty{};
+          _dst->v_ = Empty{};
         } else if (std::holds_alternative<Skip>(_src->v())) {
           const auto &_alt = std::get<Skip>(_src->v());
-          _dst->d_v_ = Skip{_alt.d_a.clone(), _alt.d_s.clone(),
-                            _alt.d_t.clone(), _alt.d_n.clone(),
-                            _alt.d_a4 ? std::make_unique<chain>() : nullptr};
-          auto &_dst_alt = std::get<Skip>(_dst->d_v_);
-          if (_alt.d_a4) {
-            _stack.push_back({_alt.d_a4.get(), _dst_alt.d_a4.get()});
+          _dst->v_ = Skip{_alt.a.clone(), _alt.s.clone(), _alt.t.clone(),
+                          _alt.n.clone(),
+                          _alt.a4 ? std::make_unique<chain>() : nullptr};
+          auto &_dst_alt = std::get<Skip>(_dst->v_);
+          if (_alt.a4) {
+            _stack.push_back({_alt.a4.get(), _dst_alt.a4.get()});
           }
         } else {
           const auto &_alt = std::get<Change>(_src->v());
-          _dst->d_v_ = Change{_alt.d_s.clone(),
-                              _alt.d_t.clone(),
-                              _alt.d_u.clone(),
-                              _alt.d_n.clone(),
-                              _alt.d_a4.clone(),
-                              _alt.d_a5 ? std::make_unique<chain>() : nullptr};
-          auto &_dst_alt = std::get<Change>(_dst->d_v_);
-          if (_alt.d_a5) {
-            _stack.push_back({_alt.d_a5.get(), _dst_alt.d_a5.get()});
+          _dst->v_ = Change{
+              _alt.s.clone(),  _alt.t.clone(),
+              _alt.u.clone(),  _alt.n.clone(),
+              _alt.a4.clone(), _alt.a5 ? std::make_unique<chain>() : nullptr};
+          auto &_dst_alt = std::get<Change>(_dst->v_);
+          if (_alt.a5) {
+            _stack.push_back({_alt.a5.get(), _dst_alt.a5.get()});
           }
         }
       }
@@ -691,16 +684,16 @@ struct Levenshtein {
       std::vector<std::unique_ptr<chain>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](chain &_node) {
-        if (std::holds_alternative<Skip>(_node.d_v_)) {
-          auto &_alt = std::get<Skip>(_node.d_v_);
-          if (_alt.d_a4) {
-            _stack.push_back(std::move(_alt.d_a4));
+        if (std::holds_alternative<Skip>(_node.v_)) {
+          auto &_alt = std::get<Skip>(_node.v_);
+          if (_alt.a4) {
+            _stack.push_back(std::move(_alt.a4));
           }
         }
-        if (std::holds_alternative<Change>(_node.d_v_)) {
-          auto &_alt = std::get<Change>(_node.d_v_);
-          if (_alt.d_a5) {
-            _stack.push_back(std::move(_alt.d_a5));
+        if (std::holds_alternative<Change>(_node.v_)) {
+          auto &_alt = std::get<Change>(_node.v_);
+          if (_alt.a5) {
+            _stack.push_back(std::move(_alt.a5));
           }
         }
       };
@@ -714,10 +707,10 @@ struct Levenshtein {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     chain aux_eq_char(const String &, const String &, const Ascii &, String xs,
                       Ascii y, String ys, Nat n) const {
@@ -771,15 +764,15 @@ struct Levenshtein {
       if (std::holds_alternative<typename chain::Empty>(this->v())) {
         return f;
       } else if (std::holds_alternative<typename chain::Skip>(this->v())) {
-        const auto &[d_a, d_s, d_t, d_n, d_a4] =
+        const auto &[a0, s0, t0, n0, a4] =
             std::get<typename chain::Skip>(this->v());
-        return f0(d_a, d_s, d_t, d_n, *d_a4,
-                  (*d_a4).template chain_rec<T1>(f, f0, f1, d_s, d_t, d_n));
+        return f0(a0, s0, t0, n0, *a4,
+                  (*a4).template chain_rec<T1>(f, f0, f1, s0, t0, n0));
       } else {
-        const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
+        const auto &[s0, t0, u0, n0, a4, a5] =
             std::get<typename chain::Change>(this->v());
-        return f1(d_s, d_t, d_u, d_n, d_a4, *d_a5,
-                  (*d_a5).template chain_rec<T1>(f, f0, f1, d_t, d_u, d_n));
+        return f1(s0, t0, u0, n0, a4, *a5,
+                  (*a5).template chain_rec<T1>(f, f0, f1, t0, u0, n0));
       }
     }
 
@@ -793,15 +786,15 @@ struct Levenshtein {
       if (std::holds_alternative<typename chain::Empty>(this->v())) {
         return f;
       } else if (std::holds_alternative<typename chain::Skip>(this->v())) {
-        const auto &[d_a, d_s, d_t, d_n, d_a4] =
+        const auto &[a0, s0, t0, n0, a4] =
             std::get<typename chain::Skip>(this->v());
-        return f0(d_a, d_s, d_t, d_n, *d_a4,
-                  (*d_a4).template chain_rect<T1>(f, f0, f1, d_s, d_t, d_n));
+        return f0(a0, s0, t0, n0, *a4,
+                  (*a4).template chain_rect<T1>(f, f0, f1, s0, t0, n0));
       } else {
-        const auto &[d_s, d_t, d_u, d_n, d_a4, d_a5] =
+        const auto &[s0, t0, u0, n0, a4, a5] =
             std::get<typename chain::Change>(this->v());
-        return f1(d_s, d_t, d_u, d_n, d_a4, *d_a5,
-                  (*d_a5).template chain_rect<T1>(f, f0, f1, d_t, d_u, d_n));
+        return f1(s0, t0, u0, n0, a4, *a5,
+                  (*a5).template chain_rect<T1>(f, f0, f1, t0, u0, n0));
       }
     }
   };
@@ -812,9 +805,8 @@ struct Levenshtein {
     if (std::holds_alternative<typename String::EmptyString>(s.v())) {
       return chain::empty();
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename String::String0>(s.v());
-      return chain::skip(d_a00, *d_a10, *d_a10, Nat::o(),
-                         _inserts_chain_F<T1>(*d_a10));
+      const auto &[a00, a10] = std::get<typename String::String0>(s.v());
+      return chain::skip(a00, *a10, *a10, Nat::o(), _inserts_chain_F<T1>(*a10));
     }
   }
 
@@ -831,24 +823,24 @@ struct Levenshtein {
     Nat n2 = f(y);
     Nat n3 = f(z);
     switch (n1.leb(n2)) {
-    case Bool0::e_TRUE: {
+    case Bool0::TRUE_: {
       switch (std::move(n1).leb(std::move(n3))) {
-      case Bool0::e_TRUE: {
+      case Bool0::TRUE_: {
         return x;
       }
-      case Bool0::e_FALSE: {
+      case Bool0::FALSE_: {
         return z;
       }
       default:
         std::unreachable();
       }
     }
-    case Bool0::e_FALSE: {
+    case Bool0::FALSE_: {
       switch (std::move(n2).leb(std::move(n3))) {
-      case Bool0::e_TRUE: {
+      case Bool0::TRUE_: {
         return y;
       }
-      case Bool0::e_FALSE: {
+      case Bool0::FALSE_: {
         return z;
       }
       default:

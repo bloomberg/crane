@@ -6,9 +6,9 @@ unsigned int LetFixYcombByref::sum_list(const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
       return acc;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(xs.v());
-      return _self_go(_self_go, *d_a1, (acc + d_a0));
+      return _self_go(_self_go, *a1, (acc + a0));
     }
   };
   auto go = [&](const List<unsigned int> &xs,
@@ -23,14 +23,13 @@ List<unsigned int> LetFixYcombByref::zip_sum(const List<unsigned int> &xs,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(xs.v());
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(xs.v());
     if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {
       return List<unsigned int>::nil();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(ys.v());
-      return List<unsigned int>::cons((d_a0 + d_a00), zip_sum(*d_a1, *d_a10));
+      return List<unsigned int>::cons((a0 + a00), zip_sum(*a1, *a10));
     }
   }
 }

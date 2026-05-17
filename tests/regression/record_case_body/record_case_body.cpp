@@ -129,9 +129,9 @@ RecordCaseBody::sum_list(const RecordCaseBody::list<unsigned int> &l) {
           l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename RecordCaseBody::list<unsigned int>::Cons>(l.v());
-    return (d_a0 + sum_list(*d_a1));
+    return (a0 + sum_list(*a1));
   }
 }
 

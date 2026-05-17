@@ -98,10 +98,10 @@ std::pair<unsigned int, unsigned int>
 LetMatchType::direction_offset(LetMatchType::Direction d) {
   unsigned int dx = [&]() {
     switch (d) {
-    case Direction::e_EAST: {
+    case Direction::EAST: {
       return 1u;
     }
-    case Direction::e_WEST: {
+    case Direction::WEST: {
       return 2u;
     }
     default: {
@@ -111,10 +111,10 @@ LetMatchType::direction_offset(LetMatchType::Direction d) {
   }();
   unsigned int dy = [&]() {
     switch (d) {
-    case Direction::e_NORTH: {
+    case Direction::NORTH: {
       return 1u;
     }
-    case Direction::e_SOUTH: {
+    case Direction::SOUTH: {
       return 2u;
     }
     default: {

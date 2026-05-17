@@ -18,47 +18,47 @@ struct MutualRecursion {
   struct expr {
     // TYPES
     struct Val {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct BinOp {
-      unsigned int d_a0;
-      std::unique_ptr<expr> d_a1;
-      std::unique_ptr<expr> d_a2;
+      unsigned int a0;
+      std::unique_ptr<expr> a1;
+      std::unique_ptr<expr> a2;
     };
 
     struct UnOp {
-      unsigned int d_a0;
-      std::unique_ptr<expr> d_a1;
+      unsigned int a0;
+      std::unique_ptr<expr> a1;
     };
 
     using variant_t = std::variant<Val, BinOp, UnOp>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     expr() {}
 
-    explicit expr(Val _v) : d_v_(std::move(_v)) {}
+    explicit expr(Val _v) : v_(std::move(_v)) {}
 
-    explicit expr(BinOp _v) : d_v_(std::move(_v)) {}
+    explicit expr(BinOp _v) : v_(std::move(_v)) {}
 
-    explicit expr(UnOp _v) : d_v_(std::move(_v)) {}
+    explicit expr(UnOp _v) : v_(std::move(_v)) {}
 
-    expr(const expr &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
 
-    expr(expr &&_other) : d_v_(std::move(_other.d_v_)) {}
+    expr(expr &&_other) : v_(std::move(_other.v_)) {}
 
     expr &operator=(const expr &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     expr &operator=(expr &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -81,26 +81,26 @@ struct MutualRecursion {
         expr *_dst = _frame._dst;
         if (std::holds_alternative<Val>(_src->v())) {
           const auto &_alt = std::get<Val>(_src->v());
-          _dst->d_v_ = Val{_alt.d_a0};
+          _dst->v_ = Val{_alt.a0};
         } else if (std::holds_alternative<BinOp>(_src->v())) {
           const auto &_alt = std::get<BinOp>(_src->v());
-          _dst->d_v_ =
-              BinOp{_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr,
-                    _alt.d_a2 ? std::make_unique<expr>() : nullptr};
-          auto &_dst_alt = std::get<BinOp>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              BinOp{_alt.a0, _alt.a1 ? std::make_unique<expr>() : nullptr,
+                    _alt.a2 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<BinOp>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         } else {
           const auto &_alt = std::get<UnOp>(_src->v());
-          _dst->d_v_ =
-              UnOp{_alt.d_a0, _alt.d_a1 ? std::make_unique<expr>() : nullptr};
-          auto &_dst_alt = std::get<UnOp>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              UnOp{_alt.a0, _alt.a1 ? std::make_unique<expr>() : nullptr};
+          auto &_dst_alt = std::get<UnOp>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -124,19 +124,19 @@ struct MutualRecursion {
       std::vector<std::unique_ptr<expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](expr &_node) {
-        if (std::holds_alternative<BinOp>(_node.d_v_)) {
-          auto &_alt = std::get<BinOp>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<BinOp>(_node.v_)) {
+          auto &_alt = std::get<BinOp>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
-        if (std::holds_alternative<UnOp>(_node.d_v_)) {
-          auto &_alt = std::get<UnOp>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<UnOp>(_node.v_)) {
+          auto &_alt = std::get<UnOp>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -150,10 +150,10 @@ struct MutualRecursion {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
@@ -163,15 +163,15 @@ struct MutualRecursion {
              std::is_invocable_r_v<T1, F2 &, unsigned int &, expr &, T1 &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
     if (std::holds_alternative<typename expr::Val>(e.v())) {
-      const auto &[d_a0] = std::get<typename expr::Val>(e.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename expr::Val>(e.v());
+      return f(a0);
     } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e.v());
-      return f0(d_a0, *d_a1, expr_rect<T1>(f, f0, f4, *d_a1), *d_a2,
-                expr_rect<T1>(f, f0, f4, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename expr::BinOp>(e.v());
+      return f0(a0, *a1, expr_rect<T1>(f, f0, f4, *a1), *a2,
+                expr_rect<T1>(f, f0, f4, *a2));
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e.v());
-      return f4(d_a0, *d_a1, expr_rect<T1>(f, f0, f4, *d_a1));
+      const auto &[a0, a1] = std::get<typename expr::UnOp>(e.v());
+      return f4(a0, *a1, expr_rect<T1>(f, f0, f4, *a1));
     }
   }
 
@@ -182,15 +182,15 @@ struct MutualRecursion {
              std::is_invocable_r_v<T1, F2 &, unsigned int &, expr &, T1 &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
     if (std::holds_alternative<typename expr::Val>(e.v())) {
-      const auto &[d_a0] = std::get<typename expr::Val>(e.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename expr::Val>(e.v());
+      return f(a0);
     } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename expr::BinOp>(e.v());
-      return f0(d_a0, *d_a1, expr_rec<T1>(f, f0, f4, *d_a1), *d_a2,
-                expr_rec<T1>(f, f0, f4, *d_a2));
+      const auto &[a0, a1, a2] = std::get<typename expr::BinOp>(e.v());
+      return f0(a0, *a1, expr_rec<T1>(f, f0, f4, *a1), *a2,
+                expr_rec<T1>(f, f0, f4, *a2));
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename expr::UnOp>(e.v());
-      return f4(d_a0, *d_a1, expr_rec<T1>(f, f0, f4, *d_a1));
+      const auto &[a0, a1] = std::get<typename expr::UnOp>(e.v());
+      return f4(a0, *a1, expr_rec<T1>(f, f0, f4, *a1));
     }
   }
 

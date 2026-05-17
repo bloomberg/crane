@@ -34,7 +34,7 @@ void aSsErT(bool condition, const char *message, int line) {
 int nat_to_int(const Nat &n) {
   return std::visit(
       Overloaded{[](const Nat::O) -> int { return 0; },
-                 [](const Nat::S &s) -> int { return 1 + nat_to_int(*s.d_a0); }},
+                 [](const Nat::S &s) -> int { return 1 + nat_to_int(*s.a0); }},
       n.v());
 }
 

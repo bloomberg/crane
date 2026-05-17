@@ -8,7 +8,7 @@
 #include <variant>
 #include <vector>
 
-enum class Comparison { e_EQ, e_LT, e_GT };
+enum class Comparison { EQ, LT, GT };
 
 struct Nat {
   static Comparison compare(unsigned int n, unsigned int m);
@@ -55,37 +55,37 @@ template <OrderedType K, BaseType V> struct MakeMap {
     struct Empty {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      key d_a1;
-      value d_a2;
-      std::unique_ptr<tree> d_a3;
+      std::unique_ptr<tree> a0;
+      key a1;
+      value a2;
+      std::unique_ptr<tree> a3;
     };
 
     using variant_t = std::variant<Empty, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Empty _v) : d_v_(_v) {}
+    explicit tree(Empty _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -107,18 +107,18 @@ template <OrderedType K, BaseType V> struct MakeMap {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty{};
+          _dst->v_ = Empty{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2, _alt.d_a3 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ =
+              Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                   _alt.a2, _alt.a3 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a3) {
-            _stack.push_back({_alt.d_a3.get(), _dst_alt.d_a3.get()});
+          if (_alt.a3) {
+            _stack.push_back({_alt.a3.get(), _dst_alt.a3.get()});
           }
         }
       }
@@ -138,13 +138,13 @@ template <OrderedType K, BaseType V> struct MakeMap {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a3) {
-            _stack.push_back(std::move(_alt.d_a3));
+          if (_alt.a3) {
+            _stack.push_back(std::move(_alt.a3));
           }
         }
       };
@@ -158,10 +158,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   using t = tree;
@@ -175,17 +175,16 @@ template <OrderedType K, BaseType V> struct MakeMap {
     if (std::holds_alternative<typename tree::Empty>(m.v())) {
       return tree::node(tree::empty(), k, v, tree::empty());
     } else {
-      const auto &[d_a0, d_a1, d_a2, d_a3] =
-          std::get<typename tree::Node>(m.v());
-      switch (K::compare(k, d_a1)) {
-      case Comparison::e_EQ: {
-        return tree::node(*d_a0, k, v, *d_a3);
+      const auto &[a0, a1, a2, a3] = std::get<typename tree::Node>(m.v());
+      switch (K::compare(k, a1)) {
+      case Comparison::EQ: {
+        return tree::node(*a0, k, v, *a3);
       }
-      case Comparison::e_LT: {
-        return tree::node(add(k, v, *d_a0), d_a1, d_a2, *d_a3);
+      case Comparison::LT: {
+        return tree::node(add(k, v, *a0), a1, a2, *a3);
       }
-      case Comparison::e_GT: {
-        return tree::node(*d_a0, d_a1, d_a2, add(k, v, *d_a3));
+      case Comparison::GT: {
+        return tree::node(*a0, a1, a2, add(k, v, *a3));
       }
       default:
         std::unreachable();
@@ -197,17 +196,16 @@ template <OrderedType K, BaseType V> struct MakeMap {
     if (std::holds_alternative<typename tree::Empty>(m.v())) {
       return std::optional<typename V::t>();
     } else {
-      const auto &[d_a0, d_a1, d_a2, d_a3] =
-          std::get<typename tree::Node>(m.v());
-      switch (K::compare(k, d_a1)) {
-      case Comparison::e_EQ: {
-        return std::make_optional<typename V::t>(d_a2);
+      const auto &[a0, a1, a2, a3] = std::get<typename tree::Node>(m.v());
+      switch (K::compare(k, a1)) {
+      case Comparison::EQ: {
+        return std::make_optional<typename V::t>(a2);
       }
-      case Comparison::e_LT: {
-        return find(k, *d_a0);
+      case Comparison::LT: {
+        return find(k, *a0);
       }
-      case Comparison::e_GT: {
-        return find(k, *d_a3);
+      case Comparison::GT: {
+        return find(k, *a3);
       }
       default:
         std::unreachable();

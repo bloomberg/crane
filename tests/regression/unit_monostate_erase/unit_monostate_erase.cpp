@@ -38,14 +38,14 @@ void UnitMonostateErase::match_unit_tail(UnitMonostateErase::Color c) {
   {
     [&]() -> void {
       switch (c) {
-      case Color::e_RED: {
+      case Color::RED: {
         return;
       }
-      case Color::e_GREEN: {
+      case Color::GREEN: {
         std::cout << "green"s << '\n';
         return;
       }
-      case Color::e_BLUE: {
+      case Color::BLUE: {
         std::cout << "blue"s << '\n';
         return;
       }
@@ -61,14 +61,14 @@ void UnitMonostateErase::match_unit_tail(UnitMonostateErase::Color c) {
 void UnitMonostateErase::match_then_next(UnitMonostateErase::Color c) {
   [&]() -> void {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       std::cout << "green"s << '\n';
       return;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       std::cout << "blue"s << '\n';
       return;
     }
@@ -107,18 +107,18 @@ void UnitMonostateErase::nested_matches(UnitMonostateErase::Color c1,
                                         UnitMonostateErase::Color c2) {
   [&]() -> void {
     switch (c1) {
-    case Color::e_RED: {
+    case Color::RED: {
       return [&]() -> void {
         switch (c2) {
-        case Color::e_RED: {
+        case Color::RED: {
           std::cout << "RR"s << '\n';
           return;
         }
-        case Color::e_GREEN: {
+        case Color::GREEN: {
           std::cout << "RG"s << '\n';
           return;
         }
-        case Color::e_BLUE: {
+        case Color::BLUE: {
           return;
         }
         default:
@@ -126,11 +126,11 @@ void UnitMonostateErase::nested_matches(UnitMonostateErase::Color c1,
         }
       }();
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       std::cout << "G"s << '\n';
       return;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return;
     }
     default:

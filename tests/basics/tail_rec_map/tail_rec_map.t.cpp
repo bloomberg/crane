@@ -46,8 +46,8 @@ std::vector<T> list_to_vector(const List<T> &l) {
     bool done = false;
     std::visit(Overloaded{[&](const typename List<T>::Nil &) { done = true; },
                           [&](const typename List<T>::Cons &c) {
-                            result.push_back(c.d_a0);
-                            current = c.d_a1.get();
+                            result.push_back(c.a0);
+                            current = c.a1.get();
                           }},
                current->v());
     if (done)

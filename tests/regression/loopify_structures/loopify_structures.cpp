@@ -13,9 +13,9 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
     unsigned int fuel;
   };
 
-  /// _After_NList: saves [d_a00, f], dispatches next recursive call.
+  /// _After_NList: saves [a00, f], dispatches next recursive call.
   struct _After_NList {
-    const List<LoopifyStructures::nested> *d_a00;
+    const List<LoopifyStructures::nested> *a00;
     unsigned int f;
   };
 
@@ -25,9 +25,9 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
     unsigned int _result;
   };
 
-  /// _Resume_Elem: saves [d_a00], resumes after recursive call with _result.
+  /// _Resume_Elem: saves [a00], resumes after recursive call with _result.
   struct _Resume_Elem {
-    unsigned int d_a00;
+    unsigned int a00;
   };
 
   using _Frame =
@@ -53,32 +53,32 @@ unsigned int LoopifyStructures::sum_nested_list_fuel(
                 typename List<LoopifyStructures::nested>::Nil>(l.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<LoopifyStructures::nested>::Cons>(l.v());
           if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-                  d_a0.v())) {
-            const auto &[d_a00] =
-                std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
-            _stack.emplace_back(_Resume_Elem{d_a00});
-            _stack.emplace_back(_Enter{d_a1.get(), f});
+                  a0.v())) {
+            const auto &[a00] =
+                std::get<typename LoopifyStructures::nested::Elem>(a0.v());
+            _stack.emplace_back(_Resume_Elem{a00});
+            _stack.emplace_back(_Enter{a1.get(), f});
           } else {
-            const auto &[d_a00] =
-                std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_After_NList{d_a00.get(), f});
-            _stack.emplace_back(_Enter{d_a1.get(), f});
+            const auto &[a00] =
+                std::get<typename LoopifyStructures::nested::NList>(a0.v());
+            _stack.emplace_back(_After_NList{a00.get(), f});
+            _stack.emplace_back(_Enter{a1.get(), f});
           }
         }
       }
     } else if (std::holds_alternative<_After_NList>(_frame)) {
       auto _f = std::move(std::get<_After_NList>(_frame));
       _stack.emplace_back(_Combine_NList{_result});
-      _stack.emplace_back(_Enter{_f.d_a00, _f.f});
+      _stack.emplace_back(_Enter{_f.a00, _f.f});
     } else if (std::holds_alternative<_Combine_NList>(_frame)) {
       auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = (_result + _f._result);
     } else {
       auto _f = std::move(std::get<_Resume_Elem>(_frame));
-      _result = (_f.d_a00 + _result);
+      _result = (_f.a00 + _result);
     }
   }
   return _result;
@@ -95,21 +95,21 @@ unsigned int LoopifyStructures::depth_nested_list_fuel(
             l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<LoopifyStructures::nested>::Cons>(l.v());
       if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-              d_a0.v())) {
-        unsigned int rest_max = depth_nested_list_fuel(f, *d_a1);
+              a0.v())) {
+        unsigned int rest_max = depth_nested_list_fuel(f, *a1);
         if (0u <= rest_max) {
           return rest_max;
         } else {
           return 0u;
         }
       } else {
-        const auto &[d_a00] =
-            std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-        unsigned int d = (depth_nested_list_fuel(f, *d_a00) + 1);
-        unsigned int rest_max = depth_nested_list_fuel(f, *d_a1);
+        const auto &[a00] =
+            std::get<typename LoopifyStructures::nested::NList>(a0.v());
+        unsigned int d = (depth_nested_list_fuel(f, *a00) + 1);
+        unsigned int rest_max = depth_nested_list_fuel(f, *a1);
         if (d <= rest_max) {
           return rest_max;
         } else {
@@ -131,9 +131,9 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
     unsigned int fuel;
   };
 
-  /// _After_NList: saves [d_a00, f], dispatches next recursive call.
+  /// _After_NList: saves [a00, f], dispatches next recursive call.
   struct _After_NList {
-    const List<LoopifyStructures::nested> *d_a00;
+    const List<LoopifyStructures::nested> *a00;
     unsigned int f;
   };
 
@@ -143,9 +143,9 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
     List<unsigned int> _result;
   };
 
-  /// _Resume_Elem: saves [d_a00], resumes after recursive call with _result.
+  /// _Resume_Elem: saves [a00], resumes after recursive call with _result.
   struct _Resume_Elem {
-    unsigned int d_a00;
+    unsigned int a00;
   };
 
   using _Frame =
@@ -171,32 +171,32 @@ List<unsigned int> LoopifyStructures::flatten_nested_list_fuel(
                 typename List<LoopifyStructures::nested>::Nil>(l.v())) {
           _result = List<unsigned int>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<LoopifyStructures::nested>::Cons>(l.v());
           if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-                  d_a0.v())) {
-            const auto &[d_a00] =
-                std::get<typename LoopifyStructures::nested::Elem>(d_a0.v());
-            _stack.emplace_back(_Resume_Elem{d_a00});
-            _stack.emplace_back(_Enter{d_a1.get(), f});
+                  a0.v())) {
+            const auto &[a00] =
+                std::get<typename LoopifyStructures::nested::Elem>(a0.v());
+            _stack.emplace_back(_Resume_Elem{a00});
+            _stack.emplace_back(_Enter{a1.get(), f});
           } else {
-            const auto &[d_a00] =
-                std::get<typename LoopifyStructures::nested::NList>(d_a0.v());
-            _stack.emplace_back(_After_NList{d_a00.get(), f});
-            _stack.emplace_back(_Enter{d_a1.get(), f});
+            const auto &[a00] =
+                std::get<typename LoopifyStructures::nested::NList>(a0.v());
+            _stack.emplace_back(_After_NList{a00.get(), f});
+            _stack.emplace_back(_Enter{a1.get(), f});
           }
         }
       }
     } else if (std::holds_alternative<_After_NList>(_frame)) {
       auto _f = std::move(std::get<_After_NList>(_frame));
       _stack.emplace_back(_Combine_NList{std::move(_result)});
-      _stack.emplace_back(_Enter{_f.d_a00, _f.f});
+      _stack.emplace_back(_Enter{_f.a00, _f.f});
     } else if (std::holds_alternative<_Combine_NList>(_frame)) {
       auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = _result.app(_f._result);
     } else {
       auto _f = std::move(std::get<_Resume_Elem>(_frame));
-      _result = List<unsigned int>::cons(_f.d_a00, _result);
+      _result = List<unsigned int>::cons(_f.a00, _result);
     }
   }
   return _result;
@@ -213,15 +213,15 @@ LoopifyStructures::find_first_some(const List<std::optional<unsigned int>> &l) {
       _result = std::optional<unsigned int>();
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<std::optional<unsigned int>>::Cons>(
               _loop_l->v());
-      if (d_a0.has_value()) {
-        const unsigned int &v = *d_a0;
+      if (a0.has_value()) {
+        const unsigned int &v = *a0;
         _result = std::make_optional<unsigned int>(v);
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }

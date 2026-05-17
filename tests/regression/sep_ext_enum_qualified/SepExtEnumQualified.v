@@ -1,8 +1,8 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (* Regression: separate extraction must fully qualify enum type names
-   in switch case labels (e.g. Datatypes::Comparison::e_EQ, not
-   Comparison::e_EQ). *)
+   in switch case labels (e.g. Datatypes::Comparison::EQ, not
+   Comparison::EQ). *)
 
 Module Type OrderedType.
   Parameter t : Type.

@@ -26,9 +26,9 @@ bool list_eq(const List<unsigned int> &l,
   while (it != expected.end()) {
     auto &v = cur->v();
     if (auto *cons = std::get_if<List<unsigned int>::Cons>(&v)) {
-      if (cons->d_a0 != *it)
+      if (cons->a0 != *it)
         return false;
-      cur = cons->d_a1.get();
+      cur = cons->a1.get();
       ++it;
     } else {
       return false; // list too short

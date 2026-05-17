@@ -5,14 +5,14 @@
 
 struct EnumSwitchQualified {
   struct Outer {
-    enum class Color { e_RED, e_BLUE };
+    enum class Color { RED, BLUE };
 
     template <typename T1> static T1 color_rect(T1 f, T1 f0, Color c) {
       switch (c) {
-      case Color::e_RED: {
+      case Color::RED: {
         return f;
       }
-      case Color::e_BLUE: {
+      case Color::BLUE: {
         return f0;
       }
       default:
@@ -22,10 +22,10 @@ struct EnumSwitchQualified {
 
     template <typename T1> static T1 color_rec(T1 f, T1 f0, Color c) {
       switch (c) {
-      case Color::e_RED: {
+      case Color::RED: {
         return f;
       }
-      case Color::e_BLUE: {
+      case Color::BLUE: {
         return f0;
       }
       default:
@@ -38,7 +38,7 @@ struct EnumSwitchQualified {
   };
 
   static inline const unsigned int t =
-      Outer::code(Outer::flip(Outer::Color::e_RED));
+      Outer::code(Outer::flip(Outer::Color::RED));
 };
 
 #endif // INCLUDED_ENUM_SWITCH_QUALIFIED

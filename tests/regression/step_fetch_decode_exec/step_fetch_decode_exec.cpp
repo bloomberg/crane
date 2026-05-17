@@ -22,10 +22,9 @@ StepFetchDecodeExec::execute(const StepFetchDecodeExec::state &s,
           i.v())) {
     return state{s.acc, (s.pc + 1u), s.rom};
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename StepFetchDecodeExec::instruction::ADD_ACC>(i.v());
-    return state{(16u ? (s.acc + d_a0) % 16u : (s.acc + d_a0)), (s.pc + 2u),
-                 s.rom};
+    return state{(16u ? (s.acc + a0) % 16u : (s.acc + a0)), (s.pc + 2u), s.rom};
   }
 }
 

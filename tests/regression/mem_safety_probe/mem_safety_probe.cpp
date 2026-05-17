@@ -22,23 +22,23 @@ MemSafetyProbe::build_adders(
           mylist<std::function<unsigned int(unsigned int)>>::mynil());
       break;
     } else {
-      const auto &[d_a0, d_a1] = std::get<
+      const auto &[a0, a1] = std::get<
           typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mycons>(
           _loop_trees.v());
-      MemSafetyProbe::mylist<MemSafetyProbe::tree> d_a1_value = *d_a1;
+      MemSafetyProbe::mylist<MemSafetyProbe::tree> a1_value = *a1;
       auto _cell = std::make_unique<
           MemSafetyProbe::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
               [=](unsigned int _x0) mutable -> unsigned int {
-                return d_a0.sum_values(_x0);
+                return a0.sum_values(_x0);
               },
               nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename mylist<
           std::function<unsigned int(unsigned int)>>::Mycons>(
                     (*_write)->v_mut())
-                    .d_a1;
-      _loop_trees = d_a1_value;
+                    .a1;
+      _loop_trees = a1_value;
       continue;
     }
   }
@@ -78,10 +78,10 @@ unsigned int MemSafetyProbe::apply_all(
               std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename MemSafetyProbe::mylist<
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-        _stack.emplace_back(_Resume_Mycons{d_a0(x)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Mycons{a0(x)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -102,9 +102,9 @@ unsigned int MemSafetyProbe::match_partial(MemSafetyProbe::tree t) {
   if (std::holds_alternative<typename MemSafetyProbe::tree::Leaf>(t.v_mut())) {
     return f(0u);
   } else {
-    auto &[d_a0, d_a1, d_a2] =
+    auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe::tree::Node>(t.v_mut());
-    return f(std::move(d_a1));
+    return f(std::move(a1));
   }
 }
 
@@ -132,11 +132,11 @@ MemSafetyProbe::box_from_match(const MemSafetyProbe::tree &t) {
   if (std::holds_alternative<typename MemSafetyProbe::tree::Leaf>(t.v())) {
     return fn_box::box([](unsigned int n) { return n; });
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe::tree::Node>(t.v());
-    MemSafetyProbe::tree d_a0_value = *d_a0;
+    MemSafetyProbe::tree a0_value = *a0;
     return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
-      return d_a0_value.sum_values(_x0);
+      return a0_value.sum_values(_x0);
     });
   }
 }

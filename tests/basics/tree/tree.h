@@ -7,41 +7,41 @@
 #include <variant>
 #include <vector>
 
-enum class Bool0 { e_TRUE, e_FALSE };
+enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
   // TYPES
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> d_a0;
+    std::unique_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Nat() {}
 
-  explicit Nat(O _v) : d_v_(_v) {}
+  explicit Nat(O _v) : v_(_v) {}
 
-  explicit Nat(S _v) : d_v_(std::move(_v)) {}
+  explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Nat(Nat &&_other) : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Nat &operator=(Nat &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -63,13 +63,13 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -86,10 +86,10 @@ public:
     std::vector<std::unique_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.d_v_)) {
-        auto &_alt = std::get<S>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<S>(_node.v_)) {
+        auto &_alt = std::get<S>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -103,21 +103,21 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   Nat max(Nat m) const {
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return m;
     } else {
-      auto &[d_a0] = std::get<typename Nat::S>(this->v());
+      auto &[a0] = std::get<typename Nat::S>(this->v());
       if (std::holds_alternative<typename Nat::O>(m.v_mut())) {
         return *this;
       } else {
-        auto &[d_a00] = std::get<typename Nat::S>(m.v_mut());
-        return Nat::s((*d_a0).max(*d_a00));
+        auto &[a00] = std::get<typename Nat::S>(m.v_mut());
+        return Nat::s((*a0).max(*a00));
       }
     }
   }
@@ -126,56 +126,56 @@ public:
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0] = std::get<typename Nat::S>(this->v());
-      return Nat::s((*d_a0).add(std::move(m)));
+      const auto &[a0] = std::get<typename Nat::S>(this->v());
+      return Nat::s((*a0).add(std::move(m)));
     }
   }
 };
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -184,17 +184,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -204,30 +204,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -241,68 +239,68 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  List<t_A> app(List<t_A> m) const {
-    if (std::holds_alternative<typename List<t_A>::Nil>(this->v())) {
+  List<A> app(List<A> m) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(this->v());
-      return List<t_A>::cons(d_a0, (*d_a1).app(std::move(m)));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<A>::cons(a0, (*a1).app(std::move(m)));
     }
   }
 };
 
-template <typename t_A> struct Tree {
+template <typename A> struct Tree {
   /// A polymorphic binary tree. A tree is either a leaf or a
   /// node with a left subtree, a value, and a right subtree.
   // TYPES
   struct Leaf {};
 
   struct Node {
-    std::unique_ptr<Tree<t_A>> d_a0;
-    t_A d_a1;
-    std::unique_ptr<Tree<t_A>> d_a2;
+    std::unique_ptr<Tree<A>> a0;
+    A a1;
+    std::unique_ptr<Tree<A>> a2;
   };
 
   using variant_t = std::variant<Leaf, Node>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Tree() {}
 
-  explicit Tree(Leaf _v) : d_v_(_v) {}
+  explicit Tree(Leaf _v) : v_(_v) {}
 
-  explicit Tree(Node _v) : d_v_(std::move(_v)) {}
+  explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-  Tree(const Tree<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Tree(const Tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Tree(Tree<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Tree(Tree<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  Tree<t_A> &operator=(const Tree<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  Tree<A> &operator=(const Tree<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Tree<t_A> &operator=(Tree<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Tree<A> &operator=(Tree<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  Tree<t_A> clone() const {
-    Tree<t_A> _out{};
+  Tree<A> clone() const {
+    Tree<A> _out{};
 
     struct _CloneFrame {
-      const Tree<t_A> *_src;
-      Tree<t_A> *_dst;
+      const Tree<A> *_src;
+      Tree<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -311,21 +309,21 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const Tree<t_A> *_src = _frame._src;
-      Tree<t_A> *_dst = _frame._dst;
+      const Tree<A> *_src = _frame._src;
+      Tree<A> *_dst = _frame._dst;
       if (std::holds_alternative<Leaf>(_src->v())) {
-        _dst->d_v_ = Leaf{};
+        _dst->v_ = Leaf{};
       } else {
         const auto &_alt = std::get<Node>(_src->v());
-        _dst->d_v_ =
-            Node{_alt.d_a0 ? std::make_unique<Tree<t_A>>() : nullptr, _alt.d_a1,
-                 _alt.d_a2 ? std::make_unique<Tree<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Node>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ =
+            Node{_alt.a0 ? std::make_unique<Tree<A>>() : nullptr, _alt.a1,
+                 _alt.a2 ? std::make_unique<Tree<A>>() : nullptr};
+        auto &_dst_alt = std::get<Node>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
-        if (_alt.d_a2) {
-          _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+        if (_alt.a2) {
+          _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
         }
       }
     }
@@ -335,35 +333,33 @@ public:
   // CREATORS
   template <typename _U> explicit Tree(const Tree<_U> &_other) {
     if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
-      this->d_v_ = Leaf{};
+      this->v_ = Leaf{};
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<_U>::Node>(_other.v());
-      this->d_v_ =
-          Node{d_a0 ? std::make_unique<Tree<t_A>>(*d_a0) : nullptr, t_A(d_a1),
-               d_a2 ? std::make_unique<Tree<t_A>>(*d_a2) : nullptr};
+      const auto &[a0, a1, a2] = std::get<typename Tree<_U>::Node>(_other.v());
+      this->v_ = Node{a0 ? std::make_unique<Tree<A>>(*a0) : nullptr, A(a1),
+                      a2 ? std::make_unique<Tree<A>>(*a2) : nullptr};
     }
   }
 
-  static Tree<t_A> leaf() { return Tree(Leaf{}); }
+  static Tree<A> leaf() { return Tree(Leaf{}); }
 
-  static Tree<t_A> node(Tree<t_A> a0, t_A a1, Tree<t_A> a2) {
-    return Tree(Node{std::make_unique<Tree<t_A>>(std::move(a0)), std::move(a1),
-                     std::make_unique<Tree<t_A>>(std::move(a2))});
+  static Tree<A> node(Tree<A> a0, A a1, Tree<A> a2) {
+    return Tree(Node{std::make_unique<Tree<A>>(std::move(a0)), std::move(a1),
+                     std::make_unique<Tree<A>>(std::move(a2))});
   }
 
   // MANIPULATORS
   ~Tree() {
-    std::vector<std::unique_ptr<Tree<t_A>>> _stack{};
+    std::vector<std::unique_ptr<Tree<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](Tree<t_A> &_node) {
-      if (std::holds_alternative<Node>(_node.d_v_)) {
-        auto &_alt = std::get<Node>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+    auto _drain = [&](Tree<A> &_node) {
+      if (std::holds_alternative<Node>(_node.v_)) {
+        auto &_alt = std::get<Node>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
-        if (_alt.d_a2) {
-          _stack.push_back(std::move(_alt.d_a2));
+        if (_alt.a2) {
+          _stack.push_back(std::move(_alt.a2));
         }
       }
     };
@@ -377,105 +373,96 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
-                                   Tree<t_A> &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
+                                   T1 &>
   T1 tree_rect(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(this->v());
-      return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
-                (*d_a2).template tree_rect<T1>(f, f0));
+      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
+                (*a2).template tree_rect<T1>(f, f0));
     }
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<t_A> &, T1 &, t_A &,
-                                   Tree<t_A> &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
+                                   T1 &>
   T1 tree_rec(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(this->v());
-      return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
-                (*d_a2).template tree_rec<T1>(f, f0));
+      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
+                (*a2).template tree_rec<T1>(f, f0));
     }
   }
 
   /// Returns true if t is a leaf, false otherwise.
   Bool0 is_leaf() const {
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
-      return Bool0::e_TRUE;
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
+      return Bool0::TRUE_;
     } else {
-      return Bool0::e_FALSE;
+      return Bool0::FALSE_;
     }
   }
 
   /// Number of nodes in tree t. A leaf counts as 1.
   Nat size() const {
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(this->v());
-      return Nat::s(Nat::o()).add((*d_a0).size()).add((*d_a2).size());
+      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      return Nat::s(Nat::o()).add((*a0).size()).add((*a2).size());
     }
   }
 
   /// Height of tree t. A leaf has height 1.
   Nat height() const {
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(this->v());
-      return Nat::s(Nat::o()).add((*d_a0).height().max((*d_a2).height()));
+      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      return Nat::s(Nat::o()).add((*a0).height().max((*a2).height()));
     }
   }
 
   /// Collect all values in t into a list via in-order traversal.
-  List<t_A> flatten() const {
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
-      return List<t_A>::nil();
+  List<A> flatten() const {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
+      return List<A>::nil();
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(this->v());
-      return (*d_a0).flatten().app(List<t_A>::cons(d_a1, (*d_a2).flatten()));
+      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      return (*a0).flatten().app(List<A>::cons(a1, (*a2).flatten()));
     }
   }
 
   /// Merge two trees t1 and t2 element-wise using combine.
   /// Subtrees beyond the shape of the other tree are truncated.
   template <typename F0>
-    requires std::is_invocable_r_v<t_A, F0 &, t_A &, t_A &>
-  Tree<t_A> merge(F0 &&combine, const Tree<t_A> &t2) const {
-    if (std::holds_alternative<typename Tree<t_A>::Leaf>(this->v())) {
-      if (std::holds_alternative<typename Tree<t_A>::Leaf>(t2.v())) {
-        return Tree<t_A>::leaf();
+    requires std::is_invocable_r_v<A, F0 &, A &, A &>
+  Tree<A> merge(F0 &&combine, const Tree<A> &t2) const {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
+      if (std::holds_alternative<typename Tree<A>::Leaf>(t2.v())) {
+        return Tree<A>::leaf();
       } else {
-        const auto &[d_a00, d_a10, d_a20] =
-            std::get<typename Tree<t_A>::Node>(t2.v());
-        return Tree<t_A>::node(Tree<t_A>::leaf(), d_a10, Tree<t_A>::leaf());
+        const auto &[a00, a10, a20] = std::get<typename Tree<A>::Node>(t2.v());
+        return Tree<A>::node(Tree<A>::leaf(), a10, Tree<A>::leaf());
       }
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Tree<t_A>::Node>(this->v());
-      if (std::holds_alternative<typename Tree<t_A>::Leaf>(t2.v())) {
-        return Tree<t_A>::node(Tree<t_A>::leaf(), d_a1, Tree<t_A>::leaf());
+      const auto &[a0, a2, a3] = std::get<typename Tree<A>::Node>(this->v());
+      if (std::holds_alternative<typename Tree<A>::Leaf>(t2.v())) {
+        return Tree<A>::node(Tree<A>::leaf(), a2, Tree<A>::leaf());
       } else {
-        const auto &[d_a00, d_a10, d_a20] =
-            std::get<typename Tree<t_A>::Node>(t2.v());
-        return Tree<t_A>::node((*d_a0).merge(combine, *d_a00),
-                               combine(d_a1, d_a10),
-                               (*d_a2).merge(combine, *d_a20));
+        const auto &[a00, a10, a20] = std::get<typename Tree<A>::Node>(t2.v());
+        return Tree<A>::node((*a0).merge(combine, *a00), combine(a2, a10),
+                             (*a3).merge(combine, *a20));
       }
     }
   }

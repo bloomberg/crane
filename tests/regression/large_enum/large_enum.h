@@ -7,58 +7,58 @@
 
 struct LargeEnum {
   enum class Color {
-    e_RED,
-    e_ORANGE,
-    e_YELLOW,
-    e_GREEN,
-    e_BLUE,
-    e_INDIGO,
-    e_VIOLET,
-    e_BLACK,
-    e_WHITE,
-    e_GRAY,
-    e_BROWN,
-    e_PINK
+    RED,
+    ORANGE,
+    YELLOW,
+    GREEN,
+    BLUE,
+    INDIGO,
+    VIOLET,
+    BLACK,
+    WHITE,
+    GRAY,
+    BROWN,
+    PINK
   };
 
   template <typename T1>
   static T1 color_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                        T1 f7, T1 f8, T1 f9, T1 f10, Color c) {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return f;
     }
-    case Color::e_ORANGE: {
+    case Color::ORANGE: {
       return f0;
     }
-    case Color::e_YELLOW: {
+    case Color::YELLOW: {
       return f1;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       return f2;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return f3;
     }
-    case Color::e_INDIGO: {
+    case Color::INDIGO: {
       return f4;
     }
-    case Color::e_VIOLET: {
+    case Color::VIOLET: {
       return f5;
     }
-    case Color::e_BLACK: {
+    case Color::BLACK: {
       return f6;
     }
-    case Color::e_WHITE: {
+    case Color::WHITE: {
       return f7;
     }
-    case Color::e_GRAY: {
+    case Color::GRAY: {
       return f8;
     }
-    case Color::e_BROWN: {
+    case Color::BROWN: {
       return f9;
     }
-    case Color::e_PINK: {
+    case Color::PINK: {
       return f10;
     }
     default:
@@ -70,40 +70,40 @@ struct LargeEnum {
   static T1 color_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                       T1 f7, T1 f8, T1 f9, T1 f10, Color c) {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return f;
     }
-    case Color::e_ORANGE: {
+    case Color::ORANGE: {
       return f0;
     }
-    case Color::e_YELLOW: {
+    case Color::YELLOW: {
       return f1;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       return f2;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return f3;
     }
-    case Color::e_INDIGO: {
+    case Color::INDIGO: {
       return f4;
     }
-    case Color::e_VIOLET: {
+    case Color::VIOLET: {
       return f5;
     }
-    case Color::e_BLACK: {
+    case Color::BLACK: {
       return f6;
     }
-    case Color::e_WHITE: {
+    case Color::WHITE: {
       return f7;
     }
-    case Color::e_GRAY: {
+    case Color::GRAY: {
       return f8;
     }
-    case Color::e_BROWN: {
+    case Color::BROWN: {
       return f9;
     }
-    case Color::e_PINK: {
+    case Color::PINK: {
       return f10;
     }
     default:
@@ -118,7 +118,7 @@ struct LargeEnum {
   struct tok {
     // TYPES
     struct TNum {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct TPlus {};
@@ -140,7 +140,7 @@ struct LargeEnum {
     struct TSemicolon {};
 
     struct TIdent {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct TEOF {};
@@ -151,55 +151,55 @@ struct LargeEnum {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tok() {}
 
-    explicit tok(TNum _v) : d_v_(std::move(_v)) {}
+    explicit tok(TNum _v) : v_(std::move(_v)) {}
 
-    explicit tok(TPlus _v) : d_v_(_v) {}
+    explicit tok(TPlus _v) : v_(_v) {}
 
-    explicit tok(TMinus _v) : d_v_(_v) {}
+    explicit tok(TMinus _v) : v_(_v) {}
 
-    explicit tok(TStar _v) : d_v_(_v) {}
+    explicit tok(TStar _v) : v_(_v) {}
 
-    explicit tok(TSlash _v) : d_v_(_v) {}
+    explicit tok(TSlash _v) : v_(_v) {}
 
-    explicit tok(TLParen _v) : d_v_(_v) {}
+    explicit tok(TLParen _v) : v_(_v) {}
 
-    explicit tok(TRParen _v) : d_v_(_v) {}
+    explicit tok(TRParen _v) : v_(_v) {}
 
-    explicit tok(TEq _v) : d_v_(_v) {}
+    explicit tok(TEq _v) : v_(_v) {}
 
-    explicit tok(TBang _v) : d_v_(_v) {}
+    explicit tok(TBang _v) : v_(_v) {}
 
-    explicit tok(TSemicolon _v) : d_v_(_v) {}
+    explicit tok(TSemicolon _v) : v_(_v) {}
 
-    explicit tok(TIdent _v) : d_v_(std::move(_v)) {}
+    explicit tok(TIdent _v) : v_(std::move(_v)) {}
 
-    explicit tok(TEOF _v) : d_v_(_v) {}
+    explicit tok(TEOF _v) : v_(_v) {}
 
-    tok(const tok &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tok(const tok &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tok(tok &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tok(tok &&_other) : v_(std::move(_other.v_)) {}
 
     tok &operator=(const tok &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tok &operator=(tok &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     tok clone() const {
       if (std::holds_alternative<TNum>(this->v())) {
-        const auto &[d_a0] = std::get<TNum>(this->v());
-        return tok(TNum{d_a0});
+        const auto &[a0] = std::get<TNum>(this->v());
+        return tok(TNum{a0});
       } else if (std::holds_alternative<TPlus>(this->v())) {
         return tok(TPlus{});
       } else if (std::holds_alternative<TMinus>(this->v())) {
@@ -219,8 +219,8 @@ struct LargeEnum {
       } else if (std::holds_alternative<TSemicolon>(this->v())) {
         return tok(TSemicolon{});
       } else if (std::holds_alternative<TIdent>(this->v())) {
-        const auto &[d_a0] = std::get<TIdent>(this->v());
-        return tok(TIdent{d_a0});
+        const auto &[a0] = std::get<TIdent>(this->v());
+        return tok(TIdent{a0});
       } else {
         return tok(TEOF{});
       }
@@ -252,10 +252,10 @@ struct LargeEnum {
     static tok teof() { return tok(TEOF{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F10>
@@ -264,8 +264,8 @@ struct LargeEnum {
   static T1 tok_rect(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                      T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {
-      const auto &[d_a0] = std::get<typename tok::TNum>(t.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename tok::TNum>(t.v());
+      return f(a0);
     } else if (std::holds_alternative<typename tok::TPlus>(t.v())) {
       return f0;
     } else if (std::holds_alternative<typename tok::TMinus>(t.v())) {
@@ -285,8 +285,8 @@ struct LargeEnum {
     } else if (std::holds_alternative<typename tok::TSemicolon>(t.v())) {
       return f8;
     } else if (std::holds_alternative<typename tok::TIdent>(t.v())) {
-      const auto &[d_a0] = std::get<typename tok::TIdent>(t.v());
-      return f9(d_a0);
+      const auto &[a0] = std::get<typename tok::TIdent>(t.v());
+      return f9(a0);
     } else {
       return f10;
     }
@@ -298,8 +298,8 @@ struct LargeEnum {
   static T1 tok_rec(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                     T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {
-      const auto &[d_a0] = std::get<typename tok::TNum>(t.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename tok::TNum>(t.v());
+      return f(a0);
     } else if (std::holds_alternative<typename tok::TPlus>(t.v())) {
       return f0;
     } else if (std::holds_alternative<typename tok::TMinus>(t.v())) {
@@ -319,8 +319,8 @@ struct LargeEnum {
     } else if (std::holds_alternative<typename tok::TSemicolon>(t.v())) {
       return f8;
     } else if (std::holds_alternative<typename tok::TIdent>(t.v())) {
-      const auto &[d_a0] = std::get<typename tok::TIdent>(t.v());
-      return f9(d_a0);
+      const auto &[a0] = std::get<typename tok::TIdent>(t.v());
+      return f9(a0);
     } else {
       return f10;
     }
@@ -328,12 +328,12 @@ struct LargeEnum {
 
   static unsigned int tok_to_nat(const tok &t);
   static bool is_operator(const tok &t);
-  static inline const unsigned int test_red = color_to_nat(Color::e_RED);
-  static inline const unsigned int test_pink = color_to_nat(Color::e_PINK);
-  static inline const bool test_warm_red = is_warm(Color::e_RED);
-  static inline const bool test_warm_blue = is_warm(Color::e_BLUE);
-  static inline const bool test_neutral_black = is_neutral(Color::e_BLACK);
-  static inline const bool test_neutral_red = is_neutral(Color::e_RED);
+  static inline const unsigned int test_red = color_to_nat(Color::RED);
+  static inline const unsigned int test_pink = color_to_nat(Color::PINK);
+  static inline const bool test_warm_red = is_warm(Color::RED);
+  static inline const bool test_warm_blue = is_warm(Color::BLUE);
+  static inline const bool test_neutral_black = is_neutral(Color::BLACK);
+  static inline const bool test_neutral_red = is_neutral(Color::RED);
   static inline const unsigned int test_tok_num = tok_to_nat(tok::tnum(42u));
   static inline const unsigned int test_tok_plus = tok_to_nat(tok::tplus());
   static inline const unsigned int test_tok_ident = tok_to_nat(tok::tident(3u));

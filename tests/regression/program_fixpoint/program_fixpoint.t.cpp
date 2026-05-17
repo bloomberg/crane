@@ -30,8 +30,8 @@ list_to_vector(const List<unsigned int> &l) {
   const List<unsigned int> *cur = &l;
   while (std::holds_alternative<typename List<unsigned int>::Cons>(cur->v())) {
     auto &c = std::get<typename List<unsigned int>::Cons>(cur->v());
-    result.push_back(c.d_a0);
-    cur = c.d_a1.get();
+    result.push_back(c.a0);
+    cur = c.a1.get();
   }
   return result;
 }

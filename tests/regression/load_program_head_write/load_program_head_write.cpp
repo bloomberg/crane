@@ -7,19 +7,16 @@ List<unsigned int> LoadProgramHeadWrite::update_nth(unsigned int n,
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return l;
     } else {
-      auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v_mut());
-      return List<unsigned int>::cons(x, *d_a1);
+      auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v_mut());
+      return List<unsigned int>::cons(x, *a1);
     }
   } else {
     unsigned int n_ = n - 1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
       return l;
     } else {
-      auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(l.v_mut());
-      return List<unsigned int>::cons(std::move(d_a00),
-                                      update_nth(n_, x, *d_a10));
+      auto &[a00, a10] = std::get<typename List<unsigned int>::Cons>(l.v_mut());
+      return List<unsigned int>::cons(std::move(a00), update_nth(n_, x, *a10));
     }
   }
 }
@@ -49,12 +46,12 @@ LoadProgramHeadWrite::load_program(LoadProgramHeadWrite::state s,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes.v())) {
     return s;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<unsigned int>::Cons>(bytes.v());
     LoadProgramHeadWrite::state s1 =
-        set_prom_params(std::move(s), base, d_a0, true);
+        set_prom_params(std::move(s), base, a0, true);
     LoadProgramHeadWrite::state s2 = execute_wpm(std::move(s1));
     return load_program(std::move(s2),
-                        (4096u ? (base + 1u) % 4096u : (base + 1u)), *d_a1);
+                        (4096u ? (base + 1u) % 4096u : (base + 1u)), *a1);
   }
 }

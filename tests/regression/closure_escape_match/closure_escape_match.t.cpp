@@ -28,11 +28,11 @@ int main() {
 
     // Expect: app [10, 20] [30] = [10, 20, 30]
     auto &c1 = std::get<1>(result.v());
-    assert(c1.d_a0 == 10u);
-    auto &c2 = std::get<1>(c1.d_a1->v());
-    assert(c2.d_a0 == 20u);
-    auto &c3 = std::get<1>(c2.d_a1->v());
-    assert(c3.d_a0 == 30u);
+    assert(c1.a0 == 10u);
+    auto &c2 = std::get<1>(c1.a1->v());
+    assert(c2.a0 == 20u);
+    auto &c3 = std::get<1>(c2.a1->v());
+    assert(c3.a0 == 30u);
     std::cout << "make_prepender_opt: OK" << std::endl;
   }
 
@@ -76,7 +76,7 @@ int main() {
     auto arg = L::mycons(30u, L::mynil());
     auto result = prepender(arg);
     auto &c1 = std::get<1>(result.v());
-    assert(c1.d_a0 == 10u);
+    assert(c1.a0 == 10u);
     std::cout << "closure_in_pair: OK" << std::endl;
   }
 

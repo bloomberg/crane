@@ -13,16 +13,16 @@ DecodeList::decode_list(const List<unsigned int> &bytes) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(bytes.v())) {
     return List<DecodeList::instruction>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<unsigned int>::Cons>(bytes.v());
-    auto &&_sv0 = *d_a1;
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
       return List<DecodeList::instruction>::nil();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      return List<DecodeList::instruction>::cons(decode(d_a0, d_a00),
-                                                 decode_list(*d_a10));
+      return List<DecodeList::instruction>::cons(decode(a0, a00),
+                                                 decode_list(*a10));
     }
   }
 }

@@ -7,11 +7,11 @@ MatchRefAfterMove::head_and_tail_length(
           typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
     return mypair<unsigned int, unsigned int>::mkpair(0u, 0u);
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
             l.v());
-    return mypair<unsigned int, unsigned int>::mkpair(d_a0,
-                                                      (*d_a1).mylist_length());
+    return mypair<unsigned int, unsigned int>::mkpair(a0,
+                                                      (*a1).mylist_length());
   }
 }
 
@@ -29,19 +29,19 @@ unsigned int MatchRefAfterMove::nested_match_probe(
           typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
             l.v());
-    auto &&_sv0 = *d_a1;
+    auto &&_sv0 = *a1;
     if (std::holds_alternative<
             typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(
             _sv0.v())) {
-      return d_a0;
+      return a0;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
               _sv0.v());
-      return ((d_a0 + d_a00) + (*d_a10).mylist_length());
+      return ((a0 + a00) + (*a10).mylist_length());
     }
   }
 }
@@ -57,11 +57,11 @@ MatchRefAfterMove::match_into_pair(
     return mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>::
         mkpair(0u, mylist<unsigned int>::mynil());
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
             l.v());
     return mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>::
-        mkpair(d_a0, mylist<unsigned int>::mycons((d_a0 + 1u), *d_a1));
+        mkpair(a0, mylist<unsigned int>::mycons((a0 + 1u), *a1));
   }
 }
 
@@ -76,10 +76,10 @@ MatchRefAfterMove::double_match(
             typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
               l.v());
-      return d_a0;
+      return a0;
     }
   }();
   MatchRefAfterMove::mylist<unsigned int> t = [&]() {
@@ -87,10 +87,10 @@ MatchRefAfterMove::double_match(
             typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
       return mylist<unsigned int>::mynil();
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
               l.v());
-      return *d_a10;
+      return *a10;
     }
   }();
   return mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>::mkpair(
@@ -103,10 +103,10 @@ unsigned int MatchRefAfterMove::mylist_sum(
           typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
             l.v());
-    return (d_a0 + mylist_sum(*d_a1));
+    return (a0 + mylist_sum(*a1));
   }
 }
 
@@ -117,32 +117,30 @@ unsigned int MatchRefAfterMove::complex_match(
   if (std::holds_alternative<typename MatchRefAfterMove::either<
           MatchRefAfterMove::mylist<unsigned int>,
           MatchRefAfterMove::mylist<unsigned int>>::Left>(e.v())) {
-    const auto &[d_a0] = std::get<typename MatchRefAfterMove::either<
+    const auto &[a0] = std::get<typename MatchRefAfterMove::either<
         MatchRefAfterMove::mylist<unsigned int>,
         MatchRefAfterMove::mylist<unsigned int>>::Left>(e.v());
     if (std::holds_alternative<
-            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(
-            d_a0.v())) {
+            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(a0.v())) {
       return 0u;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-              d_a0.v());
-      return d_a00;
+              a0.v());
+      return a00;
     }
   } else {
-    const auto &[d_a0] = std::get<typename MatchRefAfterMove::either<
+    const auto &[a0] = std::get<typename MatchRefAfterMove::either<
         MatchRefAfterMove::mylist<unsigned int>,
         MatchRefAfterMove::mylist<unsigned int>>::Right>(e.v());
     if (std::holds_alternative<
-            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(
-            d_a0.v())) {
+            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(a0.v())) {
       return 999u;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-              d_a0.v());
-      return (d_a00 + (*d_a10).mylist_length());
+              a0.v());
+      return (a00 + (*a10).mylist_length());
     }
   }
 }

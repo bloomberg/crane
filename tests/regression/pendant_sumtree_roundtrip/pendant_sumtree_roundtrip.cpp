@@ -2,8 +2,8 @@
 
 unsigned int PendantSumtreeRoundtripCase::digit_to_nat(const T &d) {
   auto &&_sv = d.to_nat(10u);
-  const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
-  return d_x;
+  const auto &[x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
+  return x;
 }
 
 PendantSumtreeRoundtripCase::digit
@@ -16,8 +16,8 @@ unsigned int PendantSumtreeRoundtripCase::value_digits(unsigned int,
   if (std::holds_alternative<typename T0<T>::Nil>(ds.v())) {
     return 0u;
   } else {
-    const auto &[d_h, d_n, d_a2] = std::get<typename T0<T>::Cons>(ds.v());
-    return (digit_to_nat(d_h) + (10u * value_digits(d_n, *d_a2)));
+    const auto &[h, n, a2] = std::get<typename T0<T>::Cons>(ds.v());
+    return (digit_to_nat(h) + (10u * value_digits(n, *a2)));
   }
 }
 
@@ -35,11 +35,11 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(unsigned int n,
     if (std::holds_alternative<typename List<T>::Nil0>(xs.v())) {
       return std::optional<T0<T>>();
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename List<T>::Cons0>(xs.v());
-      auto _cs = list_to_vector_opt(n_, *d_a10);
+      const auto &[a00, a10] = std::get<typename List<T>::Cons0>(xs.v());
+      auto _cs = list_to_vector_opt(n_, *a10);
       if (_cs.has_value()) {
         const T0<T> &v = *_cs;
-        return std::make_optional<T0<T>>(T0<T>::cons(d_a00, n_, v));
+        return std::make_optional<T0<T>>(T0<T>::cons(a00, n_, v));
       } else {
         return std::optional<T0<T>>();
       }
@@ -99,10 +99,10 @@ PendantSumtreeRoundtripCase::pendant_digits(
     if (std::holds_alternative<typename List<T0<T>>::Nil0>(l.v())) {
       return std::optional<T0<T>>();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T0<T>>::Cons0>(l.v());
-      auto &&_sv = *d_a1;
+      const auto &[a0, a1] = std::get<typename List<T0<T>>::Cons0>(l.v());
+      auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T0<T>>::Nil0>(_sv.v())) {
-        return std::make_optional<T0<T>>(d_a0);
+        return std::make_optional<T0<T>>(a0);
       } else {
         return std::optional<T0<T>>();
       }
@@ -130,14 +130,14 @@ List<std::optional<unsigned int>> PendantSumtreeRoundtripCase::ledger_values(
           l.v())) {
     return List<std::optional<unsigned int>>::nil0();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<SigT<
+    const auto &[a0, a1] = std::get<typename List<SigT<
         unsigned int, PendantSumtreeRoundtripCase::CertifiedPendant>>::Cons0>(
         l.v());
-    const auto &[d_x0, d_a10] = std::get<typename SigT<
+    const auto &[x0, a10] = std::get<typename SigT<
         unsigned int, PendantSumtreeRoundtripCase::CertifiedPendant>::ExistT>(
-        d_a0.v());
-    return List<std::optional<unsigned int>>::cons0(pendant_value(d_x0, d_a10),
-                                                    ledger_values(*d_a1));
+        a0.v());
+    return List<std::optional<unsigned int>>::cons0(pendant_value(x0, a10),
+                                                    ledger_values(*a1));
   }
 }
 
@@ -186,15 +186,15 @@ PendantSumtreeRoundtripCase::sumtree_top(
     unsigned int, const PendantSumtreeRoundtripCase::SumTree &st) {
   if (std::holds_alternative<
           typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(st.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(
             st.v());
-    return d_a0;
+    return a0;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
             st.v());
-    return d_a0;
+    return a0;
   }
 }
 
@@ -203,17 +203,17 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
     unsigned int n, const PendantSumtreeRoundtripCase::SumTree &st) {
   if (std::holds_alternative<
           typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(st.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(
             st.v());
     return List<PendantSumtreeRoundtripCase::CertifiedPendant>::cons0(
-        d_a0, List<PendantSumtreeRoundtripCase::CertifiedPendant>::nil0());
+        a0, List<PendantSumtreeRoundtripCase::CertifiedPendant>::nil0());
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
             st.v());
-    List<PendantSumtreeRoundtripCase::SumTree> d_a1_value = *d_a1;
-    return d_a1_value
+    List<PendantSumtreeRoundtripCase::SumTree> a1_value = *a1;
+    return a1_value
         .template map<List<PendantSumtreeRoundtripCase::CertifiedPendant>>(
             [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
                 -> List<PendantSumtreeRoundtripCase::CertifiedPendant> {
@@ -229,11 +229,11 @@ unsigned int PendantSumtreeRoundtripCase::sumtree_depth(
           typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(st.v())) {
     return 1u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
             st.v());
-    List<PendantSumtreeRoundtripCase::SumTree> d_a1_value = *d_a1;
-    return (d_a1_value
+    List<PendantSumtreeRoundtripCase::SumTree> a1_value = *a1;
+    return (a1_value
                 .template map<unsigned int>(
                     [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
                         -> unsigned int { return sumtree_depth(n, _x0); })
@@ -257,22 +257,21 @@ bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
             typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(st.v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
               st.v());
-      List<PendantSumtreeRoundtripCase::SumTree> d_a1_value = *d_a1;
+      List<PendantSumtreeRoundtripCase::SumTree> a1_value = *a1;
       List<PendantSumtreeRoundtripCase::CertifiedPendant> child_tops =
-          d_a1_value
-              .template map<PendantSumtreeRoundtripCase::CertifiedPendant>(
-                  [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
-                      -> PendantSumtreeRoundtripCase::CertifiedPendant {
-                    return sumtree_top(n, _x0);
-                  });
+          a1_value.template map<PendantSumtreeRoundtripCase::CertifiedPendant>(
+              [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
+                  -> PendantSumtreeRoundtripCase::CertifiedPendant {
+                return sumtree_top(n, _x0);
+              });
       PendantSumtreeRoundtripCase::PendantGroup g =
-          PendantGroup{d_a0, child_tops};
+          PendantGroup{a0, child_tops};
       return (
           group_sums_validb(n, std::move(g)) &&
-          d_a1_value.forallb(
+          a1_value.forallb(
               [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable -> bool {
                 return sumtree_validb_aux(n, fuel_, _x0);
               }));
@@ -318,14 +317,13 @@ bool PendantSumtreeRoundtripCase::nat_list_eqb(const List<unsigned int> &xs,
       return false;
     }
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons0>(xs.v());
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons0>(xs.v());
     if (std::holds_alternative<typename List<unsigned int>::Nil0>(ys.v())) {
       return false;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<unsigned int>::Cons0>(ys.v());
-      return (d_a0 == d_a00 && nat_list_eqb(*d_a1, *d_a10));
+      return (a0 == a00 && nat_list_eqb(*a1, *a10));
     }
   }
 }

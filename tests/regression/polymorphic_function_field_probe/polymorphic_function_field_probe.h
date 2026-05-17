@@ -4,7 +4,7 @@
 #include <any>
 #include <functional>
 
-enum class Bool0 { e_TRUE, e_FALSE };
+enum class Bool0 { TRUE_, FALSE_ };
 
 struct PolymorphicFunctionFieldProbe {
   struct poly {
@@ -19,7 +19,7 @@ struct PolymorphicFunctionFieldProbe {
   }
 
   static inline const poly p = poly{[](const auto &x) { return x; }};
-  static inline const Bool0 sample_bool = apply<Bool0>(p, Bool0::e_TRUE);
+  static inline const Bool0 sample_bool = apply<Bool0>(p, Bool0::TRUE_);
 };
 
 #endif // INCLUDED_POLYMORPHIC_FUNCTION_FIELD_PROBE

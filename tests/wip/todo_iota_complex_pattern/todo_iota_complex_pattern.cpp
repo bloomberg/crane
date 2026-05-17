@@ -3,8 +3,7 @@
 unsigned int TodoIotaComplexPattern::sum_triple(
     const TodoIotaComplexPattern::Triple<unsigned int, unsigned int,
                                          unsigned int> &t) {
-  const auto &[d_a0, d_a1, d_a2] =
-      std::get<typename TodoIotaComplexPattern::Triple<
-          unsigned int, unsigned int, unsigned int>::MkTriple>(t.v());
-  return ((d_a0 + d_a1) + d_a2);
+  const auto &[a0, a1, a2] = std::get<typename TodoIotaComplexPattern::Triple<
+      unsigned int, unsigned int, unsigned int>::MkTriple>(t.v());
+  return ((a0 + a1) + a2);
 }

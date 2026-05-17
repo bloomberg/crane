@@ -11,9 +11,9 @@ InstructionSequenceExec::state InstructionSequenceExec::execute(
                  i.v())) {
     return state{(s.pc_ + 1), s.acc_};
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename InstructionSequenceExec::instruction::ADD_ACC>(i.v());
-    return state{s.pc_, (s.acc_ + d_a0)};
+    return state{s.pc_, (s.acc_ + a0)};
   }
 }
 
@@ -24,9 +24,9 @@ InstructionSequenceExec::state InstructionSequenceExec::exec_program(
           typename List<InstructionSequenceExec::instruction>::Nil>(prog.v())) {
     return s;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionSequenceExec::instruction>::Cons>(
             prog.v());
-    return exec_program(*d_a1, execute(std::move(s), d_a0));
+    return exec_program(*a1, execute(std::move(s), a0));
   }
 }

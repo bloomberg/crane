@@ -6,8 +6,8 @@ bool GeneratedStorageFieldNameClash::is_flag(
           typename GeneratedStorageFieldNameClash::d_v_::Empty>(x.v())) {
     return false;
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename GeneratedStorageFieldNameClash::d_v_::Flag>(x.v());
-    return d_a0;
+    return a0;
   }
 }

@@ -6,10 +6,10 @@ struct IntOrdered {
   using t = int;
   static Datatypes::Comparison compare(int a, int b) {
     if (a < b)
-      return Datatypes::Comparison::e_LT;
+      return Datatypes::Comparison::LT;
     if (a == b)
-      return Datatypes::Comparison::e_EQ;
-    return Datatypes::Comparison::e_GT;
+      return Datatypes::Comparison::EQ;
+    return Datatypes::Comparison::GT;
   }
 };
 static_assert(SepExtConceptQualified::OrderedType<IntOrdered>);

@@ -1371,7 +1371,9 @@ let fun_tparam_name i = "F" ^ string_of_int i
 
 let fun_tparam_id i = Id.of_string (fun_tparam_name i)
 
-let field_param_name i = "d_a" ^ string_of_int i
+let field_param_name i =
+  if Table.std_lib () = "BDE" then "d_a" ^ string_of_int i
+  else "a" ^ string_of_int i
 
 let field_param_id i = Id.of_string (field_param_name i)
 
@@ -1432,9 +1434,19 @@ let db_fallback_name i = "_db" ^ string_of_int i
 
 let db_fallback_id i = Id.of_string (db_fallback_name i)
 
-let tparam_name id = Id.of_string ("t_" ^ Id.to_string id)
+let tparam_name id =
+  if Table.std_lib () = "BDE" then Id.of_string ("t_" ^ Id.to_string id)
+  else id
 
-let enum_ctor_name s = "e_" ^ String.uppercase_ascii s
+let dangerous_macros =
+  [ "TRUE"; "FALSE"; "NULL"; "EOF"; "DOMAIN"; "OVERFLOW"; "UNDERFLOW";
+    "HUGE_VAL"; "ERANGE"; "STDIN"; "STDOUT"; "STDERR" ]
+
+let enum_ctor_name s =
+  let upper = String.uppercase_ascii s in
+  if Table.std_lib () = "BDE" then "e_" ^ upper
+  else if List.mem upper dangerous_macros then upper ^ "_"
+  else upper
 
 (** Compute the C++ enum constructor name for a single constructor [Id.t],
     applying prime-to-underscore escaping.  Does not perform collision

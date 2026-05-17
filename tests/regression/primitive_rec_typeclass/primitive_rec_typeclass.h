@@ -3,8 +3,8 @@
 
 #include <concepts>
 
-template <typename I, typename t_A>
-concept HasNorm = requires(t_A a0) {
+template <typename I, typename A>
+concept HasNorm = requires(A a0) {
   { I::norm(a0) } -> std::convertible_to<unsigned int>;
 };
 

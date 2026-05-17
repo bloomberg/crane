@@ -6,10 +6,10 @@ unsigned int InstructionClassifiers::count_writes_acc(
           typename List<InstructionClassifiers::instr_acc>::Nil>(prog.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_acc>::Cons>(
             prog.v());
-    return ((d_a0.writes_acc() ? 1u : 0u) + count_writes_acc(*d_a1));
+    return ((a0.writes_acc() ? 1u : 0u) + count_writes_acc(*a1));
   }
 }
 
@@ -19,10 +19,10 @@ unsigned int InstructionClassifiers::count_writes_ram(
           typename List<InstructionClassifiers::instr_ram>::Nil>(prog.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_ram>::Cons>(
             prog.v());
-    return ((d_a0.writes_ram() ? 1u : 0u) + count_writes_ram(*d_a1));
+    return ((a0.writes_ram() ? 1u : 0u) + count_writes_ram(*a1));
   }
 }
 
@@ -32,10 +32,10 @@ unsigned int InstructionClassifiers::count_writes_regs(
           typename List<InstructionClassifiers::instr_regs>::Nil>(prog.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_regs>::Cons>(
             prog.v());
-    return ((d_a0.writes_regs() ? 1u : 0u) + count_writes_regs(*d_a1));
+    return ((a0.writes_regs() ? 1u : 0u) + count_writes_regs(*a1));
   }
 }
 
@@ -45,9 +45,9 @@ unsigned int InstructionClassifiers::count_jumps(
           typename List<InstructionClassifiers::instr_jump>::Nil>(prog.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionClassifiers::instr_jump>::Cons>(
             prog.v());
-    return ((d_a0.is_jump() ? 1u : 0u) + count_jumps(*d_a1));
+    return ((a0.is_jump() ? 1u : 0u) + count_jumps(*a1));
   }
 }

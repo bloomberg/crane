@@ -5,7 +5,7 @@ template <typename M>
 concept MinSIG = requires { typename M::template otherE<void>; };
 
 struct RocqBug14100 {
-  enum class NondetE { e_OR };
+  enum class NondetE { OR };
 
   struct Min {
     template <typename x> using otherE = NondetE;

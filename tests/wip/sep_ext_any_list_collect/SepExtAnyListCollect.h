@@ -29,8 +29,8 @@ template <SymTypes Ty> struct ListCollect {
           if (std::holds_alternative<typename Datatypes::Nat::O>(n0.v())) {
             return acc;
           } else {
-            const auto &[d_a0] = std::get<typename Datatypes::Nat::S>(n0.v());
-            return _self_go(_self_go, *d_a0,
+            const auto &[a0] = std::get<typename Datatypes::Nat::S>(n0.v());
+            return _self_go(_self_go, *a0,
                             Datatypes::template List<std::any>::cons(
                                 default0, std::move(acc)));
           }
@@ -52,10 +52,10 @@ template <SymTypes Ty> struct ListCollect {
             typename Datatypes::template List<symbols_semty>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename Datatypes::template List<symbols_semty>::Cons>(
               l.v());
-      return std::any_cast<std::pair<std::any, std::any>>(d_a0).first;
+      return std::any_cast<std::pair<std::any, std::any>>(a0).first;
     }
   }
 

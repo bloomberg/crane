@@ -7,50 +7,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a0;
+    std::unique_ptr<List<A>> a1;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -59,17 +59,17 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ =
+            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -79,30 +79,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a0, List<A> a1) {
+    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -116,21 +114,21 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
-enum class Comparison { e_EQ, e_LT, e_GT };
+enum class Comparison { EQ, LT, GT };
 
 struct Positive {
   // TYPES
   struct XI {
-    std::unique_ptr<Positive> d_a0;
+    std::unique_ptr<Positive> a0;
   };
 
   struct XO {
-    std::unique_ptr<Positive> d_a0;
+    std::unique_ptr<Positive> a0;
   };
 
   struct XH {};
@@ -139,29 +137,29 @@ struct Positive {
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Positive() {}
 
-  explicit Positive(XI _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XI _v) : v_(std::move(_v)) {}
 
-  explicit Positive(XO _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XO _v) : v_(std::move(_v)) {}
 
-  explicit Positive(XH _v) : d_v_(_v) {}
+  explicit Positive(XH _v) : v_(_v) {}
 
-  Positive(const Positive &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Positive(Positive &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Positive(Positive &&_other) : v_(std::move(_other.v_)) {}
 
   Positive &operator=(const Positive &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Positive &operator=(Positive &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -184,20 +182,20 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XI>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = XI{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XI>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XO>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = XO{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XO>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
-        _dst->d_v_ = XH{};
+        _dst->v_ = XH{};
       }
     }
     return _out;
@@ -219,16 +217,16 @@ public:
     std::vector<std::unique_ptr<Positive>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
-      if (std::holds_alternative<XI>(_node.d_v_)) {
-        auto &_alt = std::get<XI>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<XI>(_node.v_)) {
+        auto &_alt = std::get<XI>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<XO>(_node.d_v_)) {
-        auto &_alt = std::get<XO>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<XO>(_node.v_)) {
+        auto &_alt = std::get<XO>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -242,10 +240,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Z {
@@ -253,40 +251,40 @@ struct Z {
   struct Z0 {};
 
   struct Zpos {
-    Positive d_a0;
+    Positive a0;
   };
 
   struct Zneg {
-    Positive d_a0;
+    Positive a0;
   };
 
   using variant_t = std::variant<Z0, Zpos, Zneg>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Z() {}
 
-  explicit Z(Z0 _v) : d_v_(_v) {}
+  explicit Z(Z0 _v) : v_(_v) {}
 
-  explicit Z(Zpos _v) : d_v_(std::move(_v)) {}
+  explicit Z(Zpos _v) : v_(std::move(_v)) {}
 
-  explicit Z(Zneg _v) : d_v_(std::move(_v)) {}
+  explicit Z(Zneg _v) : v_(std::move(_v)) {}
 
-  Z(const Z &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Z(Z &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Z(Z &&_other) : v_(std::move(_other.v_)) {}
 
   Z &operator=(const Z &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
   Z &operator=(Z &&_other) {
-    d_v_ = std::move(_other.d_v_);
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -295,11 +293,11 @@ public:
     if (std::holds_alternative<Z0>(this->v())) {
       return Z(Z0{});
     } else if (std::holds_alternative<Zpos>(this->v())) {
-      const auto &[d_a0] = std::get<Zpos>(this->v());
-      return Z(Zpos{d_a0.clone()});
+      const auto &[a0] = std::get<Zpos>(this->v());
+      return Z(Zpos{a0.clone()});
     } else {
-      const auto &[d_a0] = std::get<Zneg>(this->v());
-      return Z(Zneg{d_a0.clone()});
+      const auto &[a0] = std::get<Zneg>(this->v());
+      return Z(Zneg{a0.clone()});
     }
   }
 
@@ -311,10 +309,10 @@ public:
   static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Pos {
@@ -332,11 +330,11 @@ struct Pos {
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
-      const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
-      return op(a, iter_op<T1>(op, *d_a0, op(a, a)));
+      const auto &[a0] = std::get<typename Positive::XI>(p.v());
+      return op(a, iter_op<T1>(op, *a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-      const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
-      return iter_op<T1>(op, *d_a0, op(a, a));
+      const auto &[a0] = std::get<typename Positive::XO>(p.v());
+      return iter_op<T1>(op, *a0, op(a, a));
     } else {
       return a;
     }
@@ -383,26 +381,21 @@ struct Datatypes {
 };
 
 struct EpochCellGlyphTraceCase {
-  enum class LunarPhase {
-    e_NEWMOON,
-    e_FIRSTQUARTER,
-    e_FULLMOON,
-    e_LASTQUARTER
-  };
+  enum class LunarPhase { NEWMOON, FIRSTQUARTER, FULLMOON, LASTQUARTER };
 
   template <typename T1>
   static T1 LunarPhase_rect(T1 f, T1 f0, T1 f1, T1 f2, LunarPhase l) {
     switch (l) {
-    case LunarPhase::e_NEWMOON: {
+    case LunarPhase::NEWMOON: {
       return f;
     }
-    case LunarPhase::e_FIRSTQUARTER: {
+    case LunarPhase::FIRSTQUARTER: {
       return f0;
     }
-    case LunarPhase::e_FULLMOON: {
+    case LunarPhase::FULLMOON: {
       return f1;
     }
-    case LunarPhase::e_LASTQUARTER: {
+    case LunarPhase::LASTQUARTER: {
       return f2;
     }
     default:
@@ -413,16 +406,16 @@ struct EpochCellGlyphTraceCase {
   template <typename T1>
   static T1 LunarPhase_rec(T1 f, T1 f0, T1 f1, T1 f2, LunarPhase l) {
     switch (l) {
-    case LunarPhase::e_NEWMOON: {
+    case LunarPhase::NEWMOON: {
       return f;
     }
-    case LunarPhase::e_FIRSTQUARTER: {
+    case LunarPhase::FIRSTQUARTER: {
       return f0;
     }
-    case LunarPhase::e_FULLMOON: {
+    case LunarPhase::FULLMOON: {
       return f1;
     }
-    case LunarPhase::e_LASTQUARTER: {
+    case LunarPhase::LASTQUARTER: {
       return f2;
     }
     default:
@@ -433,58 +426,58 @@ struct EpochCellGlyphTraceCase {
   static unsigned int phase_code(LunarPhase p);
   static LunarPhase phase_from_angle(const Z &angle_deg);
   enum class ZodiacSign {
-    e_ARIES,
-    e_TAURUS,
-    e_GEMINI,
-    e_CANCER,
-    e_LEO,
-    e_VIRGO,
-    e_LIBRA,
-    e_SCORPIO,
-    e_SAGITTARIUS,
-    e_CAPRICORN,
-    e_AQUARIUS,
-    e_PISCES
+    ARIES,
+    TAURUS,
+    GEMINI,
+    CANCER,
+    LEO,
+    VIRGO,
+    LIBRA,
+    SCORPIO,
+    SAGITTARIUS,
+    CAPRICORN,
+    AQUARIUS,
+    PISCES
   };
 
   template <typename T1>
   static T1 ZodiacSign_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                             T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, ZodiacSign z) {
     switch (z) {
-    case ZodiacSign::e_ARIES: {
+    case ZodiacSign::ARIES: {
       return f;
     }
-    case ZodiacSign::e_TAURUS: {
+    case ZodiacSign::TAURUS: {
       return f0;
     }
-    case ZodiacSign::e_GEMINI: {
+    case ZodiacSign::GEMINI: {
       return f1;
     }
-    case ZodiacSign::e_CANCER: {
+    case ZodiacSign::CANCER: {
       return f2;
     }
-    case ZodiacSign::e_LEO: {
+    case ZodiacSign::LEO: {
       return f3;
     }
-    case ZodiacSign::e_VIRGO: {
+    case ZodiacSign::VIRGO: {
       return f4;
     }
-    case ZodiacSign::e_LIBRA: {
+    case ZodiacSign::LIBRA: {
       return f5;
     }
-    case ZodiacSign::e_SCORPIO: {
+    case ZodiacSign::SCORPIO: {
       return f6;
     }
-    case ZodiacSign::e_SAGITTARIUS: {
+    case ZodiacSign::SAGITTARIUS: {
       return f7;
     }
-    case ZodiacSign::e_CAPRICORN: {
+    case ZodiacSign::CAPRICORN: {
       return f8;
     }
-    case ZodiacSign::e_AQUARIUS: {
+    case ZodiacSign::AQUARIUS: {
       return f9;
     }
-    case ZodiacSign::e_PISCES: {
+    case ZodiacSign::PISCES: {
       return f10;
     }
     default:
@@ -496,40 +489,40 @@ struct EpochCellGlyphTraceCase {
   static T1 ZodiacSign_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                            T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, ZodiacSign z) {
     switch (z) {
-    case ZodiacSign::e_ARIES: {
+    case ZodiacSign::ARIES: {
       return f;
     }
-    case ZodiacSign::e_TAURUS: {
+    case ZodiacSign::TAURUS: {
       return f0;
     }
-    case ZodiacSign::e_GEMINI: {
+    case ZodiacSign::GEMINI: {
       return f1;
     }
-    case ZodiacSign::e_CANCER: {
+    case ZodiacSign::CANCER: {
       return f2;
     }
-    case ZodiacSign::e_LEO: {
+    case ZodiacSign::LEO: {
       return f3;
     }
-    case ZodiacSign::e_VIRGO: {
+    case ZodiacSign::VIRGO: {
       return f4;
     }
-    case ZodiacSign::e_LIBRA: {
+    case ZodiacSign::LIBRA: {
       return f5;
     }
-    case ZodiacSign::e_SCORPIO: {
+    case ZodiacSign::SCORPIO: {
       return f6;
     }
-    case ZodiacSign::e_SAGITTARIUS: {
+    case ZodiacSign::SAGITTARIUS: {
       return f7;
     }
-    case ZodiacSign::e_CAPRICORN: {
+    case ZodiacSign::CAPRICORN: {
       return f8;
     }
-    case ZodiacSign::e_AQUARIUS: {
+    case ZodiacSign::AQUARIUS: {
       return f9;
     }
-    case ZodiacSign::e_PISCES: {
+    case ZodiacSign::PISCES: {
       return f10;
     }
     default:
@@ -584,30 +577,30 @@ struct EpochCellGlyphTraceCase {
   static Z predict_olympiad_year(const MechanismState &s);
   static ZodiacSign predict_zodiac_sign(const MechanismState &s);
   enum class EclipseCategory {
-    e_EC_TOTALLUNAR,
-    e_EC_PARTIALLUNAR,
-    e_EC_TOTALSOLAR,
-    e_EC_ANNULARSOLAR,
-    e_EC_PARTIALSOLAR
+    EC_TOTALLUNAR,
+    EC_PARTIALLUNAR,
+    EC_TOTALSOLAR,
+    EC_ANNULARSOLAR,
+    EC_PARTIALSOLAR
   };
 
   template <typename T1>
   static T1 EclipseCategory_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
                                  EclipseCategory e) {
     switch (e) {
-    case EclipseCategory::e_EC_TOTALLUNAR: {
+    case EclipseCategory::EC_TOTALLUNAR: {
       return f;
     }
-    case EclipseCategory::e_EC_PARTIALLUNAR: {
+    case EclipseCategory::EC_PARTIALLUNAR: {
       return f0;
     }
-    case EclipseCategory::e_EC_TOTALSOLAR: {
+    case EclipseCategory::EC_TOTALSOLAR: {
       return f1;
     }
-    case EclipseCategory::e_EC_ANNULARSOLAR: {
+    case EclipseCategory::EC_ANNULARSOLAR: {
       return f2;
     }
-    case EclipseCategory::e_EC_PARTIALSOLAR: {
+    case EclipseCategory::EC_PARTIALSOLAR: {
       return f3;
     }
     default:
@@ -619,19 +612,19 @@ struct EpochCellGlyphTraceCase {
   static T1 EclipseCategory_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
                                 EclipseCategory e) {
     switch (e) {
-    case EclipseCategory::e_EC_TOTALLUNAR: {
+    case EclipseCategory::EC_TOTALLUNAR: {
       return f;
     }
-    case EclipseCategory::e_EC_PARTIALLUNAR: {
+    case EclipseCategory::EC_PARTIALLUNAR: {
       return f0;
     }
-    case EclipseCategory::e_EC_TOTALSOLAR: {
+    case EclipseCategory::EC_TOTALSOLAR: {
       return f1;
     }
-    case EclipseCategory::e_EC_ANNULARSOLAR: {
+    case EclipseCategory::EC_ANNULARSOLAR: {
       return f2;
     }
-    case EclipseCategory::e_EC_PARTIALSOLAR: {
+    case EclipseCategory::EC_PARTIALSOLAR: {
       return f3;
     }
     default:
@@ -661,29 +654,29 @@ struct EpochCellGlyphTraceCase {
     }
   };
   enum class DialGlyph {
-    e_GLYPH_SIGMA,
-    e_GLYPH_ETA,
-    e_GLYPH_SIGMATOTAL,
-    e_GLYPH_ETAANNULAR,
-    e_GLYPH_EMPTY
+    GLYPH_SIGMA,
+    GLYPH_ETA,
+    GLYPH_SIGMATOTAL,
+    GLYPH_ETAANNULAR,
+    GLYPH_EMPTY
   };
 
   template <typename T1>
   static T1 DialGlyph_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, DialGlyph d) {
     switch (d) {
-    case DialGlyph::e_GLYPH_SIGMA: {
+    case DialGlyph::GLYPH_SIGMA: {
       return f;
     }
-    case DialGlyph::e_GLYPH_ETA: {
+    case DialGlyph::GLYPH_ETA: {
       return f0;
     }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+    case DialGlyph::GLYPH_SIGMATOTAL: {
       return f1;
     }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
+    case DialGlyph::GLYPH_ETAANNULAR: {
       return f2;
     }
-    case DialGlyph::e_GLYPH_EMPTY: {
+    case DialGlyph::GLYPH_EMPTY: {
       return f3;
     }
     default:
@@ -694,19 +687,19 @@ struct EpochCellGlyphTraceCase {
   template <typename T1>
   static T1 DialGlyph_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, DialGlyph d) {
     switch (d) {
-    case DialGlyph::e_GLYPH_SIGMA: {
+    case DialGlyph::GLYPH_SIGMA: {
       return f;
     }
-    case DialGlyph::e_GLYPH_ETA: {
+    case DialGlyph::GLYPH_ETA: {
       return f0;
     }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+    case DialGlyph::GLYPH_SIGMATOTAL: {
       return f1;
     }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
+    case DialGlyph::GLYPH_ETAANNULAR: {
       return f2;
     }
-    case DialGlyph::e_GLYPH_EMPTY: {
+    case DialGlyph::GLYPH_EMPTY: {
       return f3;
     }
     default:
@@ -722,7 +715,7 @@ struct EpochCellGlyphTraceCase {
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
       Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xh())))),
-      EclipseCategory::e_EC_TOTALLUNAR,
+      EclipseCategory::EC_TOTALLUNAR,
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
       Z::zpos(Positive::xo(Positive::xi(
@@ -738,7 +731,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xh())))),
       Z::zpos(Positive::xi(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))),
-      EclipseCategory::e_EC_TOTALLUNAR,
+      EclipseCategory::EC_TOTALLUNAR,
       Z::zpos(Positive::xi(Positive::xo(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))),
       Z::zpos(Positive::xo(Positive::xo(
@@ -753,7 +746,7 @@ struct EpochCellGlyphTraceCase {
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
       Z::zpos(Positive::xh()),
-      EclipseCategory::e_EC_PARTIALSOLAR,
+      EclipseCategory::EC_PARTIALSOLAR,
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
       Z::zpos(Positive::xi(Positive::xi(
@@ -769,7 +762,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))),
       Z::zpos(Positive::xo(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
-      EclipseCategory::e_EC_TOTALLUNAR,
+      EclipseCategory::EC_TOTALLUNAR,
       Z::zpos(Positive::xi(Positive::xi(
           Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
       Z::zpos(Positive::xi(
@@ -784,7 +777,7 @@ struct EpochCellGlyphTraceCase {
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xh())),
       Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xh())))),
-      EclipseCategory::e_EC_TOTALLUNAR,
+      EclipseCategory::EC_TOTALLUNAR,
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
       Z::zpos(Positive::xi(Positive::xi(
@@ -800,7 +793,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xo(Positive::xi(Positive::xh()))),
       Z::zpos(Positive::xi(
           Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))),
-      EclipseCategory::e_EC_TOTALLUNAR,
+      EclipseCategory::EC_TOTALLUNAR,
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
       Z::zpos(Positive::xo(Positive::xo(

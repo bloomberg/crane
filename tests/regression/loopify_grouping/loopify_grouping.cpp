@@ -10,10 +10,10 @@ LoopifyGrouping::prepend_to_groups(unsigned int x, bool same,
           List<unsigned int>::cons(x, List<unsigned int>::nil()),
           List<List<unsigned int>>::nil());
     } else {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename List<List<unsigned int>>::Cons>(groups.v_mut());
       return List<List<unsigned int>>::cons(
-          List<unsigned int>::cons(x, std::move(d_a0)), *d_a1);
+          List<unsigned int>::cons(x, std::move(a0)), *a1);
     }
   } else {
     return List<List<unsigned int>>::cons(
@@ -32,11 +32,11 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
     unsigned int fuel;
   };
 
-  /// _Cont_Cons: saves [d_a0, d_a00], resumes after recursive call, then
-  /// processes rest.
+  /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then processes
+  /// rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
-    unsigned int d_a00;
+    unsigned int a0;
+    unsigned int a00;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -59,29 +59,29 @@ List<List<unsigned int>> LoopifyGrouping::group_fuel(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = List<List<unsigned int>>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv0 = *d_a1;
+          auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv0.v())) {
             _result = List<List<unsigned int>>::cons(
-                List<unsigned int>::cons(d_a0, List<unsigned int>::nil()),
+                List<unsigned int>::cons(a0, List<unsigned int>::nil()),
                 List<List<unsigned int>>::nil());
           } else {
-            const auto &[d_a00, d_a10] =
+            const auto &[a00, a10] =
                 std::get<typename List<unsigned int>::Cons>(_sv0.v());
-            _stack.emplace_back(_Cont_Cons{d_a0, d_a00});
+            _stack.emplace_back(_Cont_Cons{a0, a00});
             _stack.emplace_back(
-                _Enter{List<unsigned int>::cons(d_a00, *d_a10), fuel_});
+                _Enter{List<unsigned int>::cons(a00, *a10), fuel_});
           }
         }
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
-      unsigned int d_a00 = _f.d_a00;
+      unsigned int a0 = _f.a0;
+      unsigned int a00 = _f.a00;
       List<List<unsigned int>> rec_result = _result;
-      _result = prepend_to_groups(d_a0, d_a0 == d_a00, std::move(rec_result));
+      _result = prepend_to_groups(a0, a0 == a00, std::move(rec_result));
     }
   }
   return _result;
@@ -100,13 +100,13 @@ bool LoopifyGrouping::elem(unsigned int x, const List<unsigned int> &l) {
       _result = false;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if (x == d_a0) {
+      if (x == a0) {
         _result = true;
         break;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }
@@ -121,10 +121,9 @@ List<unsigned int> LoopifyGrouping::nub(
     const List<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -142,19 +141,19 @@ List<unsigned int> LoopifyGrouping::nub(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       List<unsigned int> rest = _result;
-      if (elem(d_a0, rest)) {
+      if (elem(a0, rest)) {
         _result = std::move(rest);
       } else {
-        _result = List<unsigned int>::cons(d_a0, std::move(rest));
+        _result = List<unsigned int>::cons(a0, std::move(rest));
       }
     }
   }
@@ -172,19 +171,18 @@ List<unsigned int> LoopifyGrouping::remove_elem(unsigned int x,
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if (x == d_a0) {
-        _loop_l = d_a1.get();
+      if (x == a0) {
+        _loop_l = a1.get();
         continue;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = a1.get();
         continue;
       }
     }
@@ -202,10 +200,10 @@ LoopifyGrouping::partition3(
     const List<unsigned int> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0, pivot], resumes after recursive call, then
+  /// _Cont_Cons: saves [a0, pivot], resumes after recursive call, then
   /// processes rest.
   struct _Cont_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
     unsigned int pivot;
   };
 
@@ -228,31 +226,30 @@ LoopifyGrouping::partition3(
                                                 List<unsigned int>::nil()),
                                  List<unsigned int>::nil());
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0, pivot});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0, pivot});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int d_a0 = _f.d_a0;
+      unsigned int a0 = _f.a0;
       unsigned int pivot = _f.pivot;
       const std::pair<List<unsigned int>, List<unsigned int>> &p =
           _result.first;
       const List<unsigned int> &greater = _result.second;
       const List<unsigned int> &less = p.first;
       const List<unsigned int> &equal = p.second;
-      if (d_a0 < pivot) {
+      if (a0 < pivot) {
         _result = std::make_pair(
-            std::make_pair(List<unsigned int>::cons(d_a0, less), equal),
-            greater);
+            std::make_pair(List<unsigned int>::cons(a0, less), equal), greater);
       } else {
-        if (pivot < d_a0) {
+        if (pivot < a0) {
           _result = std::make_pair(std::make_pair(less, equal),
-                                   List<unsigned int>::cons(d_a0, greater));
+                                   List<unsigned int>::cons(a0, greater));
         } else {
           _result = std::make_pair(
-              std::make_pair(less, List<unsigned int>::cons(d_a0, equal)),
+              std::make_pair(less, List<unsigned int>::cons(a0, equal)),
               greater);
         }
       }
@@ -290,13 +287,13 @@ unsigned int LoopifyGrouping::count_elem(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        if (x == d_a0) {
+        if (x == a0) {
           _stack.emplace_back(_Resume1{1u});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         } else {
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
@@ -319,15 +316,15 @@ LoopifyGrouping::group_pairs(const List<unsigned int> &l) {
           List<std::pair<unsigned int, unsigned int>>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto &&_sv = *d_a1;
+      auto &&_sv = *a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
         *_write = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
             List<std::pair<unsigned int, unsigned int>>::nil());
         break;
       } else {
-        auto &&_sv1 = *d_a1;
+        auto &&_sv1 = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _sv1.v())) {
           *_write =
@@ -335,19 +332,19 @@ LoopifyGrouping::group_pairs(const List<unsigned int> &l) {
                   List<std::pair<unsigned int, unsigned int>>::nil());
           break;
         } else {
-          const auto &[d_a01, d_a11] =
+          const auto &[a01, a11] =
               std::get<typename List<unsigned int>::Cons>(_sv1.v());
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(d_a0, d_a01), nullptr));
+                      std::make_pair(a0, a01), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
-          _loop_l = d_a11.get();
+                   .a1;
+          _loop_l = a11.get();
           continue;
         }
       }

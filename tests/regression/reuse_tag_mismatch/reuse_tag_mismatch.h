@@ -22,49 +22,49 @@ struct ReuseTagMismatch {
   struct direction {
     // TYPES
     struct GoUp {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct GoDown {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     using variant_t = std::variant<GoUp, GoDown>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     direction() {}
 
-    explicit direction(GoUp _v) : d_v_(std::move(_v)) {}
+    explicit direction(GoUp _v) : v_(std::move(_v)) {}
 
-    explicit direction(GoDown _v) : d_v_(std::move(_v)) {}
+    explicit direction(GoDown _v) : v_(std::move(_v)) {}
 
-    direction(const direction &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    direction(const direction &_other) : v_(std::move(_other.clone().v_)) {}
 
-    direction(direction &&_other) : d_v_(std::move(_other.d_v_)) {}
+    direction(direction &&_other) : v_(std::move(_other.v_)) {}
 
     direction &operator=(const direction &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     direction &operator=(direction &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     direction clone() const {
       if (std::holds_alternative<GoUp>(this->v())) {
-        const auto &[d_a0] = std::get<GoUp>(this->v());
-        return direction(GoUp{d_a0});
+        const auto &[a0] = std::get<GoUp>(this->v());
+        return direction(GoUp{a0});
       } else {
-        const auto &[d_a0] = std::get<GoDown>(this->v());
-        return direction(GoDown{d_a0});
+        const auto &[a0] = std::get<GoDown>(this->v());
+        return direction(GoDown{a0});
       }
     }
 
@@ -74,10 +74,10 @@ struct ReuseTagMismatch {
     static direction godown(unsigned int a0) { return direction(GoDown{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1>
@@ -85,11 +85,11 @@ struct ReuseTagMismatch {
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 direction_rect(F0 &&f, F1 &&f0, const direction &d) {
     if (std::holds_alternative<typename direction::GoUp>(d.v())) {
-      const auto &[d_a0] = std::get<typename direction::GoUp>(d.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename direction::GoUp>(d.v());
+      return f(a0);
     } else {
-      const auto &[d_a0] = std::get<typename direction::GoDown>(d.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename direction::GoDown>(d.v());
+      return f0(a0);
     }
   }
 
@@ -98,11 +98,11 @@ struct ReuseTagMismatch {
              std::is_invocable_r_v<T1, F1 &, unsigned int &>
   static T1 direction_rec(F0 &&f, F1 &&f0, const direction &d) {
     if (std::holds_alternative<typename direction::GoUp>(d.v())) {
-      const auto &[d_a0] = std::get<typename direction::GoUp>(d.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename direction::GoUp>(d.v());
+      return f(a0);
     } else {
-      const auto &[d_a0] = std::get<typename direction::GoDown>(d.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename direction::GoDown>(d.v());
+      return f0(a0);
     }
   }
 
@@ -138,11 +138,11 @@ struct ReuseTagMismatch {
   static inline const unsigned int test4 = []() {
     auto &&_sv3 = id_or_flip(direction::goup(10u), true);
     if (std::holds_alternative<typename direction::GoUp>(_sv3.v())) {
-      const auto &[d_a03] = std::get<typename direction::GoUp>(_sv3.v());
-      return (d_a03 + 1000u);
+      const auto &[a03] = std::get<typename direction::GoUp>(_sv3.v());
+      return (a03 + 1000u);
     } else {
-      const auto &[d_a03] = std::get<typename direction::GoDown>(_sv3.v());
-      return d_a03;
+      const auto &[a03] = std::get<typename direction::GoDown>(_sv3.v());
+      return a03;
     }
   }();
 };

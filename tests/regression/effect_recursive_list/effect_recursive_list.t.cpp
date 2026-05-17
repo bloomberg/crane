@@ -11,8 +11,8 @@ std::vector<T> to_vec(const List<T>& lst) {
     const List<T> *cur = &lst;
     while (std::holds_alternative<typename List<T>::Cons>(cur->v())) {
         auto& cons = std::get<typename List<T>::Cons>(cur->v());
-        result.push_back(cons.d_a0);
-        cur = cons.d_a1.get();
+        result.push_back(cons.a0);
+        cur = cons.a1.get();
     }
     return result;
 }

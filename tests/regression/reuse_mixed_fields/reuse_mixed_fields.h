@@ -10,51 +10,51 @@ struct ReuseMixedFields {
   struct payload {
     // TYPES
     struct AsNat {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      unsigned int a0;
+      unsigned int a1;
     };
 
     struct AsPair {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      unsigned int a0;
+      unsigned int a1;
     };
 
     using variant_t = std::variant<AsNat, AsPair>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     payload() {}
 
-    explicit payload(AsNat _v) : d_v_(std::move(_v)) {}
+    explicit payload(AsNat _v) : v_(std::move(_v)) {}
 
-    explicit payload(AsPair _v) : d_v_(std::move(_v)) {}
+    explicit payload(AsPair _v) : v_(std::move(_v)) {}
 
-    payload(const payload &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    payload(const payload &_other) : v_(std::move(_other.clone().v_)) {}
 
-    payload(payload &&_other) : d_v_(std::move(_other.d_v_)) {}
+    payload(payload &&_other) : v_(std::move(_other.v_)) {}
 
     payload &operator=(const payload &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     payload &operator=(payload &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     payload clone() const {
       if (std::holds_alternative<AsNat>(this->v())) {
-        const auto &[d_a0, d_a1] = std::get<AsNat>(this->v());
-        return payload(AsNat{d_a0, d_a1});
+        const auto &[a0, a1] = std::get<AsNat>(this->v());
+        return payload(AsNat{a0, a1});
       } else {
-        const auto &[d_a0, d_a1] = std::get<AsPair>(this->v());
-        return payload(AsPair{d_a0, d_a1});
+        const auto &[a0, a1] = std::get<AsPair>(this->v());
+        return payload(AsPair{a0, a1});
       }
     }
 
@@ -68,10 +68,10 @@ struct ReuseMixedFields {
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1>
@@ -79,11 +79,11 @@ struct ReuseMixedFields {
              std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
   static T1 payload_rect(F0 &&f, F1 &&f0, const payload &p) {
     if (std::holds_alternative<typename payload::AsNat>(p.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename payload::AsNat>(p.v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename payload::AsNat>(p.v());
+      return f(a0, a1);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename payload::AsPair>(p.v());
-      return f0(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename payload::AsPair>(p.v());
+      return f0(a0, a1);
     }
   }
 
@@ -92,11 +92,11 @@ struct ReuseMixedFields {
              std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
   static T1 payload_rec(F0 &&f, F1 &&f0, const payload &p) {
     if (std::holds_alternative<typename payload::AsNat>(p.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename payload::AsNat>(p.v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename payload::AsNat>(p.v());
+      return f(a0, a1);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename payload::AsPair>(p.v());
-      return f0(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename payload::AsPair>(p.v());
+      return f0(a0, a1);
     }
   }
 
@@ -111,11 +111,11 @@ struct ReuseMixedFields {
   static inline const unsigned int test1 = []() {
     auto &&_sv0 = swap_tag_or_id(payload::asnat(10u, 20u), true);
     if (std::holds_alternative<typename payload::AsNat>(_sv0.v())) {
-      const auto &[d_a00, d_a10] = std::get<typename payload::AsNat>(_sv0.v());
-      return (d_a00 + 1000u);
+      const auto &[a00, a10] = std::get<typename payload::AsNat>(_sv0.v());
+      return (a00 + 1000u);
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename payload::AsPair>(_sv0.v());
-      return d_a00;
+      const auto &[a00, a10] = std::get<typename payload::AsPair>(_sv0.v());
+      return a00;
     }
   }();
   /// test2: chain two swaps. Should be identity.
@@ -127,11 +127,11 @@ struct ReuseMixedFields {
     auto &&_sv1 =
         swap_tag_or_id(swap_tag_or_id(payload::asnat(5u, 6u), true), true);
     if (std::holds_alternative<typename payload::AsNat>(_sv1.v())) {
-      const auto &[d_a01, d_a11] = std::get<typename payload::AsNat>(_sv1.v());
-      return ((d_a01 * 10u) + d_a11);
+      const auto &[a01, a11] = std::get<typename payload::AsNat>(_sv1.v());
+      return ((a01 * 10u) + a11);
     } else {
-      const auto &[d_a01, d_a11] = std::get<typename payload::AsPair>(_sv1.v());
-      return (((d_a01 * 10u) + d_a11) + 1000u);
+      const auto &[a01, a11] = std::get<typename payload::AsPair>(_sv1.v());
+      return (((a01 * 10u) + a11) + 1000u);
     }
   }();
 };

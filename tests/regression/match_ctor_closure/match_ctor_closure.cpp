@@ -9,11 +9,11 @@ MatchCtorClosure::match_and_box(const MatchCtorClosure::tree &t) {
   if (std::holds_alternative<typename MatchCtorClosure::tree::Leaf>(t.v())) {
     return fn_box::box([](unsigned int x) { return x; });
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename MatchCtorClosure::tree::Node>(t.v());
-    MatchCtorClosure::tree d_a0_value = *d_a0;
+    MatchCtorClosure::tree a0_value = *a0;
     return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
-      return d_a0_value.sum_values(_x0);
+      return a0_value.sum_values(_x0);
     });
   }
 }

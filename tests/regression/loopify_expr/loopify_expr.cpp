@@ -31,27 +31,27 @@ unsigned int LoopifyExpr::sum_shapes(
               l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
         unsigned int val = [&]() {
           if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
-                  d_a0.v())) {
-            const auto &[d_a00] =
-                std::get<typename LoopifyExpr::shape::Circle>(d_a0.v());
-            return d_a00;
+                  a0.v())) {
+            const auto &[a00] =
+                std::get<typename LoopifyExpr::shape::Circle>(a0.v());
+            return a00;
           } else if (std::holds_alternative<
-                         typename LoopifyExpr::shape::Square>(d_a0.v())) {
-            const auto &[d_a00] =
-                std::get<typename LoopifyExpr::shape::Square>(d_a0.v());
-            return d_a00;
+                         typename LoopifyExpr::shape::Square>(a0.v())) {
+            const auto &[a00] =
+                std::get<typename LoopifyExpr::shape::Square>(a0.v());
+            return a00;
           } else {
-            const auto &[d_a00] =
-                std::get<typename LoopifyExpr::shape::Triangle>(d_a0.v());
-            return d_a00;
+            const auto &[a00] =
+                std::get<typename LoopifyExpr::shape::Triangle>(a0.v());
+            return a00;
           }
         }();
         _stack.emplace_back(_Resume_Cons{val});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -71,10 +71,9 @@ LoopifyExpr::count_by_shape(
     const List<LoopifyExpr::shape> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    LoopifyExpr::shape d_a0;
+    LoopifyExpr::shape a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -93,23 +92,22 @@ LoopifyExpr::count_by_shape(
               l.v())) {
         _result = std::make_pair(std::make_pair(0u, 0u), 0u);
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      LoopifyExpr::shape d_a0 = std::move(_f.d_a0);
+      LoopifyExpr::shape a0 = std::move(_f.a0);
       const std::pair<unsigned int, unsigned int> &p = _result.first;
       const unsigned int &t = _result.second;
       const unsigned int &c = p.first;
       const unsigned int &sq = p.second;
-      if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
-              d_a0.v())) {
+      if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(a0.v())) {
         _result = std::make_pair(std::make_pair((c + 1), sq), t);
       } else if (std::holds_alternative<typename LoopifyExpr::shape::Square>(
-                     d_a0.v())) {
+                     a0.v())) {
         _result = std::make_pair(std::make_pair(c, (sq + 1)), t);
       } else {
         _result = std::make_pair(std::make_pair(c, sq), (t + 1));

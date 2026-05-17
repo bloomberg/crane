@@ -12,16 +12,16 @@ LoopifyTreePaths::map_cons(unsigned int x, const List<List<unsigned int>> &ll) {
           List<List<unsigned int>>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
       auto _cell = std::make_unique<List<List<unsigned int>>>(
           typename List<List<unsigned int>>::Cons(
-              List<unsigned int>::cons(x, d_a0), nullptr));
+              List<unsigned int>::cons(x, a0), nullptr));
       *_write = std::move(_cell);
       _write =
           &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
-               .d_a1;
-      _loop_ll = d_a1.get();
+               .a1;
+      _loop_ll = a1.get();
       continue;
     }
   }

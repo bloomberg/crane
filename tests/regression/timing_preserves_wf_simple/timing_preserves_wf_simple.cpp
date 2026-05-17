@@ -7,10 +7,10 @@ bool TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
 
 unsigned int TimingPreservesWfSimple::cycles(TimingPreservesWfSimple::Instr i) {
   switch (i) {
-  case Instr::e_FIM: {
+  case Instr::FIM: {
     return 16u;
   }
-  case Instr::e_JMS: {
+  case Instr::JMS: {
     return 24u;
   }
   default: {
@@ -23,7 +23,7 @@ TimingPreservesWfSimple::state
 TimingPreservesWfSimple::execute(const TimingPreservesWfSimple::state &s,
                                  TimingPreservesWfSimple::Instr i) {
   switch (i) {
-  case Instr::e_JMS: {
+  case Instr::JMS: {
     return state{s.regs_len, s.rom_len, s.pc, (s.stack_len + 1)};
   }
   default: {

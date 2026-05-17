@@ -6,8 +6,7 @@ unsigned int DropHeadDefault::head_after_drop(const List<unsigned int> &rom,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    return d_a0;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(_sv.v());
+    return a0;
   }
 }

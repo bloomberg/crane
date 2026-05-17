@@ -2,11 +2,11 @@
 
 Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xo(succ(*d_a0));
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    return Positive::xo(succ(*a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*d_a0);
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xi(*a0);
   } else {
     return Positive::xo(Positive::xh());
   }
@@ -14,34 +14,34 @@ Positive Pos::succ(const Positive &x) {
 
 Positive Pos::add(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*a0, *a00));
     } else {
-      return Positive::xo(succ(*d_a0));
+      return Positive::xo(succ(*a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add(*a0, *a00));
     } else {
-      return Positive::xi(*d_a0);
+      return Positive::xi(*a0);
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(succ(*d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(succ(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(*d_a00);
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(*a00);
     } else {
       return Positive::xo(Positive::xh());
     }
@@ -50,34 +50,34 @@ Positive Pos::add(const Positive &x, const Positive &y) {
 
 Positive Pos::add_carry(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add_carry(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add_carry(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add_carry(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
     } else {
-      return Positive::xi(succ(*d_a0));
+      return Positive::xi(succ(*a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*a0, *a00));
     } else {
-      return Positive::xo(succ(*d_a0));
+      return Positive::xo(succ(*a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(succ(*d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(succ(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(succ(*d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(succ(*a00));
     } else {
       return Positive::xi(Positive::xh());
     }
@@ -86,11 +86,11 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
 
 Positive Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xi(Positive::xo(*d_a0));
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    return Positive::xi(Positive::xo(*a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(pred_double(*d_a0));
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xi(pred_double(*a0));
   } else {
     return Positive::xh();
   }
@@ -98,18 +98,18 @@ Positive Pos::pred_double(const Positive &x) {
 
 bool Pos::eqb(const Positive &p, const Positive &q) {
   if (std::holds_alternative<typename Positive::XI>(p.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
+    const auto &[a0] = std::get<typename Positive::XI>(p.v());
     if (std::holds_alternative<typename Positive::XI>(q.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(q.v());
-      return eqb(*d_a0, *d_a00);
+      const auto &[a00] = std::get<typename Positive::XI>(q.v());
+      return eqb(*a0, *a00);
     } else {
       return false;
     }
   } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
+    const auto &[a0] = std::get<typename Positive::XO>(p.v());
     if (std::holds_alternative<typename Positive::XO>(q.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(q.v());
-      return eqb(*d_a0, *d_a00);
+      const auto &[a00] = std::get<typename Positive::XO>(q.v());
+      return eqb(*a0, *a00);
     } else {
       return false;
     }
@@ -126,11 +126,11 @@ Z BinInt::double_(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    return Z::zpos(Positive::xo(d_a0));
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    return Z::zpos(Positive::xo(a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    return Z::zneg(Positive::xo(d_a0));
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    return Z::zneg(Positive::xo(a0));
   }
 }
 
@@ -138,11 +138,11 @@ Z BinInt::succ_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    return Z::zpos(Positive::xi(d_a0));
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    return Z::zpos(Positive::xi(a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    return Z::zneg(Pos::pred_double(d_a0));
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    return Z::zneg(Pos::pred_double(a0));
   }
 }
 
@@ -150,44 +150,44 @@ Z BinInt::pred_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zneg(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    return Z::zpos(Pos::pred_double(d_a0));
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    return Z::zpos(Pos::pred_double(a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    return Z::zneg(Positive::xi(d_a0));
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    return Z::zneg(Positive::xi(a0));
   }
 }
 
 Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return BinInt::double_(BinInt::pos_sub(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return BinInt::double_(BinInt::pos_sub(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return BinInt::succ_double(BinInt::pos_sub(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return BinInt::succ_double(BinInt::pos_sub(*a0, *a00));
     } else {
-      return Z::zpos(Positive::xo(*d_a0));
+      return Z::zpos(Positive::xo(*a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return BinInt::pred_double(BinInt::pos_sub(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return BinInt::pred_double(BinInt::pos_sub(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return BinInt::double_(BinInt::pos_sub(*d_a0, *d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return BinInt::double_(BinInt::pos_sub(*a0, *a00));
     } else {
-      return Z::zpos(Pos::pred_double(*d_a0));
+      return Z::zpos(Pos::pred_double(*a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Z::zneg(Positive::xo(*d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Z::zneg(Positive::xo(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Z::zneg(Pos::pred_double(*d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Z::zneg(Pos::pred_double(*a00));
     } else {
       return Z::z0();
     }
@@ -198,26 +198,26 @@ Z BinInt::add(Z x, Z y) {
   if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
-    auto &[d_a0] = std::get<typename Z::Zpos>(x.v_mut());
+    auto &[a0] = std::get<typename Z::Zpos>(x.v_mut());
     if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(std::move(d_a0), std::move(d_a00)));
+      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
+      return Z::zpos(Pos::add(std::move(a0), std::move(a00)));
     } else {
-      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(std::move(d_a0), std::move(d_a00));
+      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
+      return BinInt::pos_sub(std::move(a0), std::move(a00));
     }
   } else {
-    auto &[d_a0] = std::get<typename Z::Zneg>(x.v_mut());
+    auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
     if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(std::move(d_a00), std::move(d_a0));
+      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
+      return BinInt::pos_sub(std::move(a00), std::move(a0));
     } else {
-      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(std::move(d_a0), std::move(d_a00)));
+      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
+      return Z::zneg(Pos::add(std::move(a0), std::move(a00)));
     }
   }
 }
@@ -230,18 +230,18 @@ bool BinInt::eqb(const Z &x, const Z &y) {
       return false;
     }
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
     if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
-      return Pos::eqb(d_a0, d_a00);
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Pos::eqb(a0, a00);
     } else {
       return false;
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
     if (std::holds_alternative<typename Z::Zneg>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
-      return Pos::eqb(d_a0, d_a00);
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Pos::eqb(a0, a00);
     } else {
       return false;
     }
@@ -251,9 +251,9 @@ bool BinInt::eqb(const Z &x, const Z &y) {
 bool CoalitionBidHonorTraceCase::clan_eq_dec(
     CoalitionBidHonorTraceCase::Clan c1, CoalitionBidHonorTraceCase::Clan c2) {
   switch (c1) {
-  case Clan::e_CLANWOLF: {
+  case Clan::CLANWOLF: {
     switch (c2) {
-    case Clan::e_CLANWOLF: {
+    case Clan::CLANWOLF: {
       return true;
     }
     default: {
@@ -261,9 +261,9 @@ bool CoalitionBidHonorTraceCase::clan_eq_dec(
     }
     }
   }
-  case Clan::e_CLANJADEFALCON: {
+  case Clan::CLANJADEFALCON: {
     switch (c2) {
-    case Clan::e_CLANJADEFALCON: {
+    case Clan::CLANJADEFALCON: {
       return true;
     }
     default: {
@@ -271,9 +271,9 @@ bool CoalitionBidHonorTraceCase::clan_eq_dec(
     }
     }
   }
-  case Clan::e_CLANGHOSTBEAR: {
+  case Clan::CLANGHOSTBEAR: {
     switch (c2) {
-    case Clan::e_CLANGHOSTBEAR: {
+    case Clan::CLANGHOSTBEAR: {
       return true;
     }
     default: {
@@ -298,13 +298,13 @@ bool CoalitionBidHonorTraceCase::clan_eqb(CoalitionBidHonorTraceCase::Clan c1,
 unsigned int
 CoalitionBidHonorTraceCase::rank_to_nat(CoalitionBidHonorTraceCase::Rank r) {
   switch (r) {
-  case Rank::e_WARRIOR: {
+  case Rank::WARRIOR: {
     return 0u;
   }
-  case Rank::e_STARCAPTAIN: {
+  case Rank::STARCAPTAIN: {
     return 3u;
   }
-  case Rank::e_STARCOLONEL: {
+  case Rank::STARCOLONEL: {
     return 4u;
   }
   default:
@@ -319,19 +319,19 @@ bool CoalitionBidHonorTraceCase::rank_le(CoalitionBidHonorTraceCase::Rank r1,
 
 bool CoalitionBidHonorTraceCase::may_issue_batchall(
     const CoalitionBidHonorTraceCase::Commander &c) {
-  return rank_le(Rank::e_STARCAPTAIN, c.cmd_rank);
+  return rank_le(Rank::STARCAPTAIN, c.cmd_rank);
 }
 
 unsigned int CoalitionBidHonorTraceCase::weight_class_value(
     CoalitionBidHonorTraceCase::WeightClass w) {
   switch (w) {
-  case WeightClass::e_LIGHT: {
+  case WeightClass::LIGHT: {
     return 10u;
   }
-  case WeightClass::e_HEAVY: {
+  case WeightClass::HEAVY: {
     return 15u;
   }
-  case WeightClass::e_ASSAULT: {
+  case WeightClass::ASSAULT: {
     return 18u;
   }
   default:
@@ -342,13 +342,13 @@ unsigned int CoalitionBidHonorTraceCase::weight_class_value(
 unsigned int CoalitionBidHonorTraceCase::unit_class_bonus(
     CoalitionBidHonorTraceCase::UnitClass c) {
   switch (c) {
-  case UnitClass::e_OMNIMECH: {
+  case UnitClass::OMNIMECH: {
     return 20u;
   }
-  case UnitClass::e_BATTLEMECH: {
+  case UnitClass::BATTLEMECH: {
     return 10u;
   }
-  case UnitClass::e_ELEMENTAL: {
+  case UnitClass::ELEMENTAL: {
     return 15u;
   }
   default:
@@ -481,16 +481,16 @@ CoalitionBidHonorTraceCase::update_coalition_force(
           c.v())) {
     return List<CoalitionBidHonorTraceCase::CoalitionMember>::nil();
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
         c.v());
     if (idx <= 0) {
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
-          CoalitionMember{d_a0.cm_clan, d_a0.cm_commander, new_force}, *d_a1);
+          CoalitionMember{a0.cm_clan, a0.cm_commander, new_force}, *a1);
     } else {
       unsigned int n = idx - 1;
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
-          d_a0, update_coalition_force(*d_a1, n, std::move(new_force)));
+          a0, update_coalition_force(*a1, n, std::move(new_force)));
     }
   }
 }
@@ -509,11 +509,11 @@ CoalitionBidHonorTraceCase::coalition_lead_commander(
           c.v())) {
     return std::optional<CoalitionBidHonorTraceCase::Commander>();
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
         c.v());
     return std::make_optional<CoalitionBidHonorTraceCase::Commander>(
-        d_a0.cm_commander);
+        a0.cm_commander);
   }
 }
 
@@ -557,34 +557,34 @@ bool CoalitionBidHonorTraceCase::is_ready(
     CoalitionBidHonorTraceCase::ReadyStatus rs,
     CoalitionBidHonorTraceCase::Side side) {
   switch (rs) {
-  case ReadyStatus::e_NEITHERREADY: {
+  case ReadyStatus::NEITHERREADY: {
     return false;
   }
-  case ReadyStatus::e_ATTACKERREADY: {
+  case ReadyStatus::ATTACKERREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
+    case Side::ATTACKER: {
       return true;
     }
-    case Side::e_DEFENDER: {
+    case Side::DEFENDER: {
       return false;
     }
     default:
       std::unreachable();
     }
   }
-  case ReadyStatus::e_DEFENDERREADY: {
+  case ReadyStatus::DEFENDERREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
+    case Side::ATTACKER: {
       return false;
     }
-    case Side::e_DEFENDER: {
+    case Side::DEFENDER: {
       return true;
     }
     default:
       std::unreachable();
     }
   }
-  case ReadyStatus::e_BOTHREADY: {
+  case ReadyStatus::BOTHREADY: {
     return true;
   }
   default:
@@ -596,43 +596,43 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::set_ready(
     CoalitionBidHonorTraceCase::ReadyStatus rs,
     CoalitionBidHonorTraceCase::Side side) {
   switch (rs) {
-  case ReadyStatus::e_NEITHERREADY: {
+  case ReadyStatus::NEITHERREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
-      return ReadyStatus::e_ATTACKERREADY;
+    case Side::ATTACKER: {
+      return ReadyStatus::ATTACKERREADY;
     }
-    case Side::e_DEFENDER: {
-      return ReadyStatus::e_DEFENDERREADY;
+    case Side::DEFENDER: {
+      return ReadyStatus::DEFENDERREADY;
     }
     default:
       std::unreachable();
     }
   }
-  case ReadyStatus::e_ATTACKERREADY: {
+  case ReadyStatus::ATTACKERREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
+    case Side::ATTACKER: {
       return rs;
     }
-    case Side::e_DEFENDER: {
-      return ReadyStatus::e_BOTHREADY;
+    case Side::DEFENDER: {
+      return ReadyStatus::BOTHREADY;
     }
     default:
       std::unreachable();
     }
   }
-  case ReadyStatus::e_DEFENDERREADY: {
+  case ReadyStatus::DEFENDERREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
-      return ReadyStatus::e_BOTHREADY;
+    case Side::ATTACKER: {
+      return ReadyStatus::BOTHREADY;
     }
-    case Side::e_DEFENDER: {
+    case Side::DEFENDER: {
       return rs;
     }
     default:
       std::unreachable();
     }
   }
-  case ReadyStatus::e_BOTHREADY: {
+  case ReadyStatus::BOTHREADY: {
     return rs;
   }
   default:
@@ -644,40 +644,40 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::clear_ready(
     CoalitionBidHonorTraceCase::ReadyStatus rs,
     CoalitionBidHonorTraceCase::Side side) {
   switch (rs) {
-  case ReadyStatus::e_NEITHERREADY: {
+  case ReadyStatus::NEITHERREADY: {
     return rs;
   }
-  case ReadyStatus::e_ATTACKERREADY: {
+  case ReadyStatus::ATTACKERREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
-      return ReadyStatus::e_NEITHERREADY;
+    case Side::ATTACKER: {
+      return ReadyStatus::NEITHERREADY;
     }
-    case Side::e_DEFENDER: {
+    case Side::DEFENDER: {
       return rs;
     }
     default:
       std::unreachable();
     }
   }
-  case ReadyStatus::e_DEFENDERREADY: {
+  case ReadyStatus::DEFENDERREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
+    case Side::ATTACKER: {
       return rs;
     }
-    case Side::e_DEFENDER: {
-      return ReadyStatus::e_NEITHERREADY;
+    case Side::DEFENDER: {
+      return ReadyStatus::NEITHERREADY;
     }
     default:
       std::unreachable();
     }
   }
-  case ReadyStatus::e_BOTHREADY: {
+  case ReadyStatus::BOTHREADY: {
     switch (side) {
-    case Side::e_ATTACKER: {
-      return ReadyStatus::e_DEFENDERREADY;
+    case Side::ATTACKER: {
+      return ReadyStatus::DEFENDERREADY;
     }
-    case Side::e_DEFENDER: {
-      return ReadyStatus::e_ATTACKERREADY;
+    case Side::DEFENDER: {
+      return ReadyStatus::ATTACKERREADY;
     }
     default:
       std::unreachable();
@@ -706,14 +706,14 @@ CoalitionBidHonorTraceCase::Honor CoalitionBidHonorTraceCase::ledger_lookup(
           ledger.v())) {
     return Z::z0();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::pair<unsigned int, Z>>::Cons>(ledger.v());
-    const unsigned int &id = d_a0.first;
-    const Z &honor = d_a0.second;
+    const unsigned int &id = a0.first;
+    const Z &honor = a0.second;
     if (id == warrior_id) {
       return honor;
     } else {
-      return ledger_lookup(*d_a1, warrior_id);
+      return ledger_lookup(*a1, warrior_id);
     }
   }
 }
@@ -728,17 +728,17 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
         std::make_pair(warrior_id, std::move(new_honor)),
         List<std::pair<unsigned int, Z>>::nil());
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::pair<unsigned int, Z>>::Cons>(ledger.v());
-    const unsigned int &id = d_a0.first;
-    const Z &honor = d_a0.second;
+    const unsigned int &id = a0.first;
+    const Z &honor = a0.second;
     if (id == warrior_id) {
       return List<std::pair<unsigned int, Z>>::cons(
-          std::make_pair(id, std::move(new_honor)), *d_a1);
+          std::make_pair(id, std::move(new_honor)), *a1);
     } else {
       return List<std::pair<unsigned int, Z>>::cons(
           std::make_pair(id, honor),
-          ledger_update_by_id(*d_a1, warrior_id, std::move(new_honor)));
+          ledger_update_by_id(*a1, warrior_id, std::move(new_honor)));
     }
   }
 }
@@ -778,10 +778,10 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
   } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
                                         ProtocolAction::ActRefuse>(
                  action.v())) {
-    const auto &[d_reason] = std::get<
+    const auto &[reason0] = std::get<
         typename CoalitionBidHonorTraceCase::ProtocolAction::ActRefuse>(
         action.v());
-    return refusal_honor_delta(d_reason);
+    return refusal_honor_delta(reason0);
   } else if (std::holds_alternative<
                  typename CoalitionBidHonorTraceCase::ProtocolAction::ActClose>(
                  action.v())) {

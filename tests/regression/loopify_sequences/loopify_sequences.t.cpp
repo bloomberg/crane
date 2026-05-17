@@ -40,7 +40,7 @@ int main() {
   // Test run_sum
   auto running = LoopifySequences::run_sum(lst);
   ASSERT(std::holds_alternative<List::Cons>(running.v()));
-  ASSERT(std::get<List::Cons>(running.v()).d_a0 == 0u);
+  ASSERT(std::get<List::Cons>(running.v()).a0 == 0u);
 
   // Test intercalate
   using ListList = ::List<::List<unsigned int>>;

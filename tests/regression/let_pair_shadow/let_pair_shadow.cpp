@@ -6,9 +6,9 @@ LetPairShadow::mylist_sum(const LetPairShadow::mylist<unsigned int> &l) {
           typename LetPairShadow::mylist<unsigned int>::Mynil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename LetPairShadow::mylist<unsigned int>::Mycons>(l.v());
-    return (d_a0 + mylist_sum(*d_a1));
+    return (a0 + mylist_sum(*a1));
   }
 }
 

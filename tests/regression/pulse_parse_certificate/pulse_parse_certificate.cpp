@@ -5,11 +5,11 @@ PulseParseCertificateCase::first_true(const List<bool> &xs) {
   if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
     return std::optional<unsigned int>();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
-    if (d_a0) {
+    const auto &[a0, a1] = std::get<typename List<bool>::Cons>(xs.v());
+    if (a0) {
       return std::make_optional<unsigned int>(0u);
     } else {
-      auto _cs = first_true(*d_a1);
+      auto _cs = first_true(*a1);
       if (_cs.has_value()) {
         const unsigned int &idx = *_cs;
         return std::make_optional<unsigned int>((idx + 1));
@@ -25,13 +25,13 @@ PulseParseCertificateCase::last_true(const List<bool> &xs) {
   if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
     return std::optional<unsigned int>();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
-    auto _cs = last_true(*d_a1);
+    const auto &[a0, a1] = std::get<typename List<bool>::Cons>(xs.v());
+    auto _cs = last_true(*a1);
     if (_cs.has_value()) {
       const unsigned int &idx = *_cs;
       return std::make_optional<unsigned int>((idx + 1));
     } else {
-      if (d_a0) {
+      if (a0) {
         return std::make_optional<unsigned int>(0u);
       } else {
         return std::optional<unsigned int>();
@@ -45,11 +45,11 @@ PulseParseCertificateCase::trace_to_runs(const List<bool> &xs) {
   if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename List<bool>::Cons>(xs.v());
-    if (d_a0) {
-      return List<unsigned int>::cons(2u, trace_to_runs(*d_a1));
+    const auto &[a0, a1] = std::get<typename List<bool>::Cons>(xs.v());
+    if (a0) {
+      return List<unsigned int>::cons(2u, trace_to_runs(*a1));
     } else {
-      return List<unsigned int>::cons(1u, trace_to_runs(*d_a1));
+      return List<unsigned int>::cons(1u, trace_to_runs(*a1));
     }
   }
 }
@@ -59,9 +59,8 @@ PulseParseCertificateCase::pulse_base_from_runs(const List<unsigned int> &rs) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(rs.v())) {
     return 1u;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(rs.v());
-    return d_a0;
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(rs.v());
+    return a0;
   }
 }
 
@@ -69,9 +68,9 @@ PulseParseCertificateCase::PulseClass
 PulseParseCertificateCase::classify_run_with_base(unsigned int base,
                                                   unsigned int n) {
   if ((base + 1) <= n) {
-    return PulseClass::e_MARKLONG;
+    return PulseClass::MARKLONG;
   } else {
-    return PulseClass::e_MARKSHORT;
+    return PulseClass::MARKSHORT;
   }
 }
 
@@ -88,24 +87,24 @@ bool PulseParseCertificateCase::pulse_class_eqb(
     PulseParseCertificateCase::PulseClass x,
     PulseParseCertificateCase::PulseClass y) {
   switch (x) {
-  case PulseClass::e_MARKSHORT: {
+  case PulseClass::MARKSHORT: {
     switch (y) {
-    case PulseClass::e_MARKSHORT: {
+    case PulseClass::MARKSHORT: {
       return true;
     }
-    case PulseClass::e_MARKLONG: {
+    case PulseClass::MARKLONG: {
       return false;
     }
     default:
       std::unreachable();
     }
   }
-  case PulseClass::e_MARKLONG: {
+  case PulseClass::MARKLONG: {
     switch (y) {
-    case PulseClass::e_MARKSHORT: {
+    case PulseClass::MARKSHORT: {
       return false;
     }
-    case PulseClass::e_MARKLONG: {
+    case PulseClass::MARKLONG: {
       return true;
     }
     default:
@@ -130,7 +129,7 @@ bool PulseParseCertificateCase::pulse_class_list_eqb(
       return false;
     }
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<PulseParseCertificateCase::PulseClass>::Cons>(
             xs.v());
     if (std::holds_alternative<
@@ -138,11 +137,10 @@ bool PulseParseCertificateCase::pulse_class_list_eqb(
             ys.v())) {
       return false;
     } else {
-      const auto &[d_a00, d_a10] =
+      const auto &[a00, a10] =
           std::get<typename List<PulseParseCertificateCase::PulseClass>::Cons>(
               ys.v());
-      return (pulse_class_eqb(d_a0, d_a00) &&
-              pulse_class_list_eqb(*d_a1, *d_a10));
+      return (pulse_class_eqb(a0, a00) && pulse_class_list_eqb(*a1, *a10));
     }
   }
 }

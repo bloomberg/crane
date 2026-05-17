@@ -8,17 +8,17 @@
 #include <vector>
 
 struct PatternImpossible {
-  enum class Three { e_ONE, e_TWO, e_THREE };
+  enum class Three { ONE, TWO, THREE };
 
   template <typename T1> static T1 three_rect(T1 f, T1 f0, T1 f1, Three t) {
     switch (t) {
-    case Three::e_ONE: {
+    case Three::ONE: {
       return f;
     }
-    case Three::e_TWO: {
+    case Three::TWO: {
       return f0;
     }
-    case Three::e_THREE: {
+    case Three::THREE: {
       return f1;
     }
     default:
@@ -28,13 +28,13 @@ struct PatternImpossible {
 
   template <typename T1> static T1 three_rec(T1 f, T1 f0, T1 f1, Three t) {
     switch (t) {
-    case Three::e_ONE: {
+    case Three::ONE: {
       return f;
     }
-    case Three::e_TWO: {
+    case Three::TWO: {
       return f0;
     }
-    case Three::e_THREE: {
+    case Three::THREE: {
       return f1;
     }
     default:
@@ -45,39 +45,39 @@ struct PatternImpossible {
   struct nested {
     // TYPES
     struct Leaf {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct Node {
-      std::unique_ptr<nested> d_a0;
-      std::unique_ptr<nested> d_a1;
+      std::unique_ptr<nested> a0;
+      std::unique_ptr<nested> a1;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     nested() {}
 
-    explicit nested(Leaf _v) : d_v_(std::move(_v)) {}
+    explicit nested(Leaf _v) : v_(std::move(_v)) {}
 
-    explicit nested(Node _v) : d_v_(std::move(_v)) {}
+    explicit nested(Node _v) : v_(std::move(_v)) {}
 
-    nested(const nested &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    nested(const nested &_other) : v_(std::move(_other.clone().v_)) {}
 
-    nested(nested &&_other) : d_v_(std::move(_other.d_v_)) {}
+    nested(nested &&_other) : v_(std::move(_other.v_)) {}
 
     nested &operator=(const nested &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     nested &operator=(nested &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -100,17 +100,17 @@ struct PatternImpossible {
         nested *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
           const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->d_v_ = Leaf{_alt.d_a0};
+          _dst->v_ = Leaf{_alt.a0};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ = Node{_alt.d_a0 ? std::make_unique<nested>() : nullptr,
-                            _alt.d_a1 ? std::make_unique<nested>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<nested>() : nullptr,
+                          _alt.a1 ? std::make_unique<nested>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -130,13 +130,13 @@ struct PatternImpossible {
       std::vector<std::unique_ptr<nested>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](nested &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -150,10 +150,10 @@ struct PatternImpossible {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1>
@@ -161,12 +161,12 @@ struct PatternImpossible {
              std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
   static T1 nested_rect(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
-      const auto &[d_a0] = std::get<typename nested::Leaf>(n.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename nested::Leaf>(n.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n.v());
-      return f0(*d_a0, nested_rect<T1>(f, f0, *d_a0), *d_a1,
-                nested_rect<T1>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename nested::Node>(n.v());
+      return f0(*a0, nested_rect<T1>(f, f0, *a0), *a1,
+                nested_rect<T1>(f, f0, *a1));
     }
   }
 
@@ -175,12 +175,12 @@ struct PatternImpossible {
              std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
   static T1 nested_rec(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
-      const auto &[d_a0] = std::get<typename nested::Leaf>(n.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename nested::Leaf>(n.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename nested::Node>(n.v());
-      return f0(*d_a0, nested_rec<T1>(f, f0, *d_a0), *d_a1,
-                nested_rec<T1>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename nested::Node>(n.v());
+      return f0(*a0, nested_rec<T1>(f, f0, *a0), *a1,
+                nested_rec<T1>(f, f0, *a1));
     }
   }
 
@@ -188,11 +188,10 @@ struct PatternImpossible {
   static unsigned int nested_match(const nested &n);
   static unsigned int double_match(Three x, Three y);
   static unsigned int multi_arg_pattern(const nested &n);
-  static inline const unsigned int test1 = complex_match(Three::e_ONE);
+  static inline const unsigned int test1 = complex_match(Three::ONE);
   static inline const unsigned int test2 =
       nested_match(nested::node(nested::leaf(5u), nested::leaf(10u)));
-  static inline const unsigned int test3 =
-      double_match(Three::e_ONE, Three::e_TWO);
+  static inline const unsigned int test3 = double_match(Three::ONE, Three::TWO);
 };
 
 #endif // INCLUDED_PATTERN_IMPOSSIBLE

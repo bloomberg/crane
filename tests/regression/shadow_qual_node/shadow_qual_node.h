@@ -3,7 +3,7 @@
 
 struct ShadowQualNode {
   struct Node {
-    enum class Shadow { e_TAG };
+    enum class Shadow { TAG };
 
     template <typename T1> static T1 shadow_rect(T1 f, Shadow) { return f; }
 
@@ -11,7 +11,7 @@ struct ShadowQualNode {
   };
 
   static Node::Shadow id(Node::Shadow x);
-  static inline const Node::Shadow t = id(Node::Shadow::e_TAG);
+  static inline const Node::Shadow t = id(Node::Shadow::TAG);
 };
 
 #endif // INCLUDED_SHADOW_QUAL_NODE

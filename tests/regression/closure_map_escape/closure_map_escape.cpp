@@ -20,14 +20,14 @@ ClosureMapEscape::map_to_adders(
           typename ClosureMapEscape::mylist<unsigned int>::Mynil>(l.v())) {
     return mylist<std::function<unsigned int(unsigned int)>>::mynil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ClosureMapEscape::mylist<unsigned int>::Mycons>(
             l.v());
-    ClosureMapEscape::mylist<unsigned int> d_a1_value = *d_a1;
+    ClosureMapEscape::mylist<unsigned int> a1_value = *a1;
     auto add_impl = [=](auto &_self_add,
                         unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
-        return d_a0;
+        return a0;
       } else {
         unsigned int x_ = x - 1;
         return (_self_add(_self_add, x_) + 1);
@@ -37,7 +37,7 @@ ClosureMapEscape::map_to_adders(
       return add_impl(add_impl, x);
     };
     return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-        add, map_to_adders(d_a1_value));
+        add, map_to_adders(a1_value));
   }
 }
 
@@ -49,9 +49,9 @@ unsigned int ClosureMapEscape::apply_first(
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename ClosureMapEscape::mylist<
+    const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
         std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return d_a0(arg);
+    return a0(arg);
   }
 }
 
@@ -63,8 +63,8 @@ unsigned int ClosureMapEscape::sum_apply(
           std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename ClosureMapEscape::mylist<
+    const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
         std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return (d_a0(arg) + sum_apply(*d_a1, arg));
+    return (a0(arg) + sum_apply(*a1, arg));
   }
 }

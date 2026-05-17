@@ -69,58 +69,58 @@ LoopifyGenerators::zip_longest_aux(const List<unsigned int> &l1,
                   List<std::pair<unsigned int, unsigned int>>::nil());
           break;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(default0, d_a00), nullptr));
+                      std::make_pair(default0, a00), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
+                   .a1;
           _loop_fuel = f;
-          _loop_l2 = std::move(*d_a10);
+          _loop_l2 = std::move(*a10);
           _loop_l1 = List<unsigned int>::nil();
           continue;
         }
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l1.v());
         if (std::holds_alternative<typename List<unsigned int>::Nil>(
                 _loop_l2.v())) {
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(d_a0, default0), nullptr));
+                      std::make_pair(a0, default0), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
+                   .a1;
           _loop_fuel = f;
           _loop_l2 = List<unsigned int>::nil();
-          _loop_l1 = std::move(*d_a1);
+          _loop_l1 = std::move(*a1);
           continue;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(_loop_l2.v());
           auto _cell =
               std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
                   typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                      std::make_pair(d_a0, d_a00), nullptr));
+                      std::make_pair(a0, a00), nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<
                    typename List<std::pair<unsigned int, unsigned int>>::Cons>(
                    (*_write)->v_mut())
-                   .d_a1;
+                   .a1;
           _loop_fuel = f;
-          _loop_l2 = std::move(*d_a10);
-          _loop_l1 = std::move(*d_a1);
+          _loop_l2 = std::move(*a10);
+          _loop_l1 = std::move(*a1);
           continue;
         }
       }
@@ -155,10 +155,10 @@ unsigned int LoopifyGenerators::len_impl(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = 0u;
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
         _stack.emplace_back(_Resume_Cons{});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -249,7 +249,7 @@ List<unsigned int> LoopifyGenerators::take(unsigned int n,
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
         *_write =
@@ -257,12 +257,11 @@ List<unsigned int> LoopifyGenerators::take(unsigned int n,
         break;
       } else {
         auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
+            typename List<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
+            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+        _loop_l = a1.get();
         _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
         continue;
       }
@@ -286,7 +285,7 @@ List<unsigned int> LoopifyGenerators::repeat(unsigned int x, unsigned int n) {
           typename List<unsigned int>::Cons(x, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
       _loop_n = m;
       continue;
     }
@@ -310,7 +309,7 @@ List<unsigned int> LoopifyGenerators::replicate_single(unsigned int x,
           typename List<unsigned int>::Cons(x, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
       _loop_n = m;
       continue;
     }
@@ -350,10 +349,10 @@ List<unsigned int> LoopifyGenerators::replicate_each(
       if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{replicate_single(d_a0, n)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Resume_Cons{replicate_single(a0, n)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

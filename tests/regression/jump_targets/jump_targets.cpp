@@ -6,14 +6,14 @@ JumpTargets::collect_targets(const List<JumpTargets::instr_collection> &prog) {
           prog.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<JumpTargets::instr_collection>::Cons>(prog.v());
-    auto _cs = d_a0.jump_target_collection();
+    auto _cs = a0.jump_target_collection();
     if (_cs.has_value()) {
       const unsigned int &a = *_cs;
-      return List<unsigned int>::cons(a, collect_targets(*d_a1));
+      return List<unsigned int>::cons(a, collect_targets(*a1));
     } else {
-      return collect_targets(*d_a1);
+      return collect_targets(*a1);
     }
   }
 }

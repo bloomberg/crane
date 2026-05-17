@@ -6,77 +6,75 @@
 #include <variant>
 
 struct BenchLetIn {
-  template <typename t_A, typename t_B> struct pair {
+  template <typename A, typename B> struct pair {
     // TYPES
     struct Pair0 {
-      t_A d_a0;
-      t_B d_a1;
+      A a0;
+      B a1;
     };
 
     using variant_t = std::variant<Pair0>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     pair() {}
 
-    explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
+    explicit pair(Pair0 _v) : v_(std::move(_v)) {}
 
-    pair(const pair<t_A, t_B> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    pair(const pair<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    pair(pair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    pair(pair<A, B> &&_other) : v_(std::move(_other.v_)) {}
 
-    pair<t_A, t_B> &operator=(const pair<t_A, t_B> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    pair<A, B> &operator=(const pair<A, B> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    pair<A, B> &operator=(pair<A, B> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    pair<t_A, t_B> clone() const {
-      const auto &[d_a0, d_a1] = std::get<Pair0>(this->v());
-      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
+    pair<A, B> clone() const {
+      const auto &[a0, a1] = std::get<Pair0>(this->v());
+      return pair<A, B>(Pair0{a0, a1});
     }
 
     // CREATORS
     template <typename _U0, typename _U1>
     explicit pair(const pair<_U0, _U1> &_other) {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+      this->v_ = Pair0{A(a0), B(a1)};
     }
 
-    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
+    static pair<A, B> pair0(A a0, B a1) {
       return pair(Pair0{std::move(a0), std::move(a1)});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 pair_rec(F0 &&f) const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename pair<A, B>::Pair0>(this->v());
+      return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 pair_rect(F0 &&f) const {
-      const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(this->v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename pair<A, B>::Pair0>(this->v());
+      return f(a0, a1);
     }
   };
 
@@ -86,79 +84,78 @@ struct BenchLetIn {
                                   unsigned int c, unsigned int d);
   static unsigned int sum_via_pairs(unsigned int n);
 
-  template <typename t_A, typename t_B, typename t_C> struct triple {
+  template <typename A, typename B, typename C> struct triple {
     // TYPES
     struct Triple0 {
-      t_A d_a0;
-      t_B d_a1;
-      t_C d_a2;
+      A a0;
+      B a1;
+      C a2;
     };
 
     using variant_t = std::variant<Triple0>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     triple() {}
 
-    explicit triple(Triple0 _v) : d_v_(std::move(_v)) {}
+    explicit triple(Triple0 _v) : v_(std::move(_v)) {}
 
-    triple(const triple<t_A, t_B, t_C> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    triple(const triple<A, B, C> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    triple(triple<t_A, t_B, t_C> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    triple(triple<A, B, C> &&_other) : v_(std::move(_other.v_)) {}
 
-    triple<t_A, t_B, t_C> &operator=(const triple<t_A, t_B, t_C> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    triple<A, B, C> &operator=(const triple<A, B, C> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    triple<t_A, t_B, t_C> &operator=(triple<t_A, t_B, t_C> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    triple<A, B, C> &operator=(triple<A, B, C> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    triple<t_A, t_B, t_C> clone() const {
-      const auto &[d_a0, d_a1, d_a2] = std::get<Triple0>(this->v());
-      return triple<t_A, t_B, t_C>(Triple0{d_a0, d_a1, d_a2});
+    triple<A, B, C> clone() const {
+      const auto &[a0, a1, a2] = std::get<Triple0>(this->v());
+      return triple<A, B, C>(Triple0{a0, a1, a2});
     }
 
     // CREATORS
     template <typename _U0, typename _U1, typename _U2>
     explicit triple(const triple<_U0, _U1, _U2> &_other) {
-      const auto &[d_a0, d_a1, d_a2] =
+      const auto &[a0, a1, a2] =
           std::get<typename triple<_U0, _U1, _U2>::Triple0>(_other.v());
-      this->d_v_ = Triple0{t_A(d_a0), t_B(d_a1), t_C(d_a2)};
+      this->v_ = Triple0{A(a0), B(a1), C(a2)};
     }
 
-    static triple<t_A, t_B, t_C> triple0(t_A a0, t_B a1, t_C a2) {
+    static triple<A, B, C> triple0(A a0, B a1, C a2) {
       return triple(Triple0{std::move(a0), std::move(a1), std::move(a2)});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
     T1 triple_rec(F0 &&f) const {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple<t_A, t_B, t_C>::Triple0>(this->v());
-      return f(d_a0, d_a1, d_a2);
+      const auto &[a0, a1, a2] =
+          std::get<typename triple<A, B, C>::Triple0>(this->v());
+      return f(a0, a1, a2);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
     T1 triple_rect(F0 &&f) const {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple<t_A, t_B, t_C>::Triple0>(this->v());
-      return f(d_a0, d_a1, d_a2);
+      const auto &[a0, a1, a2] =
+          std::get<typename triple<A, B, C>::Triple0>(this->v());
+      return f(a0, a1, a2);
     }
   };
 

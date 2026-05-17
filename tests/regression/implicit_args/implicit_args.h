@@ -26,50 +26,50 @@ struct ImplicitArgs {
     return g(f(x));
   }
 
-  template <typename t_A> struct mylist {
+  template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
 
     struct Mycons {
-      t_A d_a0;
-      std::unique_ptr<mylist<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    mylist<t_A> &operator=(const mylist<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    mylist<A> &operator=(const mylist<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<t_A> &operator=(mylist<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist<A> &operator=(mylist<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    mylist<t_A> clone() const {
-      mylist<t_A> _out{};
+    mylist<A> clone() const {
+      mylist<A> _out{};
 
       struct _CloneFrame {
-        const mylist<t_A> *_src;
-        mylist<t_A> *_dst;
+        const mylist<A> *_src;
+        mylist<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -78,17 +78,17 @@ struct ImplicitArgs {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const mylist<t_A> *_src = _frame._src;
-        mylist<t_A> *_dst = _frame._dst;
+        const mylist<A> *_src = _frame._src;
+        mylist<A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Mycons{_alt.a0,
+                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -98,31 +98,31 @@ struct ImplicitArgs {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil{};
+        this->v_ = Mynil{};
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons{
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->v_ =
+            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist(Mynil{}); }
 
-    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      std::vector<std::unique_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](mylist<t_A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](mylist<A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -136,10 +136,10 @@ struct ImplicitArgs {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -148,8 +148,8 @@ struct ImplicitArgs {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *d_a1, mylist_rect<T1, T2>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(a0, *a1, mylist_rect<T1, T2>(f, f0, *a1));
     }
   }
 
@@ -159,8 +159,8 @@ struct ImplicitArgs {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *d_a1, mylist_rec<T1, T2>(f, f0, *d_a1));
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(a0, *a1, mylist_rec<T1, T2>(f, f0, *a1));
     }
   }
 
@@ -168,8 +168,8 @@ struct ImplicitArgs {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      return (1u + length<T1>(*d_a1));
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+      return (1u + length<T1>(*a1));
     }
   }
 
@@ -203,8 +203,8 @@ struct ImplicitArgs {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+      return a0;
     }
   }
 

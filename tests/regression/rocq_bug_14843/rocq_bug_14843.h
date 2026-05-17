@@ -3,7 +3,7 @@
 
 #include <functional>
 
-enum class Unit { e_TT };
+enum class Unit { TT };
 
 struct RocqBug14843 {
   struct r {

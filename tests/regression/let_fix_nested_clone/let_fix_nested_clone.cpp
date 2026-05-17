@@ -7,23 +7,23 @@ unsigned int LetFixNestedClone::sum_nested(const List<List<unsigned int>> &ll) {
             xss.v())) {
       return acc;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<List<unsigned int>>::Cons>(xss.v());
       auto inner_impl = [](auto &_self_inner, const List<unsigned int> &ys,
                            unsigned int a) -> unsigned int {
         if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {
           return a;
         } else {
-          const auto &[d_a00, d_a10] =
+          const auto &[a00, a10] =
               std::get<typename List<unsigned int>::Cons>(ys.v());
-          return _self_inner(_self_inner, *d_a10, (a + d_a00));
+          return _self_inner(_self_inner, *a10, (a + a00));
         }
       };
       auto inner = [&](const List<unsigned int> &ys,
                        unsigned int a) -> unsigned int {
         return inner_impl(inner_impl, ys, a);
       };
-      return _self_outer(_self_outer, *d_a1, (inner(d_a0, 0u) + acc));
+      return _self_outer(_self_outer, *a1, (inner(a0, 0u) + acc));
     }
   };
   auto outer = [&](const List<List<unsigned int>> &xss,

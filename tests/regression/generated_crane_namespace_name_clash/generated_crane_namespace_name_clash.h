@@ -16,23 +16,23 @@ struct crane_ {
   struct stream {
     // TYPES
     struct Cons {
-      bool d_a0;
-      std::shared_ptr<stream> d_a1;
+      bool a0;
+      std::shared_ptr<stream> a1;
     };
 
     using variant_t = std::variant<Cons>;
 
   private:
     // DATA
-    crane::lazy<variant_t> d_lazyV_;
+    crane::lazy<variant_t> lazy_v_;
 
   public:
     // CREATORS
     explicit stream(Cons _v)
-        : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
+        : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
     explicit stream(std::function<variant_t()> _thunk)
-        : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
+        : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(bool a0, const stream &a1) {
       return stream(Cons{a0, std::make_shared<stream>(a1)});
@@ -46,7 +46,7 @@ struct crane_ {
     }
 
     // ACCESSORS
-    const variant_t &v() const { return d_lazyV_.force(); }
+    const variant_t &v() const { return lazy_v_.force(); }
   };
 
   static stream ones();

@@ -3,15 +3,15 @@
 /// 1. Match on custom inductive with effects in each arm
 std::string MatchMonadic::color_name(Color c) {
   switch (c) {
-  case Color::e_RED: {
+  case Color::RED: {
     std::cout << "red"s << '\n';
     return "red";
   }
-  case Color::e_GREEN: {
+  case Color::GREEN: {
     std::cout << "green"s << '\n';
     return "green";
   }
-  case Color::e_BLUE: {
+  case Color::BLUE: {
     std::cout << "blue"s << '\n';
     return "blue";
   }
@@ -70,12 +70,12 @@ unsigned int MatchMonadic::tree_sum(const Tree<unsigned int> &t) {
   if (std::holds_alternative<typename Tree<unsigned int>::Leaf>(t.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename Tree<unsigned int>::Node>(t.v());
     std::cout << "visiting"s << '\n';
-    unsigned int sl = tree_sum(*d_a0);
-    unsigned int sr = tree_sum(*d_a2);
-    return ((sl + d_a1) + sr);
+    unsigned int sl = tree_sum(*a0);
+    unsigned int sr = tree_sum(*a2);
+    return ((sl + a1) + sr);
   }
 }
 

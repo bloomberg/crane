@@ -30,7 +30,7 @@ int main() {
       Overloaded{
           [](const RS::tree::Leaf) { std::cout << "Leaf"; },
           [](const RS::tree::Node &n) {
-            std::cout << "Node(_, " << n.d_a1 << ", _)";
+            std::cout << "Node(_, " << n.a1 << ", _)";
           }},
       rd.v());
   std::cout << std::endl;

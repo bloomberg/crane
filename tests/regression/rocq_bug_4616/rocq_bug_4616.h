@@ -5,7 +5,7 @@
 #include <functional>
 
 struct RocqBug4616 {
-  enum class Foo_ { e_FOO };
+  enum class Foo_ { FOO };
   using foo = std::any;
   using f = std::function<std::any(Foo_)>;
 };

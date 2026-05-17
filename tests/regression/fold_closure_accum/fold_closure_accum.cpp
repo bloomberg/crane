@@ -5,9 +5,9 @@ unsigned int FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
   if (std::holds_alternative<typename FoldClosureAccum::tree::Leaf>(t.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename FoldClosureAccum::tree::Node>(t.v());
-    return ((tree_sum(*d_a0) + d_a1) + tree_sum(*d_a2));
+    return ((tree_sum(*a0) + a1) + tree_sum(*a2));
   }
 }
 

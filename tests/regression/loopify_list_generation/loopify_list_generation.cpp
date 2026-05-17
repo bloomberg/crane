@@ -15,7 +15,7 @@ List<unsigned int> LoopifyListGeneration::replicate(unsigned int n,
           typename List<unsigned int>::Cons(x, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
       _loop_n = n_;
       continue;
     }
@@ -33,21 +33,21 @@ List<unsigned int> LoopifyListGeneration::stutter(const List<unsigned int> &l) {
       *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto _cell = std::make_unique<List<unsigned int>>(
-          typename List<unsigned int>::Cons(d_a0, nullptr));
+          typename List<unsigned int>::Cons(a0, nullptr));
       auto _cell1 = std::make_unique<List<unsigned int>>(
-          typename List<unsigned int>::Cons(d_a0, nullptr));
-      std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
+          typename List<unsigned int>::Cons(a0, nullptr));
+      std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).a1 =
           std::move(_cell1);
       *_write = std::move(_cell);
       _write =
           &std::get<typename List<unsigned int>::Cons>(
                std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1->v_mut())
-               .d_a1;
-      _loop_l = d_a1.get();
+                   .a1->v_mut())
+               .a1;
+      _loop_l = a1.get();
       continue;
     }
   }
@@ -111,7 +111,7 @@ List<unsigned int> LoopifyListGeneration::iterate(unsigned int n,
           typename List<unsigned int>::Cons(_loop_x, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
       _loop_x = (_loop_x + 1u);
       _loop_n = n_;
       continue;
@@ -150,13 +150,13 @@ List<unsigned int> LoopifyListGeneration::replicate_list(
               l.v())) {
         _result = List<unsigned int>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<
+        const auto &[a0, a1] = std::get<
             typename List<std::pair<unsigned int, unsigned int>>::Cons>(l.v());
-        const unsigned int &n = d_a0.first;
-        const unsigned int &x = d_a0.second;
+        const unsigned int &n = a0.first;
+        const unsigned int &x = a0.second;
         List<unsigned int> rep = replicate(n, x);
         _stack.emplace_back(_Resume_n{std::move(rep)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n>(_frame));
@@ -188,14 +188,14 @@ List<unsigned int> LoopifyListGeneration::repeat_with_sep(unsigned int sep,
             typename List<unsigned int>::Cons(x, nullptr));
         auto _cell1 = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(sep, nullptr));
-        std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).d_a1 =
+        std::get<typename List<unsigned int>::Cons>(_cell->v_mut()).a1 =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<unsigned int>::Cons>(
                  std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1->v_mut())
-                 .d_a1;
+                     .a1->v_mut())
+                 .a1;
         _loop_n = n_;
         continue;
       }
@@ -220,7 +220,7 @@ List<unsigned int> LoopifyListGeneration::range(unsigned int start,
           typename List<unsigned int>::Cons(_loop_start, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
+          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
       _loop_len = len_;
       _loop_start = (_loop_start + 1u);
       continue;

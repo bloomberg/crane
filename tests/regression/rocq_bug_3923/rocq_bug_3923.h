@@ -4,7 +4,7 @@
 #include <concepts>
 #include <stdexcept>
 
-enum class Unit { e_TT };
+enum class Unit { TT };
 template <typename M>
 concept TRIVIAL = requires { typename M::t; };
 template <typename M>

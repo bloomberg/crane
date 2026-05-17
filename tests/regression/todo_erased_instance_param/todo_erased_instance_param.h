@@ -3,9 +3,9 @@
 
 #include <concepts>
 
-template <typename I, typename t_A>
+template <typename I, typename A>
 concept Default = requires {
-  { I::def() } -> std::convertible_to<t_A>;
+  { I::def() } -> std::convertible_to<A>;
 };
 
 struct TodoErasedInstanceParam {

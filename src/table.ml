@@ -483,6 +483,9 @@ let has_dependent_params r =
       with _ -> false )
   | _ -> false
 
+let {Goptions.get = std_lib} =
+  declare_string_option_and_ref ~key:["Crane"; "StdLib"] ~value:"std" ()
+
 (** Compute the C++ enum constructor name for constructor [j] (1-based) of
     inductive [(kn, i)].  Handles non-ASCII escaping, prime-to-underscore
     conversion, and intra-enum collision avoidance identically to
@@ -497,7 +500,15 @@ let enum_ctor_name_of_ref kn i j =
     done;
     Bytes.to_string b
   in
-  let ctor_name s = "e_" ^ String.uppercase_ascii s in
+  let ctor_name s =
+    let upper = String.uppercase_ascii s in
+    if std_lib () = "BDE" then "e_" ^ upper
+    else if List.mem upper
+              [ "TRUE"; "FALSE"; "NULL"; "EOF"; "DOMAIN"; "OVERFLOW";
+                "UNDERFLOW"; "HUGE_VAL"; "ERANGE"; "STDIN"; "STDOUT"; "STDERR" ]
+    then upper ^ "_"
+    else upper
+  in
   try
     let ind = unsafe_lookup_ind kn in
     let packet = ind.ind_packets.(i) in
@@ -1313,9 +1324,6 @@ let {Goptions.get = format_style} =
     ~key:["Crane"; "Format"; "Style"]
     ~value:"{BasedOnStyle: LLVM, SeparateDefinitionBlocks: Always}"
     ()
-
-let {Goptions.get = std_lib} =
-  declare_string_option_and_ref ~key:["Crane"; "StdLib"] ~value:"std" ()
 
 let {Goptions.get = bde_dir} =
   declare_string_option_and_ref ~key:["Crane"; "BDE"; "Directory"] ~value:"" ()

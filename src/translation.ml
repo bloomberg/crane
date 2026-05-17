@@ -28,7 +28,7 @@ let globref_equal = Environ.QGlobRef.equal Environ.empty_env
 let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
   let lc = String.lowercase_ascii ctor_struct_name in
   let reserved_generated_names =
-    [ "v"; "v_mut"; "clone"; "variant_t" ]
+    [ "v"; "v_"; "v_mut"; "clone"; "variant_t" ]
   in
   let collides =
     Id.Set.mem (Id.of_string lc) (get_keywords ())
@@ -104,7 +104,7 @@ let field_name_str_of_idx consarg_names k =
       if Id.Set.mem (Id.of_string sanitized) (get_keywords ()) then
         field_param_name k
       else
-        "d_" ^ sanitized
+        if Table.std_lib () = "BDE" then "d_" ^ sanitized else sanitized
     | None -> field_param_name k )
   | _ -> field_param_name k
 
@@ -6029,13 +6029,22 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let tvars = get_current_type_vars () in
   let rev_ids = List.rev ids in
   let dummies_arr = Array.of_list dummies in
+  let outer_avoid = snd env in
+  let binding_names_arr =
+    let avoid = ref outer_avoid in
+    Array.init (List.length rev_ids) (fun i ->
+      let field_id = lookup_ctor_field_name ctor_struct_name i in
+      let base = Id.of_string (Id.to_string field_id ^ suffix) in
+      let name =
+        if Id.Set.mem base !avoid then rename_id base !avoid else base
+      in
+      avoid := Id.Set.add name !avoid;
+      name)
+  in
   let field_bindings =
     List.mapi
       (fun i (_var_name, ml_ty) ->
-        let field_id = lookup_ctor_field_name ctor_struct_name i in
-        let binding_name =
-          Id.of_string (Id.to_string field_id ^ suffix)
-        in
+        let binding_name = binding_names_arr.(i) in
         (* A field needs dereferencing if:
            1. It's a direct self/mutual ref at the definition site
               (stored as shared_ptr in the struct), OR
@@ -13155,7 +13164,11 @@ let gen_ind_header_v2
 
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
       let variant_member_name =
-        escape_if_clashes (if is_coinductive then "d_lazyV_" else "d_v_")
+        escape_if_clashes
+          (if Table.std_lib () = "BDE" then
+             (if is_coinductive then "d_lazyV_" else "d_v_")
+           else
+             (if is_coinductive then "lazy_v_" else "v_"))
       in
       let variant_alias_id = Id.of_string variant_alias_name in
       let variant_alias_ty = Tid (variant_alias_id, []) in
@@ -13441,10 +13454,10 @@ let gen_ind_header_v2
                                          push_rval
                                            (CPPraw (
                                               "std::make_unique<" ^ ss
-                                              ^ ">(std::move(_lc.d_a0))"));
+                                              ^ ">(std::move(_lc." ^ field_param_name 0 ^ "))"));
                                          Sraw (
-                                           "if (_lc.d_a1) {"
-                                           ^ " _lp = _lc.d_a1.get();"
+                                           "if (_lc." ^ field_param_name 1 ^ ") {"
+                                           ^ " _lp = _lc." ^ field_param_name 1 ^ ".get();"
                                            ^ " } else { break; }") ]) ])]
                               | `None -> [])
                             fields
@@ -14396,16 +14409,16 @@ let gen_ind_header_v2
                                       ^ " _ldst->v_mut() = typename "
                                         ^ ls ^ "::" ^ cons_s ^ "{"
                                         ^ self_s ^ "{},"
-                                        ^ " _lsrc_c.d_a1 ? std::make_unique<"
+                                        ^ " _lsrc_c." ^ field_param_name 1 ^ " ? std::make_unique<"
                                         ^ ls ^ ">() : nullptr};"
                                       ^ " auto& _ldst_c = std::get<typename "
                                         ^ ls ^ "::" ^ cons_s
                                         ^ ">(_ldst->v_mut());"
-                                      ^ " _stack.push_back({&_lsrc_c.d_a0,"
-                                        ^ " &_ldst_c.d_a0});"
-                                      ^ " if (_lsrc_c.d_a1) {"
-                                        ^ " _lsrc = _lsrc_c.d_a1.get();"
-                                        ^ " _ldst = _ldst_c.d_a1.get();"
+                                      ^ " _stack.push_back({&_lsrc_c." ^ field_param_name 0 ^ ","
+                                        ^ " &_ldst_c." ^ field_param_name 0 ^ "});"
+                                      ^ " if (_lsrc_c." ^ field_param_name 1 ^ ") {"
+                                        ^ " _lsrc = _lsrc_c." ^ field_param_name 1 ^ ".get();"
+                                        ^ " _ldst = _ldst_c." ^ field_param_name 1 ^ ".get();"
                                       ^ " } else { break; }"
                                       ^ " }"
                                       ^ " if (std::holds_alternative<typename "

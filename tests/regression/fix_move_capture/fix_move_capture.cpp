@@ -4,9 +4,9 @@ unsigned int FixMoveCapture::length(const FixMoveCapture::mylist &l) {
   if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
-    return (1u + length(*d_a1));
+    return (1u + length(*a1));
   }
 }
 
@@ -14,9 +14,9 @@ unsigned int FixMoveCapture::sum(const FixMoveCapture::mylist &l) {
   if (std::holds_alternative<typename FixMoveCapture::mylist::Mynil>(l.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v());
-    return (d_a0 + sum(*d_a1));
+    return (a0 + sum(*a1));
   }
 }
 
@@ -27,9 +27,9 @@ FixMoveCapture::mylist FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
           l.v_mut())) {
     return mylist::mynil();
   } else {
-    auto &[d_a0, d_a1] =
+    auto &[a0, a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v_mut());
-    return mylist::mycons(std::move(d_a0), l);
+    return mylist::mycons(std::move(a0), l);
   }
 }
 

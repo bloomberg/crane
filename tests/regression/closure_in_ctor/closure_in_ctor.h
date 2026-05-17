@@ -10,7 +10,7 @@ struct ClosureInCtor {
   struct box {
     // TYPES
     struct Box0 {
-      std::function<unsigned int(unsigned int)> d_a0;
+      std::function<unsigned int(unsigned int)> a0;
     };
 
     struct Empty {};
@@ -19,35 +19,35 @@ struct ClosureInCtor {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     box() {}
 
-    explicit box(Box0 _v) : d_v_(std::move(_v)) {}
+    explicit box(Box0 _v) : v_(std::move(_v)) {}
 
-    explicit box(Empty _v) : d_v_(_v) {}
+    explicit box(Empty _v) : v_(_v) {}
 
-    box(const box &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    box(const box &_other) : v_(std::move(_other.clone().v_)) {}
 
-    box(box &&_other) : d_v_(std::move(_other.d_v_)) {}
+    box(box &&_other) : v_(std::move(_other.v_)) {}
 
     box &operator=(const box &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     box &operator=(box &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     box clone() const {
       if (std::holds_alternative<Box0>(this->v())) {
-        const auto &[d_a0] = std::get<Box0>(this->v());
-        return box(Box0{d_a0});
+        const auto &[a0] = std::get<Box0>(this->v());
+        return box(Box0{a0});
       } else {
         return box(Empty{});
       }
@@ -61,10 +61,10 @@ struct ClosureInCtor {
     static box empty() { return box(Empty{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
@@ -72,8 +72,8 @@ struct ClosureInCtor {
                                    std::function<unsigned int(unsigned int)> &>
   static T1 box_rect(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename box::Box0>(b.v());
+      return f(a0);
     } else {
       return f0;
     }
@@ -84,8 +84,8 @@ struct ClosureInCtor {
                                    std::function<unsigned int(unsigned int)> &>
   static T1 box_rec(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(b.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename box::Box0>(b.v());
+      return f(a0);
     } else {
       return f0;
     }
@@ -109,8 +109,8 @@ struct ClosureInCtor {
   static inline const unsigned int test1 = []() {
     auto &&_sv = make_box_fix(5u);
     if (std::holds_alternative<typename box::Box0>(_sv.v())) {
-      const auto &[d_a0] = std::get<typename box::Box0>(_sv.v());
-      return d_a0(3u);
+      const auto &[a0] = std::get<typename box::Box0>(_sv.v());
+      return a0(3u);
     } else {
       return 999u;
     }
@@ -120,8 +120,8 @@ struct ClosureInCtor {
   static inline const unsigned int test2 = []() {
     box b = make_box_fix(42u);
     if (std::holds_alternative<typename box::Box0>(b.v_mut())) {
-      auto &[d_a0] = std::get<typename box::Box0>(b.v_mut());
-      return std::move(d_a0)(10u);
+      auto &[a0] = std::get<typename box::Box0>(b.v_mut());
+      return std::move(a0)(10u);
     } else {
       return 999u;
     }
@@ -132,10 +132,10 @@ struct ClosureInCtor {
     box b1 = make_box_fix(10u);
     box b2 = make_box_fix(20u);
     if (std::holds_alternative<typename box::Box0>(b1.v_mut())) {
-      auto &[d_a0] = std::get<typename box::Box0>(b1.v_mut());
+      auto &[a0] = std::get<typename box::Box0>(b1.v_mut());
       if (std::holds_alternative<typename box::Box0>(b2.v_mut())) {
-        auto &[d_a00] = std::get<typename box::Box0>(b2.v_mut());
-        return (std::move(d_a0)(0u) + std::move(d_a00)(0u));
+        auto &[a00] = std::get<typename box::Box0>(b2.v_mut());
+        return (std::move(a0)(0u) + std::move(a00)(0u));
       } else {
         return 999u;
       }

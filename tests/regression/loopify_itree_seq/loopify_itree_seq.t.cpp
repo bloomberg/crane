@@ -28,8 +28,8 @@ std::vector<T> list_to_vec(const List<T> &l) {
   const List<T> *cur = &l;
   while (std::holds_alternative<typename List<T>::Cons>(cur->v())) {
     auto &c = std::get<typename List<T>::Cons>(cur->v());
-    result.push_back(c.d_a0);
-    cur = c.d_a1.get();
+    result.push_back(c.a0);
+    cur = c.a1.get();
   }
   return result;
 }

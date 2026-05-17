@@ -2,9 +2,9 @@
 
 unsigned int ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
   if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
-    return (1u + length(*d_a1));
+    return (1u + length(*a1));
   } else {
     return 0u;
   }
@@ -12,9 +12,9 @@ unsigned int ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
 
 unsigned int ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
   if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
-    return (d_a0 + sum(*d_a1));
+    return (a0 + sum(*a1));
   } else {
     return 0u;
   }
@@ -41,9 +41,9 @@ ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l,
   if (b) {
     if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(
             l.v_mut())) {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename ReuseFnInBody::mylist::Mycons>(l.v_mut());
-      return mylist::mycons((sum(l) + std::move(d_a0)), *d_a1);
+      return mylist::mycons((sum(l) + std::move(a0)), *a1);
     } else {
       return mylist::mynil();
     }

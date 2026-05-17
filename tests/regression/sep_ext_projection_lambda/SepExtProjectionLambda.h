@@ -36,12 +36,12 @@ template <Sig S> struct Worker {
             xs.v())) {
       return std::optional<typename S::A>();
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename Datatypes::template List<item>::Cons>(xs.v());
-      if (d_a0.label == target) {
-        return std::make_optional<typename S::A>(d_a0.payload);
+      if (a0.label == target) {
+        return std::make_optional<typename S::A>(a0.payload);
       } else {
-        return find_label(target, *d_a1);
+        return find_label(target, *a1);
       }
     }
   }

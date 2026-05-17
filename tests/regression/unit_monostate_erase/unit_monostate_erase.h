@@ -24,17 +24,17 @@ struct UnitMonostateErase {
   ///
   /// A match on a custom type, all branches unit-typed, in tail
   /// position of a void function.
-  enum class Color { e_RED, e_GREEN, e_BLUE };
+  enum class Color { RED, GREEN, BLUE };
 
   template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return f;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       return f0;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return f1;
     }
     default:
@@ -44,13 +44,13 @@ struct UnitMonostateErase {
 
   template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return f;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       return f0;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return f1;
     }
     default:

@@ -28,9 +28,9 @@ bool ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     ValidatedVirtualCrossmatchTraceCase::HLALocus x,
     ValidatedVirtualCrossmatchTraceCase::HLALocus y) {
   switch (x) {
-  case HLALocus::e_LOCUS_A: {
+  case HLALocus::LOCUS_A: {
     switch (y) {
-    case HLALocus::e_LOCUS_A: {
+    case HLALocus::LOCUS_A: {
       return true;
     }
     default: {
@@ -38,9 +38,9 @@ bool ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     }
     }
   }
-  case HLALocus::e_LOCUS_B: {
+  case HLALocus::LOCUS_B: {
     switch (y) {
-    case HLALocus::e_LOCUS_B: {
+    case HLALocus::LOCUS_B: {
       return true;
     }
     default: {
@@ -48,9 +48,9 @@ bool ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     }
     }
   }
-  case HLALocus::e_LOCUS_DR: {
+  case HLALocus::LOCUS_DR: {
     switch (y) {
-    case HLALocus::e_LOCUS_DR: {
+    case HLALocus::LOCUS_DR: {
       return true;
     }
     default: {
@@ -131,7 +131,7 @@ List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
 ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &a) {
   switch (a.hla_locus) {
-  case HLALocus::e_LOCUS_A: {
+  case HLALocus::LOCUS_A: {
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
     } else {
@@ -161,7 +161,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
       }
     }
   }
-  case HLALocus::e_LOCUS_B: {
+  case HLALocus::LOCUS_B: {
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
     } else {
@@ -212,7 +212,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
       }
     }
   }
-  case HLALocus::e_LOCUS_DR: {
+  case HLALocus::LOCUS_DR: {
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
     } else {
@@ -265,17 +265,17 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
           l.v())) {
     return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::Cons>(
         l.v());
-    List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> d_a1_value = *d_a1;
-    if (d_a1_value.existsb(
+    List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> a1_value = *a1;
+    if (a1_value.existsb(
             [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) mutable
-                -> bool { return epitope_eqb(d_a0, _x0); })) {
-      return epitope_dedup(d_a1_value);
+                -> bool { return epitope_eqb(a0, _x0); })) {
+      return epitope_dedup(a1_value);
     } else {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::cons(
-          d_a0, epitope_dedup(d_a1_value));
+          a0, epitope_dedup(a1_value));
     }
   }
 }
@@ -292,18 +292,18 @@ ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
     const ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig &cfg,
     unsigned int mfi) {
   if (mfi <= cfg.mfi_cfg_negative) {
-    return MFIStrength::e_MFI_NEGATIVE;
+    return MFIStrength::MFI_NEGATIVE;
   } else {
     if (mfi <= cfg.mfi_cfg_weak_positive) {
-      return MFIStrength::e_MFI_WEAKPOSITIVE;
+      return MFIStrength::MFI_WEAKPOSITIVE;
     } else {
       if (mfi <= cfg.mfi_cfg_moderate) {
-        return MFIStrength::e_MFI_MODERATE;
+        return MFIStrength::MFI_MODERATE;
       } else {
         if (mfi <= cfg.mfi_cfg_strong) {
-          return MFIStrength::e_MFI_STRONG;
+          return MFIStrength::MFI_STRONG;
         } else {
-          return MFIStrength::e_MFI_VERYSTRONG;
+          return MFIStrength::MFI_VERYSTRONG;
         }
       }
     }
@@ -360,17 +360,17 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &donor) {
   unsigned int max_mfi = max_dsa_mfi(recipient, donor);
   switch (classify_mfi_safe(vcfg, max_mfi)) {
-  case MFIStrength::e_MFI_NEGATIVE: {
-    return VirtualXMResult::e_VXM_NEGATIVE;
+  case MFIStrength::MFI_NEGATIVE: {
+    return VirtualXMResult::VXM_NEGATIVE;
   }
-  case MFIStrength::e_MFI_WEAKPOSITIVE: {
-    return VirtualXMResult::e_VXM_WEAKPOSITIVE;
+  case MFIStrength::MFI_WEAKPOSITIVE: {
+    return VirtualXMResult::VXM_WEAKPOSITIVE;
   }
-  case MFIStrength::e_MFI_MODERATE: {
-    return VirtualXMResult::e_VXM_POSITIVE;
+  case MFIStrength::MFI_MODERATE: {
+    return VirtualXMResult::VXM_POSITIVE;
   }
   default: {
-    return VirtualXMResult::e_VXM_STRONGPOSITIVE;
+    return VirtualXMResult::VXM_STRONGPOSITIVE;
   }
   }
 }
@@ -380,21 +380,21 @@ ValidatedVirtualCrossmatchTraceCase::transplant_acceptability(
     ValidatedVirtualCrossmatchTraceCase::VirtualXMResult vxm,
     bool complement_fixing_dsa) {
   switch (vxm) {
-  case VirtualXMResult::e_VXM_NEGATIVE: {
-    return TransplantAcceptability::e_ACCEPTABLE;
+  case VirtualXMResult::VXM_NEGATIVE: {
+    return TransplantAcceptability::ACCEPTABLE;
   }
-  case VirtualXMResult::e_VXM_WEAKPOSITIVE: {
+  case VirtualXMResult::VXM_WEAKPOSITIVE: {
     if (complement_fixing_dsa) {
-      return TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK;
+      return TransplantAcceptability::UNACCEPTABLE_HIGH_RISK;
     } else {
-      return TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION;
+      return TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION;
     }
   }
-  case VirtualXMResult::e_VXM_POSITIVE: {
-    return TransplantAcceptability::e_UNACCEPTABLE_HIGH_RISK;
+  case VirtualXMResult::VXM_POSITIVE: {
+    return TransplantAcceptability::UNACCEPTABLE_HIGH_RISK;
   }
-  case VirtualXMResult::e_VXM_STRONGPOSITIVE: {
-    return TransplantAcceptability::e_ABSOLUTE_CONTRAINDICATION;
+  case VirtualXMResult::VXM_STRONGPOSITIVE: {
+    return TransplantAcceptability::ABSOLUTE_CONTRAINDICATION;
   }
   default:
     std::unreachable();
@@ -415,9 +415,9 @@ ValidatedVirtualCrossmatchTraceCase::full_virtual_crossmatch_safe(
 bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
     const ValidatedVirtualCrossmatchTraceCase::CrossmatchWithUncertainty &xm) {
   switch (xm.xmu_result) {
-  case CrossmatchResult::e_XM_COMPATIBLE: {
+  case CrossmatchResult::XM_COMPATIBLE: {
     switch (xm.xmu_confidence) {
-    case TestConfidence::e_CONFIDENCE_LOW: {
+    case TestConfidence::CONFIDENCE_LOW: {
       return false;
     }
     default: {
@@ -471,10 +471,10 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
 bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
     ValidatedVirtualCrossmatchTraceCase::TransplantAcceptability a) {
   switch (a) {
-  case TransplantAcceptability::e_ACCEPTABLE: {
+  case TransplantAcceptability::ACCEPTABLE: {
     return true;
   }
-  case TransplantAcceptability::e_ACCEPTABLE_WITH_DESENSITIZATION: {
+  case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
     return true;
   }
   default: {
@@ -525,44 +525,43 @@ unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D0>(d.v());
-    return Nat::of_uint_acc(*d_a0, Nat::tail_mul(10u, acc));
+    const auto &[a0] = std::get<typename Uint::D0>(d.v());
+    return Nat::of_uint_acc(*a0, Nat::tail_mul(10u, acc));
   } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D1>(d.v());
-    return Nat::of_uint_acc(*d_a0, (Nat::tail_mul(10u, acc) + 1));
+    const auto &[a0] = std::get<typename Uint::D1>(d.v());
+    return Nat::of_uint_acc(*a0, (Nat::tail_mul(10u, acc) + 1));
   } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D2>(d.v());
-    return Nat::of_uint_acc(*d_a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint::D2>(d.v());
+    return Nat::of_uint_acc(*a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D3>(d.v());
-    return Nat::of_uint_acc(*d_a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint::D3>(d.v());
+    return Nat::of_uint_acc(*a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D4>(d.v());
-    return Nat::of_uint_acc(*d_a0,
+    const auto &[a0] = std::get<typename Uint::D4>(d.v());
+    return Nat::of_uint_acc(*a0,
                             ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D5>(d.v());
+    const auto &[a0] = std::get<typename Uint::D5>(d.v());
     return Nat::of_uint_acc(
-        *d_a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D6>(d.v());
+    const auto &[a0] = std::get<typename Uint::D6>(d.v());
     return Nat::of_uint_acc(
-        *d_a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D7>(d.v());
+    const auto &[a0] = std::get<typename Uint::D7>(d.v());
     return Nat::of_uint_acc(
-        *d_a0,
-        (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D8>(d.v());
+    const auto &[a0] = std::get<typename Uint::D8>(d.v());
     return Nat::of_uint_acc(
-        *d_a0,
+        *a0,
         ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
   } else {
-    const auto &[d_a0] = std::get<typename Uint::D9>(d.v());
+    const auto &[a0] = std::get<typename Uint::D9>(d.v());
     return Nat::of_uint_acc(
-        *d_a0,
+        *a0,
         (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
@@ -575,69 +574,67 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D10>(d.v());
-    return Nat::of_hex_uint_acc(*d_a0, Nat::tail_mul(16u, acc));
+    const auto &[a0] = std::get<typename Uint0::D10>(d.v());
+    return Nat::of_hex_uint_acc(*a0, Nat::tail_mul(16u, acc));
   } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D11>(d.v());
-    return Nat::of_hex_uint_acc(*d_a0, (Nat::tail_mul(16u, acc) + 1));
+    const auto &[a0] = std::get<typename Uint0::D11>(d.v());
+    return Nat::of_hex_uint_acc(*a0, (Nat::tail_mul(16u, acc) + 1));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D12>(d.v());
-    return Nat::of_hex_uint_acc(*d_a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint0::D12>(d.v());
+    return Nat::of_hex_uint_acc(*a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D13>(d.v());
-    return Nat::of_hex_uint_acc(*d_a0,
-                                (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint0::D13>(d.v());
+    return Nat::of_hex_uint_acc(*a0, (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D14>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
+        *a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D15>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D15>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D16>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D16>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D17>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
-        (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D18>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
          1));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D19>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D19>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Da>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Da>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Db>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Db>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
             1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Dc>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
              1) +
             1) +
@@ -645,9 +642,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Dd>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                1) +
               1) +
@@ -657,9 +654,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::De>(d.v());
+    const auto &[a0] = std::get<typename Uint0::De>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                 1) +
                1) +
@@ -670,9 +667,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
           1) +
          1));
   } else {
-    const auto &[d_a0] = std::get<typename Uint0::Df>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Df>(d.v());
     return Nat::of_hex_uint_acc(
-        *d_a0,
+        *a0,
         (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
                  1) +
                 1) +
@@ -692,10 +689,10 @@ unsigned int Nat::of_hex_uint(const Uint0 &d) {
 
 unsigned int Nat::of_num_uint(const Uint1 &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
-    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d.v());
-    return Nat::of_uint(d_u);
+    const auto &[u] = std::get<typename Uint1::UIntDecimal>(d.v());
+    return Nat::of_uint(u);
   } else {
-    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d.v());
-    return Nat::of_hex_uint(d_u);
+    const auto &[u] = std::get<typename Uint1::UIntHexadecimal>(d.v());
+    return Nat::of_hex_uint(u);
   }
 }

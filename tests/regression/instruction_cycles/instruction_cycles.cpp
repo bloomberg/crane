@@ -13,16 +13,16 @@ InstructionCycles::cycles_jms(const InstructionCycles::state2 &,
 
 unsigned int InstructionCycles::cycles_min(InstructionCycles::Instr3 i) {
   switch (i) {
-  case Instr3::e_FIM3: {
+  case Instr3::FIM3: {
     return 16u;
   }
-  case Instr3::e_JMS3: {
+  case Instr3::JMS3: {
     return 24u;
   }
-  case Instr3::e_JCNTAKEN3: {
+  case Instr3::JCNTAKEN3: {
     return 16u;
   }
-  case Instr3::e_ISZTAKEN3: {
+  case Instr3::ISZTAKEN3: {
     return 16u;
   }
   default: {
@@ -33,16 +33,16 @@ unsigned int InstructionCycles::cycles_min(InstructionCycles::Instr3 i) {
 
 unsigned int InstructionCycles::cycles_max(InstructionCycles::Instr4 i) {
   switch (i) {
-  case Instr4::e_FIM4: {
+  case Instr4::FIM4: {
     return 16u;
   }
-  case Instr4::e_JMS4: {
+  case Instr4::JMS4: {
     return 24u;
   }
-  case Instr4::e_JCNTAKEN4: {
+  case Instr4::JCNTAKEN4: {
     return 16u;
   }
-  case Instr4::e_ISZTAKEN4: {
+  case Instr4::ISZTAKEN4: {
     return 16u;
   }
   default: {
@@ -58,10 +58,10 @@ unsigned int InstructionCycles::program_cycles5(
           typename List<InstructionCycles::instruction5>::Nil>(prog.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionCycles::instruction5>::Cons>(
             prog.v());
-    return (d_a0.cycles_sum(s) + program_cycles5(d_a0.execute5(s), *d_a1));
+    return (a0.cycles_sum(s) + program_cycles5(a0.execute5(s), *a1));
   }
 }
 
@@ -77,10 +77,10 @@ unsigned int InstructionCycles::program_cycles6(
           typename List<InstructionCycles::Instruction6>::Nil>(prog.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionCycles::Instruction6>::Cons>(
             prog.v());
-    return (cycles6(s, d_a0) + program_cycles6(s, *d_a1));
+    return (cycles6(s, a0) + program_cycles6(s, *a1));
   }
 }
 
@@ -96,9 +96,9 @@ unsigned int InstructionCycles::program_cycles7(
           typename List<InstructionCycles::Instruction7>::Nil>(prog.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<InstructionCycles::Instruction7>::Cons>(
             prog.v());
-    return (cycles7(s, d_a0) + program_cycles7(s, *d_a1));
+    return (cycles7(s, a0) + program_cycles7(s, *a1));
   }
 }

@@ -5,10 +5,10 @@ void DependentElimStdexceptProbe::get_present(
   {
     [&]() -> void {
       switch (a) {
-      case Avail::e_PRESENT: {
+      case Avail::PRESENT: {
         return;
       }
-      case Avail::e_ABSENT: {
+      case Avail::ABSENT: {
         throw std::logic_error("unreachable");
       }
       default:

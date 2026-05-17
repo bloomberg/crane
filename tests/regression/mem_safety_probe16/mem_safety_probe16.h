@@ -24,36 +24,36 @@ struct MemSafetyProbe16 {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      unsigned int a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -75,18 +75,17 @@ struct MemSafetyProbe16 {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -106,13 +105,13 @@ struct MemSafetyProbe16 {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -126,10 +125,10 @@ struct MemSafetyProbe16 {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// TEST 8: Higher-order map: apply a function to each element
     /// of a tree, building a new tree of closures.
@@ -170,10 +169,9 @@ struct MemSafetyProbe16 {
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = tree::leaf();
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), (d_a1 + 1u)});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), (a1 + 1u)});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
@@ -192,27 +190,22 @@ struct MemSafetyProbe16 {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return n;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        auto &&_sv0 = *d_a0;
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        auto &&_sv0 = *a0;
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
-          return ((d_a1 + (*d_a2).tree_sum()) + n);
+          return ((a1 + (*a2).tree_sum()) + n);
         } else {
-          const auto &[d_a00, d_a10, d_a20] =
-              std::get<typename tree::Node>(_sv0.v());
-          auto &&_sv1 = *d_a2;
+          const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
+          auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
-            return (
-                ((((*d_a00).tree_sum() + d_a10) + (*d_a20).tree_sum()) + d_a1) +
-                n);
+            return (((((*a00).tree_sum() + a10) + (*a20).tree_sum()) + a1) + n);
           } else {
-            const auto &[d_a01, d_a11, d_a21] =
+            const auto &[a01, a11, a21] =
                 std::get<typename tree::Node>(_sv1.v());
-            return ((((((((*d_a00).tree_sum() + d_a10) + (*d_a20).tree_sum()) +
-                        d_a1) +
-                       (*d_a01).tree_sum()) +
-                      d_a11) +
-                     (*d_a21).tree_sum()) +
+            return ((((((((*a00).tree_sum() + a10) + (*a20).tree_sum()) + a1) +
+                       (*a01).tree_sum()) +
+                      a11) +
+                     (*a21).tree_sum()) +
                     n);
           }
         }
@@ -240,17 +233,17 @@ struct MemSafetyProbe16 {
         const tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a1], dispatches next recursive call.
+      /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int d_a1;
+        unsigned int a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         unsigned int _result;
-        unsigned int d_a1;
+        unsigned int a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -269,18 +262,17 @@ struct MemSafetyProbe16 {
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = 0u;
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), a1});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, _f.d_a1});
+          _stack.emplace_back(_Combine_Node{_result, _f.a1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = ((_result + _f.d_a1) + _f._result);
+          _result = ((_result + _f.a1) + _f._result);
         }
       }
       return _result;
@@ -297,22 +289,21 @@ struct MemSafetyProbe16 {
         const tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
-      /// call.
+      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        unsigned int a1;
+        tree a0;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         T1 _result;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        unsigned int a1;
+        tree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -331,19 +322,18 @@ struct MemSafetyProbe16 {
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+                                            std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
+          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
         }
       }
       return _result;
@@ -360,22 +350,21 @@ struct MemSafetyProbe16 {
         const tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
-      /// call.
+      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        unsigned int a1;
+        tree a0;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         T1 _result;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        unsigned int a1;
+        tree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -394,69 +383,68 @@ struct MemSafetyProbe16 {
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), *d_a2, d_a1, *d_a0});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+                                            std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
+          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
         }
       }
       return _result;
     }
   };
 
-  template <typename t_A> struct mylist {
+  template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
 
     struct Mycons {
-      t_A d_a0;
-      std::unique_ptr<mylist<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist<A> &&_other) : v_(std::move(_other.v_)) {}
 
-    mylist<t_A> &operator=(const mylist<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    mylist<A> &operator=(const mylist<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<t_A> &operator=(mylist<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist<A> &operator=(mylist<A> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    mylist<t_A> clone() const {
-      mylist<t_A> _out{};
+    mylist<A> clone() const {
+      mylist<A> _out{};
 
       struct _CloneFrame {
-        const mylist<t_A> *_src;
-        mylist<t_A> *_dst;
+        const mylist<A> *_src;
+        mylist<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -465,17 +453,17 @@ struct MemSafetyProbe16 {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const mylist<t_A> *_src = _frame._src;
-        mylist<t_A> *_dst = _frame._dst;
+        const mylist<A> *_src = _frame._src;
+        mylist<A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Mycons{_alt.a0,
+                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -485,31 +473,31 @@ struct MemSafetyProbe16 {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil{};
+        this->v_ = Mynil{};
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons{
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->v_ =
+            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist(Mynil{}); }
 
-    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      std::vector<std::unique_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](mylist<t_A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](mylist<A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -523,10 +511,10 @@ struct MemSafetyProbe16 {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     unsigned int length() const {
       const mylist *_self = this;
@@ -555,13 +543,13 @@ struct MemSafetyProbe16 {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = 0u;
           } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename mylist<t_A>::Mycons>(_sv.v());
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
             _stack.emplace_back(_Resume_Mycons{1u});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         } else {
           auto _f = std::move(std::get<_Resume_Mycons>(_frame));
@@ -571,25 +559,23 @@ struct MemSafetyProbe16 {
       return _result;
     }
 
-    mylist<t_A> myapp(mylist<t_A> l2) const {
-      std::unique_ptr<mylist<t_A>> _head{};
-      std::unique_ptr<mylist<t_A>> *_write = &_head;
+    mylist<A> myapp(mylist<A> l2) const {
+      std::unique_ptr<mylist<A>> _head{};
+      std::unique_ptr<mylist<A>> *_write = &_head;
       const mylist *_loop_self = this;
-      mylist<t_A> _loop_l2 = std::move(l2);
+      mylist<A> _loop_l2 = std::move(l2);
       while (true) {
         auto &&_sv = *_loop_self;
-        if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
-          *_write = std::make_unique<mylist<t_A>>(std::move(_loop_l2));
+        if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+          *_write = std::make_unique<mylist<A>>(std::move(_loop_l2));
           break;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename mylist<t_A>::Mycons>(_sv.v());
-          auto _cell = std::make_unique<mylist<t_A>>(
-              typename mylist<t_A>::Mycons(d_a0, nullptr));
+          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
+          auto _cell = std::make_unique<mylist<A>>(
+              typename mylist<A>::Mycons(a0, nullptr));
           *_write = std::move(_cell);
-          _write =
-              &std::get<typename mylist<t_A>::Mycons>((*_write)->v_mut()).d_a1;
-          _loop_self = d_a1.get();
+          _write = &std::get<typename mylist<A>::Mycons>((*_write)->v_mut()).a1;
+          _loop_self = a1.get();
           continue;
         }
       }
@@ -597,7 +583,7 @@ struct MemSafetyProbe16 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
@@ -606,12 +592,12 @@ struct MemSafetyProbe16 {
         const mylist *_self;
       };
 
-      /// _Resume_Mycons: saves [f0, d_a1, d_a0], resumes after recursive call
-      /// with _result.
+      /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
+      /// _result.
       struct _Resume_Mycons {
         F1 f0;
-        mylist<t_A> d_a1;
-        t_A d_a0;
+        mylist<A> a1;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -627,24 +613,24 @@ struct MemSafetyProbe16 {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         } else {
           auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+          _result = _f.f0(_f.a0, _f.a1, _result);
         }
       }
       return _result;
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &, mylist<t_A> &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist *_self = this;
 
@@ -653,12 +639,12 @@ struct MemSafetyProbe16 {
         const mylist *_self;
       };
 
-      /// _Resume_Mycons: saves [f0, d_a1, d_a0], resumes after recursive call
-      /// with _result.
+      /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
+      /// _result.
       struct _Resume_Mycons {
         F1 f0;
-        mylist<t_A> d_a1;
-        t_A d_a0;
+        mylist<A> a1;
+        A a0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -674,17 +660,17 @@ struct MemSafetyProbe16 {
           auto _f = std::move(std::get<_Enter>(_frame));
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<t_A>::Mynil>(_sv.v())) {
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = f;
           } else {
-            const auto &[d_a0, d_a1] =
-                std::get<typename mylist<t_A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *d_a1, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         } else {
           auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+          _result = _f.f0(_f.a0, _f.a1, _result);
         }
       }
       return _result;
@@ -738,14 +724,14 @@ struct MemSafetyProbe16 {
         if (std::holds_alternative<typename mylist<tree>::Mynil>(trees.v())) {
           return acc;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename mylist<tree>::Mycons>(trees.v());
-          mylist<tree> d_a1_value = *d_a1;
+          mylist<tree> a1_value = *a1;
           return [=](unsigned int _x0) mutable -> unsigned int {
             return compose_summers(
-                d_a1_value,
+                a1_value,
                 [=](unsigned int n) mutable {
-                  return acc((d_a0.tree_sum() + n));
+                  return acc((a0.tree_sum() + n));
                 },
                 _x0);
           };
@@ -861,17 +847,17 @@ struct MemSafetyProbe16 {
       if (std::holds_alternative<typename tree::Leaf>(t.v())) {
         _result = k(mylist<unsigned int>::mynil());
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-        tree d_a0_value = *d_a0;
-        tree d_a2_value = *d_a2;
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+        tree a0_value = *a0;
+        tree a2_value = *a2;
         _stack.emplace_back(_Enter{
             [=](const mylist<unsigned int> &ll) mutable {
               return flatten_cps_aux(
-                  d_a2_value, [=](mylist<unsigned int> rl) mutable {
-                    return k(ll.myapp(mylist<unsigned int>::mycons(d_a1, rl)));
+                  a2_value, [=](mylist<unsigned int> rl) mutable {
+                    return k(ll.myapp(mylist<unsigned int>::mycons(a1, rl)));
                   });
             },
-            d_a0.get()});
+            a0.get()});
       }
     }
     return _result;

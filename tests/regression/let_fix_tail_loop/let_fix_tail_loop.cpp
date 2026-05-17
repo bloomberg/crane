@@ -6,9 +6,9 @@ unsigned int LetFixTailLoop::sum_list(const List<unsigned int> &l) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
       return acc;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(xs.v());
-      return _self_go(_self_go, *d_a1, (acc + d_a0));
+      return _self_go(_self_go, *a1, (acc + a0));
     }
   };
   auto go = [&](const List<unsigned int> &xs,

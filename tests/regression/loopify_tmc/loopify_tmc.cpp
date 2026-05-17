@@ -21,8 +21,7 @@ LoopifyTmc::list<unsigned int> LoopifyTmc::range(unsigned int lo,
             typename list<unsigned int>::Cons(hi_, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
+            &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).a1;
         _loop_hi = hi_;
         continue;
       } else {
@@ -50,15 +49,15 @@ LoopifyTmc::prefix_sums(unsigned int acc,
           list<unsigned int>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename LoopifyTmc::list<unsigned int>::Cons>(_loop_l->v());
-      unsigned int s = (_loop_acc + d_a0);
+      unsigned int s = (_loop_acc + a0);
       auto _cell = std::make_unique<LoopifyTmc::list<unsigned int>>(
           typename list<unsigned int>::Cons(s, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).d_a1;
-      _loop_l = d_a1.get();
+          &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut()).a1;
+      _loop_l = a1.get();
       _loop_acc = s;
       continue;
     }

@@ -9,12 +9,12 @@ bool MutualValueDeepCopy::reaches_end_a(const MutualValueDeepCopy::a &x) {
       _result = true;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename MutualValueDeepCopy::a::ANode>(_loop_x->v());
-      const MutualValueDeepCopy::b &_inl_y = *d_a1;
-      const auto &[_inl_d_a0] =
+      const MutualValueDeepCopy::b &_inl_y = *a1;
+      const auto &[_inl_a0] =
           std::get<typename MutualValueDeepCopy::b::BNode>(_inl_y.v());
-      _loop_x = _inl_d_a0.get();
+      _loop_x = _inl_a0.get();
     }
   }
   return _result;
@@ -24,17 +24,17 @@ bool MutualValueDeepCopy::reaches_end_b(const MutualValueDeepCopy::b &y) {
   bool _result;
   const MutualValueDeepCopy::b *_loop_y = &y;
   while (true) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename MutualValueDeepCopy::b::BNode>(_loop_y->v());
-    const MutualValueDeepCopy::a &_inl_x = *d_a0;
+    const MutualValueDeepCopy::a &_inl_x = *a0;
     if (std::holds_alternative<typename MutualValueDeepCopy::a::AEnd>(
             _inl_x.v())) {
       _result = true;
       break;
     } else {
-      const auto &[_inl_d_a0, _inl_d_a1] =
+      const auto &[_inl_a0, _inl_a1] =
           std::get<typename MutualValueDeepCopy::a::ANode>(_inl_x.v());
-      _loop_y = _inl_d_a1.get();
+      _loop_y = _inl_a1.get();
     }
   }
   return _result;

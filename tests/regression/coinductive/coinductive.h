@@ -12,23 +12,23 @@ struct Coinductive {
   struct stream {
     // TYPES
     struct Cons {
-      unsigned int d_a0;
-      std::shared_ptr<stream> d_a1;
+      unsigned int a0;
+      std::shared_ptr<stream> a1;
     };
 
     using variant_t = std::variant<Cons>;
 
   private:
     // DATA
-    crane::lazy<variant_t> d_lazyV_;
+    crane::lazy<variant_t> lazy_v_;
 
   public:
     // CREATORS
     explicit stream(Cons _v)
-        : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
+        : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
     explicit stream(std::function<variant_t()> _thunk)
-        : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
+        : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(unsigned int a0, const stream &a1) {
       return stream(Cons{a0, std::make_shared<stream>(a1)});
@@ -42,7 +42,7 @@ struct Coinductive {
     }
 
     // ACCESSORS
-    const variant_t &v() const { return d_lazyV_.force(); }
+    const variant_t &v() const { return lazy_v_.force(); }
   };
 
   static stream zeros();
@@ -53,10 +53,9 @@ struct Coinductive {
   template <typename F0>
     requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
   static stream smap(F0 &&f, stream s) {
-    const auto &[d_a0, d_a1] = std::get<typename stream::Cons>(s.v());
-    return stream::lazy_([=]() mutable -> stream {
-      return stream::cons(f(d_a0), smap(f, *d_a1));
-    });
+    const auto &[a0, a1] = std::get<typename stream::Cons>(s.v());
+    return stream::lazy_(
+        [=]() mutable -> stream { return stream::cons(f(a0), smap(f, *a1)); });
   }
 
   static stream interleave(stream s1, stream s2);
@@ -68,31 +67,31 @@ struct Coinductive {
   struct tree {
     // TYPES
     struct Leaf {
-      unsigned int d_a0;
+      unsigned int a0;
     };
 
     struct Node {
-      unsigned int d_a0;
-      std::shared_ptr<tree> d_a1;
-      std::shared_ptr<tree> d_a2;
+      unsigned int a0;
+      std::shared_ptr<tree> a1;
+      std::shared_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    crane::lazy<variant_t> d_lazyV_;
+    crane::lazy<variant_t> lazy_v_;
 
   public:
     // CREATORS
     explicit tree(Leaf _v)
-        : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
+        : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
     explicit tree(Node _v)
-        : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
+        : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
     explicit tree(std::function<variant_t()> _thunk)
-        : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
+        : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
 
@@ -109,7 +108,7 @@ struct Coinductive {
     }
 
     // ACCESSORS
-    const variant_t &v() const { return d_lazyV_.force(); }
+    const variant_t &v() const { return lazy_v_.force(); }
   };
 
   static tree infinite_tree(unsigned int n);

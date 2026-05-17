@@ -79,12 +79,11 @@ List<unsigned int> ComputationalProof::insert_dec(unsigned int x,
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::cons(x, List<unsigned int>::nil());
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    if (le_dec(x, d_a0)) {
-      return List<unsigned int>::cons(x, List<unsigned int>::cons(d_a0, *d_a1));
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+    if (le_dec(x, a0)) {
+      return List<unsigned int>::cons(x, List<unsigned int>::cons(a0, *a1));
     } else {
-      return List<unsigned int>::cons(d_a0, insert_dec(x, *d_a1));
+      return List<unsigned int>::cons(a0, insert_dec(x, *a1));
     }
   }
 }
@@ -93,8 +92,7 @@ List<unsigned int> ComputationalProof::isort_dec(const List<unsigned int> &l) {
   if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
     return List<unsigned int>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    return insert_dec(d_a0, isort_dec(*d_a1));
+    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+    return insert_dec(a0, isort_dec(*a1));
   }
 }

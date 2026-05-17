@@ -6,7 +6,7 @@
 namespace SeparateExtraction {
 
 unsigned int sep_add(unsigned int _x0, unsigned int _x1);
-enum class Color { e_RED, e_GREEN, e_BLUE };
+enum class Color { RED, GREEN, BLUE };
 unsigned int color_to_nat(Color c);
 
 } // namespace SeparateExtraction

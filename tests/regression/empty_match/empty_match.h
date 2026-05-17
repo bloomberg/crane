@@ -25,53 +25,52 @@ struct EmptyMatch {
 
   static unsigned int from_empty(const empty &_x0);
 
-  template <typename t_A, typename t_B> struct either {
+  template <typename A, typename B> struct either {
     // TYPES
     struct Left {
-      t_A d_a0;
+      A a0;
     };
 
     struct Right {
-      t_B d_a0;
+      B a0;
     };
 
     using variant_t = std::variant<Left, Right>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     either() {}
 
-    explicit either(Left _v) : d_v_(std::move(_v)) {}
+    explicit either(Left _v) : v_(std::move(_v)) {}
 
-    explicit either(Right _v) : d_v_(std::move(_v)) {}
+    explicit either(Right _v) : v_(std::move(_v)) {}
 
-    either(const either<t_A, t_B> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    either(const either<A, B> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    either(either<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    either(either<A, B> &&_other) : v_(std::move(_other.v_)) {}
 
-    either<t_A, t_B> &operator=(const either<t_A, t_B> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    either<A, B> &operator=(const either<A, B> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    either<t_A, t_B> &operator=(either<t_A, t_B> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    either<A, B> &operator=(either<A, B> &&_other) {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    either<t_A, t_B> clone() const {
+    either<A, B> clone() const {
       if (std::holds_alternative<Left>(this->v())) {
-        const auto &[d_a0] = std::get<Left>(this->v());
-        return either<t_A, t_B>(Left{d_a0});
+        const auto &[a0] = std::get<Left>(this->v());
+        return either<A, B>(Left{a0});
       } else {
-        const auto &[d_a0] = std::get<Right>(this->v());
-        return either<t_A, t_B>(Right{d_a0});
+        const auto &[a0] = std::get<Right>(this->v());
+        return either<A, B>(Right{a0});
       }
     }
 
@@ -79,27 +78,25 @@ struct EmptyMatch {
     template <typename _U0, typename _U1>
     explicit either(const either<_U0, _U1> &_other) {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
-        const auto &[d_a0] =
+        const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        this->d_v_ = Left{t_A(d_a0)};
+        this->v_ = Left{A(a0)};
       } else {
-        const auto &[d_a0] =
+        const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        this->d_v_ = Right{t_B(d_a0)};
+        this->v_ = Right{B(a0)};
       }
     }
 
-    static either<t_A, t_B> left(t_A a0) { return either(Left{std::move(a0)}); }
+    static either<A, B> left(A a0) { return either(Left{std::move(a0)}); }
 
-    static either<t_A, t_B> right(t_B a0) {
-      return either(Right{std::move(a0)});
-    }
+    static either<A, B> right(B a0) { return either(Right{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
@@ -107,11 +104,11 @@ struct EmptyMatch {
              std::is_invocable_r_v<T3, F1 &, T2 &>
   static T3 either_rect(F0 &&f, F1 &&f0, const either<T1, T2> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e.v())) {
-      const auto &[d_a0] = std::get<typename either<T1, T2>::Left>(e.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename either<T1, T2>::Left>(e.v());
+      return f(a0);
     } else {
-      const auto &[d_a0] = std::get<typename either<T1, T2>::Right>(e.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename either<T1, T2>::Right>(e.v());
+      return f0(a0);
     }
   }
 
@@ -120,21 +117,21 @@ struct EmptyMatch {
              std::is_invocable_r_v<T3, F1 &, T2 &>
   static T3 either_rec(F0 &&f, F1 &&f0, const either<T1, T2> &e) {
     if (std::holds_alternative<typename either<T1, T2>::Left>(e.v())) {
-      const auto &[d_a0] = std::get<typename either<T1, T2>::Left>(e.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename either<T1, T2>::Left>(e.v());
+      return f(a0);
     } else {
-      const auto &[d_a0] = std::get<typename either<T1, T2>::Right>(e.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename either<T1, T2>::Right>(e.v());
+      return f0(a0);
     }
   }
 
   template <typename T1> static T1 handle_left(const either<T1, empty> &e) {
     if (std::holds_alternative<typename either<T1, empty>::Left>(e.v())) {
-      const auto &[d_a0] = std::get<typename either<T1, empty>::Left>(e.v());
-      return d_a0;
+      const auto &[a0] = std::get<typename either<T1, empty>::Left>(e.v());
+      return a0;
     } else {
-      const auto &[d_a0] = std::get<typename either<T1, empty>::Right>(e.v());
-      return absurd<T1>(d_a0);
+      const auto &[a0] = std::get<typename either<T1, empty>::Right>(e.v());
+      return absurd<T1>(a0);
     }
   }
 

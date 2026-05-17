@@ -58,25 +58,25 @@ unsigned int MutualRecursion::process_b(unsigned int n, unsigned int m) {
 
 unsigned int MutualRecursion::eval_expr(const MutualRecursion::expr &e) {
   if (std::holds_alternative<typename MutualRecursion::expr::Val>(e.v())) {
-    const auto &[d_a0] = std::get<typename MutualRecursion::expr::Val>(e.v());
-    return d_a0;
+    const auto &[a0] = std::get<typename MutualRecursion::expr::Val>(e.v());
+    return a0;
   } else if (std::holds_alternative<typename MutualRecursion::expr::BinOp>(
                  e.v())) {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename MutualRecursion::expr::BinOp>(e.v());
-    if (d_a0 <= 0) {
-      return (eval_expr(*d_a1) + eval_expr(*d_a2));
+    if (a0 <= 0) {
+      return (eval_expr(*a1) + eval_expr(*a2));
     } else {
-      unsigned int _x = d_a0 - 1;
-      return (eval_expr(*d_a1) * eval_expr(*d_a2));
+      unsigned int _x = a0 - 1;
+      return (eval_expr(*a1) * eval_expr(*a2));
     }
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename MutualRecursion::expr::UnOp>(e.v());
-    if (d_a0 <= 0) {
-      return eval_expr(*d_a1);
+    if (a0 <= 0) {
+      return eval_expr(*a1);
     } else {
-      unsigned int _x = d_a0 - 1;
+      unsigned int _x = a0 - 1;
       return 0u;
     }
   }

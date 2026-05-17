@@ -14,36 +14,36 @@ struct ClosurePairThis {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      unsigned int a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -65,18 +65,17 @@ struct ClosurePairThis {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -96,13 +95,13 @@ struct ClosurePairThis {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -116,10 +115,10 @@ struct ClosurePairThis {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// BUG HYPOTHESIS: get_fn_pair returns two closures in a pair.
     /// When methodified, both closures capture the raw this pointer.
@@ -147,9 +146,8 @@ struct ClosurePairThis {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return 0u;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return (((*d_a0).tree_sum() + d_a1) + (*d_a2).tree_sum());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
       }
     }
 
@@ -160,10 +158,9 @@ struct ClosurePairThis {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rec<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rec<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, (*a0).template tree_rec<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rec<T1>(f, f0));
       }
     }
 
@@ -174,10 +171,9 @@ struct ClosurePairThis {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
-            std::get<typename tree::Node>(this->v());
-        return f0(*d_a0, (*d_a0).template tree_rect<T1>(f, f0), d_a1, *d_a2,
-                  (*d_a2).template tree_rect<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, (*a0).template tree_rect<T1>(f, f0), a1, *a2,
+                  (*a2).template tree_rect<T1>(f, f0));
       }
     }
   };
@@ -185,63 +181,63 @@ struct ClosurePairThis {
   struct wrapper {
     // TYPES
     struct Wrap {
-      tree d_a0;
+      tree a0;
     };
 
     using variant_t = std::variant<Wrap>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     wrapper() {}
 
-    explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
+    explicit wrapper(Wrap _v) : v_(std::move(_v)) {}
 
-    wrapper(const wrapper &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
 
-    wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
+    wrapper(wrapper &&_other) : v_(std::move(_other.v_)) {}
 
     wrapper &operator=(const wrapper &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
     wrapper &operator=(wrapper &&_other) {
-      d_v_ = std::move(_other.d_v_);
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     wrapper clone() const {
-      const auto &[d_a0] = std::get<Wrap>(this->v());
-      return wrapper(Wrap{d_a0.clone()});
+      const auto &[a0] = std::get<Wrap>(this->v());
+      return wrapper(Wrap{a0.clone()});
     }
 
     // CREATORS
     static wrapper wrap(tree a0) { return wrapper(Wrap{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
-    return f(d_a0);
+    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    return f(a0);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
-    return f(d_a0);
+    const auto &[a0] = std::get<typename wrapper::Wrap>(w.v());
+    return f(a0);
   }
 
   /// test1: flag=0 on tree with sum=7. fst closure adds, snd multiplies.

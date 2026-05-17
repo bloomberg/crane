@@ -34,8 +34,8 @@ unsigned int DeepMap::root_or_zero(const DeepMap::tree<unsigned int> &t) {
           t.v())) {
     return 0u;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename DeepMap::tree<unsigned int>::Node>(t.v());
-    return d_a1;
+    return a1;
   }
 }

@@ -25,7 +25,7 @@ SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
     gs2 = std::move(gs1);
   }
   switch (forced_mode) {
-  case Mode::e_CHASE: {
+  case Mode::CHASE: {
     SuperfluousMoves::game_state gs3 = lose_one_life(std::move(gs2));
     if (gs3.lives == 0u) {
       return std::make_pair(false, loop_state{gs3, gs3.pacpos, gs3.ghosts});
@@ -33,7 +33,7 @@ SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
       return std::make_pair(false, loop_state{gs3, gs3.pacpos, gs3.ghosts});
     }
   }
-  case Mode::e_FRIGHTENED: {
+  case Mode::FRIGHTENED: {
     return std::make_pair(false, std::move(ls));
   }
   default:

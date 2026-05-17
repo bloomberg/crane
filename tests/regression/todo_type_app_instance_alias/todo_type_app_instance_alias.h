@@ -3,9 +3,9 @@
 
 #include <concepts>
 
-template <typename I, typename t_A>
+template <typename I, typename A>
 concept Boxed = requires {
-  { I::boxed_default() } -> std::convertible_to<t_A>;
+  { I::boxed_default() } -> std::convertible_to<A>;
 };
 
 struct TodoTypeAppInstanceAlias {

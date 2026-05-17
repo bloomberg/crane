@@ -88,7 +88,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(unsigned int fuel,
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
+                   .a1;
           _loop_n = (2u ? _loop_n / 2u : 0);
           _loop_fuel = fuel_;
           continue;
@@ -98,7 +98,7 @@ LoopifyNumericSequences::collatz_sequence_fuel(unsigned int fuel,
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
+                   .a1;
           _loop_n = ((3u * _loop_n) + 1u);
           _loop_fuel = fuel_;
           continue;
@@ -402,20 +402,19 @@ LoopifyNumericSequences::alternate_sum(bool sign, unsigned int acc,
       _result = _loop_acc;
       break;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_sign) {
-        _loop_l = d_a1.get();
-        _loop_acc = (_loop_acc + d_a0);
+        _loop_l = a1.get();
+        _loop_acc = (_loop_acc + a0);
         _loop_sign = false;
       } else {
-        if (d_a0 <= _loop_acc) {
-          _loop_l = d_a1.get();
-          _loop_acc =
-              (((_loop_acc - d_a0) > _loop_acc ? 0 : (_loop_acc - d_a0)));
+        if (a0 <= _loop_acc) {
+          _loop_l = a1.get();
+          _loop_acc = (((_loop_acc - a0) > _loop_acc ? 0 : (_loop_acc - a0)));
           _loop_sign = true;
         } else {
-          _loop_l = d_a1.get();
+          _loop_l = a1.get();
           _loop_acc = 0u;
           _loop_sign = true;
         }

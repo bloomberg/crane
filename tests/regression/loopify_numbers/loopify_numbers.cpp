@@ -1233,9 +1233,8 @@ unsigned int LoopifyNumbers::sum_odd_indices_fuel(unsigned int fuel,
     if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
       return 0u;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      return (d_a0 + sum_even_indices_fuel(f, *d_a1));
+      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      return (a0 + sum_even_indices_fuel(f, *a1));
     }
   }
 }
@@ -1250,9 +1249,9 @@ unsigned int LoopifyNumbers::sum_even_indices_fuel(
     unsigned int fuel;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int d_a0;
+    unsigned int a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -1275,9 +1274,9 @@ unsigned int LoopifyNumbers::sum_even_indices_fuel(
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
           _result = 0u;
         } else {
-          const auto &[d_a0, d_a1] =
+          const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
-          const List<unsigned int> &_inl_l = *d_a1;
+          const List<unsigned int> &_inl_l = *a1;
           unsigned int _inl_fuel = f;
           if (_inl_fuel <= 0) {
             _result = 0u;
@@ -1287,17 +1286,17 @@ unsigned int LoopifyNumbers::sum_even_indices_fuel(
                     _inl_l.v())) {
               _result = 0u;
             } else {
-              const auto &[d_a0, d_a1] =
+              const auto &[a0, a1] =
                   std::get<typename List<unsigned int>::Cons>(_inl_l.v());
-              _stack.emplace_back(_Resume_Cons{d_a0});
-              _stack.emplace_back(_Enter{d_a1.get(), f});
+              _stack.emplace_back(_Resume_Cons{a0});
+              _stack.emplace_back(_Enter{a1.get(), f});
             }
           }
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.d_a0 + _result);
+      _result = (_f.a0 + _result);
     }
   }
   return _result;
@@ -1335,7 +1334,7 @@ List<unsigned int> LoopifyNumbers::collatz_list_fuel(unsigned int fuel,
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
+                   .a1;
           _loop_n = (2u ? _loop_n / 2u : 0);
           _loop_fuel = f;
           continue;
@@ -1346,7 +1345,7 @@ List<unsigned int> LoopifyNumbers::collatz_list_fuel(unsigned int fuel,
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
+                     .a1;
             _loop_n = (3u ? _loop_n / 3u : 0);
             _loop_fuel = f;
             continue;
@@ -1356,7 +1355,7 @@ List<unsigned int> LoopifyNumbers::collatz_list_fuel(unsigned int fuel,
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
+                     .a1;
             _loop_n = ((3u * _loop_n) + 1u);
             _loop_fuel = f;
             continue;

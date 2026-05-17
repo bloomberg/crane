@@ -19,10 +19,9 @@ std::string EffectRecursiveList::fold_effect(const List<std::string> &xs,
   if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
     return acc;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<std::string>::Cons>(xs.v());
-    std::cout << d_a0 << '\n';
-    return fold_effect(*d_a1, acc + " "s + d_a0);
+    const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
+    std::cout << a0 << '\n';
+    return fold_effect(*a1, acc + " "s + a0);
   }
 }
 
@@ -47,13 +46,13 @@ EffectRecursiveList::collect_envs(const List<std::string> &names) {
   if (std::holds_alternative<typename List<std::string>::Nil>(names.v())) {
     return List<std::optional<std::string>>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::string>::Cons>(names.v());
     std::optional<std::string> val = [&]() -> std::optional<std::string> {
-      auto *v = std::getenv(d_a0.c_str());
+      auto *v = std::getenv(a0.c_str());
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
-    List<std::optional<std::string>> vals = collect_envs(*d_a1);
+    List<std::optional<std::string>> vals = collect_envs(*a1);
     return List<std::optional<std::string>>::cons(val, vals);
   }
 }
