@@ -121,12 +121,12 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct RamInitReset {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -135,7 +135,7 @@ struct RamInitReset {
         return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -146,8 +146,8 @@ struct RamInitReset {
   }
 
   struct ram_reg {
-    List<unsigned int> reg_main;
-    List<unsigned int> reg_status;
+    List<uint64_t> reg_main;
+    List<uint64_t> reg_status;
 
     // ACCESSORS
     ram_reg clone() const {
@@ -157,7 +157,7 @@ struct RamInitReset {
 
   struct ram_chip {
     List<ram_reg> chip_regs;
-    unsigned int chip_port;
+    uint64_t chip_port;
 
     // ACCESSORS
     ram_chip clone() const {
@@ -173,10 +173,10 @@ struct RamInitReset {
   };
 
   struct ram_sel {
-    unsigned int sel_bank;
-    unsigned int sel_chip;
-    unsigned int sel_reg;
-    unsigned int sel_char;
+    uint64_t sel_bank;
+    uint64_t sel_chip;
+    uint64_t sel_reg;
+    uint64_t sel_char;
 
     // ACCESSORS
     ram_sel clone() const {
@@ -186,14 +186,14 @@ struct RamInitReset {
   };
 
   struct state {
-    List<unsigned int> state_regs;
-    unsigned int state_acc;
+    List<uint64_t> state_regs;
+    uint64_t state_acc;
     bool state_carry;
-    unsigned int state_pc;
-    List<unsigned int> state_stack;
+    uint64_t state_pc;
+    List<uint64_t> state_stack;
     List<ram_bank> state_ram;
     ram_sel state_sel;
-    List<unsigned int> state_rom;
+    List<uint64_t> state_rom;
 
     // ACCESSORS
     state clone() const {
@@ -205,34 +205,35 @@ struct RamInitReset {
   };
 
   static inline const ram_reg empty_reg =
-      ram_reg{ListDef::template repeat<unsigned int>(0u, 16u),
-              ListDef::template repeat<unsigned int>(0u, 4u)};
-  static inline const ram_chip empty_chip =
-      ram_chip{ListDef::template repeat<ram_reg>(empty_reg, 4u), 0u};
+      ram_reg{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+              ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4))};
+  static inline const ram_chip empty_chip = ram_chip{
+      ListDef::template repeat<ram_reg>(empty_reg, UINT64_C(4)), UINT64_C(0)};
   static inline const ram_bank empty_bank =
-      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, 4u)};
+      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, UINT64_C(4))};
   static inline const List<ram_bank> empty_ram =
-      ListDef::template repeat<ram_bank>(empty_bank, 4u);
-  static inline const ram_sel default_sel = ram_sel{0u, 0u, 0u, 0u};
+      ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));
+  static inline const ram_sel default_sel =
+      ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state init_state =
-      state{ListDef::template repeat<unsigned int>(0u, 16u),
-            0u,
+      state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+            UINT64_C(0),
             false,
-            0u,
-            List<unsigned int>::nil(),
+            UINT64_C(0),
+            List<uint64_t>::nil(),
             empty_ram,
             default_sel,
-            ListDef::template repeat<unsigned int>(0u, 8u)};
+            ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static state reset_state(const state &s);
-  static std::pair<std::optional<unsigned int>, state> pop_stack(state s);
-  static inline const unsigned int reset_pc = reset_state(init_state).state_pc;
+  static std::pair<std::optional<uint64_t>, state> pop_stack(state s);
+  static inline const uint64_t reset_pc = reset_state(init_state).state_pc;
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
-    unsigned int k = n - 1;
+    uint64_t k = n - 1;
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }

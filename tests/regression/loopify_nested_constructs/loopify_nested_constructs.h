@@ -6,20 +6,20 @@
 #include <vector>
 
 struct LoopifyNestedConstructs {
-  static unsigned int multi_let(unsigned int n);
-  static unsigned int nested_if_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int nested_if(unsigned int n);
-  static unsigned int deep_nest(unsigned int n);
-  static unsigned int let_nested(unsigned int n);
-  static unsigned int mod_pattern_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int mod_pattern(unsigned int n);
-  static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-  tuple_constr(unsigned int n);
-  static unsigned int alternating_ops(unsigned int n);
-  static bool chained_comp_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int chained_comp(unsigned int n);
-  static unsigned int compute_with_lets(unsigned int n);
-  static unsigned int nested_match(unsigned int n);
+  static uint64_t multi_let(uint64_t n);
+  static uint64_t nested_if_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t nested_if(uint64_t n);
+  static uint64_t deep_nest(uint64_t n);
+  static uint64_t let_nested(uint64_t n);
+  static uint64_t mod_pattern_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t mod_pattern(uint64_t n);
+  static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
+  tuple_constr(uint64_t n);
+  static uint64_t alternating_ops(uint64_t n);
+  static bool chained_comp_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t chained_comp(uint64_t n);
+  static uint64_t compute_with_lets(uint64_t n);
+  static uint64_t nested_match(uint64_t n);
 };
 
 #endif // INCLUDED_LOOPIFY_NESTED_CONSTRUCTS

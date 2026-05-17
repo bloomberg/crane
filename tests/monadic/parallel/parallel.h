@@ -5,15 +5,13 @@
 #include <utility>
 
 struct Nat {
-  static inline const unsigned int one = 1u;
+  static inline const uint64_t one = UINT64_C(1);
 };
 
 struct ParallelTest {
-  static unsigned int ack(const std::pair<unsigned int, unsigned int> &p);
-  static std::pair<unsigned int, unsigned int> fast(unsigned int m,
-                                                    unsigned int n);
-  static std::pair<unsigned int, unsigned int> slow(unsigned int m,
-                                                    unsigned int n);
+  static uint64_t ack(const std::pair<uint64_t, uint64_t> &p);
+  static std::pair<uint64_t, uint64_t> fast(uint64_t m, uint64_t n);
+  static std::pair<uint64_t, uint64_t> slow(uint64_t m, uint64_t n);
 };
 
 #endif // INCLUDED_PARALLEL

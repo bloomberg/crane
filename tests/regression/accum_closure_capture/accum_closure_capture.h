@@ -17,7 +17,7 @@ struct AccumClosureCapture {
     struct FNil {};
 
     struct FCons {
-      std::function<unsigned int(unsigned int)> a0;
+      std::function<uint64_t(uint64_t)> a0;
       std::unique_ptr<fn_list> a1;
     };
 
@@ -84,8 +84,7 @@ struct AccumClosureCapture {
     // CREATORS
     static fn_list fnil() { return fn_list(FNil{}); }
 
-    static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
-                         fn_list a1) {
+    static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
       return fn_list(
           FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
@@ -117,7 +116,7 @@ struct AccumClosureCapture {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int apply_all(unsigned int init) const {
+    uint64_t apply_all(uint64_t init) const {
       if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return init;
       } else {
@@ -128,8 +127,7 @@ struct AccumClosureCapture {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<
-          T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
-          T1 &>
+          T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
     T1 fn_list_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
@@ -141,8 +139,7 @@ struct AccumClosureCapture {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<
-          T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
-          T1 &>
+          T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
     T1 fn_list_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
@@ -159,7 +156,7 @@ struct AccumClosureCapture {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -229,7 +226,7 @@ struct AccumClosureCapture {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -276,19 +273,19 @@ struct AccumClosureCapture {
       } else {
         auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return fn_list::fcons(
-            [=](unsigned int x) mutable { return (x + _self_val.tree_sum()); },
-            fn_list::fcons([=](unsigned int x) mutable { return (x + a1); },
+            [=](uint64_t x) mutable { return (x + _self_val.tree_sum()); },
+            fn_list::fcons([=](uint64_t x) mutable { return (x + a1); },
                            fn_list::fcons(
-                               [=](unsigned int x) mutable {
+                               [=](uint64_t x) mutable {
                                  return (x + _self_val.tree_sum());
                                },
                                fn_list::fnil())));
       }
     }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
@@ -296,8 +293,8 @@ struct AccumClosureCapture {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -309,8 +306,8 @@ struct AccumClosureCapture {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -325,19 +322,21 @@ struct AccumClosureCapture {
   /// test1: Create tree with sum=42, extract closures, apply to 0.
   /// Expected: 0 + 42 = 42, 42 + 20 = 62, 62 + 42 = 104.
   /// With dangling this, tree_sum reads garbage.
-  static inline const unsigned int test1 = []() {
-    fn_list fs = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                            tree::node(tree::leaf(), 12u, tree::leaf()))
-                     .extract_closures();
-    return std::move(fs).apply_all(0u);
+  static inline const uint64_t test1 = []() {
+    fn_list fs =
+        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                   UINT64_C(20),
+                   tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
+            .extract_closures();
+    return std::move(fs).apply_all(UINT64_C(0));
   }();
   /// test2: Allocate a noise tree between extracting closures and applying
   /// them. Increases memory pressure on freed region.
-  static inline const unsigned int test2 = []() {
-    fn_list fs =
-        tree::node(tree::leaf(), 100u, tree::leaf()).extract_closures();
-    unsigned int noise =
-        tree::node(tree::leaf(), 999u, tree::leaf()).tree_sum();
+  static inline const uint64_t test2 = []() {
+    fn_list fs = tree::node(tree::leaf(), UINT64_C(100), tree::leaf())
+                     .extract_closures();
+    uint64_t noise =
+        tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
     return std::move(fs).apply_all(noise);
   }();
 };

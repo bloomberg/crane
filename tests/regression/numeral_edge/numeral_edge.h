@@ -942,56 +942,56 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(unsigned int n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, unsigned int n,
-                                  unsigned int m);
-  static unsigned int tail_mul(unsigned int n, unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 struct NumeralEdge {
   /// 1. Zero
-  static inline const unsigned int nat_zero = 0u;
+  static inline const uint64_t nat_zero = UINT64_C(0);
   static inline const unsigned int n_zero = 0u;
   static inline const int64_t z_zero = INT64_C(0);
   /// 2. Small values
-  static inline const unsigned int nat_one = 1u;
-  static inline const unsigned int nat_ten = 10u;
+  static inline const uint64_t nat_one = UINT64_C(1);
+  static inline const uint64_t nat_ten = UINT64_C(10);
   static inline const int64_t z_neg = INT64_C(-5);
   static inline const int64_t z_neg_one = INT64_C(-1);
   /// 3. Moderate values
-  static inline const unsigned int nat_hundred = 100u;
+  static inline const uint64_t nat_hundred = UINT64_C(100);
   static inline const int64_t z_thousand = INT64_C(1000);
   static inline const unsigned int n_large = 65535u;
   /// 4. Powers of 2
-  static inline const unsigned int nat_pow2_8 = 256u;
-  static inline const unsigned int nat_pow2_16 = 65536u;
+  static inline const uint64_t nat_pow2_8 = UINT64_C(256);
+  static inline const uint64_t nat_pow2_16 = UINT64_C(65536);
   static inline const int64_t z_pow2_30 = INT64_C(1073741824);
   /// 5. Numerals in arithmetic expressions
-  static inline const unsigned int add_numerals = (100u + 200u);
+  static inline const uint64_t add_numerals = (UINT64_C(100) + UINT64_C(200));
   static inline const int64_t mul_numerals = (INT64_C(10) * INT64_C(20));
   static inline const int64_t sub_numerals = (INT64_C(100) - INT64_C(1));
   /// 6. Numeral as function argument
-  static unsigned int take_nat(unsigned int n);
-  static inline const unsigned int test_arg = take_nat(42u);
+  static uint64_t take_nat(uint64_t n);
+  static inline const uint64_t test_arg = take_nat(UINT64_C(42));
   /// 7. Numeral in list
-  static inline const List<unsigned int> nat_list = List<unsigned int>::cons(
-      1u, List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())));
+  static inline const List<uint64_t> nat_list = List<uint64_t>::cons(
+      UINT64_C(1), List<uint64_t>::cons(
+                       UINT64_C(2), List<uint64_t>::cons(
+                                        UINT64_C(3), List<uint64_t>::nil())));
   /// 8. Numeral in option
-  static inline const std::optional<unsigned int> some_nat =
-      std::make_optional<unsigned int>(99u);
+  static inline const std::optional<uint64_t> some_nat =
+      std::make_optional<uint64_t>(UINT64_C(99));
   /// 9. Numeral in pair
-  static inline const std::pair<unsigned int, unsigned int> nat_pair =
-      std::make_pair(10u, 20u);
+  static inline const std::pair<uint64_t, uint64_t> nat_pair =
+      std::make_pair(UINT64_C(10), UINT64_C(20));
   /// 10. Numeral in match
-  static unsigned int classify(unsigned int n);
+  static uint64_t classify(uint64_t n);
   /// 11. Comparison with numeral
-  static bool is_big(unsigned int n);
+  static bool is_big(uint64_t n);
   /// 12. Multiple Z values in one function
   static inline const int64_t z_arith =
       (INT64_C(10) + (INT64_C(3) * INT64_C(7)));
@@ -1000,8 +1000,7 @@ struct NumeralEdge {
       std::make_pair(INT64_C(-42), INT64_C(42));
 
   /// 14. N conversion
-  static inline const unsigned int n_to_nat_test =
-      static_cast<unsigned int>(255u);
+  static inline const uint64_t n_to_nat_test = static_cast<unsigned int>(255u);
 };
 
 #endif // INCLUDED_NUMERAL_EDGE

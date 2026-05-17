@@ -4,7 +4,7 @@
 #include <iostream>
 
 int main() {
-  using L = ReuseAlias::mylist<unsigned int>;
+  using L = ReuseAlias::mylist<uint64_t>;
 
   // --- double_use ---
   // inc_head and identity on the same list.

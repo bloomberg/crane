@@ -6,7 +6,7 @@
 int main() {
   // Build a maximally-unbalanced tree (right spine of 10k nodes).
   // Construction is loopified.
-  auto t = DeepMap::build_right(10000u, DeepMap::tree<unsigned int>::leaf());
+  auto t = DeepMap::build_right(10000u, DeepMap::tree<uint64_t>::leaf());
   std::cout << "Built tree with 10k nodes" << std::endl;
 
   auto r = DeepMap::root_or_zero(t);
@@ -24,10 +24,10 @@ int main() {
   assert(r2 == r + 1u);
 
   // Dropping t2 triggers deep destructor chain
-  t2 = DeepMap::tree<unsigned int>::leaf();
+  t2 = DeepMap::tree<uint64_t>::leaf();
   std::cout << "Dropped mapped tree" << std::endl;
 
-  t = DeepMap::tree<unsigned int>::leaf();
+  t = DeepMap::tree<uint64_t>::leaf();
   std::cout << "Dropped original tree" << std::endl;
 
   return 0;

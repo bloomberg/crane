@@ -121,30 +121,27 @@ public:
 };
 
 struct LoopifyAdvancedPatterns {
-  static unsigned int len_impl(const List<unsigned int> &l);
-  static List<unsigned int> as_guard(const List<unsigned int> &l);
-  static unsigned int multi_guard(const List<unsigned int> &l);
-  static unsigned int four_elem(const List<unsigned int> &l);
-  static unsigned int nested_pattern(
-      const List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
-          &l);
-  static unsigned int guard_accum(unsigned int acc,
-                                  const List<unsigned int> &l);
-  static List<unsigned int> cons_computed(unsigned int n,
-                                          const List<unsigned int> &l);
+  static uint64_t len_impl(const List<uint64_t> &l);
+  static List<uint64_t> as_guard(const List<uint64_t> &l);
+  static uint64_t multi_guard(const List<uint64_t> &l);
+  static uint64_t four_elem(const List<uint64_t> &l);
+  static uint64_t nested_pattern(
+      const List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> &l);
+  static uint64_t guard_accum(uint64_t acc, const List<uint64_t> &l);
+  static List<uint64_t> cons_computed(uint64_t n, const List<uint64_t> &l);
 
   struct shape {
     // TYPES
     struct Circle {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Square {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Triangle {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<Circle, Square, Triangle>;
@@ -192,11 +189,11 @@ struct LoopifyAdvancedPatterns {
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) { return shape(Circle{a0}); }
+    static shape circle(uint64_t a0) { return shape(Circle{a0}); }
 
-    static shape square(unsigned int a0) { return shape(Square{a0}); }
+    static shape square(uint64_t a0) { return shape(Square{a0}); }
 
-    static shape triangle(unsigned int a0) { return shape(Triangle{a0}); }
+    static shape triangle(uint64_t a0) { return shape(Triangle{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -206,9 +203,9 @@ struct LoopifyAdvancedPatterns {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &>
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -223,9 +220,9 @@ struct LoopifyAdvancedPatterns {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &>
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -239,12 +236,12 @@ struct LoopifyAdvancedPatterns {
     }
   }
 
-  static unsigned int extract_value(const shape &s);
-  static unsigned int sum_shapes(const List<shape> &l);
-  static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
+  static uint64_t extract_value(const shape &s);
+  static uint64_t sum_shapes(const List<shape> &l);
+  static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
   count_by_shape(const List<shape> &l);
-  static List<unsigned int> replace_at(unsigned int idx, unsigned int value,
-                                       const List<unsigned int> &l);
+  static List<uint64_t> replace_at(uint64_t idx, uint64_t value,
+                                   const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_ADVANCED_PATTERNS

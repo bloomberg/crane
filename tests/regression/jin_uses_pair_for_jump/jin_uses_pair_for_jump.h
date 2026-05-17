@@ -121,38 +121,42 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct JinUsesPairForJump {
   struct state {
-    List<unsigned int> regs;
-    unsigned int pc;
+    List<uint64_t> regs;
+    uint64_t pc;
 
     // ACCESSORS
     state clone() const { return state{(*this).regs.clone(), (*this).pc}; }
   };
 
-  static unsigned int get_reg(const state &s, unsigned int r);
-  static unsigned int get_reg_pair(const state &s, unsigned int r);
-  static unsigned int page_of(unsigned int addr);
-  static state execute_jin(const state &s, unsigned int r);
-  static inline const state sample = state{
-      List<unsigned int>::cons(
-          0u,
-          List<unsigned int>::cons(
-              0u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          11u, List<unsigned int>::cons(
-                                   0u, List<unsigned int>::cons(
-                                           0u, List<unsigned int>::nil())))))),
-      300u};
-  static inline const bool t = execute_jin(sample, 3u).pc == 555u;
+  static uint64_t get_reg(const state &s, uint64_t r);
+  static uint64_t get_reg_pair(const state &s, uint64_t r);
+  static uint64_t page_of(uint64_t addr);
+  static state execute_jin(const state &s, uint64_t r);
+  static inline const state sample =
+      state{List<uint64_t>::cons(
+                UINT64_C(0),
+                List<uint64_t>::cons(
+                    UINT64_C(0),
+                    List<uint64_t>::cons(
+                        UINT64_C(2),
+                        List<uint64_t>::cons(
+                            UINT64_C(11),
+                            List<uint64_t>::cons(
+                                UINT64_C(0),
+                                List<uint64_t>::cons(
+                                    UINT64_C(0), List<uint64_t>::nil())))))),
+            UINT64_C(300)};
+  static inline const bool t =
+      execute_jin(sample, UINT64_C(3)).pc == UINT64_C(555);
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -161,7 +165,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

@@ -1,76 +1,74 @@
 #include "stm.h"
 
-unsigned int stmtest::stm_basic_counter(std::monostate) {
-  stm::TVar<unsigned int> c = stm::newTVar(0u);
-  stm::writeTVar(c, 1u);
+uint64_t stmtest::stm_basic_counter(std::monostate) {
+  stm::TVar<uint64_t> c = stm::newTVar(UINT64_C(0));
+  stm::writeTVar(c, UINT64_C(1));
   return stm::readTVar(c);
 }
 
-unsigned int stmtest::io_basic_counter() {
+uint64_t stmtest::io_basic_counter() {
   return stm::atomically([&] { return stm_basic_counter(std::monostate{}); });
 }
 
-unsigned int stmtest::stm_inc(unsigned int x) {
-  stm::TVar<unsigned int> c = stm::newTVar(x);
-  STMDefs::template modifyTVar<unsigned int>(
-      c, [](unsigned int n) { return (n + 1); });
+uint64_t stmtest::stm_inc(uint64_t x) {
+  stm::TVar<uint64_t> c = stm::newTVar(x);
+  STMDefs::template modifyTVar<uint64_t>(c, [](uint64_t n) { return (n + 1); });
   return stm::readTVar(c);
 }
 
-unsigned int stmtest::io_inc(unsigned int x) {
+uint64_t stmtest::io_inc(uint64_t x) {
   return stm::atomically([&] { return stm_inc(x); });
 }
 
-unsigned int stmtest::stm_add_self(unsigned int x) {
-  stm::TVar<unsigned int> c = stm::newTVar(x);
-  unsigned int v = stm::readTVar(c);
+uint64_t stmtest::stm_add_self(uint64_t x) {
+  stm::TVar<uint64_t> c = stm::newTVar(x);
+  uint64_t v = stm::readTVar(c);
   stm::writeTVar(c, (v + x));
   return stm::readTVar(c);
 }
 
-unsigned int stmtest::io_add_self(unsigned int x) {
+uint64_t stmtest::io_add_self(uint64_t x) {
   return stm::atomically([&] { return stm_add_self(x); });
 }
 
-void stmtest::stm_enqueue(stm::TVar<List<unsigned int>> q, unsigned int x) {
-  List<unsigned int> xs = stm::readTVar(q);
-  stm::writeTVar(q, std::move(xs).app(List<unsigned int>::cons(
-                        x, List<unsigned int>::nil())));
+void stmtest::stm_enqueue(stm::TVar<List<uint64_t>> q, uint64_t x) {
+  List<uint64_t> xs = stm::readTVar(q);
+  stm::writeTVar(
+      q, std::move(xs).app(List<uint64_t>::cons(x, List<uint64_t>::nil())));
   return;
 }
 
-unsigned int stmtest::stm_dequeue(stm::TVar<List<unsigned int>> q) {
-  List<unsigned int> xs = stm::readTVar(q);
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v_mut())) {
-    return stm::retry<unsigned int>();
+uint64_t stmtest::stm_dequeue(stm::TVar<List<uint64_t>> q) {
+  List<uint64_t> xs = stm::readTVar(q);
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v_mut())) {
+    return stm::retry<uint64_t>();
   } else {
-    auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(xs.v_mut());
+    auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v_mut());
     stm::writeTVar(q, *a1);
     return a0;
   }
 }
 
-unsigned int stmtest::stm_tryDequeue(stm::TVar<List<unsigned int>> q,
-                                     unsigned int dflt) {
-  return stm::orElse<unsigned int>(stm_dequeue(q), dflt);
+uint64_t stmtest::stm_tryDequeue(stm::TVar<List<uint64_t>> q, uint64_t dflt) {
+  return stm::orElse<uint64_t>(stm_dequeue(q), dflt);
 }
 
-unsigned int stmtest::stm_queue_roundtrip(unsigned int x) {
-  stm::TVar<List<unsigned int>> q = stm::newTVar(List<unsigned int>::nil());
+uint64_t stmtest::stm_queue_roundtrip(uint64_t x) {
+  stm::TVar<List<uint64_t>> q = stm::newTVar(List<uint64_t>::nil());
   stm_enqueue(q, x);
   return stm_dequeue(q);
 }
 
-unsigned int stmtest::io_queue_roundtrip(unsigned int x) {
+uint64_t stmtest::io_queue_roundtrip(uint64_t x) {
   return stm::atomically([&] { return stm_queue_roundtrip(x); });
 }
 
-unsigned int stmtest::stm_orElse_retry_example(std::monostate) {
-  stm::TVar<List<unsigned int>> q = stm::newTVar(List<unsigned int>::nil());
-  return stm::orElse<unsigned int>(stm_dequeue(q), 42u);
+uint64_t stmtest::stm_orElse_retry_example(std::monostate) {
+  stm::TVar<List<uint64_t>> q = stm::newTVar(List<uint64_t>::nil());
+  return stm::orElse<uint64_t>(stm_dequeue(q), UINT64_C(42));
 }
 
-unsigned int stmtest::io_orElse_retry_example() {
+uint64_t stmtest::io_orElse_retry_example() {
   return stm::atomically(
       [&] { return stm_orElse_retry_example(std::monostate{}); });
 }

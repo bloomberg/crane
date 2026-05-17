@@ -27,11 +27,11 @@ template <Elem E> struct MutualTree {
   struct tree {
     // TYPES
     struct Leaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Node {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<forest> a1;
     };
 
@@ -77,9 +77,9 @@ template <Elem E> struct MutualTree {
     }
 
     // CREATORS
-    static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
+    static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
-    static tree node(unsigned int a0, forest a1) {
+    static tree node(uint64_t a0, forest a1) {
       return tree(Node{a0, std::make_unique<forest>(std::move(a1))});
     }
 
@@ -226,8 +226,8 @@ template <Elem E> struct MutualTree {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, forest &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, forest &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
@@ -239,8 +239,8 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, forest &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, forest &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
@@ -273,25 +273,25 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  static unsigned int tree_size(const tree &t0) {
+  static uint64_t tree_size(const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
-      return 1u;
+      return UINT64_C(1);
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
-      return (1u + forest_size(*a1));
+      return (UINT64_C(1) + forest_size(*a1));
     }
   }
 
-  static unsigned int forest_size(const forest &f) {
+  static uint64_t forest_size(const forest &f) {
     if (std::holds_alternative<typename forest::FNil>(f.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename forest::FCons>(f.v());
       return (tree_size(*a0) + forest_size(*a1));
     }
   }
 
-  static unsigned int tree_sum(const tree &t0) {
+  static uint64_t tree_sum(const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
       return a0;
@@ -301,9 +301,9 @@ template <Elem E> struct MutualTree {
     }
   }
 
-  static unsigned int forest_sum(const forest &f) {
+  static uint64_t forest_sum(const forest &f) {
     if (std::holds_alternative<typename forest::FNil>(f.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename forest::FCons>(f.v());
       return (tree_sum(*a0) + forest_sum(*a1));
@@ -311,12 +311,12 @@ template <Elem E> struct MutualTree {
   }
 
   static const tree &leaf1() {
-    static const tree v = tree::leaf(1u);
+    static const tree v = tree::leaf(UINT64_C(1));
     return v;
   }
 
   static const tree &leaf2() {
-    static const tree v = tree::leaf(2u);
+    static const tree v = tree::leaf(UINT64_C(2));
     return v;
   }
 
@@ -327,21 +327,21 @@ template <Elem E> struct MutualTree {
   }
 
   static const tree &sample_tree() {
-    static const tree v = tree::node(0u, small_forest());
+    static const tree v = tree::node(UINT64_C(0), small_forest());
     return v;
   }
 };
 
 struct NatElem {
-  using t = unsigned int;
-  static inline const unsigned int dflt = 0u;
+  using t = uint64_t;
+  static inline const uint64_t dflt = UINT64_C(0);
 };
 
 static_assert(Elem<NatElem>);
 using NatTree = MutualTree<NatElem>;
-const unsigned int test_tree_size = NatTree::tree_size(NatTree::sample_tree());
-const unsigned int test_forest_size =
-    NatTree::forest_size(NatTree::small_forest());
-const unsigned int test_tree_sum = NatTree::tree_sum(NatTree::sample_tree());
+const uint64_t test_tree_size = NatTree::tree_size(NatTree::sample_tree());
+const uint64_t test_forest_size = NatTree::forest_size(NatTree::small_forest());
+
+const uint64_t test_tree_sum = NatTree::tree_sum(NatTree::sample_tree());
 
 #endif // INCLUDED_MUTUAL_FUNCTOR

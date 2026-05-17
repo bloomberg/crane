@@ -121,9 +121,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -362,16 +362,17 @@ struct FoldSequenceStateTraceCase {
                                List<FoldStep>::nil())));
   static inline const ConstructionState sample_final_state =
       execute_sequence(initial_state, sample_sequence);
-  static unsigned int
-  line_count_after_sample_sequence(const ConstructionState &st);
-  static inline const unsigned int sample_sequence_length =
+  static uint64_t line_count_after_sample_sequence(const ConstructionState &st);
+  static inline const uint64_t sample_sequence_length =
       sample_sequence.length();
-  static inline const unsigned int sample_line_count =
+  static inline const uint64_t sample_line_count =
       line_count_after_sample_sequence(initial_state);
-  static inline const unsigned int sample_point_count =
+  static inline const uint64_t sample_point_count =
       sample_final_state.state_points.length();
-  static inline const bool sample_lines_nonempty = !(sample_line_count == 0u);
-  static inline const bool sample_has_expected_lines = sample_line_count == 5u;
+  static inline const bool sample_lines_nonempty =
+      !(sample_line_count == UINT64_C(0));
+  static inline const bool sample_has_expected_lines =
+      sample_line_count == UINT64_C(5);
 };
 
 #endif // INCLUDED_FOLD_SEQUENCE_STATE_TRACE

@@ -26,7 +26,7 @@ struct MemSafetyProbe24 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -96,7 +96,7 @@ struct MemSafetyProbe24 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -133,20 +133,19 @@ struct MemSafetyProbe24 {
 
     /// TEST 6: Store a tree AND its sum in a pair, then transform
     /// both. Tests that clone is independent of original.
-    unsigned int clone_and_transform() const {
-      std::pair<tree, unsigned int> p =
-          std::make_pair(*this, (*this).tree_sum());
+    uint64_t clone_and_transform() const {
+      std::pair<tree, uint64_t> p = std::make_pair(*this, (*this).tree_sum());
       tree t2 = p.first;
-      unsigned int s = p.second;
-      tree t3 = std::move(t2).map_tree(
-          [=](unsigned int n) mutable { return (n + s); });
+      uint64_t s = p.second;
+      tree t3 =
+          std::move(t2).map_tree([=](uint64_t n) mutable { return (n + s); });
       return std::move(t3).tree_sum();
     }
 
     /// TEST 5: Nested value type — list of trees stored in a tree-like
     /// structure. Tests clone correctness and ownership for nested types.
     template <typename F0>
-      requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
     tree map_tree(F0 &&f) const {
       const tree *_self = this;
 
@@ -158,14 +157,14 @@ struct MemSafetyProbe24 {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        decltype(std::declval<F0 &>()(std::declval<unsigned int &>())) a1;
+        decltype(std::declval<F0 &>()(std::declval<uint64_t &>())) a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         tree _result;
-        decltype(std::declval<F0 &>()(std::declval<unsigned int &>())) a1;
+        decltype(std::declval<F0 &>()(std::declval<uint64_t &>())) a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -203,28 +202,28 @@ struct MemSafetyProbe24 {
     /// TEST 4: Recursive function where result uses BOTH t (for return)
     /// and t's children (through recursive calls) — not loopified because
     /// return type is pair. Tests use-after-move in make_pair.
-    std::pair<tree, unsigned int> tag_tree() const {
+    std::pair<tree, uint64_t> tag_tree() const {
       const tree *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-        return std::make_pair(tree::leaf(), 0u);
+        return std::make_pair(tree::leaf(), UINT64_C(0));
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-        std::pair<tree, unsigned int> pl = (*a0).tag_tree();
-        std::pair<tree, unsigned int> pr = (*a2).tag_tree();
+        std::pair<tree, uint64_t> pl = (*a0).tag_tree();
+        std::pair<tree, uint64_t> pr = (*a2).tag_tree();
         return std::make_pair(*_self,
                               ((std::move(a1) + pl.second) + pr.second));
       }
     }
 
     /// TEST 3: Triple use of t in one expression.
-    std::pair<std::pair<tree, tree>, unsigned int> triple_use() const {
+    std::pair<std::pair<tree, tree>, uint64_t> triple_use() const {
       return std::make_pair(std::make_pair(*this, *this), (*this).tree_sum());
     }
 
     /// TEST 2: Pair where BOTH elements use t, one as value
     /// and one through a function.
-    std::pair<tree, unsigned int> pair_self() const {
+    std::pair<tree, uint64_t> pair_self() const {
       return std::make_pair(*this, (*this).tree_sum());
     }
 
@@ -235,7 +234,7 @@ struct MemSafetyProbe24 {
       return tree::node(*this, (*this).tree_sum(), tree::leaf());
     }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -246,18 +245,18 @@ struct MemSafetyProbe24 {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -270,7 +269,7 @@ struct MemSafetyProbe24 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), a1});
@@ -289,8 +288,8 @@ struct MemSafetyProbe24 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -303,7 +302,7 @@ struct MemSafetyProbe24 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -312,7 +311,7 @@ struct MemSafetyProbe24 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -350,8 +349,8 @@ struct MemSafetyProbe24 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -364,7 +363,7 @@ struct MemSafetyProbe24 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -373,7 +372,7 @@ struct MemSafetyProbe24 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -526,7 +525,7 @@ struct MemSafetyProbe24 {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int length() const {
+    uint64_t length() const {
       const mylist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -537,11 +536,11 @@ struct MemSafetyProbe24 {
       /// _Resume_Mycons: saves [_s0], resumes after recursive call with
       /// _result.
       struct _Resume_Mycons {
-        decltype(1u) _s0;
+        decltype(UINT64_C(1)) _s0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -554,11 +553,11 @@ struct MemSafetyProbe24 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{1u});
+            _stack.emplace_back(_Resume_Mycons{UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           }
         } else {
@@ -687,101 +686,111 @@ struct MemSafetyProbe24 {
     }
   };
 
-  static unsigned int sum_list(const mylist<unsigned int> &l);
-  static inline const unsigned int test_self_annotate =
-      tree::node(tree::leaf(), 5u, tree::leaf()).self_annotate().tree_sum();
-  static inline const unsigned int test_pair_self = []() {
-    std::pair<tree, unsigned int> p =
-        tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u,
-                   tree::node(tree::leaf(), 11u, tree::leaf()))
+  static uint64_t sum_list(const mylist<uint64_t> &l);
+  static inline const uint64_t test_self_annotate =
+      tree::node(tree::leaf(), UINT64_C(5), tree::leaf())
+          .self_annotate()
+          .tree_sum();
+  static inline const uint64_t test_pair_self = []() {
+    std::pair<tree, uint64_t> p =
+        tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                   UINT64_C(7),
+                   tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
             .pair_self();
     return (p.first.tree_sum() + p.second);
   }();
-  static inline const unsigned int test_triple_use = []() {
-    std::pair<std::pair<tree, tree>, unsigned int> p =
-        tree::node(tree::leaf(), 5u, tree::leaf()).triple_use();
+  static inline const uint64_t test_triple_use = []() {
+    std::pair<std::pair<tree, tree>, uint64_t> p =
+        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()).triple_use();
     return (((p.first).first.tree_sum() + (p.first).second.tree_sum()) +
             p.second);
   }();
-  static inline const unsigned int test_tag_tree = []() {
-    std::pair<tree, unsigned int> p =
-        tree::node(tree::node(tree::leaf(), 2u, tree::leaf()), 5u,
-                   tree::node(tree::leaf(), 8u, tree::leaf()))
+  static inline const uint64_t test_tag_tree = []() {
+    std::pair<tree, uint64_t> p =
+        tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                   UINT64_C(5),
+                   tree::node(tree::leaf(), UINT64_C(8), tree::leaf()))
             .tag_tree();
     return (p.first.tree_sum() + p.second);
   }();
-  static mylist<unsigned int> tree_to_list(const tree &t);
-  static inline const unsigned int test_nested_ops = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u,
-                        tree::node(tree::leaf(), 11u, tree::leaf()));
-    tree doubled = t.map_tree([](unsigned int n) { return (n * 2u); });
-    mylist<unsigned int> flat = tree_to_list(std::move(doubled));
+  static mylist<uint64_t> tree_to_list(const tree &t);
+  static inline const uint64_t test_nested_ops = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
+    tree doubled = t.map_tree([](uint64_t n) { return (n * UINT64_C(2)); });
+    mylist<uint64_t> flat = tree_to_list(std::move(doubled));
     return (sum_list(std::move(flat)) + std::move(t).tree_sum());
   }();
-  static inline const unsigned int test_clone_and_transform =
-      tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                 tree::node(tree::leaf(), 3u, tree::leaf()))
+  static inline const uint64_t test_clone_and_transform =
+      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                 UINT64_C(2),
+                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
           .clone_and_transform();
   /// TEST 7: Build a tree from a list, using accumulated state.
   /// Tests interaction between list recursion and tree construction.
-  static tree list_to_tree(const mylist<unsigned int> &l, tree acc);
-  static inline const unsigned int test_list_to_tree =
-      list_to_tree(mylist<unsigned int>::mycons(
-                       1u, mylist<unsigned int>::mycons(
-                               2u, mylist<unsigned int>::mycons(
-                                       3u, mylist<unsigned int>::mynil()))),
-                   tree::leaf())
+  static tree list_to_tree(const mylist<uint64_t> &l, tree acc);
+  static inline const uint64_t test_list_to_tree =
+      list_to_tree(
+          mylist<uint64_t>::mycons(
+              UINT64_C(1),
+              mylist<uint64_t>::mycons(
+                  UINT64_C(2), mylist<uint64_t>::mycons(
+                                   UINT64_C(3), mylist<uint64_t>::mynil()))),
+          tree::leaf())
           .tree_sum();
   /// TEST 8: Zip two trees, producing a list of pairs.
   /// Both trees are destructured simultaneously.
-  static mylist<std::pair<unsigned int, unsigned int>>
-  zip_trees(const tree &t1, const tree &t2);
-  static inline const unsigned int test_zip_trees = sum_list([]() {
-    mylist<std::pair<unsigned int, unsigned int>> pairs =
-        zip_trees(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                             tree::node(tree::leaf(), 3u, tree::leaf())),
-                  tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                             tree::node(tree::leaf(), 30u, tree::leaf())));
-    std::function<unsigned int(std::pair<unsigned int, unsigned int>)>
-        add_pair = [](const std::pair<unsigned int, unsigned int> &p) {
+  static mylist<std::pair<uint64_t, uint64_t>> zip_trees(const tree &t1,
+                                                         const tree &t2);
+  static inline const uint64_t test_zip_trees = sum_list([]() {
+    mylist<std::pair<uint64_t, uint64_t>> pairs = zip_trees(
+        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                   UINT64_C(2),
+                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                   UINT64_C(20),
+                   tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+    std::function<uint64_t(std::pair<uint64_t, uint64_t>)> add_pair =
+        [](const std::pair<uint64_t, uint64_t> &p) {
           return (p.first + p.second);
         };
     if (std::holds_alternative<
-            typename mylist<std::pair<unsigned int, unsigned int>>::Mynil>(
+            typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
             pairs.v_mut())) {
-      return mylist<unsigned int>::mycons(0u, mylist<unsigned int>::mynil());
+      return mylist<uint64_t>::mycons(UINT64_C(0), mylist<uint64_t>::mynil());
     } else {
-      auto &[a0, a1] = std::get<
-          typename mylist<std::pair<unsigned int, unsigned int>>::Mycons>(
-          pairs.v_mut());
+      auto &[a0, a1] =
+          std::get<typename mylist<std::pair<uint64_t, uint64_t>>::Mycons>(
+              pairs.v_mut());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<
-              typename mylist<std::pair<unsigned int, unsigned int>>::Mynil>(
+              typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
               _sv0.v())) {
-        return mylist<unsigned int>::mycons(add_pair(std::move(a0)),
-                                            mylist<unsigned int>::mynil());
+        return mylist<uint64_t>::mycons(add_pair(std::move(a0)),
+                                        mylist<uint64_t>::mynil());
       } else {
-        const auto &[a00, a10] = std::get<
-            typename mylist<std::pair<unsigned int, unsigned int>>::Mycons>(
-            _sv0.v());
+        const auto &[a00, a10] =
+            std::get<typename mylist<std::pair<uint64_t, uint64_t>>::Mycons>(
+                _sv0.v());
         auto &&_sv1 = *a10;
         if (std::holds_alternative<
-                typename mylist<std::pair<unsigned int, unsigned int>>::Mynil>(
+                typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
                 _sv1.v())) {
-          return mylist<unsigned int>::mycons(
+          return mylist<uint64_t>::mycons(
               add_pair(std::move(a0)),
-              mylist<unsigned int>::mycons(add_pair(a00),
-                                           mylist<unsigned int>::mynil()));
+              mylist<uint64_t>::mycons(add_pair(a00),
+                                       mylist<uint64_t>::mynil()));
         } else {
-          const auto &[a01, a11] = std::get<
-              typename mylist<std::pair<unsigned int, unsigned int>>::Mycons>(
-              _sv1.v());
-          return mylist<unsigned int>::mycons(
+          const auto &[a01, a11] =
+              std::get<typename mylist<std::pair<uint64_t, uint64_t>>::Mycons>(
+                  _sv1.v());
+          return mylist<uint64_t>::mycons(
               add_pair(std::move(a0)),
-              mylist<unsigned int>::mycons(
+              mylist<uint64_t>::mycons(
                   add_pair(a00),
-                  mylist<unsigned int>::mycons(add_pair(a01),
-                                               mylist<unsigned int>::mynil())));
+                  mylist<uint64_t>::mycons(add_pair(a01),
+                                           mylist<uint64_t>::mynil())));
         }
       }
     }

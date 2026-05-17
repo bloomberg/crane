@@ -7,9 +7,9 @@ MemSafetyProbe20::wrapped MemSafetyProbe20::wrap_if(MemSafetyProbe20::tree t,
                                                     bool b) {
   if (b) {
     return wrapped::wrap(
-        [=](unsigned int n) mutable { return (t.tree_sum() + n); });
+        [=](uint64_t n) mutable { return (t.tree_sum() + n); });
   } else {
-    return wrapped::wrap([](unsigned int n) { return n; });
+    return wrapped::wrap([](uint64_t n) { return n; });
   }
 }
 
@@ -19,10 +19,10 @@ MemSafetyProbe20::wrap_match(MemSafetyProbe20::tree t,
   switch (c) {
   case Choice::CLEFT: {
     return wrapped::wrap(
-        [=](unsigned int n) mutable { return (t.tree_sum() + n); });
+        [=](uint64_t n) mutable { return (t.tree_sum() + n); });
   }
   case Choice::CRIGHT: {
-    return wrapped::wrap([](unsigned int n) { return n; });
+    return wrapped::wrap([](uint64_t n) { return n; });
   }
   default:
     std::unreachable();
@@ -31,27 +31,27 @@ MemSafetyProbe20::wrap_match(MemSafetyProbe20::tree t,
 
 /// TEST 3: Pair of closure and value, returned from if.
 /// Uses prod to wrap the closure.
-std::pair<MemSafetyProbe20::wrapped, unsigned int>
+std::pair<MemSafetyProbe20::wrapped, uint64_t>
 MemSafetyProbe20::pair_from_if(MemSafetyProbe20::tree t, bool b) {
   if (b) {
-    return std::make_pair(wrapped::wrap([=](unsigned int n) mutable {
-                            return (t.tree_sum() + n);
-                          }),
-                          t.tree_sum());
+    return std::make_pair(
+        wrapped::wrap([=](uint64_t n) mutable { return (t.tree_sum() + n); }),
+        t.tree_sum());
   } else {
-    return std::make_pair(wrapped::wrap([](unsigned int n) { return n; }), 0u);
+    return std::make_pair(wrapped::wrap([](uint64_t n) { return n; }),
+                          UINT64_C(0));
   }
 }
 
 /// TEST 4: Wrapped closure captured in a locally-constructed tree.
 /// The let-bound tree is stack-allocated.
-MemSafetyProbe20::wrapped MemSafetyProbe20::wrap_local(unsigned int n, bool b) {
+MemSafetyProbe20::wrapped MemSafetyProbe20::wrap_local(uint64_t n, bool b) {
   MemSafetyProbe20::tree t = tree::node(tree::leaf(), n, tree::leaf());
   if (b) {
     return wrapped::wrap(
-        [=](unsigned int m) mutable { return (t.tree_sum() + m); });
+        [=](uint64_t m) mutable { return (t.tree_sum() + m); });
   } else {
-    return wrapped::wrap([](unsigned int m) { return m; });
+    return wrapped::wrap([](uint64_t m) { return m; });
   }
 }
 
@@ -61,13 +61,14 @@ MemSafetyProbe20::nested_wrap(MemSafetyProbe20::tree t, bool b1, bool b2) {
   if (b1) {
     if (b2) {
       return wrapped::wrap(
-          [=](unsigned int n) mutable { return (t.tree_sum() + n); });
+          [=](uint64_t n) mutable { return (t.tree_sum() + n); });
     } else {
-      return wrapped::wrap(
-          [=](unsigned int n) mutable { return ((t.tree_sum() * 2u) + n); });
+      return wrapped::wrap([=](uint64_t n) mutable {
+        return ((t.tree_sum() * UINT64_C(2)) + n);
+      });
     }
   } else {
-    return wrapped::wrap([](unsigned int n) { return n; });
+    return wrapped::wrap([](uint64_t n) { return n; });
   }
 }
 
@@ -75,23 +76,22 @@ MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped>
 MemSafetyProbe20::wrap_list(MemSafetyProbe20::tree t, bool b) {
   if (b) {
     return mylist<MemSafetyProbe20::wrapped>::mycons(
-        wrapped::wrap(
-            [=](unsigned int n) mutable { return (t.tree_sum() + n); }),
+        wrapped::wrap([=](uint64_t n) mutable { return (t.tree_sum() + n); }),
         mylist<MemSafetyProbe20::wrapped>::mycons(
-            wrapped::wrap([=](unsigned int n) mutable {
+            wrapped::wrap([=](uint64_t n) mutable {
               return ((t.tree_sum() + t.tree_sum()) + n);
             }),
             mylist<MemSafetyProbe20::wrapped>::mynil()));
   } else {
     return mylist<MemSafetyProbe20::wrapped>::mycons(
-        wrapped::wrap([](unsigned int n) { return n; }),
+        wrapped::wrap([](uint64_t n) { return n; }),
         mylist<MemSafetyProbe20::wrapped>::mynil());
   }
 }
 
-unsigned int MemSafetyProbe20::sum_wrapped(
+uint64_t MemSafetyProbe20::sum_wrapped(
     const MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped> &l,
-    unsigned int
+    uint64_t
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
@@ -101,11 +101,11 @@ unsigned int MemSafetyProbe20::sum_wrapped(
   /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Mycons {
     decltype(std::declval<MemSafetyProbe20::wrapped &>().unwrap(
-        std::declval<unsigned int &>())) _s0;
+        std::declval<uint64_t &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -118,7 +118,7 @@ unsigned int MemSafetyProbe20::sum_wrapped(
       const MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe20::mylist<
               MemSafetyProbe20::wrapped>::Mynil>(l.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe20::mylist<
             MemSafetyProbe20::wrapped>::Mycons>(l.v());

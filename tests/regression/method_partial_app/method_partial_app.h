@@ -15,7 +15,7 @@ struct MethodPartialApp {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct MethodPartialApp {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,13 +122,11 @@ struct MethodPartialApp {
 
     /// add_to_sum: methodified on first arg (tree).
     /// Takes a tree and a nat, returns the tree's sum plus the nat.
-    unsigned int add_to_sum(unsigned int x) const {
-      return ((*this).tree_sum() + x);
-    }
+    uint64_t add_to_sum(uint64_t x) const { return ((*this).tree_sum() + x); }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
@@ -136,8 +134,8 @@ struct MethodPartialApp {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -149,8 +147,8 @@ struct MethodPartialApp {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -163,34 +161,33 @@ struct MethodPartialApp {
   };
 
   /// Direct partial app stored in let, called twice.
-  static inline const unsigned int method_partial_bug = []() {
+  static inline const uint64_t method_partial_bug = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t.add_to_sum(_x0);
-      };
-      return (f(5u) + f(10u));
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return t.add_to_sum(_x0); };
+      return (f(UINT64_C(5)) + f(UINT64_C(10)));
     }();
   }();
 
   /// Partial app stored in a constructor.
   struct box {
     // DATA
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     box clone() const { return {a0}; }
 
     // CREATORS
-    static box box0(std::function<unsigned int(unsigned int)> a0) {
+    static box box0(std::function<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 box_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -198,8 +195,8 @@ struct MethodPartialApp {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 box_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -207,31 +204,29 @@ struct MethodPartialApp {
     }
   };
 
-  static inline const unsigned int method_partial_box = []() {
+  static inline const uint64_t method_partial_box = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      box b = box::box0([=](unsigned int _x0) mutable -> unsigned int {
-        return t.add_to_sum(_x0);
-      });
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      box b = box::box0(
+          [=](uint64_t _x0) mutable -> uint64_t { return t.add_to_sum(_x0); });
       auto &[a0] = b;
-      return (a0(5u) + a0(10u));
+      return (a0(UINT64_C(5)) + a0(UINT64_C(10)));
     }();
   }();
   /// Two partial apps from different trees.
-  static inline const unsigned int method_partial_two = []() {
+  static inline const uint64_t method_partial_two = []() {
     return []() {
-      tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-      tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
-      std::function<unsigned int(unsigned int)> f1 =
-          [&](unsigned int _x0) -> unsigned int {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+      std::function<uint64_t(uint64_t)> f1 = [&](uint64_t _x0) -> uint64_t {
         return std::move(t1).add_to_sum(_x0);
       };
-      std::function<unsigned int(unsigned int)> f2 =
-          [&](unsigned int _x0) -> unsigned int {
+      std::function<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
         return std::move(t2).add_to_sum(_x0);
       };
-      return (f1(0u) + f2(0u));
+      return (f1(UINT64_C(0)) + f2(UINT64_C(0)));
     }();
   }();
 };

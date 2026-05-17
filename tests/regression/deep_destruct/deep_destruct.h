@@ -217,11 +217,10 @@ struct DeepDestruct {
   }
 
   /// Tail-recursive list builder — should compile to a loop.
-  static mylist<unsigned int> build_aux(unsigned int n,
-                                        mylist<unsigned int> acc);
-  static mylist<unsigned int> build(unsigned int n);
+  static mylist<uint64_t> build_aux(uint64_t n, mylist<uint64_t> acc);
+  static mylist<uint64_t> build(uint64_t n);
   /// Simple accessor to observe the result.
-  static unsigned int head_or_zero(const mylist<unsigned int> &l);
+  static uint64_t head_or_zero(const mylist<uint64_t> &l);
 };
 
 #endif // INCLUDED_DEEP_DESTRUCT

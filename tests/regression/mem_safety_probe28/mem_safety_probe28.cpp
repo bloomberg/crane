@@ -1,6 +1,6 @@
 #include "mem_safety_probe28.h"
 
-unsigned int MemSafetyProbe28::tree_sum(
+uint64_t MemSafetyProbe28::tree_sum(
     const MemSafetyProbe28::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -11,18 +11,18 @@ unsigned int MemSafetyProbe28::tree_sum(
   /// _After_Node: saves [a0, a1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe28::tree *a0;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
-    unsigned int a1;
+    uint64_t _result;
+    uint64_t a1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
@@ -35,7 +35,7 @@ unsigned int MemSafetyProbe28::tree_sum(
       const MemSafetyProbe28::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe28::tree::Node>(t.v());
@@ -54,7 +54,7 @@ unsigned int MemSafetyProbe28::tree_sum(
   return _result;
 }
 
-unsigned int MemSafetyProbe28::tree_depth(
+uint64_t MemSafetyProbe28::tree_depth(
     const MemSafetyProbe28::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -65,18 +65,18 @@ unsigned int MemSafetyProbe28::tree_depth(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe28::tree *a0;
-    decltype(1u) _s1;
+    decltype(UINT64_C(1)) _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
-    decltype(1u) _s1;
+    uint64_t _result;
+    decltype(UINT64_C(1)) _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
@@ -89,11 +89,11 @@ unsigned int MemSafetyProbe28::tree_depth(
       const MemSafetyProbe28::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe28::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{a0.get(), 1u});
+        _stack.emplace_back(_After_Node{a0.get(), UINT64_C(1)});
         _stack.emplace_back(_Enter{a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -113,7 +113,7 @@ unsigned int MemSafetyProbe28::tree_depth(
 /// In the Node/Node branch, t2's children are used for recursion AND
 /// tree_sum t2 uses the whole tree. If the optimization moves *(l2),
 /// tree_sum t2 might see corrupted data.
-unsigned int MemSafetyProbe28::zip_trees(
+uint64_t MemSafetyProbe28::zip_trees(
     const MemSafetyProbe28::tree &t1,
     const MemSafetyProbe28::tree
         &t2) { /// _Enter: captures varying parameters for each recursive call.
@@ -127,37 +127,37 @@ unsigned int MemSafetyProbe28::zip_trees(
   struct _After_Leaf {
     decltype(tree::leaf()) _s0;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _After_Node: saves [a00, a0, a10, a1, t2], dispatches next recursive call.
   struct _After_Node {
     MemSafetyProbe28::tree a00;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a10;
-    unsigned int a1;
+    uint64_t a10;
+    uint64_t a1;
     decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Leaf {
-    unsigned int _result;
-    unsigned int a1;
+    uint64_t _result;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
-    unsigned int a10;
-    unsigned int a1;
+    uint64_t _result;
+    uint64_t a10;
+    uint64_t a1;
     decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{t2, &t1});
@@ -209,7 +209,7 @@ unsigned int MemSafetyProbe28::zip_trees(
 
 /// TEST 2: zip_depth - Similar but uses tree_depth on t2.
 /// Tests a different tree traversal on the non-pointer-safe param.
-unsigned int MemSafetyProbe28::zip_depth(
+uint64_t MemSafetyProbe28::zip_depth(
     const MemSafetyProbe28::tree &t1,
     const MemSafetyProbe28::tree
         &t2) { /// _Enter: captures varying parameters for each recursive call.
@@ -223,7 +223,7 @@ unsigned int MemSafetyProbe28::zip_depth(
   struct _After_Leaf {
     decltype(tree::leaf()) _s0;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _After_Node: saves [a00, a0, t2], dispatches next recursive call.
@@ -236,20 +236,20 @@ unsigned int MemSafetyProbe28::zip_depth(
   /// _Combine_Leaf: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Leaf {
-    unsigned int _result;
-    unsigned int a1;
+    uint64_t _result;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
+    uint64_t _result;
     decltype(tree_depth(std::declval<const MemSafetyProbe28::tree &>())) t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{t2, &t1});
@@ -300,7 +300,7 @@ unsigned int MemSafetyProbe28::zip_depth(
 
 /// TEST 3: zip_and_build - Recurse and also construct using t2's children.
 /// t2's left child is used for recursion AND returned as part of result.
-unsigned int MemSafetyProbe28::zip_and_sum(
+uint64_t MemSafetyProbe28::zip_and_sum(
     const MemSafetyProbe28::tree &t1,
     const MemSafetyProbe28::tree
         &t2) { /// _Enter: captures varying parameters for each recursive call.
@@ -314,7 +314,7 @@ unsigned int MemSafetyProbe28::zip_and_sum(
   struct _After_Leaf {
     decltype(tree::leaf()) _s0;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _After_Node: saves [a00, a0, a10, _s3, _s4], dispatches next recursive
@@ -322,7 +322,7 @@ unsigned int MemSafetyProbe28::zip_and_sum(
   struct _After_Node {
     MemSafetyProbe28::tree a00;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a10;
+    uint64_t a10;
     decltype(tree_sum(
         *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s3;
     decltype(tree_sum(
@@ -332,15 +332,15 @@ unsigned int MemSafetyProbe28::zip_and_sum(
   /// _Combine_Leaf: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Leaf {
-    unsigned int _result;
-    unsigned int a1;
+    uint64_t _result;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
-    unsigned int a10;
+    uint64_t _result;
+    uint64_t a10;
     decltype(tree_sum(
         *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s2;
     decltype(tree_sum(
@@ -349,7 +349,7 @@ unsigned int MemSafetyProbe28::zip_and_sum(
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{t2, &t1});
@@ -401,7 +401,7 @@ unsigned int MemSafetyProbe28::zip_and_sum(
 
 /// TEST 4: double_zip - Both t1 and t2 are trees, but t2 is used
 /// in a different way for each call. Makes t2 non-pointer-safe.
-unsigned int MemSafetyProbe28::double_zip(
+uint64_t MemSafetyProbe28::double_zip(
     const MemSafetyProbe28::tree &t1,
     const MemSafetyProbe28::tree
         &t2) { /// _Enter: captures varying parameters for each recursive call.
@@ -415,35 +415,35 @@ unsigned int MemSafetyProbe28::double_zip(
   struct _After_Leaf {
     const MemSafetyProbe28::tree *t2;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _After_Node: saves [a00, a0, a10, t2], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe28::tree *a00;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a10;
+    uint64_t a10;
     decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Leaf {
-    unsigned int _result;
-    unsigned int a1;
+    uint64_t _result;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
-    unsigned int a10;
+    uint64_t _result;
+    uint64_t a10;
     decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&t2, &t1});
@@ -495,13 +495,13 @@ unsigned int MemSafetyProbe28::double_zip(
 
 /// TEST 5: zip with list accumulator. t2 is tree, acc is list.
 /// t2 non-pointer-safe due to Leaf in some calls.
-List<unsigned int> MemSafetyProbe28::zip_collect(
+List<uint64_t> MemSafetyProbe28::zip_collect(
     const MemSafetyProbe28::tree &t1, const MemSafetyProbe28::tree &t2,
-    List<unsigned int>
+    List<uint64_t>
         acc) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    List<unsigned int> acc;
+    List<uint64_t> acc;
     MemSafetyProbe28::tree t2;
     const MemSafetyProbe28::tree *t1;
   };
@@ -514,7 +514,7 @@ List<unsigned int> MemSafetyProbe28::zip_collect(
 
   /// _Resume_Leaf_1: saves [a1], resumes after recursive call with _result.
   struct _Resume_Leaf_1 {
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _Resume_Node: saves [a00, a0], resumes after recursive call with _result.
@@ -526,13 +526,13 @@ List<unsigned int> MemSafetyProbe28::zip_collect(
   /// _Resume_Node_1: saves [a1, a10], resumes after recursive call with
   /// _result.
   struct _Resume_Node_1 {
-    unsigned int a1;
-    unsigned int a10;
+    uint64_t a1;
+    uint64_t a10;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Leaf, _Resume_Leaf_1,
                               _Resume_Node, _Resume_Node_1>;
-  List<unsigned int> _result{};
+  List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{acc, t2, &t1});
@@ -543,7 +543,7 @@ List<unsigned int> MemSafetyProbe28::zip_collect(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> acc = std::move(_f.acc);
+      List<uint64_t> acc = std::move(_f.acc);
       const MemSafetyProbe28::tree &t2 = _f.t2;
       const MemSafetyProbe28::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
@@ -571,34 +571,34 @@ List<unsigned int> MemSafetyProbe28::zip_collect(
       _stack.emplace_back(_Enter{std::move(_result), std::move(_f._s0), _f.a0});
     } else if (std::holds_alternative<_Resume_Leaf_1>(_frame)) {
       auto _f = std::move(std::get<_Resume_Leaf_1>(_frame));
-      _result = List<unsigned int>::cons(_f.a1, _result);
+      _result = List<uint64_t>::cons(_f.a1, _result);
     } else if (std::holds_alternative<_Resume_Node>(_frame)) {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
       _stack.emplace_back(_Enter{std::move(_result), std::move(_f.a00), _f.a0});
     } else {
       auto _f = std::move(std::get<_Resume_Node_1>(_frame));
-      _result = List<unsigned int>::cons(
-          _f.a1, List<unsigned int>::cons(_f.a10, _result));
+      _result =
+          List<uint64_t>::cons(_f.a1, List<uint64_t>::cons(_f.a10, _result));
     }
   }
   return _result;
 }
 
-unsigned int MemSafetyProbe28::list_sum(
-    const List<unsigned int>
+uint64_t MemSafetyProbe28::list_sum(
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -608,12 +608,11 @@ unsigned int MemSafetyProbe28::list_sum(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = 0u;
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Resume_Cons{a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -640,28 +639,28 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
   struct _After_Leaf {
     decltype(tree::leaf()) _s0;
     const MemSafetyProbe28::tree *a0;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _After_Node: saves [a00, a0, _s2], dispatches next recursive call.
   struct _After_Node {
     MemSafetyProbe28::tree a00;
     const MemSafetyProbe28::tree *a0;
-    unsigned int _s2;
+    uint64_t _s2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Leaf {
     MemSafetyProbe28::tree _result;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     MemSafetyProbe28::tree _result;
-    unsigned int _s1;
+    uint64_t _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -718,24 +717,24 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
 
 /// TEST 7: Deep trees to stress the optimization.
 MemSafetyProbe28::tree MemSafetyProbe28::build_balanced(
-    unsigned int
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _After_n_: saves [n_, n], dispatches next recursive call.
   struct _After_n_ {
-    unsigned int n_;
-    unsigned int n;
+    uint64_t n_;
+    uint64_t n;
   };
 
   /// _Combine_n_: receives partial results, combines with _result from final
   /// call.
   struct _Combine_n_ {
     MemSafetyProbe28::tree _result;
-    unsigned int n;
+    uint64_t n;
   };
 
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
@@ -749,11 +748,11 @@ MemSafetyProbe28::tree MemSafetyProbe28::build_balanced(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree::leaf();
       } else {
-        unsigned int n_ = n - 1;
+        uint64_t n_ = n - 1;
         _stack.emplace_back(_After_n_{n_, n});
         _stack.emplace_back(_Enter{n_});
       }

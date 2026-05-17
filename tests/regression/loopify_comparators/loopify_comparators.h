@@ -118,7 +118,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -130,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -143,7 +143,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -159,17 +159,16 @@ public:
 };
 
 struct LoopifyComparators {
-  static unsigned int maximum_by(const List<unsigned int> &l);
-  static unsigned int minimum_by(const List<unsigned int> &l);
-  static List<unsigned int> merge_by_fuel(unsigned int fuel,
-                                          List<unsigned int> l1,
-                                          List<unsigned int> l2);
-  static List<unsigned int> merge_by(const List<unsigned int> &l1,
-                                     const List<unsigned int> &l2);
-  static List<unsigned int> insert_sorted(unsigned int x, List<unsigned int> l);
-  static List<unsigned int> insertion_sort(const List<unsigned int> &l);
-  static bool is_sorted_fuel(unsigned int fuel, const List<unsigned int> &l);
-  static bool is_sorted(const List<unsigned int> &l);
+  static uint64_t maximum_by(const List<uint64_t> &l);
+  static uint64_t minimum_by(const List<uint64_t> &l);
+  static List<uint64_t> merge_by_fuel(uint64_t fuel, List<uint64_t> l1,
+                                      List<uint64_t> l2);
+  static List<uint64_t> merge_by(const List<uint64_t> &l1,
+                                 const List<uint64_t> &l2);
+  static List<uint64_t> insert_sorted(uint64_t x, List<uint64_t> l);
+  static List<uint64_t> insertion_sort(const List<uint64_t> &l);
+  static bool is_sorted_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static bool is_sorted(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_COMPARATORS

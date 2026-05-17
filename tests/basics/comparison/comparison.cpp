@@ -1,22 +1,22 @@
 #include "comparison.h"
 
-unsigned int Comparison::cmp_to_nat(Comparison::Cmp c) {
+uint64_t Comparison::cmp_to_nat(Comparison::Cmp c) {
   switch (c) {
   case Cmp::CMPLT: {
-    return 0u;
+    return UINT64_C(0);
   }
   case Cmp::CMPEQ: {
-    return 1u;
+    return UINT64_C(1);
   }
   case Cmp::CMPGT: {
-    return 2u;
+    return UINT64_C(2);
   }
   default:
     std::unreachable();
   }
 }
 
-Comparison::Cmp Comparison::compare_nats(unsigned int a, unsigned int b) {
+Comparison::Cmp Comparison::compare_nats(uint64_t a, uint64_t b) {
   if (a < b) {
     return Cmp::CMPLT;
   } else {
@@ -28,7 +28,7 @@ Comparison::Cmp Comparison::compare_nats(unsigned int a, unsigned int b) {
   }
 }
 
-unsigned int Comparison::max_nat(unsigned int a, unsigned int b) {
+uint64_t Comparison::max_nat(uint64_t a, uint64_t b) {
   switch (compare_nats(a, b)) {
   case Cmp::CMPLT: {
     return b;
@@ -39,7 +39,7 @@ unsigned int Comparison::max_nat(unsigned int a, unsigned int b) {
   }
 }
 
-unsigned int Comparison::min_nat(unsigned int a, unsigned int b) {
+uint64_t Comparison::min_nat(uint64_t a, uint64_t b) {
   switch (compare_nats(a, b)) {
   case Cmp::CMPGT: {
     return b;
@@ -50,8 +50,7 @@ unsigned int Comparison::min_nat(unsigned int a, unsigned int b) {
   }
 }
 
-unsigned int Comparison::clamp(unsigned int val, unsigned int lo,
-                               unsigned int hi) {
+uint64_t Comparison::clamp(uint64_t val, uint64_t lo, uint64_t hi) {
   switch (compare_nats(val, lo)) {
   case Cmp::CMPLT: {
     return lo;

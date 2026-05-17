@@ -15,7 +15,7 @@ struct NameClashNestedDeep {
     struct MyNil {};
 
     struct MyCons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<mylist> a1;
     };
 
@@ -82,7 +82,7 @@ struct NameClashNestedDeep {
     // CREATORS
     static mylist mynil() { return mylist(MyNil{}); }
 
-    static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(uint64_t a0, mylist a1) {
       return mylist(MyCons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
@@ -115,7 +115,7 @@ struct NameClashNestedDeep {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
@@ -126,7 +126,7 @@ struct NameClashNestedDeep {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
@@ -134,17 +134,16 @@ struct NameClashNestedDeep {
       const auto &[a0, a1] = std::get<typename mylist::MyCons>(m.v());
       return f0(a0, *a1, mylist_rec<T1>(f, f0, *a1));
     }
-  }
+  } /// Four levels of nested matching.
 
-  /// Four levels of nested matching.
-  static unsigned int deep4(const mylist &a, const mylist &b, const mylist &c,
-                            const mylist &d);
+  static uint64_t deep4(const mylist &a, const mylist &b, const mylist &c,
+                        const mylist &d);
   /// Match in a let, then match on the let result.
-  static unsigned int let_match_chain(const mylist &xs, const mylist &ys);
+  static uint64_t let_match_chain(const mylist &xs, const mylist &ys);
   /// Matching where the same list is matched multiple times.
-  static unsigned int multi_match_same(const mylist &xs);
+  static uint64_t multi_match_same(const mylist &xs);
   /// Nested match where inner match scrutinee is a field from outer match.
-  static unsigned int nested_field_match(const mylist &xs);
+  static uint64_t nested_field_match(const mylist &xs);
 };
 
 #endif // INCLUDED_NAME_CLASH_NESTED_DEEP

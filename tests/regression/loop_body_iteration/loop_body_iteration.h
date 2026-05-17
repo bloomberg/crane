@@ -121,19 +121,19 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct LoopBodyIteration {
   struct state {
-    List<unsigned int> regs_;
+    List<uint64_t> regs_;
 
     // ACCESSORS
     state clone() const { return state{(*this).regs_.clone()}; }
   };
 
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -142,7 +142,7 @@ struct LoopBodyIteration {
         return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -152,17 +152,18 @@ struct LoopBodyIteration {
     }
   }
 
-  static unsigned int get_reg0(const state &s);
+  static uint64_t get_reg0(const state &s);
   static state count_loop_body(const state &s);
-  static state iterate_body(unsigned int n, state s);
-  static inline const state sample = state{List<unsigned int>::cons(
-      0u, List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())))};
-  static inline const unsigned int t = get_reg0(iterate_body(5u, sample));
+  static state iterate_body(uint64_t n, state s);
+  static inline const state sample = state{List<uint64_t>::cons(
+      UINT64_C(0), List<uint64_t>::cons(
+                       UINT64_C(1), List<uint64_t>::cons(
+                                        UINT64_C(2), List<uint64_t>::nil())))};
+  static inline const uint64_t t = get_reg0(iterate_body(UINT64_C(5), sample));
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -171,7 +172,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

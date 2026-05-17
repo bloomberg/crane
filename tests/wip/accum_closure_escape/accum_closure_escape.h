@@ -171,7 +171,7 @@ struct AccumClosureEscape {
 
     struct TNode {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -242,7 +242,7 @@ struct AccumClosureEscape {
     // CREATORS
     static tree tleaf() { return tree(TLeaf{}); }
 
-    static tree tnode(tree a0, unsigned int a1, tree a2) {
+    static tree tnode(tree a0, uint64_t a1, tree a2) {
       return tree(TNode{std::make_unique<tree>(std::move(a0)), a1,
                         std::make_unique<tree>(std::move(a2))});
     }
@@ -279,32 +279,32 @@ struct AccumClosureEscape {
 
     /// Build closures from TREE traversal: tree nodes become closures.
     /// Each closure captures pattern variables from tree match.
-    mylist<std::function<unsigned int(unsigned int)>> tree_to_adders() const {
+    mylist<std::function<uint64_t(uint64_t)>> tree_to_adders() const {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
-        return mylist<std::function<unsigned int(unsigned int)>>::mynil();
+        return mylist<std::function<uint64_t(uint64_t)>>::mynil();
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](unsigned int x) mutable { return (a1 + x); },
+        return mylist<std::function<uint64_t(uint64_t)>>::mycons(
+            [=](uint64_t x) mutable { return (a1 + x); },
             a0_value.tree_to_adders().mylist_append(a2_value.tree_to_adders()));
       }
     }
 
-    mylist<unsigned int> tree_to_list() const {
+    mylist<uint64_t> tree_to_list() const {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
-        return mylist<unsigned int>::mynil();
+        return mylist<uint64_t>::mynil();
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
-        return mylist<unsigned int>::mycons(
+        return mylist<uint64_t>::mycons(
             a1, (*a0).tree_to_list().mylist_append((*a2).tree_to_list()));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return f;
@@ -316,8 +316,8 @@ struct AccumClosureEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
         return f;
@@ -334,56 +334,55 @@ struct AccumClosureEscape {
   /// SIMPLE LAMBDA VERSION: Each closure fun x => h + x captures
   /// h from the pattern match. These are simple lambdas, so they
   /// should capture by =.
-  static mylist<std::function<unsigned int(unsigned int)>>
-  build_adders(const mylist<unsigned int> &l,
-               mylist<std::function<unsigned int(unsigned int)>> acc);
+  static mylist<std::function<uint64_t(uint64_t)>>
+  build_adders(const mylist<uint64_t> &l,
+               mylist<std::function<uint64_t(uint64_t)>> acc);
   /// Apply first closure from the list.
-  static unsigned int
-  apply_first(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-              unsigned int x);
+  static uint64_t
+  apply_first(const mylist<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
   /// Apply all closures and sum.
-  static unsigned int
-  apply_all_sum(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-                unsigned int x);
+  static uint64_t
+  apply_all_sum(const mylist<std::function<uint64_t(uint64_t)>> &fns,
+                uint64_t x);
   /// test1: build_adders 10, 20, 30  = 30+_, 20+_, 10+_ (reversed)
   /// apply_first result 5 = 30 + 5 = 35
-  static inline const unsigned int test1 = []() {
-    mylist<std::function<unsigned int(unsigned int)>> fns = build_adders(
-        mylist<unsigned int>::mycons(
-            10u, mylist<unsigned int>::mycons(
-                     20u, mylist<unsigned int>::mycons(
-                              30u, mylist<unsigned int>::mynil()))),
-        mylist<std::function<unsigned int(unsigned int)>>::mynil());
-    return apply_first(std::move(fns), 5u);
+  static inline const uint64_t test1 = []() {
+    mylist<std::function<uint64_t(uint64_t)>> fns = build_adders(
+        mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
+        mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    return apply_first(std::move(fns), UINT64_C(5));
   }();
   /// test2: apply all closures: (30+5) + (20+5) + (10+5) = 35+25+15 = 75
-  static inline const unsigned int test2 = []() {
-    mylist<std::function<unsigned int(unsigned int)>> fns = build_adders(
-        mylist<unsigned int>::mycons(
-            10u, mylist<unsigned int>::mycons(
-                     20u, mylist<unsigned int>::mycons(
-                              30u, mylist<unsigned int>::mynil()))),
-        mylist<std::function<unsigned int(unsigned int)>>::mynil());
-    return apply_all_sum(std::move(fns), 5u);
+  static inline const uint64_t test2 = []() {
+    mylist<std::function<uint64_t(uint64_t)>> fns = build_adders(
+        mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
+        mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    return apply_all_sum(std::move(fns), UINT64_C(5));
   }();
 
   /// COMPOSE CLOSURES: Each step builds a composed function.
   /// This creates closures that capture OTHER closures.
-  static unsigned int
-  compose_from_list(const mylist<unsigned int> &l,
-                    std::function<unsigned int(unsigned int)> acc,
-                    unsigned int _x0) {
-    return [=]() mutable -> std::function<unsigned int(unsigned int)> {
-      if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(l.v())) {
+  static uint64_t compose_from_list(const mylist<uint64_t> &l,
+                                    std::function<uint64_t(uint64_t)> acc,
+                                    uint64_t _x0) {
+    return [=]() mutable -> std::function<uint64_t(uint64_t)> {
+      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
         return acc;
       } else {
         const auto &[a0, a1] =
-            std::get<typename mylist<unsigned int>::Mycons>(l.v());
-        const mylist<unsigned int> &a1_value = *a1;
-        return [=](unsigned int _x0) mutable -> unsigned int {
+            std::get<typename mylist<uint64_t>::Mycons>(l.v());
+        const mylist<uint64_t> &a1_value = *a1;
+        return [=](uint64_t _x0) mutable -> uint64_t {
           return compose_from_list(
-              a1_value, [=](unsigned int x) mutable { return acc((a0 + x)); },
-              _x0);
+              a1_value, [=](uint64_t x) mutable { return acc((a0 + x)); }, _x0);
         };
       }
     }()(_x0);
@@ -393,27 +392,30 @@ struct AccumClosureEscape {
   /// = fun x => id (10 + (20 + (30 + x)))
   /// = fun x => 60 + x
   /// test3 = 60 + 7 = 67
-  static inline const unsigned int test3 = compose_from_list(
-      mylist<unsigned int>::mycons(
-          10u, mylist<unsigned int>::mycons(
-                   20u, mylist<unsigned int>::mycons(
-                            30u, mylist<unsigned int>::mynil()))),
-      [](unsigned int x) { return x; }, 7u);
+  static inline const uint64_t test3 = compose_from_list(
+      mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil()))),
+      [](uint64_t x) { return x; }, UINT64_C(7));
   /// test4: Tree (Node (Node Leaf 10 Leaf) 20 (Node Leaf 30 Leaf))
   /// Closures: 20+_, 10+_, 30+_
   /// apply_all_sum with 5: (20+5) + (10+5) + (30+5) = 25+15+35 = 75
-  static inline const unsigned int test4 = []() {
-    tree t = tree::tnode(tree::tnode(tree::tleaf(), 10u, tree::tleaf()), 20u,
-                         tree::tnode(tree::tleaf(), 30u, tree::tleaf()));
-    return apply_all_sum(std::move(t).tree_to_adders(), 5u);
+  static inline const uint64_t test4 = []() {
+    tree t = tree::tnode(
+        tree::tnode(tree::tleaf(), UINT64_C(10), tree::tleaf()), UINT64_C(20),
+        tree::tnode(tree::tleaf(), UINT64_C(30), tree::tleaf()));
+    return apply_all_sum(std::move(t).tree_to_adders(), UINT64_C(5));
   }();
   /// Store a closure and then clobber the stack before using it.
-  static inline const unsigned int test5 = []() {
-    tree t = tree::tnode(tree::tnode(tree::tleaf(), 42u, tree::tleaf()), 100u,
-                         tree::tleaf());
-    mylist<std::function<unsigned int(unsigned int)>> fns =
+  static inline const uint64_t test5 = []() {
+    tree t =
+        tree::tnode(tree::tnode(tree::tleaf(), UINT64_C(42), tree::tleaf()),
+                    UINT64_C(100), tree::tleaf());
+    mylist<std::function<uint64_t(uint64_t)>> fns =
         std::move(t).tree_to_adders();
-    return apply_first(std::move(fns), 0u);
+    return apply_first(std::move(fns), UINT64_C(0));
   }();
 };
 

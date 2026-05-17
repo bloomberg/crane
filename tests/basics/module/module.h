@@ -11,7 +11,7 @@
 enum class Comparison { EQ, LT, GT };
 
 struct Nat {
-  static Comparison compare(unsigned int n, unsigned int m);
+  static Comparison compare(uint64_t n, uint64_t m);
 };
 
 template <typename M>
@@ -215,20 +215,22 @@ template <OrderedType K, BaseType V> struct MakeMap {
 };
 
 struct NatBase {
-  using t = unsigned int;
+  using t = uint64_t;
 };
 
 static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
-  using t = unsigned int;
-  static Comparison compare(unsigned int _x0, unsigned int _x1);
+  using t = uint64_t;
+  static Comparison compare(uint64_t _x0, uint64_t _x1);
 };
 
 static_assert(OrderedType<NatOrdered>);
 using NatMap = MakeMap<NatOrdered, NatBase>;
 static_assert(Map<NatMap>);
 const NatMap::t mymap = NatMap::add(
-    1u, 10u, NatMap::add(2u, 20u, NatMap::add(3u, 30u, NatMap::empty())));
+    UINT64_C(1), UINT64_C(10),
+    NatMap::add(UINT64_C(2), UINT64_C(20),
+                NatMap::add(UINT64_C(3), UINT64_C(30), NatMap::empty())));
 
 #endif // INCLUDED_MODULE

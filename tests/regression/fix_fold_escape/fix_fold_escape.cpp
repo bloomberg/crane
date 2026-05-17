@@ -9,50 +9,49 @@
 /// The callback returns cons adder acc, storing the closure.
 /// After the callback returns, n is destroyed. Later iterations and
 /// the final result contain dangling closures.
-List<std::function<unsigned int(unsigned int)>>
-FixFoldEscape::collect_adders(const List<unsigned int> &l) {
+List<std::function<uint64_t(uint64_t)>>
+FixFoldEscape::collect_adders(const List<uint64_t> &l) {
   return fold_left(
-      [](List<std::function<unsigned int(unsigned int)>> acc, unsigned int n) {
+      [](List<std::function<uint64_t(uint64_t)>> acc, uint64_t n) {
         auto adder_impl = [=](auto &_self_adder,
-                              unsigned int x) mutable -> unsigned int {
+                              uint64_t x) mutable -> uint64_t {
           if (x <= 0) {
             return n;
           } else {
-            unsigned int x_ = x - 1;
+            uint64_t x_ = x - 1;
             return (_self_adder(_self_adder, x_) + 1);
           }
         };
-        auto adder = [=](unsigned int x) mutable -> unsigned int {
+        auto adder = [=](uint64_t x) mutable -> uint64_t {
           return adder_impl(adder_impl, x);
         };
-        return List<std::function<unsigned int(unsigned int)>>::cons(adder,
-                                                                     acc);
+        return List<std::function<uint64_t(uint64_t)>>::cons(adder, acc);
       },
-      List<std::function<unsigned int(unsigned int)>>::nil(), l);
+      List<std::function<uint64_t(uint64_t)>>::nil(), l);
 }
 
-unsigned int FixFoldEscape::apply_head(
-    const List<std::function<unsigned int(unsigned int)>> &l, unsigned int x) {
+uint64_t
+FixFoldEscape::apply_head(const List<std::function<uint64_t(uint64_t)>> &l,
+                          uint64_t x) {
   if (std::holds_alternative<
-          typename List<std::function<unsigned int(unsigned int)>>::Nil>(
-          l.v())) {
-    return 0u;
+          typename List<std::function<uint64_t(uint64_t)>>::Nil>(l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<
-        typename List<std::function<unsigned int(unsigned int)>>::Cons>(l.v());
+    const auto &[a0, a1] =
+        std::get<typename List<std::function<uint64_t(uint64_t)>>::Cons>(l.v());
     return a0(x);
   }
 }
 
-unsigned int FixFoldEscape::sum_apply(
-    const List<std::function<unsigned int(unsigned int)>> &l, unsigned int x) {
+uint64_t
+FixFoldEscape::sum_apply(const List<std::function<uint64_t(uint64_t)>> &l,
+                         uint64_t x) {
   if (std::holds_alternative<
-          typename List<std::function<unsigned int(unsigned int)>>::Nil>(
-          l.v())) {
-    return 0u;
+          typename List<std::function<uint64_t(uint64_t)>>::Nil>(l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<
-        typename List<std::function<unsigned int(unsigned int)>>::Cons>(l.v());
+    const auto &[a0, a1] =
+        std::get<typename List<std::function<uint64_t(uint64_t)>>::Cons>(l.v());
     return (a0(x) + sum_apply(*a1, x));
   }
 }

@@ -36,8 +36,8 @@ static int thread_safe_rand() {
 }
 
 // Helper for comparison functions
-static bool nat_lt(unsigned int a, unsigned int b) { return a < b; }
-static bool nat_eq(unsigned int a, unsigned int b) { return a == b; }
+static bool nat_lt(unsigned int a, uint64_t b) { return a < b; }
+static bool nat_eq(unsigned int a, uint64_t b) { return a == b; }
 
 // =============================================================================
 //                         CONCURRENT TESTS
@@ -49,7 +49,7 @@ bool test_concurrent_insert() {
   const int ITEMS_PER_THREAD = 100;
 
   auto sl = stm::atomically([] {
-    return SkipList<int, int>::template create<unsigned int, unsigned int>(0,
+    return SkipList<int, int>::template create<uint64_t, uint64_t>(0,
                                                                            0);
   });
 
@@ -82,7 +82,7 @@ bool test_concurrent_insert() {
   }
 
   // Verify all items were inserted
-  unsigned int len = stm::atomically([&] { return sl.length(); });
+  uint64_t len = stm::atomically([&] { return sl.length(); });
   if (len != NUM_THREADS * ITEMS_PER_THREAD) {
     std::cerr << "Expected " << NUM_THREADS * ITEMS_PER_THREAD << " items, got "
               << len << std::endl;
@@ -113,7 +113,7 @@ bool test_concurrent_read_write() {
   const int READS_PER_READER = 500;
 
   auto sl = stm::atomically([] {
-    return SkipList<int, int>::template create<unsigned int, unsigned int>(0,
+    return SkipList<int, int>::template create<uint64_t, uint64_t>(0,
                                                                            0);
   });
 
@@ -173,7 +173,7 @@ bool test_concurrent_read_write() {
   }
 
   // Verify final length
-  unsigned int len = stm::atomically([&] { return sl.length(); });
+  uint64_t len = stm::atomically([&] { return sl.length(); });
   unsigned int expected = 50 + NUM_WRITERS * ITEMS_PER_WRITER;
   if (len != expected) {
     std::cerr << "Expected " << expected << " items, got " << len << std::endl;
@@ -188,7 +188,7 @@ bool test_concurrent_producer_consumer() {
   const int NUM_ITEMS = 200;
 
   auto sl = stm::atomically([] {
-    return SkipList<int, int>::template create<unsigned int, unsigned int>(0,
+    return SkipList<int, int>::template create<uint64_t, uint64_t>(0,
                                                                            0);
   });
 
@@ -201,7 +201,7 @@ bool test_concurrent_producer_consumer() {
     for (int i = 1; i <= NUM_ITEMS; i++) {
       try {
         stm::atomically([&] {
-          sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+          sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                      thread_safe_rand() % 16);
         });
       } catch (...) {
@@ -227,7 +227,7 @@ bool test_concurrent_producer_consumer() {
 
       try {
         auto result = stm::atomically(
-            [&]() -> std::optional<std::pair<unsigned int, unsigned int>> {
+            [&]() -> std::optional<std::pair<uint64_t, uint64_t>> {
               return sl.popFront();
             });
         if (result.has_value()) {
@@ -272,7 +272,7 @@ bool test_concurrent_mixed_operations() {
   const int OPS_PER_THREAD = 100;
 
   auto sl = stm::atomically([] {
-    return SkipList<int, int>::template create<unsigned int, unsigned int>(0,
+    return SkipList<int, int>::template create<uint64_t, uint64_t>(0,
                                                                            0);
   });
 
@@ -327,7 +327,7 @@ bool test_concurrent_mixed_operations() {
   }
 
   // Verify list is in consistent state
-  unsigned int len = stm::atomically([&] { return sl.length(); });
+  uint64_t len = stm::atomically([&] { return sl.length(); });
   bool isEmpty = stm::atomically([&] { return sl.isEmpty(); });
 
   // Basic sanity checks
@@ -478,12 +478,12 @@ int main(int argc, char *argv[]) {
     {
       auto start = timer();
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
       for (int i = 0; i < LARGE_N; i++) {
         stm::atomically([&] {
-          sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+          sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                      thread_safe_rand() % 16);
         });
       }
@@ -495,13 +495,13 @@ int main(int argc, char *argv[]) {
 
     // Benchmark 2: Random insert
     {
-      std::vector<unsigned int> keys(LARGE_N);
+      std::vector<uint64_t> keys(LARGE_N);
       for (int i = 0; i < LARGE_N; i++)
         keys[i] = thread_safe_rand();
 
       auto start = timer();
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
       for (int i = 0; i < LARGE_N; i++) {
@@ -519,12 +519,12 @@ int main(int argc, char *argv[]) {
     // Benchmark 3: Lookup
     {
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
       for (int i = 0; i < SMALL_N; i++) {
         stm::atomically([&] {
-          sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+          sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                      thread_safe_rand() % 16);
         });
       }
@@ -532,7 +532,7 @@ int main(int argc, char *argv[]) {
       auto start = timer();
       for (int i = 0; i < LARGE_N; i++) {
         stm::atomically(
-            [&] { sl.lookup(nat_lt, nat_eq, (unsigned int)(i % SMALL_N)); });
+            [&] { sl.lookup(nat_lt, nat_eq, (uint64_t)(i % SMALL_N)); });
       }
       std::cout << std::left << std::setw(30)
                 << "Lookup (10000 ops):" << std::right << std::setw(10)
@@ -543,12 +543,12 @@ int main(int argc, char *argv[]) {
     // Benchmark 4: Member check
     {
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
       for (int i = 0; i < SMALL_N; i++) {
         stm::atomically([&] {
-          sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+          sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                      thread_safe_rand() % 16);
         });
       }
@@ -556,7 +556,7 @@ int main(int argc, char *argv[]) {
       auto start = timer();
       for (int i = 0; i < LARGE_N; i++) {
         stm::atomically(
-            [&] { sl.member(nat_lt, nat_eq, (unsigned int)(i % SMALL_N)); });
+            [&] { sl.member(nat_lt, nat_eq, (uint64_t)(i % SMALL_N)); });
       }
       std::cout << std::left << std::setw(30)
                 << "Member (10000 ops):" << std::right << std::setw(10)
@@ -567,12 +567,12 @@ int main(int argc, char *argv[]) {
     // Benchmark 5: PopFront
     {
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
       for (int i = 0; i < SMALL_N; i++) {
         stm::atomically([&] {
-          sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+          sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                      thread_safe_rand() % 16);
         });
       }
@@ -593,7 +593,7 @@ int main(int argc, char *argv[]) {
       const int ITEMS_PER_THREAD = SMALL_N / NUM_THREADS;
 
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
 
@@ -624,12 +624,12 @@ int main(int argc, char *argv[]) {
       const int OPS_PER_THREAD = LARGE_N / NUM_THREADS;
 
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
       for (int i = 0; i < SMALL_N; i++) {
         stm::atomically([&] {
-          sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+          sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                      thread_safe_rand() % 16);
         });
       }
@@ -640,7 +640,7 @@ int main(int argc, char *argv[]) {
         threads.emplace_back([&sl]() {
           for (int i = 0; i < OPS_PER_THREAD; i++) {
             stm::atomically([&] {
-              sl.lookup(nat_lt, nat_eq, (unsigned int)(i % SMALL_N));
+              sl.lookup(nat_lt, nat_eq, (uint64_t)(i % SMALL_N));
             });
           }
         });
@@ -658,13 +658,13 @@ int main(int argc, char *argv[]) {
       const int OPS_PER_THREAD = SMALL_N / 2;
 
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
       // Pre-populate
       for (int i = 0; i < 100; i++) {
         stm::atomically([&] {
-          sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+          sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                      i % 16);
         });
       }
@@ -690,7 +690,7 @@ int main(int argc, char *argv[]) {
         threads.emplace_back([&sl]() {
           for (int i = 0; i < OPS_PER_THREAD; i++) {
             stm::atomically(
-                [&] { sl.member(nat_lt, nat_eq, (unsigned int)(i % 100)); });
+                [&] { sl.member(nat_lt, nat_eq, (uint64_t)(i % 100)); });
           }
         });
       }
@@ -706,7 +706,7 @@ int main(int argc, char *argv[]) {
     // Benchmark 9: Producer-consumer
     {
       auto sl = stm::atomically([] {
-        return SkipList<int, int>::template create<unsigned int, unsigned int>(
+        return SkipList<int, int>::template create<uint64_t, uint64_t>(
             0, 0);
       });
 
@@ -720,7 +720,7 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < SMALL_N; i++) {
           unsigned int level = rng() % 16;
           stm::atomically([&, level] {
-            sl.insert(nat_lt, nat_eq, (unsigned int)i, (unsigned int)(i * 10),
+            sl.insert(nat_lt, nat_eq, (uint64_t)i, (uint64_t)(i * 10),
                        level);
           });
         }
@@ -730,7 +730,7 @@ int main(int argc, char *argv[]) {
       std::thread consumer([&]() {
         while (!done || consumed < SMALL_N) {
           auto result = stm::atomically(
-              [&]() -> std::optional<std::pair<unsigned int, unsigned int>> {
+              [&]() -> std::optional<std::pair<uint64_t, uint64_t>> {
                 return sl.popFront();
               });
           if (result.has_value()) {

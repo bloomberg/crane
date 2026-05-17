@@ -121,29 +121,31 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct RegionPatchWrite {
-  static List<unsigned int> update_region(const List<unsigned int> &rom,
-                                          unsigned int base,
-                                          const List<unsigned int> &bytes);
-  static inline const unsigned int t = ListDef::template nth<unsigned int>(
-      2u,
+  static List<uint64_t> update_region(const List<uint64_t> &rom, uint64_t base,
+                                      const List<uint64_t> &bytes);
+  static inline const uint64_t t = ListDef::template nth<uint64_t>(
+      UINT64_C(2),
       update_region(
-          List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      0u, List<unsigned int>::cons(
-                              0u, List<unsigned int>::cons(
-                                      0u, List<unsigned int>::nil())))),
-          1u,
-          List<unsigned int>::cons(
-              7u, List<unsigned int>::cons(8u, List<unsigned int>::nil()))),
-      0u);
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(0),
+                  List<uint64_t>::cons(
+                      UINT64_C(0), List<uint64_t>::cons(
+                                       UINT64_C(0), List<uint64_t>::nil())))),
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(7),
+              List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil()))),
+      UINT64_C(0));
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -152,7 +154,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

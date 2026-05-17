@@ -146,9 +146,9 @@ struct ReuseAlias {
     }
   }
 
-  template <typename T1> static unsigned int length(const mylist<T1> &l) {
+  template <typename T1> static uint64_t length(const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       return (length<T1>(*a1) + 1);
@@ -156,26 +156,25 @@ struct ReuseAlias {
   }
 
   /// Increment the head — candidate for reuse optimization when use_count = 1.
-  static mylist<unsigned int> inc_head(const mylist<unsigned int> &l);
+  static mylist<uint64_t> inc_head(const mylist<uint64_t> &l);
   /// Use the same list twice: once through inc_head, once directly.
   /// If reuse fires on the first call (because evaluation order is
   /// unspecified), the second use of l sees the already-mutated list.
-  static std::pair<mylist<unsigned int>, mylist<unsigned int>>
-  double_use(mylist<unsigned int> l);
+  static std::pair<mylist<uint64_t>, mylist<uint64_t>>
+  double_use(mylist<uint64_t> l);
   /// Pass the same list to two different functions.
-  static std::pair<unsigned int, unsigned int>
-  double_call(const mylist<unsigned int> &l);
+  static std::pair<uint64_t, uint64_t> double_call(const mylist<uint64_t> &l);
   /// Alias through let-binding, then use both the alias and the original
   /// in a match.
-  static std::pair<mylist<unsigned int>, unsigned int>
-  alias_and_match(mylist<unsigned int> l);
+  static std::pair<mylist<uint64_t>, uint64_t>
+  alias_and_match(mylist<uint64_t> l);
   /// Build a result that refers to the scrutinee AND a pattern variable
   /// from the same match.
-  static std::pair<mylist<unsigned int>, mylist<unsigned int>>
-  scrutinee_in_branch(mylist<unsigned int> l);
+  static std::pair<mylist<uint64_t>, mylist<uint64_t>>
+  scrutinee_in_branch(mylist<uint64_t> l);
 
   /// Chain inc_head: each call might try to reuse.
-  static mylist<unsigned int> triple_inc(const mylist<unsigned int> &l);
+  static mylist<uint64_t> triple_inc(const mylist<uint64_t> &l);
 };
 
 #endif // INCLUDED_REUSE_ALIAS

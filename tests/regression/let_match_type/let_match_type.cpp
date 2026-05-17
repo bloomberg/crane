@@ -1,82 +1,81 @@
 #include "let_match_type.h"
 
 /// 1. let-bound bool match returning nat
-unsigned int LetMatchType::let_match_nat(bool b) {
-  unsigned int x;
+uint64_t LetMatchType::let_match_nat(bool b) {
+  uint64_t x;
   if (b) {
-    x = 1u;
+    x = UINT64_C(1);
   } else {
-    x = 0u;
+    x = UINT64_C(0);
   }
   return (x + x);
 }
 
 /// 2. let-bound nat match returning string — TRIGGERS std::any bug
-std::string LetMatchType::let_match_string(unsigned int n) {
+std::string LetMatchType::let_match_string(uint64_t n) {
   std::string s;
   if (n <= 0) {
     s = "zero";
   } else {
-    unsigned int _x = n - 1;
+    uint64_t _x = n - 1;
     s = "nonzero";
   }
   return s + s;
 }
 
 /// 3. let-bound option match
-unsigned int
-LetMatchType::let_match_option(const std::optional<unsigned int> &o) {
-  unsigned int x;
+uint64_t LetMatchType::let_match_option(const std::optional<uint64_t> &o) {
+  uint64_t x;
   if (o.has_value()) {
-    const unsigned int &n = *o;
+    const uint64_t &n = *o;
     x = n;
   } else {
-    x = 0u;
+    x = UINT64_C(0);
   }
-  return (x + 1u);
+  return (x + UINT64_C(1));
 }
 
 /// 4. let-bound nested bool match
-unsigned int LetMatchType::let_nested_bool(bool a, bool b) {
+uint64_t LetMatchType::let_nested_bool(bool a, bool b) {
   if (a) {
     if (b) {
-      return 3u;
+      return UINT64_C(3);
     } else {
-      return 2u;
+      return UINT64_C(2);
     }
   } else {
     if (b) {
-      return 1u;
+      return UINT64_C(1);
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }
 }
 
 /// 5. Multiple let-bound matches
-unsigned int LetMatchType::multi_let_match(bool a, bool b) {
-  unsigned int x;
+uint64_t LetMatchType::multi_let_match(bool a, bool b) {
+  uint64_t x;
   if (a) {
-    x = 10u;
+    x = UINT64_C(10);
   } else {
-    x = 0u;
+    x = UINT64_C(0);
   }
-  unsigned int y;
+  uint64_t y;
   if (b) {
-    y = 1u;
+    y = UINT64_C(1);
   } else {
-    y = 0u;
+    y = UINT64_C(0);
   }
   return (x + y);
 }
 
 /// 6. let-bound match used in function argument
-unsigned int LetMatchType::let_match_in_arg(unsigned int n) {
-  unsigned int x;
+uint64_t LetMatchType::let_match_in_arg(uint64_t n) {
+  uint64_t x;
   if (n <= 0) {
-    x = 0u;
+    x = UINT64_C(0);
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     x = n_;
   }
   return (x + x);
@@ -94,31 +93,31 @@ std::string LetMatchType::let_match_monadic(bool b) {
   return msg;
 }
 
-std::pair<unsigned int, unsigned int>
+std::pair<uint64_t, uint64_t>
 LetMatchType::direction_offset(LetMatchType::Direction d) {
-  unsigned int dx = [&]() {
+  uint64_t dx = [&]() {
     switch (d) {
     case Direction::EAST: {
-      return 1u;
+      return UINT64_C(1);
     }
     case Direction::WEST: {
-      return 2u;
+      return UINT64_C(2);
     }
     default: {
-      return 0u;
+      return UINT64_C(0);
     }
     }
   }();
-  unsigned int dy = [&]() {
+  uint64_t dy = [&]() {
     switch (d) {
     case Direction::NORTH: {
-      return 1u;
+      return UINT64_C(1);
     }
     case Direction::SOUTH: {
-      return 2u;
+      return UINT64_C(2);
     }
     default: {
-      return 0u;
+      return UINT64_C(0);
     }
     }
   }();

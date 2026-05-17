@@ -4,17 +4,18 @@
 #include <utility>
 
 struct AnonFixpoint {
-  static unsigned int sum_to(unsigned int n);
-  static unsigned int factorial(unsigned int m);
-  static unsigned int double_sum(unsigned int m);
-  static unsigned int gcd(unsigned int a, unsigned int b);
-  static unsigned int test_shadow(unsigned int n);
-  static inline const unsigned int test_sum_5 = sum_to(5u);
-  static inline const unsigned int test_sum_0 = sum_to(0u);
-  static inline const unsigned int test_fact_5 = factorial(5u);
-  static inline const unsigned int test_fact_0 = factorial(0u);
-  static inline const unsigned int test_double = double_sum(3u);
-  static inline const unsigned int test_gcd = gcd((4u * 3u), (2u * 3u));
+  static uint64_t sum_to(uint64_t n);
+  static uint64_t factorial(uint64_t m);
+  static uint64_t double_sum(uint64_t m);
+  static uint64_t gcd(uint64_t a, uint64_t b);
+  static uint64_t test_shadow(uint64_t n);
+  static inline const uint64_t test_sum_5 = sum_to(UINT64_C(5));
+  static inline const uint64_t test_sum_0 = sum_to(UINT64_C(0));
+  static inline const uint64_t test_fact_5 = factorial(UINT64_C(5));
+  static inline const uint64_t test_fact_0 = factorial(UINT64_C(0));
+  static inline const uint64_t test_double = double_sum(UINT64_C(3));
+  static inline const uint64_t test_gcd =
+      gcd((UINT64_C(4) * UINT64_C(3)), (UINT64_C(2) * UINT64_C(3)));
 };
 
 #endif // INCLUDED_ANON_FIXPOINT

@@ -136,17 +136,16 @@ template <typename A> struct Sig {
 
 struct ComprehensivePatterns {
   struct S {
-    unsigned int s_a;
-    unsigned int s_b;
-    unsigned int s_c;
+    uint64_t s_a;
+    uint64_t s_b;
+    uint64_t s_c;
 
     // ACCESSORS
     S clone() const { return S{(*this).s_a, (*this).s_b, (*this).s_c}; }
   };
 
-  static std::pair<std::pair<S, unsigned int>, unsigned int>
-  syntactic_variation(S s);
-  static std::pair<S, unsigned int> with_magic(S s);
+  static std::pair<std::pair<S, uint64_t>, uint64_t> syntactic_variation(S s);
+  static std::pair<S, uint64_t> with_magic(S s);
 
   struct L1 {
     S l1_s;
@@ -186,27 +185,23 @@ struct ComprehensivePatterns {
   static std::pair<
       std::pair<std::pair<std::pair<std::pair<std::pair<L5, L4>, L3>, L2>, L1>,
                 S>,
-      unsigned int>
+      uint64_t>
   deep_nest(L5 l5);
-  static std::pair<std::pair<std::pair<S, unsigned int>, unsigned int>,
-                   unsigned int>
+  static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>, uint64_t>
   nested_pair_reuse(S s);
-  static std::pair<S, unsigned int> compose(S s);
-  static std::pair<std::function<unsigned int(unsigned int)>, S>
-  lambda_proj(S s);
-  static std::pair<std::pair<std::pair<S, unsigned int>, unsigned int>,
-                   unsigned int>
+  static std::pair<S, uint64_t> compose(S s);
+  static std::pair<std::function<uint64_t(uint64_t)>, S> lambda_proj(S s);
+  static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>, uint64_t>
   proj_chain(S s);
   static std::pair<
-      std::pair<std::pair<S, S>, std::pair<unsigned int, unsigned int>>,
-      std::pair<std::pair<unsigned int, unsigned int>,
-                std::pair<unsigned int, unsigned int>>>
+      std::pair<std::pair<S, S>, std::pair<uint64_t, uint64_t>>,
+      std::pair<std::pair<uint64_t, uint64_t>, std::pair<uint64_t, uint64_t>>>
   octuple(S s);
-  static std::pair<std::optional<std::pair<S, unsigned int>>, S>
+  static std::pair<std::optional<std::pair<S, uint64_t>>, S>
   nested_containers(S s);
-  static std::pair<std::pair<S, unsigned int>, unsigned int>
-  match_pair(const std::pair<S, unsigned int> &p);
-  static List<std::pair<S, unsigned int>> make_list(unsigned int n, S s);
+  static std::pair<std::pair<S, uint64_t>, uint64_t>
+  match_pair(const std::pair<S, uint64_t> &p);
+  static List<std::pair<S, uint64_t>> make_list(uint64_t n, S s);
   static std::optional<std::pair<S, S>> multi_match(const std::optional<S> &o1,
                                                     const std::optional<S> &o2);
   enum class Three { A, B, C };
@@ -243,15 +238,15 @@ struct ComprehensivePatterns {
     }
   }
 
-  static std::pair<S, unsigned int> match_three(Three t, S s);
-  static std::pair<S, unsigned int> let_in_arg(S s);
-  static std::pair<S, unsigned int> match_record(S s);
-  static std::pair<S, unsigned int> rebind(S s1);
-  static std::pair<std::function<unsigned int(std::monostate)>,
-                   std::function<unsigned int(std::monostate)>>
+  static std::pair<S, uint64_t> match_three(Three t, S s);
+  static std::pair<S, uint64_t> let_in_arg(S s);
+  static std::pair<S, uint64_t> match_record(S s);
+  static std::pair<S, uint64_t> rebind(S s1);
+  static std::pair<std::function<uint64_t(std::monostate)>,
+                   std::function<uint64_t(std::monostate)>>
   closure_pair(S s);
   static Sig<S> sigma_reuse(S s);
-  static std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
+  static std::pair<uint64_t, std::pair<uint64_t, uint64_t>>
   multi_proj_arg(const S &s);
 
   struct Either {
@@ -261,7 +256,7 @@ struct ComprehensivePatterns {
     };
 
     struct Right_N {
-      unsigned int n;
+      uint64_t n;
     };
 
     using variant_t = std::variant<Left_S, Right_N>;
@@ -306,7 +301,7 @@ struct ComprehensivePatterns {
     // CREATORS
     static Either left_s(S s) { return Either(Left_S{std::move(s)}); }
 
-    static Either right_n(unsigned int n) { return Either(Right_N{n}); }
+    static Either right_n(uint64_t n) { return Either(Right_N{n}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -316,7 +311,7 @@ struct ComprehensivePatterns {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, S &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
         const auto &[s0] = std::get<typename Either::Left_S>(this->v());
@@ -329,7 +324,7 @@ struct ComprehensivePatterns {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, S &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
         const auto &[s0] = std::get<typename Either::Left_S>(this->v());
@@ -344,7 +339,7 @@ struct ComprehensivePatterns {
   static std::pair<Either, Either> both_in_sum(S s);
 
   struct R1 {
-    unsigned int r1_val;
+    uint64_t r1_val;
 
     // ACCESSORS
     R1 clone() const { return R1{(*this).r1_val}; }
@@ -352,7 +347,7 @@ struct ComprehensivePatterns {
 
   struct R2 {
     R1 r2_inner;
-    unsigned int r2_data;
+    uint64_t r2_data;
 
     // ACCESSORS
     R2 clone() const { return R2{(*this).r2_inner.clone(), (*this).r2_data}; }
@@ -361,7 +356,7 @@ struct ComprehensivePatterns {
   struct R3 {
     R2 r3_r2;
     R1 r3_r1;
-    unsigned int r3_num;
+    uint64_t r3_num;
 
     // ACCESSORS
     R3 clone() const {
@@ -369,30 +364,29 @@ struct ComprehensivePatterns {
     }
   };
 
-  static std::pair<std::pair<std::pair<R3, R2>, R1>, unsigned int>
+  static std::pair<std::pair<std::pair<R3, R2>, R1>, uint64_t>
   hard_proj_chain(R3 r3);
-  static std::pair<std::pair<R2, R1>, unsigned int> multi_path(const R3 &r3);
-  static std::pair<std::pair<R2, R1>, unsigned int> let_proj(R2 r2);
-  static unsigned int extract_val(const R1 &r1);
-  static std::pair<R2, unsigned int> nested_call(R2 r2);
-  static std::pair<std::pair<R2, R1>, unsigned int>
-  multi_proj_let(unsigned int n);
+  static std::pair<std::pair<R2, R1>, uint64_t> multi_path(const R3 &r3);
+  static std::pair<std::pair<R2, R1>, uint64_t> let_proj(R2 r2);
+  static uint64_t extract_val(const R1 &r1);
+  static std::pair<R2, uint64_t> nested_call(R2 r2);
+  static std::pair<std::pair<R2, R1>, uint64_t> multi_proj_let(uint64_t n);
   static std::optional<std::pair<R2, R1>> match_proj(R2 r2);
-  static std::pair<std::pair<R1, unsigned int>, unsigned int>
+  static std::pair<std::pair<R1, uint64_t>, uint64_t>
   proj_multi_use(const R2 &r2);
-  static std::pair<std::pair<R3, R2>, std::pair<R1, unsigned int>>
+  static std::pair<std::pair<R3, R2>, std::pair<R1, uint64_t>>
   complex_nest(R3 r3);
-  static R2 make_r2(unsigned int n);
-  static std::pair<std::pair<R2, R1>, unsigned int> from_func(unsigned int n);
-  static std::pair<std::pair<R2, R1>, std::pair<R1, unsigned int>>
+  static R2 make_r2(uint64_t n);
+  static std::pair<std::pair<R2, R1>, uint64_t> from_func(uint64_t n);
+  static std::pair<std::pair<R2, R1>, std::pair<R1, uint64_t>>
   pair_of_pairs(R2 r2);
   static std::pair<R2, R1> cond_proj(bool b, R2 r2);
-  static List<std::pair<R2, R1>> repeat_r2(unsigned int n, R2 r2);
+  static List<std::pair<R2, R1>> repeat_r2(uint64_t n, R2 r2);
   static std::pair<std::pair<R3, R2>, R1> nested_lets(R3 r3);
-  static std::pair<R1, unsigned int> double_proj(const R3 &r3);
+  static std::pair<R1, uint64_t> double_proj(const R3 &r3);
   static std::pair<std::pair<R3, R2>, R2> mixed_access(R3 r3);
   static std::pair<R2, R1> return_proj_h(R2 r2);
-  static std::pair<std::pair<std::pair<R3, R2>, R1>, unsigned int>
+  static std::pair<std::pair<std::pair<R3, R2>, R1>, uint64_t>
   all_levels(R3 r3);
   static std::pair<R1, R1> let_and_proj(const R2 &r2);
   static std::pair<R2, R2> multi_construct(R1 r1);
@@ -400,62 +394,61 @@ struct ComprehensivePatterns {
   option_proj(const std::optional<R2> &o);
 
   struct R {
-    unsigned int val;
-    unsigned int dat;
+    uint64_t val;
+    uint64_t dat;
 
     // ACCESSORS
     R clone() const { return R{(*this).val, (*this).dat}; }
   };
 
-  static std::pair<R, unsigned int> pair_inline_proj(R r);
-  static std::pair<std::pair<R, unsigned int>, unsigned int>
-  nested_pair_inline(R r);
-  static unsigned int match_bind_and_use(const R &r);
-  static unsigned int let_with_type(const R &r);
-  static unsigned int proj_of_last_use(const R &r1);
-  static unsigned int multi_let_same(const R &r);
-  static unsigned int option_unwrap_proj(const std::optional<R> &o);
-  static std::pair<R, unsigned int> fun_result_and_proj(unsigned int n);
-  static std::optional<unsigned int> match_multi_use(const std::optional<R> &o);
-  static std::pair<std::pair<R, unsigned int>, unsigned int> tuple_proj(R r);
-  static std::pair<R, unsigned int> chain_to_pair(R r1);
-  static List<std::pair<R, unsigned int>> repeat_pair(unsigned int n, R r);
-  static std::pair<R, unsigned int> cond_pair(bool b, R r);
-  static unsigned int nested_match(const std::optional<R> &o1,
-                                   const std::optional<R> &o2);
-  static std::pair<unsigned int, unsigned int> both_proj(const R &r);
-  static unsigned int compose_proj(const R &r);
-  static std::optional<unsigned int> proj_through_option(const R &r);
+  static std::pair<R, uint64_t> pair_inline_proj(R r);
+  static std::pair<std::pair<R, uint64_t>, uint64_t> nested_pair_inline(R r);
+  static uint64_t match_bind_and_use(const R &r);
+  static uint64_t let_with_type(const R &r);
+  static uint64_t proj_of_last_use(const R &r1);
+  static uint64_t multi_let_same(const R &r);
+  static uint64_t option_unwrap_proj(const std::optional<R> &o);
+  static std::pair<R, uint64_t> fun_result_and_proj(uint64_t n);
+  static std::optional<uint64_t> match_multi_use(const std::optional<R> &o);
+  static std::pair<std::pair<R, uint64_t>, uint64_t> tuple_proj(R r);
+  static std::pair<R, uint64_t> chain_to_pair(R r1);
+  static List<std::pair<R, uint64_t>> repeat_pair(uint64_t n, R r);
+  static std::pair<R, uint64_t> cond_pair(bool b, R r);
+  static uint64_t nested_match(const std::optional<R> &o1,
+                               const std::optional<R> &o2);
+  static std::pair<uint64_t, uint64_t> both_proj(const R &r);
+  static uint64_t compose_proj(const R &r);
+  static std::optional<uint64_t> proj_through_option(const R &r);
 
   struct NC {
-    unsigned int nc_a;
-    unsigned int nc_b;
-    unsigned int nc_c;
+    uint64_t nc_a;
+    uint64_t nc_b;
+    uint64_t nc_c;
 
     // ACCESSORS
     NC clone() const { return NC{(*this).nc_a, (*this).nc_b, (*this).nc_c}; }
   };
 
-  static unsigned int use_proj(unsigned int n);
-  static unsigned int proj_as_arg(const NC &r);
-  static unsigned int use_two(unsigned int _x0, unsigned int _x1);
-  static unsigned int multi_proj_args(const NC &r);
-  static unsigned int let_proj_then_base(const NC &r);
-  static unsigned int base_then_multi_proj(const NC &r);
-  static unsigned int proj_in_condition(const NC &r);
-  static unsigned int proj_in_scrutinee(const NC &r);
-  static unsigned int return_proj_nc(const NC &r);
-  static unsigned int call_return_proj(const NC &r);
-  static unsigned int inc(unsigned int n);
-  static unsigned int nested_proj_calls(const NC &r);
-  static unsigned int count_down(unsigned int n, const NC &r);
-  static unsigned int f1(const NC &r);
-  static unsigned int f2(const NC &r);
-  static unsigned int multi_function_calls(const NC &r);
-  static unsigned int proj_then_match(const NC &r);
-  static unsigned int let_used_twice(const NC &r);
+  static uint64_t use_proj(uint64_t n);
+  static uint64_t proj_as_arg(const NC &r);
+  static uint64_t use_two(uint64_t _x0, uint64_t _x1);
+  static uint64_t multi_proj_args(const NC &r);
+  static uint64_t let_proj_then_base(const NC &r);
+  static uint64_t base_then_multi_proj(const NC &r);
+  static uint64_t proj_in_condition(const NC &r);
+  static uint64_t proj_in_scrutinee(const NC &r);
+  static uint64_t return_proj_nc(const NC &r);
+  static uint64_t call_return_proj(const NC &r);
+  static uint64_t inc(uint64_t n);
+  static uint64_t nested_proj_calls(const NC &r);
+  static uint64_t count_down(uint64_t n, const NC &r);
+  static uint64_t f1(const NC &r);
+  static uint64_t f2(const NC &r);
+  static uint64_t multi_function_calls(const NC &r);
+  static uint64_t proj_then_match(const NC &r);
+  static uint64_t let_used_twice(const NC &r);
   static bool base_in_call_and_proj(const NC &r);
-  static unsigned int chained_lets_same_base(const NC &r);
+  static uint64_t chained_lets_same_base(const NC &r);
 
   struct OuterNC {
     NC outer_nc;
@@ -464,21 +457,21 @@ struct ComprehensivePatterns {
     OuterNC clone() const { return OuterNC{(*this).outer_nc.clone()}; }
   };
 
-  static unsigned int double_proj_nc(const OuterNC &o);
-  static unsigned int multi_positions(const NC &r);
-  static unsigned int sum_proj(unsigned int n, const NC &r);
+  static uint64_t double_proj_nc(const OuterNC &o);
+  static uint64_t multi_positions(const NC &r);
+  static uint64_t sum_proj(uint64_t n, const NC &r);
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, NC &>
-  static unsigned int apply(F0 &&f, NC _x0) {
+    requires std::is_invocable_r_v<uint64_t, F0 &, NC &>
+  static uint64_t apply(F0 &&f, NC _x0) {
     return f(std::move(_x0));
   }
 
-  static unsigned int hof_test(const NC &r);
+  static uint64_t hof_test(const NC &r);
 
   struct State {
-    unsigned int state_value;
-    unsigned int state_data;
+    uint64_t state_value;
+    uint64_t state_data;
 
     // ACCESSORS
     State clone() const {
@@ -486,43 +479,43 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int use_two_fc(unsigned int _x0, unsigned int _x1);
-  static unsigned int bug_two_args(const State &s);
-  static unsigned int use_three(unsigned int x, unsigned int y, unsigned int z);
-  static unsigned int bug_three_args(const State &s);
-  static unsigned int take_state_and_val(const State &_x, unsigned int n);
-  static unsigned int bug_state_and_proj(const State &s);
-  static unsigned int inner_func(unsigned int n);
-  static unsigned int bug_nested_calls(const State &s);
-  static unsigned int bug_in_condition(const State &s);
-  static unsigned int f1_fc(unsigned int n);
-  static unsigned int f2_fc(unsigned int n);
-  static unsigned int bug_multi_calls(const State &s);
-  static std::pair<State, unsigned int> bug_base_and_proj(const State &s);
-  static unsigned int sequential_lets(const State &s);
-  static std::pair<State, unsigned int> let_then_use_base(State s);
-  static unsigned int two_proj_sequence(const State &s);
-  static unsigned int let_multi_proj(const State &s);
-  static unsigned int nested_lets_same_base(const State &s);
-  static unsigned int if_with_proj(const State &s);
-  static unsigned int match_scrutinee_proj(const State &s);
-  static std::pair<State, unsigned int> bind_proj_use_base(State s);
+  static uint64_t use_two_fc(uint64_t _x0, uint64_t _x1);
+  static uint64_t bug_two_args(const State &s);
+  static uint64_t use_three(uint64_t x, uint64_t y, uint64_t z);
+  static uint64_t bug_three_args(const State &s);
+  static uint64_t take_state_and_val(const State &_x, uint64_t n);
+  static uint64_t bug_state_and_proj(const State &s);
+  static uint64_t inner_func(uint64_t n);
+  static uint64_t bug_nested_calls(const State &s);
+  static uint64_t bug_in_condition(const State &s);
+  static uint64_t f1_fc(uint64_t n);
+  static uint64_t f2_fc(uint64_t n);
+  static uint64_t bug_multi_calls(const State &s);
+  static std::pair<State, uint64_t> bug_base_and_proj(const State &s);
+  static uint64_t sequential_lets(const State &s);
+  static std::pair<State, uint64_t> let_then_use_base(State s);
+  static uint64_t two_proj_sequence(const State &s);
+  static uint64_t let_multi_proj(const State &s);
+  static uint64_t nested_lets_same_base(const State &s);
+  static uint64_t if_with_proj(const State &s);
+  static uint64_t match_scrutinee_proj(const State &s);
+  static std::pair<State, uint64_t> bind_proj_use_base(State s);
 
   struct RSeq {
-    unsigned int seq_val;
+    uint64_t seq_val;
 
     // ACCESSORS
     RSeq clone() const { return RSeq{(*this).seq_val}; }
   };
 
   static RSeq side_effect(RSeq r);
-  static unsigned int after_side_effect(const RSeq &r);
-  static unsigned int two_side_effects(const RSeq &r);
-  static unsigned int side_effect_in_branch(bool b, const RSeq &r);
+  static uint64_t after_side_effect(const RSeq &r);
+  static uint64_t two_side_effects(const RSeq &r);
+  static uint64_t side_effect_in_branch(bool b, const RSeq &r);
 
   struct StateStmt {
-    unsigned int stmt_value;
-    unsigned int stmt_data;
+    uint64_t stmt_value;
+    uint64_t stmt_data;
 
     // ACCESSORS
     StateStmt clone() const {
@@ -530,12 +523,12 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int return_proj_stmt(const StateStmt &s);
-  static unsigned int return_complex(const StateStmt &s);
-  static std::pair<unsigned int, unsigned int> return_pair(const StateStmt &s);
+  static uint64_t return_proj_stmt(const StateStmt &s);
+  static uint64_t return_complex(const StateStmt &s);
+  static std::pair<uint64_t, uint64_t> return_pair(const StateStmt &s);
 
   struct InnerStmt {
-    unsigned int inner_stmt_val;
+    uint64_t inner_stmt_val;
 
     // ACCESSORS
     InnerStmt clone() const { return InnerStmt{(*this).inner_stmt_val}; }
@@ -543,7 +536,7 @@ struct ComprehensivePatterns {
 
   struct OuterStmt {
     InnerStmt outer_stmt_inner;
-    unsigned int outer_stmt_data;
+    uint64_t outer_stmt_data;
 
     // ACCESSORS
     OuterStmt clone() const {
@@ -552,7 +545,7 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int chained_proj(const OuterStmt &o);
+  static uint64_t chained_proj(const OuterStmt &o);
 
   struct Level3Stmt {
     OuterStmt l3_outer_stmt;
@@ -563,10 +556,10 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int triple_chain(const Level3Stmt &l3);
-  static unsigned int proj_in_arith(const StateStmt &s);
-  static unsigned int multi_proj_expr(const StateStmt &s);
-  static List<unsigned int> proj_in_list(const StateStmt &s);
+  static uint64_t triple_chain(const Level3Stmt &l3);
+  static uint64_t proj_in_arith(const StateStmt &s);
+  static uint64_t multi_proj_expr(const StateStmt &s);
+  static List<uint64_t> proj_in_list(const StateStmt &s);
   static bool compare_projs(const StateStmt &s);
   static bool bool_with_proj(const StateStmt &s);
 
@@ -574,25 +567,25 @@ struct ComprehensivePatterns {
     return x;
   }
 
-  static unsigned int sum_values(unsigned int n, const StateStmt &s);
+  static uint64_t sum_values(uint64_t n, const StateStmt &s);
 
   struct RCF {
-    unsigned int cf_val;
+    uint64_t cf_val;
 
     // ACCESSORS
     RCF clone() const { return RCF{(*this).cf_val}; }
   };
 
-  static unsigned int branch_use(bool b, const RCF &r);
-  static std::pair<RCF, unsigned int> branch_different(bool b, RCF r);
-  static unsigned int match_with_wild(const std::optional<RCF> &o);
-  static unsigned int sum_with_state(unsigned int n, const RCF &r);
-  static unsigned int even_count(unsigned int n, const RCF &r);
-  static unsigned int odd_count(unsigned int n, const RCF &r);
+  static uint64_t branch_use(bool b, const RCF &r);
+  static std::pair<RCF, uint64_t> branch_different(bool b, RCF r);
+  static uint64_t match_with_wild(const std::optional<RCF> &o);
+  static uint64_t sum_with_state(uint64_t n, const RCF &r);
+  static uint64_t even_count(uint64_t n, const RCF &r);
+  static uint64_t odd_count(uint64_t n, const RCF &r);
 
   struct StateLB {
-    unsigned int lb_value;
-    unsigned int lb_data;
+    uint64_t lb_value;
+    uint64_t lb_data;
 
     // ACCESSORS
     StateLB clone() const { return StateLB{(*this).lb_value, (*this).lb_data}; }
@@ -601,12 +594,12 @@ struct ComprehensivePatterns {
   struct Tree {
     // TYPES
     struct Leaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Node {
       std::unique_ptr<Tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<Tree> a2;
     };
 
@@ -675,9 +668,9 @@ struct ComprehensivePatterns {
     }
 
     // CREATORS
-    static Tree leaf(unsigned int a0) { return Tree(Leaf{a0}); }
+    static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
-    static Tree node(Tree a0, unsigned int a1, Tree a2) {
+    static Tree node(Tree a0, uint64_t a1, Tree a2) {
       return Tree(Node{std::make_unique<Tree>(std::move(a0)), a1,
                        std::make_unique<Tree>(std::move(a2))});
     }
@@ -730,14 +723,14 @@ struct ComprehensivePatterns {
     Tree transform_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
-        return Tree::leaf((a0 + 1u));
+        return Tree::leaf((a0 + UINT64_C(1)));
       } else {
         const auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
-        return Tree::node(*a0, (a1 + 1u), *a2);
+        return Tree::node(*a0, (a1 + UINT64_C(1)), *a2);
       }
     }
 
-    unsigned int consume_tree_with_state(const StateLB &s) const {
+    uint64_t consume_tree_with_state(const StateLB &s) const {
       const Tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -748,18 +741,18 @@ struct ComprehensivePatterns {
       /// _After_Node: saves [_s0, _s1], dispatches next recursive call.
       struct _After_Node {
         Tree *_s0;
-        unsigned int _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int _s1;
+        uint64_t _result;
+        uint64_t _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -792,7 +785,7 @@ struct ComprehensivePatterns {
       return _result;
     }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       const Tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -803,18 +796,18 @@ struct ComprehensivePatterns {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         Tree *_s0;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -847,9 +840,9 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, unsigned int &,
-                                     Tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
+                                     T1 &>
     T1 Tree_rec(F0 &&f, F1 &&f0) const {
       const Tree *_self = this;
 
@@ -862,7 +855,7 @@ struct ComprehensivePatterns {
       struct _After_Node {
         Tree *_s0;
         Tree a2;
-        unsigned int a1;
+        uint64_t a1;
         Tree a0;
       };
 
@@ -871,7 +864,7 @@ struct ComprehensivePatterns {
       struct _Combine_Node {
         T1 _result;
         Tree a2;
-        unsigned int a1;
+        uint64_t a1;
         Tree a0;
       };
 
@@ -910,9 +903,9 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, unsigned int &,
-                                     Tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
+                                     T1 &>
     T1 Tree_rect(F0 &&f, F1 &&f0) const {
       const Tree *_self = this;
 
@@ -925,7 +918,7 @@ struct ComprehensivePatterns {
       struct _After_Node {
         Tree *_s0;
         Tree a2;
-        unsigned int a1;
+        uint64_t a1;
         Tree a0;
       };
 
@@ -934,7 +927,7 @@ struct ComprehensivePatterns {
       struct _Combine_Node {
         T1 _result;
         Tree a2;
-        unsigned int a1;
+        uint64_t a1;
         Tree a0;
       };
 
@@ -973,11 +966,11 @@ struct ComprehensivePatterns {
     }
   };
 
-  static unsigned int accum_with_state(unsigned int n, const StateLB &s);
+  static uint64_t accum_with_state(uint64_t n, const StateLB &s);
 
   struct StateRO {
-    unsigned int ro_value;
-    unsigned int ro_data;
+    uint64_t ro_value;
+    uint64_t ro_data;
 
     // ACCESSORS
     StateRO clone() const { return StateRO{(*this).ro_value, (*this).ro_data}; }
@@ -1040,9 +1033,9 @@ struct ComprehensivePatterns {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int extract_from_container() const {
+    uint64_t extract_from_container() const {
       if (std::holds_alternative<typename Container::Empty>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0] = std::get<typename Container::Full>(this->v());
         return (a0.ro_value + a0.ro_data);
@@ -1073,19 +1066,19 @@ struct ComprehensivePatterns {
   };
 
   struct StateOP {
-    unsigned int op_value;
-    unsigned int op_data;
+    uint64_t op_value;
+    uint64_t op_data;
 
     // ACCESSORS
     StateOP clone() const { return StateOP{(*this).op_value, (*this).op_data}; }
   };
 
   static StateOP identity(StateOP s);
-  static unsigned int extract_via_match(const StateOP &s);
+  static uint64_t extract_via_match(const StateOP &s);
   static StateOP consume_state(StateOP s);
-  static unsigned int match_consumed(const StateOP &s);
-  static std::pair<StateOP, unsigned int> force_owned(StateOP s);
-  static std::pair<std::pair<StateOP, StateOP>, unsigned int>
+  static uint64_t match_consumed(const StateOP &s);
+  static std::pair<StateOP, uint64_t> force_owned(StateOP s);
+  static std::pair<std::pair<StateOP, StateOP>, uint64_t>
   pair_then_match(StateOP s);
 };
 

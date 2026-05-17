@@ -3,11 +3,11 @@
 
 struct NestedRecordUpdateQual {
   struct Shadow {
-    unsigned int value;
+    uint64_t value;
   };
 
   static Shadow bump(const Shadow &x);
-  static inline const Shadow t = bump(Shadow{1u});
+  static inline const Shadow t = bump(Shadow{UINT64_C(1)});
 };
 
 #endif // INCLUDED_NESTED_RECORD_UPDATE_QUAL

@@ -1,34 +1,34 @@
 #include "record_field_patterns.h"
 
-unsigned int
+uint64_t
 RecordFieldPatterns::classify_point(const RecordFieldPatterns::Point &p) {
-  unsigned int x = p.px;
-  unsigned int y = p.py;
+  uint64_t x = p.px;
+  uint64_t y = p.py;
   if (x <= 0) {
     if (y <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int _x = y - 1;
-      return 1u;
+      uint64_t _x = y - 1;
+      return UINT64_C(1);
     }
   } else {
-    unsigned int _x = x - 1;
+    uint64_t _x = x - 1;
     if (y <= 0) {
-      return 2u;
+      return UINT64_C(2);
     } else {
-      unsigned int _x0 = y - 1;
+      uint64_t _x0 = y - 1;
       return (x + y);
     }
   }
 }
 
-unsigned int RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
-  unsigned int px0 = p.px;
-  unsigned int n = p.py;
+uint64_t RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
+  uint64_t px0 = p.px;
+  uint64_t n = p.py;
   if (px0 <= 0) {
     return n;
   } else {
-    unsigned int m = px0 - 1;
+    uint64_t m = px0 - 1;
     return (m + n);
   }
 }
@@ -40,79 +40,78 @@ RecordFieldPatterns::id_point(const RecordFieldPatterns::Point &_x0) {
   return identity<RecordFieldPatterns::Point>(_x0);
 }
 
-std::pair<unsigned int, unsigned int>
+std::pair<uint64_t, uint64_t>
 RecordFieldPatterns::point_pair(const RecordFieldPatterns::Point &p) {
   return std::make_pair(p.px, p.py);
 }
 
-unsigned int
-RecordFieldPatterns::first_coord(const RecordFieldPatterns::Point &p) {
-  return generic_first<unsigned int, unsigned int>(point_pair(p));
+uint64_t RecordFieldPatterns::first_coord(const RecordFieldPatterns::Point &p) {
+  return generic_first<uint64_t, uint64_t>(point_pair(p));
 }
 
-unsigned int
-RecordFieldPatterns::scaled_sum(unsigned int scale,
+uint64_t
+RecordFieldPatterns::scaled_sum(uint64_t scale,
                                 const RecordFieldPatterns::ScaledPoint &sp) {
-  unsigned int x = sp.sp_x;
-  unsigned int y = sp.sp_y;
+  uint64_t x = sp.sp_x;
+  uint64_t y = sp.sp_y;
   return (scale * (x + y));
 }
 
-RecordFieldPatterns::Point RecordFieldPatterns::PointImpl::mk(unsigned int x,
-                                                              unsigned int x0) {
+RecordFieldPatterns::Point RecordFieldPatterns::PointImpl::mk(uint64_t x,
+                                                              uint64_t x0) {
   return Point{x, x0};
 }
 
-unsigned int
+uint64_t
 RecordFieldPatterns::PointImpl::get_x(const RecordFieldPatterns::Point &p) {
   return p.px;
 }
 
-unsigned int
+uint64_t
 RecordFieldPatterns::PointImpl::get_y(const RecordFieldPatterns::Point &p) {
   return p.py;
 }
 
-unsigned int
+uint64_t
 RecordFieldPatterns::segment_length_sq(const RecordFieldPatterns::Segment &s) {
   RecordFieldPatterns::Point seg_start0 = s.seg_start;
   RecordFieldPatterns::Point seg_end0 = s.seg_end;
-  unsigned int x1 = seg_start0.px;
-  unsigned int y1 = seg_start0.py;
-  unsigned int x2 = seg_end0.px;
-  unsigned int y2 = seg_end0.py;
-  unsigned int dx = (((x2 - x1) > x2 ? 0 : (x2 - x1)));
-  unsigned int dy = (((y2 - y1) > y2 ? 0 : (y2 - y1)));
+  uint64_t x1 = seg_start0.px;
+  uint64_t y1 = seg_start0.py;
+  uint64_t x2 = seg_end0.px;
+  uint64_t y2 = seg_end0.py;
+  uint64_t dx = (((x2 - x1) > x2 ? 0 : (x2 - x1)));
+  uint64_t dy = (((y2 - y1) > y2 ? 0 : (y2 - y1)));
   return ((dx * dx) + (dy * dy));
 }
 
-unsigned int
+uint64_t
 RecordFieldPatterns::bounded_range(const RecordFieldPatterns::Bounded &b) {
-  unsigned int l = b.lo;
-  unsigned int h = b.hi;
-  unsigned int m = b.mid;
+  uint64_t l = b.lo;
+  uint64_t h = b.hi;
+  uint64_t m = b.mid;
   return ((((h - l) > h ? 0 : (h - l))) + m);
 }
 
-unsigned int
+uint64_t
 RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
-  return points.template fold_left<unsigned int>(
-      [](unsigned int acc, const RecordFieldPatterns::Point &p) {
+  return points.template fold_left<uint64_t>(
+      [](uint64_t acc, const RecordFieldPatterns::Point &p) {
         return (acc + p.px);
       },
-      0u);
+      UINT64_C(0));
 }
 
-List<unsigned int>
+List<uint64_t>
 RecordFieldPatterns::map_py(const List<RecordFieldPatterns::Point> &points) {
-  return points.template map<unsigned int>(
+  return points.template map<uint64_t>(
       [](const RecordFieldPatterns::Point &p) { return p.py; });
 }
 
 RecordFieldPatterns::Point
 RecordFieldPatterns::swap(const RecordFieldPatterns::Point &p) {
-  unsigned int x = p.px;
-  unsigned int y = p.py;
+  uint64_t x = p.px;
+  uint64_t y = p.py;
   return Point{y, x};
 }
 
@@ -121,7 +120,7 @@ RecordFieldPatterns::double_swap(const RecordFieldPatterns::Point &p) {
   return swap(swap(p));
 }
 
-unsigned int
+uint64_t
 RecordFieldPatterns::get_count(const RecordFieldPatterns::Container &c) {
   return c.count;
 }

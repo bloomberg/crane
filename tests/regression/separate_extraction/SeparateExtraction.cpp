@@ -2,18 +2,18 @@
 
 namespace SeparateExtraction {
 
-unsigned int sep_add(unsigned int _x0, unsigned int _x1) { return (_x0 + _x1); }
+uint64_t sep_add(uint64_t _x0, uint64_t _x1) { return (_x0 + _x1); }
 
-unsigned int color_to_nat(Color c) {
+uint64_t color_to_nat(Color c) {
   switch (c) {
   case Color::RED: {
-    return 1u;
+    return UINT64_C(1);
   }
   case Color::GREEN: {
-    return 2u;
+    return UINT64_C(2);
   }
   case Color::BLUE: {
-    return 3u;
+    return UINT64_C(3);
   }
   default:
     std::unreachable();

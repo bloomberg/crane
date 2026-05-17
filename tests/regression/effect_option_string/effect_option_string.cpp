@@ -102,7 +102,7 @@ int64_t EffectOptionString::option_int(std::string name) {
   int64_t len;
   if (r.has_value()) {
     const std::string &v = *r;
-    len = v.length();
+    len = static_cast<int64_t>(v.length());
   } else {
     len = int64_t(0);
   }

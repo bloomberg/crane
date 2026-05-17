@@ -1,44 +1,41 @@
 #include "let_fix_ycomb_byref.h"
 
-unsigned int LetFixYcombByref::sum_list(const List<unsigned int> &l) {
-  auto go_impl = [](auto &_self_go, const List<unsigned int> &xs,
-                    unsigned int acc) -> unsigned int {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
+uint64_t LetFixYcombByref::sum_list(const List<uint64_t> &l) {
+  auto go_impl = [](auto &_self_go, const List<uint64_t> &xs,
+                    uint64_t acc) -> uint64_t {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return acc;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       return _self_go(_self_go, *a1, (acc + a0));
     }
   };
-  auto go = [&](const List<unsigned int> &xs,
-                unsigned int acc) -> unsigned int {
+  auto go = [&](const List<uint64_t> &xs, uint64_t acc) -> uint64_t {
     return go_impl(go_impl, xs, acc);
   };
-  return go(l, 0u);
+  return go(l, UINT64_C(0));
 }
 
-List<unsigned int> LetFixYcombByref::zip_sum(const List<unsigned int> &xs,
-                                             const List<unsigned int> &ys) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
-    return List<unsigned int>::nil();
+List<uint64_t> LetFixYcombByref::zip_sum(const List<uint64_t> &xs,
+                                         const List<uint64_t> &ys) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
+    return List<uint64_t>::nil();
   } else {
-    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(xs.v());
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {
-      return List<unsigned int>::nil();
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<unsigned int>::Cons>(ys.v());
-      return List<unsigned int>::cons((a0 + a00), zip_sum(*a1, *a10));
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(ys.v());
+      return List<uint64_t>::cons((a0 + a00), zip_sum(*a1, *a10));
     }
   }
 }
 
-List<unsigned int> LetFixYcombByref::countdown(unsigned int k) {
+List<uint64_t> LetFixYcombByref::countdown(uint64_t k) {
   if (k <= 0) {
-    return List<unsigned int>::nil();
+    return List<uint64_t>::nil();
   } else {
-    unsigned int k_ = k - 1;
-    return List<unsigned int>::cons(k, countdown(k_));
+    uint64_t k_ = k - 1;
+    return List<uint64_t>::cons(k, countdown(k_));
   }
 }

@@ -22,11 +22,11 @@ struct ReuseTagMismatch {
   struct direction {
     // TYPES
     struct GoUp {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct GoDown {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<GoUp, GoDown>;
@@ -69,9 +69,9 @@ struct ReuseTagMismatch {
     }
 
     // CREATORS
-    static direction goup(unsigned int a0) { return direction(GoUp{a0}); }
+    static direction goup(uint64_t a0) { return direction(GoUp{a0}); }
 
-    static direction godown(unsigned int a0) { return direction(GoDown{a0}); }
+    static direction godown(uint64_t a0) { return direction(GoDown{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -81,8 +81,8 @@ struct ReuseTagMismatch {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 direction_rect(F0 &&f, F1 &&f0, const direction &d) {
     if (std::holds_alternative<typename direction::GoUp>(d.v())) {
       const auto &[a0] = std::get<typename direction::GoUp>(d.v());
@@ -94,8 +94,8 @@ struct ReuseTagMismatch {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 direction_rec(F0 &&f, F1 &&f0, const direction &d) {
     if (std::holds_alternative<typename direction::GoUp>(d.v())) {
       const auto &[a0] = std::get<typename direction::GoUp>(d.v());
@@ -117,29 +117,29 @@ struct ReuseTagMismatch {
   /// Match on the result:
   /// - GoUp _ => 1 (wrong, reuse bug would make this match)
   /// - GoDown _ => 2 (correct)
-  static inline const unsigned int test1 =
+  static inline const uint64_t test1 =
       (std::holds_alternative<typename direction::GoUp>(
-           id_or_flip(direction::goup(42u), true).v())
-           ? 1u
-           : 2u);
+           id_or_flip(direction::goup(UINT64_C(42)), true).v())
+           ? UINT64_C(1)
+           : UINT64_C(2));
   /// test2: no flip -> should be GoUp 42 unchanged.
-  static inline const unsigned int test2 =
+  static inline const uint64_t test2 =
       (std::holds_alternative<typename direction::GoUp>(
-           id_or_flip(direction::goup(42u), false).v())
-           ? 1u
-           : 2u);
+           id_or_flip(direction::goup(UINT64_C(42)), false).v())
+           ? UINT64_C(1)
+           : UINT64_C(2));
   /// test3: flip GoDown 100 -> should be GoUp 100.
-  static inline const unsigned int test3 =
+  static inline const uint64_t test3 =
       (std::holds_alternative<typename direction::GoUp>(
-           id_or_flip(direction::godown(100u), true).v())
-           ? 3u
-           : 4u);
+           id_or_flip(direction::godown(UINT64_C(100)), true).v())
+           ? UINT64_C(3)
+           : UINT64_C(4));
   /// test4: use the flipped value's payload.
-  static inline const unsigned int test4 = []() {
-    auto &&_sv3 = id_or_flip(direction::goup(10u), true);
+  static inline const uint64_t test4 = []() {
+    auto &&_sv3 = id_or_flip(direction::goup(UINT64_C(10)), true);
     if (std::holds_alternative<typename direction::GoUp>(_sv3.v())) {
       const auto &[a03] = std::get<typename direction::GoUp>(_sv3.v());
-      return (a03 + 1000u);
+      return (a03 + UINT64_C(1000));
     } else {
       const auto &[a03] = std::get<typename direction::GoDown>(_sv3.v());
       return a03;

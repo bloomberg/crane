@@ -828,15 +828,14 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(unsigned int n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, unsigned int n,
-                                  unsigned int m);
-  static unsigned int tail_mul(unsigned int n, unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 struct HofTreeLoopify {
@@ -990,7 +989,7 @@ struct HofTreeLoopify {
     }
   }
 
-  static tree<unsigned int> depth_tree(unsigned int n);
+  static tree<uint64_t> depth_tree(uint64_t n);
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
@@ -1056,43 +1055,35 @@ struct HofTreeLoopify {
     }
   }
 
-  static inline const tree<unsigned int> small_tree = tree<unsigned int>::node(
-      tree<unsigned int>::node(
-          tree<unsigned int>::node(tree<unsigned int>::leaf(), 1u,
-                                   tree<unsigned int>::leaf()),
-          2u,
-          tree<unsigned int>::node(tree<unsigned int>::leaf(), 3u,
-                                   tree<unsigned int>::leaf())),
-      4u,
-      tree<unsigned int>::node(
-          tree<unsigned int>::node(tree<unsigned int>::leaf(), 5u,
-                                   tree<unsigned int>::leaf()),
-          6u,
-          tree<unsigned int>::node(tree<unsigned int>::leaf(), 7u,
-                                   tree<unsigned int>::leaf())));
-  static inline const tree<unsigned int> mapped =
-      tree_map<unsigned int, unsigned int>(
-          [](unsigned int x) { return (x * 2u); }, small_tree);
-  static inline const unsigned int folded =
-      tree_fold<unsigned int, unsigned int>(
-          0u,
-          [](unsigned int l, unsigned int x, unsigned int r) {
-            return ((l + x) + r);
-          },
-          small_tree);
-  static inline const tree<unsigned int> zipped =
-      tree_zip_with<unsigned int, unsigned int, unsigned int>(
-          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-            return (_x0 + _x1);
-          },
+  static inline const tree<uint64_t> small_tree = tree<uint64_t>::node(
+      tree<uint64_t>::node(
+          tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(1),
+                               tree<uint64_t>::leaf()),
+          UINT64_C(2),
+          tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(3),
+                               tree<uint64_t>::leaf())),
+      UINT64_C(4),
+      tree<uint64_t>::node(
+          tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(5),
+                               tree<uint64_t>::leaf()),
+          UINT64_C(6),
+          tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(7),
+                               tree<uint64_t>::leaf())));
+  static inline const tree<uint64_t> mapped = tree_map<uint64_t, uint64_t>(
+      [](uint64_t x) { return (x * UINT64_C(2)); }, small_tree);
+  static inline const uint64_t folded = tree_fold<uint64_t, uint64_t>(
+      UINT64_C(0),
+      [](uint64_t l, uint64_t x, uint64_t r) { return ((l + x) + r); },
+      small_tree);
+  static inline const tree<uint64_t> zipped =
+      tree_zip_with<uint64_t, uint64_t, uint64_t>(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           small_tree, small_tree);
-  static inline const std::pair<unsigned int, tree<unsigned int>> accum =
-      tree_map_accum<unsigned int, unsigned int, unsigned int>(
-          [](unsigned int s, unsigned int x) {
-            return std::make_pair((s + x), s);
-          },
-          0u, small_tree);
-  static inline const tree<unsigned int> deep = depth_tree(50000u);
+  static inline const std::pair<uint64_t, tree<uint64_t>> accum =
+      tree_map_accum<uint64_t, uint64_t, uint64_t>(
+          [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
+          UINT64_C(0), small_tree);
+  static inline const tree<uint64_t> deep = depth_tree(UINT64_C(50000));
 };
 
 #endif // INCLUDED_HOF_TREE_LOOPIFY

@@ -15,7 +15,7 @@ struct BlockTemplateEdge {
   /// 3. Two block templates of same type back-to-back
   static std::string two_strings();
   /// 4. Block template result bound but unused
-  static unsigned int block_unused();
+  static uint64_t block_unused();
   /// 5. Block template followed by non-block operation
   static int64_t block_then_pure();
 };

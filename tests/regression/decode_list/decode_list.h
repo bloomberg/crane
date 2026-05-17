@@ -119,9 +119,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -135,7 +135,7 @@ struct DecodeList {
     struct NOP {};
 
     struct LDM {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP, LDM>;
@@ -179,7 +179,7 @@ struct DecodeList {
     // CREATORS
     static instruction nop() { return instruction(NOP{}); }
 
-    static instruction ldm(unsigned int a0) { return instruction(LDM{a0}); }
+    static instruction ldm(uint64_t a0) { return instruction(LDM{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -189,7 +189,7 @@ struct DecodeList {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rect(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
@@ -200,7 +200,7 @@ struct DecodeList {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rec(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
@@ -210,43 +210,47 @@ struct DecodeList {
     }
   }
 
-  static instruction decode(unsigned int b1, unsigned int b2);
-  static List<instruction> decode_list(const List<unsigned int> &bytes);
-  static inline const unsigned int t_empty =
-      decode_list(List<unsigned int>::nil()).length();
-  static inline const unsigned int t_odd_tail = []() {
-    auto &&_sv0 = decode_list(List<unsigned int>::cons(
-        0u,
-        List<unsigned int>::cons(
-            99u, List<unsigned int>::cons(42u, List<unsigned int>::nil()))));
+  static instruction decode(uint64_t b1, uint64_t b2);
+  static List<instruction> decode_list(const List<uint64_t> &bytes);
+  static inline const uint64_t t_empty =
+      decode_list(List<uint64_t>::nil()).length();
+  static inline const uint64_t t_odd_tail = []() {
+    auto &&_sv0 = decode_list(List<uint64_t>::cons(
+        UINT64_C(0),
+        List<uint64_t>::cons(
+            UINT64_C(99),
+            List<uint64_t>::cons(UINT64_C(42), List<uint64_t>::nil()))));
     if (std::holds_alternative<typename List<instruction>::Nil>(_sv0.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a00, a10] =
           std::get<typename List<instruction>::Cons>(_sv0.v());
       if (std::holds_alternative<typename instruction::NOP>(a00.v())) {
         auto &&_sv = *a10;
         if (std::holds_alternative<typename List<instruction>::Nil>(_sv.v())) {
-          return 1u;
+          return UINT64_C(1);
         } else {
-          return 0u;
+          return UINT64_C(0);
         }
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   }();
-  static inline const unsigned int t_pair_count =
-      decode_list(List<unsigned int>::cons(
-                      0u, List<unsigned int>::cons(
-                              1u, List<unsigned int>::cons(
-                                      2u, List<unsigned int>::cons(
-                                              3u, List<unsigned int>::nil())))))
-          .length();
-  static inline const unsigned int t_single_pair =
+  static inline const uint64_t t_pair_count =
       decode_list(
-          List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(7u, List<unsigned int>::nil())))
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(1),
+                  List<uint64_t>::cons(
+                      UINT64_C(2), List<uint64_t>::cons(
+                                       UINT64_C(3), List<uint64_t>::nil())))))
+          .length();
+  static inline const uint64_t t_single_pair =
+      decode_list(List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())))
           .length();
 };
 

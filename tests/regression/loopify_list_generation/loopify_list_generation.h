@@ -143,15 +143,14 @@ public:
 };
 
 struct LoopifyListGeneration {
-  static List<unsigned int> replicate(unsigned int n, unsigned int x);
-  static List<unsigned int> stutter(const List<unsigned int> &l);
-  static List<unsigned int> cycle(unsigned int n, const List<unsigned int> &l);
-  static List<unsigned int> iterate(unsigned int n, unsigned int x);
-  static List<unsigned int>
-  replicate_list(const List<std::pair<unsigned int, unsigned int>> &l);
-  static List<unsigned int> repeat_with_sep(unsigned int sep, unsigned int n,
-                                            unsigned int x);
-  static List<unsigned int> range(unsigned int start, unsigned int len);
+  static List<uint64_t> replicate(uint64_t n, uint64_t x);
+  static List<uint64_t> stutter(const List<uint64_t> &l);
+  static List<uint64_t> cycle(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> iterate(uint64_t n, uint64_t x);
+  static List<uint64_t>
+  replicate_list(const List<std::pair<uint64_t, uint64_t>> &l);
+  static List<uint64_t> repeat_with_sep(uint64_t sep, uint64_t n, uint64_t x);
+  static List<uint64_t> range(uint64_t start, uint64_t len);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_GENERATION

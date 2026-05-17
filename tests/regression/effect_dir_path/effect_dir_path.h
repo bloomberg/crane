@@ -125,9 +125,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -149,8 +149,7 @@ struct EffectDirPath {
   /// 6. create_directory bool result explicitly bound and used
   static std::string create_and_report(std::string path);
   /// 7. Recursive function counting list items from list_directory
-  static unsigned int count_entries(const List<std::string> &dirs,
-                                    unsigned int acc);
+  static uint64_t count_entries(const List<std::string> &dirs, uint64_t acc);
   /// 8. remove_directory (returns bool but treated as unit in bind)
   static void cleanup(std::string path);
 };

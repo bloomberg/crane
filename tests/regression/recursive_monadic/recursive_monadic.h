@@ -130,28 +130,26 @@ public:
 
 struct RecursiveMonadic {
   /// 1. Simple recursive countdown with effect
-  static unsigned int countdown(unsigned int n);
+  static uint64_t countdown(uint64_t n);
   /// 2. Recursive sum over list with logging
-  static unsigned int sum_list(const List<unsigned int> &xs);
+  static uint64_t sum_list(const List<uint64_t> &xs);
   /// 3. Recursive collect: transforms each element with effect
   static List<int64_t> collect_lengths(const List<std::string> &xs);
   /// 4. Recursive with two recursive calls (tree-like)
-  static unsigned int repeat_action(unsigned int n, std::string msg);
+  static uint64_t repeat_action(uint64_t n, std::string msg);
 
   /// 5. Recursive with match in the middle
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> filter_print(F0 &&pred,
-                                         const List<unsigned int> &xs) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> filter_print(F0 &&pred, const List<uint64_t> &xs) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
-      List<unsigned int> rest_ = filter_print(pred, *a1);
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+      List<uint64_t> rest_ = filter_print(pred, *a1);
       if (pred(a0)) {
         std::cout << "keep"s << '\n';
-        return List<unsigned int>::cons(a0, std::move(rest_));
+        return List<uint64_t>::cons(a0, std::move(rest_));
       } else {
         return rest_;
       }
@@ -159,24 +157,23 @@ struct RecursiveMonadic {
   }
 
   /// 6. Recursive with block template in each step
-  static List<std::string> read_n_lines(unsigned int n);
+  static List<std::string> read_n_lines(uint64_t n);
   /// 7. Mutual-like: two functions calling each other via wrapper
-  static std::string even_action(unsigned int n);
-  static std::string odd_action(unsigned int n);
+  static std::string even_action(uint64_t n);
+  static std::string odd_action(uint64_t n);
 
   /// 8. Recursive option-returning function
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::optional<unsigned int> find_first(F0 &&pred,
-                                                const List<unsigned int> &xs) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
-      return std::optional<unsigned int>();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::optional<uint64_t> find_first(F0 &&pred,
+                                            const List<uint64_t> &xs) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
+      return std::optional<uint64_t>();
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       std::cout << "checking"s << '\n';
       if (pred(a0)) {
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else {
         return find_first(pred, *a1);
       }

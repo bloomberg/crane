@@ -42,10 +42,10 @@ struct InductiveInModule {
     }
 
     static inline const Color default_color = Color::RED;
-    static unsigned int color_to_nat(Color c);
+    static uint64_t color_to_nat(Color c);
   };
 
-  static inline const unsigned int test_color =
+  static inline const uint64_t test_color =
       Inner::color_to_nat(Inner::Color::RED);
 
   struct Outer {
@@ -150,12 +150,13 @@ struct InductiveInModule {
       }
     };
 
-    static inline const unsigned int test_option =
-        Middle::template get_or_default<unsigned int>(
-            42u, Middle::template option<unsigned int>::some(99u));
+    static inline const uint64_t test_option =
+        Middle::template get_or_default<uint64_t>(
+            UINT64_C(42),
+            Middle::template option<uint64_t>::some(UINT64_C(99)));
   };
 
-  static inline const unsigned int final_test = Outer::test_option;
+  static inline const uint64_t final_test = Outer::test_option;
 };
 
 #endif // INCLUDED_INDUCTIVE_IN_MODULE

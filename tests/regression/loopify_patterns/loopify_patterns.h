@@ -217,63 +217,60 @@ struct LoopifyPatterns {
   }
 
   /// multi_let n multiple sequential let bindings before recursion.
-  static unsigned int multi_let(unsigned int n);
+  static uint64_t multi_let(uint64_t n);
   /// nested_if n deeply nested if-then-else with recursion at different depths.
-  static unsigned int nested_if_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int nested_if(unsigned int n);
+  static uint64_t nested_if_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t nested_if(uint64_t n);
   /// deep_nest n deeply nested function application.
-  static unsigned int deep_nest(unsigned int n);
+  static uint64_t deep_nest(uint64_t n);
   /// bool_chain n target multiple recursive calls in || chain.
-  static bool bool_chain_fuel(unsigned int fuel, unsigned int n,
-                              unsigned int target);
-  static bool bool_chain(unsigned int n, unsigned int target);
+  static bool bool_chain_fuel(uint64_t fuel, uint64_t n, uint64_t target);
+  static bool bool_chain(uint64_t n, uint64_t target);
   /// chained_comp n boolean result with double recursion.
-  static bool chained_comp(unsigned int n);
+  static bool chained_comp(uint64_t n);
   /// tuple_constr n recursive calls in multiple tuple positions.
-  static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-  tuple_constr(unsigned int n);
+  static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
+  tuple_constr(uint64_t n);
   /// sum_prod_count l a_sum a_prod a_count multiple accumulator updates.
-  static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-  sum_prod_count(const list<unsigned int> &l, unsigned int a_sum,
-                 unsigned int a_prod, unsigned int a_count);
+  static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
+  sum_prod_count(const list<uint64_t> &l, uint64_t a_sum, uint64_t a_prod,
+                 uint64_t a_count);
   /// split_by_sign l pos neg partition with dual accumulators.
-  static std::pair<list<unsigned int>, list<unsigned int>>
-  split_by_sign_aux(const list<unsigned int> &l, unsigned int base,
-                    list<unsigned int> pos, list<unsigned int> neg);
-  static std::pair<list<unsigned int>, list<unsigned int>>
-  split_by_sign(const list<unsigned int> &l, unsigned int base);
+  static std::pair<list<uint64_t>, list<uint64_t>>
+  split_by_sign_aux(const list<uint64_t> &l, uint64_t base, list<uint64_t> pos,
+                    list<uint64_t> neg);
+  static std::pair<list<uint64_t>, list<uint64_t>>
+  split_by_sign(const list<uint64_t> &l, uint64_t base);
   /// guard_accum acc l multiple when-style guards with different logic.
-  static unsigned int guard_accum(unsigned int acc,
-                                  const list<unsigned int> &l);
+  static uint64_t guard_accum(uint64_t acc, const list<uint64_t> &l);
   /// cons_computed n l cons with conditional parameter change.
-  static list<unsigned int> cons_computed(unsigned int n,
-                                          const list<unsigned int> &l);
+  static list<uint64_t> cons_computed(uint64_t n, const list<uint64_t> &l);
   /// mod_pattern n recursive call in mod expression.
-  static unsigned int mod_pattern(unsigned int n);
+  static uint64_t mod_pattern(uint64_t n);
   /// alternating_ops n alternating operations based on modulo.
-  static unsigned int alternating_ops(unsigned int n);
+  static uint64_t alternating_ops(uint64_t n);
 
   /// max_by f l recursive max with function application.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t
   max_by(F0 &&f,
-         const list<unsigned int> &l) { /// _Enter: captures varying parameters
-                                        /// for each recursive call.
+         const list<uint64_t> &l) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
 
     struct _Enter {
-      const list<unsigned int> *l;
+      const list<uint64_t> *l;
     };
 
     /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      unsigned int a0;
+      uint64_t a0;
       F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -283,15 +280,13 @@ struct LoopifyPatterns {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-          _result = 0u;
+        const list<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename list<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
-          if (std::holds_alternative<typename list<unsigned int>::Nil>(
-                  _sv.v())) {
+          if (std::holds_alternative<typename list<uint64_t>::Nil>(_sv.v())) {
             _result = f(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, f});
@@ -300,10 +295,10 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int a0 = _f.a0;
+        uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        unsigned int rest_max = _result;
-        unsigned int fx = f(a0);
+        uint64_t rest_max = _result;
+        uint64_t fx = f(a0);
         if (fx < rest_max) {
           _result = std::move(rest_max);
         } else {
@@ -315,14 +310,13 @@ struct LoopifyPatterns {
   }
 
   /// replace_at idx value l replace element at index.
-  static list<unsigned int> replace_at(unsigned int idx, unsigned int value,
-                                       const list<unsigned int> &l);
+  static list<uint64_t> replace_at(uint64_t idx, uint64_t value,
+                                   const list<uint64_t> &l);
   /// nested_pattern l three-element tuple pattern.
-  static unsigned int nested_pattern(
-      const list<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
-          &l);
+  static uint64_t nested_pattern(
+      const list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> &l);
   /// let_nested n let with nested let in binding.
-  static unsigned int let_nested(unsigned int n);
+  static uint64_t let_nested(uint64_t n);
 
   /// insert_everywhere x l insert element at all possible positions.
   template <typename T1>
@@ -393,37 +387,32 @@ struct LoopifyPatterns {
   }
 
   /// Helper: list length.
-  static unsigned int list_len(const list<unsigned int> &l);
+  static uint64_t list_len(const list<uint64_t> &l);
 
   /// merge_by cmp l1 l2 merge with custom comparator.
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &,
-                                   unsigned int &>
-  static list<unsigned int> merge_by_fuel(unsigned int fuel, F1 &&cmp,
-                                          list<unsigned int> l1,
-                                          list<unsigned int> l2) {
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
+  static list<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
+                                      list<uint64_t> l1, list<uint64_t> l2) {
     if (fuel <= 0) {
       return l1;
     } else {
-      unsigned int f = fuel - 1;
-      if (std::holds_alternative<typename list<unsigned int>::Nil>(
-              l1.v_mut())) {
+      uint64_t f = fuel - 1;
+      if (std::holds_alternative<typename list<uint64_t>::Nil>(l1.v_mut())) {
         return l2;
       } else {
-        auto &[a0, a1] =
-            std::get<typename list<unsigned int>::Cons>(l1.v_mut());
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(
-                l2.v_mut())) {
+        auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l1.v_mut());
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l2.v_mut())) {
           return l1;
         } else {
           auto &[a00, a10] =
-              std::get<typename list<unsigned int>::Cons>(l2.v_mut());
-          if (cmp(a0, a00) <= 0u) {
-            return list<unsigned int>::cons(std::move(a0),
-                                            merge_by_fuel(f, cmp, *a1, l2));
+              std::get<typename list<uint64_t>::Cons>(l2.v_mut());
+          if (cmp(a0, a00) <= UINT64_C(0)) {
+            return list<uint64_t>::cons(std::move(a0),
+                                        merge_by_fuel(f, cmp, *a1, l2));
           } else {
-            return list<unsigned int>::cons(std::move(a00),
-                                            merge_by_fuel(f, cmp, l1, *a10));
+            return list<uint64_t>::cons(std::move(a00),
+                                        merge_by_fuel(f, cmp, l1, *a10));
           }
         }
       }
@@ -431,65 +420,57 @@ struct LoopifyPatterns {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
-                                   unsigned int &>
-  static list<unsigned int> merge_by(F0 &&cmp, const list<unsigned int> &l1,
-                                     const list<unsigned int> &l2) {
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+  static list<uint64_t> merge_by(F0 &&cmp, const list<uint64_t> &l1,
+                                 const list<uint64_t> &l2) {
     return merge_by_fuel((list_len(l1) + list_len(l2)), cmp, l1, l2);
   }
 
   /// process_twice l applies recursion twice: process(process(xs)).
-  static list<unsigned int> process_twice_fuel(unsigned int fuel,
-                                               list<unsigned int> l);
-  static list<unsigned int> process_twice(const list<unsigned int> &l);
+  static list<uint64_t> process_twice_fuel(uint64_t fuel, list<uint64_t> l);
+  static list<uint64_t> process_twice(const list<uint64_t> &l);
   /// as_guard l uses as-pattern with guard (length check).
-  static list<unsigned int> as_guard_fuel(unsigned int fuel,
-                                          const list<unsigned int> &l);
-  static list<unsigned int> as_guard(const list<unsigned int> &l);
+  static list<uint64_t> as_guard_fuel(uint64_t fuel, const list<uint64_t> &l);
+  static list<uint64_t> as_guard(const list<uint64_t> &l);
   /// quad_sum_pattern l pattern with 4-way split.
-  static unsigned int quad_sum_pattern(const list<unsigned int> &l);
+  static uint64_t quad_sum_pattern(const list<uint64_t> &l);
   /// multi_guard l demonstrates pattern with multiple conditional branches.
-  static unsigned int multi_guard(const list<unsigned int> &l);
+  static uint64_t multi_guard(const list<uint64_t> &l);
   /// Internal helper for double_append.
-  static list<unsigned int> append_lists(const list<unsigned int> &l1,
-                                         list<unsigned int> l2);
+  static list<uint64_t> append_lists(const list<uint64_t> &l1,
+                                     list<uint64_t> l2);
   /// double_append l1 l2 uses recursive result twice: h :: (rest @ rest).
-  static list<unsigned int> double_append(const list<unsigned int> &l1,
-                                          list<unsigned int> l2);
+  static list<uint64_t> double_append(const list<uint64_t> &l1,
+                                      list<uint64_t> l2);
   /// process_twice_alt l applies transformation twice on recursive result.
-  static list<unsigned int> process_twice_alt_fuel(unsigned int fuel,
-                                                   list<unsigned int> l);
-  static list<unsigned int> process_twice_alt(const list<unsigned int> &l);
+  static list<uint64_t> process_twice_alt_fuel(uint64_t fuel, list<uint64_t> l);
+  static list<uint64_t> process_twice_alt(const list<uint64_t> &l);
   /// sum_if_positive_else_double l conditional logic on each element.
-  static unsigned int sum_if_positive_else_double(const list<unsigned int> &l);
+  static uint64_t sum_if_positive_else_double(const list<uint64_t> &l);
 
   /// take_until p l takes elements until predicate is true.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static list<unsigned int> take_until(F0 &&p, const list<unsigned int> &l) {
-    std::unique_ptr<list<unsigned int>> _head{};
-    std::unique_ptr<list<unsigned int>> *_write = &_head;
-    const list<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static list<uint64_t> take_until(F0 &&p, const list<uint64_t> &l) {
+    std::unique_ptr<list<uint64_t>> _head{};
+    std::unique_ptr<list<uint64_t>> *_write = &_head;
+    const list<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename list<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write =
-            std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
+      if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<list<uint64_t>>(list<uint64_t>::nil());
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename list<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename list<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          *_write =
-              std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
+          *_write = std::make_unique<list<uint64_t>>(list<uint64_t>::nil());
           break;
         } else {
-          auto _cell = std::make_unique<list<unsigned int>>(
-              typename list<unsigned int>::Cons(a0, nullptr));
+          auto _cell = std::make_unique<list<uint64_t>>(
+              typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                   .a1;
+              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
           _loop_l = a1.get();
           continue;
         }
@@ -500,30 +481,28 @@ struct LoopifyPatterns {
 
   /// partition_by p q l partitions into 3 categories based on two predicates.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<bool, F1 &, unsigned int &>
-  static std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
-                   list<unsigned int>>
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<bool, F1 &, uint64_t &>
+  static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
   partition_by(
       F0 &&p, F1 &&q,
-      const list<unsigned int>
+      const list<uint64_t>
           &l) { /// _Enter: captures varying parameters for each recursive call.
 
     struct _Enter {
-      const list<unsigned int> *l;
+      const list<uint64_t> *l;
     };
 
     /// _Cont_Cons: saves [a0, p, q], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
-      unsigned int a0;
+      uint64_t a0;
       F0 p;
       F1 q;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
-              list<unsigned int>>
+    std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
         _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
@@ -534,37 +513,35 @@ struct LoopifyPatterns {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-          _result = std::make_pair(std::make_pair(list<unsigned int>::nil(),
-                                                  list<unsigned int>::nil()),
-                                   list<unsigned int>::nil());
+        const list<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+          _result = std::make_pair(
+              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
+              list<uint64_t>::nil());
         } else {
-          const auto &[a0, a1] =
-              std::get<typename list<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Cont_Cons{a0, p, q});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int a0 = _f.a0;
+        uint64_t a0 = _f.a0;
         F0 p = _f.p;
         F1 q = _f.q;
-        const std::pair<list<unsigned int>, list<unsigned int>> &p0 =
-            _result.first;
-        const list<unsigned int> &cs = _result.second;
-        const list<unsigned int> &as_ = p0.first;
-        const list<unsigned int> &bs = p0.second;
+        const std::pair<list<uint64_t>, list<uint64_t>> &p0 = _result.first;
+        const list<uint64_t> &cs = _result.second;
+        const list<uint64_t> &as_ = p0.first;
+        const list<uint64_t> &bs = p0.second;
         if (p(a0)) {
           _result = std::make_pair(
-              std::make_pair(list<unsigned int>::cons(a0, as_), bs), cs);
+              std::make_pair(list<uint64_t>::cons(a0, as_), bs), cs);
         } else {
           if (q(a0)) {
             _result = std::make_pair(
-                std::make_pair(as_, list<unsigned int>::cons(a0, bs)), cs);
+                std::make_pair(as_, list<uint64_t>::cons(a0, bs)), cs);
           } else {
             _result = std::make_pair(std::make_pair(as_, bs),
-                                     list<unsigned int>::cons(a0, cs));
+                                     list<uint64_t>::cons(a0, cs));
           }
         }
       }
@@ -573,23 +550,21 @@ struct LoopifyPatterns {
   }
 
   /// merge_alternating l1 l2 merges two lists by alternating elements.
-  static list<unsigned int> merge_alternating(list<unsigned int> l1,
-                                              list<unsigned int> l2);
+  static list<uint64_t> merge_alternating(list<uint64_t> l1, list<uint64_t> l2);
 
   /// filter_map_indexed p f l filters and maps with index.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &,
-                                   unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static list<unsigned int> filter_map_indexed_aux(F0 &&p, F1 &&f,
-                                                   const list<unsigned int> &l,
-                                                   unsigned int idx) {
-    if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-      return list<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static list<uint64_t> filter_map_indexed_aux(F0 &&p, F1 &&f,
+                                               const list<uint64_t> &l,
+                                               uint64_t idx) {
+    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+      return list<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename list<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
       if (p(idx, a0)) {
-        return list<unsigned int>::cons(
+        return list<uint64_t>::cons(
             f(a0), filter_map_indexed_aux(p, f, *a1, (idx + 1)));
       } else {
         return filter_map_indexed_aux(p, f, *a1, (idx + 1));
@@ -598,16 +573,15 @@ struct LoopifyPatterns {
   }
 
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &,
-                                   unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static list<unsigned int> filter_map_indexed(F0 &&p, F1 &&f,
-                                               const list<unsigned int> &l) {
-    return filter_map_indexed_aux(p, f, l, 0u);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static list<uint64_t> filter_map_indexed(F0 &&p, F1 &&f,
+                                           const list<uint64_t> &l) {
+    return filter_map_indexed_aux(p, f, l, UINT64_C(0));
   }
 
   /// four_elem l four-element destructuring pattern with fallback cases.
-  static unsigned int four_elem(const list<unsigned int> &l);
+  static uint64_t four_elem(const list<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_PATTERNS

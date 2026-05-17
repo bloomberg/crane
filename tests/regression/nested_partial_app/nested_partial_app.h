@@ -15,7 +15,7 @@ struct NestedPartialApp {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct NestedPartialApp {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,8 +122,8 @@ struct NestedPartialApp {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,8 +135,8 @@ struct NestedPartialApp {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -147,9 +147,9 @@ struct NestedPartialApp {
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
   /// 3-argument function: builds Node(t1, n, t2).
-  static tree build_node(tree t1, unsigned int n, tree t2);
+  static tree build_node(tree t1, uint64_t n, tree t2);
   /// BUG HYPOTHESIS: Partially apply build_node in stages.
   /// g = build_node t1  → closure captures t1
   /// h = g 42           → closure captures t1 and 42
@@ -162,61 +162,59 @@ struct NestedPartialApp {
   /// h c2 = Node(t1, 42, c2)
   /// tree_sum(h c1) + tree_sum(h c2) where c1=Node Leaf 1 Leaf, c2=Node Leaf 2
   /// Leaf = (10 + 42 + 1) + (10 + 42 + 2) = 53 + 54 = 107
-  static inline const unsigned int nested_partial_bug = []() {
+  static inline const uint64_t nested_partial_bug = []() {
     return []() {
-      tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<tree(unsigned int, tree)> g =
-          [=](unsigned int _x0, tree _x1) mutable -> tree {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      std::function<tree(uint64_t, tree)> g = [=](uint64_t _x0,
+                                                  tree _x1) mutable -> tree {
         return build_node(t1, _x0, _x1);
       };
       std::function<tree(tree)> h = [=](tree _pa0) mutable {
-        return g(42u, _pa0);
+        return g(UINT64_C(42), _pa0);
       };
-      tree r1 = h(tree::node(tree::leaf(), 1u, tree::leaf()));
-      tree r2 = h(tree::node(tree::leaf(), 2u, tree::leaf()));
+      tree r1 = h(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
+      tree r2 = h(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
       return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
     }();
   }();
   /// Variation: use intermediate partial app g twice before further
   /// partial application. Tests if g's capture of t1 survives.
-  static inline const unsigned int nested_partial_reuse = []() {
+  static inline const uint64_t nested_partial_reuse = []() {
     return []() {
-      tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<tree(unsigned int, tree)> g =
-          [=](unsigned int _x0, tree _x1) mutable -> tree {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      std::function<tree(uint64_t, tree)> g = [=](uint64_t _x0,
+                                                  tree _x1) mutable -> tree {
         return build_node(t1, _x0, _x1);
       };
       std::function<tree(tree)> h1 = [=](tree _pa0) mutable {
-        return g(42u, _pa0);
+        return g(UINT64_C(42), _pa0);
       };
       std::function<tree(tree)> h2 = [=](tree _pa0) mutable {
-        return g(99u, _pa0);
+        return g(UINT64_C(99), _pa0);
       };
-      tree r1 = h1(tree::node(tree::leaf(), 1u, tree::leaf()));
-      tree r2 = h2(tree::node(tree::leaf(), 2u, tree::leaf()));
+      tree r1 = h1(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
+      tree r2 = h2(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
       return (tree_sum(std::move(r1)) + tree_sum(std::move(r2)));
     }();
   }();
   /// Variation: 4-argument function, triple nesting.
-  static unsigned int quad_fn(const tree &a, unsigned int b, unsigned int c,
-                              const tree &d);
-  static inline const unsigned int triple_partial = []() {
+  static uint64_t quad_fn(const tree &a, uint64_t b, uint64_t c, const tree &d);
+  static inline const uint64_t triple_partial = []() {
     return []() {
-      tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<unsigned int(unsigned int, unsigned int, tree)> f1 =
-          [=](unsigned int _x0, unsigned int _x1,
-              tree _x2) mutable -> unsigned int {
+      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      std::function<uint64_t(uint64_t, uint64_t, tree)> f1 =
+          [=](uint64_t _x0, uint64_t _x1, tree _x2) mutable -> uint64_t {
         return quad_fn(t, _x0, _x1, _x2);
       };
-      std::function<unsigned int(unsigned int, tree)> f2 =
-          [=](unsigned int _pa0, tree _pa1) mutable {
-            return f1(20u, _pa0, _pa1);
-          };
-      std::function<unsigned int(tree)> f3 = [=](tree _pa0) mutable {
-        return f2(30u, _pa0);
+      std::function<uint64_t(uint64_t, tree)> f2 = [=](uint64_t _pa0,
+                                                       tree _pa1) mutable {
+        return f1(UINT64_C(20), _pa0, _pa1);
       };
-      unsigned int r1 = f3(tree::node(tree::leaf(), 1u, tree::leaf()));
-      unsigned int r2 = f3(tree::node(tree::leaf(), 2u, tree::leaf()));
+      std::function<uint64_t(tree)> f3 = [=](tree _pa0) mutable {
+        return f2(UINT64_C(30), _pa0);
+      };
+      uint64_t r1 = f3(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()));
+      uint64_t r2 = f3(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()));
       return (r1 + r2);
     }();
   }();

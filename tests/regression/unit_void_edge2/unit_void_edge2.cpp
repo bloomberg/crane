@@ -1,21 +1,21 @@
 #include "unit_void_edge2.h"
 
-unsigned int UnitVoidEdge2::take_unit(std::monostate) { return 42u; }
+uint64_t UnitVoidEdge2::take_unit(std::monostate) { return UINT64_C(42); }
 
-void UnitVoidEdge2::opaque_unit(unsigned int) { return; }
+void UnitVoidEdge2::opaque_unit(uint64_t) { return; }
 
-unsigned int UnitVoidEdge2::let_use_as_arg(unsigned int n) {
+uint64_t UnitVoidEdge2::let_use_as_arg(uint64_t n) {
   opaque_unit(n);
   std::monostate x = std::monostate{};
   return take_unit(x);
 }
 
-void UnitVoidEdge2::let_return_unit(unsigned int _x0) {
+void UnitVoidEdge2::let_return_unit(uint64_t _x0) {
   opaque_unit(_x0);
   return;
 }
 
-unsigned int UnitVoidEdge2::let_match_unit(unsigned int n) {
+uint64_t UnitVoidEdge2::let_match_unit(uint64_t n) {
   opaque_unit(n);
   std::monostate x = std::monostate{};
   {
@@ -23,19 +23,19 @@ unsigned int UnitVoidEdge2::let_match_unit(unsigned int n) {
   }
 }
 
-unsigned int UnitVoidEdge2::let_chain_use(unsigned int n) {
+uint64_t UnitVoidEdge2::let_chain_use(uint64_t n) {
   opaque_unit(n);
   std::monostate a = std::monostate{};
   return take_unit(a);
 }
 
-unsigned int UnitVoidEdge2::let_use_in_if(unsigned int n, bool flag) {
+uint64_t UnitVoidEdge2::let_use_in_if(uint64_t n, bool flag) {
   opaque_unit(n);
   std::monostate x = std::monostate{};
   if (flag) {
     return take_unit(x);
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
@@ -55,24 +55,24 @@ void UnitVoidEdge2::mono_chain() {
   return;
 }
 
-unsigned int UnitVoidEdge2::mono_bind_match() {
+uint64_t UnitVoidEdge2::mono_bind_match() {
   std::cout << "test"s;
   std::monostate x = std::monostate{};
   {
-    return 42u;
+    return UINT64_C(42);
   }
 }
 
-unsigned int UnitVoidEdge2::mono_bind_opaque() {
+uint64_t UnitVoidEdge2::mono_bind_opaque() {
   std::cout << "setup"s;
-  return 99u;
+  return UINT64_C(99);
 }
 
-void UnitVoidEdge2::count_down_unit(unsigned int n) {
+void UnitVoidEdge2::count_down_unit(uint64_t n) {
   if (n <= 0) {
     return;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     count_down_unit(n_);
     return;
   }
@@ -86,23 +86,23 @@ std::optional<std::monostate> UnitVoidEdge2::make_some_unit(bool b) {
   }
 }
 
-unsigned int
+uint64_t
 UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> &o) {
   if (o.has_value()) {
     const std::monostate &u = *o;
     return take_unit(u);
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-unsigned int UnitVoidEdge2::compose_option_unit(bool b1, bool b2) {
+uint64_t UnitVoidEdge2::compose_option_unit(bool b1, bool b2) {
   std::optional<std::monostate> o1 = make_some_unit(b1);
   std::optional<std::monostate> o2 = make_some_unit(b2);
   return (use_option_unit(o1) + use_option_unit(o2));
 }
 
-UnitVoidEdge2::pair<unsigned int, std::monostate>
-UnitVoidEdge2::make_nat_unit_pair(unsigned int n) {
-  return pair<unsigned int, std::monostate>::pair0(n, std::monostate{});
+UnitVoidEdge2::pair<uint64_t, std::monostate>
+UnitVoidEdge2::make_nat_unit_pair(uint64_t n) {
+  return pair<uint64_t, std::monostate>::pair0(n, std::monostate{});
 }

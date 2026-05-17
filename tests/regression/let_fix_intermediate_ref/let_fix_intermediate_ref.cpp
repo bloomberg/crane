@@ -1,45 +1,41 @@
 #include "let_fix_intermediate_ref.h"
 
-unsigned int
-LetFixIntermediateRef::sum_heads(const List<List<unsigned int>> &ll) {
-  auto go_impl = [](auto &_self_go, const List<List<unsigned int>> &xss,
-                    unsigned int acc) -> unsigned int {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            xss.v())) {
+uint64_t LetFixIntermediateRef::sum_heads(const List<List<uint64_t>> &ll) {
+  auto go_impl = [](auto &_self_go, const List<List<uint64_t>> &xss,
+                    uint64_t acc) -> uint64_t {
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(xss.v())) {
       return acc;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(xss.v());
-      unsigned int hd = [&]() {
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(a0.v())) {
-          return 0u;
+          std::get<typename List<List<uint64_t>>::Cons>(xss.v());
+      uint64_t hd = [&]() {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+          return UINT64_C(0);
         } else {
           const auto &[a00, a10] =
-              std::get<typename List<unsigned int>::Cons>(a0.v());
+              std::get<typename List<uint64_t>::Cons>(a0.v());
           return a00;
         }
       }();
       return _self_go(_self_go, *a1, (acc + hd));
     }
   };
-  auto go = [&](const List<List<unsigned int>> &xss,
-                unsigned int acc) -> unsigned int {
+  auto go = [&](const List<List<uint64_t>> &xss, uint64_t acc) -> uint64_t {
     return go_impl(go_impl, xss, acc);
   };
-  return go(ll, 0u);
+  return go(ll, UINT64_C(0));
 }
 
-unsigned int LetFixIntermediateRef::zip_sum(const List<unsigned int> &l1,
-                                            const List<unsigned int> &l2) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
-    return 0u;
+uint64_t LetFixIntermediateRef::zip_sum(const List<uint64_t> &l1,
+                                        const List<uint64_t> &l2) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l1.v());
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
-      return 0u;
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<unsigned int>::Cons>(l2.v());
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
       return ((a0 + a00) + zip_sum(*a1, *a10));
     }
   }

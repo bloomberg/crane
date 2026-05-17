@@ -8,13 +8,12 @@ struct NatModZero {
   /// But NatIntStd maps Nat.modulo to (%a0 % %a1) with
   /// no zero guard — unlike Nat.div which has one.
   /// So my_mod n 0 produces n % 0u in C++ — UB (SIGFPE).
-  static unsigned int my_mod(unsigned int _x0, unsigned int _x1);
+  static uint64_t my_mod(uint64_t _x0, uint64_t _x1);
   /// A "safe" divmod that a Rocq programmer would reasonably write,
   /// relying on the totality of Nat.div and Nat.modulo.
   /// In Rocq, divmod n 0 = (0, n).
   /// In C++, the second component triggers UB.
-  static std::pair<unsigned int, unsigned int> divmod(unsigned int a,
-                                                      unsigned int b);
+  static std::pair<uint64_t, uint64_t> divmod(uint64_t a, uint64_t b);
 };
 
 #endif // INCLUDED_NAT_MOD_ZERO

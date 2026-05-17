@@ -136,11 +136,11 @@ struct ProgramTargetsRegionScan {
   struct instruction {
     // TYPES
     struct JUN {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct JMS {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP {};
@@ -189,9 +189,9 @@ struct ProgramTargetsRegionScan {
     }
 
     // CREATORS
-    static instruction jun(unsigned int a0) { return instruction(JUN{a0}); }
+    static instruction jun(uint64_t a0) { return instruction(JUN{a0}); }
 
-    static instruction jms(unsigned int a0) { return instruction(JMS{a0}); }
+    static instruction jms(uint64_t a0) { return instruction(JMS{a0}); }
 
     static instruction nop() { return instruction(NOP{}); }
 
@@ -203,8 +203,8 @@ struct ProgramTargetsRegionScan {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rect(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[a0] = std::get<typename instruction::JUN>(i.v());
@@ -218,8 +218,8 @@ struct ProgramTargetsRegionScan {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rec(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[a0] = std::get<typename instruction::JUN>(i.v());
@@ -233,8 +233,8 @@ struct ProgramTargetsRegionScan {
   }
 
   struct layout {
-    unsigned int base_addr;
-    unsigned int code_size;
+    uint64_t base_addr;
+    uint64_t code_size;
 
     // ACCESSORS
     layout clone() const {
@@ -242,23 +242,23 @@ struct ProgramTargetsRegionScan {
     }
   };
 
-  static std::optional<unsigned int> jump_target(const instruction &i);
-  static bool addr_in_regionb(unsigned int addr, const layout &l);
+  static std::optional<uint64_t> jump_target(const instruction &i);
+  static bool addr_in_regionb(uint64_t addr, const layout &l);
   static bool target_in_layoutb(const layout &l, const instruction &i);
   static bool program_targets_okb(const List<instruction> &prog,
                                   const layout &l);
-  static inline const unsigned int t = []() {
-    layout l = layout{200u, 20u};
+  static inline const uint64_t t = []() {
+    layout l = layout{UINT64_C(200), UINT64_C(20)};
     List<instruction> p = List<instruction>::cons(
         instruction::nop(),
         List<instruction>::cons(
-            instruction::jun(205u),
-            List<instruction>::cons(instruction::jms(218u),
+            instruction::jun(UINT64_C(205)),
+            List<instruction>::cons(instruction::jms(UINT64_C(218)),
                                     List<instruction>::nil())));
     if (program_targets_okb(std::move(p), std::move(l))) {
-      return 1u;
+      return UINT64_C(1);
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
 };

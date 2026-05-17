@@ -122,31 +122,30 @@ public:
 };
 
 struct LoopifyExtrema {
-  static unsigned int maximum(const List<unsigned int> &l);
-  static unsigned int minimum(const List<unsigned int> &l);
-  static std::pair<unsigned int, unsigned int>
-  minmax(const List<unsigned int> &l);
+  static uint64_t maximum(const List<uint64_t> &l);
+  static uint64_t minimum(const List<uint64_t> &l);
+  static std::pair<uint64_t, uint64_t> minmax(const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t
   max_by(F0 &&f,
-         const List<unsigned int> &l) { /// _Enter: captures varying parameters
-                                        /// for each recursive call.
+         const List<uint64_t> &l) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      unsigned int a0;
+      uint64_t a0;
       F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -156,15 +155,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = 0u;
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv.v())) {
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = f(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, f});
@@ -173,10 +170,10 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int a0 = _f.a0;
+        uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        unsigned int rest_max = _result;
-        unsigned int fx = f(a0);
+        uint64_t rest_max = _result;
+        uint64_t fx = f(a0);
         if (rest_max < fx) {
           _result = std::move(fx);
         } else {
@@ -188,25 +185,25 @@ struct LoopifyExtrema {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t
   min_by(F0 &&f,
-         const List<unsigned int> &l) { /// _Enter: captures varying parameters
-                                        /// for each recursive call.
+         const List<uint64_t> &l) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      unsigned int a0;
+      uint64_t a0;
       F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -216,15 +213,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = 0u;
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv.v())) {
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = f(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, f});
@@ -233,10 +228,10 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int a0 = _f.a0;
+        uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        unsigned int rest_min = _result;
-        unsigned int fx = f(a0);
+        uint64_t rest_min = _result;
+        uint64_t fx = f(a0);
         if (fx < rest_min) {
           _result = std::move(fx);
         } else {
@@ -248,25 +243,25 @@ struct LoopifyExtrema {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t
   argmax(F0 &&f,
-         const List<unsigned int> &l) { /// _Enter: captures varying parameters
-                                        /// for each recursive call.
+         const List<uint64_t> &l) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      unsigned int a0;
+      uint64_t a0;
       F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -276,15 +271,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = 0u;
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv.v())) {
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, f});
@@ -293,11 +286,11 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int a0 = _f.a0;
+        uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        unsigned int rest_best = _result;
-        unsigned int fx = f(a0);
-        unsigned int f_rest = f(rest_best);
+        uint64_t rest_best = _result;
+        uint64_t fx = f(a0);
+        uint64_t f_rest = f(rest_best);
         if (f_rest < fx) {
           _result = std::move(a0);
         } else {
@@ -309,25 +302,25 @@ struct LoopifyExtrema {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t
   argmin(F0 &&f,
-         const List<unsigned int> &l) { /// _Enter: captures varying parameters
-                                        /// for each recursive call.
+         const List<uint64_t> &l) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      unsigned int a0;
+      uint64_t a0;
       F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -337,15 +330,13 @@ struct LoopifyExtrema {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = 0u;
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv.v())) {
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, f});
@@ -354,11 +345,11 @@ struct LoopifyExtrema {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int a0 = _f.a0;
+        uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        unsigned int rest_best = _result;
-        unsigned int fx = f(a0);
-        unsigned int f_rest = f(rest_best);
+        uint64_t rest_best = _result;
+        uint64_t fx = f(a0);
+        uint64_t f_rest = f(rest_best);
         if (fx < f_rest) {
           _result = std::move(a0);
         } else {
@@ -369,32 +360,30 @@ struct LoopifyExtrema {
     return _result;
   }
 
-  static unsigned int lex_compare(const List<unsigned int> &l1,
-                                  const List<unsigned int> &l2);
-  static bool all_equal(const List<unsigned int> &l);
-  static bool is_sorted(const List<unsigned int> &l);
+  static uint64_t lex_compare(const List<uint64_t> &l1,
+                              const List<uint64_t> &l2);
+  static bool all_equal(const List<uint64_t> &l);
+  static bool is_sorted(const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
-  static bool adjacent_all(F0 &&p, const List<unsigned int> &l) {
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
+  static bool adjacent_all(F0 &&p, const List<uint64_t> &l) {
     bool _result;
-    const List<unsigned int> *_loop_l = &l;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         _result = true;
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         auto &&_sv0 = *a1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv0.v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
           _result = true;
           break;
         } else {
           const auto &[a00, a10] =
-              std::get<typename List<unsigned int>::Cons>(_sv0.v());
+              std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (p(a0, a00)) {
             _loop_l = a1.get();
           } else {

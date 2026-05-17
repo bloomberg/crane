@@ -121,14 +121,14 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct RdrReadsFromSelectedPort {
   struct state {
-    unsigned int acc;
-    List<unsigned int> rom_ports;
-    unsigned int sel_rom;
+    uint64_t acc;
+    List<uint64_t> rom_ports;
+    uint64_t sel_rom;
 
     // ACCESSORS
     state clone() const {
@@ -137,19 +137,21 @@ struct RdrReadsFromSelectedPort {
   };
 
   static state execute_rdr(const state &s);
-  static inline const state sample =
-      state{0u,
-            List<unsigned int>::cons(
-                1u, List<unsigned int>::cons(
-                        2u, List<unsigned int>::cons(
-                                7u, List<unsigned int>::cons(
-                                        4u, List<unsigned int>::nil())))),
-            2u};
-  static inline const bool t = execute_rdr(sample).acc == 7u;
+  static inline const state sample = state{
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(7),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))),
+      UINT64_C(2)};
+  static inline const bool t = execute_rdr(sample).acc == UINT64_C(7);
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -158,7 +160,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

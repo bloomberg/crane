@@ -5,18 +5,16 @@
 
 namespace SepExtCrossModule {
 
-unsigned int sum_list(const Datatypes::List<unsigned int> &l) {
-  return l.template fold_left<unsigned int>(
-      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-        return (_x0 + _x1);
-      },
-      0u);
+uint64_t sum_list(const Datatypes::List<uint64_t> &l) {
+  return l.template fold_left<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0));
 }
 
-Datatypes::List<unsigned int> make_pair_list(unsigned int n, unsigned int m) {
-  return Datatypes::template List<unsigned int>::cons(
-      n, Datatypes::template List<unsigned int>::cons(
-             m, Datatypes::template List<unsigned int>::nil()));
+Datatypes::List<uint64_t> make_pair_list(uint64_t n, uint64_t m) {
+  return Datatypes::template List<uint64_t>::cons(
+      n, Datatypes::template List<uint64_t>::cons(
+             m, Datatypes::template List<uint64_t>::nil()));
 }
 
 } // namespace SepExtCrossModule

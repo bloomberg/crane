@@ -118,11 +118,11 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  List<A> skipn(unsigned int n) const {
+  List<A> skipn(uint64_t n) const {
     if (n <= 0) {
       return std::move(*this);
     } else {
-      unsigned int n0 = n - 1;
+      uint64_t n0 = n - 1;
       if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
         return List<A>::nil();
       } else {
@@ -132,11 +132,11 @@ public:
     }
   }
 
-  List<A> firstn(unsigned int n) const {
+  List<A> firstn(uint64_t n) const {
     if (n <= 0) {
       return List<A>::nil();
     } else {
-      unsigned int n0 = n - 1;
+      uint64_t n0 = n - 1;
       if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
         return List<A>::nil();
       } else {
@@ -146,9 +146,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -167,7 +167,7 @@ public:
 
 struct UpdateNthBounds {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, List<T1> l) {
+  static List<T1> update_nth(uint64_t n, T1 x, List<T1> l) {
     if (n < l.length()) {
       return l.firstn(n).app(List<T1>::cons(x, l.skipn((n + 1))));
     } else {
@@ -175,22 +175,25 @@ struct UpdateNthBounds {
     }
   }
 
-  static inline const unsigned int in_bounds_length =
-      update_nth<unsigned int>(
-          2u, 9u,
-          List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(
-                      2u, List<unsigned int>::cons(
-                              3u, List<unsigned int>::cons(
-                                      4u, List<unsigned int>::nil())))))
+  static inline const uint64_t in_bounds_length =
+      update_nth<uint64_t>(
+          UINT64_C(2), UINT64_C(9),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(
+                      UINT64_C(3), List<uint64_t>::cons(
+                                       UINT64_C(4), List<uint64_t>::nil())))))
           .length();
-  static inline const unsigned int out_of_bounds_length =
-      update_nth<unsigned int>(
-          9u, 7u,
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))))
+  static inline const uint64_t out_of_bounds_length =
+      update_nth<uint64_t>(
+          UINT64_C(9), UINT64_C(7),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))
           .length();
 };
 

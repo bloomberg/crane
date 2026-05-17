@@ -43,12 +43,12 @@ struct NameClashIifeThis {
   struct shape {
     // TYPES
     struct Circle {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Square {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     using variant_t = std::variant<Circle, Square>;
@@ -91,9 +91,9 @@ struct NameClashIifeThis {
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) { return shape(Circle{a0}); }
+    static shape circle(uint64_t a0) { return shape(Circle{a0}); }
 
-    static shape square(unsigned int a0, unsigned int a1) {
+    static shape square(uint64_t a0, uint64_t a1) {
       return shape(Square{a0, a1});
     }
 
@@ -103,18 +103,18 @@ struct NameClashIifeThis {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int nested_match(Color c) const {
+    uint64_t nested_match(Color c) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
         switch (c) {
         case Color::RED: {
-          return (a0 + 10u);
+          return (a0 + UINT64_C(10));
         }
         case Color::GREEN: {
-          return (a0 + 20u);
+          return (a0 + UINT64_C(20));
         }
         case Color::BLUE: {
-          return (a0 + 30u);
+          return (a0 + UINT64_C(30));
         }
         default:
           std::unreachable();
@@ -129,7 +129,7 @@ struct NameClashIifeThis {
           return (a0 + a1);
         }
         case Color::BLUE: {
-          return 0u;
+          return UINT64_C(0);
         }
         default:
           std::unreachable();
@@ -137,23 +137,23 @@ struct NameClashIifeThis {
       }
     }
 
-    unsigned int describe(Color c) const {
-      unsigned int color_val = [&]() {
+    uint64_t describe(Color c) const {
+      uint64_t color_val = [&]() {
         switch (c) {
         case Color::RED: {
-          return 1u;
+          return UINT64_C(1);
         }
         case Color::GREEN: {
-          return 2u;
+          return UINT64_C(2);
         }
         case Color::BLUE: {
-          return 3u;
+          return UINT64_C(3);
         }
         default:
           std::unreachable();
         }
       }();
-      unsigned int shape_val = [&]() {
+      uint64_t shape_val = [&]() {
         if (std::holds_alternative<typename shape::Circle>(this->v())) {
           const auto &[a0] = std::get<typename shape::Circle>(this->v());
           return a0;
@@ -166,8 +166,8 @@ struct NameClashIifeThis {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
     T1 shape_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
@@ -179,8 +179,8 @@ struct NameClashIifeThis {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
     T1 shape_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
@@ -192,7 +192,7 @@ struct NameClashIifeThis {
     }
   };
 
-  static unsigned int match_of_match(Color c, const shape &s);
+  static uint64_t match_of_match(Color c, const shape &s);
 
   struct wrapper {
     // TYPES
@@ -254,7 +254,7 @@ struct NameClashIifeThis {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int triple_nest() const {
+    uint64_t triple_nest() const {
       if (std::holds_alternative<typename wrapper::Wrap>(this->v())) {
         const auto &[a0, a1] = std::get<typename wrapper::Wrap>(this->v());
         if (std::holds_alternative<typename shape::Circle>(a1.v())) {
@@ -264,10 +264,10 @@ struct NameClashIifeThis {
             return a00;
           }
           case Color::GREEN: {
-            return (a00 * 2u);
+            return (a00 * UINT64_C(2));
           }
           case Color::BLUE: {
-            return (a00 * 3u);
+            return (a00 * UINT64_C(3));
           }
           default:
             std::unreachable();
@@ -282,14 +282,14 @@ struct NameClashIifeThis {
             return (a00 * a10);
           }
           case Color::BLUE: {
-            return 0u;
+            return UINT64_C(0);
           }
           default:
             std::unreachable();
           }
         }
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   };

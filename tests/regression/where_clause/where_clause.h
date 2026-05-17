@@ -11,7 +11,7 @@ struct WhereClause {
   struct Expr {
     // TYPES
     struct Num {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Plus {
@@ -102,7 +102,7 @@ struct WhereClause {
     }
 
     // CREATORS
-    static Expr num(unsigned int a0) { return Expr(Num{a0}); }
+    static Expr num(uint64_t a0) { return Expr(Num{a0}); }
 
     static Expr plus(Expr a0, Expr a1) {
       return Expr(Plus{std::make_unique<Expr>(std::move(a0)),
@@ -153,19 +153,19 @@ struct WhereClause {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int expr_size() const {
+    uint64_t expr_size() const {
       if (std::holds_alternative<typename Expr::Num>(this->v())) {
-        return 1u;
+        return UINT64_C(1);
       } else if (std::holds_alternative<typename Expr::Plus>(this->v())) {
         const auto &[a0, a1] = std::get<typename Expr::Plus>(this->v());
-        return ((1u + (*a0).expr_size()) + (*a1).expr_size());
+        return ((UINT64_C(1) + (*a0).expr_size()) + (*a1).expr_size());
       } else {
         const auto &[a0, a1] = std::get<typename Expr::Times>(this->v());
-        return ((1u + (*a0).expr_size()) + (*a1).expr_size());
+        return ((UINT64_C(1) + (*a0).expr_size()) + (*a1).expr_size());
       }
     }
 
-    unsigned int eval() const {
+    uint64_t eval() const {
       if (std::holds_alternative<typename Expr::Num>(this->v())) {
         const auto &[a0] = std::get<typename Expr::Num>(this->v());
         return a0;
@@ -179,7 +179,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
     T1 Expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
@@ -198,7 +198,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, Expr &, T1 &, Expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, Expr &, T1 &, Expr &, T1 &>
     T1 Expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
@@ -457,7 +457,7 @@ struct WhereClause {
   struct AExpr {
     // TYPES
     struct ANum {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct APlus {
@@ -550,7 +550,7 @@ struct WhereClause {
     }
 
     // CREATORS
-    static AExpr anum(unsigned int a0) { return AExpr(ANum{a0}); }
+    static AExpr anum(uint64_t a0) { return AExpr(ANum{a0}); }
 
     static AExpr aplus(AExpr a0, AExpr a1) {
       return AExpr(APlus{std::make_unique<AExpr>(std::move(a0)),
@@ -601,7 +601,7 @@ struct WhereClause {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int aeval() const {
+    uint64_t aeval() const {
       if (std::holds_alternative<typename AExpr::ANum>(this->v())) {
         const auto &[a0] = std::get<typename AExpr::ANum>(this->v());
         return a0;
@@ -619,7 +619,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, AExpr &, T1 &, AExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
                                      T1 &>
@@ -639,7 +639,7 @@ struct WhereClause {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, AExpr &, T1 &, AExpr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, BExpr &, AExpr &, T1 &, AExpr &,
                                      T1 &>
@@ -659,21 +659,23 @@ struct WhereClause {
     }
   };
 
-  static inline const unsigned int test_eval_plus =
-      Expr::plus(Expr::num(3u), Expr::num(4u)).eval();
-  static inline const unsigned int test_eval_times =
-      Expr::times(Expr::num(5u), Expr::num(6u)).eval();
-  static inline const unsigned int test_eval_nested =
-      Expr::plus(Expr::times(Expr::num(2u), Expr::num(3u)), Expr::num(1u))
+  static inline const uint64_t test_eval_plus =
+      Expr::plus(Expr::num(UINT64_C(3)), Expr::num(UINT64_C(4))).eval();
+  static inline const uint64_t test_eval_times =
+      Expr::times(Expr::num(UINT64_C(5)), Expr::num(UINT64_C(6))).eval();
+  static inline const uint64_t test_eval_nested =
+      Expr::plus(Expr::times(Expr::num(UINT64_C(2)), Expr::num(UINT64_C(3))),
+                 Expr::num(UINT64_C(1)))
           .eval();
-  static inline const unsigned int test_size =
-      Expr::plus(Expr::times(Expr::num(2u), Expr::num(3u)), Expr::num(1u))
+  static inline const uint64_t test_size =
+      Expr::plus(Expr::times(Expr::num(UINT64_C(2)), Expr::num(UINT64_C(3))),
+                 Expr::num(UINT64_C(1)))
           .expr_size();
   static inline const bool test_beval =
       BExpr::band(BExpr::btrue(), BExpr::bnot(BExpr::bfalse())).beval();
-  static inline const unsigned int test_aeval =
-      AExpr::aif(BExpr::band(BExpr::btrue(), BExpr::btrue()), AExpr::anum(10u),
-                 AExpr::anum(20u))
+  static inline const uint64_t test_aeval =
+      AExpr::aif(BExpr::band(BExpr::btrue(), BExpr::btrue()),
+                 AExpr::anum(UINT64_C(10)), AExpr::anum(UINT64_C(20)))
           .aeval();
 };
 

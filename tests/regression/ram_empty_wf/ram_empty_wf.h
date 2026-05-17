@@ -120,13 +120,13 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct RamEmptyWf {
   struct ram_reg {
-    List<unsigned int> reg_main;
-    List<unsigned int> reg_status;
+    List<uint64_t> reg_main;
+    List<uint64_t> reg_status;
 
     // ACCESSORS
     ram_reg clone() const {
@@ -136,7 +136,7 @@ struct RamEmptyWf {
 
   struct ram_chip {
     List<ram_reg> chip_regs;
-    unsigned int chip_port;
+    uint64_t chip_port;
 
     // ACCESSORS
     ram_chip clone() const {
@@ -152,10 +152,10 @@ struct RamEmptyWf {
   };
 
   struct ram_sel {
-    unsigned int sel_bank;
-    unsigned int sel_chip;
-    unsigned int sel_reg;
-    unsigned int sel_char;
+    uint64_t sel_bank;
+    uint64_t sel_chip;
+    uint64_t sel_reg;
+    uint64_t sel_char;
 
     // ACCESSORS
     ram_sel clone() const {
@@ -165,23 +165,24 @@ struct RamEmptyWf {
   };
 
   static inline const ram_reg empty_reg =
-      ram_reg{ListDef::template repeat<unsigned int>(0u, 16u),
-              ListDef::template repeat<unsigned int>(0u, 4u)};
-  static inline const ram_chip empty_chip =
-      ram_chip{ListDef::template repeat<ram_reg>(empty_reg, 4u), 0u};
+      ram_reg{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+              ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4))};
+  static inline const ram_chip empty_chip = ram_chip{
+      ListDef::template repeat<ram_reg>(empty_reg, UINT64_C(4)), UINT64_C(0)};
   static inline const ram_bank empty_bank =
-      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, 4u)};
+      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, UINT64_C(4))};
   static inline const List<ram_bank> empty_ram =
-      ListDef::template repeat<ram_bank>(empty_bank, 4u);
-  static inline const ram_sel default_sel = ram_sel{0u, 0u, 0u, 0u};
-  static inline const unsigned int default_bank_idx = default_sel.sel_bank;
+      ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));
+  static inline const ram_sel default_sel =
+      ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
+  static inline const uint64_t default_bank_idx = default_sel.sel_bank;
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
-    unsigned int k = n - 1;
+    uint64_t k = n - 1;
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }

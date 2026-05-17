@@ -150,20 +150,21 @@ template <typename A, typename P> struct SigT {
 };
 
 struct SigmaTypes {
-  static SigT<unsigned int, std::any> nat_with_double(unsigned int n);
-  static Sig<unsigned int> positive_succ(unsigned int n);
-  static unsigned int get_positive(unsigned int n);
-  static Sig<unsigned int> double_positive(unsigned int n);
-  static unsigned int use_nat_double(unsigned int n);
-  static List<unsigned int> positives_up_to(unsigned int k);
-  static inline const unsigned int test_double_5 = use_nat_double(5u);
-  static inline const unsigned int test_positive_3 = get_positive(3u);
-  static inline const unsigned int test_double_pos = []() {
-    const auto &_sv0 = double_positive(3u);
+  static SigT<uint64_t, std::any> nat_with_double(uint64_t n);
+  static Sig<uint64_t> positive_succ(uint64_t n);
+  static uint64_t get_positive(uint64_t n);
+  static Sig<uint64_t> double_positive(uint64_t n);
+  static uint64_t use_nat_double(uint64_t n);
+  static List<uint64_t> positives_up_to(uint64_t k);
+  static inline const uint64_t test_double_5 = use_nat_double(UINT64_C(5));
+  static inline const uint64_t test_positive_3 = get_positive(UINT64_C(3));
+  static inline const uint64_t test_double_pos = []() {
+    const auto &_sv0 = double_positive(UINT64_C(3));
     const auto &[x0] = _sv0;
     return x0;
   }();
-  static inline const List<unsigned int> test_positives = positives_up_to(5u);
+  static inline const List<uint64_t> test_positives =
+      positives_up_to(UINT64_C(5));
 };
 
 #endif // INCLUDED_SIGMA_TYPES

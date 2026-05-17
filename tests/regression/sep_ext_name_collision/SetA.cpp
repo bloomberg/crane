@@ -2,6 +2,6 @@
 
 namespace SetA {
 
-unsigned int make(unsigned int n) { return (n + 1u); }
+uint64_t make(uint64_t n) { return (n + UINT64_C(1)); }
 
 } // namespace SetA

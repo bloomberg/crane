@@ -10,7 +10,7 @@
 struct DocComments {
   /// add computes the sum of two natural numbers n and m.
   /// It works by structural recursion on n.
-  static unsigned int add(unsigned int n, unsigned int m);
+  static uint64_t add(uint64_t n, uint64_t m);
 
   /// A simple pair holding two values of possibly different types.
   template <typename A, typename B> struct pair {
@@ -163,13 +163,13 @@ struct DocComments {
     }
   }
 
-  static unsigned int no_doc_comment(unsigned int x);
+  static uint64_t no_doc_comment(uint64_t x);
 
   /// The identity function: returns its argument unchanged.
   template <typename T1> static T1 identity(T1 x) { return x; }
 
   /// double n returns 2 * n.
-  static unsigned int double_(unsigned int n);
+  static uint64_t double_(uint64_t n);
   /// A simple color enumeration.
   enum class Color {
     /// Red color.

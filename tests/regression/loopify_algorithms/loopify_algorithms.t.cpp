@@ -17,7 +17,7 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using List = ::List<unsigned int>;
+  using List = ::List<uint64_t>;
 
   // Test sieve (simple case)
   auto l = List::cons(

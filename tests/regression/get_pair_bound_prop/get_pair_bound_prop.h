@@ -119,11 +119,11 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  List<A> skipn(unsigned int n) const {
+  List<A> skipn(uint64_t n) const {
     if (n <= 0) {
       return std::move(*this);
     } else {
-      unsigned int n0 = n - 1;
+      uint64_t n0 = n - 1;
       if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
         return List<A>::nil();
       } else {
@@ -133,11 +133,11 @@ public:
     }
   }
 
-  List<A> firstn(unsigned int n) const {
+  List<A> firstn(uint64_t n) const {
     if (n <= 0) {
       return List<A>::nil();
     } else {
-      unsigned int n0 = n - 1;
+      uint64_t n0 = n - 1;
       if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
         return List<A>::nil();
       } else {
@@ -150,12 +150,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct GetPairBoundProp {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -164,7 +164,7 @@ struct GetPairBoundProp {
         return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -175,13 +175,13 @@ struct GetPairBoundProp {
   }
 
   struct state {
-    unsigned int ex_acc;
-    List<unsigned int> ex_regs;
+    uint64_t ex_acc;
+    List<uint64_t> ex_regs;
     bool ex_carry;
-    unsigned int ex_pc;
-    List<unsigned int> ex_stack;
-    unsigned int ex_pair_bus;
-    List<unsigned int> ex_ports;
+    uint64_t ex_pc;
+    List<uint64_t> ex_stack;
+    uint64_t ex_pair_bus;
+    List<uint64_t> ex_ports;
 
     // ACCESSORS
     state clone() const {
@@ -192,41 +192,39 @@ struct GetPairBoundProp {
     }
   };
 
-  static unsigned int get_reg(const state &s, unsigned int r);
-  static List<unsigned int> set_reg(const state &s, unsigned int r,
-                                    unsigned int v);
-  static unsigned int pair_base(unsigned int r);
-  static unsigned int get_pair(const state &s, unsigned int r);
-  static List<unsigned int> set_pair(const state &s, unsigned int r,
-                                     unsigned int v);
-  static List<unsigned int> push_return(const state &s, unsigned int ret);
+  static uint64_t get_reg(const state &s, uint64_t r);
+  static List<uint64_t> set_reg(const state &s, uint64_t r, uint64_t v);
+  static uint64_t pair_base(uint64_t r);
+  static uint64_t get_pair(const state &s, uint64_t r);
+  static List<uint64_t> set_pair(const state &s, uint64_t r, uint64_t v);
+  static List<uint64_t> push_return(const state &s, uint64_t ret);
 
   struct instr {
     // TYPES
     struct NOP {};
 
     struct LDM {
-      unsigned int n;
+      uint64_t n;
     };
 
     struct LD {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct XCH {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct INC {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct ADD {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct SUB {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct IAC {};
@@ -256,42 +254,42 @@ struct GetPairBoundProp {
     struct KBP {};
 
     struct JUN {
-      unsigned int a;
+      uint64_t a;
     };
 
     struct JMS {
-      unsigned int a;
+      uint64_t a;
     };
 
     struct JCN {
-      unsigned int c;
-      unsigned int a;
+      uint64_t c;
+      uint64_t a;
     };
 
     struct FIM {
-      unsigned int r;
-      unsigned int d;
+      uint64_t r;
+      uint64_t d;
     };
 
     struct SRC {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct FIN {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct JIN {
-      unsigned int r;
+      uint64_t r;
     };
 
     struct ISZ {
-      unsigned int r;
-      unsigned int a;
+      uint64_t r;
+      uint64_t a;
     };
 
     struct BBL {
-      unsigned int d;
+      uint64_t d;
     };
 
     using variant_t =
@@ -460,17 +458,17 @@ struct GetPairBoundProp {
     // CREATORS
     static instr nop() { return instr(NOP{}); }
 
-    static instr ldm(unsigned int n) { return instr(LDM{n}); }
+    static instr ldm(uint64_t n) { return instr(LDM{n}); }
 
-    static instr ld(unsigned int r) { return instr(LD{r}); }
+    static instr ld(uint64_t r) { return instr(LD{r}); }
 
-    static instr xch(unsigned int r) { return instr(XCH{r}); }
+    static instr xch(uint64_t r) { return instr(XCH{r}); }
 
-    static instr inc(unsigned int r) { return instr(INC{r}); }
+    static instr inc(uint64_t r) { return instr(INC{r}); }
 
-    static instr add(unsigned int r) { return instr(ADD{r}); }
+    static instr add(uint64_t r) { return instr(ADD{r}); }
 
-    static instr sub(unsigned int r) { return instr(SUB{r}); }
+    static instr sub(uint64_t r) { return instr(SUB{r}); }
 
     static instr iac() { return instr(IAC{}); }
 
@@ -498,29 +496,23 @@ struct GetPairBoundProp {
 
     static instr kbp() { return instr(KBP{}); }
 
-    static instr jun(unsigned int a) { return instr(JUN{a}); }
+    static instr jun(uint64_t a) { return instr(JUN{a}); }
 
-    static instr jms(unsigned int a) { return instr(JMS{a}); }
+    static instr jms(uint64_t a) { return instr(JMS{a}); }
 
-    static instr jcn(unsigned int c, unsigned int a) {
-      return instr(JCN{c, a});
-    }
+    static instr jcn(uint64_t c, uint64_t a) { return instr(JCN{c, a}); }
 
-    static instr fim(unsigned int r, unsigned int d) {
-      return instr(FIM{r, d});
-    }
+    static instr fim(uint64_t r, uint64_t d) { return instr(FIM{r, d}); }
 
-    static instr src(unsigned int r) { return instr(SRC{r}); }
+    static instr src(uint64_t r) { return instr(SRC{r}); }
 
-    static instr fin(unsigned int r) { return instr(FIN{r}); }
+    static instr fin(uint64_t r) { return instr(FIN{r}); }
 
-    static instr jin(unsigned int r) { return instr(JIN{r}); }
+    static instr jin(uint64_t r) { return instr(JIN{r}); }
 
-    static instr isz(unsigned int r, unsigned int a) {
-      return instr(ISZ{r, a});
-    }
+    static instr isz(uint64_t r, uint64_t a) { return instr(ISZ{r, a}); }
 
-    static instr bbl(unsigned int d) { return instr(BBL{d}); }
+    static instr bbl(uint64_t d) { return instr(BBL{d}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -533,21 +525,21 @@ struct GetPairBoundProp {
             typename F5, typename F6, typename F20, typename F21, typename F22,
             typename F23, typename F24, typename F25, typename F26,
             typename F27, typename F28>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F6 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F20 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F21 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F22 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F23 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F24 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F25 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F26 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F27 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F28 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F6 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F20 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F21 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F22 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F23 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F24 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F25 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F26 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F27 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F28 &, uint64_t &>
   static T1 instr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                        T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
@@ -634,21 +626,21 @@ struct GetPairBoundProp {
             typename F5, typename F6, typename F20, typename F21, typename F22,
             typename F23, typename F24, typename F25, typename F26,
             typename F27, typename F28>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F3 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F5 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F6 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F20 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F21 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F22 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F23 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F24 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F25 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F26 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F27 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F28 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F6 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F20 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F21 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F22 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F23 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F24 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F25 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F26 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F27 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F28 &, uint64_t &>
   static T1 instr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                       T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
@@ -733,55 +725,60 @@ struct GetPairBoundProp {
 
   static state execute(const state &s, const instr &i);
   static inline const state sample = state{
-      3u,
-      List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u,
-              List<unsigned int>::cons(
-                  3u,
-                  List<unsigned int>::cons(
-                      4u,
-                      List<unsigned int>::cons(
-                          5u,
-                          List<unsigned int>::cons(
-                              6u,
-                              List<unsigned int>::cons(
-                                  7u,
-                                  List<unsigned int>::cons(
-                                      8u, List<unsigned int>::cons(
-                                              9u,
-                                              List<unsigned int>::cons(
-                                                  10u,
-                                                  List<unsigned int>::cons(
-                                                      11u,
-                                                      List<unsigned int>::cons(
-                                                          12u,
-                                                          List<unsigned int>::cons(
-                                                              13u,
-                                                              List<unsigned int>::cons(
-                                                                  14u,
-                                                                  List<unsigned int>::cons(
-                                                                      15u,
-                                                                      List<unsigned int>::cons(
-                                                                          0u,
-                                                                          List<
-                                                                              unsigned int>::
-                                                                              nil())))))))))))))))),
+      UINT64_C(3),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(
+                          UINT64_C(5),
+                          List<uint64_t>::cons(
+                              UINT64_C(6),
+                              List<uint64_t>::cons(
+                                  UINT64_C(7),
+                                  List<uint64_t>::cons(
+                                      UINT64_C(8),
+                                      List<uint64_t>::cons(
+                                          UINT64_C(9),
+                                          List<uint64_t>::cons(
+                                              UINT64_C(10),
+                                              List<uint64_t>::cons(
+                                                  UINT64_C(11),
+                                                  List<uint64_t>::cons(
+                                                      UINT64_C(12),
+                                                      List<uint64_t>::cons(
+                                                          UINT64_C(13),
+                                                          List<uint64_t>::cons(
+                                                              UINT64_C(14),
+                                                              List<uint64_t>::cons(
+                                                                  UINT64_C(15),
+                                                                  List<uint64_t>::cons(
+                                                                      UINT64_C(
+                                                                          0),
+                                                                      List<
+                                                                          uint64_t>::
+                                                                          nil())))))))))))))))),
       false,
-      10u,
-      List<unsigned int>::cons(
-          20u, List<unsigned int>::cons(30u, List<unsigned int>::nil())),
-      42u,
-      List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::nil()))))};
+      UINT64_C(10),
+      List<uint64_t>::cons(
+          UINT64_C(20),
+          List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())),
+      UINT64_C(42),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))))};
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -790,7 +787,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

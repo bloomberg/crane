@@ -36,16 +36,16 @@ int main() {
   ASSERT(Sum::test_either == 3u);
 
   // Test left_val is Left
-  ASSERT((std::holds_alternative<Sum::either<unsigned int, bool>::Left>(
+  ASSERT((std::holds_alternative<Sum::either<uint64_t, bool>::Left>(
       Sum::left_val.v())));
 
   // Test right_val is Right
-  ASSERT((std::holds_alternative<Sum::either<unsigned int, bool>::Right>(
+  ASSERT((std::holds_alternative<Sum::either<uint64_t, bool>::Right>(
       Sum::right_val.v())));
 
   // Test triple
   ASSERT((std::holds_alternative<
-          Sum::triple<unsigned int, bool, unsigned int>::Second>(
+          Sum::triple<uint64_t, bool, uint64_t>::Second>(
       Sum::triple_test.v())));
 
   return testStatus;

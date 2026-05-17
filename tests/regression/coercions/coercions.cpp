@@ -1,22 +1,21 @@
 #include "coercions.h"
 
-unsigned int Coercions::bool_to_nat(bool b) {
+uint64_t Coercions::bool_to_nat(bool b) {
   if (b) {
-    return 1u;
+    return UINT64_C(1);
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-unsigned int Coercions::add_bool(unsigned int n, bool b) {
+uint64_t Coercions::add_bool(uint64_t n, bool b) {
   return (n + bool_to_nat(b));
 }
 
-unsigned int Coercions::double_wrapped(const Coercions::Wrapper &w) {
+uint64_t Coercions::double_wrapped(const Coercions::Wrapper &w) {
   return (w.unwrap + w.unwrap);
 }
 
-unsigned int Coercions::add_boolbox(unsigned int n,
-                                    const Coercions::BoolBox &bb) {
+uint64_t Coercions::add_boolbox(uint64_t n, const Coercions::BoolBox &bb) {
   return (n + bool_to_nat(bb.unbox));
 }

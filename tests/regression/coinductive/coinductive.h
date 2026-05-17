@@ -12,7 +12,7 @@ struct Coinductive {
   struct stream {
     // TYPES
     struct Cons {
-      unsigned int a0;
+      uint64_t a0;
       std::shared_ptr<stream> a1;
     };
 
@@ -30,7 +30,7 @@ struct Coinductive {
     explicit stream(std::function<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static stream cons(unsigned int a0, const stream &a1) {
+    static stream cons(uint64_t a0, const stream &a1) {
       return stream(Cons{a0, std::make_shared<stream>(a1)});
     }
 
@@ -46,12 +46,12 @@ struct Coinductive {
   };
 
   static stream zeros();
-  static stream count_from(unsigned int n);
-  static unsigned int hd(stream s);
+  static stream count_from(uint64_t n);
+  static uint64_t hd(stream s);
   static stream tl(stream s);
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static stream smap(F0 &&f, stream s) {
     const auto &[a0, a1] = std::get<typename stream::Cons>(s.v());
     return stream::lazy_(
@@ -60,18 +60,18 @@ struct Coinductive {
 
   static stream interleave(stream s1, stream s2);
   static inline const stream get_zeros = zeros();
-  static inline const stream get_count = count_from(0u);
-  static inline const unsigned int test_hd = hd(get_zeros);
+  static inline const stream get_count = count_from(UINT64_C(0));
+  static inline const uint64_t test_hd = hd(get_zeros);
   static inline const stream test_count = get_count;
 
   struct tree {
     // TYPES
     struct Leaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Node {
-      unsigned int a0;
+      uint64_t a0;
       std::shared_ptr<tree> a1;
       std::shared_ptr<tree> a2;
     };
@@ -93,9 +93,9 @@ struct Coinductive {
     explicit tree(std::function<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
+    static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
-    static tree node(unsigned int a0, const tree &a1, const tree &a2) {
+    static tree node(uint64_t a0, const tree &a1, const tree &a2) {
       return tree(
           Node{a0, std::make_shared<tree>(a1), std::make_shared<tree>(a2)});
     }
@@ -111,7 +111,7 @@ struct Coinductive {
     const variant_t &v() const { return lazy_v_.force(); }
   };
 
-  static tree infinite_tree(unsigned int n);
+  static tree infinite_tree(uint64_t n);
 };
 
 #endif // INCLUDED_COINDUCTIVE

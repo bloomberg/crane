@@ -120,15 +120,15 @@ public:
 };
 
 struct LoopifyNumericMisc {
-  static unsigned int sum_abs(const List<unsigned int> &l);
-  static unsigned int alternating_ops(unsigned int n);
-  static unsigned int count_even(const List<unsigned int> &l);
-  static unsigned int count_odd(const List<unsigned int> &l);
-  static unsigned int product(const List<unsigned int> &l);
-  static unsigned int sum_of_squares(const List<unsigned int> &l);
-  static unsigned int max_two(unsigned int a, unsigned int b);
-  static unsigned int list_max(const List<unsigned int> &l);
-  static unsigned int list_min(const List<unsigned int> &l);
+  static uint64_t sum_abs(const List<uint64_t> &l);
+  static uint64_t alternating_ops(uint64_t n);
+  static uint64_t count_even(const List<uint64_t> &l);
+  static uint64_t count_odd(const List<uint64_t> &l);
+  static uint64_t product(const List<uint64_t> &l);
+  static uint64_t sum_of_squares(const List<uint64_t> &l);
+  static uint64_t max_two(uint64_t a, uint64_t b);
+  static uint64_t list_max(const List<uint64_t> &l);
+  static uint64_t list_min(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_NUMERIC_MISC

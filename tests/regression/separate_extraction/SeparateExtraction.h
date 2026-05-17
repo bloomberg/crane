@@ -5,9 +5,9 @@
 
 namespace SeparateExtraction {
 
-unsigned int sep_add(unsigned int _x0, unsigned int _x1);
+uint64_t sep_add(uint64_t _x0, uint64_t _x1);
 enum class Color { RED, GREEN, BLUE };
-unsigned int color_to_nat(Color c);
+uint64_t color_to_nat(Color c);
 
 } // namespace SeparateExtraction
 

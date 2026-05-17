@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -70,7 +70,7 @@ int main() {
   ASSERT(LoopifyPolymorphic::nat_length(evens) == 2u);  // 2, 4
 
   // nat_map
-  auto doubled = LoopifyPolymorphic::nat_map([](unsigned int x) { return x * 2; }, l3);
+  auto doubled = LoopifyPolymorphic::nat_map([](uint64_t x) { return x * 2; }, l3);
   ASSERT(LoopifyPolymorphic::nat_length(doubled) == 3u);
 
   // nat_partition

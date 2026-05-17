@@ -121,9 +121,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -153,7 +153,7 @@ struct BinInt {
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct Q {
@@ -189,15 +189,14 @@ struct PolygonWindingAreaTraceCase {
   using Polygon = List<Point>;
 
   template <typename T1>
-  static T1 nth_cyclic(const T1 &default0, const List<T1> &l, unsigned int i) {
+  static T1 nth_cyclic(const T1 &default0, const List<T1> &l, uint64_t i) {
     return ListDef::template nth<T1>((l.length() ? i % l.length() : i), l,
                                      default0);
   }
 
   static Real lon_diff(Real lon1, Real lon2);
   static Real spherical_shoelace_aux(const List<Point> &pts,
-                                     const List<Point> &all_pts,
-                                     unsigned int idx);
+                                     const List<Point> &all_pts, uint64_t idx);
   static Real spherical_shoelace(const List<Point> &pts);
   static Real spherical_polygon_area(const List<Point> &poly);
   static Real distance_to_central_angle(Real d);
@@ -250,7 +249,7 @@ struct PolygonWindingAreaTraceCase {
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -259,7 +258,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

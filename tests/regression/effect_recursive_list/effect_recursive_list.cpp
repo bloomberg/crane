@@ -1,11 +1,11 @@
 #include "effect_recursive_list.h"
 
 /// 1. Recursive function building a list from stdin lines
-List<std::string> EffectRecursiveList::read_n_lines(unsigned int n) {
+List<std::string> EffectRecursiveList::read_n_lines(uint64_t n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
     List<std::string> rest = read_n_lines(n_);
@@ -26,16 +26,15 @@ std::string EffectRecursiveList::fold_effect(const List<std::string> &xs,
 }
 
 /// 4. Read lines and store each in env with index
-unsigned int EffectRecursiveList::store_lines(std::string prefix,
-                                              unsigned int n) {
+uint64_t EffectRecursiveList::store_lines(std::string prefix, uint64_t n) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
     setenv(prefix.c_str(), line.c_str(), 1);
-    unsigned int rest = store_lines(prefix, n_);
+    uint64_t rest = store_lines(prefix, n_);
     return (rest + 1);
   }
 }

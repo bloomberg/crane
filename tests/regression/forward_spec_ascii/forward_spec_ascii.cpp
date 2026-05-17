@@ -1,8 +1,8 @@
 #include "forward_spec_ascii.h"
 
-unsigned int ForwardSpecAscii::helper_nat(unsigned int n) { return (n + 1); }
+uint64_t ForwardSpecAscii::helper_nat(uint64_t n) { return (n + 1); }
 
-unsigned int ForwardSpecAscii::bump_node(const ForwardSpecAscii::node &x) {
+uint64_t ForwardSpecAscii::bump_node(const ForwardSpecAscii::node &x) {
   if (std::holds_alternative<typename ForwardSpecAscii::node::ANode>(x.v())) {
     const auto &[a0] = std::get<typename ForwardSpecAscii::node::ANode>(x.v());
     return helper_nat(a0);

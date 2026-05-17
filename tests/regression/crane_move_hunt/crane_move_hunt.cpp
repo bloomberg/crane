@@ -6,7 +6,7 @@ CraneMoveHunt::box CraneMoveHunt::clone_box(const CraneMoveHunt::box &b) {
 
 CraneMoveHunt::box CraneMoveHunt::keep_box(CraneMoveHunt::box b) { return b; }
 
-unsigned int CraneMoveHunt::use_state(const CraneMoveHunt::state &s) {
+uint64_t CraneMoveHunt::use_state(const CraneMoveHunt::state &s) {
   return (s.core.payload + s.cursor.payload);
 }
 
@@ -15,8 +15,8 @@ CraneMoveHunt::render_state(const CraneMoveHunt::state &s) {
   return state{s.core, s.cursor, s.visible};
 }
 
-unsigned int CraneMoveHunt::sound_state(const CraneMoveHunt::state &before,
-                                        const CraneMoveHunt::state &after) {
+uint64_t CraneMoveHunt::sound_state(const CraneMoveHunt::state &before,
+                                    const CraneMoveHunt::state &after) {
   return (use_state(before) + use_state(after));
 }
 
@@ -143,8 +143,8 @@ CraneMoveHunt::state axiom_nat_pair_frame(const CraneMoveHunt::state &s0) {
   const bool &quit = handled.first;
   const CraneMoveHunt::state &s1 = handled.second;
   CraneMoveHunt::state s2 = CraneMoveHunt::resolve_state(s1);
-  unsigned int n = toy_tick_nat(s1);
-  if ((quit || n == 0u)) {
+  uint64_t n = toy_tick_nat(s1);
+  if ((quit || n == UINT64_C(0))) {
     return s2;
   } else {
     return s1;

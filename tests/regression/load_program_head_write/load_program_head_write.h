@@ -121,14 +121,14 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct LoadProgramHeadWrite {
   struct state {
-    List<unsigned int> rom;
-    unsigned int prom_addr;
-    unsigned int prom_data;
+    List<uint64_t> rom;
+    uint64_t prom_addr;
+    uint64_t prom_data;
     bool prom_enable;
 
     // ACCESSORS
@@ -138,31 +138,34 @@ struct LoadProgramHeadWrite {
     }
   };
 
-  static List<unsigned int> update_nth(unsigned int n, unsigned int x,
-                                       List<unsigned int> l);
-  static state set_prom_params(const state &s, unsigned int addr,
-                               unsigned int data, bool enable);
+  static List<uint64_t> update_nth(uint64_t n, uint64_t x, List<uint64_t> l);
+  static state set_prom_params(const state &s, uint64_t addr, uint64_t data,
+                               bool enable);
   static state execute_wpm(const state &s);
-  static state load_program(state s, unsigned int base,
-                            const List<unsigned int> &bytes);
-  static inline const unsigned int t = []() {
-    state s0 =
-        state{List<unsigned int>::cons(
-                  0u, List<unsigned int>::cons(
-                          0u, List<unsigned int>::cons(
-                                  0u, List<unsigned int>::cons(
-                                          0u, List<unsigned int>::nil())))),
-              0u, 0u, false};
+  static state load_program(state s, uint64_t base,
+                            const List<uint64_t> &bytes);
+  static inline const uint64_t t = []() {
+    state s0 = state{
+        List<uint64_t>::cons(
+            UINT64_C(0),
+            List<uint64_t>::cons(
+                UINT64_C(0),
+                List<uint64_t>::cons(
+                    UINT64_C(0),
+                    List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil())))),
+        UINT64_C(0), UINT64_C(0), false};
     state s1 = load_program(
-        std::move(s0), 1u,
-        List<unsigned int>::cons(
-            7u, List<unsigned int>::cons(8u, List<unsigned int>::nil())));
-    return ListDef::template nth<unsigned int>(1u, std::move(s1).rom, 0u);
+        std::move(s0), UINT64_C(1),
+        List<uint64_t>::cons(
+            UINT64_C(7),
+            List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())));
+    return ListDef::template nth<uint64_t>(UINT64_C(1), std::move(s1).rom,
+                                           UINT64_C(0));
   }();
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -171,7 +174,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

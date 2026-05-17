@@ -20,10 +20,10 @@ std::string EffectUnitStress::bind_identity() {
 }
 
 /// 3. Bind where RHS ignores the binding
-unsigned int EffectUnitStress::bind_ignore() {
+uint64_t EffectUnitStress::bind_ignore() {
   std::string _x;
   std::getline(std::cin, _x);
-  return 0u;
+  return UINT64_C(0);
 }
 
 /// 4. Multiple Ret tt in if-then-else
@@ -55,15 +55,15 @@ std::pair<std::string, std::string> EffectUnitStress::pair_of_effects() {
 }
 
 /// 7. match on nat with monadic body
-std::string EffectUnitStress::nat_dispatch(unsigned int n) {
+std::string EffectUnitStress::nat_dispatch(uint64_t n) {
   if (n <= 0) {
     return "zero";
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     if (n0 <= 0) {
       return "one";
     } else {
-      unsigned int _x = n0 - 1;
+      uint64_t _x = n0 - 1;
       return "many";
     }
   }
@@ -73,7 +73,7 @@ std::string EffectUnitStress::nat_dispatch(unsigned int n) {
 int64_t EffectUnitStress::let_pure_in_monadic() {
   std::string s;
   std::getline(std::cin, s);
-  int64_t n = s.length();
+  int64_t n = static_cast<int64_t>(s.length());
   int64_t m = ((n + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL);
   return m;
 }
@@ -96,13 +96,12 @@ std::string EffectUnitStress::nested_if_monadic(bool b1, bool b2) {
 }
 
 /// 10. Monadic function returning option
-std::optional<unsigned int>
-EffectUnitStress::safe_head(const List<unsigned int> &xs) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
+std::optional<uint64_t> EffectUnitStress::safe_head(const List<uint64_t> &xs) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
     std::cout << "empty!"s << '\n';
-    return std::optional<unsigned int>();
+    return std::optional<uint64_t>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(xs.v());
-    return std::make_optional<unsigned int>(a0);
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+    return std::make_optional<uint64_t>(a0);
   }
 }

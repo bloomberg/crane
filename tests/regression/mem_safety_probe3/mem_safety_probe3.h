@@ -16,7 +16,7 @@ struct MemSafetyProbe3 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -86,7 +86,7 @@ struct MemSafetyProbe3 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,35 +122,33 @@ struct MemSafetyProbe3 {
     const variant_t &v() const { return v_; }
 
     /// TEST 9: Closure stored in option alongside tree data in pair.
-    std::pair<std::optional<std::function<unsigned int(unsigned int)>>, tree>
+    std::pair<std::optional<std::function<uint64_t(uint64_t)>>, tree>
     opt_pair(bool b) const {
       return std::make_pair(
-          (b ? std::make_optional<std::function<unsigned int(unsigned int)>>(
-                   [&](unsigned int _x0) -> unsigned int {
+          (b ? std::make_optional<std::function<uint64_t(uint64_t)>>(
+                   [&](uint64_t _x0) -> uint64_t {
                      return (*this).sum_values(_x0);
                    })
-             : std::optional<std::function<unsigned int(unsigned int)>>()),
+             : std::optional<std::function<uint64_t(uint64_t)>>()),
           *this);
     }
 
     /// TEST 8: Three closures, each capturing different tree,
     /// applied in a specific order with results feeding forward.
-    unsigned int chain_three(tree t2, const tree &t3) const {
-      std::function<unsigned int(unsigned int)> f1 =
-          [&](unsigned int _x0) -> unsigned int {
+    uint64_t chain_three(tree t2, const tree &t3) const {
+      std::function<uint64_t(uint64_t)> f1 = [&](uint64_t _x0) -> uint64_t {
         return std::move(*this).sum_values(_x0);
       };
-      std::function<unsigned int(unsigned int)> f2 =
-          [&](unsigned int _x0) -> unsigned int {
+      std::function<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
         return std::move(t2).sum_values(_x0);
       };
-      return t3.sum_values(f2(f1(0u)));
+      return t3.sum_values(f2(f1(UINT64_C(0))));
     }
 
     /// TEST 7: Map a tree, producing a new tree. Then sum the new tree.
     /// The mapped function captures a tree value.
     template <typename F0>
-      requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
     tree map_tree(F0 &&f) const {
       const tree *_self = this;
 
@@ -162,14 +160,14 @@ struct MemSafetyProbe3 {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        decltype(std::declval<F0 &>()(std::declval<unsigned int &>())) a1;
+        decltype(std::declval<F0 &>()(std::declval<uint64_t &>())) a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         tree _result;
-        decltype(std::declval<F0 &>()(std::declval<unsigned int &>())) a1;
+        decltype(std::declval<F0 &>()(std::declval<uint64_t &>())) a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -205,30 +203,30 @@ struct MemSafetyProbe3 {
     }
 
     /// TEST 6: Nested pair: pair of pairs of closures.
-    std::pair<std::pair<std::function<unsigned int(unsigned int)>,
-                        std::function<unsigned int(unsigned int)>>,
-              unsigned int>
+    std::pair<std::pair<std::function<uint64_t(uint64_t)>,
+                        std::function<uint64_t(uint64_t)>>,
+              uint64_t>
     nested_pair() const {
       tree _self_val = *this;
       return std::make_pair(std::make_pair(
-                                [=](unsigned int _x0) mutable -> unsigned int {
+                                [=](uint64_t _x0) mutable -> uint64_t {
                                   return _self_val.sum_values(_x0);
                                 },
-                                [](unsigned int x) { return x; }),
-                            (*this).sum_values(0u));
+                                [](uint64_t x) { return x; }),
+                            (*this).sum_values(UINT64_C(0)));
     }
 
     /// TEST 5: Mutual use: tree used BOTH as partial application arg
     /// AND as match scrutinee in the SAME scope.
-    unsigned int mutual_use() const {
+    uint64_t mutual_use() const {
       tree _self_val = *this;
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t {
         return _self_val.sum_values(_x0);
       };
-      unsigned int r = [&]() {
+      uint64_t r = [&]() {
         if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-          return 0u;
+          return UINT64_C(0);
         } else {
           auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
           return a1;
@@ -239,7 +237,7 @@ struct MemSafetyProbe3 {
 
     /// TEST 4: Tree traversal that builds up a nat accumulator
     /// using local fixpoint. The tree is captured in the fixpoint scope.
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -250,18 +248,18 @@ struct MemSafetyProbe3 {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -274,7 +272,7 @@ struct MemSafetyProbe3 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), a1});
@@ -295,20 +293,18 @@ struct MemSafetyProbe3 {
     /// TEST 3: Partial application result stored in a pair, then both
     /// elements of the pair are applied. The pair construction must
     /// properly clone the closures.
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
+    std::pair<std::function<uint64_t(uint64_t)>,
+              std::function<uint64_t(uint64_t)>>
     paired_closures(tree t2) const {
       tree _self_val = *this;
       return std::make_pair(
-          [=](unsigned int _x0) mutable -> unsigned int {
+          [=](uint64_t _x0) mutable -> uint64_t {
             return _self_val.sum_values(_x0);
           },
-          [=](unsigned int _x0) mutable -> unsigned int {
-            return t2.sum_values(_x0);
-          });
+          [=](uint64_t _x0) mutable -> uint64_t { return t2.sum_values(_x0); });
     }
 
-    unsigned int sum_values(unsigned int x) const {
+    uint64_t sum_values(uint64_t x) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
@@ -331,8 +327,8 @@ struct MemSafetyProbe3 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -345,7 +341,7 @@ struct MemSafetyProbe3 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -354,7 +350,7 @@ struct MemSafetyProbe3 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -392,8 +388,8 @@ struct MemSafetyProbe3 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -406,7 +402,7 @@ struct MemSafetyProbe3 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -415,7 +411,7 @@ struct MemSafetyProbe3 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -665,119 +661,121 @@ struct MemSafetyProbe3 {
 
   /// TEST 1: Local fixpoint capturing a tree value.
   /// The fixpoint accesses the captured tree on each recursive call.
-  static inline const unsigned int local_fix_capture = []() {
+  static inline const uint64_t local_fix_capture = []() {
     return []() {
-      tree t = tree::node(tree::leaf(), 42u, tree::leaf());
-      auto helper_impl = [&](auto &_self_helper,
-                             unsigned int n) -> unsigned int {
+      tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
+      auto helper_impl = [&](auto &_self_helper, uint64_t n) -> uint64_t {
         if (n <= 0) {
-          return t.sum_values(0u);
+          return t.sum_values(UINT64_C(0));
         } else {
-          unsigned int n_ = n - 1;
-          return (t.sum_values(1u) + _self_helper(_self_helper, n_));
+          uint64_t n_ = n - 1;
+          return (t.sum_values(UINT64_C(1)) + _self_helper(_self_helper, n_));
         }
       };
-      auto helper = [&](unsigned int n) -> unsigned int {
+      auto helper = [&](uint64_t n) -> uint64_t {
         return helper_impl(helper_impl, n);
       };
-      return helper(3u);
+      return helper(UINT64_C(3));
     }();
   }();
   /// TEST 2: Local fixpoint returning a closure that captures
   /// a match-destructured field from a tree.
-  static inline const unsigned int fix_with_closure = []() {
+  static inline const uint64_t fix_with_closure = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
       if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v_mut());
-        std::function<unsigned int(unsigned int)> fl =
-            [&](unsigned int _x0) -> unsigned int {
+        std::function<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
           return (*a0).sum_values(_x0);
         };
-        unsigned int vl = fl(a1);
-        std::function<unsigned int(unsigned int)> fr =
-            [&](unsigned int _x0) -> unsigned int {
+        uint64_t vl = fl(a1);
+        std::function<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
           return (*a2).sum_values(_x0);
         };
-        unsigned int vr = fr(std::move(a1));
+        uint64_t vr = fr(std::move(a1));
         return (vl + vr);
       }
     }();
   }();
-  static inline const unsigned int test_paired_closures = []() {
-    tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-    tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
+  static inline const uint64_t test_paired_closures = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    std::pair<std::function<uint64_t(uint64_t)>,
+              std::function<uint64_t(uint64_t)>>
         p = std::move(t1).paired_closures(std::move(t2));
-    return (p.first(5u) + p.second(5u));
+    return (p.first(UINT64_C(5)) + p.second(UINT64_C(5)));
   }();
-  static inline const unsigned int test_tree_sum =
-      tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                 tree::node(tree::leaf(), 30u, tree::leaf()))
+  static inline const uint64_t test_tree_sum =
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf()))
           .tree_sum();
   /// f = sum_values (Node (Node Leaf 10 Leaf) 20 (...))
   /// r = 20. f 20 = 10+30+20+20 = 80
-  static inline const unsigned int test_mutual_use =
-      tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                 tree::node(tree::leaf(), 30u, tree::leaf()))
+  static inline const uint64_t test_mutual_use =
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf()))
           .mutual_use();
-  static inline const unsigned int test_nested_pair = []() {
-    tree t = tree::node(tree::leaf(), 42u, tree::leaf());
-    std::pair<std::pair<std::function<unsigned int(unsigned int)>,
-                        std::function<unsigned int(unsigned int)>>,
-              unsigned int>
+  static inline const uint64_t test_nested_pair = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
+    std::pair<std::pair<std::function<uint64_t(uint64_t)>,
+                        std::function<uint64_t(uint64_t)>>,
+              uint64_t>
         p = std::move(t).nested_pair();
-    return (((p.first).first(10u) + (p.first).second(10u)) + p.second);
+    return (((p.first).first(UINT64_C(10)) + (p.first).second(UINT64_C(10))) +
+            p.second);
   }();
-  static inline const unsigned int test_map_with_captured = []() {
+  static inline const uint64_t test_map_with_captured = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 5u, tree::leaf()), 10u,
-                          tree::node(tree::leaf(), 15u, tree::leaf()));
-      tree t2 = tree::node(tree::leaf(), 100u, tree::leaf());
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                          UINT64_C(10),
+                          tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
+      tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
       tree mapped = std::move(t).map_tree(
-          [=](unsigned int v) mutable { return (v + t2.sum_values(0u)); });
+          [=](uint64_t v) mutable { return (v + t2.sum_values(UINT64_C(0))); });
       return std::move(mapped).tree_sum();
     }();
   }();
-  static inline const unsigned int test_chain_three =
-      tree::node(tree::leaf(), 10u, tree::leaf())
-          .chain_three(tree::node(tree::leaf(), 20u, tree::leaf()),
-                       tree::node(tree::leaf(), 30u, tree::leaf()));
-  static inline const unsigned int test_opt_pair = []() {
-    tree t = tree::node(tree::leaf(), 42u, tree::leaf());
-    std::pair<std::optional<std::function<unsigned int(unsigned int)>>, tree>
-        p = std::move(t).opt_pair(true);
+  static inline const uint64_t test_chain_three =
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf())
+          .chain_three(tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+                       tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+  static inline const uint64_t test_opt_pair = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
+    std::pair<std::optional<std::function<uint64_t(uint64_t)>>, tree> p =
+        std::move(t).opt_pair(true);
     auto _cs = p.first;
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return (f(10u) + p.second.sum_values(0u));
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return (f(UINT64_C(10)) + p.second.sum_values(UINT64_C(0)));
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
   /// TEST 10: Large tree with deep recursion — stresses the
   /// loopified tree traversal and clone mechanisms.
-  static tree build_deep(unsigned int n);
-  static inline const unsigned int test_deep_tree = []() {
-    tree t = build_deep(100u);
+  static tree build_deep(uint64_t n);
+  static inline const uint64_t test_deep_tree = []() {
+    tree t = build_deep(UINT64_C(100));
     return std::move(t).tree_sum();
   }();
 
   /// TEST 11: Fixpoint that takes a function argument and uses it
   /// alongside captured tree data.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int
-  apply_n_times(F0 &&f, unsigned int n,
-                unsigned int x) { /// _Enter: captures varying parameters for
-                                  /// each recursive call.
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t
+  apply_n_times(F0 &&f, uint64_t n,
+                uint64_t x) { /// _Enter: captures varying parameters for each
+                              /// recursive call.
 
     struct _Enter {
-      unsigned int n;
+      uint64_t n;
     };
 
     /// _Resume_n_: saves [f], resumes after recursive call with _result.
@@ -786,7 +784,7 @@ struct MemSafetyProbe3 {
     };
 
     using _Frame = std::variant<_Enter, _Resume_n_>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{n});
@@ -796,11 +794,11 @@ struct MemSafetyProbe3 {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        unsigned int n = _f.n;
+        uint64_t n = _f.n;
         if (n <= 0) {
           _result = std::move(x);
         } else {
-          unsigned int n_ = n - 1;
+          uint64_t n_ = n - 1;
           _stack.emplace_back(_Resume_n_{f});
           _stack.emplace_back(_Enter{n_});
         }
@@ -812,30 +810,26 @@ struct MemSafetyProbe3 {
     return _result;
   }
 
-  static inline const unsigned int test_apply_n = []() {
+  static inline const uint64_t test_apply_n = []() {
     return []() {
-      tree t = tree::node(tree::leaf(), 10u, tree::leaf());
+      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       return apply_n_times(
-          [=](unsigned int _x0) mutable -> unsigned int {
-            return t.sum_values(_x0);
-          },
-          5u, 0u);
+          [=](uint64_t _x0) mutable -> uint64_t { return t.sum_values(_x0); },
+          UINT64_C(5), UINT64_C(0));
     }();
   }();
   /// TEST 12: Closure that partially applies a fixpoint.
   /// The fixpoint itself takes a function argument.
-  static inline const unsigned int test_partial_fix = []() {
+  static inline const uint64_t test_partial_fix = []() {
     return []() {
-      tree t = tree::node(tree::leaf(), 5u, tree::leaf());
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
+      tree t = tree::node(tree::leaf(), UINT64_C(5), tree::leaf());
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t {
         return apply_n_times(
-            [=](unsigned int _x0) mutable -> unsigned int {
-              return t.sum_values(_x0);
-            },
-            3u, _x0);
+            [=](uint64_t _x0) mutable -> uint64_t { return t.sum_values(_x0); },
+            UINT64_C(3), _x0);
       };
-      return (f(0u) + f(10u));
+      return (f(UINT64_C(0)) + f(UINT64_C(10)));
     }();
   }();
 };

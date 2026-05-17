@@ -25,12 +25,12 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 // Helper to convert list to vector for testing
-std::vector<unsigned int>
-list_to_vector(const List<unsigned int> &l) {
-  std::vector<unsigned int> result;
-  const List<unsigned int> *cur = &l;
-  while (std::holds_alternative<typename List<unsigned int>::Cons>(cur->v())) {
-    auto &c = std::get<typename List<unsigned int>::Cons>(cur->v());
+std::vector<uint64_t>
+list_to_vector(const List<uint64_t> &l) {
+  std::vector<uint64_t> result;
+  const List<uint64_t> *cur = &l;
+  while (std::holds_alternative<typename List<uint64_t>::Cons>(cur->v())) {
+    auto &c = std::get<typename List<uint64_t>::Cons>(cur->v());
     result.push_back(c.a0);
     cur = c.a1.get();
   }
@@ -38,11 +38,11 @@ list_to_vector(const List<unsigned int> &l) {
 }
 
 // Helper to create a list from a vector
-List<unsigned int>
-vector_to_list(const std::vector<unsigned int> &vec) {
-  auto result = List<unsigned int>::nil();
+List<uint64_t>
+vector_to_list(const std::vector<uint64_t> &vec) {
+  auto result = List<uint64_t>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<unsigned int>::cons(*it, std::move(result));
+    result = List<uint64_t>::cons(*it, std::move(result));
   }
   return result;
 }
@@ -50,7 +50,7 @@ vector_to_list(const std::vector<unsigned int> &vec) {
 int main() {
   // Test 1: Sort empty list
   {
-    auto empty = List<unsigned int>::nil();
+    auto empty = List<uint64_t>::nil();
     auto sorted_list = MergesortFuel::msort(empty);
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 0);
@@ -60,7 +60,7 @@ int main() {
   // Test 2: Sort single element
   {
     auto single =
-        List<unsigned int>::cons(5, List<unsigned int>::nil());
+        List<uint64_t>::cons(5, List<uint64_t>::nil());
     auto sorted_list = MergesortFuel::msort(single);
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 1);

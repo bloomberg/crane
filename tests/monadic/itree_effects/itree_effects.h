@@ -833,23 +833,22 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(unsigned int n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, unsigned int n,
-                                  unsigned int m);
-  static unsigned int tail_mul(unsigned int n, unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 /// ------------------------------------------------------------------
 struct ITreeEffects {
   static void greet();
-  static unsigned int roll_dice(unsigned int sides);
+  static uint64_t roll_dice(uint64_t sides);
   static void timed_greeting();
-  static void echo_loop(unsigned int n);
+  static void echo_loop(uint64_t n);
 };
 
 #endif // INCLUDED_ITREE_EFFECTS

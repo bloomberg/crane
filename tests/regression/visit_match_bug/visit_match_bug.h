@@ -11,12 +11,12 @@ struct VisitMatchBug {
   struct Tree {
     // TYPES
     struct Leaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Node {
       std::unique_ptr<Tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<Tree> a2;
     };
 
@@ -85,9 +85,9 @@ struct VisitMatchBug {
     }
 
     // CREATORS
-    static Tree leaf(unsigned int a0) { return Tree(Leaf{a0}); }
+    static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
-    static Tree node(Tree a0, unsigned int a1, Tree a2) {
+    static Tree node(Tree a0, uint64_t a1, Tree a2) {
       return Tree(Node{std::make_unique<Tree>(std::move(a0)), a1,
                        std::make_unique<Tree>(std::move(a2))});
     }
@@ -124,9 +124,9 @@ struct VisitMatchBug {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, unsigned int &,
-                                   Tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
+                                   T1 &>
   static T1 Tree_rect(F0 &&f, F1 &&f0, const Tree &t) {
     if (std::holds_alternative<typename Tree::Leaf>(t.v())) {
       const auto &[a0] = std::get<typename Tree::Leaf>(t.v());
@@ -139,9 +139,9 @@ struct VisitMatchBug {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, unsigned int &,
-                                   Tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
+                                   T1 &>
   static T1 Tree_rec(F0 &&f, F1 &&f0, const Tree &t) {
     if (std::holds_alternative<typename Tree::Leaf>(t.v())) {
       const auto &[a0] = std::get<typename Tree::Leaf>(t.v());
@@ -154,24 +154,24 @@ struct VisitMatchBug {
   }
 
   static Tree consume(Tree t);
-  static unsigned int match_after_consume(const Tree &t);
-  static unsigned int match_last_use(const Tree &t);
-  static unsigned int nested_match_consume(const Tree &t);
-  static unsigned int chain_then_match(const Tree &t1);
+  static uint64_t match_after_consume(const Tree &t);
+  static uint64_t match_last_use(const Tree &t);
+  static uint64_t nested_match_consume(const Tree &t);
+  static uint64_t chain_then_match(const Tree &t1);
 
   struct State {
-    unsigned int value;
-    unsigned int data;
+    uint64_t value;
+    uint64_t data;
 
     // ACCESSORS
     State clone() const { return State{(*this).value, (*this).data}; }
   };
 
-  static unsigned int match_extract_field(const State &s);
-  static unsigned int match_extract_two(const State &s);
-  static unsigned int match_nested(const State &s);
-  static unsigned int match_in_tail(const State &s);
-  static unsigned int match_in_expr(const State &s);
+  static uint64_t match_extract_field(const State &s);
+  static uint64_t match_extract_two(const State &s);
+  static uint64_t match_nested(const State &s);
+  static uint64_t match_in_tail(const State &s);
+  static uint64_t match_in_expr(const State &s);
 };
 
 #endif // INCLUDED_VISIT_MATCH_BUG

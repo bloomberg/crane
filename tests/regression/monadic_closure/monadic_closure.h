@@ -130,7 +130,7 @@ struct MonadicClosure {
   /// 1. Lambda capturing a bind result
   template <typename T1>
   static int64_t _capture_bind_f(const T1, const std::string line) {
-    return line.length();
+    return static_cast<int64_t>(line.length());
   }
 
   static int64_t capture_bind();
@@ -153,7 +153,7 @@ struct MonadicClosure {
   static int64_t with_length(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
-    return f(line.length());
+    return f(static_cast<int64_t>(line.length()));
   }
 
   static int64_t test_with_length();
@@ -163,12 +163,12 @@ struct MonadicClosure {
   /// 6. Closure used in a fold-like pattern
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, std::string &>
-  static unsigned int count_matching(F0 &&pred, const List<std::string> &xs) {
+  static uint64_t count_matching(F0 &&pred, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
-      unsigned int n = count_matching(pred, *a1);
+      uint64_t n = count_matching(pred, *a1);
       if (pred(a0)) {
         return (n + 1);
       } else {
@@ -177,7 +177,7 @@ struct MonadicClosure {
     }
   }
 
-  static unsigned int test_count();
+  static uint64_t test_count();
   /// 7. Effect inside a let, result used later
   static int64_t let_effect_capture();
   /// 8. Two closures with different captured variables

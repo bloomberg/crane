@@ -1,6 +1,6 @@
 #include "sep_ext_sigt_dependent.h"
 
-SigT<Tag, tag_type> Packer::pack_b(unsigned int n) {
+SigT<Tag, tag_type> Packer::pack_b(uint64_t n) {
   return SigT<Tag, std::any>::existt(Tag::TAGB, n);
 }
 

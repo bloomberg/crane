@@ -166,15 +166,14 @@ struct DoubleTypename {
   };
 
   struct NatOrd {
-    using t = unsigned int;
+    using t = uint64_t;
   };
 
   using NatMap = MakeMap<NatOrd>;
-  static inline const List<unsigned int> test =
-      NatMap::template keys<unsigned int>(
-          List<NatMap::entry<unsigned int>>::cons(
-              NatMap::template entry<unsigned int>::entry0(1u, 2u),
-              List<NatMap::entry<unsigned int>>::nil()));
+  static inline const List<uint64_t> test =
+      NatMap::template keys<uint64_t>(List<NatMap::entry<uint64_t>>::cons(
+          NatMap::template entry<uint64_t>::entry0(UINT64_C(1), UINT64_C(2)),
+          List<NatMap::entry<uint64_t>>::nil()));
 };
 
 #endif // INCLUDED_DOUBLE_TYPENAME

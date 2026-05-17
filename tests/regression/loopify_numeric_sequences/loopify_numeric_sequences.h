@@ -121,28 +121,27 @@ public:
 };
 
 struct LoopifyNumericSequences {
-  static unsigned int collatz_length_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int collatz_length(unsigned int n);
-  static List<unsigned int> collatz_sequence_fuel(unsigned int fuel,
-                                                  unsigned int n);
-  static List<unsigned int> collatz_sequence(unsigned int n);
-  static unsigned int tribonacci_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int tribonacci(unsigned int n);
-  static unsigned int staircase_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int staircase(unsigned int n);
+  static uint64_t collatz_length_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t collatz_length(uint64_t n);
+  static List<uint64_t> collatz_sequence_fuel(uint64_t fuel, uint64_t n);
+  static List<uint64_t> collatz_sequence(uint64_t n);
+  static uint64_t tribonacci_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t tribonacci(uint64_t n);
+  static uint64_t staircase_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t staircase(uint64_t n);
 
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int church(unsigned int n, F1 &&f, unsigned int x) {
-    unsigned int _result;
-    unsigned int _loop_x = std::move(x);
-    unsigned int _loop_n = std::move(n);
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
+    uint64_t _result;
+    uint64_t _loop_x = std::move(x);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         _result = std::move(_loop_x);
         break;
       } else {
-        unsigned int n_ = _loop_n - 1;
+        uint64_t n_ = _loop_n - 1;
         _loop_x = f(_loop_x);
         _loop_n = n_;
       }
@@ -150,14 +149,14 @@ struct LoopifyNumericSequences {
     return _result;
   }
 
-  static unsigned int digitsum_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int digitsum(unsigned int n);
-  static unsigned int dec_to_bin_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int dec_to_bin(unsigned int n);
-  static unsigned int alternate_sum(bool sign, unsigned int acc,
-                                    const List<unsigned int> &l);
-  static unsigned int sum_divisors_aux(unsigned int n, unsigned int d);
-  static unsigned int sum_divisors(unsigned int n);
+  static uint64_t digitsum_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t digitsum(uint64_t n);
+  static uint64_t dec_to_bin_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t dec_to_bin(uint64_t n);
+  static uint64_t alternate_sum(bool sign, uint64_t acc,
+                                const List<uint64_t> &l);
+  static uint64_t sum_divisors_aux(uint64_t n, uint64_t d);
+  static uint64_t sum_divisors(uint64_t n);
 };
 
 #endif // INCLUDED_LOOPIFY_NUMERIC_SEQUENCES

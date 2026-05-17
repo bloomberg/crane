@@ -154,9 +154,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -931,7 +931,7 @@ public:
 };
 
 struct PeanoNat {
-  static bool eq_dec(unsigned int n, unsigned int m);
+  static bool eq_dec(uint64_t n, uint64_t m);
 };
 
 struct Bool {
@@ -1002,15 +1002,14 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(unsigned int n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, unsigned int n,
-                                  unsigned int m);
-  static unsigned int tail_mul(unsigned int n, unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 struct ValidatedVirtualCrossmatchTraceCase {
@@ -1054,7 +1053,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   struct HLAAllele {
     HLALocus hla_locus;
-    unsigned int hla_group;
+    uint64_t hla_group;
 
     // ACCESSORS
     HLAAllele clone() const {
@@ -1075,7 +1074,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   struct HLAEpitope {
-    unsigned int epitope_id;
+    uint64_t epitope_id;
     HLALocus epitope_locus;
     bool epitope_immunogenic;
 
@@ -1089,20 +1088,20 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static bool epitope_eq_dec(const HLAEpitope &x, const HLAEpitope &y);
   static bool epitope_eqb(const HLAEpitope &x, const HLAEpitope &y);
   static inline const HLAEpitope eplet_62GE =
-      HLAEpitope{62u, HLALocus::LOCUS_A, true};
+      HLAEpitope{UINT64_C(62), HLALocus::LOCUS_A, true};
   static inline const HLAEpitope eplet_65QIA =
-      HLAEpitope{65u, HLALocus::LOCUS_A, true};
+      HLAEpitope{UINT64_C(65), HLALocus::LOCUS_A, true};
   static inline const HLAEpitope eplet_142T =
-      HLAEpitope{142u, HLALocus::LOCUS_B, true};
+      HLAEpitope{UINT64_C(142), HLALocus::LOCUS_B, true};
   static inline const HLAEpitope eplet_77N =
-      HLAEpitope{77u, HLALocus::LOCUS_DR, true};
+      HLAEpitope{UINT64_C(77), HLALocus::LOCUS_DR, true};
   static List<HLAEpitope> allele_epitopes(const HLAAllele &a);
   static List<HLAEpitope> typing_epitopes(const HLATyping &t);
   static List<HLAEpitope> epitope_dedup(const List<HLAEpitope> &l);
 
   struct EpitopeAntibody {
     HLAEpitope ab_epitope;
-    unsigned int ab_mfi;
+    uint64_t ab_mfi;
     bool ab_complement_fixing;
 
     // ACCESSORS
@@ -1114,9 +1113,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   struct VirtualXMProfile {
     List<EpitopeAntibody> vxm_epitope_abs;
-    unsigned int vxm_current_pra;
-    unsigned int vxm_peak_pra;
-    unsigned int vxm_sensitization_events;
+    uint64_t vxm_current_pra;
+    uint64_t vxm_peak_pra;
+    uint64_t vxm_sensitization_events;
 
     // ACCESSORS
     VirtualXMProfile clone() const {
@@ -1127,11 +1126,11 @@ struct ValidatedVirtualCrossmatchTraceCase {
   };
 
   struct MFIThresholdConfig {
-    unsigned int mfi_cfg_negative;
-    unsigned int mfi_cfg_weak_positive;
-    unsigned int mfi_cfg_moderate;
-    unsigned int mfi_cfg_strong;
-    unsigned int mfi_cfg_lab_id;
+    uint64_t mfi_cfg_negative;
+    uint64_t mfi_cfg_weak_positive;
+    uint64_t mfi_cfg_moderate;
+    uint64_t mfi_cfg_strong;
+    uint64_t mfi_cfg_lab_id;
     bool mfi_cfg_validated;
 
     // ACCESSORS
@@ -1145,7 +1144,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   static bool mfi_config_valid(const MFIThresholdConfig &cfg);
   static inline const MFIThresholdConfig example_luminex_thresholds =
-      MFIThresholdConfig{1000u, 3000u, 8000u, 12000u, 1u, true};
+      MFIThresholdConfig{UINT64_C(1000),  UINT64_C(3000), UINT64_C(8000),
+                         UINT64_C(12000), UINT64_C(1),    true};
 
   struct ValidatedMFIConfig {
     MFIThresholdConfig vmc_config;
@@ -1213,12 +1213,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }
 
   static MFIStrength classify_mfi_with_config(const MFIThresholdConfig &cfg,
-                                              unsigned int mfi);
+                                              uint64_t mfi);
   static MFIStrength classify_mfi_safe(const ValidatedMFIConfig &vcfg,
-                                       unsigned int mfi);
-  static inline const unsigned int mfi_negative_threshold = 1000u;
-  static unsigned int max_dsa_mfi(const VirtualXMProfile &recipient,
-                                  const HLATyping &donor);
+                                       uint64_t mfi);
+  static inline const uint64_t mfi_negative_threshold = UINT64_C(1000);
+  static uint64_t max_dsa_mfi(const VirtualXMProfile &recipient,
+                              const HLATyping &donor);
   static bool has_complement_fixing_dsa(const VirtualXMProfile &recipient,
                                         const HLATyping &donor);
   enum class VirtualXMResult {
@@ -1417,7 +1417,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   struct CrossmatchWithUncertainty {
     CrossmatchResult xmu_result;
-    unsigned int xmu_method;
+    uint64_t xmu_method;
     TestConfidence xmu_confidence;
 
     // ACCESSORS
@@ -1430,12 +1430,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static bool safe_to_release(const CrossmatchWithUncertainty &xm);
 
   struct SafeTransfusionOrder {
-    unsigned int sto_recipient_id;
-    unsigned int sto_product_id;
+    uint64_t sto_recipient_id;
+    uint64_t sto_product_id;
     bool sto_compatibility_check;
     CrossmatchWithUncertainty sto_crossmatch;
-    unsigned int sto_sample_collection_time;
-    unsigned int sto_authorized_by;
+    uint64_t sto_sample_collection_time;
+    uint64_t sto_authorized_by;
     bool sto_emergency_release;
 
     // ACCESSORS
@@ -1448,43 +1448,45 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
   };
 
-  static bool order_sample_valid(unsigned int collection_time,
-                                 unsigned int current_time);
+  static bool order_sample_valid(uint64_t collection_time,
+                                 uint64_t current_time);
   static bool transfusion_order_authorized(const SafeTransfusionOrder &order,
-                                           unsigned int current_time);
+                                           uint64_t current_time);
   static std::optional<SafeTransfusionOrder> create_safe_transfusion_order(
-      unsigned int recipient_id, unsigned int product_id, bool compat_result,
-      CrossmatchWithUncertainty xm, unsigned int sample_time,
-      unsigned int current_time, unsigned int authorizer, bool is_emergency);
+      uint64_t recipient_id, uint64_t product_id, bool compat_result,
+      CrossmatchWithUncertainty xm, uint64_t sample_time, uint64_t current_time,
+      uint64_t authorizer, bool is_emergency);
   static inline const HLATyping donor_hla = HLATyping{List<HLAAllele>::cons(
-      HLAAllele{HLALocus::LOCUS_A, 2u},
+      HLAAllele{HLALocus::LOCUS_A, UINT64_C(2)},
       List<HLAAllele>::cons(
-          HLAAllele{HLALocus::LOCUS_A, 3u},
+          HLAAllele{HLALocus::LOCUS_A, UINT64_C(3)},
           List<HLAAllele>::cons(
-              HLAAllele{HLALocus::LOCUS_B, 7u},
-              List<HLAAllele>::cons(HLAAllele{HLALocus::LOCUS_DR, 4u},
+              HLAAllele{HLALocus::LOCUS_B, UINT64_C(7)},
+              List<HLAAllele>::cons(HLAAllele{HLALocus::LOCUS_DR, UINT64_C(4)},
                                     List<HLAAllele>::nil()))))};
-  static inline const VirtualXMProfile weak_profile = VirtualXMProfile{
-      List<EpitopeAntibody>::cons(
-          EpitopeAntibody{eplet_65QIA, 2500u, false},
-          List<EpitopeAntibody>::cons(EpitopeAntibody{eplet_77N, 800u, false},
-                                      List<EpitopeAntibody>::nil())),
-      32u, 40u, 2u};
+  static inline const VirtualXMProfile weak_profile =
+      VirtualXMProfile{List<EpitopeAntibody>::cons(
+                           EpitopeAntibody{eplet_65QIA, UINT64_C(2500), false},
+                           List<EpitopeAntibody>::cons(
+                               EpitopeAntibody{eplet_77N, UINT64_C(800), false},
+                               List<EpitopeAntibody>::nil())),
+                       UINT64_C(32), UINT64_C(40), UINT64_C(2)};
   static inline const VirtualXMProfile strong_profile = VirtualXMProfile{
       List<EpitopeAntibody>::cons(
-          EpitopeAntibody{eplet_65QIA, 9000u, true},
-          List<EpitopeAntibody>::cons(EpitopeAntibody{eplet_142T, 6000u, false},
-                                      List<EpitopeAntibody>::nil())),
-      95u, 98u, 5u};
+          EpitopeAntibody{eplet_65QIA, UINT64_C(9000), true},
+          List<EpitopeAntibody>::cons(
+              EpitopeAntibody{eplet_142T, UINT64_C(6000), false},
+              List<EpitopeAntibody>::nil())),
+      UINT64_C(95), UINT64_C(98), UINT64_C(5)};
   static inline const CrossmatchWithUncertainty good_crossmatch =
-      CrossmatchWithUncertainty{CrossmatchResult::XM_COMPATIBLE, 1u,
+      CrossmatchWithUncertainty{CrossmatchResult::XM_COMPATIBLE, UINT64_C(1),
                                 TestConfidence::CONFIDENCE_HIGH};
   static inline const CrossmatchWithUncertainty bad_crossmatch =
-      CrossmatchWithUncertainty{CrossmatchResult::XM_INCOMPATIBLE, 1u,
+      CrossmatchWithUncertainty{CrossmatchResult::XM_INCOMPATIBLE, UINT64_C(1),
                                 TestConfidence::CONFIDENCE_HIGH};
   static bool risk_acceptable(TransplantAcceptability a);
   static inline const bool sample_virtual_zero_negative = []() {
-    switch (classify_mfi_safe(validated_luminex, 0u)) {
+    switch (classify_mfi_safe(validated_luminex, UINT64_C(0))) {
     case MFIStrength::MFI_NEGATIVE: {
       return true;
     }
@@ -1493,7 +1495,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     }
     }
   }();
-  static inline const unsigned int sample_dedup_count =
+  static inline const uint64_t sample_dedup_count =
       epitope_dedup(typing_epitopes(donor_hla)).length();
   static inline const bool sample_weak_acceptability = []() {
     switch (full_virtual_crossmatch_safe(validated_luminex, weak_profile,
@@ -1519,16 +1521,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const bool sample_strong_has_complement_fixing_dsa =
       has_complement_fixing_dsa(strong_profile, donor_hla);
-  static inline const unsigned int sample_strong_max_mfi =
+  static inline const uint64_t sample_strong_max_mfi =
       max_dsa_mfi(strong_profile, donor_hla);
-  static inline const unsigned int sample_lab_id =
+  static inline const uint64_t sample_lab_id =
       validated_luminex.vmc_config.mfi_cfg_lab_id;
   static inline const bool sample_order_created = []() -> bool {
     auto _cs = create_safe_transfusion_order(
-        100u, 200u,
+        UINT64_C(100), UINT64_C(200),
         risk_acceptable(full_virtual_crossmatch_safe(validated_luminex,
                                                      weak_profile, donor_hla)),
-        good_crossmatch, 0u, 1000u, 77u, false);
+        good_crossmatch, UINT64_C(0), UINT64_C(1000), UINT64_C(77), false);
     if (_cs.has_value()) {
       const SafeTransfusionOrder &_x = *_cs;
       return true;
@@ -1538,10 +1540,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const bool sample_order_blocked = []() -> bool {
     auto _cs = create_safe_transfusion_order(
-        100u, 201u,
+        UINT64_C(100), UINT64_C(201),
         risk_acceptable(full_virtual_crossmatch_safe(
             validated_luminex, strong_profile, donor_hla)),
-        bad_crossmatch, 0u, 1000u, 77u, false);
+        bad_crossmatch, UINT64_C(0), UINT64_C(1000), UINT64_C(77), false);
     if (_cs.has_value()) {
       const SafeTransfusionOrder &_x = *_cs;
       return false;
@@ -1551,11 +1553,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const bool sample_authorized_order_stays_authorized =
       []() -> bool {
-    auto _cs = create_safe_transfusion_order(100u, 202u, true, good_crossmatch,
-                                             100u, 200u, 88u, false);
+    auto _cs = create_safe_transfusion_order(
+        UINT64_C(100), UINT64_C(202), true, good_crossmatch, UINT64_C(100),
+        UINT64_C(200), UINT64_C(88), false);
     if (_cs.has_value()) {
       const SafeTransfusionOrder &order = *_cs;
-      return transfusion_order_authorized(order, 200u);
+      return transfusion_order_authorized(order, UINT64_C(200));
     } else {
       return false;
     }

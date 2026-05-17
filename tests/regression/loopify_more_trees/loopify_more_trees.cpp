@@ -11,14 +11,14 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::mirror(
   /// _After_Node: saves [a2, a1], dispatches next recursive call.
   struct _After_Node {
     const LoopifyMoreTrees::tree *a2;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     LoopifyMoreTrees::tree _result;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -122,7 +122,7 @@ bool LoopifyMoreTrees::same_shape(
   return _result;
 }
 
-List<unsigned int> LoopifyMoreTrees::tree_to_list(
+List<uint64_t> LoopifyMoreTrees::tree_to_list(
     const LoopifyMoreTrees::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -133,20 +133,20 @@ List<unsigned int> LoopifyMoreTrees::tree_to_list(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const LoopifyMoreTrees::tree *a0;
-    decltype(List<unsigned int>::cons(std::declval<unsigned int &>(),
-                                      List<unsigned int>::nil())) _s1;
+    decltype(List<uint64_t>::cons(std::declval<uint64_t &>(),
+                                  List<uint64_t>::nil())) _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    List<unsigned int> _result;
-    decltype(List<unsigned int>::cons(std::declval<unsigned int &>(),
-                                      List<unsigned int>::nil())) _s1;
+    List<uint64_t> _result;
+    decltype(List<uint64_t>::cons(std::declval<uint64_t &>(),
+                                  List<uint64_t>::nil())) _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-  List<unsigned int> _result{};
+  List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
@@ -159,12 +159,12 @@ List<unsigned int> LoopifyMoreTrees::tree_to_list(
       const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
-        _result = List<unsigned int>::nil();
+        _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
         _stack.emplace_back(_After_Node{
-            a0.get(), List<unsigned int>::cons(a1, List<unsigned int>::nil())});
+            a0.get(), List<uint64_t>::cons(a1, List<uint64_t>::nil())});
         _stack.emplace_back(_Enter{a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -183,7 +183,7 @@ bool LoopifyMoreTrees::mirror_equal(const LoopifyMoreTrees::tree &t) {
   return same_shape(t, mirror(t));
 }
 
-unsigned int LoopifyMoreTrees::count_nodes(
+uint64_t LoopifyMoreTrees::count_nodes(
     const LoopifyMoreTrees::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -194,18 +194,18 @@ unsigned int LoopifyMoreTrees::count_nodes(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const LoopifyMoreTrees::tree *a0;
-    decltype(1u) _s1;
+    decltype(UINT64_C(1)) _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
-    decltype(1u) _s1;
+    uint64_t _result;
+    decltype(UINT64_C(1)) _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
@@ -218,11 +218,11 @@ unsigned int LoopifyMoreTrees::count_nodes(
       const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
-        _stack.emplace_back(_After_Node{a0.get(), 1u});
+        _stack.emplace_back(_After_Node{a0.get(), UINT64_C(1)});
         _stack.emplace_back(_Enter{a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -251,16 +251,16 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   struct _After_Node {
     LoopifyMoreTrees::tree a00;
     LoopifyMoreTrees::tree a0;
-    decltype(std::max(std::move(std::declval<unsigned int &>()),
-                      std::move(std::declval<unsigned int &>()))) _s2;
+    decltype(std::max(std::move(std::declval<uint64_t &>()),
+                      std::move(std::declval<uint64_t &>()))) _s2;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     LoopifyMoreTrees::tree _result;
-    decltype(std::max(std::move(std::declval<unsigned int &>()),
-                      std::move(std::declval<unsigned int &>()))) _s1;
+    decltype(std::max(std::move(std::declval<uint64_t &>()),
+                      std::move(std::declval<uint64_t &>()))) _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -305,7 +305,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   return _result;
 }
 
-unsigned int LoopifyMoreTrees::sum_of_max_branches(
+uint64_t LoopifyMoreTrees::sum_of_max_branches(
     const LoopifyMoreTrees::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -316,18 +316,18 @@ unsigned int LoopifyMoreTrees::sum_of_max_branches(
   /// _After_Node: saves [a0, a1], dispatches next recursive call.
   struct _After_Node {
     const LoopifyMoreTrees::tree *a0;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
-    unsigned int _result;
-    unsigned int a1;
+    uint64_t _result;
+    uint64_t a1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
@@ -340,7 +340,7 @@ unsigned int LoopifyMoreTrees::sum_of_max_branches(
       const LoopifyMoreTrees::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
               t.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
@@ -360,7 +360,7 @@ unsigned int LoopifyMoreTrees::sum_of_max_branches(
 }
 
 LoopifyMoreTrees::tree LoopifyMoreTrees::insert_bst(
-    unsigned int x,
+    uint64_t x,
     const LoopifyMoreTrees::tree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -371,12 +371,12 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::insert_bst(
   /// _Resume1: saves [a2, a1], resumes after recursive call with _result.
   struct _Resume1 {
     LoopifyMoreTrees::tree a2;
-    unsigned int a1;
+    uint64_t a1;
   };
 
   /// _Resume2: saves [a1, a0], resumes after recursive call with _result.
   struct _Resume2 {
-    unsigned int a1;
+    uint64_t a1;
     LoopifyMoreTrees::tree a0;
   };
 
@@ -418,16 +418,16 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::insert_bst(
 }
 
 LoopifyMoreTrees::tree LoopifyMoreTrees::build_bst(
-    const List<unsigned int>
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -441,12 +441,11 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::build_bst(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = tree::leaf();
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Resume_Cons{a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -458,25 +457,23 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::build_bst(
   return _result;
 }
 
-List<unsigned int> LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
-                                                  List<unsigned int> l2) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  List<unsigned int> _loop_l2 = std::move(l2);
-  const List<unsigned int> *_loop_l1 = &l1;
+List<uint64_t> LoopifyMoreTrees::append_lists(const List<uint64_t> &l1,
+                                              List<uint64_t> l2) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  List<uint64_t> _loop_l2 = std::move(l2);
+  const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l1->v())) {
-      *_write = std::make_unique<List<unsigned int>>(std::move(_loop_l2));
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
+      *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
-      auto _cell = std::make_unique<List<unsigned int>>(
-          typename List<unsigned int>::Cons(a0, nullptr));
+          std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
+      auto _cell = std::make_unique<List<uint64_t>>(
+          typename List<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
       _loop_l1 = a1.get();
       continue;
     }
@@ -484,21 +481,21 @@ List<unsigned int> LoopifyMoreTrees::append_lists(const List<unsigned int> &l1,
   return std::move(*_head);
 }
 
-List<unsigned int> LoopifyMoreTrees::flatten(
-    const List<List<unsigned int>>
+List<uint64_t> LoopifyMoreTrees::flatten(
+    const List<List<uint64_t>>
         &ll) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<List<unsigned int>> *ll;
+    const List<List<uint64_t>> *ll;
   };
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    List<unsigned int> a0;
+    List<uint64_t> a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  List<unsigned int> _result{};
+  List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
@@ -508,13 +505,12 @@ List<unsigned int> LoopifyMoreTrees::flatten(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *_f.ll;
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-              ll.v())) {
-        _result = List<unsigned int>::nil();
+      const List<List<uint64_t>> &ll = *_f.ll;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
+        _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<List<unsigned int>>::Cons>(ll.v());
+            std::get<typename List<List<uint64_t>>::Cons>(ll.v());
         _stack.emplace_back(_Resume_Cons{a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -526,26 +522,25 @@ List<unsigned int> LoopifyMoreTrees::flatten(
   return _result;
 }
 
-List<List<unsigned int>>
+List<List<uint64_t>>
 LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
-  std::unique_ptr<List<List<unsigned int>>> _head{};
-  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
+  std::unique_ptr<List<List<uint64_t>>> _head{};
+  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
   const List<LoopifyMoreTrees::tree> *_loop_lt = &lt;
   while (true) {
     if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
             _loop_lt->v())) {
-      *_write = std::make_unique<List<List<unsigned int>>>(
-          List<List<unsigned int>>::nil());
+      *_write =
+          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<LoopifyMoreTrees::tree>::Cons>(_loop_lt->v());
-      auto _cell = std::make_unique<List<List<unsigned int>>>(
-          typename List<List<unsigned int>>::Cons(tree_to_list(a0), nullptr));
+      auto _cell = std::make_unique<List<List<uint64_t>>>(
+          typename List<List<uint64_t>>::Cons(tree_to_list(a0), nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
-               .a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
       _loop_lt = a1.get();
       continue;
     }
@@ -637,35 +632,34 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
   return _result;
 }
 
-List<List<unsigned int>>
-LoopifyMoreTrees::tree_levels_fuel(unsigned int fuel,
+List<List<uint64_t>>
+LoopifyMoreTrees::tree_levels_fuel(uint64_t fuel,
                                    const List<LoopifyMoreTrees::tree> &level) {
-  std::unique_ptr<List<List<unsigned int>>> _head{};
-  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
+  std::unique_ptr<List<List<uint64_t>>> _head{};
+  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
   List<LoopifyMoreTrees::tree> _loop_level = level;
-  unsigned int _loop_fuel = std::move(fuel);
+  uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<List<unsigned int>>>(
-          List<List<unsigned int>>::nil());
+      *_write =
+          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
-      unsigned int fuel_ = _loop_fuel - 1;
+      uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<LoopifyMoreTrees::tree>::Nil>(
               _loop_level.v())) {
-        *_write = std::make_unique<List<List<unsigned int>>>(
-            List<List<unsigned int>>::nil());
+        *_write =
+            std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
         break;
       } else {
-        List<unsigned int> values = flatten(map_tree_to_list(_loop_level));
+        List<uint64_t> values = flatten(map_tree_to_list(_loop_level));
         List<LoopifyMoreTrees::tree> next = concat_map_children(_loop_level);
-        auto _cell = std::make_unique<List<List<unsigned int>>>(
-            typename List<List<unsigned int>>::Cons(std::move(values),
-                                                    nullptr));
+        auto _cell = std::make_unique<List<List<uint64_t>>>(
+            typename List<List<uint64_t>>::Cons(std::move(values), nullptr));
         *_write = std::move(_cell);
-        _write = &std::get<typename List<List<unsigned int>>::Cons>(
-                      (*_write)->v_mut())
-                      .a1;
+        _write =
+            &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
+                 .a1;
         _loop_level = std::move(next);
         _loop_fuel = fuel_;
         continue;
@@ -675,9 +669,8 @@ LoopifyMoreTrees::tree_levels_fuel(unsigned int fuel,
   return std::move(*_head);
 }
 
-List<List<unsigned int>>
-LoopifyMoreTrees::tree_levels(LoopifyMoreTrees::tree t) {
+List<List<uint64_t>> LoopifyMoreTrees::tree_levels(LoopifyMoreTrees::tree t) {
   return tree_levels_fuel(
-      100u, List<LoopifyMoreTrees::tree>::cons(
-                std::move(t), List<LoopifyMoreTrees::tree>::nil()));
+      UINT64_C(100), List<LoopifyMoreTrees::tree>::cons(
+                         std::move(t), List<LoopifyMoreTrees::tree>::nil()));
 }

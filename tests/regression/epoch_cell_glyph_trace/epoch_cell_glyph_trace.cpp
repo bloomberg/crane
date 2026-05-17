@@ -171,12 +171,10 @@ bool Pos::eqb(const Positive &p, const Positive &q) {
   }
 }
 
-unsigned int Pos::to_nat(const Positive &x) {
-  return iter_op<unsigned int>(
-      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-        return (_x0 + _x1);
-      },
-      x, 1u);
+uint64_t Pos::to_nat(const Positive &x) {
+  return iter_op<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      UINT64_C(1));
 }
 
 Z BinInt::double_(const Z &x) {
@@ -397,12 +395,12 @@ bool BinInt::eqb(const Z &x, const Z &y) {
   }
 }
 
-unsigned int BinInt::to_nat(const Z &z) {
+uint64_t BinInt::to_nat(const Z &z) {
   if (std::holds_alternative<typename Z::Zpos>(z.v())) {
     const auto &[a0] = std::get<typename Z::Zpos>(z.v());
     return Pos::to_nat(a0);
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
@@ -520,20 +518,20 @@ Z BinInt::abs(const Z &z) {
   }
 }
 
-unsigned int
+uint64_t
 EpochCellGlyphTraceCase::phase_code(EpochCellGlyphTraceCase::LunarPhase p) {
   switch (p) {
   case LunarPhase::NEWMOON: {
-    return 0u;
+    return UINT64_C(0);
   }
   case LunarPhase::FIRSTQUARTER: {
-    return 1u;
+    return UINT64_C(1);
   }
   case LunarPhase::FULLMOON: {
-    return 2u;
+    return UINT64_C(2);
   }
   case LunarPhase::LASTQUARTER: {
-    return 3u;
+    return UINT64_C(3);
   }
   default:
     std::unreachable();
@@ -574,44 +572,44 @@ EpochCellGlyphTraceCase::phase_from_angle(const Z &angle_deg) {
   }
 }
 
-unsigned int
+uint64_t
 EpochCellGlyphTraceCase::zodiac_code(EpochCellGlyphTraceCase::ZodiacSign z) {
   switch (z) {
   case ZodiacSign::ARIES: {
-    return 0u;
+    return UINT64_C(0);
   }
   case ZodiacSign::TAURUS: {
-    return 1u;
+    return UINT64_C(1);
   }
   case ZodiacSign::GEMINI: {
-    return 2u;
+    return UINT64_C(2);
   }
   case ZodiacSign::CANCER: {
-    return 3u;
+    return UINT64_C(3);
   }
   case ZodiacSign::LEO: {
-    return 4u;
+    return UINT64_C(4);
   }
   case ZodiacSign::VIRGO: {
-    return 5u;
+    return UINT64_C(5);
   }
   case ZodiacSign::LIBRA: {
-    return 6u;
+    return UINT64_C(6);
   }
   case ZodiacSign::SCORPIO: {
-    return 7u;
+    return UINT64_C(7);
   }
   case ZodiacSign::SAGITTARIUS: {
-    return 8u;
+    return UINT64_C(8);
   }
   case ZodiacSign::CAPRICORN: {
-    return 9u;
+    return UINT64_C(9);
   }
   case ZodiacSign::AQUARIUS: {
-    return 10u;
+    return UINT64_C(10);
   }
   case ZodiacSign::PISCES: {
-    return 11u;
+    return UINT64_C(11);
   }
   default:
     std::unreachable();
@@ -691,12 +689,12 @@ EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step_reverse(
 }
 
 EpochCellGlyphTraceCase::MechanismState
-EpochCellGlyphTraceCase::step_n(unsigned int n,
+EpochCellGlyphTraceCase::step_n(uint64_t n,
                                 EpochCellGlyphTraceCase::MechanismState s) {
   if (n <= 0) {
     return s;
   } else {
-    unsigned int rest = n - 1;
+    uint64_t rest = n - 1;
     return step_n(rest, step(std::move(s)));
   }
 }
@@ -811,46 +809,46 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::eclipse_category_code(
+uint64_t EpochCellGlyphTraceCase::eclipse_category_code(
     EpochCellGlyphTraceCase::EclipseCategory c) {
   switch (c) {
   case EclipseCategory::EC_TOTALLUNAR: {
-    return 0u;
+    return UINT64_C(0);
   }
   case EclipseCategory::EC_PARTIALLUNAR: {
-    return 1u;
+    return UINT64_C(1);
   }
   case EclipseCategory::EC_TOTALSOLAR: {
-    return 2u;
+    return UINT64_C(2);
   }
   case EclipseCategory::EC_ANNULARSOLAR: {
-    return 3u;
+    return UINT64_C(3);
   }
   case EclipseCategory::EC_PARTIALSOLAR: {
-    return 4u;
+    return UINT64_C(4);
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int
+uint64_t
 EpochCellGlyphTraceCase::glyph_code(EpochCellGlyphTraceCase::DialGlyph g) {
   switch (g) {
   case DialGlyph::GLYPH_SIGMA: {
-    return 0u;
+    return UINT64_C(0);
   }
   case DialGlyph::GLYPH_ETA: {
-    return 1u;
+    return UINT64_C(1);
   }
   case DialGlyph::GLYPH_SIGMATOTAL: {
-    return 2u;
+    return UINT64_C(2);
   }
   case DialGlyph::GLYPH_ETAANNULAR: {
-    return 3u;
+    return UINT64_C(3);
   }
   case DialGlyph::GLYPH_EMPTY: {
-    return 4u;
+    return UINT64_C(4);
   }
   default:
     std::unreachable();
@@ -934,23 +932,23 @@ EpochCellGlyphTraceCase::glyph_at_cell(const Z &cell) {
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::count_total_lunar(
+uint64_t EpochCellGlyphTraceCase::count_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
           es.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    unsigned int count_here = [&]() {
+    uint64_t count_here = [&]() {
       switch (a0.he_category) {
       case EclipseCategory::EC_TOTALLUNAR: {
-        return 1u;
+        return UINT64_C(1);
       }
       default: {
-        return 0u;
+        return UINT64_C(0);
       }
       }
     }();
@@ -958,27 +956,27 @@ unsigned int EpochCellGlyphTraceCase::count_total_lunar(
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::count_visible_total_lunar(
+uint64_t EpochCellGlyphTraceCase::count_visible_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
           es.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    unsigned int count_here = [&]() {
+    uint64_t count_here = [&]() {
       switch (a0.he_category) {
       case EclipseCategory::EC_TOTALLUNAR: {
         if (a0.he_visible_mediterranean) {
-          return 1u;
+          return UINT64_C(1);
         } else {
-          return 0u;
+          return UINT64_C(0);
         }
       }
       default: {
-        return 0u;
+        return UINT64_C(0);
       }
       }
     }();
@@ -986,21 +984,21 @@ unsigned int EpochCellGlyphTraceCase::count_visible_total_lunar(
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::visible_series_checksum(
+uint64_t EpochCellGlyphTraceCase::visible_series_checksum(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
           es.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    unsigned int term;
+    uint64_t term;
     if (a0.he_visible_mediterranean) {
       term = BinInt::to_nat(BinInt::abs(a0.he_saros_series));
     } else {
-      term = 0u;
+      term = UINT64_C(0);
     }
     return (term + visible_series_checksum(*a1));
   }
@@ -1050,21 +1048,21 @@ bool EpochCellGlyphTraceCase::reading_matches(
                                 reading.reading_glyph);
 }
 
-unsigned int EpochCellGlyphTraceCase::reading_phase_code(
+uint64_t EpochCellGlyphTraceCase::reading_phase_code(
     const EpochCellGlyphTraceCase::EpochReading &reading) {
   return phase_code(predict_moon_phase_from_state(reading.reading_state));
 }
 
-unsigned int EpochCellGlyphTraceCase::reading_zodiac_code(
+uint64_t EpochCellGlyphTraceCase::reading_zodiac_code(
     const EpochCellGlyphTraceCase::EpochReading &reading) {
   return zodiac_code(predict_zodiac_sign(reading.reading_state));
 }
 
-unsigned int EpochCellGlyphTraceCase::phase_code_after_steps(unsigned int n) {
+uint64_t EpochCellGlyphTraceCase::phase_code_after_steps(uint64_t n) {
   return phase_code(predict_moon_phase_from_state(step_n(n, initial_state)));
 }
 
-unsigned int EpochCellGlyphTraceCase::zodiac_code_after_steps(unsigned int n) {
+uint64_t EpochCellGlyphTraceCase::zodiac_code_after_steps(uint64_t n) {
   return zodiac_code(predict_zodiac_sign(step_n(n, initial_state)));
 }
 

@@ -26,24 +26,24 @@ concept OUTER_NAT = OUTER<M>;
 
 struct TodoWithModuleConstraint {
   struct NatInner {
-    using t = unsigned int;
-    static inline const unsigned int zero = 0u;
+    using t = uint64_t;
+    static inline const uint64_t zero = UINT64_C(0);
   };
 
   struct NatOuter {
     using Inner = NatInner;
-    static Inner::t step(unsigned int n);
+    static Inner::t step(uint64_t n);
   };
 
   template <OUTER_NAT X> struct UseNat {
-    static const unsigned int &twice() {
-      static const unsigned int v = X::step(X::step(X::Inner::zero));
+    static const uint64_t &twice() {
+      static const uint64_t v = X::step(X::step(X::Inner::zero));
       return v;
     }
   };
 
   using Applied = UseNat<NatOuter>;
-  static inline const unsigned int test_twice = Applied::twice();
+  static inline const uint64_t test_twice = Applied::twice();
 };
 
 #endif // INCLUDED_TODO_WITH_MODULE_CONSTRAINT

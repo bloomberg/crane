@@ -123,7 +123,7 @@ public:
 struct UniversePoly {
   template <typename T1> static T1 poly_id(T1 x) { return x; }
 
-  static inline const unsigned int test_id_nat = poly_id<unsigned int>(42u);
+  static inline const uint64_t test_id_nat = poly_id<uint64_t>(UINT64_C(42));
   static inline const bool test_id_bool = poly_id<bool>(true);
 
   template <typename A, typename B> struct ppair {
@@ -136,9 +136,9 @@ struct UniversePoly {
     }
   };
 
-  static inline const ppair<unsigned int, bool> test_pair =
-      ppair<unsigned int, bool>{5u, true};
-  static inline const unsigned int test_pfst = test_pair.pfst;
+  static inline const ppair<uint64_t, bool> test_pair =
+      ppair<uint64_t, bool>{UINT64_C(5), true};
+  static inline const uint64_t test_pfst = test_pair.pfst;
   static inline const bool test_psnd = test_pair.psnd;
 
   template <typename A> struct poption {
@@ -252,33 +252,34 @@ struct UniversePoly {
     }
   }
 
-  static inline const poption<unsigned int> test_map_some =
-      poption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + 1u); },
-          poption<unsigned int>::psome(5u));
-  static inline const poption<unsigned int> test_map_none =
-      poption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + 1u); },
-          poption<unsigned int>::pnone());
-  static inline const poption<unsigned int> test_bind =
-      poption_bind<unsigned int, unsigned int>(
-          poption<unsigned int>::psome(3u),
-          [](unsigned int n) { return poption<unsigned int>::psome((n + n)); });
+  static inline const poption<uint64_t> test_map_some =
+      poption_map<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          poption<uint64_t>::psome(UINT64_C(5)));
+  static inline const poption<uint64_t> test_map_none =
+      poption_map<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          poption<uint64_t>::pnone());
+  static inline const poption<uint64_t> test_bind =
+      poption_bind<uint64_t, uint64_t>(
+          poption<uint64_t>::psome(UINT64_C(3)),
+          [](uint64_t n) { return poption<uint64_t>::psome((n + n)); });
 
-  template <typename T1> static unsigned int poly_length(const List<T1> &l) {
+  template <typename T1> static uint64_t poly_length(const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       return (poly_length<T1>(*a1) + 1);
     }
   }
 
-  static inline const unsigned int test_length =
-      poly_length<unsigned int>(List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
+  static inline const uint64_t test_length =
+      poly_length<uint64_t>(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_UNIVERSE_POLY

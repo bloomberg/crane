@@ -15,7 +15,7 @@ struct MemSafetyProbe29 {
 
     struct INode {
       std::unique_ptr<inner> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<inner> a2;
     };
 
@@ -86,7 +86,7 @@ struct MemSafetyProbe29 {
     // CREATORS
     static inner ileaf() { return inner(ILeaf{}); }
 
-    static inner inode(inner a0, unsigned int a1, inner a2) {
+    static inner inode(inner a0, uint64_t a1, inner a2) {
       return inner(INode{std::make_unique<inner>(std::move(a0)), a1,
                          std::make_unique<inner>(std::move(a2))});
     }
@@ -133,14 +133,14 @@ struct MemSafetyProbe29 {
       /// _After_INode: saves [_s0, _s1], dispatches next recursive call.
       struct _After_INode {
         inner *_s0;
-        unsigned int _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_INode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_INode {
         inner _result;
-        unsigned int _s1;
+        uint64_t _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
@@ -160,7 +160,7 @@ struct MemSafetyProbe29 {
             _result = inner::ileaf();
           } else {
             const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
-            _stack.emplace_back(_After_INode{a0.get(), (a1 * 2u)});
+            _stack.emplace_back(_After_INode{a0.get(), (a1 * UINT64_C(2))});
             _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_INode>(_frame)) {
@@ -175,7 +175,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    unsigned int inner_sum() const {
+    uint64_t inner_sum() const {
       const inner *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -186,18 +186,18 @@ struct MemSafetyProbe29 {
       /// _After_INode: saves [_s0, a1], dispatches next recursive call.
       struct _After_INode {
         inner *_s0;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_INode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_INode {
-        unsigned int _result;
-        unsigned int a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -210,7 +210,7 @@ struct MemSafetyProbe29 {
           const inner *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
             _stack.emplace_back(_After_INode{a0.get(), a1});
@@ -229,7 +229,7 @@ struct MemSafetyProbe29 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, unsigned int &,
+      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, uint64_t &,
                                      inner &, T1 &>
     T1 inner_rec(T1 f, F1 &&f0) const {
       const inner *_self = this;
@@ -243,7 +243,7 @@ struct MemSafetyProbe29 {
       struct _After_INode {
         inner *_s0;
         inner a2;
-        unsigned int a1;
+        uint64_t a1;
         inner a0;
       };
 
@@ -252,7 +252,7 @@ struct MemSafetyProbe29 {
       struct _Combine_INode {
         T1 _result;
         inner a2;
-        unsigned int a1;
+        uint64_t a1;
         inner a0;
       };
 
@@ -290,7 +290,7 @@ struct MemSafetyProbe29 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, unsigned int &,
+      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, uint64_t &,
                                      inner &, T1 &>
     T1 inner_rect(T1 f, F1 &&f0) const {
       const inner *_self = this;
@@ -304,7 +304,7 @@ struct MemSafetyProbe29 {
       struct _After_INode {
         inner *_s0;
         inner a2;
-        unsigned int a1;
+        uint64_t a1;
         inner a0;
       };
 
@@ -313,7 +313,7 @@ struct MemSafetyProbe29 {
       struct _Combine_INode {
         T1 _result;
         inner a2;
-        unsigned int a1;
+        uint64_t a1;
         inner a0;
       };
 
@@ -522,7 +522,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    unsigned int outer_sum() const {
+    uint64_t outer_sum() const {
       const outer *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -539,12 +539,12 @@ struct MemSafetyProbe29 {
       /// _Combine_ONode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_ONode {
-        unsigned int _result;
+        uint64_t _result;
         decltype(std::declval<inner &>().inner_sum()) a1;
       };
 
       using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -557,7 +557,7 @@ struct MemSafetyProbe29 {
           const outer *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
             _stack.emplace_back(_After_ONode{a0.get(), a1.inner_sum()});
@@ -702,7 +702,7 @@ struct MemSafetyProbe29 {
   struct expr {
     // TYPES
     struct Lit {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Neg {
@@ -806,7 +806,7 @@ struct MemSafetyProbe29 {
     }
 
     // CREATORS
-    static expr lit(unsigned int a0) { return expr(Lit{a0}); }
+    static expr lit(uint64_t a0) { return expr(Lit{a0}); }
 
     static expr neg(expr a0) {
       return expr(Neg{std::make_unique<expr>(std::move(a0))});
@@ -880,27 +880,27 @@ struct MemSafetyProbe29 {
       /// _After_Add: saves [_s0, _s1], dispatches next recursive call.
       struct _After_Add {
         expr *_s0;
-        decltype(0u) _s1;
+        decltype(UINT64_C(0)) _s1;
       };
 
       /// _After_Mul: saves [_s0, _s1], dispatches next recursive call.
       struct _After_Mul {
         expr *_s0;
-        decltype(1u) _s1;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
         inner _result;
-        decltype(0u) _s1;
+        decltype(UINT64_C(0)) _s1;
       };
 
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
         inner _result;
-        decltype(1u) _s1;
+        decltype(UINT64_C(1)) _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,
@@ -926,11 +926,11 @@ struct MemSafetyProbe29 {
             _stack.emplace_back(_Enter{a0.get()});
           } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{a0.get(), 0u});
+            _stack.emplace_back(_After_Add{a0.get(), UINT64_C(0)});
             _stack.emplace_back(_Enter{a1.get()});
           } else {
             const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
-            _stack.emplace_back(_After_Mul{a0.get(), 1u});
+            _stack.emplace_back(_After_Mul{a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           }
         } else if (std::holds_alternative<_After_Add>(_frame)) {
@@ -1003,7 +1003,7 @@ struct MemSafetyProbe29 {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-            _result = expr::lit((a0 * 2u));
+            _result = expr::lit((a0 * UINT64_C(2)));
           } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
             _stack.emplace_back(_Resume_Neg{});
@@ -1039,7 +1039,7 @@ struct MemSafetyProbe29 {
       return _result;
     }
 
-    unsigned int eval_expr() const {
+    uint64_t eval_expr() const {
       const expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1060,18 +1060,18 @@ struct MemSafetyProbe29 {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,
                                   _Combine_Mul>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -1119,7 +1119,7 @@ struct MemSafetyProbe29 {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &>
@@ -1224,7 +1224,7 @@ struct MemSafetyProbe29 {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &>
@@ -1338,7 +1338,7 @@ struct MemSafetyProbe29 {
       std::unique_ptr<tree3> a0;
       std::unique_ptr<tree3> a1;
       std::unique_ptr<tree3> a2;
-      unsigned int a3;
+      uint64_t a3;
     };
 
     using variant_t = std::variant<T3Leaf, T3Node>;
@@ -1412,7 +1412,7 @@ struct MemSafetyProbe29 {
     // CREATORS
     static tree3 t3leaf() { return tree3(T3Leaf{}); }
 
-    static tree3 t3node(tree3 a0, tree3 a1, tree3 a2, unsigned int a3) {
+    static tree3 t3node(tree3 a0, tree3 a1, tree3 a2, uint64_t a3) {
       return tree3(T3Node{std::make_unique<tree3>(std::move(a0)),
                           std::make_unique<tree3>(std::move(a1)),
                           std::make_unique<tree3>(std::move(a2)), a3});
@@ -1451,7 +1451,7 @@ struct MemSafetyProbe29 {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int tree3_sum() const {
+    uint64_t tree3_sum() const {
       const tree3 *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1463,28 +1463,28 @@ struct MemSafetyProbe29 {
       struct _After_T3Node {
         const tree3 *_s0;
         const tree3 *_s1;
-        unsigned int a3;
+        uint64_t a3;
       };
 
       /// _After_T3Node_1: saves [_result, _s1, a3], dispatches next recursive
       /// call.
       struct _After_T3Node_1 {
-        unsigned int _result;
+        uint64_t _result;
         const tree3 *_s1;
-        unsigned int a3;
+        uint64_t a3;
       };
 
       /// _Combine_T3Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_T3Node {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        unsigned int a3;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t a3;
       };
 
       using _Frame =
           std::variant<_Enter, _After_T3Node, _After_T3Node_1, _Combine_T3Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -1498,7 +1498,7 @@ struct MemSafetyProbe29 {
           const tree3 *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename tree3::T3Node>(_sv.v());
@@ -1523,7 +1523,7 @@ struct MemSafetyProbe29 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
-                                     tree3 &, T1 &, unsigned int &>
+                                     tree3 &, T1 &, uint64_t &>
     T1 tree3_rec(T1 f, F1 &&f0) const {
       const tree3 *_self = this;
 
@@ -1537,7 +1537,7 @@ struct MemSafetyProbe29 {
       struct _After_T3Node {
         const tree3 *_s0;
         const tree3 *_s1;
-        unsigned int a3;
+        uint64_t a3;
         tree3 a2;
         tree3 a1;
         tree3 a0;
@@ -1548,7 +1548,7 @@ struct MemSafetyProbe29 {
       struct _After_T3Node_1 {
         T1 _result;
         const tree3 *_s1;
-        unsigned int a3;
+        uint64_t a3;
         tree3 a2;
         tree3 a1;
         tree3 a0;
@@ -1559,7 +1559,7 @@ struct MemSafetyProbe29 {
       struct _Combine_T3Node {
         T1 _result_0;
         T1 _result_1;
-        unsigned int a3;
+        uint64_t a3;
         tree3 a2;
         tree3 a1;
         tree3 a0;
@@ -1612,7 +1612,7 @@ struct MemSafetyProbe29 {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
-                                     tree3 &, T1 &, unsigned int &>
+                                     tree3 &, T1 &, uint64_t &>
     T1 tree3_rect(T1 f, F1 &&f0) const {
       const tree3 *_self = this;
 
@@ -1626,7 +1626,7 @@ struct MemSafetyProbe29 {
       struct _After_T3Node {
         const tree3 *_s0;
         const tree3 *_s1;
-        unsigned int a3;
+        uint64_t a3;
         tree3 a2;
         tree3 a1;
         tree3 a0;
@@ -1637,7 +1637,7 @@ struct MemSafetyProbe29 {
       struct _After_T3Node_1 {
         T1 _result;
         const tree3 *_s1;
-        unsigned int a3;
+        uint64_t a3;
         tree3 a2;
         tree3 a1;
         tree3 a0;
@@ -1648,7 +1648,7 @@ struct MemSafetyProbe29 {
       struct _Combine_T3Node {
         T1 _result_0;
         T1 _result_1;
-        unsigned int a3;
+        uint64_t a3;
         tree3 a2;
         tree3 a1;
         tree3 a0;
@@ -1702,57 +1702,65 @@ struct MemSafetyProbe29 {
 
   /// TEST 1: Build and sum an outer tree with inner tree values.
   /// Tests nested value-type clone/destructor interaction.
-  static inline const unsigned int test_outer_basic = []() {
+  static inline const uint64_t test_outer_basic = []() {
     outer o = outer::onode(
         outer::onode(outer::oleaf(),
-                     inner::inode(inner::ileaf(), 10u, inner::ileaf()),
+                     inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
                      outer::oleaf()),
-        inner::inode(inner::inode(inner::ileaf(), 1u, inner::ileaf()), 2u,
-                     inner::inode(inner::ileaf(), 3u, inner::ileaf())),
+        inner::inode(inner::inode(inner::ileaf(), UINT64_C(1), inner::ileaf()),
+                     UINT64_C(2),
+                     inner::inode(inner::ileaf(), UINT64_C(3), inner::ileaf())),
         outer::onode(outer::oleaf(),
-                     inner::inode(inner::ileaf(), 20u, inner::ileaf()),
+                     inner::inode(inner::ileaf(), UINT64_C(20), inner::ileaf()),
                      outer::oleaf()));
     return std::move(o).outer_sum();
   }();
   /// TEST 2: Dup pattern — use inner tree twice in outer construction.
   static outer dup_inner(inner i);
-  static inline const unsigned int test_dup_inner = []() {
-    inner i =
-        inner::inode(inner::inode(inner::ileaf(), 5u, inner::ileaf()), 10u,
-                     inner::inode(inner::ileaf(), 15u, inner::ileaf()));
+  static inline const uint64_t test_dup_inner = []() {
+    inner i = inner::inode(
+        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()), UINT64_C(10),
+        inner::inode(inner::ileaf(), UINT64_C(15), inner::ileaf()));
     return dup_inner(std::move(i)).outer_sum();
   }();
-  static inline const unsigned int test_transform = []() {
+  static inline const uint64_t test_transform = []() {
     outer o = outer::onode(
-        outer::oleaf(), inner::inode(inner::ileaf(), 5u, inner::ileaf()),
+        outer::oleaf(),
+        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()),
         outer::onode(outer::oleaf(),
-                     inner::inode(inner::ileaf(), 10u, inner::ileaf()),
+                     inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
                      outer::oleaf()));
     return std::move(o).transform_outer().outer_sum();
   }();
   /// TEST 4: Build and evaluate a complex expression tree.
-  static inline const unsigned int test_expr = []() {
+  static inline const uint64_t test_expr = []() {
     expr e = expr::add(
-        expr::mul(expr::add(expr::lit(2u), expr::lit(3u)), expr::lit(4u)),
-        expr::neg(expr::add(expr::lit(10u), expr::lit(5u))));
+        expr::mul(expr::add(expr::lit(UINT64_C(2)), expr::lit(UINT64_C(3))),
+                  expr::lit(UINT64_C(4))),
+        expr::neg(expr::add(expr::lit(UINT64_C(10)), expr::lit(UINT64_C(5)))));
     return std::move(e).eval_expr();
   }();
   /// TEST 5: Deep 3-child tree to stress clone/destructor.
-  static tree3 build_tree3(unsigned int n);
-  static inline const unsigned int test_tree3 = build_tree3(4u).tree3_sum();
-  static inline const unsigned int test_dup_outer = []() {
-    outer o = outer::onode(outer::oleaf(),
-                           inner::inode(inner::ileaf(), 42u, inner::ileaf()),
-                           outer::oleaf());
+  static tree3 build_tree3(uint64_t n);
+  static inline const uint64_t test_tree3 =
+      build_tree3(UINT64_C(4)).tree3_sum();
+  static inline const uint64_t test_dup_outer = []() {
+    outer o =
+        outer::onode(outer::oleaf(),
+                     inner::inode(inner::ileaf(), UINT64_C(42), inner::ileaf()),
+                     outer::oleaf());
     std::pair<outer, outer> p = std::move(o).dup_outer();
     return (p.first.outer_sum() + p.second.outer_sum());
   }();
-  static inline const unsigned int test_double_expr =
-      expr::add(expr::lit(5u), expr::mul(expr::lit(3u), expr::lit(7u)))
+  static inline const uint64_t test_double_expr =
+      expr::add(expr::lit(UINT64_C(5)),
+                expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))))
           .double_expr()
           .eval_expr();
-  static inline const unsigned int test_cross_type = []() {
-    expr e = expr::add(expr::lit(5u), expr::mul(expr::lit(3u), expr::lit(7u)));
+  static inline const uint64_t test_cross_type = []() {
+    expr e =
+        expr::add(expr::lit(UINT64_C(5)),
+                  expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))));
     inner i = std::move(e).expr_to_inner();
     outer o = outer::onode(outer::oleaf(), i, outer::oleaf());
     return (std::move(o).outer_sum() + std::move(i).inner_sum());

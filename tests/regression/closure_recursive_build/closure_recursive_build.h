@@ -15,7 +15,7 @@ struct ClosureRecursiveBuild {
     struct FNil {};
 
     struct FCons {
-      std::function<unsigned int(unsigned int)> a0;
+      std::function<uint64_t(uint64_t)> a0;
       std::unique_ptr<fn_list> a1;
     };
 
@@ -82,8 +82,7 @@ struct ClosureRecursiveBuild {
     // CREATORS
     static fn_list fnil() { return fn_list(FNil{}); }
 
-    static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
-                         fn_list a1) {
+    static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
       return fn_list(
           FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
@@ -118,7 +117,7 @@ struct ClosureRecursiveBuild {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<
-        T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
+        T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
   static T1 fn_list_rect(T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
@@ -130,7 +129,7 @@ struct ClosureRecursiveBuild {
 
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<
-        T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &, T1 &>
+        T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
   static T1 fn_list_rec(T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
@@ -147,21 +146,23 @@ struct ClosureRecursiveBuild {
   /// by &. The closures are stored in FCons constructors. After
   /// build_adders returns, all intermediate stack frames are gone,
   /// and every closure holds a dangling reference.
-  static fn_list build_adders(unsigned int n);
-  static unsigned int apply_first(const fn_list &fl, unsigned int x);
-  static unsigned int apply_all_sum(const fn_list &fl, unsigned int x);
+  static fn_list build_adders(uint64_t n);
+  static uint64_t apply_first(const fn_list &fl, uint64_t x);
+  static uint64_t apply_all_sum(const fn_list &fl, uint64_t x);
   /// test1: build_adders(3) = adder_3, adder_2, adder_1.
   /// apply_first returns adder_3(10) = 3 + 10 = 13.
-  static inline const unsigned int test1 = apply_first(build_adders(3u), 10u);
+  static inline const uint64_t test1 =
+      apply_first(build_adders(UINT64_C(3)), UINT64_C(10));
   /// test2: apply_all_sum sums all adders applied to 0.
   /// adder_3(0) + adder_2(0) + adder_1(0) = 3 + 2 + 1 = 6.
-  static inline const unsigned int test2 = apply_all_sum(build_adders(3u), 0u);
+  static inline const uint64_t test2 =
+      apply_all_sum(build_adders(UINT64_C(3)), UINT64_C(0));
   /// test3: with noise between build and use.
   /// build_adders(5), noise, then apply_first(fns, 0) = 5.
-  static inline const unsigned int test3 = []() {
-    fn_list fns = build_adders(5u);
-    unsigned int noise = ((99u + 88u) + 77u);
-    return (apply_first(std::move(fns), 0u) + noise);
+  static inline const uint64_t test3 = []() {
+    fn_list fns = build_adders(UINT64_C(5));
+    uint64_t noise = ((UINT64_C(99) + UINT64_C(88)) + UINT64_C(77));
+    return (apply_first(std::move(fns), UINT64_C(0)) + noise);
   }();
 };
 

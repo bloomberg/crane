@@ -3,7 +3,7 @@
 
 namespace SetB {
 
-unsigned int make(unsigned int n);
+uint64_t make(uint64_t n);
 
 } // namespace SetB
 

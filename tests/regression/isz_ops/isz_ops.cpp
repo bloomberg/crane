@@ -1,34 +1,34 @@
 #include "isz_ops.h"
 
-unsigned int IszOps::nibble_of_nat(unsigned int n) {
-  return (16u ? n % 16u : n);
+uint64_t IszOps::nibble_of_nat(uint64_t n) {
+  return (UINT64_C(16) ? n % UINT64_C(16) : n);
 }
 
-unsigned int IszOps::get_reg(const IszOps::state &s, unsigned int r) {
-  return ListDef::template nth<unsigned int>(r, s.regs, 0u);
+uint64_t IszOps::get_reg(const IszOps::state &s, uint64_t r) {
+  return ListDef::template nth<uint64_t>(r, s.regs, UINT64_C(0));
 }
 
-unsigned int IszOps::cycles_isz(const IszOps::state &s, unsigned int r) {
-  unsigned int new_val = nibble_of_nat((get_reg(s, r) + 1u));
-  if (new_val == 0u) {
-    return 8u;
+uint64_t IszOps::cycles_isz(const IszOps::state &s, uint64_t r) {
+  uint64_t new_val = nibble_of_nat((get_reg(s, r) + UINT64_C(1)));
+  if (new_val == UINT64_C(0)) {
+    return UINT64_C(8);
   } else {
-    return 16u;
+    return UINT64_C(16);
   }
 }
 
-unsigned int IszOps::isz_iterations(unsigned int v) {
-  if (v == 0u) {
-    return 16u;
+uint64_t IszOps::isz_iterations(uint64_t v) {
+  if (v == UINT64_C(0)) {
+    return UINT64_C(16);
   } else {
-    return (((16u - v) > 16u ? 0 : (16u - v)));
+    return (((UINT64_C(16) - v) > UINT64_C(16) ? 0 : (UINT64_C(16) - v)));
   }
 }
 
-bool IszOps::isz_loops(const IszOps::state &s, unsigned int r) {
-  return !(nibble_of_nat((get_reg(s, r) + 1u)) == 0u);
+bool IszOps::isz_loops(const IszOps::state &s, uint64_t r) {
+  return !(nibble_of_nat((get_reg(s, r) + UINT64_C(1))) == UINT64_C(0));
 }
 
-bool IszOps::isz_terminates(const IszOps::state &s, unsigned int r) {
-  return nibble_of_nat((get_reg(s, r) + 1u)) == 0u;
+bool IszOps::isz_terminates(const IszOps::state &s, uint64_t r) {
+  return nibble_of_nat((get_reg(s, r) + UINT64_C(1))) == UINT64_C(0);
 }

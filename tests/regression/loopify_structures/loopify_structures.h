@@ -150,7 +150,7 @@ struct LoopifyStructures {
   struct nested {
     // TYPES
     struct Elem {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NList {
@@ -243,7 +243,7 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static nested elem(unsigned int a0) { return nested(Elem{a0}); }
+    static nested elem(uint64_t a0) { return nested(Elem{a0}); }
 
     static nested nlist(List<nested> a0) {
       return nested(NList{std::make_unique<List<nested>>(std::move(a0))});
@@ -287,39 +287,39 @@ struct LoopifyStructures {
     const variant_t &v() const { return v_; }
 
     /// nested_flatten n flattens to a regular list.
-    List<unsigned int> nested_flatten() const {
+    List<uint64_t> nested_flatten() const {
       if (std::holds_alternative<typename nested::Elem>(this->v())) {
         const auto &[a0] = std::get<typename nested::Elem>(this->v());
-        return List<unsigned int>::cons(a0, List<unsigned int>::nil());
+        return List<uint64_t>::cons(a0, List<uint64_t>::nil());
       } else {
         const auto &[a0] = std::get<typename nested::NList>(this->v());
-        return flatten_nested_list_fuel(1000u, *a0);
+        return flatten_nested_list_fuel(UINT64_C(1000), *a0);
       }
     }
 
     /// nested_depth n computes maximum nesting depth.
-    unsigned int nested_depth() const {
+    uint64_t nested_depth() const {
       if (std::holds_alternative<typename nested::Elem>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0] = std::get<typename nested::NList>(this->v());
-        return (depth_nested_list_fuel(1000u, *a0) + 1);
+        return (depth_nested_list_fuel(UINT64_C(1000), *a0) + 1);
       }
     }
 
     /// nested_sum n sums all elements in a nested structure.
-    unsigned int nested_sum() const {
+    uint64_t nested_sum() const {
       if (std::holds_alternative<typename nested::Elem>(this->v())) {
         const auto &[a0] = std::get<typename nested::Elem>(this->v());
         return a0;
       } else {
         const auto &[a0] = std::get<typename nested::NList>(this->v());
-        return sum_nested_list_fuel(1000u, *a0);
+        return sum_nested_list_fuel(UINT64_C(1000), *a0);
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, List<nested> &>
     T1 nested_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename nested::Elem>(this->v())) {
@@ -332,7 +332,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, List<nested> &>
     T1 nested_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename nested::Elem>(this->v())) {
@@ -347,20 +347,18 @@ struct LoopifyStructures {
 
   /// Helper: sum all elements in a list of nested structures.
   /// Handles both tree and list levels in one function for full loopification.
-  static unsigned int sum_nested_list_fuel(unsigned int fuel,
-                                           const List<nested> &l);
+  static uint64_t sum_nested_list_fuel(uint64_t fuel, const List<nested> &l);
   /// Helper: compute max depth among a list of nested structures.
-  static unsigned int depth_nested_list_fuel(unsigned int fuel,
-                                             const List<nested> &l);
+  static uint64_t depth_nested_list_fuel(uint64_t fuel, const List<nested> &l);
   /// Helper: flatten a list of nested structures to a flat list of nats.
-  static List<unsigned int> flatten_nested_list_fuel(unsigned int fuel,
-                                                     const List<nested> &l);
+  static List<uint64_t> flatten_nested_list_fuel(uint64_t fuel,
+                                                 const List<nested> &l);
 
   /// Quadtree: leaf or 4-way branch.
   struct quadtree {
     // TYPES
     struct QLeaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Quad {
@@ -443,7 +441,7 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static quadtree qleaf(unsigned int a0) { return quadtree(QLeaf{a0}); }
+    static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
@@ -490,7 +488,7 @@ struct LoopifyStructures {
 
     /// quad_map f t applies function to all leaves.
     template <typename F0>
-      requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
     quadtree quad_map(F0 &&f) const {
       const quadtree *_self = this;
 
@@ -580,19 +578,19 @@ struct LoopifyStructures {
     }
 
     /// quad_depth t computes quadtree depth.
-    unsigned int quad_depth() const {
+    uint64_t quad_depth() const {
       const quadtree *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2, a3] =
             std::get<typename quadtree::Quad>(_sv.v());
-        unsigned int d1 = (*a0).quad_depth();
-        unsigned int d2 = (*a1).quad_depth();
-        unsigned int d3 = (*a2).quad_depth();
-        unsigned int d4 = (*a3).quad_depth();
-        return ([&]() -> unsigned int {
+        uint64_t d1 = (*a0).quad_depth();
+        uint64_t d2 = (*a1).quad_depth();
+        uint64_t d3 = (*a2).quad_depth();
+        uint64_t d4 = (*a3).quad_depth();
+        return ([&]() -> uint64_t {
           if ((d1 <= d2 ? d2 : d1) <= (d3 <= d4 ? d4 : d3)) {
             if (d3 <= d4) {
               return d4;
@@ -611,7 +609,7 @@ struct LoopifyStructures {
     }
 
     /// quad_sum t sums all values in quadtree.
-    unsigned int quad_sum() const {
+    uint64_t quad_sum() const {
       const quadtree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -629,7 +627,7 @@ struct LoopifyStructures {
       /// _After_Quad_1: saves [_result, _s1, _s2], dispatches next recursive
       /// call.
       struct _After_Quad_1 {
-        unsigned int _result;
+        uint64_t _result;
         const quadtree *_s1;
         const quadtree *_s2;
       };
@@ -637,22 +635,22 @@ struct LoopifyStructures {
       /// _After_Quad_2: saves [_result_0, _result_1, _s2], dispatches next
       /// recursive call.
       struct _After_Quad_2 {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
         const quadtree *_s2;
       };
 
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        unsigned int _result_2;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t _result_2;
       };
 
       using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
                                   _After_Quad_2, _Combine_Quad>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -696,7 +694,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
@@ -808,7 +806,7 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
@@ -922,21 +920,19 @@ struct LoopifyStructures {
 
   /// find_opt p l finds first element satisfying predicate, returns option.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::optional<unsigned int> find_opt(F0 &&p,
-                                              const List<unsigned int> &l) {
-    std::optional<unsigned int> _result;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::optional<uint64_t> find_opt(F0 &&p, const List<uint64_t> &l) {
+    std::optional<uint64_t> _result;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        _result = std::optional<unsigned int>();
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        _result = std::optional<uint64_t>();
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<unsigned int>(a0);
+          _result = std::make_optional<uint64_t>(a0);
           break;
         } else {
           _loop_l = a1.get();
@@ -948,17 +944,16 @@ struct LoopifyStructures {
 
   /// map_opt f l maps option-returning function and filters out Nones.
   template <typename F0>
-    requires std::is_invocable_r_v<std::optional<unsigned int>, F0 &,
-                                   unsigned int &>
-  static List<unsigned int> map_opt(F0 &&f, const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<std::optional<uint64_t>, F0 &, uint64_t &>
+  static List<uint64_t> map_opt(F0 &&f, const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       auto _cs = f(a0);
       if (_cs.has_value()) {
-        const unsigned int &y = *_cs;
-        return List<unsigned int>::cons(y, map_opt(f, *a1));
+        const uint64_t &y = *_cs;
+        return List<uint64_t>::cons(y, map_opt(f, *a1));
       } else {
         return map_opt(f, *a1);
       }
@@ -966,16 +961,15 @@ struct LoopifyStructures {
   } /// filter_map p f l filters and maps in one pass.
 
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static List<unsigned int> filter_map(F0 &&p, F1 &&f,
-                                       const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static List<uint64_t> filter_map(F0 &&p, F1 &&f, const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       if (p(a0)) {
-        return List<unsigned int>::cons(f(a0), filter_map(p, f, *a1));
+        return List<uint64_t>::cons(f(a0), filter_map(p, f, *a1));
       } else {
         return filter_map(p, f, *a1);
       }
@@ -983,18 +977,18 @@ struct LoopifyStructures {
   }
 
   /// find_first_some l finds first Some value in list of options.
-  static std::optional<unsigned int>
-  find_first_some(const List<std::optional<unsigned int>> &l);
+  static std::optional<uint64_t>
+  find_first_some(const List<std::optional<uint64_t>> &l);
 
   /// Tree type with values in leaves.
   struct ltree {
     // TYPES
     struct LLeaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct LNode {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<ltree> a1;
       std::unique_ptr<ltree> a2;
     };
@@ -1065,9 +1059,9 @@ struct LoopifyStructures {
     }
 
     // CREATORS
-    static ltree lleaf(unsigned int a0) { return ltree(LLeaf{a0}); }
+    static ltree lleaf(uint64_t a0) { return ltree(LLeaf{a0}); }
 
-    static ltree lnode(unsigned int a0, ltree a1, ltree a2) {
+    static ltree lnode(uint64_t a0, ltree a1, ltree a2) {
       return ltree(LNode{a0, std::make_unique<ltree>(std::move(a1)),
                          std::make_unique<ltree>(std::move(a2))});
     }
@@ -1117,14 +1111,14 @@ struct LoopifyStructures {
       struct _After_LNode {
         ltree *_s0;
         ltree a10;
-        unsigned int max_val;
+        uint64_t max_val;
       };
 
       /// _Combine_LNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_LNode {
         ltree _result;
-        unsigned int max_val;
+        uint64_t max_val;
       };
 
       using _Frame = std::variant<_Enter, _After_LNode, _Combine_LNode>;
@@ -1157,7 +1151,7 @@ struct LoopifyStructures {
             } else {
               auto &[a00, a10, a20] =
                   std::get<typename ltree::LNode>(t2.v_mut());
-              unsigned int max_val;
+              uint64_t max_val;
               if (a0 <= a00) {
                 max_val = a00;
               } else {
@@ -1180,8 +1174,8 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, ltree &, T1 &,
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, ltree &, T1 &,
                                      ltree &, T1 &>
     T1 ltree_rec(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
@@ -1196,7 +1190,7 @@ struct LoopifyStructures {
         ltree *_s0;
         ltree a2;
         ltree a1;
-        unsigned int a0;
+        uint64_t a0;
       };
 
       /// _Combine_LNode: receives partial results, combines with _result from
@@ -1205,7 +1199,7 @@ struct LoopifyStructures {
         T1 _result;
         ltree a2;
         ltree a1;
-        unsigned int a0;
+        uint64_t a0;
       };
 
       using _Frame = std::variant<_Enter, _After_LNode, _Combine_LNode>;
@@ -1243,8 +1237,8 @@ struct LoopifyStructures {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, ltree &, T1 &,
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, ltree &, T1 &,
                                      ltree &, T1 &>
     T1 ltree_rect(F0 &&f, F1 &&f0) const {
       const ltree *_self = this;
@@ -1259,7 +1253,7 @@ struct LoopifyStructures {
         ltree *_s0;
         ltree a2;
         ltree a1;
-        unsigned int a0;
+        uint64_t a0;
       };
 
       /// _Combine_LNode: receives partial results, combines with _result from
@@ -1268,7 +1262,7 @@ struct LoopifyStructures {
         T1 _result;
         ltree a2;
         ltree a1;
-        unsigned int a0;
+        uint64_t a0;
       };
 
       using _Frame = std::variant<_Enter, _After_LNode, _Combine_LNode>;

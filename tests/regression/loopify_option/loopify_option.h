@@ -262,22 +262,23 @@ struct LoopifyOption {
 
   /// nth_opt n l returns the nth element, or None for out of bounds.
   template <typename T1>
-  static std::optional<T1> nth_opt(unsigned int n, const list<T1> &l) {
+  static std::optional<T1> nth_opt(uint64_t n, const list<T1> &l) {
     std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        if (_loop_n == 0u) {
+        if (_loop_n == UINT64_C(0)) {
           _result = std::make_optional<T1>(a0);
           break;
         } else {
           _loop_l = a1.get();
-          _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+          _loop_n = ((
+              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         }
       }
     }
@@ -285,9 +286,8 @@ struct LoopifyOption {
   }
 
   /// lookup_opt key l looks up key in an association list.
-  static std::optional<unsigned int>
-  lookup_opt(unsigned int key,
-             const list<std::pair<unsigned int, unsigned int>> &l);
+  static std::optional<uint64_t>
+  lookup_opt(uint64_t key, const list<std::pair<uint64_t, uint64_t>> &l);
 
   /// map_opt f l applies f and keeps only Some results.
   template <typename T1, typename T2, typename F0>
@@ -310,19 +310,19 @@ struct LoopifyOption {
   /// find_index p l returns the index of the first match, or None.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
-  static std::optional<unsigned int> find_index_aux(F0 &&p, const list<T1> &l,
-                                                    unsigned int i) {
-    std::optional<unsigned int> _result;
-    unsigned int _loop_i = std::move(i);
+  static std::optional<uint64_t> find_index_aux(F0 &&p, const list<T1> &l,
+                                                uint64_t i) {
+    std::optional<uint64_t> _result;
+    uint64_t _loop_i = std::move(i);
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<unsigned int>();
+        _result = std::optional<uint64_t>();
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<unsigned int>(_loop_i);
+          _result = std::make_optional<uint64_t>(_loop_i);
           break;
         } else {
           _loop_i = (_loop_i + 1);
@@ -335,8 +335,8 @@ struct LoopifyOption {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
-  static std::optional<unsigned int> find_index(F0 &&p, const list<T1> &l) {
-    return find_index_aux<T1>(p, l, 0u);
+  static std::optional<uint64_t> find_index(F0 &&p, const list<T1> &l) {
+    return find_index_aux<T1>(p, l, UINT64_C(0));
   }
 };
 

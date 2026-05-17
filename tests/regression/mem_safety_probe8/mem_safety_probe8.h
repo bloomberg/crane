@@ -23,7 +23,7 @@ struct MemSafetyProbe8 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -93,7 +93,7 @@ struct MemSafetyProbe8 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -130,8 +130,8 @@ struct MemSafetyProbe8 {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -143,8 +143,8 @@ struct MemSafetyProbe8 {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -158,46 +158,52 @@ struct MemSafetyProbe8 {
   /// TEST 1: Non-method tree traversal with double recursion.
   /// dummy ensures tree is NOT the first arg (avoiding methodification).
   /// tree is the second arg — should be owned if it doesn't escape.
-  static unsigned int tree_sum_ext(unsigned int _x, const tree &t);
-  static inline const unsigned int test_tree_sum = tree_sum_ext(
-      0u, tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                     tree::node(tree::leaf(), 30u, tree::leaf())));
+  static uint64_t tree_sum_ext(uint64_t _x, const tree &t);
+  static inline const uint64_t test_tree_sum = tree_sum_ext(
+      UINT64_C(0),
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// TEST 2: Same but with a more complex computation to prevent
   /// the optimizer from simplifying.
-  static unsigned int tree_weighted(unsigned int _x, const tree &t,
-                                    unsigned int depth);
-  static inline const unsigned int test_tree_weighted =
-      tree_weighted(0u,
-                    tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                               tree::node(tree::leaf(), 30u, tree::leaf())),
-                    1u);
+  static uint64_t tree_weighted(uint64_t _x, const tree &t, uint64_t depth);
+  static inline const uint64_t test_tree_weighted = tree_weighted(
+      UINT64_C(0),
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())),
+      UINT64_C(1));
   /// TEST 3: Deep tree traversal — more iterations, more frames.
-  static tree make_left_spine(unsigned int n);
-  static inline const unsigned int test_deep_tree =
-      tree_sum_ext(0u, make_left_spine(100u));
+  static tree make_left_spine(uint64_t n);
+  static inline const uint64_t test_deep_tree =
+      tree_sum_ext(UINT64_C(0), make_left_spine(UINT64_C(100)));
   /// TEST 4: Tree traversal where both recursive calls use
   /// different subtrees — _After frame must hold one while
   /// processing the other.
-  static unsigned int tree_collect(unsigned int _x, const tree &t);
-  static inline const unsigned int test_collect = tree_collect(
-      0u, tree::node(tree::node(tree::node(tree::leaf(), 5u, tree::leaf()), 10u,
-                                tree::leaf()),
-                     20u,
-                     tree::node(tree::leaf(), 30u,
-                                tree::node(tree::leaf(), 40u, tree::leaf()))));
+  static uint64_t tree_collect(uint64_t _x, const tree &t);
+  static inline const uint64_t test_collect = tree_collect(
+      UINT64_C(0),
+      tree::node(
+          tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                     UINT64_C(10), tree::leaf()),
+          UINT64_C(20),
+          tree::node(tree::leaf(), UINT64_C(30),
+                     tree::node(tree::leaf(), UINT64_C(40), tree::leaf()))));
   /// TEST 5: Tree function where the tree is consumed (not
   /// used after recursive calls) — maximally owned.
-  static unsigned int tree_flatten(unsigned int _x, const tree &t);
-  static inline const unsigned int test_flatten = tree_flatten(
-      0u, tree::node(tree::node(tree::leaf(), 2u, tree::leaf()), 3u,
-                     tree::node(tree::leaf(), 5u, tree::leaf())));
+  static uint64_t tree_flatten(uint64_t _x, const tree &t);
+  static inline const uint64_t test_flatten = tree_flatten(
+      UINT64_C(0),
+      tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                 UINT64_C(3),
+                 tree::node(tree::leaf(), UINT64_C(5), tree::leaf())));
   /// TEST 6: Pass tree as a higher-order function argument
   /// to prevent methodification completely.
-  static unsigned int tree_size_via_fold(const tree &t);
-  static inline const unsigned int test_fold_size = tree_size_via_fold(
-      tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                 tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 4u,
-                            tree::leaf())));
+  static uint64_t tree_size_via_fold(const tree &t);
+  static inline const uint64_t test_fold_size = tree_size_via_fold(tree::node(
+      tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
+      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                 UINT64_C(4), tree::leaf())));
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE8

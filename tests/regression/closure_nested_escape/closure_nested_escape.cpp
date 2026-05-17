@@ -10,29 +10,28 @@
 /// Difference from fix_escape_capture: returns TWO fixpoints that both
 /// capture the SAME variable. This tests whether both closures
 /// independently read garbage from the same dangling reference.
-std::pair<std::function<unsigned int(unsigned int)>,
-          std::function<unsigned int(unsigned int)>>
-ClosureNestedEscape::make_pair_fix(unsigned int n) {
-  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
+std::pair<std::function<uint64_t(uint64_t)>, std::function<uint64_t(uint64_t)>>
+ClosureNestedEscape::make_pair_fix(uint64_t n) {
+  auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
     if (x <= 0) {
       return n;
     } else {
-      unsigned int x_ = x - 1;
+      uint64_t x_ = x - 1;
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=](unsigned int x) mutable -> unsigned int {
+  auto add = [=](uint64_t x) mutable -> uint64_t {
     return add_impl(add_impl, x);
   };
-  auto mul_impl = [=](auto &_self_mul, unsigned int x) mutable -> unsigned int {
+  auto mul_impl = [=](auto &_self_mul, uint64_t x) mutable -> uint64_t {
     if (x <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int x_ = x - 1;
+      uint64_t x_ = x - 1;
       return (n + _self_mul(_self_mul, x_));
     }
   };
-  auto mul = [=](unsigned int x) mutable -> unsigned int {
+  auto mul = [=](uint64_t x) mutable -> uint64_t {
     return mul_impl(mul_impl, x);
   };
   return std::make_pair(add, mul);

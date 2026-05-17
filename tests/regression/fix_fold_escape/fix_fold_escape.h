@@ -125,15 +125,15 @@ struct FixFoldEscape {
   /// Manual fold_left to avoid stdlib extraction complications.
   template <typename F0>
     requires std::is_invocable_r_v<
-        List<std::function<unsigned int(unsigned int)>>, F0 &,
-        List<std::function<unsigned int(unsigned int)>> &, unsigned int &>
-  static List<std::function<unsigned int(unsigned int)>>
-  fold_left(F0 &&f, List<std::function<unsigned int(unsigned int)>> acc,
-            const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        List<std::function<uint64_t(uint64_t)>>, F0 &,
+        List<std::function<uint64_t(uint64_t)>> &, uint64_t &>
+  static List<std::function<uint64_t(uint64_t)>>
+  fold_left(F0 &&f, List<std::function<uint64_t(uint64_t)>> acc,
+            const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return acc;
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       return fold_left(f, f(std::move(acc), a0), *a1);
     }
   }
@@ -147,37 +147,38 @@ struct FixFoldEscape {
   /// The callback returns cons adder acc, storing the closure.
   /// After the callback returns, n is destroyed. Later iterations and
   /// the final result contain dangling closures.
-  static List<std::function<unsigned int(unsigned int)>>
-  collect_adders(const List<unsigned int> &l);
-  static unsigned int
-  apply_head(const List<std::function<unsigned int(unsigned int)>> &l,
-             unsigned int x);
-  static unsigned int
-  sum_apply(const List<std::function<unsigned int(unsigned int)>> &l,
-            unsigned int x); /// test1: collect_adders 10; 20; 30 -> adder_30;
-                             /// adder_20; adder_10
+  static List<std::function<uint64_t(uint64_t)>>
+  collect_adders(const List<uint64_t> &l);
+  static uint64_t apply_head(const List<std::function<uint64_t(uint64_t)>> &l,
+                             uint64_t x);
+  static uint64_t sum_apply(const List<std::function<uint64_t(uint64_t)>> &l,
+                            uint64_t x); /// test1: collect_adders 10; 20; 30 ->
+                                         /// adder_30; adder_20; adder_10
   /// (reversed by fold_left). apply_head picks adder_30, apply to 5 -> 35.
-  static inline const unsigned int test1 = apply_head(
-      collect_adders(List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil())))),
-      5u);
+  static inline const uint64_t test1 = apply_head(
+      collect_adders(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))),
+      UINT64_C(5));
   /// test2: Sum all adders applied to 0.
   /// adder_30(0) + adder_20(0) + adder_10(0) = 30 + 20 + 10 = 60.
-  static inline const unsigned int test2 = sum_apply(
-      collect_adders(List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil())))),
-      0u);
+  static inline const uint64_t test2 = sum_apply(
+      collect_adders(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))),
+      UINT64_C(0));
   /// test3: With noise between collection and use.
-  static inline const unsigned int test3 = []() {
-    List<std::function<unsigned int(unsigned int)>> fns =
-        collect_adders(List<unsigned int>::cons(
-            100u, List<unsigned int>::cons(200u, List<unsigned int>::nil())));
-    unsigned int noise = ((55u + 44u) + 33u);
-    return (apply_head(std::move(fns), 0u) + noise);
+  static inline const uint64_t test3 = []() {
+    List<std::function<uint64_t(uint64_t)>> fns =
+        collect_adders(List<uint64_t>::cons(
+            UINT64_C(100),
+            List<uint64_t>::cons(UINT64_C(200), List<uint64_t>::nil())));
+    uint64_t noise = ((UINT64_C(55) + UINT64_C(44)) + UINT64_C(33));
+    return (apply_head(std::move(fns), UINT64_C(0)) + noise);
   }();
 };
 

@@ -1,13 +1,13 @@
 #include "name_clash_nested_deep.h"
 
 /// Four levels of nested matching.
-unsigned int NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,
-                                        const NameClashNestedDeep::mylist &b,
-                                        const NameClashNestedDeep::mylist &c,
-                                        const NameClashNestedDeep::mylist &d) {
+uint64_t NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,
+                                    const NameClashNestedDeep::mylist &b,
+                                    const NameClashNestedDeep::mylist &c,
+                                    const NameClashNestedDeep::mylist &d) {
   if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
           a.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
         std::get<typename NameClashNestedDeep::mylist::MyCons>(a.v());
@@ -37,23 +37,23 @@ unsigned int NameClashNestedDeep::deep4(const NameClashNestedDeep::mylist &a,
 }
 
 /// Match in a let, then match on the let result.
-unsigned int
+uint64_t
 NameClashNestedDeep::let_match_chain(const NameClashNestedDeep::mylist &xs,
                                      const NameClashNestedDeep::mylist &ys) {
-  unsigned int hd_x = [&]() {
+  uint64_t hd_x = [&]() {
     if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
             xs.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(xs.v());
       return a0;
     }
   }();
-  unsigned int hd_y = [&]() {
+  uint64_t hd_y = [&]() {
     if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
             ys.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a00, a10] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(ys.v());
@@ -64,7 +64,7 @@ NameClashNestedDeep::let_match_chain(const NameClashNestedDeep::mylist &xs,
       mylist::mycons((hd_x + hd_y), mylist::mynil());
   if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
           combined.v_mut())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     auto &[a01, a11] = std::get<typename NameClashNestedDeep::mylist::MyCons>(
         combined.v_mut());
@@ -73,12 +73,12 @@ NameClashNestedDeep::let_match_chain(const NameClashNestedDeep::mylist &xs,
 }
 
 /// Matching where the same list is matched multiple times.
-unsigned int
+uint64_t
 NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
-  unsigned int first = [&]() {
+  uint64_t first = [&]() {
     if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
             xs.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(xs.v());
@@ -95,10 +95,10 @@ NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
       return *a10;
     }
   }();
-  unsigned int second = [&]() {
+  uint64_t second = [&]() {
     if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
             tail.v_mut())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       auto &[a01, a11] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(tail.v_mut());
@@ -109,25 +109,25 @@ NameClashNestedDeep::multi_match_same(const NameClashNestedDeep::mylist &xs) {
 }
 
 /// Nested match where inner match scrutinee is a field from outer match.
-unsigned int
+uint64_t
 NameClashNestedDeep::nested_field_match(const NameClashNestedDeep::mylist &xs) {
   if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
           xs.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
         std::get<typename NameClashNestedDeep::mylist::MyCons>(xs.v());
     auto &&_sv0 = *a1;
     if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
             _sv0.v())) {
-      return 1u;
+      return UINT64_C(1);
     } else {
       const auto &[a00, a10] =
           std::get<typename NameClashNestedDeep::mylist::MyCons>(_sv0.v());
       auto &&_sv1 = *a10;
       if (std::holds_alternative<typename NameClashNestedDeep::mylist::MyNil>(
               _sv1.v())) {
-        return 2u;
+        return UINT64_C(2);
       } else {
         const auto &[a01, a11] =
             std::get<typename NameClashNestedDeep::mylist::MyCons>(_sv1.v());

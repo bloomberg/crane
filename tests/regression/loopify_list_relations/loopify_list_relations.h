@@ -118,7 +118,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -130,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -143,7 +143,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -159,38 +159,32 @@ public:
 };
 
 struct LoopifyListRelations {
-  static bool is_prefix_of(const List<unsigned int> &l1,
-                           const List<unsigned int> &l2);
-  static bool is_suffix_of(const List<unsigned int> &l1,
-                           const List<unsigned int> &l2);
-  static bool is_infix_of_aux(const List<unsigned int> &needle,
-                              const List<unsigned int> &haystack);
-  static bool is_infix_of(const List<unsigned int> &_x0,
-                          const List<unsigned int> &_x1);
-  static List<unsigned int>
-  find_sublists_aux(const List<unsigned int> &needle,
-                    const List<unsigned int> &haystack, unsigned int idx);
-  static List<unsigned int> find_sublists(const List<unsigned int> &needle,
-                                          const List<unsigned int> &haystack);
-  static bool list_eq(const List<unsigned int> &l1,
-                      const List<unsigned int> &l2);
-  static unsigned int list_compare(const List<unsigned int> &l1,
-                                   const List<unsigned int> &l2);
-  static List<std::pair<unsigned int, unsigned int>>
-  zip(const List<unsigned int> &l1, const List<unsigned int> &l2);
-  static List<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
-  zip3(const List<unsigned int> &l1, const List<unsigned int> &l2,
-       const List<unsigned int> &l3);
-  static List<unsigned int> interleave(List<unsigned int> l1,
-                                       List<unsigned int> l2);
-  static List<unsigned int> merge_fuel(unsigned int fuel, List<unsigned int> l1,
-                                       List<unsigned int> l2);
-  static List<unsigned int> merge(const List<unsigned int> &l1,
-                                  const List<unsigned int> &l2);
-  static List<unsigned int> union_(const List<unsigned int> &l1,
-                                   List<unsigned int> l2);
-  static List<unsigned int> intersection(const List<unsigned int> &l1,
-                                         const List<unsigned int> &l2);
+  static bool is_prefix_of(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  static bool is_suffix_of(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  static bool is_infix_of_aux(const List<uint64_t> &needle,
+                              const List<uint64_t> &haystack);
+  static bool is_infix_of(const List<uint64_t> &_x0, const List<uint64_t> &_x1);
+  static List<uint64_t> find_sublists_aux(const List<uint64_t> &needle,
+                                          const List<uint64_t> &haystack,
+                                          uint64_t idx);
+  static List<uint64_t> find_sublists(const List<uint64_t> &needle,
+                                      const List<uint64_t> &haystack);
+  static bool list_eq(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  static uint64_t list_compare(const List<uint64_t> &l1,
+                               const List<uint64_t> &l2);
+  static List<std::pair<uint64_t, uint64_t>> zip(const List<uint64_t> &l1,
+                                                 const List<uint64_t> &l2);
+  static List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>
+  zip3(const List<uint64_t> &l1, const List<uint64_t> &l2,
+       const List<uint64_t> &l3);
+  static List<uint64_t> interleave(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> merge_fuel(uint64_t fuel, List<uint64_t> l1,
+                                   List<uint64_t> l2);
+  static List<uint64_t> merge(const List<uint64_t> &l1,
+                              const List<uint64_t> &l2);
+  static List<uint64_t> union_(const List<uint64_t> &l1, List<uint64_t> l2);
+  static List<uint64_t> intersection(const List<uint64_t> &l1,
+                                     const List<uint64_t> &l2);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_RELATIONS

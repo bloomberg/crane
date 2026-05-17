@@ -131,9 +131,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -143,11 +143,11 @@ public:
 
 struct PulseParseCertificateCase {
   using Trace = List<bool>;
-  using Runs = List<unsigned int>;
-  static std::optional<unsigned int> first_true(const List<bool> &xs);
-  static std::optional<unsigned int> last_true(const List<bool> &xs);
+  using Runs = List<uint64_t>;
+  static std::optional<uint64_t> first_true(const List<bool> &xs);
+  static std::optional<uint64_t> last_true(const List<bool> &xs);
   static Runs trace_to_runs(const List<bool> &xs);
-  static unsigned int pulse_base_from_runs(const List<unsigned int> &rs);
+  static uint64_t pulse_base_from_runs(const List<uint64_t> &rs);
   enum class PulseClass { MARKSHORT, MARKLONG };
 
   template <typename T1> static T1 PulseClass_rect(T1 f, T1 f0, PulseClass p) {
@@ -176,18 +176,18 @@ struct PulseParseCertificateCase {
     }
   }
 
-  static PulseClass classify_run_with_base(unsigned int base, unsigned int n);
-  static List<PulseClass> classify_runs_with_base(unsigned int base,
-                                                  const List<unsigned int> &rs);
+  static PulseClass classify_run_with_base(uint64_t base, uint64_t n);
+  static List<PulseClass> classify_runs_with_base(uint64_t base,
+                                                  const List<uint64_t> &rs);
   static bool pulse_class_eqb(PulseClass x, PulseClass y);
   static bool pulse_class_list_eqb(const List<PulseClass> &xs,
                                    const List<PulseClass> &ys);
 
   struct PulseCertificate {
-    std::optional<unsigned int> certificate_first_active;
-    std::optional<unsigned int> certificate_last_active;
+    std::optional<uint64_t> certificate_first_active;
+    std::optional<uint64_t> certificate_last_active;
     Runs certificate_runs;
-    unsigned int certificate_base;
+    uint64_t certificate_base;
     List<PulseClass> certificate_classes;
 
     // ACCESSORS
@@ -213,27 +213,27 @@ struct PulseParseCertificateCase {
       certify_trace(sample_trace);
   static inline const bool sample_certificate_consistent =
       pulse_parse_certificate_self_consistent(sample_certificate);
-  static inline const unsigned int sample_certificate_base =
+  static inline const uint64_t sample_certificate_base =
       sample_certificate.certificate_base;
-  static inline const unsigned int sample_certificate_first_active =
-      []() -> unsigned int {
+  static inline const uint64_t sample_certificate_first_active =
+      []() -> uint64_t {
     if (sample_certificate.certificate_first_active.has_value()) {
-      const unsigned int &idx = *sample_certificate.certificate_first_active;
+      const uint64_t &idx = *sample_certificate.certificate_first_active;
       return idx;
     } else {
-      return 99u;
+      return UINT64_C(99);
     }
   }();
-  static inline const unsigned int sample_certificate_last_active =
-      []() -> unsigned int {
+  static inline const uint64_t sample_certificate_last_active =
+      []() -> uint64_t {
     if (sample_certificate.certificate_last_active.has_value()) {
-      const unsigned int &idx = *sample_certificate.certificate_last_active;
+      const uint64_t &idx = *sample_certificate.certificate_last_active;
       return idx;
     } else {
-      return 99u;
+      return UINT64_C(99);
     }
   }();
-  static inline const unsigned int sample_certificate_class_count =
+  static inline const uint64_t sample_certificate_class_count =
       sample_certificate.certificate_classes.length();
 };
 

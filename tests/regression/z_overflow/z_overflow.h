@@ -828,15 +828,14 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(unsigned int n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, unsigned int n,
-                                  unsigned int m);
-  static unsigned int tail_mul(unsigned int n, unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 struct ZOverflow {
@@ -849,7 +848,7 @@ struct ZOverflow {
   /// Z value that fits in unsigned int (should work)
   static inline const int64_t z_fits = INT64_C(1000000000);
   /// Nat > 2^32 also overflows unsigned int
-  static inline const unsigned int big_nat = 4294967296u;
+  static inline const uint64_t big_nat = UINT64_C(4294967296);
 };
 
 #endif // INCLUDED_Z_OVERFLOW

@@ -12,7 +12,7 @@ enum class Ty { TNAT, TBOOL };
 struct Expr {
   // TYPES
   struct ENat {
-    unsigned int a0;
+    uint64_t a0;
   };
 
   struct EBool {
@@ -136,7 +136,7 @@ public:
   }
 
   // CREATORS
-  static Expr enat(unsigned int a0) { return Expr(ENat{a0}); }
+  static Expr enat(uint64_t a0) { return Expr(ENat{a0}); }
 
   static Expr ebool(bool a0) { return Expr(EBool{a0}); }
 
@@ -216,12 +216,12 @@ public:
       return a0;
     } else if (std::holds_alternative<typename Expr::EAdd>(this->v())) {
       const auto &[a0, a1] = std::get<typename Expr::EAdd>(this->v());
-      return (std::any_cast<unsigned int>((*a0).eval(Ty::TNAT)) +
-              std::any_cast<unsigned int>((*a1).eval(Ty::TNAT)));
+      return (std::any_cast<uint64_t>((*a0).eval(Ty::TNAT)) +
+              std::any_cast<uint64_t>((*a1).eval(Ty::TNAT)));
     } else if (std::holds_alternative<typename Expr::EEq>(this->v())) {
       const auto &[a0, a1] = std::get<typename Expr::EEq>(this->v());
-      return std::any_cast<unsigned int>((*a0).eval(Ty::TNAT)) ==
-             std::any_cast<unsigned int>((*a1).eval(Ty::TNAT));
+      return std::any_cast<uint64_t>((*a0).eval(Ty::TNAT)) ==
+             std::any_cast<uint64_t>((*a1).eval(Ty::TNAT));
     } else {
       const auto &[t, a1, a2, a3] = std::get<typename Expr::EIf>(this->v());
       if (std::any_cast<bool>((*a1).eval(Ty::TBOOL))) {

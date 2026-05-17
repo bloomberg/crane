@@ -1,12 +1,12 @@
 #include "unit_type.h"
 
-void UnitType::return_unit(unsigned int) { return; }
+void UnitType::return_unit(uint64_t) { return; }
 
-unsigned int UnitType::take_unit(std::monostate) { return 5u; }
+uint64_t UnitType::take_unit(std::monostate) { return UINT64_C(5); }
 
-unsigned int UnitType::match_unit(std::monostate) {
+uint64_t UnitType::match_unit(std::monostate) {
   {
-    return 7u;
+    return UINT64_C(7);
   }
 }
 

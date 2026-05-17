@@ -151,20 +151,19 @@ struct stmtest {
     }
   }
 
-  static unsigned int stm_basic_counter(std::monostate _x);
-  static unsigned int io_basic_counter();
-  static unsigned int stm_inc(unsigned int x);
-  static unsigned int io_inc(unsigned int x);
-  static unsigned int stm_add_self(unsigned int x);
-  static unsigned int io_add_self(unsigned int x);
-  static void stm_enqueue(stm::TVar<List<unsigned int>> q, unsigned int x);
-  static unsigned int stm_dequeue(stm::TVar<List<unsigned int>> q);
-  static unsigned int stm_tryDequeue(stm::TVar<List<unsigned int>> q,
-                                     unsigned int dflt);
-  static unsigned int stm_queue_roundtrip(unsigned int x);
-  static unsigned int io_queue_roundtrip(unsigned int x);
-  static unsigned int stm_orElse_retry_example(std::monostate _x);
-  static unsigned int io_orElse_retry_example();
+  static uint64_t stm_basic_counter(std::monostate _x);
+  static uint64_t io_basic_counter();
+  static uint64_t stm_inc(uint64_t x);
+  static uint64_t io_inc(uint64_t x);
+  static uint64_t stm_add_self(uint64_t x);
+  static uint64_t io_add_self(uint64_t x);
+  static void stm_enqueue(stm::TVar<List<uint64_t>> q, uint64_t x);
+  static uint64_t stm_dequeue(stm::TVar<List<uint64_t>> q);
+  static uint64_t stm_tryDequeue(stm::TVar<List<uint64_t>> q, uint64_t dflt);
+  static uint64_t stm_queue_roundtrip(uint64_t x);
+  static uint64_t io_queue_roundtrip(uint64_t x);
+  static uint64_t stm_orElse_retry_example(std::monostate _x);
+  static uint64_t io_orElse_retry_example();
 };
 
 template <typename T1, typename F1>

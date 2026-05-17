@@ -205,43 +205,40 @@ struct CoindGuard {
     });
   }
 
-  template <typename T1> static List<T1> take(unsigned int n, Stream<T1> s) {
+  template <typename T1> static List<T1> take(uint64_t n, Stream<T1> s) {
     if (n <= 0) {
       return List<T1>::nil();
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       return List<T1>::cons(hd<T1>(s), take<T1>(n_, tl<T1>(s)));
     }
   }
 
-  static inline const Stream<unsigned int> nats =
-      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
-  static inline const Stream<unsigned int> evens =
-      smap<unsigned int, unsigned int>([](unsigned int n) { return (n * 2u); },
-                                       nats);
-  static inline const Stream<unsigned int> fibs =
-      unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
-          [](const std::pair<unsigned int, unsigned int> &pat) {
-            const unsigned int &a = pat.first;
-            const unsigned int &b = pat.second;
+  static inline const Stream<uint64_t> nats =
+      iterate<uint64_t>([](uint64_t x) { return (x + 1); }, UINT64_C(0));
+  static inline const Stream<uint64_t> evens = smap<uint64_t, uint64_t>(
+      [](uint64_t n) { return (n * UINT64_C(2)); }, nats);
+  static inline const Stream<uint64_t> fibs =
+      unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
+          [](const std::pair<uint64_t, uint64_t> &pat) {
+            const uint64_t &a = pat.first;
+            const uint64_t &b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));
           },
-          std::make_pair(0u, 1u));
-  static inline const Stream<unsigned int> sum_stream =
-      zipWith<unsigned int, unsigned int, unsigned int>(
-          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-            return (_x0 + _x1);
-          },
+          std::make_pair(UINT64_C(0), UINT64_C(1)));
+  static inline const Stream<uint64_t> sum_stream =
+      zipWith<uint64_t, uint64_t, uint64_t>(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           nats, evens);
-  static inline const List<unsigned int> test_nats_5 =
-      take<unsigned int>(5u, nats);
-  static inline const List<unsigned int> test_evens_5 =
-      take<unsigned int>(5u, evens);
-  static inline const List<unsigned int> test_fibs_8 =
-      take<unsigned int>(8u, fibs);
-  static inline const List<unsigned int> test_sum_5 =
-      take<unsigned int>(5u, sum_stream);
-  static inline const unsigned int test_iterate_hd = hd<unsigned int>(nats);
+  static inline const List<uint64_t> test_nats_5 =
+      take<uint64_t>(UINT64_C(5), nats);
+  static inline const List<uint64_t> test_evens_5 =
+      take<uint64_t>(UINT64_C(5), evens);
+  static inline const List<uint64_t> test_fibs_8 =
+      take<uint64_t>(UINT64_C(8), fibs);
+  static inline const List<uint64_t> test_sum_5 =
+      take<uint64_t>(UINT64_C(5), sum_stream);
+  static inline const uint64_t test_iterate_hd = hd<uint64_t>(nats);
 };
 
 #endif // INCLUDED_COIND_GUARD

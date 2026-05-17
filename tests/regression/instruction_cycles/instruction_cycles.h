@@ -133,7 +133,7 @@ public:
 
 struct InstructionCycles {
   struct state1 {
-    unsigned int acc1;
+    uint64_t acc1;
     bool carry1;
     bool test_pin1;
 
@@ -146,8 +146,8 @@ struct InstructionCycles {
   struct instruction1 {
     // TYPES
     struct JCN1 {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     struct NOP1 {};
@@ -192,7 +192,7 @@ struct InstructionCycles {
     }
 
     // CREATORS
-    static instruction1 jcn1(unsigned int a0, unsigned int a1) {
+    static instruction1 jcn1(uint64_t a0, uint64_t a1) {
       return instruction1(JCN1{a0, a1});
     }
 
@@ -204,34 +204,38 @@ struct InstructionCycles {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int cycles_jcn(const state1 &s) const {
+    uint64_t cycles_jcn(const state1 &s) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
-        unsigned int c1 = (8u ? a0 / 8u : 0);
-        unsigned int c2 = (2u ? (4u ? a0 / 4u : 0) % 2u : (4u ? a0 / 4u : 0));
-        unsigned int c3 = (2u ? (2u ? a0 / 2u : 0) % 2u : (2u ? a0 / 2u : 0));
-        unsigned int c4 = (2u ? a0 % 2u : a0);
-        bool base_cond =
-            ((s.acc1 == 0u && c2 == 1u) ||
-             ((s.carry1 && c3 == 1u) || (!(s.test_pin1) && c4 == 1u)));
+        uint64_t c1 = (UINT64_C(8) ? a0 / UINT64_C(8) : 0);
+        uint64_t c2 =
+            (UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
+                         : (UINT64_C(4) ? a0 / UINT64_C(4) : 0));
+        uint64_t c3 =
+            (UINT64_C(2) ? (UINT64_C(2) ? a0 / UINT64_C(2) : 0) % UINT64_C(2)
+                         : (UINT64_C(2) ? a0 / UINT64_C(2) : 0));
+        uint64_t c4 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
+        bool base_cond = ((s.acc1 == UINT64_C(0) && c2 == UINT64_C(1)) ||
+                          ((s.carry1 && c3 == UINT64_C(1)) ||
+                           (!(s.test_pin1) && c4 == UINT64_C(1))));
         bool jump;
-        if (c1 == 1u) {
+        if (c1 == UINT64_C(1)) {
           jump = !(base_cond);
         } else {
           jump = base_cond;
         }
         if (jump) {
-          return 16u;
+          return UINT64_C(16);
         } else {
-          return 8u;
+          return UINT64_C(8);
         }
       } else {
-        return 8u;
+        return UINT64_C(8);
       }
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 instruction1_rec(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
@@ -242,7 +246,7 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 instruction1_rect(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
@@ -253,13 +257,14 @@ struct InstructionCycles {
     }
   };
 
-  static inline const unsigned int test_cycles_jcn_not_taken =
-      instruction1::jcn1(4u, 7u).cycles_jcn(state1{1u, false, true});
+  static inline const uint64_t test_cycles_jcn_not_taken =
+      instruction1::jcn1(UINT64_C(4), UINT64_C(7))
+          .cycles_jcn(state1{UINT64_C(1), false, true});
 
   struct instruction2 {
     // TYPES
     struct JMS2 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP2 {};
@@ -304,7 +309,7 @@ struct InstructionCycles {
     }
 
     // CREATORS
-    static instruction2 jms2(unsigned int a0) { return instruction2(JMS2{a0}); }
+    static instruction2 jms2(uint64_t a0) { return instruction2(JMS2{a0}); }
 
     static instruction2 nop2() { return instruction2(NOP2{}); }
 
@@ -315,7 +320,7 @@ struct InstructionCycles {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
     T1 instruction2_rec(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
         const auto &[a0] = std::get<typename instruction2::JMS2>(this->v());
@@ -326,7 +331,7 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
     T1 instruction2_rect(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
         const auto &[a0] = std::get<typename instruction2::JMS2>(this->v());
@@ -338,15 +343,15 @@ struct InstructionCycles {
   };
 
   struct state2 {
-    unsigned int acc2;
+    uint64_t acc2;
 
     // ACCESSORS
     state2 clone() const { return state2{(*this).acc2}; }
   };
 
-  static unsigned int cycles_jms(const state2 &_x, const instruction2 &i);
-  static inline const unsigned int test_cycles_jms_constant =
-      cycles_jms(state2{0u}, instruction2::jms2(77u));
+  static uint64_t cycles_jms(const state2 &_x, const instruction2 &i);
+  static inline const uint64_t test_cycles_jms_constant =
+      cycles_jms(state2{UINT64_C(0)}, instruction2::jms2(UINT64_C(77)));
   enum class Instr3 {
     NOP3,
     ADD3,
@@ -431,7 +436,7 @@ struct InstructionCycles {
     }
   }
 
-  static unsigned int cycles_min(Instr3 i);
+  static uint64_t cycles_min(Instr3 i);
   static inline const List<Instr3> all_instrs3 = List<Instr3>::cons(
       Instr3::NOP3,
       List<Instr3>::cons(
@@ -452,7 +457,8 @@ struct InstructionCycles {
                                       Instr3::ISZZERO3,
                                       List<Instr3>::nil())))))))));
   static inline const bool test_min_cycles_per_instruction =
-      all_instrs3.forallb([](Instr3 i) { return 8u <= cycles_min(i); });
+      all_instrs3.forallb(
+          [](Instr3 i) { return UINT64_C(8) <= cycles_min(i); });
   enum class Instr4 {
     NOP4,
     ADD4,
@@ -537,7 +543,7 @@ struct InstructionCycles {
     }
   }
 
-  static unsigned int cycles_max(Instr4 i);
+  static uint64_t cycles_max(Instr4 i);
   static inline const List<Instr4> all_instrs4 = List<Instr4>::cons(
       Instr4::NOP4,
       List<Instr4>::cons(
@@ -558,10 +564,11 @@ struct InstructionCycles {
                                       Instr4::ISZZERO4,
                                       List<Instr4>::nil())))))))));
   static inline const bool test_max_cycles_per_instruction =
-      all_instrs4.forallb([](Instr4 i) { return cycles_max(i) <= 24u; });
+      all_instrs4.forallb(
+          [](Instr4 i) { return cycles_max(i) <= UINT64_C(24); });
 
   struct state5 {
-    unsigned int acc5;
+    uint64_t acc5;
     bool carry5;
     bool test5;
 
@@ -576,11 +583,11 @@ struct InstructionCycles {
     struct NOP5 {};
 
     struct JCN5 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct INC5 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP5, JCN5, INC5>;
@@ -630,9 +637,9 @@ struct InstructionCycles {
     // CREATORS
     static instruction5 nop5() { return instruction5(NOP5{}); }
 
-    static instruction5 jcn5(unsigned int a0) { return instruction5(JCN5{a0}); }
+    static instruction5 jcn5(uint64_t a0) { return instruction5(JCN5{a0}); }
 
-    static instruction5 inc5(unsigned int a0) { return instruction5(INC5{a0}); }
+    static instruction5 inc5(uint64_t a0) { return instruction5(INC5{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -642,34 +649,37 @@ struct InstructionCycles {
 
     state5 execute5(state5 s) const {
       if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
-        return state5{(16u ? (s.acc5 + 1u) % 16u : (s.acc5 + 1u)), s.carry5,
-                      s.test5};
+        return state5{(UINT64_C(16) ? (s.acc5 + UINT64_C(1)) % UINT64_C(16)
+                                    : (s.acc5 + UINT64_C(1))),
+                      s.carry5, s.test5};
       } else {
         return s;
       }
     }
 
-    unsigned int cycles_sum(const state5 &s) const {
+    uint64_t cycles_sum(const state5 &s) const {
       if (std::holds_alternative<typename instruction5::JCN5>(this->v())) {
         const auto &[a0] = std::get<typename instruction5::JCN5>(this->v());
-        if ((8u ? a0 / 8u : 0) == 1u) {
-          return 16u;
+        if ((UINT64_C(8) ? a0 / UINT64_C(8) : 0) == UINT64_C(1)) {
+          return UINT64_C(16);
         } else {
-          if ((s.acc5 == 0u &&
-               (2u ? (4u ? a0 / 4u : 0) % 2u : (4u ? a0 / 4u : 0)) == 1u)) {
-            return 16u;
+          if ((s.acc5 == UINT64_C(0) &&
+               (UINT64_C(2)
+                    ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
+                    : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) == UINT64_C(1))) {
+            return UINT64_C(16);
           } else {
-            return 8u;
+            return UINT64_C(8);
           }
         }
       } else {
-        return 8u;
+        return UINT64_C(8);
       }
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &>
     T1 instruction5_rec(T1 f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
         return f;
@@ -684,8 +694,8 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &>
     T1 instruction5_rect(T1 f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
         return f;
@@ -700,14 +710,14 @@ struct InstructionCycles {
     }
   };
 
-  static unsigned int program_cycles5(const state5 &s,
-                                      const List<instruction5> &prog);
-  static inline const unsigned int test_instruction_cycle_sum = program_cycles5(
-      state5{0u, false, true},
+  static uint64_t program_cycles5(const state5 &s,
+                                  const List<instruction5> &prog);
+  static inline const uint64_t test_instruction_cycle_sum = program_cycles5(
+      state5{UINT64_C(0), false, true},
       List<instruction5>::cons(
-          instruction5::jcn5(8u),
+          instruction5::jcn5(UINT64_C(8)),
           List<instruction5>::cons(
-              instruction5::inc5(0u),
+              instruction5::inc5(UINT64_C(0)),
               List<instruction5>::cons(instruction5::nop5(),
                                        List<instruction5>::nil()))));
   enum class Instruction6 { NOP6 };
@@ -721,28 +731,28 @@ struct InstructionCycles {
   }
 
   struct state6 {
-    unsigned int acc6;
+    uint64_t acc6;
 
     // ACCESSORS
     state6 clone() const { return state6{(*this).acc6}; }
   };
 
-  static unsigned int cycles6(const state6 &_x, Instruction6 _x0);
-  static unsigned int program_cycles6(const state6 &s,
-                                      const List<Instruction6> &prog);
-  static inline const unsigned int singleton_cycles6 = program_cycles6(
-      state6{0u},
+  static uint64_t cycles6(const state6 &_x, Instruction6 _x0);
+  static uint64_t program_cycles6(const state6 &s,
+                                  const List<Instruction6> &prog);
+  static inline const uint64_t singleton_cycles6 = program_cycles6(
+      state6{UINT64_C(0)},
       List<Instruction6>::cons(Instruction6::NOP6, List<Instruction6>::nil()));
-  static inline const unsigned int three_nop_cycles6 = program_cycles6(
-      state6{0u}, List<Instruction6>::cons(
-                      Instruction6::NOP6,
-                      List<Instruction6>::cons(
-                          Instruction6::NOP6,
-                          List<Instruction6>::cons(
-                              Instruction6::NOP6, List<Instruction6>::nil()))));
-  static inline const std::pair<unsigned int, unsigned int>
-      test_program_cycles =
-          std::make_pair(singleton_cycles6, three_nop_cycles6);
+  static inline const uint64_t three_nop_cycles6 = program_cycles6(
+      state6{UINT64_C(0)},
+      List<Instruction6>::cons(
+          Instruction6::NOP6,
+          List<Instruction6>::cons(
+              Instruction6::NOP6,
+              List<Instruction6>::cons(Instruction6::NOP6,
+                                       List<Instruction6>::nil()))));
+  static inline const std::pair<uint64_t, uint64_t> test_program_cycles =
+      std::make_pair(singleton_cycles6, three_nop_cycles6);
   enum class Instruction7 { NOP7 };
 
   template <typename T1> static T1 instruction7_rect(T1 f, Instruction7) {
@@ -754,26 +764,25 @@ struct InstructionCycles {
   }
 
   struct state7 {
-    unsigned int acc7;
+    uint64_t acc7;
 
     // ACCESSORS
     state7 clone() const { return state7{(*this).acc7}; }
   };
 
-  static unsigned int cycles7(const state7 &_x, Instruction7 _x0);
-  static unsigned int program_cycles7(const state7 &s,
-                                      const List<Instruction7> &prog);
-  static inline const unsigned int test_program_cycles_single = program_cycles7(
-      state7{16u},
+  static uint64_t cycles7(const state7 &_x, Instruction7 _x0);
+  static uint64_t program_cycles7(const state7 &s,
+                                  const List<Instruction7> &prog);
+  static inline const uint64_t test_program_cycles_single = program_cycles7(
+      state7{UINT64_C(16)},
       List<Instruction7>::cons(Instruction7::NOP7, List<Instruction7>::nil()));
   static inline const std::pair<
       std::pair<
           std::pair<
-              std::pair<std::pair<std::pair<unsigned int, unsigned int>, bool>,
-                        bool>,
-              unsigned int>,
-          std::pair<unsigned int, unsigned int>>,
-      unsigned int>
+              std::pair<std::pair<std::pair<uint64_t, uint64_t>, bool>, bool>,
+              uint64_t>,
+          std::pair<uint64_t, uint64_t>>,
+      uint64_t>
       t = std::make_pair(
           std::make_pair(
               std::make_pair(

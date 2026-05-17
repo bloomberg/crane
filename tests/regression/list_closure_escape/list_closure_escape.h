@@ -15,7 +15,7 @@ struct ListClosureEscape {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct ListClosureEscape {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -120,7 +120,7 @@ struct ListClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int sum_values(unsigned int x) const {
+    uint64_t sum_values(uint64_t x) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
@@ -143,8 +143,8 @@ struct ListClosureEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -156,8 +156,8 @@ struct ListClosureEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -175,7 +175,7 @@ struct ListClosureEscape {
     struct FNil {};
 
     struct FCons {
-      std::function<unsigned int(unsigned int)> a0;
+      std::function<uint64_t(uint64_t)> a0;
       std::unique_ptr<fn_list> a1;
     };
 
@@ -242,8 +242,7 @@ struct ListClosureEscape {
     // CREATORS
     static fn_list fnil() { return fn_list(FNil{}); }
 
-    static fn_list fcons(std::function<unsigned int(unsigned int)> a0,
-                         fn_list a1) {
+    static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
       return fn_list(
           FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
     }
@@ -275,7 +274,7 @@ struct ListClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int apply_first(unsigned int x) const {
+    uint64_t apply_first(uint64_t x) const {
       if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return x;
       } else {
@@ -286,8 +285,7 @@ struct ListClosureEscape {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<
-          T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
-          T1 &>
+          T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
     T1 fn_list_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
@@ -299,8 +297,7 @@ struct ListClosureEscape {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<
-          T1, F1 &, std::function<unsigned int(unsigned int)> &, fn_list &,
-          T1 &>
+          T1, F1 &, std::function<uint64_t(uint64_t)> &, fn_list &, T1 &>
     T1 fn_list_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename fn_list::FNil>(this->v())) {
         return f;
@@ -315,13 +312,15 @@ struct ListClosureEscape {
   /// Each lambda for (sum_values t_i) captures t_i by &.
   /// When build_fns returns, t1 and t2 are destroyed.
   static fn_list build_fns(tree t1, tree t2);
-  static inline const unsigned int bug_list_clobber = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    tree t2 = tree::node(tree::node(tree::leaf(), 77u, tree::leaf()), 88u,
-                         tree::node(tree::leaf(), 99u, tree::leaf()));
+  static inline const uint64_t bug_list_clobber = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(77), tree::leaf()),
+                         UINT64_C(88),
+                         tree::node(tree::leaf(), UINT64_C(99), tree::leaf()));
     fn_list fns = build_fns(std::move(t1), std::move(t2));
-    return std::move(fns).apply_first(0u);
+    return std::move(fns).apply_first(UINT64_C(0));
   }();
 };
 

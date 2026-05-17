@@ -4,7 +4,7 @@
 #include <iostream>
 
 int main() {
-  using L = ClosureEscapeMatch::mylist<unsigned int>;
+  using L = ClosureEscapeMatch::mylist<uint64_t>;
   using LL = ClosureEscapeMatch::mylist<L>;
 
   // --- make_prepender_opt ---

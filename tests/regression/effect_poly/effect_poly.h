@@ -136,12 +136,12 @@ struct EffectPoly {
     return f(a);
   }
 
-  static unsigned int test_map_result();
+  static uint64_t test_map_result();
 
   /// 2. Polymorphic bind-and-return
   template <typename T1> static T1 lift_pure(const T1 &_x0) { return _x0; }
 
-  static unsigned int test_lift_nat();
+  static uint64_t test_lift_nat();
   static std::string test_lift_string();
   static bool test_lift_bool();
   /// 3. Monadic when / guard
@@ -166,8 +166,8 @@ struct EffectPoly {
     }
   }
 
-  static unsigned int sum_with_logging(unsigned int acc, unsigned int n);
-  static unsigned int test_fold();
+  static uint64_t sum_with_logging(uint64_t acc, uint64_t n);
+  static uint64_t test_fold();
   /// 7. Returning a pair from a monadic computation
   static std::pair<std::string, std::string> read_two_lines();
   /// 8. Chaining monadic functions with different return types

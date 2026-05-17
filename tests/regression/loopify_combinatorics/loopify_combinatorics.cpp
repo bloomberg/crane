@@ -2,28 +2,27 @@
 
 /// Consolidated combinatorial algorithms.
 /// remove x l removes first occurrence of x from list.
-List<unsigned int> LoopifyCombinatorics::remove(unsigned int x,
-                                                const List<unsigned int> &l) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  const List<unsigned int> *_loop_l = &l;
+List<uint64_t> LoopifyCombinatorics::remove(uint64_t x,
+                                            const List<uint64_t> &l) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l->v())) {
-      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        *_write = std::make_unique<List<unsigned int>>(*a1);
+        *_write = std::make_unique<List<uint64_t>>(*a1);
         break;
       } else {
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(a0, nullptr));
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
         _loop_l = a1.get();
         continue;
       }
@@ -33,28 +32,26 @@ List<unsigned int> LoopifyCombinatorics::remove(unsigned int x,
 }
 
 /// Helper: prepend x to each list in lsts.
-List<List<unsigned int>>
-LoopifyCombinatorics::map_cons(unsigned int x,
-                               const List<List<unsigned int>> &lsts) {
-  std::unique_ptr<List<List<unsigned int>>> _head{};
-  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  const List<List<unsigned int>> *_loop_lsts = &lsts;
+List<List<uint64_t>>
+LoopifyCombinatorics::map_cons(uint64_t x, const List<List<uint64_t>> &lsts) {
+  std::unique_ptr<List<List<uint64_t>>> _head{};
+  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  const List<List<uint64_t>> *_loop_lsts = &lsts;
   while (true) {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_lsts->v())) {
-      *_write = std::make_unique<List<List<unsigned int>>>(
-          List<List<unsigned int>>::nil());
+      *_write =
+          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_lsts->v());
-      auto _cell = std::make_unique<List<List<unsigned int>>>(
-          typename List<List<unsigned int>>::Cons(
-              List<unsigned int>::cons(x, a0), nullptr));
+          std::get<typename List<List<uint64_t>>::Cons>(_loop_lsts->v());
+      auto _cell = std::make_unique<List<List<uint64_t>>>(
+          typename List<List<uint64_t>>::Cons(List<uint64_t>::cons(x, a0),
+                                              nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<unsigned int>>::Cons>((*_write)->v_mut())
-               .a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
       _loop_lsts = a1.get();
       continue;
     }
@@ -67,43 +64,43 @@ LoopifyCombinatorics::map_cons(unsigned int x,
 /// iteration and the recursive subproblem, enabling full loopification.
 /// The match on remaining is hoisted out of the let-binding so that all
 /// recursive calls appear at the top level of each branch.
-List<List<unsigned int>> LoopifyCombinatorics::perms_choices_fuel(
-    unsigned int fuel, const List<unsigned int> &choices,
-    const List<unsigned int> &
+List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
+    uint64_t fuel, const List<uint64_t> &choices,
+    const List<uint64_t> &
         orig) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    List<unsigned int> orig;
-    List<unsigned int> choices;
-    unsigned int fuel;
+    List<uint64_t> orig;
+    List<uint64_t> choices;
+    uint64_t fuel;
   };
 
   /// _After_Cons: saves [remaining_0, remaining_1, f, a0], dispatches next
   /// recursive call.
   struct _After_Cons {
-    List<unsigned int> remaining_0;
-    List<unsigned int> remaining_1;
-    unsigned int f;
-    unsigned int a0;
+    List<uint64_t> remaining_0;
+    List<uint64_t> remaining_1;
+    uint64_t f;
+    uint64_t a0;
   };
 
   /// _Combine_Cons: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Cons {
-    List<List<unsigned int>> _result;
-    unsigned int a0;
+    List<List<uint64_t>> _result;
+    uint64_t a0;
   };
 
   /// _Resume_Nil: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Nil {
     decltype(map_cons(
-        std::declval<unsigned int &>(),
-        List<List<unsigned int>>::cons(List<unsigned int>::nil(),
-                                       List<List<unsigned int>>::nil()))) _s0;
+        std::declval<uint64_t &>(),
+        List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                   List<List<uint64_t>>::nil()))) _s0;
   };
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
-  List<List<unsigned int>> _result{};
+  List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{orig, choices, fuel});
@@ -114,26 +111,24 @@ List<List<unsigned int>> LoopifyCombinatorics::perms_choices_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &orig = _f.orig;
-      const List<unsigned int> &choices = _f.choices;
-      unsigned int fuel = _f.fuel;
+      const List<uint64_t> &orig = _f.orig;
+      const List<uint64_t> &choices = _f.choices;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = List<List<unsigned int>>::nil();
+        _result = List<List<uint64_t>>::nil();
       } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                choices.v())) {
-          _result = List<List<unsigned int>>::nil();
+        uint64_t f = fuel - 1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(choices.v())) {
+          _result = List<List<uint64_t>>::nil();
         } else {
           const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(choices.v());
-          List<unsigned int> remaining = remove(a0, orig);
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
+              std::get<typename List<uint64_t>::Cons>(choices.v());
+          List<uint64_t> remaining = remove(a0, orig);
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(
                   remaining.v_mut())) {
-            _stack.emplace_back(_Resume_Nil{
-                map_cons(a0, List<List<unsigned int>>::cons(
-                                 List<unsigned int>::nil(),
-                                 List<List<unsigned int>>::nil()))});
+            _stack.emplace_back(_Resume_Nil{map_cons(
+                a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                               List<List<uint64_t>>::nil()))});
             _stack.emplace_back(_Enter{orig, std::move(*a1), f});
           } else {
             _stack.emplace_back(_After_Cons{remaining, remaining, f, a0});
@@ -158,30 +153,30 @@ List<List<unsigned int>> LoopifyCombinatorics::perms_choices_fuel(
 }
 
 /// permutations_fuel fuel l generates all permutations of a list.
-List<List<unsigned int>>
-LoopifyCombinatorics::permutations_fuel(unsigned int fuel,
-                                        const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return List<List<unsigned int>>::cons(List<unsigned int>::nil(),
-                                          List<List<unsigned int>>::nil());
+List<List<uint64_t>>
+LoopifyCombinatorics::permutations_fuel(uint64_t fuel,
+                                        const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                      List<List<uint64_t>>::nil());
   } else {
     return perms_choices_fuel(fuel, l, l);
   }
 }
 
-unsigned int LoopifyCombinatorics::len_list(
-    const List<unsigned int>
+uint64_t LoopifyCombinatorics::len_list(
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Resume_Cons: resumes after recursive call with _result.
   struct _Resume_Cons {};
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -191,12 +186,11 @@ unsigned int LoopifyCombinatorics::len_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = 0u;
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Resume_Cons{});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -208,21 +202,21 @@ unsigned int LoopifyCombinatorics::len_list(
   return _result;
 }
 
-unsigned int LoopifyCombinatorics::factorial_impl(
-    unsigned int
+uint64_t LoopifyCombinatorics::factorial_impl(
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _Resume_m: saves [n], resumes after recursive call with _result.
   struct _Resume_m {
-    unsigned int n;
+    uint64_t n;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
@@ -232,11 +226,11 @@ unsigned int LoopifyCombinatorics::factorial_impl(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
-        _result = 1u;
+        _result = UINT64_C(1);
       } else {
-        unsigned int m = n - 1;
+        uint64_t m = n - 1;
         _stack.emplace_back(_Resume_m{n});
         _stack.emplace_back(_Enter{m});
       }
@@ -248,27 +242,27 @@ unsigned int LoopifyCombinatorics::factorial_impl(
   return _result;
 }
 
-List<List<unsigned int>>
-LoopifyCombinatorics::permutations(const List<unsigned int> &l) {
+List<List<uint64_t>>
+LoopifyCombinatorics::permutations(const List<uint64_t> &l) {
   return permutations_fuel(factorial_impl(len_list(l)), l);
 }
 
 /// subsequences l generates all subsequences (subsets preserving order).
-List<List<unsigned int>> LoopifyCombinatorics::subsequences(
-    const List<unsigned int>
+List<List<uint64_t>> LoopifyCombinatorics::subsequences(
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
-  List<List<unsigned int>> _result{};
+  List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -278,36 +272,35 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = List<List<unsigned int>>::cons(
-            List<unsigned int>::nil(), List<List<unsigned int>>::nil());
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                             List<List<uint64_t>>::nil());
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int a0 = _f.a0;
-      List<List<unsigned int>> rest = _result;
+      uint64_t a0 = _f.a0;
+      List<List<uint64_t>> rest = _result;
       auto map_prepend_impl =
           [&](auto &_self_map_prepend,
-              const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
-        if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+              const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
                 lst.v())) {
-          return List<List<unsigned int>>::nil();
+          return List<List<uint64_t>>::nil();
         } else {
           const auto &[a00, a10] =
-              std::get<typename List<List<unsigned int>>::Cons>(lst.v());
-          return List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(a0, a00),
+              std::get<typename List<List<uint64_t>>::Cons>(lst.v());
+          return List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(a0, a00),
               _self_map_prepend(_self_map_prepend, *a10));
         }
       };
       auto map_prepend =
-          [&](const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
+          [&](const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
         return map_prepend_impl(map_prepend_impl, lst);
       };
       _result = rest.app(map_prepend(rest));
@@ -317,29 +310,26 @@ List<List<unsigned int>> LoopifyCombinatorics::subsequences(
 }
 
 /// Helper for cartesian product.
-List<std::pair<unsigned int, unsigned int>>
-LoopifyCombinatorics::map_pairs(unsigned int y, const List<unsigned int> &l) {
-  std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> _head{};
-  std::unique_ptr<List<std::pair<unsigned int, unsigned int>>> *_write = &_head;
-  const List<unsigned int> *_loop_l = &l;
+List<std::pair<uint64_t, uint64_t>>
+LoopifyCombinatorics::map_pairs(uint64_t y, const List<uint64_t> &l) {
+  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
+  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l->v())) {
-      *_write = std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
-          List<std::pair<unsigned int, unsigned int>>::nil());
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+      *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+          List<std::pair<uint64_t, uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      auto _cell =
-          std::make_unique<List<std::pair<unsigned int, unsigned int>>>(
-              typename List<std::pair<unsigned int, unsigned int>>::Cons(
-                  std::make_pair(a0, y), nullptr));
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+      auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+          typename List<std::pair<uint64_t, uint64_t>>::Cons(
+              std::make_pair(a0, y), nullptr));
       *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
-               (*_write)->v_mut())
-               .a1;
+      _write = &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+                    (*_write)->v_mut())
+                    .a1;
       _loop_l = a1.get();
       continue;
     }
@@ -348,23 +338,23 @@ LoopifyCombinatorics::map_pairs(unsigned int y, const List<unsigned int> &l) {
 }
 
 /// cartesian l1 l2 Cartesian product of two lists.
-List<std::pair<unsigned int, unsigned int>> LoopifyCombinatorics::cartesian(
-    const List<unsigned int> &l1,
-    const List<unsigned int>
+List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
+    const List<uint64_t> &l1,
+    const List<uint64_t>
         &l2) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l2;
+    const List<uint64_t> *l2;
   };
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(map_pairs(std::declval<unsigned int &>(),
-                       std::declval<const List<unsigned int> &>())) _s0;
+    decltype(map_pairs(std::declval<uint64_t &>(),
+                       std::declval<const List<uint64_t> &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  List<std::pair<unsigned int, unsigned int>> _result{};
+  List<std::pair<uint64_t, uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l2});
@@ -374,12 +364,11 @@ List<std::pair<unsigned int, unsigned int>> LoopifyCombinatorics::cartesian(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l2 = *_f.l2;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
-        _result = List<std::pair<unsigned int, unsigned int>>::nil();
+      const List<uint64_t> &l2 = *_f.l2;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
+        _result = List<std::pair<uint64_t, uint64_t>>::nil();
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l2.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l2.v());
         _stack.emplace_back(_Resume_Cons{map_pairs(a0, l1)});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -392,21 +381,21 @@ List<std::pair<unsigned int, unsigned int>> LoopifyCombinatorics::cartesian(
 }
 
 /// power_set l generates the power set (all subsets).
-List<List<unsigned int>> LoopifyCombinatorics::power_set(
-    const List<unsigned int>
+List<List<uint64_t>> LoopifyCombinatorics::power_set(
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
-  List<List<unsigned int>> _result{};
+  List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -416,36 +405,35 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = List<List<unsigned int>>::cons(
-            List<unsigned int>::nil(), List<List<unsigned int>>::nil());
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                             List<List<uint64_t>>::nil());
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int a0 = _f.a0;
-      List<List<unsigned int>> rest = _result;
+      uint64_t a0 = _f.a0;
+      List<List<uint64_t>> rest = _result;
       auto map_add_x_impl =
           [&](auto &_self_map_add_x,
-              const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
-        if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+              const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
                 lst.v())) {
-          return List<List<unsigned int>>::nil();
+          return List<List<uint64_t>>::nil();
         } else {
           const auto &[a00, a10] =
-              std::get<typename List<List<unsigned int>>::Cons>(lst.v());
-          return List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(a0, a00),
+              std::get<typename List<List<uint64_t>>::Cons>(lst.v());
+          return List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(a0, a00),
               _self_map_add_x(_self_map_add_x, *a10));
         }
       };
       auto map_add_x =
-          [&](const List<List<unsigned int>> &lst) -> List<List<unsigned int>> {
+          [&](const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
         return map_add_x_impl(map_add_x_impl, lst);
       };
       _result = rest.app(map_add_x(rest));
@@ -455,25 +443,25 @@ List<List<unsigned int>> LoopifyCombinatorics::power_set(
 }
 
 /// insert_everywhere x l inserts x at every position in l.
-List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
-    unsigned int x,
-    List<unsigned int>
+List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
+    uint64_t x,
+    List<uint64_t>
         l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    List<unsigned int> l;
+    List<uint64_t> l;
   };
 
   /// _Cont_Cons: saves [a0, l, x], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Cons {
-    unsigned int a0;
-    List<unsigned int> l;
-    unsigned int x;
+    uint64_t a0;
+    List<uint64_t> l;
+    uint64_t x;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
-  List<List<unsigned int>> _result{};
+  List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{l});
@@ -483,42 +471,42 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      List<unsigned int> l = std::move(_f.l);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v_mut())) {
-        _result = List<List<unsigned int>>::cons(
-            List<unsigned int>::cons(x, List<unsigned int>::nil()),
-            List<List<unsigned int>>::nil());
+      List<uint64_t> l = std::move(_f.l);
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+        _result = List<List<uint64_t>>::cons(
+            List<uint64_t>::cons(x, List<uint64_t>::nil()),
+            List<List<uint64_t>>::nil());
       } else {
-        auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v_mut());
+        auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
         _stack.emplace_back(_Cont_Cons{a0, l, x});
         _stack.emplace_back(_Enter{std::move(*a1)});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int a0 = _f.a0;
-      List<unsigned int> l = std::move(_f.l);
-      unsigned int x = _f.x;
-      List<List<unsigned int>> rest = _result;
-      auto prepend_y_impl = [&](auto &_self_prepend_y,
-                                const List<List<unsigned int>> &lsts)
-          -> List<List<unsigned int>> {
-        if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+      uint64_t a0 = _f.a0;
+      List<uint64_t> l = std::move(_f.l);
+      uint64_t x = _f.x;
+      List<List<uint64_t>> rest = _result;
+      auto prepend_y_impl =
+          [&](auto &_self_prepend_y,
+              const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
                 lsts.v())) {
-          return List<List<unsigned int>>::nil();
+          return List<List<uint64_t>>::nil();
         } else {
           const auto &[a00, a10] =
-              std::get<typename List<List<unsigned int>>::Cons>(lsts.v());
-          return List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(a0, a00),
+              std::get<typename List<List<uint64_t>>::Cons>(lsts.v());
+          return List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(a0, a00),
               _self_prepend_y(_self_prepend_y, *a10));
         }
       };
-      auto prepend_y = [&](const List<List<unsigned int>> &lsts)
-          -> List<List<unsigned int>> {
+      auto prepend_y =
+          [&](const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
         return prepend_y_impl(prepend_y_impl, lsts);
       };
-      _result = List<List<unsigned int>>::cons(List<unsigned int>::cons(x, l),
-                                               prepend_y(std::move(rest)));
+      _result = List<List<uint64_t>>::cons(List<uint64_t>::cons(x, l),
+                                           prepend_y(std::move(rest)));
     }
   }
   return _result;
@@ -526,18 +514,17 @@ List<List<unsigned int>> LoopifyCombinatorics::insert_everywhere(
 
 /// Helper: check if element is in list.
 bool LoopifyCombinatorics::elem(
-    unsigned int x,
-    const List<unsigned int>
+    uint64_t x,
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(std::declval<unsigned int &>() ==
-             std::declval<unsigned int &>()) _s0;
+    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -551,12 +538,11 @@ bool LoopifyCombinatorics::elem(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = false;
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Resume_Cons{x == a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -569,19 +555,19 @@ bool LoopifyCombinatorics::elem(
 }
 
 /// Helper: list length.
-unsigned int LoopifyCombinatorics::len_impl(
-    const List<unsigned int>
+uint64_t LoopifyCombinatorics::len_impl(
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Resume_Cons: resumes after recursive call with _result.
   struct _Resume_Cons {};
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -591,12 +577,11 @@ unsigned int LoopifyCombinatorics::len_impl(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = 0u;
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(_Resume_Cons{});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -609,23 +594,23 @@ unsigned int LoopifyCombinatorics::len_impl(
 }
 
 /// dedup l removes all duplicates (keeps first occurrence).
-List<unsigned int> LoopifyCombinatorics::dedup_fuel(
-    unsigned int fuel,
-    const List<unsigned int>
+List<uint64_t> LoopifyCombinatorics::dedup_fuel(
+    uint64_t fuel,
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
-    unsigned int fuel;
+    const List<uint64_t> *l;
+    uint64_t fuel;
   };
 
   /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    unsigned int a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
-  List<unsigned int> _result{};
+  List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, fuel});
@@ -635,35 +620,34 @@ List<unsigned int> LoopifyCombinatorics::dedup_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *_f.l;
-      unsigned int fuel = _f.fuel;
+      const List<uint64_t> &l = *_f.l;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = List<unsigned int>::nil();
+        _result = List<uint64_t>::nil();
       } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = List<unsigned int>::nil();
+        uint64_t f = fuel - 1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = List<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get(), f});
         }
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      unsigned int a0 = _f.a0;
-      List<unsigned int> rest = _result;
+      uint64_t a0 = _f.a0;
+      List<uint64_t> rest = _result;
       if (elem(a0, rest)) {
         _result = std::move(rest);
       } else {
-        _result = List<unsigned int>::cons(a0, std::move(rest));
+        _result = List<uint64_t>::cons(a0, std::move(rest));
       }
     }
   }
   return _result;
 }
 
-List<unsigned int> LoopifyCombinatorics::dedup(const List<unsigned int> &l) {
+List<uint64_t> LoopifyCombinatorics::dedup(const List<uint64_t> &l) {
   return dedup_fuel(len_impl(l), l);
 }

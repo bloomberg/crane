@@ -125,11 +125,11 @@ struct DepElim {
   struct fin {
     // TYPES
     struct FZ {
-      unsigned int n;
+      uint64_t n;
     };
 
     struct FS {
-      unsigned int n;
+      uint64_t n;
       std::unique_ptr<fin> a1;
     };
 
@@ -194,9 +194,9 @@ struct DepElim {
     }
 
     // CREATORS
-    static fin fz(unsigned int n) { return fin(FZ{n}); }
+    static fin fz(uint64_t n) { return fin(FZ{n}); }
 
-    static fin fs(unsigned int n, fin a1) {
+    static fin fs(uint64_t n, fin a1) {
       return fin(FS{n, std::make_unique<fin>(std::move(a1))});
     }
 
@@ -227,9 +227,9 @@ struct DepElim {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int fin_to_nat(unsigned int) const {
+    uint64_t fin_to_nat(uint64_t) const {
       if (std::holds_alternative<typename fin::FZ>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[n, a1] = std::get<typename fin::FS>(this->v());
         return ((*a1).fin_to_nat(n) + 1);
@@ -237,9 +237,9 @@ struct DepElim {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, fin &, T1 &>
-    T1 fin_rec(F0 &&f, F1 &&f0, unsigned int) const {
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, fin &, T1 &>
+    T1 fin_rec(F0 &&f, F1 &&f0, uint64_t) const {
       if (std::holds_alternative<typename fin::FZ>(this->v())) {
         const auto &[n0] = std::get<typename fin::FZ>(this->v());
         return f(n0);
@@ -250,9 +250,9 @@ struct DepElim {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, fin &, T1 &>
-    T1 fin_rect(F0 &&f, F1 &&f0, unsigned int) const {
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, fin &, T1 &>
+    T1 fin_rect(F0 &&f, F1 &&f0, uint64_t) const {
       if (std::holds_alternative<typename fin::FZ>(this->v())) {
         const auto &[n0] = std::get<typename fin::FZ>(this->v());
         return f(n0);
@@ -268,7 +268,7 @@ struct DepElim {
     struct Vnil {};
 
     struct Vcons {
-      unsigned int n;
+      uint64_t n;
       A a1;
       std::unique_ptr<vec<A>> a2;
     };
@@ -346,7 +346,7 @@ struct DepElim {
 
     static vec<A> vnil() { return vec(Vnil{}); }
 
-    static vec<A> vcons(unsigned int n, A a1, vec<A> a2) {
+    static vec<A> vcons(uint64_t n, A a1, vec<A> a2) {
       return vec(
           Vcons{n, std::move(a1), std::make_unique<vec<A>>(std::move(a2))});
     }
@@ -378,7 +378,7 @@ struct DepElim {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    vec<A> vec_tail(unsigned int) const {
+    vec<A> vec_tail(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
         throw std::logic_error("unreachable");
       } else {
@@ -387,7 +387,7 @@ struct DepElim {
       }
     }
 
-    A vec_head(unsigned int) const {
+    A vec_head(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
         throw std::logic_error("unreachable");
       } else {
@@ -398,7 +398,7 @@ struct DepElim {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &>
-    vec<T1> vec_map(unsigned int, F1 &&f) const {
+    vec<T1> vec_map(uint64_t, F1 &&f) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
         return vec<T1>::vnil();
       } else {
@@ -407,7 +407,7 @@ struct DepElim {
       }
     }
 
-    List<A> vec_to_list(unsigned int) const {
+    List<A> vec_to_list(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
         return List<A>::nil();
       } else {
@@ -417,9 +417,8 @@ struct DepElim {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, A &, vec<A> &,
-                                     T1 &>
-    T1 vec_rec(T1 f, F1 &&f0, unsigned int) const {
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
+    T1 vec_rec(T1 f, F1 &&f0, uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
         return f;
       } else {
@@ -429,9 +428,8 @@ struct DepElim {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, A &, vec<A> &,
-                                     T1 &>
-    T1 vec_rect(T1 f, F1 &&f0, unsigned int) const {
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
+    T1 vec_rect(T1 f, F1 &&f0, uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
         return f;
       } else {
@@ -444,7 +442,7 @@ struct DepElim {
   struct avail {
     // TYPES
     struct Present {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Absent {};
@@ -488,7 +486,7 @@ struct DepElim {
     }
 
     // CREATORS
-    static avail present(unsigned int a0) { return avail(Present{a0}); }
+    static avail present(uint64_t a0) { return avail(Present{a0}); }
 
     static avail absent() { return avail(Absent{}); }
 
@@ -498,7 +496,7 @@ struct DepElim {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int get_present() const {
+    uint64_t get_present() const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
         return a0;
@@ -508,7 +506,7 @@ struct DepElim {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
     T1 avail_rec(F0 &&f, T1 f0, bool) const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
@@ -519,7 +517,7 @@ struct DepElim {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
     T1 avail_rect(F0 &&f, T1 f0, bool) const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
@@ -530,25 +528,28 @@ struct DepElim {
     }
   };
 
-  static inline const unsigned int test_fin0 = fin::fz(2u).fin_to_nat(3u);
-  static inline const unsigned int test_fin2 =
-      fin::fs(2u, fin::fs(1u, fin::fz(0u))).fin_to_nat(3u);
-  static inline const vec<unsigned int> my_vec = vec<unsigned int>::vcons(
-      2u, 10u,
-      vec<unsigned int>::vcons(
-          1u, 20u,
-          vec<unsigned int>::vcons(0u, 30u, vec<unsigned int>::vnil())));
-  static inline const List<unsigned int> test_vec_list = my_vec.vec_to_list(3u);
-  static inline const unsigned int test_vec_head = my_vec.vec_head(2u);
-  static inline const List<unsigned int> test_vec_tail_list =
-      my_vec.vec_tail(2u).vec_to_list(2u);
-  static inline const List<unsigned int> test_vec_map =
+  static inline const uint64_t test_fin0 =
+      fin::fz(UINT64_C(2)).fin_to_nat(UINT64_C(3));
+  static inline const uint64_t test_fin2 =
+      fin::fs(UINT64_C(2), fin::fs(UINT64_C(1), fin::fz(UINT64_C(0))))
+          .fin_to_nat(UINT64_C(3));
+  static inline const vec<uint64_t> my_vec = vec<uint64_t>::vcons(
+      UINT64_C(2), UINT64_C(10),
+      vec<uint64_t>::vcons(UINT64_C(1), UINT64_C(20),
+                           vec<uint64_t>::vcons(UINT64_C(0), UINT64_C(30),
+                                                vec<uint64_t>::vnil())));
+  static inline const List<uint64_t> test_vec_list =
+      my_vec.vec_to_list(UINT64_C(3));
+  static inline const uint64_t test_vec_head = my_vec.vec_head(UINT64_C(2));
+  static inline const List<uint64_t> test_vec_tail_list =
+      my_vec.vec_tail(UINT64_C(2)).vec_to_list(UINT64_C(2));
+  static inline const List<uint64_t> test_vec_map =
       my_vec
-          .template vec_map<unsigned int>(
-              3u, [](unsigned int n) { return (n + 1u); })
-          .vec_to_list(3u);
-  static inline const unsigned int test_present =
-      avail::present(42u).get_present();
+          .template vec_map<uint64_t>(
+              UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(1)); })
+          .vec_to_list(UINT64_C(3));
+  static inline const uint64_t test_present =
+      avail::present(UINT64_C(42)).get_present();
 };
 
 #endif // INCLUDED_DEP_ELIM

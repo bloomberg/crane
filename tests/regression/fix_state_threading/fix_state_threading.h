@@ -120,39 +120,45 @@ public:
 };
 
 struct Nat {
-  static bool even(unsigned int n);
+  static bool even(uint64_t n);
 };
 
 struct FixStateThreading {
-  static std::pair<List<unsigned int>, unsigned int>
-  reverse_count(const List<unsigned int> &l, List<unsigned int> acc);
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  collect_odds_evens(const List<unsigned int> &l, List<unsigned int> odds,
-                     List<unsigned int> evens);
-  static std::pair<unsigned int, unsigned int>
-  sum_with_acc(const List<unsigned int> &l, unsigned int acc);
-  static inline const std::pair<List<unsigned int>, unsigned int> test_rev =
-      reverse_count(List<unsigned int>::cons(
-                        1u, List<unsigned int>::cons(
-                                2u, List<unsigned int>::cons(
-                                        3u, List<unsigned int>::nil()))),
-                    List<unsigned int>::nil());
-  static inline const std::pair<List<unsigned int>, List<unsigned int>>
-      test_ce = collect_odds_evens(
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::cons(
-                                          5u, List<unsigned int>::nil()))))),
-          List<unsigned int>::nil(), List<unsigned int>::nil());
-  static inline const std::pair<unsigned int, unsigned int> test_sum =
-      sum_with_acc(List<unsigned int>::cons(
-                       10u, List<unsigned int>::cons(
-                                20u, List<unsigned int>::cons(
-                                         30u, List<unsigned int>::nil()))),
-                   0u);
+  static std::pair<List<uint64_t>, uint64_t>
+  reverse_count(const List<uint64_t> &l, List<uint64_t> acc);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  collect_odds_evens(const List<uint64_t> &l, List<uint64_t> odds,
+                     List<uint64_t> evens);
+  static std::pair<uint64_t, uint64_t> sum_with_acc(const List<uint64_t> &l,
+                                                    uint64_t acc);
+  static inline const std::pair<List<uint64_t>, uint64_t> test_rev =
+      reverse_count(
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+          List<uint64_t>::nil());
+  static inline const std::pair<List<uint64_t>, List<uint64_t>> test_ce =
+      collect_odds_evens(
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(
+                      UINT64_C(3),
+                      List<uint64_t>::cons(
+                          UINT64_C(4),
+                          List<uint64_t>::cons(UINT64_C(5),
+                                               List<uint64_t>::nil()))))),
+          List<uint64_t>::nil(), List<uint64_t>::nil());
+  static inline const std::pair<uint64_t, uint64_t> test_sum = sum_with_acc(
+      List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
+      UINT64_C(0));
 };
 
 #endif // INCLUDED_FIX_STATE_THREADING

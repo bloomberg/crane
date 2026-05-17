@@ -1,23 +1,21 @@
 #include "let_fix_tail_loop.h"
 
-unsigned int LetFixTailLoop::sum_list(const List<unsigned int> &l) {
-  auto go_impl = [](auto &_self_go, const List<unsigned int> &xs,
-                    unsigned int acc) -> unsigned int {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
+uint64_t LetFixTailLoop::sum_list(const List<uint64_t> &l) {
+  auto go_impl = [](auto &_self_go, const List<uint64_t> &xs,
+                    uint64_t acc) -> uint64_t {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return acc;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       return _self_go(_self_go, *a1, (acc + a0));
     }
   };
-  auto go = [&](const List<unsigned int> &xs,
-                unsigned int acc) -> unsigned int {
+  auto go = [&](const List<uint64_t> &xs, uint64_t acc) -> uint64_t {
     return go_impl(go_impl, xs, acc);
   };
-  return go(l, 0u);
+  return go(l, UINT64_C(0));
 }
 
-unsigned int LetFixTailLoop::length_list(const List<unsigned int> &l) {
-  return _length_list_go<unsigned int>(l, 0u);
+uint64_t LetFixTailLoop::length_list(const List<uint64_t> &l) {
+  return _length_list_go<uint64_t>(l, UINT64_C(0));
 }

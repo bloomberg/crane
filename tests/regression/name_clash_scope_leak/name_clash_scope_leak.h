@@ -130,21 +130,20 @@ public:
 
 struct NameClashScopeLeak {
   /// Match on list, return list. Both branches produce the same type.
-  static List<unsigned int> rotate(const List<unsigned int> &l);
+  static List<uint64_t> rotate(const List<uint64_t> &l);
   /// Two consecutive matches on different lists in the same function.
-  static unsigned int heads_sum(const List<unsigned int> &l1,
-                                const List<unsigned int> &l2);
+  static uint64_t heads_sum(const List<uint64_t> &l1, const List<uint64_t> &l2);
   /// Match on list, and in the Cons branch, match on the tail.
-  static unsigned int first_two_sum(const List<unsigned int> &l);
+  static uint64_t first_two_sum(const List<uint64_t> &l);
   /// Match where both branches contain let bindings with same name.
-  static unsigned int branch_let_clash(const List<unsigned int> &l);
+  static uint64_t branch_let_clash(const List<uint64_t> &l);
   /// Three consecutive matches, each with same binding variable name pattern.
-  static unsigned int triple_head(const List<unsigned int> &l1,
-                                  const List<unsigned int> &l2,
-                                  const List<unsigned int> &l3);
+  static uint64_t triple_head(const List<uint64_t> &l1,
+                              const List<uint64_t> &l2,
+                              const List<uint64_t> &l3);
   /// Matching on a pair where both components are lists.
-  static unsigned int
-  pair_match(const std::pair<List<unsigned int>, List<unsigned int>> &p);
+  static uint64_t
+  pair_match(const std::pair<List<uint64_t>, List<uint64_t>> &p);
 };
 
 #endif // INCLUDED_NAME_CLASH_SCOPE_LEAK

@@ -188,17 +188,21 @@ public:
     }
   }
 
-  static const List<unsigned int> &mytest() {
-    static const List<unsigned int> v =
-        List<unsigned int>::cons(
-            3u,
-            List<unsigned int>::cons(
-                1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())))
-            .app(List<unsigned int>::cons(
-                8u, List<unsigned int>::cons(
-                        3u, List<unsigned int>::cons(
-                                7u, List<unsigned int>::cons(
-                                        9u, List<unsigned int>::nil())))));
+  static const List<uint64_t> &mytest() {
+    static const List<uint64_t> v =
+        List<uint64_t>::cons(
+            UINT64_C(3),
+            List<uint64_t>::cons(
+                UINT64_C(1),
+                List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))
+            .app(List<uint64_t>::cons(
+                UINT64_C(8),
+                List<uint64_t>::cons(
+                    UINT64_C(3),
+                    List<uint64_t>::cons(
+                        UINT64_C(7),
+                        List<uint64_t>::cons(UINT64_C(9),
+                                             List<uint64_t>::nil())))));
     return v;
   }
 };

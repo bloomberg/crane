@@ -1,17 +1,15 @@
 #include "match_ref_after_move.h"
 
-MatchRefAfterMove::mypair<unsigned int, unsigned int>
+MatchRefAfterMove::mypair<uint64_t, uint64_t>
 MatchRefAfterMove::head_and_tail_length(
-    const MatchRefAfterMove::mylist<unsigned int> &l) {
+    const MatchRefAfterMove::mylist<uint64_t> &l) {
   if (std::holds_alternative<
-          typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
-    return mypair<unsigned int, unsigned int>::mkpair(0u, 0u);
+          typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
+    return mypair<uint64_t, uint64_t>::mkpair(UINT64_C(0), UINT64_C(0));
   } else {
     const auto &[a0, a1] =
-        std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-            l.v());
-    return mypair<unsigned int, unsigned int>::mkpair(a0,
-                                                      (*a1).mylist_length());
+        std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
+    return mypair<uint64_t, uint64_t>::mkpair(a0, (*a1).mylist_length());
   }
 }
 
@@ -23,23 +21,21 @@ MatchRefAfterMove::head_and_tail_length(
 /// If the outer head h is a reference into the outer value, and
 /// the outer value is freed because the inner match consumes the
 /// tail (sole remaining reference), h dangles.
-unsigned int MatchRefAfterMove::nested_match_probe(
-    const MatchRefAfterMove::mylist<unsigned int> &l) {
+uint64_t MatchRefAfterMove::nested_match_probe(
+    const MatchRefAfterMove::mylist<uint64_t> &l) {
   if (std::holds_alternative<
-          typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
-    return 0u;
+          typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
-        std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-            l.v());
+        std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
     auto &&_sv0 = *a1;
     if (std::holds_alternative<
-            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(
-            _sv0.v())) {
+            typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(_sv0.v())) {
       return a0;
     } else {
       const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
+          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
               _sv0.v());
       return ((a0 + a00) + (*a10).mylist_length());
     }
@@ -49,96 +45,90 @@ unsigned int MatchRefAfterMove::nested_match_probe(
 /// Pattern 3: Build a pair where one element is from a match
 /// and the other is a function of the matched value.
 /// Tests evaluation order in pair construction.
-MatchRefAfterMove::mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>
+MatchRefAfterMove::mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>
 MatchRefAfterMove::match_into_pair(
-    const MatchRefAfterMove::mylist<unsigned int> &l) {
+    const MatchRefAfterMove::mylist<uint64_t> &l) {
   if (std::holds_alternative<
-          typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
-    return mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>::
-        mkpair(0u, mylist<unsigned int>::mynil());
+          typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
+    return mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>::mkpair(
+        UINT64_C(0), mylist<uint64_t>::mynil());
   } else {
     const auto &[a0, a1] =
-        std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-            l.v());
-    return mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>::
-        mkpair(a0, mylist<unsigned int>::mycons((a0 + 1u), *a1));
+        std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
+    return mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>::mkpair(
+        a0, mylist<uint64_t>::mycons((a0 + UINT64_C(1)), *a1));
   }
 }
 
 /// Pattern 4: Double match on same value.
 /// First match extracts head, second match extracts tail.
 /// Between matches, the value might be moved.
-MatchRefAfterMove::mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>
-MatchRefAfterMove::double_match(
-    const MatchRefAfterMove::mylist<unsigned int> &l) {
-  unsigned int h = [&]() {
+MatchRefAfterMove::mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>
+MatchRefAfterMove::double_match(const MatchRefAfterMove::mylist<uint64_t> &l) {
+  uint64_t h = [&]() {
     if (std::holds_alternative<
-            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
-      return 0u;
+            typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
-          std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-              l.v());
+          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
       return a0;
     }
   }();
-  MatchRefAfterMove::mylist<unsigned int> t = [&]() {
+  MatchRefAfterMove::mylist<uint64_t> t = [&]() {
     if (std::holds_alternative<
-            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
-      return mylist<unsigned int>::mynil();
+            typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
+      return mylist<uint64_t>::mynil();
     } else {
       const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-              l.v());
+          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
       return *a10;
     }
   }();
-  return mypair<unsigned int, MatchRefAfterMove::mylist<unsigned int>>::mkpair(
+  return mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>::mkpair(
       h, std::move(t));
 }
 
-unsigned int MatchRefAfterMove::mylist_sum(
-    const MatchRefAfterMove::mylist<unsigned int> &l) {
+uint64_t
+MatchRefAfterMove::mylist_sum(const MatchRefAfterMove::mylist<uint64_t> &l) {
   if (std::holds_alternative<
-          typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(l.v())) {
-    return 0u;
+          typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
-        std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
-            l.v());
+        std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
     return (a0 + mylist_sum(*a1));
   }
 }
 
-unsigned int MatchRefAfterMove::complex_match(
-    const MatchRefAfterMove::either<MatchRefAfterMove::mylist<unsigned int>,
-                                    MatchRefAfterMove::mylist<unsigned int>>
-        &e) {
+uint64_t MatchRefAfterMove::complex_match(
+    const MatchRefAfterMove::either<MatchRefAfterMove::mylist<uint64_t>,
+                                    MatchRefAfterMove::mylist<uint64_t>> &e) {
   if (std::holds_alternative<typename MatchRefAfterMove::either<
-          MatchRefAfterMove::mylist<unsigned int>,
-          MatchRefAfterMove::mylist<unsigned int>>::Left>(e.v())) {
+          MatchRefAfterMove::mylist<uint64_t>,
+          MatchRefAfterMove::mylist<uint64_t>>::Left>(e.v())) {
     const auto &[a0] = std::get<typename MatchRefAfterMove::either<
-        MatchRefAfterMove::mylist<unsigned int>,
-        MatchRefAfterMove::mylist<unsigned int>>::Left>(e.v());
+        MatchRefAfterMove::mylist<uint64_t>,
+        MatchRefAfterMove::mylist<uint64_t>>::Left>(e.v());
     if (std::holds_alternative<
-            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(a0.v())) {
-      return 0u;
+            typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(a0.v())) {
+      return UINT64_C(0);
     } else {
       const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
+          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
               a0.v());
       return a00;
     }
   } else {
     const auto &[a0] = std::get<typename MatchRefAfterMove::either<
-        MatchRefAfterMove::mylist<unsigned int>,
-        MatchRefAfterMove::mylist<unsigned int>>::Right>(e.v());
+        MatchRefAfterMove::mylist<uint64_t>,
+        MatchRefAfterMove::mylist<uint64_t>>::Right>(e.v());
     if (std::holds_alternative<
-            typename MatchRefAfterMove::mylist<unsigned int>::Mynil>(a0.v())) {
-      return 999u;
+            typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(a0.v())) {
+      return UINT64_C(999);
     } else {
       const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<unsigned int>::Mycons>(
+          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
               a0.v());
       return (a00 + (*a10).mylist_length());
     }

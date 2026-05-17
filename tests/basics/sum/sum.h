@@ -138,12 +138,11 @@ struct Sum {
     }
   };
 
-  static inline const either<unsigned int, bool> left_val =
-      either<unsigned int, bool>::left(5u);
-  static inline const either<unsigned int, bool> right_val =
-      either<unsigned int, bool>::right(true);
-  static unsigned int
-  either_to_nat(const either<unsigned int, unsigned int> &e);
+  static inline const either<uint64_t, bool> left_val =
+      either<uint64_t, bool>::left(UINT64_C(5));
+  static inline const either<uint64_t, bool> right_val =
+      either<uint64_t, bool>::right(true);
+  static uint64_t either_to_nat(const either<uint64_t, uint64_t> &e);
 
   template <typename A, typename B, typename C> struct triple {
     // TYPES
@@ -278,12 +277,12 @@ struct Sum {
     }
   };
 
-  static inline const triple<unsigned int, bool, unsigned int> triple_test =
-      triple<unsigned int, bool, unsigned int>::second(true);
+  static inline const triple<uint64_t, bool, uint64_t> triple_test =
+      triple<uint64_t, bool, uint64_t>::second(true);
   static inline const bool test_left = left_val.is_left();
   static inline const bool test_right = right_val.is_left();
-  static inline const unsigned int test_either =
-      either_to_nat(either<unsigned int, unsigned int>::left(3u));
+  static inline const uint64_t test_either =
+      either_to_nat(either<uint64_t, uint64_t>::left(UINT64_C(3)));
 };
 
 #endif // INCLUDED_SUM

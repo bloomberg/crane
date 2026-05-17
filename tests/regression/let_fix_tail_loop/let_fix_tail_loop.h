@@ -120,30 +120,34 @@ public:
 };
 
 template <typename T1>
-unsigned int _length_list_go(const List<T1> xs, const unsigned int n) {
+uint64_t _length_list_go(const List<T1> xs, const uint64_t n) {
   if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
     return n;
   } else {
     const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
-    return _length_list_go<T1>(*a1, (1u + n));
+    return _length_list_go<T1>(*a1, (UINT64_C(1) + n));
   }
 }
 
 struct LetFixTailLoop {
-  static unsigned int sum_list(const List<unsigned int> &l);
-  static unsigned int length_list(const List<unsigned int> &l);
-  static inline const unsigned int test_sum = sum_list(List<unsigned int>::cons(
-      1u, List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(
-                      3u, List<unsigned int>::cons(
-                              4u, List<unsigned int>::cons(
-                                      5u, List<unsigned int>::nil()))))));
-  static inline const unsigned int test_len =
-      length_list(List<unsigned int>::cons(
-          10u, List<unsigned int>::cons(
-                   20u, List<unsigned int>::cons(
-                            30u, List<unsigned int>::cons(
-                                     40u, List<unsigned int>::nil())))));
+  static uint64_t sum_list(const List<uint64_t> &l);
+  static uint64_t length_list(const List<uint64_t> &l);
+  static inline const uint64_t test_sum = sum_list(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static inline const uint64_t test_len = length_list(List<uint64_t>::cons(
+      UINT64_C(10),
+      List<uint64_t>::cons(
+          UINT64_C(20),
+          List<uint64_t>::cons(
+              UINT64_C(30),
+              List<uint64_t>::cons(UINT64_C(40), List<uint64_t>::nil())))));
 };
 
 #endif // INCLUDED_LET_FIX_TAIL_LOOP

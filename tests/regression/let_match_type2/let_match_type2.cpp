@@ -1,72 +1,72 @@
 #include "let_match_type2.h"
 
 /// 1. Match returning bool — should be fine
-bool LetMatchType2::let_match_bool(unsigned int n) {
+bool LetMatchType2::let_match_bool(uint64_t n) {
   bool b;
   if (n <= 0) {
     b = true;
   } else {
-    unsigned int _x = n - 1;
+    uint64_t _x = n - 1;
     b = false;
   }
   return !(b);
 }
 
 /// 2. Match returning pair — might trigger std::any
-unsigned int LetMatchType2::let_match_pair(bool b) {
-  std::pair<unsigned int, unsigned int> p;
+uint64_t LetMatchType2::let_match_pair(bool b) {
+  std::pair<uint64_t, uint64_t> p;
   if (b) {
-    p = std::make_pair(1u, 2u);
+    p = std::make_pair(UINT64_C(1), UINT64_C(2));
   } else {
-    p = std::make_pair(3u, 4u);
+    p = std::make_pair(UINT64_C(3), UINT64_C(4));
   }
   return (p.first + p.second);
 }
 
 /// 3. Match returning list — might trigger std::any
-List<unsigned int> LetMatchType2::let_match_list(bool b) {
+List<uint64_t> LetMatchType2::let_match_list(bool b) {
   if (b) {
-    return List<unsigned int>::cons(1u, List<unsigned int>::nil());
+    return List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
   } else {
-    return List<unsigned int>::nil();
+    return List<uint64_t>::nil();
   }
 }
 
 /// 4. Match returning option — might trigger std::any
-std::optional<unsigned int> LetMatchType2::let_match_opt(bool b) {
+std::optional<uint64_t> LetMatchType2::let_match_opt(bool b) {
   if (b) {
-    return std::make_optional<unsigned int>(1u);
+    return std::make_optional<uint64_t>(UINT64_C(1));
   } else {
-    return std::optional<unsigned int>();
+    return std::optional<uint64_t>();
   }
 }
 
 /// 5. Cascading let-matches all returning nat — should be fine
-unsigned int LetMatchType2::cascading_nat(bool a, bool b, bool c) {
-  unsigned int x;
+uint64_t LetMatchType2::cascading_nat(bool a, bool b, bool c) {
+  uint64_t x;
   if (a) {
-    x = 10u;
+    x = UINT64_C(10);
   } else {
-    x = 0u;
+    x = UINT64_C(0);
   }
-  unsigned int y;
+  uint64_t y;
   if (b) {
-    y = 5u;
+    y = UINT64_C(5);
   } else {
-    y = 0u;
+    y = UINT64_C(0);
   }
-  unsigned int z;
+  uint64_t z;
   if (c) {
-    z = 1u;
+    z = UINT64_C(1);
   } else {
-    z = 0u;
+    z = UINT64_C(0);
   }
   return ((x + y) + z);
 }
 
 /// 6. Match returning function type
-unsigned int LetMatchType2::let_match_fun(bool b) {
-  unsigned int x = 5u;
+uint64_t LetMatchType2::let_match_fun(bool b) {
+  uint64_t x = UINT64_C(5);
   if (b) {
     return (x + 1);
   } else {
@@ -75,35 +75,35 @@ unsigned int LetMatchType2::let_match_fun(bool b) {
 }
 
 /// 7. Match result used in another match
-unsigned int LetMatchType2::match_of_match(unsigned int n) {
-  unsigned int x;
+uint64_t LetMatchType2::match_of_match(uint64_t n) {
+  uint64_t x;
   if (n <= 0) {
-    x = 1u;
+    x = UINT64_C(1);
   } else {
-    unsigned int _x = n - 1;
-    x = 2u;
+    uint64_t _x = n - 1;
+    x = UINT64_C(2);
   }
   if (x <= 0) {
-    return 100u;
+    return UINT64_C(100);
   } else {
-    unsigned int n0 = x - 1;
+    uint64_t n0 = x - 1;
     if (n0 <= 0) {
-      return 200u;
+      return UINT64_C(200);
     } else {
-      unsigned int _x = n0 - 1;
-      return 300u;
+      uint64_t _x = n0 - 1;
+      return UINT64_C(300);
     }
   }
 }
 
 /// 8. let-bound match where arms have bindings
-unsigned int LetMatchType2::let_match_bindings(unsigned int n) {
-  unsigned int x;
+uint64_t LetMatchType2::let_match_bindings(uint64_t n) {
+  uint64_t x;
   if (n <= 0) {
-    x = 0u;
+    x = UINT64_C(0);
   } else {
-    unsigned int m = n - 1;
-    x = (m + 1u);
+    uint64_t m = n - 1;
+    x = (m + UINT64_C(1));
   }
   return (x + x);
 }

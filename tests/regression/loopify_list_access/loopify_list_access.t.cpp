@@ -16,8 +16,8 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
-using PairList = List<std::pair<unsigned int, unsigned int>>;
+using UIntList = List<uint64_t>;
+using PairList = List<std::pair<uint64_t, uint64_t>>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -58,7 +58,7 @@ int main() {
   auto all_vals = LoopifyListAccess::lookup_all(1u, pairs2);
 
   // find
-  auto is_big = [](unsigned int x) { return x > 35; };
+  auto is_big = [](uint64_t x) { return x > 35; };
   ASSERT(LoopifyListAccess::find(is_big, l5) == 40u);
 
   // count
@@ -68,7 +68,7 @@ int main() {
   ASSERT(LoopifyListAccess::count(2u, l_dups) == 1u);
 
   // count_matching
-  auto is_even = [](unsigned int x) { return x % 2 == 0; };
+  auto is_even = [](uint64_t x) { return x % 2 == 0; };
   ASSERT(LoopifyListAccess::count_matching(is_even, l5) == 5u);  // 10, 20, 30, 40, 50 -> all are even
 
   // nth_default

@@ -11,7 +11,7 @@ struct DeepPattern {
   struct tree {
     // TYPES
     struct Leaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Node {
@@ -84,7 +84,7 @@ struct DeepPattern {
     }
 
     // CREATORS
-    static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
+    static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
     static tree node(tree a0, tree a1) {
       return tree(Node{std::make_unique<tree>(std::move(a0)),
@@ -121,61 +121,61 @@ struct DeepPattern {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int nested_let_match() const {
+    uint64_t nested_let_match() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename tree::Leaf>(this->v());
         return a0;
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-        unsigned int a = [&]() {
+        uint64_t a = [&]() {
           auto &&_sv0 = *a0;
           if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
             const auto &[a00] = std::get<typename tree::Leaf>(_sv0.v());
             return a00;
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         }();
-        unsigned int b = [&]() {
+        uint64_t b = [&]() {
           auto &&_sv1 = *a1;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             const auto &[a01] = std::get<typename tree::Leaf>(_sv1.v());
             return a01;
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         }();
-        unsigned int c = (a + b);
-        unsigned int d = (c * 2u);
-        return (d + 1u);
+        uint64_t c = (a + b);
+        uint64_t d = (c * UINT64_C(2));
+        return (d + UINT64_C(1));
       }
     }
 
-    unsigned int conditional_match(unsigned int target) const {
+    uint64_t conditional_match(uint64_t target) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename tree::Leaf>(this->v());
         if (a0 == target) {
-          return 100u;
+          return UINT64_C(100);
         } else {
           return a0;
         }
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
         if ((*this).has_value(target)) {
-          return 200u;
+          return UINT64_C(200);
         } else {
           auto &&_sv0 = *a0;
           if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
             const auto &[a00] = std::get<typename tree::Leaf>(_sv0.v());
             return a00;
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         }
       }
     }
 
-    bool has_value(unsigned int target) const {
+    bool has_value(uint64_t target) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename tree::Leaf>(this->v());
         return a0 == target;
@@ -187,35 +187,35 @@ struct DeepPattern {
 
     tree as_pattern_test() const { return std::move(*this); }
 
-    unsigned int wildcard_with_bindings() const {
+    uint64_t wildcard_with_bindings() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename tree::Leaf>(this->v());
         return a0;
       } else {
         const auto &[a0, a1] = std::get<typename tree::Node>(this->v());
-        unsigned int x = [&]() {
+        uint64_t x = [&]() {
           auto &&_sv0 = *a0;
           if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
             const auto &[a00] = std::get<typename tree::Leaf>(_sv0.v());
             return a00;
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         }();
-        unsigned int y = [&]() {
+        uint64_t y = [&]() {
           auto &&_sv1 = *a1;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             const auto &[a01] = std::get<typename tree::Leaf>(_sv1.v());
             return a01;
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         }();
         return (x + y);
       }
     }
 
-    unsigned int multi_constructor(const tree &t2) const {
+    uint64_t multi_constructor(const tree &t2) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename tree::Leaf>(this->v());
         if (std::holds_alternative<typename tree::Leaf>(t2.v())) {
@@ -228,7 +228,7 @@ struct DeepPattern {
             const auto &[a01] = std::get<typename tree::Leaf>(_sv1.v());
             return (a0 + a01);
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         }
       } else {
@@ -252,10 +252,10 @@ struct DeepPattern {
                   const auto &[a04] = std::get<typename tree::Leaf>(_sv4.v());
                   return (((a00 + a01) + a03) + a04);
                 } else {
-                  return 0u;
+                  return UINT64_C(0);
                 }
               } else {
-                return 0u;
+                return UINT64_C(0);
               }
             }
           } else {
@@ -263,16 +263,16 @@ struct DeepPattern {
               const auto &[a02] = std::get<typename tree::Leaf>(t2.v());
               return (a00 + a02);
             } else {
-              return 0u;
+              return UINT64_C(0);
             }
           }
         } else {
-          return 0u;
+          return UINT64_C(0);
         }
       }
     }
 
-    unsigned int deep_match() const {
+    uint64_t deep_match() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename tree::Leaf>(this->v());
         return a0;
@@ -295,10 +295,10 @@ struct DeepPattern {
                 const auto &[a03] = std::get<typename tree::Leaf>(_sv3.v());
                 return ((a00 + a02) + a03);
               } else {
-                return 0u;
+                return UINT64_C(0);
               }
             } else {
-              return 0u;
+              return UINT64_C(0);
             }
           }
         } else {
@@ -324,14 +324,14 @@ struct DeepPattern {
                     const auto &[a05] = std::get<typename tree::Leaf>(_sv5.v());
                     return (((a01 + a02) + a04) + a05);
                   } else {
-                    return 0u;
+                    return UINT64_C(0);
                   }
                 } else {
-                  return 0u;
+                  return UINT64_C(0);
                 }
               }
             } else {
-              return 0u;
+              return UINT64_C(0);
             }
           } else {
             const auto &[a01, a11] = std::get<typename tree::Node>(_sv1.v());
@@ -349,16 +349,16 @@ struct DeepPattern {
                     const auto &[a05] = std::get<typename tree::Leaf>(_sv5.v());
                     return (((a02 + a03) + a04) + a05);
                   } else {
-                    return 0u;
+                    return UINT64_C(0);
                   }
                 } else {
-                  return 0u;
+                  return UINT64_C(0);
                 }
               } else {
-                return 0u;
+                return UINT64_C(0);
               }
             } else {
-              return 0u;
+              return UINT64_C(0);
             }
           }
         }
@@ -366,7 +366,7 @@ struct DeepPattern {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, tree &, T1 &, tree &, T1 &>
     T1 tree_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
@@ -380,7 +380,7 @@ struct DeepPattern {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, tree &, T1 &, tree &, T1 &>
     T1 tree_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
@@ -530,11 +530,11 @@ struct DeepPattern {
     }
   };
 
-  static unsigned int list_deep_match(const list<tree> &l);
-  static inline const unsigned int test1 =
-      tree::node(tree::leaf(1u), tree::leaf(2u)).deep_match();
-  static inline const unsigned int test2 =
-      tree::leaf(5u).multi_constructor(tree::leaf(10u));
+  static uint64_t list_deep_match(const list<tree> &l);
+  static inline const uint64_t test1 =
+      tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))).deep_match();
+  static inline const uint64_t test2 =
+      tree::leaf(UINT64_C(5)).multi_constructor(tree::leaf(UINT64_C(10)));
 };
 
 #endif // INCLUDED_DEEP_PATTERN

@@ -119,7 +119,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -131,7 +131,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -144,7 +144,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -184,8 +184,8 @@ public:
 
 struct LoopifySequences {
   /// alternate_sum sign acc l alternating sum with sign flip.
-  static unsigned int alternate_sum(unsigned int sign, unsigned int acc,
-                                    const List<unsigned int> &l);
+  static uint64_t alternate_sum(uint64_t sign, uint64_t acc,
+                                const List<uint64_t> &l);
 
   /// intercalate sep lists inserts sep between lists and flattens.
   template <typename T1>
@@ -261,18 +261,18 @@ struct LoopifySequences {
   } /// transpose l transposes a list of lists.
 
   template <typename T1>
-  static List<List<T1>> transpose_fuel(unsigned int fuel,
+  static List<List<T1>> transpose_fuel(uint64_t fuel,
                                        const List<List<T1>> &ll) {
     std::unique_ptr<List<List<T1>>> _head{};
     std::unique_ptr<List<List<T1>>> *_write = &_head;
     List<List<T1>> _loop_ll = ll;
-    unsigned int _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
         *_write = std::make_unique<List<List<T1>>>(List<List<T1>>::nil());
         break;
       } else {
-        unsigned int f = _loop_fuel - 1;
+        uint64_t f = _loop_fuel - 1;
         auto all_nil_impl = [](auto &_self_all_nil,
                                const List<List<T1>> &l) -> bool {
           if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
@@ -349,43 +349,39 @@ struct LoopifySequences {
 
   template <typename T1>
   static List<List<T1>> transpose(const List<List<T1>> &ll) {
-    return transpose_fuel<T1>(100u, ll);
+    return transpose_fuel<T1>(UINT64_C(100), ll);
   }
 
   /// collatz_list n generates collatz sequence.
-  static List<unsigned int> collatz_list_fuel(unsigned int fuel,
-                                              unsigned int n);
-  static List<unsigned int> collatz_list(unsigned int n);
+  static List<uint64_t> collatz_list_fuel(uint64_t fuel, uint64_t n);
+  static List<uint64_t> collatz_list(uint64_t n);
   /// run_sum l running sum (scanl for addition).
-  static List<unsigned int> run_sum_aux(unsigned int acc,
-                                        const List<unsigned int> &l);
-  static List<unsigned int> run_sum(const List<unsigned int> &l);
+  static List<uint64_t> run_sum_aux(uint64_t acc, const List<uint64_t> &l);
+  static List<uint64_t> run_sum(const List<uint64_t> &l);
   /// rotate_left n l rotates list left by n positions.
-  static List<unsigned int> rotate_left_fuel(unsigned int fuel, unsigned int n,
-                                             List<unsigned int> l);
-  static List<unsigned int> rotate_left(unsigned int n,
-                                        const List<unsigned int> &l);
+  static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
+                                         List<uint64_t> l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
 
   /// iterate f n x generates x, f x, f (f x), ... of length n.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static List<unsigned int> iterate(F0 &&f, unsigned int n, unsigned int x) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = std::move(x);
-    unsigned int _loop_n = std::move(n);
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    uint64_t _loop_x = std::move(x);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *_write =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
-        unsigned int m = _loop_n - 1;
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(_loop_x, nullptr));
+        uint64_t m = _loop_n - 1;
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(_loop_x, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
         _loop_x = f(_loop_x);
         _loop_n = m;
         continue;
@@ -395,88 +391,77 @@ struct LoopifySequences {
   }
 
   /// sum_acc acc l sum with accumulator.
-  static unsigned int sum_acc(unsigned int acc, const List<unsigned int> &l);
+  static uint64_t sum_acc(uint64_t acc, const List<uint64_t> &l);
   /// repeat_string s n repeats string n times (using list as string).
-  static List<unsigned int> repeat_string(const List<unsigned int> &s,
-                                          unsigned int n);
+  static List<uint64_t> repeat_string(const List<uint64_t> &s, uint64_t n);
   /// repeat_with_sep s sep n repeats with separator.
-  static List<unsigned int> repeat_with_sep(List<unsigned int> s,
-                                            const List<unsigned int> &sep,
-                                            unsigned int n);
+  static List<uint64_t> repeat_with_sep(List<uint64_t> s,
+                                        const List<uint64_t> &sep, uint64_t n);
   /// string_chain s n recursive string chain: s-chain(s, n-1)-end.
-  static List<unsigned int>
-  string_chain_fuel(unsigned int fuel, const List<unsigned int> &s,
-                    unsigned int n, const List<unsigned int> &sep,
-                    const List<unsigned int> &end_marker);
-  static List<unsigned int> string_chain(const List<unsigned int> &s,
-                                         unsigned int n,
-                                         const List<unsigned int> &sep,
-                                         const List<unsigned int> &end_marker);
+  static List<uint64_t> string_chain_fuel(uint64_t fuel,
+                                          const List<uint64_t> &s, uint64_t n,
+                                          const List<uint64_t> &sep,
+                                          const List<uint64_t> &end_marker);
+  static List<uint64_t> string_chain(const List<uint64_t> &s, uint64_t n,
+                                     const List<uint64_t> &sep,
+                                     const List<uint64_t> &end_marker);
   /// split_by_sign l base pos neg splits list based on base threshold.
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  split_by_sign(const List<unsigned int> &l, unsigned int base,
-                List<unsigned int> pos, List<unsigned int> neg);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  split_by_sign(const List<uint64_t> &l, uint64_t base, List<uint64_t> pos,
+                List<uint64_t> neg);
   /// differences l computes differences between consecutive elements.
-  static List<unsigned int> differences(const List<unsigned int> &l);
+  static List<uint64_t> differences(const List<uint64_t> &l);
   /// replace_at idx value l replaces element at index with value.
-  static List<unsigned int> replace_at(unsigned int idx, unsigned int value,
-                                       const List<unsigned int> &l);
+  static List<uint64_t> replace_at(uint64_t idx, uint64_t value,
+                                   const List<uint64_t> &l);
   /// cycle n l repeats list n times.
-  static List<unsigned int> cycle(unsigned int n, const List<unsigned int> &l);
+  static List<uint64_t> cycle(uint64_t n, const List<uint64_t> &l);
   /// Helper: get first element.
-  static unsigned int first_elem(const List<unsigned int> &l);
+  static uint64_t first_elem(const List<uint64_t> &l);
   /// Helper: get last element.
-  static unsigned int last_elem(const List<unsigned int> &l);
+  static uint64_t last_elem(const List<uint64_t> &l);
   /// Helper: remove first element.
-  static List<unsigned int> tail_list(const List<unsigned int> &l);
+  static List<uint64_t> tail_list(const List<uint64_t> &l);
   /// Helper: remove last element.
-  static List<unsigned int> init_list(const List<unsigned int> &l);
+  static List<uint64_t> init_list(const List<uint64_t> &l);
   /// is_palindrome s checks if list is a palindrome.
-  static bool is_palindrome_fuel(unsigned int fuel,
-                                 const List<unsigned int> &s);
-  static bool is_palindrome(const List<unsigned int> &s);
+  static bool is_palindrome_fuel(uint64_t fuel, const List<uint64_t> &s);
+  static bool is_palindrome(const List<uint64_t> &s);
   /// string_subsequences s generates all subsequences treating list as string.
-  static List<List<unsigned int>>
-  string_subsequences(const List<unsigned int> &s);
+  static List<List<uint64_t>> string_subsequences(const List<uint64_t> &s);
   /// run_length_groups l groups consecutive runs into sublist lengths.
-  static List<unsigned int> run_length_groups_aux(unsigned int prev,
-                                                  unsigned int count,
-                                                  const List<unsigned int> &l);
-  static List<unsigned int> run_length_groups(const List<unsigned int> &l);
+  static List<uint64_t> run_length_groups_aux(uint64_t prev, uint64_t count,
+                                              const List<uint64_t> &l);
+  static List<uint64_t> run_length_groups(const List<uint64_t> &l);
   /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
-  static bool is_prefix_of(const List<unsigned int> &l1,
-                           const List<unsigned int> &l2);
+  static bool is_prefix_of(const List<uint64_t> &l1, const List<uint64_t> &l2);
   /// lis l longest increasing subsequence (greedy, not optimal).
-  static List<unsigned int> lis(List<unsigned int> l);
+  static List<uint64_t> lis(List<uint64_t> l);
 
   /// take_while p l takes elements while predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> take_while(F0 &&p, const List<unsigned int> &l) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> take_while(F0 &&p, const List<uint64_t> &l) {
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(a0, nullptr));
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
           _loop_l = a1.get();
           continue;
         } else {
-          *_write =
-              std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+          *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
           break;
         }
       }
@@ -486,22 +471,21 @@ struct LoopifySequences {
 
   /// drop_while p l drops elements while predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> drop_while(F0 &&p, const List<unsigned int> &l) {
-    List<unsigned int> _result;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> drop_while(F0 &&p, const List<uint64_t> &l) {
+    List<uint64_t> _result;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        _result = List<unsigned int>::nil();
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        _result = List<uint64_t>::nil();
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
           _loop_l = a1.get();
         } else {
-          _result = List<unsigned int>::cons(a0, *a1);
+          _result = List<uint64_t>::cons(a0, *a1);
           break;
         }
       }
@@ -510,34 +494,31 @@ struct LoopifySequences {
   }
 
   /// Helper: check if element is in list.
-  static bool elem(unsigned int x, const List<unsigned int> &l);
+  static bool elem(uint64_t x, const List<uint64_t> &l);
   /// Helper: filter list.
-  static List<unsigned int> filter_ne(unsigned int x,
-                                      const List<unsigned int> &l);
+  static List<uint64_t> filter_ne(uint64_t x, const List<uint64_t> &l);
   /// nub l removes duplicates from list.
-  static List<unsigned int> nub_fuel(unsigned int fuel,
-                                     const List<unsigned int> &l);
-  static List<unsigned int> nub(const List<unsigned int> &l);
+  static List<uint64_t> nub_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<uint64_t> nub(const List<uint64_t> &l);
   /// group l groups consecutive equal elements.
-  static List<List<unsigned int>> group_fuel(unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<List<unsigned int>> group(const List<unsigned int> &l);
+  static List<List<uint64_t>> group_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<List<uint64_t>> group(const List<uint64_t> &l);
   /// Helper: get head with default.
-  static unsigned int head_or(unsigned int default0,
-                              const List<unsigned int> &l);
+  static uint64_t head_or(uint64_t default0, const List<uint64_t> &l);
   /// remove_if_sum_even l removes elements where sum with next is even.
-  static List<unsigned int> remove_if_sum_even(const List<unsigned int> &l);
+  static List<uint64_t> remove_if_sum_even(const List<uint64_t> &l);
 
   /// bool_all p l checks if all elements satisfy predicate (forall with &&).
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool bool_all(
-      F0 &&p,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool
+  bool_all(F0 &&p,
+           const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                      /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
@@ -556,12 +537,11 @@ struct LoopifySequences {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = true;
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{p(a0)});
           _stack.emplace_back(_Enter{a1.get()});
         }
@@ -574,13 +554,13 @@ struct LoopifySequences {
   }
 
   /// run_length_encode l encodes consecutive runs: 1,1,2,2,2 -> (1,2),(2,3).
-  static List<std::pair<unsigned int, unsigned int>>
-  run_length_encode_fuel(unsigned int fuel, const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  run_length_encode(const List<unsigned int> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_encode_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_encode(const List<uint64_t> &l);
   /// between lo hi l filters elements in range lo, hi.
-  static List<unsigned int> between(unsigned int lo, unsigned int hi,
-                                    const List<unsigned int> &l);
+  static List<uint64_t> between(uint64_t lo, uint64_t hi,
+                                const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SEQUENCES

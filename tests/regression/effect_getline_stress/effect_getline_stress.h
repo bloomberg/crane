@@ -130,9 +130,9 @@ struct EffectGetlineStress {
   /// 1. get_line in both branches of if-then-else
   static std::string get_or_default(bool ask);
   /// 2. get_line in a match arm
-  static std::string get_nth_line(unsigned int n);
+  static std::string get_nth_line(uint64_t n);
   /// 3. Recursive function that uses get_line in a loop
-  static List<std::string> read_lines(unsigned int n, List<std::string> acc);
+  static List<std::string> read_lines(uint64_t n, List<std::string> acc);
   /// 4. get_line result immediately used in another effect
   static void read_and_echo();
   /// 5. get_line result used in a let chain

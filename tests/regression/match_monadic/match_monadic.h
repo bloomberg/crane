@@ -146,13 +146,13 @@ struct MatchMonadic {
   /// 2. Match on bool inside a bind chain
   static std::string conditional_read(bool b);
   /// 3. Nested match: match on result of another match
-  static std::string nested_match(unsigned int n, bool b);
+  static std::string nested_match(uint64_t n, bool b);
   /// 4. Match on option in monadic context
-  static unsigned int handle_option(const std::optional<unsigned int> &o);
+  static uint64_t handle_option(const std::optional<uint64_t> &o);
   /// 5. Recursive function matching on tree
-  static unsigned int tree_sum(const Tree<unsigned int> &t);
+  static uint64_t tree_sum(const Tree<uint64_t> &t);
   /// 6. Match result used in bind
-  static std::string match_then_bind(unsigned int n);
+  static std::string match_then_bind(uint64_t n);
   /// 7. Match inside a bind continuation
   static int64_t bind_then_match();
   /// 8. Multiple matches in sequence

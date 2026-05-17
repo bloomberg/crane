@@ -151,7 +151,7 @@ struct LoopifyMoreTrees {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -221,7 +221,7 @@ struct LoopifyMoreTrees {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -258,8 +258,8 @@ struct LoopifyMoreTrees {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -271,8 +271,8 @@ struct LoopifyMoreTrees {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -285,23 +285,23 @@ struct LoopifyMoreTrees {
 
   static tree mirror(const tree &t);
   static bool same_shape(const tree &t1, const tree &t2);
-  static List<unsigned int> tree_to_list(const tree &t);
+  static List<uint64_t> tree_to_list(const tree &t);
   static bool mirror_equal(const tree &t);
-  static unsigned int count_nodes(const tree &t);
+  static uint64_t count_nodes(const tree &t);
   static tree tree_max(tree t1, tree t2);
-  static unsigned int sum_of_max_branches(const tree &t);
-  static tree insert_bst(unsigned int x, const tree &t);
-  static tree build_bst(const List<unsigned int> &l);
-  static List<unsigned int> append_lists(const List<unsigned int> &l1,
-                                         List<unsigned int> l2);
-  static List<unsigned int> flatten(const List<List<unsigned int>> &ll);
-  static List<List<unsigned int>> map_tree_to_list(const List<tree> &lt);
+  static uint64_t sum_of_max_branches(const tree &t);
+  static tree insert_bst(uint64_t x, const tree &t);
+  static tree build_bst(const List<uint64_t> &l);
+  static List<uint64_t> append_lists(const List<uint64_t> &l1,
+                                     List<uint64_t> l2);
+  static List<uint64_t> flatten(const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> map_tree_to_list(const List<tree> &lt);
   static List<tree> tree_children(const tree &t);
   static List<tree> append_trees(const List<tree> &l1, List<tree> l2);
   static List<tree> concat_map_children(const List<tree> &lt);
-  static List<List<unsigned int>> tree_levels_fuel(unsigned int fuel,
-                                                   const List<tree> &level);
-  static List<List<unsigned int>> tree_levels(tree t);
+  static List<List<uint64_t>> tree_levels_fuel(uint64_t fuel,
+                                               const List<tree> &level);
+  static List<List<uint64_t>> tree_levels(tree t);
 };
 
 #endif // INCLUDED_LOOPIFY_MORE_TREES

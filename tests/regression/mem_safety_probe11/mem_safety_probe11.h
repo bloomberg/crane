@@ -135,12 +135,12 @@ struct MemSafetyProbe11 {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int length() const {
+    uint64_t length() const {
       if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return (1u + (*a1).length());
+        return (UINT64_C(1) + (*a1).length());
       }
     }
 
@@ -167,8 +167,7 @@ struct MemSafetyProbe11 {
     }
   };
 
-  static unsigned int
-  sum_fns(const mylist<std::function<unsigned int(unsigned int)>> &l);
+  static uint64_t sum_fns(const mylist<std::function<uint64_t(uint64_t)>> &l);
 
   struct tree {
     // TYPES
@@ -176,7 +175,7 @@ struct MemSafetyProbe11 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -246,7 +245,7 @@ struct MemSafetyProbe11 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -284,7 +283,7 @@ struct MemSafetyProbe11 {
     /// TEST 6: Function that matches on a tree AND returns a closure
     /// that RETURNS A TREE. Tests capture of value types in returned
     /// closures where the return type contains unique_ptr.
-    tree tree_transformer(unsigned int n) const {
+    tree tree_transformer(uint64_t n) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::node(tree::leaf(), n, tree::leaf());
       } else {
@@ -296,37 +295,35 @@ struct MemSafetyProbe11 {
     /// TEST 4: Closure capturing pattern variables from a NESTED match.
     /// The outer match destructs a tree, the inner match destructs a list.
     /// Tests pre-copy across nested match scopes.
-    unsigned int nested_capture(const mylist<unsigned int> &l,
-                                unsigned int n) const {
+    uint64_t nested_capture(const mylist<uint64_t> &l, uint64_t n) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return n;
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        if (std::holds_alternative<typename mylist<unsigned int>::Mynil>(
-                l.v())) {
+        if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
           return (a1 + n);
         } else {
           const auto &[a00, a10] =
-              std::get<typename mylist<unsigned int>::Mycons>(l.v());
+              std::get<typename mylist<uint64_t>::Mycons>(l.v());
           return (((((*a0).tree_sum() + (*a2).tree_sum()) + a00) + a1) + n);
         }
       }
     }
 
-    unsigned int tree_depth() const {
+    uint64_t tree_depth() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        unsigned int dl = (*a0).tree_depth();
-        unsigned int dr = (*a2).tree_depth();
-        return (1u + (dl <= dr ? dr : dl));
+        uint64_t dl = (*a0).tree_depth();
+        uint64_t dr = (*a2).tree_depth();
+        return (UINT64_C(1) + (dl <= dr ? dr : dl));
       }
     }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
@@ -334,8 +331,8 @@ struct MemSafetyProbe11 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -347,8 +344,8 @@ struct MemSafetyProbe11 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -366,105 +363,107 @@ struct MemSafetyProbe11 {
   /// After loopification with flatten, the subtrees' unique_ptrs
   /// may be moved into continuation frames.
   template <typename T1>
-  static unsigned int _collect_dual_captures_f(const T1, const tree l,
-                                               const tree r) {
+  static uint64_t _collect_dual_captures_f(const T1, const tree l,
+                                           const tree r) {
     return (std::move(l).tree_sum() + r.tree_sum());
   }
 
-  static mylist<std::function<unsigned int(unsigned int)>>
+  static mylist<std::function<uint64_t(uint64_t)>>
   collect_dual_captures(const tree &t,
-                        mylist<std::function<unsigned int(unsigned int)>> acc);
-  static inline const unsigned int test_dual_capture = []() {
-    tree t =
-        tree::node(tree::node(tree::leaf(), 5u, tree::leaf()), 10u,
-                   tree::node(tree::leaf(), 15u,
-                              tree::node(tree::leaf(), 20u, tree::leaf())));
+                        mylist<std::function<uint64_t(uint64_t)>> acc);
+  static inline const uint64_t test_dual_capture = []() {
+    tree t = tree::node(
+        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
+        tree::node(tree::leaf(), UINT64_C(15),
+                   tree::node(tree::leaf(), UINT64_C(20), tree::leaf())));
     return sum_fns(collect_dual_captures(
-        std::move(t),
-        mylist<std::function<unsigned int(unsigned int)>>::mynil()));
+        std::move(t), mylist<std::function<uint64_t(uint64_t)>>::mynil()));
   }();
 
   /// TEST 2: Closure captures the TAIL of the list (unique_ptr field).
   /// Each closure computes length of the tail.
   /// After loopification, the tail pointer may be moved.
   template <typename T1>
-  static unsigned int _capture_tails_f(const T1, const unsigned int x,
-                                       const mylist<unsigned int> xs) {
+  static uint64_t _capture_tails_f(const T1, const uint64_t x,
+                                   const mylist<uint64_t> xs) {
     return (std::move(x) + xs.length());
   }
 
-  static mylist<std::function<unsigned int(unsigned int)>>
-  capture_tails(const mylist<unsigned int> &l,
-                mylist<std::function<unsigned int(unsigned int)>> acc);
-  static inline const unsigned int test_capture_tails = []() {
-    mylist<unsigned int> l = mylist<unsigned int>::mycons(
-        100u, mylist<unsigned int>::mycons(
-                  200u, mylist<unsigned int>::mycons(
-                            300u, mylist<unsigned int>::mynil())));
+  static mylist<std::function<uint64_t(uint64_t)>>
+  capture_tails(const mylist<uint64_t> &l,
+                mylist<std::function<uint64_t(uint64_t)>> acc);
+  static inline const uint64_t test_capture_tails = []() {
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(100),
+        mylist<uint64_t>::mycons(
+            UINT64_C(200), mylist<uint64_t>::mycons(
+                               UINT64_C(300), mylist<uint64_t>::mynil())));
     return sum_fns(capture_tails(
-        std::move(l),
-        mylist<std::function<unsigned int(unsigned int)>>::mynil()));
+        std::move(l), mylist<std::function<uint64_t(uint64_t)>>::mynil()));
   }();
 
   /// TEST 3: Closure captures a SUBTREE, but the subtree is ALSO
   /// passed to a recursive call AND used in the continuation.
   /// Tests whether the clone/pre-copy mechanism handles triple use.
   template <typename T1>
-  static unsigned int _triple_use_tree_fl(const T1, const tree l) {
+  static uint64_t _triple_use_tree_fl(const T1, const tree l) {
     return std::move(l).tree_sum();
   }
 
   template <typename T1>
-  static unsigned int _triple_use_tree_fr(const T1, const tree r) {
+  static uint64_t _triple_use_tree_fr(const T1, const tree r) {
     return r.tree_sum();
   }
 
-  static mylist<std::function<unsigned int(unsigned int)>>
-  triple_use_tree(const tree &t,
-                  mylist<std::function<unsigned int(unsigned int)>> acc);
-  static inline const unsigned int test_triple_use = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u,
-                        tree::node(tree::leaf(), 11u, tree::leaf()));
+  static mylist<std::function<uint64_t(uint64_t)>>
+  triple_use_tree(const tree &t, mylist<std::function<uint64_t(uint64_t)>> acc);
+  static inline const uint64_t test_triple_use = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     return sum_fns(triple_use_tree(
-        std::move(t),
-        mylist<std::function<unsigned int(unsigned int)>>::mynil()));
+        std::move(t), mylist<std::function<uint64_t(uint64_t)>>::mynil()));
   }();
-  static inline const unsigned int test_nested_capture = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
-    mylist<unsigned int> l = mylist<unsigned int>::mycons(
-        5u, mylist<unsigned int>::mycons(99u, mylist<unsigned int>::mynil()));
-    return std::move(t).nested_capture(std::move(l), 7u);
+  static inline const uint64_t test_nested_capture = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(5),
+        mylist<uint64_t>::mycons(UINT64_C(99), mylist<uint64_t>::mynil()));
+    return std::move(t).nested_capture(std::move(l), UINT64_C(7));
   }();
 
   /// TEST 5: Tail-recursive function with two accumulators,
   /// one of which stores closures that capture the other.
   /// Tests whether accumulator values are properly captured.
   template <typename T1>
-  static unsigned int _dual_accum_f(const T1, const unsigned int new_sum) {
+  static uint64_t _dual_accum_f(const T1, const uint64_t new_sum) {
     return new_sum;
   }
 
-  static mylist<std::function<unsigned int(unsigned int)>>
-  dual_accum(const mylist<unsigned int> &l, unsigned int sum_acc,
-             mylist<std::function<unsigned int(unsigned int)>> fn_acc);
-  static inline const unsigned int test_dual_accum = []() {
-    mylist<unsigned int> l = mylist<unsigned int>::mycons(
-        10u, mylist<unsigned int>::mycons(
-                 20u, mylist<unsigned int>::mycons(
-                          30u, mylist<unsigned int>::mynil())));
+  static mylist<std::function<uint64_t(uint64_t)>>
+  dual_accum(const mylist<uint64_t> &l, uint64_t sum_acc,
+             mylist<std::function<uint64_t(uint64_t)>> fn_acc);
+  static inline const uint64_t test_dual_accum = []() {
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(10),
+        mylist<uint64_t>::mycons(
+            UINT64_C(20),
+            mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
     return sum_fns(
-        dual_accum(std::move(l), 0u,
-                   mylist<std::function<unsigned int(unsigned int)>>::mynil()));
+        dual_accum(std::move(l), UINT64_C(0),
+                   mylist<std::function<uint64_t(uint64_t)>>::mynil()));
   }();
-  static inline const unsigned int test_tree_transformer = []() {
+  static inline const uint64_t test_tree_transformer = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 5u, tree::leaf()), 10u,
-                          tree::node(tree::leaf(), 15u, tree::leaf()));
-      std::function<tree(unsigned int)> f = [&](unsigned int _x0) -> tree {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                          UINT64_C(10),
+                          tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
+      std::function<tree(uint64_t)> f = [&](uint64_t _x0) -> tree {
         return std::move(t).tree_transformer(_x0);
       };
-      tree t2 = f(100u);
+      tree t2 = f(UINT64_C(100));
       return std::move(t2).tree_sum();
     }();
   }();

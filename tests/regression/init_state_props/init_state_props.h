@@ -118,9 +118,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -129,13 +129,13 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct InitStateProps {
   struct state {
-    List<unsigned int> regs;
-    List<unsigned int> rom;
+    List<uint64_t> regs;
+    List<uint64_t> rom;
 
     // ACCESSORS
     state clone() const {
@@ -144,20 +144,19 @@ struct InitStateProps {
   };
 
   static inline const state init_state =
-      state{ListDef::template repeat<unsigned int>(0u, 16u),
-            ListDef::template repeat<unsigned int>(0u, 4096u)};
-  static inline const unsigned int test_register_count =
-      init_state.regs.length();
-  static inline const unsigned int test_rom_length = init_state.rom.length();
-  static inline const std::pair<unsigned int, unsigned int> t =
+      state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+            ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4096))};
+  static inline const uint64_t test_register_count = init_state.regs.length();
+  static inline const uint64_t test_rom_length = init_state.rom.length();
+  static inline const std::pair<uint64_t, uint64_t> t =
       std::make_pair(test_register_count, test_rom_length);
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
-    unsigned int k = n - 1;
+    uint64_t k = n - 1;
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }

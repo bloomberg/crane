@@ -17,7 +17,7 @@ struct NameClashMatchMatch {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -87,7 +87,7 @@ struct NameClashMatchMatch {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -124,8 +124,8 @@ struct NameClashMatchMatch {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -137,8 +137,8 @@ struct NameClashMatchMatch {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -179,14 +179,14 @@ struct NameClashMatchMatch {
 
   static tree choose_subtree(Dir d, const tree &t);
   /// Match on the result of choose_subtree (which itself contains a match).
-  static unsigned int subtree_value(Dir d, const tree &t);
+  static uint64_t subtree_value(Dir d, const tree &t);
   /// Inline match-on-match: both matches are expressions.
-  static unsigned int inline_match_match(Dir d, const tree &t);
+  static uint64_t inline_match_match(Dir d, const tree &t);
   /// Two matches on the same scrutinee.
-  static unsigned int double_match(const tree &t);
+  static uint64_t double_match(const tree &t);
   /// Match where the scrutinee is a function call that returns an inductive,
   /// and the result is used in another match.
-  static unsigned int chained(const tree &t);
+  static uint64_t chained(const tree &t);
 };
 
 #endif // INCLUDED_NAME_CLASH_MATCH_MATCH

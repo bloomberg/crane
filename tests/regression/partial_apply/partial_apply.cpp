@@ -1,49 +1,43 @@
 #include "partial_apply.h"
 
-List<unsigned int> PartialApply::inc_all(const List<unsigned int> &l) {
-  return l.template map<unsigned int>([](unsigned int x) { return (x + 1); });
+List<uint64_t> PartialApply::inc_all(const List<uint64_t> &l) {
+  return l.template map<uint64_t>([](uint64_t x) { return (x + 1); });
 }
 
-List<std::pair<unsigned int, unsigned int>>
-PartialApply::tag_all(const List<unsigned int> &l) {
-  return l.template map<std::pair<unsigned int, unsigned int>>(
-      [](unsigned int x) { return std::make_pair(1u, x); });
+List<std::pair<uint64_t, uint64_t>>
+PartialApply::tag_all(const List<uint64_t> &l) {
+  return l.template map<std::pair<uint64_t, uint64_t>>(
+      [](uint64_t x) { return std::make_pair(UINT64_C(1), x); });
 }
 
-List<std::optional<unsigned int>>
-PartialApply::wrap_all(const List<unsigned int> &l) {
-  return l.template map<std::optional<unsigned int>>(
-      [](unsigned int x) { return std::make_optional<unsigned int>(x); });
+List<std::optional<uint64_t>> PartialApply::wrap_all(const List<uint64_t> &l) {
+  return l.template map<std::optional<uint64_t>>(
+      [](uint64_t x) { return std::make_optional<uint64_t>(x); });
 }
 
-List<std::function<List<unsigned int>(List<unsigned int>)>>
-PartialApply::prepend_each(const List<unsigned int> &l) {
-  return l.template map<std::function<List<unsigned int>(List<unsigned int>)>>(
-      [](unsigned int x) {
-        return [=](List<unsigned int> x0) mutable {
-          return List<unsigned int>::cons(x, x0);
+List<std::function<List<uint64_t>(List<uint64_t>)>>
+PartialApply::prepend_each(const List<uint64_t> &l) {
+  return l.template map<std::function<List<uint64_t>(List<uint64_t>)>>(
+      [](uint64_t x) {
+        return [=](List<uint64_t> x0) mutable {
+          return List<uint64_t>::cons(x, x0);
         };
       });
 }
 
-List<PartialApply::tagged<bool>> PartialApply::tag_with(unsigned int n,
+List<PartialApply::tagged<bool>> PartialApply::tag_with(uint64_t n,
                                                         const List<bool> &l) {
   return l.template map<PartialApply::tagged<bool>>(
       [=](bool x) mutable { return tagged<bool>::tag(n, x); });
 }
 
-List<std::pair<unsigned int, std::pair<unsigned int, unsigned int>>>
-PartialApply::double_tag(const List<unsigned int> &l) {
-  return l.template map<
-      std::pair<unsigned int, std::pair<unsigned int, unsigned int>>>(
-      [](unsigned int x) { return std::make_pair(x, std::make_pair(x, x)); });
+List<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>
+PartialApply::double_tag(const List<uint64_t> &l) {
+  return l.template map<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>(
+      [](uint64_t x) { return std::make_pair(x, std::make_pair(x, x)); });
 }
 
-unsigned int PartialApply::sum_with_init(unsigned int init,
-                                         const List<unsigned int> &l) {
-  return l.template fold_left<unsigned int>(
-      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-        return (_x0 + _x1);
-      },
-      init);
+uint64_t PartialApply::sum_with_init(uint64_t init, const List<uint64_t> &l) {
+  return l.template fold_left<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, init);
 }

@@ -31,20 +31,20 @@ concept IntLike = requires {
 };
 
 struct NatAsIntLike {
-  using t = unsigned int;
+  using t = uint64_t;
 
-  static const unsigned int &zero() {
-    static const unsigned int v = 0u;
+  static const uint64_t &zero() {
+    static const uint64_t v = UINT64_C(0);
     return v;
   }
 
-  static const unsigned int &one() {
-    static const unsigned int v = 1u;
+  static const uint64_t &one() {
+    static const uint64_t v = UINT64_C(1);
     return v;
   }
 
-  static unsigned int add(unsigned int _x0, unsigned int _x1);
-  static bool eqb(unsigned int _x0, unsigned int _x1);
+  static uint64_t add(uint64_t _x0, uint64_t _x1);
+  static bool eqb(uint64_t _x0, uint64_t _x1);
 };
 
 template <IntLike I> struct Counter {

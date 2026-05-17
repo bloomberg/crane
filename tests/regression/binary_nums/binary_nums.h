@@ -358,7 +358,7 @@ struct Pos {
     }
   }
 
-  static unsigned int to_nat(const Positive &x);
+  static uint64_t to_nat(const Positive &x);
 };
 
 struct Coq_Pos {
@@ -381,7 +381,7 @@ struct Coq_Pos {
     }
   }
 
-  static unsigned int to_nat(const Positive &x);
+  static uint64_t to_nat(const Positive &x);
 };
 
 struct BinNat {
@@ -390,7 +390,7 @@ struct BinNat {
   static N pred(const N &n);
   static N add(N n, N m);
   static N mul(const N &n, const N &m);
-  static unsigned int to_nat(const N &a);
+  static uint64_t to_nat(const N &a);
 };
 
 struct BinInt {
@@ -403,7 +403,7 @@ struct BinInt {
   static Z sub(const Z &m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
-  static unsigned int to_nat(const Z &z);
+  static uint64_t to_nat(const Z &z);
   static Z abs(const Z &z);
 };
 
@@ -459,11 +459,11 @@ struct BinaryNums {
   static inline const Comparison z_compare_result =
       BinInt::compare(Z::zneg(Positive::xi(Positive::xh())),
                       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))));
-  static inline const unsigned int pos_to_nat =
+  static inline const uint64_t pos_to_nat =
       Coq_Pos::to_nat(Positive::xi(Positive::xi(Positive::xh())));
-  static inline const unsigned int n_to_nat = BinNat::to_nat(
+  static inline const uint64_t n_to_nat = BinNat::to_nat(
       N::npos(Positive::xi(Positive::xi(Positive::xi(Positive::xh())))));
-  static inline const unsigned int z_to_nat = BinInt::to_nat(
+  static inline const uint64_t z_to_nat = BinInt::to_nat(
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
   static N n_max(N a, N b);
   static Z z_sign(const Z &z);

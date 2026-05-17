@@ -119,9 +119,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -139,16 +139,16 @@ struct EncodeOps {
     struct DAA {};
 
     struct FIM {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     struct JUN {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct LDM1 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP1 {};
@@ -246,13 +246,13 @@ struct EncodeOps {
 
     static instruction1 daa() { return instruction1(DAA{}); }
 
-    static instruction1 fim(unsigned int a0, unsigned int a1) {
+    static instruction1 fim(uint64_t a0, uint64_t a1) {
       return instruction1(FIM{a0, a1});
     }
 
-    static instruction1 jun(unsigned int a0) { return instruction1(JUN{a0}); }
+    static instruction1 jun(uint64_t a0) { return instruction1(JUN{a0}); }
 
-    static instruction1 ldm1(unsigned int a0) { return instruction1(LDM1{a0}); }
+    static instruction1 ldm1(uint64_t a0) { return instruction1(LDM1{a0}); }
 
     static instruction1 nop1() { return instruction1(NOP1{}); }
 
@@ -270,53 +270,57 @@ struct EncodeOps {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    std::pair<unsigned int, unsigned int> encode1() const {
+    std::pair<uint64_t, uint64_t> encode1() const {
       if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
-        return std::make_pair(240u, 0u);
+        return std::make_pair(UINT64_C(240), UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::CMC>(
                      this->v())) {
-        return std::make_pair(243u, 0u);
+        return std::make_pair(UINT64_C(243), UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::DAA>(
                      this->v())) {
-        return std::make_pair(251u, 0u);
+        return std::make_pair(UINT64_C(251), UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::FIM>(
                      this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
-        return std::make_pair((32u + (((a0 - (2u ? a0 % 2u : a0)) > a0
-                                           ? 0
-                                           : (a0 - (2u ? a0 % 2u : a0))))),
-                              (256u ? a1 % 256u : a1));
+        return std::make_pair(
+            (UINT64_C(32) +
+             (((a0 - (UINT64_C(2) ? a0 % UINT64_C(2) : a0)) > a0
+                   ? 0
+                   : (a0 - (UINT64_C(2) ? a0 % UINT64_C(2) : a0))))),
+            (UINT64_C(256) ? a1 % UINT64_C(256) : a1));
       } else if (std::holds_alternative<typename instruction1::JUN>(
                      this->v())) {
         const auto &[a0] = std::get<typename instruction1::JUN>(this->v());
-        return std::make_pair((64u + (256u ? a0 / 256u : 0)),
-                              (256u ? a0 % 256u : a0));
+        return std::make_pair(
+            (UINT64_C(64) + (UINT64_C(256) ? a0 / UINT64_C(256) : 0)),
+            (UINT64_C(256) ? a0 % UINT64_C(256) : a0));
       } else if (std::holds_alternative<typename instruction1::LDM1>(
                      this->v())) {
         const auto &[a0] = std::get<typename instruction1::LDM1>(this->v());
-        return std::make_pair((208u + (16u ? a0 % 16u : a0)), 0u);
+        return std::make_pair(
+            (UINT64_C(208) + (UINT64_C(16) ? a0 % UINT64_C(16) : a0)),
+            UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::NOP1>(
                      this->v())) {
-        return std::make_pair(0u, 0u);
+        return std::make_pair(UINT64_C(0), UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::RDM>(
                      this->v())) {
-        return std::make_pair(233u, 0u);
+        return std::make_pair(UINT64_C(233), UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::TCS>(
                      this->v())) {
-        return std::make_pair(249u, 0u);
+        return std::make_pair(UINT64_C(249), UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::WPM>(
                      this->v())) {
-        return std::make_pair(227u, 0u);
+        return std::make_pair(UINT64_C(227), UINT64_C(0));
       } else {
-        return std::make_pair(228u, 0u);
+        return std::make_pair(UINT64_C(228), UINT64_C(0));
       }
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
-      requires std::is_invocable_r_v<T1, F3 &, unsigned int &,
-                                     unsigned int &> &&
-               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F5 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, uint64_t &>
     T1 instruction1_rec(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
                         T1 f6, T1 f7, T1 f8, T1 f9) const {
       if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
@@ -357,10 +361,9 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F3, typename F4, typename F5>
-      requires std::is_invocable_r_v<T1, F3 &, unsigned int &,
-                                     unsigned int &> &&
-               std::is_invocable_r_v<T1, F4 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F5 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, uint64_t &>
     T1 instruction1_rect(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
                          T1 f6, T1 f7, T1 f8, T1 f9) const {
       if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
@@ -401,14 +404,15 @@ struct EncodeOps {
     }
   };
 
-  static bool pair_in_range(const std::pair<unsigned int, unsigned int> &p);
+  static bool pair_in_range(const std::pair<uint64_t, uint64_t> &p);
   static inline const bool test_encode_bytes_in_range =
       ((((((((((pair_in_range(instruction1::clb().encode1()) &&
                 pair_in_range(instruction1::cmc().encode1())) &&
                pair_in_range(instruction1::daa().encode1())) &&
-              pair_in_range(instruction1::fim(14u, 255u).encode1())) &&
-             pair_in_range(instruction1::jun(4095u).encode1())) &&
-            pair_in_range(instruction1::ldm1(15u).encode1())) &&
+              pair_in_range(
+                  instruction1::fim(UINT64_C(14), UINT64_C(255)).encode1())) &&
+             pair_in_range(instruction1::jun(UINT64_C(4095)).encode1())) &&
+            pair_in_range(instruction1::ldm1(UINT64_C(15)).encode1())) &&
            pair_in_range(instruction1::nop1().encode1())) &&
           pair_in_range(instruction1::rdm().encode1())) &&
          pair_in_range(instruction1::tcs().encode1())) &&
@@ -420,7 +424,7 @@ struct EncodeOps {
     struct NOP2 {};
 
     struct LDM2 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP2, LDM2>;
@@ -465,7 +469,7 @@ struct EncodeOps {
     // CREATORS
     static instruction2 nop2() { return instruction2(NOP2{}); }
 
-    static instruction2 ldm2(unsigned int a0) { return instruction2(LDM2{a0}); }
+    static instruction2 ldm2(uint64_t a0) { return instruction2(LDM2{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -473,17 +477,18 @@ struct EncodeOps {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    std::pair<unsigned int, unsigned int> encode2() const {
+    std::pair<uint64_t, uint64_t> encode2() const {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
-        return std::make_pair(0u, 0u);
+        return std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
         const auto &[a0] = std::get<typename instruction2::LDM2>(this->v());
-        return std::make_pair(13u, (16u ? a0 % 16u : a0));
+        return std::make_pair(UINT64_C(13),
+                              (UINT64_C(16) ? a0 % UINT64_C(16) : a0));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instruction2_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
@@ -494,7 +499,7 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instruction2_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction2::NOP2>(this->v())) {
         return f;
@@ -505,13 +510,13 @@ struct EncodeOps {
     }
   };
 
-  static List<unsigned int> encode_list2(const List<instruction2> &prog);
-  static inline const unsigned int test_encode_list_byte_count =
+  static List<uint64_t> encode_list2(const List<instruction2> &prog);
+  static inline const uint64_t test_encode_list_byte_count =
       encode_list2(
           List<instruction2>::cons(
               instruction2::nop2(),
               List<instruction2>::cons(
-                  instruction2::ldm2(5u),
+                  instruction2::ldm2(UINT64_C(5)),
                   List<instruction2>::cons(instruction2::nop2(),
                                            List<instruction2>::nil()))))
           .length();
@@ -521,7 +526,7 @@ struct EncodeOps {
     struct NOP3 {};
 
     struct LDM3 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP3, LDM3>;
@@ -566,7 +571,7 @@ struct EncodeOps {
     // CREATORS
     static instruction3 nop3() { return instruction3(NOP3{}); }
 
-    static instruction3 ldm3(unsigned int a0) { return instruction3(LDM3{a0}); }
+    static instruction3 ldm3(uint64_t a0) { return instruction3(LDM3{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -574,17 +579,19 @@ struct EncodeOps {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    std::pair<unsigned int, unsigned int> encode3() const {
+    std::pair<uint64_t, uint64_t> encode3() const {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
-        return std::make_pair(0u, 0u);
+        return std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
         const auto &[a0] = std::get<typename instruction3::LDM3>(this->v());
-        return std::make_pair(((13u * 16u) + (16u ? a0 % 16u : a0)), 0u);
+        return std::make_pair(((UINT64_C(13) * UINT64_C(16)) +
+                               (UINT64_C(16) ? a0 % UINT64_C(16) : a0)),
+                              UINT64_C(0));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instruction3_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;
@@ -595,7 +602,7 @@ struct EncodeOps {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instruction3_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename instruction3::NOP3>(this->v())) {
         return f;
@@ -606,17 +613,17 @@ struct EncodeOps {
     }
   };
 
-  static List<unsigned int> encode_list3(const List<instruction3> &prog);
-  static inline const unsigned int test_instruction_byte_stream_encode =
+  static List<uint64_t> encode_list3(const List<instruction3> &prog);
+  static inline const uint64_t test_instruction_byte_stream_encode =
       encode_list3(
           List<instruction3>::cons(
               instruction3::nop3(),
               List<instruction3>::cons(
-                  instruction3::ldm3(3u),
-                  List<instruction3>::cons(instruction3::ldm3(12u),
+                  instruction3::ldm3(UINT64_C(3)),
+                  List<instruction3>::cons(instruction3::ldm3(UINT64_C(12)),
                                            List<instruction3>::nil()))))
           .length();
-  static inline const std::pair<std::pair<bool, unsigned int>, unsigned int> t =
+  static inline const std::pair<std::pair<bool, uint64_t>, uint64_t> t =
       std::make_pair(std::make_pair(test_encode_bytes_in_range,
                                     test_encode_list_byte_count),
                      test_instruction_byte_stream_encode);

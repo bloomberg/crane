@@ -123,31 +123,31 @@ public:
 struct RocqBug11114 {
   struct t {
     // DATA
-    unsigned int k;
+    uint64_t k;
 
     // ACCESSORS
     t clone() const { return {k}; }
 
     // CREATORS
-    static t t0(unsigned int k) { return {k}; }
+    static t t0(uint64_t k) { return {k}; }
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 t_rect(const List<unsigned int> &, F1 &&f, const t &t0) {
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static T1 t_rect(const List<uint64_t> &, F1 &&f, const t &t0) {
     const auto &[k0] = t0;
     return f(k0);
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static T1 t_rec(const List<unsigned int> &, F1 &&f, const t &t0) {
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static T1 t_rec(const List<uint64_t> &, F1 &&f, const t &t0) {
     const auto &[k0] = t0;
     return f(k0);
   }
 
   struct pkg {
-    List<unsigned int> _sig;
+    List<uint64_t> _sig;
     t _t;
 
     // ACCESSORS
@@ -155,7 +155,7 @@ struct RocqBug11114 {
   };
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static pkg map(F0 &&f, const pkg &p) {
     return pkg{p._sig, [=]() mutable {
                  const auto &_sv = p._t;
@@ -165,9 +165,10 @@ struct RocqBug11114 {
   }
 
   static inline const pkg test_pkg =
-      pkg{List<unsigned int>::cons(1u, List<unsigned int>::nil()), t::t0(2u)};
+      pkg{List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
+          t::t0(UINT64_C(2))};
   static inline const pkg test_map =
-      map([](unsigned int x) { return (x + 1u); }, test_pkg);
+      map([](uint64_t x) { return (x + UINT64_C(1)); }, test_pkg);
 };
 
 #endif // INCLUDED_ROCQ_BUG_11114

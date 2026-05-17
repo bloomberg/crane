@@ -118,7 +118,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -130,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -143,7 +143,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -159,21 +159,19 @@ public:
 };
 
 struct LoopifyGrouping {
-  static List<List<unsigned int>>
-  prepend_to_groups(unsigned int x, bool same, List<List<unsigned int>> groups);
-  static List<List<unsigned int>> group_fuel(unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<List<unsigned int>> group(const List<unsigned int> &l);
-  static bool elem(unsigned int x, const List<unsigned int> &l);
-  static List<unsigned int> nub(const List<unsigned int> &l);
-  static List<unsigned int> remove_elem(unsigned int x,
-                                        const List<unsigned int> &l);
-  static std::pair<std::pair<List<unsigned int>, List<unsigned int>>,
-                   List<unsigned int>>
-  partition3(unsigned int pivot, const List<unsigned int> &l);
-  static unsigned int count_elem(unsigned int x, const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  group_pairs(const List<unsigned int> &l);
+  static List<List<uint64_t>> prepend_to_groups(uint64_t x, bool same,
+                                                List<List<uint64_t>> groups);
+  static List<List<uint64_t>> group_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<List<uint64_t>> group(const List<uint64_t> &l);
+  static bool elem(uint64_t x, const List<uint64_t> &l);
+  static List<uint64_t> nub(const List<uint64_t> &l);
+  static List<uint64_t> remove_elem(uint64_t x, const List<uint64_t> &l);
+  static std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
+  partition3(uint64_t pivot, const List<uint64_t> &l);
+  static uint64_t count_elem(uint64_t x, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  group_pairs(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_GROUPING

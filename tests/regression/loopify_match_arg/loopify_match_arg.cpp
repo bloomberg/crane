@@ -2,7 +2,7 @@
 
 /// Count the number of Dot cells in a list.
 /// The match on c inside the Cons branch triggers bug 2.
-unsigned int LoopifyMatchArg::count_dots(
+uint64_t LoopifyMatchArg::count_dots(
     const List<LoopifyMatchArg::Cell>
         &xs) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -12,11 +12,11 @@ unsigned int LoopifyMatchArg::count_dots(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(1u) _s0;
+    decltype(UINT64_C(1)) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&xs});
@@ -29,13 +29,13 @@ unsigned int LoopifyMatchArg::count_dots(
       const List<LoopifyMatchArg::Cell> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
               xs.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
             std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs.v());
         switch (a0) {
         case Cell::DOT: {
-          _stack.emplace_back(_Resume_Cons{1u});
+          _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
           _stack.emplace_back(_Enter{a1.get()});
         }
         default: {
@@ -53,7 +53,7 @@ unsigned int LoopifyMatchArg::count_dots(
 
 /// A plain recursive length — triggers bug 1 (missing <vector>)
 /// when loopify converts it to an explicit-stack loop.
-unsigned int LoopifyMatchArg::my_length(
+uint64_t LoopifyMatchArg::my_length(
     const List<LoopifyMatchArg::Cell>
         &xs) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -63,11 +63,11 @@ unsigned int LoopifyMatchArg::my_length(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(1u) _s0;
+    decltype(UINT64_C(1)) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&xs});
@@ -80,11 +80,11 @@ unsigned int LoopifyMatchArg::my_length(
       const List<LoopifyMatchArg::Cell> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
               xs.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
             std::get<typename List<LoopifyMatchArg::Cell>::Cons>(xs.v());
-        _stack.emplace_back(_Resume_Cons{1u});
+        _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {

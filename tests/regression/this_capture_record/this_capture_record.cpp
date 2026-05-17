@@ -5,21 +5,18 @@
 /// Returns a record whose fields are closures that capture this
 /// via =, this.
 ThisCaptureRecord::callback_rec
-ThisCaptureRecord::tree_callbacks(ThisCaptureRecord::tree t,
-                                  unsigned int flag) {
+ThisCaptureRecord::tree_callbacks(ThisCaptureRecord::tree t, uint64_t flag) {
   if (flag <= 0) {
-    return callback_rec{
-        [=](unsigned int x) mutable { return (x + t.tree_sum()); },
-        [=](unsigned int x) mutable { return (x * t.tree_sum()); }};
+    return callback_rec{[=](uint64_t x) mutable { return (x + t.tree_sum()); },
+                        [=](uint64_t x) mutable { return (x * t.tree_sum()); }};
   } else {
-    unsigned int _x = flag - 1;
-    return callback_rec{
-        [=](unsigned int x) mutable { return (t.tree_sum() + x); },
-        [=](unsigned int) mutable { return t.tree_sum(); }};
+    uint64_t _x = flag - 1;
+    return callback_rec{[=](uint64_t x) mutable { return (t.tree_sum() + x); },
+                        [=](uint64_t) mutable { return t.tree_sum(); }};
   }
 }
 
 /// Dummy use of tag to keep it around for extraction.
-ThisCaptureRecord::tag ThisCaptureRecord::mk_tag(unsigned int n) {
+ThisCaptureRecord::tag ThisCaptureRecord::mk_tag(uint64_t n) {
   return tag::mktag(n);
 }

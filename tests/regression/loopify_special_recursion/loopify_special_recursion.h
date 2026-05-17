@@ -119,7 +119,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -131,7 +131,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -144,7 +144,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -189,7 +189,7 @@ struct LoopifySpecialRecursion {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -259,7 +259,7 @@ struct LoopifySpecialRecursion {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -296,8 +296,8 @@ struct LoopifySpecialRecursion {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -309,8 +309,8 @@ struct LoopifySpecialRecursion {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -321,24 +321,23 @@ struct LoopifySpecialRecursion {
     }
   }
 
-  static List<unsigned int> process_twice_fuel(unsigned int fuel,
-                                               const List<unsigned int> &l);
-  static List<unsigned int> process_twice(const List<unsigned int> &l);
-  static List<unsigned int> double_append(const List<unsigned int> &l1,
-                                          List<unsigned int> l2);
-  static List<unsigned int> remove_if_sum_even(const List<unsigned int> &l);
-  static List<unsigned int> reverse_insert(unsigned int x,
-                                           List<unsigned int> l);
+  static List<uint64_t> process_twice_fuel(uint64_t fuel,
+                                           const List<uint64_t> &l);
+  static List<uint64_t> process_twice(const List<uint64_t> &l);
+  static List<uint64_t> double_append(const List<uint64_t> &l1,
+                                      List<uint64_t> l2);
+  static List<uint64_t> remove_if_sum_even(const List<uint64_t> &l);
+  static List<uint64_t> reverse_insert(uint64_t x, List<uint64_t> l);
 
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int
-  nest_apply(unsigned int n, F1 &&f,
-             unsigned int x) { /// _Enter: captures varying parameters for each
-                               /// recursive call.
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static uint64_t
+  nest_apply(uint64_t n, F1 &&f,
+             uint64_t x) { /// _Enter: captures varying parameters for each
+                           /// recursive call.
 
     struct _Enter {
-      unsigned int n;
+      uint64_t n;
     };
 
     /// _Resume_n_: saves [f], resumes after recursive call with _result.
@@ -347,7 +346,7 @@ struct LoopifySpecialRecursion {
     };
 
     using _Frame = std::variant<_Enter, _Resume_n_>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{n});
@@ -357,11 +356,11 @@ struct LoopifySpecialRecursion {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        unsigned int n = _f.n;
+        uint64_t n = _f.n;
         if (n <= 0) {
           _result = std::move(x);
         } else {
-          unsigned int n_ = n - 1;
+          uint64_t n_ = n - 1;
           _stack.emplace_back(_Resume_n_{f});
           _stack.emplace_back(_Enter{n_});
         }
@@ -373,15 +372,13 @@ struct LoopifySpecialRecursion {
     return _result;
   }
 
-  static List<unsigned int> collect_sorted(const tree &t);
-  static unsigned int sum_odd_indices_aux(const List<unsigned int> &l,
-                                          unsigned int idx);
-  static unsigned int sum_odd_indices(const List<unsigned int> &l);
-  static unsigned int categorize_by(unsigned int k,
-                                    const List<unsigned int> &l);
-  static List<unsigned int> between(unsigned int lo, unsigned int hi,
-                                    const List<unsigned int> &l);
-  static List<unsigned int> merge_levels(const List<List<unsigned int>> &ll);
+  static List<uint64_t> collect_sorted(const tree &t);
+  static uint64_t sum_odd_indices_aux(const List<uint64_t> &l, uint64_t idx);
+  static uint64_t sum_odd_indices(const List<uint64_t> &l);
+  static uint64_t categorize_by(uint64_t k, const List<uint64_t> &l);
+  static List<uint64_t> between(uint64_t lo, uint64_t hi,
+                                const List<uint64_t> &l);
+  static List<uint64_t> merge_levels(const List<List<uint64_t>> &ll);
 };
 
 #endif // INCLUDED_LOOPIFY_SPECIAL_RECURSION

@@ -11,10 +11,10 @@
 using namespace std::string_literals;
 
 struct threadtest {
-  static void fun1(unsigned int n);
-  static void fun2(unsigned int n);
-  static void test(unsigned int m, unsigned int n);
-  static void test_pure(unsigned int m, unsigned int n);
+  static void fun1(uint64_t n);
+  static void fun2(uint64_t n);
+  static void test(uint64_t m, uint64_t n);
+  static void test_pure(uint64_t m, uint64_t n);
 };
 
 #endif // INCLUDED_THREAD

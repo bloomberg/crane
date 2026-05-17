@@ -120,28 +120,32 @@ public:
 };
 
 struct ComputationalProof {
-  static bool nat_eq_dec(unsigned int n, unsigned int x);
-  static bool nat_eqb_dec(unsigned int n, unsigned int m);
-  static bool le_dec(unsigned int n, unsigned int m);
-  static bool nat_leb_dec(unsigned int n, unsigned int m);
-  static unsigned int min_dec(unsigned int n, unsigned int m);
-  static unsigned int max_dec(unsigned int n, unsigned int m);
-  static List<unsigned int> insert_dec(unsigned int x,
-                                       const List<unsigned int> &l);
-  static List<unsigned int> isort_dec(const List<unsigned int> &l);
-  static inline const bool test_eq_true = nat_eqb_dec(5u, 5u);
-  static inline const bool test_eq_false = nat_eqb_dec(3u, 7u);
-  static inline const bool test_leb_true = nat_leb_dec(3u, 5u);
-  static inline const bool test_leb_false = nat_leb_dec(8u, 2u);
-  static inline const unsigned int test_min = min_dec(4u, 9u);
-  static inline const unsigned int test_max = max_dec(4u, 9u);
-  static inline const List<unsigned int> test_sort =
-      isort_dec(List<unsigned int>::cons(
-          5u, List<unsigned int>::cons(
-                  1u, List<unsigned int>::cons(
-                          4u, List<unsigned int>::cons(
-                                  2u, List<unsigned int>::cons(
-                                          3u, List<unsigned int>::nil()))))));
+  static bool nat_eq_dec(uint64_t n, uint64_t x);
+  static bool nat_eqb_dec(uint64_t n, uint64_t m);
+  static bool le_dec(uint64_t n, uint64_t m);
+  static bool nat_leb_dec(uint64_t n, uint64_t m);
+  static uint64_t min_dec(uint64_t n, uint64_t m);
+  static uint64_t max_dec(uint64_t n, uint64_t m);
+  static List<uint64_t> insert_dec(uint64_t x, const List<uint64_t> &l);
+  static List<uint64_t> isort_dec(const List<uint64_t> &l);
+  static inline const bool test_eq_true = nat_eqb_dec(UINT64_C(5), UINT64_C(5));
+  static inline const bool test_eq_false =
+      nat_eqb_dec(UINT64_C(3), UINT64_C(7));
+  static inline const bool test_leb_true =
+      nat_leb_dec(UINT64_C(3), UINT64_C(5));
+  static inline const bool test_leb_false =
+      nat_leb_dec(UINT64_C(8), UINT64_C(2));
+  static inline const uint64_t test_min = min_dec(UINT64_C(4), UINT64_C(9));
+  static inline const uint64_t test_max = max_dec(UINT64_C(4), UINT64_C(9));
+  static inline const List<uint64_t> test_sort = isort_dec(List<uint64_t>::cons(
+      UINT64_C(5),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))));
 };
 
 #endif // INCLUDED_COMPUTATIONAL_PROOF

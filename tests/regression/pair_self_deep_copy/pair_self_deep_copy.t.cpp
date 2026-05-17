@@ -5,7 +5,7 @@
 
 namespace {
 
-PairSelfDeepCopy::chain make_chain(unsigned int n) {
+PairSelfDeepCopy::chain make_chain(uint64_t n) {
   PairSelfDeepCopy::chain x = PairSelfDeepCopy::chain::stop();
   while (n > 0) {
     x = PairSelfDeepCopy::chain::link(

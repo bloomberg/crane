@@ -28,9 +28,9 @@ struct EffectBindAction {
   static std::string helper(std::string s);
   static std::string use_helper(bool flag);
   /// 7. Let-binding of a match result, then use in effect
-  static std::string let_match_then_effect(unsigned int n);
+  static std::string let_match_then_effect(uint64_t n);
   /// 8. Discard result of conditional effect
-  static unsigned int discard_conditional(bool flag);
+  static uint64_t discard_conditional(bool flag);
 };
 
 #endif // INCLUDED_EFFECT_BIND_ACTION

@@ -130,35 +130,34 @@ public:
 struct VoidCallback {
   /// 1. Pure HOF with void callback — the callback returns unit
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
-  static void for_each(F0 &&f, const List<unsigned int> &xs) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
+    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
+  static void for_each(F0 &&f, const List<uint64_t> &xs) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       for_each(f, *a1);
       return;
     }
   }
 
-  static void print_nat(unsigned int _x);
+  static void print_nat(uint64_t _x);
   static inline const std::monostate test_for_each = []() {
     for_each(print_nat,
-             List<unsigned int>::cons(
-                 1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())));
+             List<uint64_t>::cons(
+                 UINT64_C(1),
+                 List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
     return std::monostate{};
   }();
 
   /// 2. Monadic for-each: callback returns itree ioE unit
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
-  static void for_each_m(F0 &&f, const List<unsigned int> &xs) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
+    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
+  static void for_each_m(F0 &&f, const List<uint64_t> &xs) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       f(a0);
       for_each_m(f, *a1);
       return;
@@ -167,39 +166,39 @@ struct VoidCallback {
 
   static void test_for_each_m();
   /// 3. Pure function returning unit, used in let
-  static void side_effect_pure(unsigned int _x);
-  static inline const unsigned int use_side_effect = 42u;
+  static void side_effect_pure(uint64_t _x);
+  static inline const uint64_t use_side_effect = UINT64_C(42);
 
   /// 4. Callback that ignores argument and returns nat
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
-  static unsigned int ignore_and_count(F0 &&f, const List<unsigned int> &xs) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
-      return 0u;
+    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
+  static uint64_t ignore_and_count(F0 &&f, const List<uint64_t> &xs) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       return (ignore_and_count(f, *a1) + 1);
     }
   }
 
-  static inline const unsigned int test_ignore = ignore_and_count(
+  static inline const uint64_t test_ignore = ignore_and_count(
       print_nat,
-      List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 
   /// 5. Nested void callbacks
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
-  static void apply_twice(F0 &&f, unsigned int _x0) {
+    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
+  static void apply_twice(F0 &&f, uint64_t _x0) {
     f(_x0);
     return;
   }
 
   static inline const std::monostate test_apply_twice = []() {
-    apply_twice(print_nat, 42u);
+    apply_twice(print_nat, UINT64_C(42));
     return std::monostate{};
   }();
 
@@ -211,12 +210,12 @@ struct VoidCallback {
   }
 
   static inline const std::monostate test_apply_to_void = []() {
-    apply_to<unsigned int, std::monostate>(
-        [](const unsigned int &_wa0) {
+    apply_to<uint64_t, std::monostate>(
+        [](const uint64_t &_wa0) {
           print_nat(_wa0);
           return std::monostate{};
         },
-        5u);
+        UINT64_C(5));
     return std::monostate{};
   }();
   /// 7. Void returning function in a match arm

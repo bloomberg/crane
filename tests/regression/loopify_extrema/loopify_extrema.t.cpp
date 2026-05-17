@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -37,11 +37,11 @@ int main() {
   ASSERT(mm.second == 5u);  // max
 
   // max_by
-  auto neg = [](unsigned int x) { return 100u - x; };
+  auto neg = [](uint64_t x) { return 100u - x; };
   ASSERT(LoopifyExtrema::max_by(neg, l5) == 99u);  // max(100-3, 100-1, 100-4, 100-1, 100-5) = 99
 
   // min_by
-  auto id = [](unsigned int x) { return x; };
+  auto id = [](uint64_t x) { return x; };
   ASSERT(LoopifyExtrema::min_by(id, l5) == 1u);
 
   // argmax
@@ -68,7 +68,7 @@ int main() {
   ASSERT(LoopifyExtrema::is_sorted(l5) == false);
 
   // adjacent_all
-  auto le = [](unsigned int x, unsigned int y) { return x <= y; };
+  auto le = [](uint64_t x, uint64_t y) { return x <= y; };
   ASSERT(LoopifyExtrema::adjacent_all(le, sorted) == true);
   ASSERT(LoopifyExtrema::adjacent_all(le, l5) == false);
 

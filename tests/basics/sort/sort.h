@@ -119,9 +119,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -141,8 +141,8 @@ template <typename A> struct Sig {
 };
 
 struct Compare_dec {
-  static bool le_gt_dec(unsigned int _x0, unsigned int _x1);
-  static bool le_dec(unsigned int n, unsigned int m);
+  static bool le_gt_dec(uint64_t _x0, uint64_t _x1);
+  static bool le_dec(uint64_t n, uint64_t m);
 };
 
 struct Sort {
@@ -152,7 +152,7 @@ struct Sort {
              std::is_invocable_r_v<T2, F2 &, T1 &> &&
              std::is_invocable_r_v<T2, F3 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq(F0 &&splitF, T2 x, F2 &&x0, F3 &&x1, const List<T1> &ls) {
-    bool s = 2u <= ls.length();
+    bool s = UINT64_C(2) <= ls.length();
     if (s) {
       return x1(ls, div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).first),
                 div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
@@ -249,23 +249,21 @@ struct Sort {
     }
   }
 
-  static Sig<List<unsigned int>> sort_cons_prog(unsigned int a,
-                                                const List<unsigned int> &_x,
-                                                const List<unsigned int> &l_);
-  static Sig<List<unsigned int>> isort(const List<unsigned int> &l);
-  static List<unsigned int> merge(List<unsigned int> l1,
-                                  const List<unsigned int> &l2);
-  static Sig<List<unsigned int>> merge_prog(const List<unsigned int> &_x,
-                                            const List<unsigned int> &l1,
-                                            const List<unsigned int> &l2);
-  static Sig<List<unsigned int>> msort(const List<unsigned int> &_x0);
-  static Sig<List<unsigned int>> pair_merge_prog(unsigned int _x,
-                                                 unsigned int _x0,
-                                                 const List<unsigned int> &_x1,
-                                                 const List<unsigned int> &l_,
-                                                 const List<unsigned int> &l_0);
-  static Sig<List<unsigned int>> psort(const List<unsigned int> &_x0);
-  static Sig<List<unsigned int>> qsort(const List<unsigned int> &_x0);
+  static Sig<List<uint64_t>> sort_cons_prog(uint64_t a,
+                                            const List<uint64_t> &_x,
+                                            const List<uint64_t> &l_);
+  static Sig<List<uint64_t>> isort(const List<uint64_t> &l);
+  static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
+  static Sig<List<uint64_t>> merge_prog(const List<uint64_t> &_x,
+                                        const List<uint64_t> &l1,
+                                        const List<uint64_t> &l2);
+  static Sig<List<uint64_t>> msort(const List<uint64_t> &_x0);
+  static Sig<List<uint64_t>> pair_merge_prog(uint64_t _x, uint64_t _x0,
+                                             const List<uint64_t> &_x1,
+                                             const List<uint64_t> &l_,
+                                             const List<uint64_t> &l_0);
+  static Sig<List<uint64_t>> psort(const List<uint64_t> &_x0);
+  static Sig<List<uint64_t>> qsort(const List<uint64_t> &_x0);
 };
 
 #endif // INCLUDED_SORT

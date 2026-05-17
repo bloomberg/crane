@@ -196,15 +196,12 @@ struct HigherKinded {
     }
   }
 
-  static unsigned int tree_sum(const Tree<unsigned int> &t);
+  static uint64_t tree_sum(const Tree<uint64_t> &t);
 
-  template <typename T1> static unsigned int tree_size(const Tree<T1> &t) {
-    return tree_fold<T1, unsigned int>(
-        [](const T1 &) { return 1u; },
-        [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-          return (_x0 + _x1);
-        },
-        t);
+  template <typename T1> static uint64_t tree_size(const Tree<T1> &t) {
+    return tree_fold<T1, uint64_t>(
+        [](const T1 &) { return UINT64_C(1); },
+        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, t);
   }
 
   template <typename T1, typename T2, typename F0>
@@ -218,30 +215,29 @@ struct HigherKinded {
     }
   }
 
-  static inline const Tree<unsigned int> test_tree = Tree<unsigned int>::branch(
-      Tree<unsigned int>::leaf(1u),
-      Tree<unsigned int>::branch(Tree<unsigned int>::leaf(2u),
-                                 Tree<unsigned int>::leaf(3u)));
-  static inline const unsigned int test_tree_sum = tree_sum(test_tree);
-  static inline const unsigned int test_tree_size =
-      tree_size<unsigned int>(test_tree);
-  static inline const Tree<unsigned int> test_tree_map =
-      tree_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n * 2u); }, test_tree);
-  static inline const std::optional<unsigned int> test_hk_option = hk_map(
+  static inline const Tree<uint64_t> test_tree = Tree<uint64_t>::branch(
+      Tree<uint64_t>::leaf(UINT64_C(1)),
+      Tree<uint64_t>::branch(Tree<uint64_t>::leaf(UINT64_C(2)),
+                             Tree<uint64_t>::leaf(UINT64_C(3))));
+  static inline const uint64_t test_tree_sum = tree_sum(test_tree);
+  static inline const uint64_t test_tree_size = tree_size<uint64_t>(test_tree);
+  static inline const Tree<uint64_t> test_tree_map =
+      tree_map<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
+                                   test_tree);
+  static inline const std::optional<uint64_t> test_hk_option = hk_map(
       []<typename _T1>(auto &&a0,
                        const std::optional<_T1> &a1) -> decltype(auto) {
         return map_option<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
             std::forward<decltype(a0)>(a0), a1);
       },
-      [](unsigned int n) { return (n + 1u); },
-      std::make_optional<unsigned int>(5u));
-  static inline const Tree<unsigned int> test_hk_tree = hk_map(
+      [](uint64_t n) { return (n + UINT64_C(1)); },
+      std::make_optional<uint64_t>(UINT64_C(5)));
+  static inline const Tree<uint64_t> test_hk_tree = hk_map(
       []<typename _T1>(auto &&a0, const Tree<_T1> &a1) -> decltype(auto) {
         return tree_map<_T1, std::invoke_result_t<decltype(a0) &, _T1 &>>(
             std::forward<decltype(a0)>(a0), a1);
       },
-      [](unsigned int n) { return (n + 10u); }, test_tree);
+      [](uint64_t n) { return (n + UINT64_C(10)); }, test_tree);
 };
 
 #endif // INCLUDED_HIGHER_KINDED

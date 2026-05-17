@@ -31,7 +31,7 @@ struct FixSharedPtrField {
     struct Mynil {};
 
     struct Mycons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<mylist> a1;
     };
 
@@ -98,7 +98,7 @@ struct FixSharedPtrField {
     // CREATORS
     static mylist mynil() { return mylist(Mynil{}); }
 
-    static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(uint64_t a0, mylist a1) {
       return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
@@ -131,42 +131,40 @@ struct FixSharedPtrField {
 
     /// Local fixpoint captures h : nat (POD) and t : shared_ptr<mylist>
     /// from the match on value-type mylist. Both are captured by &.
-    std::optional<std::function<unsigned int(unsigned int)>>
-    make_list_fn() const {
+    std::optional<std::function<uint64_t(uint64_t)>> make_list_fn() const {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
-        return std::optional<std::function<unsigned int(unsigned int)>>();
+        return std::optional<std::function<uint64_t(uint64_t)>>();
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
         const mylist &a1_value = *a1;
         auto compute_impl = [=](auto &_self_compute,
-                                unsigned int x) mutable -> unsigned int {
+                                uint64_t x) mutable -> uint64_t {
           if (x <= 0) {
             return (a0 + a1_value.mylist_sum());
           } else {
-            unsigned int x_ = x - 1;
-            return (1u + _self_compute(_self_compute, x_));
+            uint64_t x_ = x - 1;
+            return (UINT64_C(1) + _self_compute(_self_compute, x_));
           }
         };
-        auto compute = [=](unsigned int x) mutable -> unsigned int {
+        auto compute = [=](uint64_t x) mutable -> uint64_t {
           return compute_impl(compute_impl, x);
         };
-        return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            compute);
+        return std::make_optional<std::function<uint64_t(uint64_t)>>(compute);
       }
     }
 
-    unsigned int mylist_length() const {
+    uint64_t mylist_length() const {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
-        return (1u + (*a1).mylist_length());
+        return (UINT64_C(1) + (*a1).mylist_length());
       }
     }
 
-    unsigned int mylist_sum() const {
+    uint64_t mylist_sum() const {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
         return (a0 + (*a1).mylist_sum());
@@ -174,7 +172,7 @@ struct FixSharedPtrField {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return f;
@@ -185,7 +183,7 @@ struct FixSharedPtrField {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename mylist::Mynil>(this->v())) {
         return f;
@@ -225,32 +223,36 @@ struct FixSharedPtrField {
   /// test1: l = 10, 20, 30, h=10, t=20,30, mylist_sum(t)=50.
   /// compute(5) = (10+50) + 5 = 65.
   /// Bug: h and t captured by &, dangle after match scope ends.
-  static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs =
-        mylist::mycons(
-            10u, mylist::mycons(20u, mylist::mycons(30u, mylist::mynil())))
-            .make_list_fn();
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = mylist::mycons(UINT64_C(10),
+                              mylist::mycons(UINT64_C(20),
+                                             mylist::mycons(UINT64_C(30),
+                                                            mylist::mynil())))
+                   .make_list_fn();
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(5u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(5));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// test2: With intervening allocation to increase stack pressure.
   /// l = 100, 200, h=100, t=200, mylist_sum(t)=200.
   /// compute(0) = 100+200 = 300.
-  static inline const unsigned int test2 = []() {
-    std::optional<std::function<unsigned int(unsigned int)>> opt =
-        mylist::mycons(100u, mylist::mycons(200u, mylist::mynil()))
+  static inline const uint64_t test2 = []() {
+    std::optional<std::function<uint64_t(uint64_t)>> opt =
+        mylist::mycons(UINT64_C(100),
+                       mylist::mycons(UINT64_C(200), mylist::mynil()))
             .make_list_fn();
-    unsigned int noise =
-        mylist::mycons(1u,
-                       mylist::mycons(2u, mylist::mycons(3u, mylist::mynil())))
+    uint64_t noise =
+        mylist::mycons(
+            UINT64_C(1),
+            mylist::mycons(UINT64_C(2),
+                           mylist::mycons(UINT64_C(3), mylist::mynil())))
             .mylist_sum();
     if (opt.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *opt;
-      return f(0u);
+      const std::function<uint64_t(uint64_t)> &f = *opt;
+      return f(UINT64_C(0));
     } else {
       return noise;
     }
@@ -258,20 +260,22 @@ struct FixSharedPtrField {
   /// test3: Longer list, use mylist_length on captured tail.
   /// l = 5, 10, 15, 20, 25, h=5, t=10,15,20,25,
   /// mylist_sum(t) = 70, compute(10) = (5+70)+10 = 85.
-  static inline const unsigned int test3 = []() -> unsigned int {
-    auto _cs =
-        mylist::mycons(
-            5u,
-            mylist::mycons(
-                10u, mylist::mycons(
-                         15u, mylist::mycons(
-                                  20u, mylist::mycons(25u, mylist::mynil())))))
-            .make_list_fn();
+  static inline const uint64_t test3 = []() -> uint64_t {
+    auto _cs = mylist::mycons(
+                   UINT64_C(5),
+                   mylist::mycons(
+                       UINT64_C(10),
+                       mylist::mycons(
+                           UINT64_C(15),
+                           mylist::mycons(
+                               UINT64_C(20),
+                               mylist::mycons(UINT64_C(25), mylist::mynil())))))
+                   .make_list_fn();
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(10u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(10));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// Dummy use of wrapper to keep it alive for extraction.

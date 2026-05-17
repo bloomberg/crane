@@ -121,32 +121,29 @@ public:
 };
 
 struct LoopifyListAccess {
-  static unsigned int nth(unsigned int n, const List<unsigned int> &l);
-  static unsigned int last(const List<unsigned int> &l);
-  static unsigned int index_of_aux(unsigned int x, const List<unsigned int> &l,
-                                   unsigned int idx);
-  static unsigned int index_of(unsigned int x, const List<unsigned int> &l);
-  static bool member(unsigned int x, const List<unsigned int> &l);
-  static unsigned int
-  lookup(unsigned int key,
-         const List<std::pair<unsigned int, unsigned int>> &l);
-  static List<unsigned int>
-  lookup_all(unsigned int key,
-             const List<std::pair<unsigned int, unsigned int>> &l);
+  static uint64_t nth(uint64_t n, const List<uint64_t> &l);
+  static uint64_t last(const List<uint64_t> &l);
+  static uint64_t index_of_aux(uint64_t x, const List<uint64_t> &l,
+                               uint64_t idx);
+  static uint64_t index_of(uint64_t x, const List<uint64_t> &l);
+  static bool member(uint64_t x, const List<uint64_t> &l);
+  static uint64_t lookup(uint64_t key,
+                         const List<std::pair<uint64_t, uint64_t>> &l);
+  static List<uint64_t>
+  lookup_all(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static unsigned int find(F0 &&p, const List<unsigned int> &l) {
-    unsigned int _result;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static uint64_t find(F0 &&p, const List<uint64_t> &l) {
+    uint64_t _result;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        _result = 0u;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        _result = UINT64_C(0);
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
           _result = std::move(a0);
           break;
@@ -158,27 +155,26 @@ struct LoopifyListAccess {
     return _result;
   }
 
-  static unsigned int count(unsigned int x, const List<unsigned int> &l);
+  static uint64_t count(uint64_t x, const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static unsigned int count_matching(F0 &&p, const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return 0u;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static uint64_t count_matching(F0 &&p, const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       if (p(a0)) {
-        return (1u + count_matching(p, *a1));
+        return (UINT64_C(1) + count_matching(p, *a1));
       } else {
         return count_matching(p, *a1);
       }
     }
   }
 
-  static bool elem_at_eq(unsigned int idx, unsigned int val,
-                         const List<unsigned int> &l);
-  static unsigned int nth_default(unsigned int n, unsigned int default0,
-                                  const List<unsigned int> &l);
+  static bool elem_at_eq(uint64_t idx, uint64_t val, const List<uint64_t> &l);
+  static uint64_t nth_default(uint64_t n, uint64_t default0,
+                              const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_ACCESS

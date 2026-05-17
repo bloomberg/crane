@@ -169,17 +169,17 @@ struct LoopifyCoindStream {
     return stream<T1>::lazy_([=]() mutable -> stream<T1> { return *a1; });
   }
 
-  template <typename T1> static List<T1> take(unsigned int n, stream<T1> s) {
+  template <typename T1> static List<T1> take(uint64_t n, stream<T1> s) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     stream<T1> _loop_s = std::move(s);
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
-        unsigned int n_ = _loop_n - 1;
+        uint64_t n_ = _loop_n - 1;
         auto _cell = std::make_unique<List<T1>>(
             typename List<T1>::Cons(hd<T1>(_loop_s), nullptr));
         *_write = std::move(_cell);
@@ -228,33 +228,30 @@ struct LoopifyCoindStream {
     });
   }
 
-  static inline const stream<unsigned int> nats =
-      iterate<unsigned int>([](unsigned int x) { return (x + 1); }, 0u);
-  static inline const stream<unsigned int> doubled =
-      smap<unsigned int, unsigned int>([](unsigned int n) { return (n * 2u); },
-                                       nats);
-  static inline const stream<unsigned int> sum_stream =
-      zipWith<unsigned int, unsigned int, unsigned int>(
-          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-            return (_x0 + _x1);
-          },
+  static inline const stream<uint64_t> nats =
+      iterate<uint64_t>([](uint64_t x) { return (x + 1); }, UINT64_C(0));
+  static inline const stream<uint64_t> doubled = smap<uint64_t, uint64_t>(
+      [](uint64_t n) { return (n * UINT64_C(2)); }, nats);
+  static inline const stream<uint64_t> sum_stream =
+      zipWith<uint64_t, uint64_t, uint64_t>(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           nats, doubled);
-  static inline const stream<unsigned int> fibs =
-      unfold<unsigned int, std::pair<unsigned int, unsigned int>>(
-          [](const std::pair<unsigned int, unsigned int> &pat) {
-            const unsigned int &a = pat.first;
-            const unsigned int &b = pat.second;
+  static inline const stream<uint64_t> fibs =
+      unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
+          [](const std::pair<uint64_t, uint64_t> &pat) {
+            const uint64_t &a = pat.first;
+            const uint64_t &b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));
           },
-          std::make_pair(0u, 1u));
-  static inline const List<unsigned int> test_nats_5 =
-      take<unsigned int>(5u, nats);
-  static inline const List<unsigned int> test_doubled_5 =
-      take<unsigned int>(5u, doubled);
-  static inline const List<unsigned int> test_sum_5 =
-      take<unsigned int>(5u, sum_stream);
-  static inline const List<unsigned int> test_fibs_8 =
-      take<unsigned int>(8u, fibs);
+          std::make_pair(UINT64_C(0), UINT64_C(1)));
+  static inline const List<uint64_t> test_nats_5 =
+      take<uint64_t>(UINT64_C(5), nats);
+  static inline const List<uint64_t> test_doubled_5 =
+      take<uint64_t>(UINT64_C(5), doubled);
+  static inline const List<uint64_t> test_sum_5 =
+      take<uint64_t>(UINT64_C(5), sum_stream);
+  static inline const List<uint64_t> test_fibs_8 =
+      take<uint64_t>(UINT64_C(8), fibs);
 };
 
 #endif // INCLUDED_LOOPIFY_COIND_STREAM

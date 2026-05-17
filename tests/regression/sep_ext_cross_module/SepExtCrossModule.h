@@ -6,8 +6,8 @@
 
 namespace SepExtCrossModule {
 
-unsigned int sum_list(const Datatypes::List<unsigned int> &l);
-Datatypes::List<unsigned int> make_pair_list(unsigned int n, unsigned int m);
+uint64_t sum_list(const Datatypes::List<uint64_t> &l);
+Datatypes::List<uint64_t> make_pair_list(uint64_t n, uint64_t m);
 
 } // namespace SepExtCrossModule
 

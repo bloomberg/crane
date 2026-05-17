@@ -34,7 +34,7 @@ Crane Extract Inlined Constant PrimString.string => "std::string" From "string".
 Crane Extract Inlined Constant PrimString.cat => "%a0 + %a1" From "string".
 Crane Extract Inlined Constant PrimString.get => "%a0[%a1]" From "string".
 Crane Extract Inlined Constant PrimString.sub => "%a0.substr(%a1, %a2)" From "string".
-Crane Extract Inlined Constant PrimString.length => "%a0.length()" From "string".
+Crane Extract Inlined Constant PrimString.length => "static_cast<int64_t>(%a0.length())" From "string".
 
 (* int63 primitives - int64_t with 63-bit masking.
    All arithmetic results are masked to [0, 2^63) to match Rocq semantics.

@@ -9,7 +9,7 @@ struct MatchFallbackNat {
   struct maybe_nat {
     // TYPES
     struct SomeNat {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NoneNat {};
@@ -53,7 +53,7 @@ struct MatchFallbackNat {
     }
 
     // CREATORS
-    static maybe_nat somenat(unsigned int a0) { return maybe_nat(SomeNat{a0}); }
+    static maybe_nat somenat(uint64_t a0) { return maybe_nat(SomeNat{a0}); }
 
     static maybe_nat nonenat() { return maybe_nat(NoneNat{}); }
 
@@ -65,7 +65,7 @@ struct MatchFallbackNat {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
   static T1 maybe_nat_rect(F0 &&f, T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
       const auto &[a0] = std::get<typename maybe_nat::SomeNat>(m.v());
@@ -76,7 +76,7 @@ struct MatchFallbackNat {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
   static T1 maybe_nat_rec(F0 &&f, T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
       const auto &[a0] = std::get<typename maybe_nat::SomeNat>(m.v());
@@ -86,9 +86,9 @@ struct MatchFallbackNat {
     }
   }
 
-  static unsigned int fallback(const maybe_nat &x);
-  static inline const unsigned int t =
-      (fallback(maybe_nat::nonenat()) + fallback(maybe_nat::somenat(7u)));
+  static uint64_t fallback(const maybe_nat &x);
+  static inline const uint64_t t = (fallback(maybe_nat::nonenat()) +
+                                    fallback(maybe_nat::somenat(UINT64_C(7))));
 };
 
 #endif // INCLUDED_MATCH_FALLBACK_NAT

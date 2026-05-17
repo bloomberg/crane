@@ -36,11 +36,10 @@ struct BenchLetIn {
     }
   };
 
-  static unsigned int swap_snd(unsigned int a, unsigned int b);
-  static unsigned int add_via_pair(unsigned int a, unsigned int b);
-  static unsigned int nested_swap(unsigned int a, unsigned int b,
-                                  unsigned int c, unsigned int d);
-  static unsigned int sum_via_pairs(unsigned int n);
+  static uint64_t swap_snd(uint64_t a, uint64_t b);
+  static uint64_t add_via_pair(uint64_t a, uint64_t b);
+  static uint64_t nested_swap(uint64_t a, uint64_t b, uint64_t c, uint64_t d);
+  static uint64_t sum_via_pairs(uint64_t n);
 
   template <typename A, typename B, typename C> struct triple {
     // DATA
@@ -73,17 +72,21 @@ struct BenchLetIn {
     }
   };
 
-  static unsigned int mid3(unsigned int a, unsigned int b, unsigned int c);
-  static unsigned int sum3(unsigned int a, unsigned int b, unsigned int c);
-  static unsigned int chain_pairs(unsigned int a, unsigned int b,
-                                  unsigned int c);
-  static inline const unsigned int test_swap = swap_snd(3u, 4u);
-  static inline const unsigned int test_add = add_via_pair(3u, 4u);
-  static inline const unsigned int test_nested = nested_swap(1u, 2u, 3u, 4u);
-  static inline const unsigned int test_sum_pairs = sum_via_pairs(5u);
-  static inline const unsigned int test_mid3 = mid3(1u, 2u, 3u);
-  static inline const unsigned int test_sum3 = sum3(1u, 2u, 3u);
-  static inline const unsigned int test_chain = chain_pairs(1u, 2u, 3u);
+  static uint64_t mid3(uint64_t a, uint64_t b, uint64_t c);
+  static uint64_t sum3(uint64_t a, uint64_t b, uint64_t c);
+  static uint64_t chain_pairs(uint64_t a, uint64_t b, uint64_t c);
+  static inline const uint64_t test_swap = swap_snd(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_add =
+      add_via_pair(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_nested =
+      nested_swap(UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_sum_pairs = sum_via_pairs(UINT64_C(5));
+  static inline const uint64_t test_mid3 =
+      mid3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_sum3 =
+      sum3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_chain =
+      chain_pairs(UINT64_C(1), UINT64_C(2), UINT64_C(3));
 };
 
 #endif // INCLUDED_BENCH_LET_IN

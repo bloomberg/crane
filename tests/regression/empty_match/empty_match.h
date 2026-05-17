@@ -23,7 +23,7 @@ struct EmptyMatch {
     throw std::logic_error("absurd case");
   }
 
-  static unsigned int from_empty(const empty &_x0);
+  static uint64_t from_empty(const empty &_x0);
 
   template <typename A, typename B> struct either {
     // TYPES
@@ -135,10 +135,9 @@ struct EmptyMatch {
     }
   }
 
-  static inline const either<unsigned int, empty> test_either =
-      either<unsigned int, empty>::left(5u);
-  static inline const unsigned int test_handle =
-      handle_left<unsigned int>(test_either);
+  static inline const either<uint64_t, empty> test_either =
+      either<uint64_t, empty>::left(UINT64_C(5));
+  static inline const uint64_t test_handle = handle_left<uint64_t>(test_either);
 
   template <typename T1, typename T2>
   static either<T1, T2> complex_absurd(const empty &) {

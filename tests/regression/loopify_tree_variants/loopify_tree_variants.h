@@ -14,7 +14,7 @@ struct LoopifyTreeVariants {
 
     struct TNode {
       std::unique_ptr<ternary> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<ternary> a2;
       std::unique_ptr<ternary> a3;
     };
@@ -90,7 +90,7 @@ struct LoopifyTreeVariants {
     // CREATORS
     static ternary tleaf() { return ternary(TLeaf{}); }
 
-    static ternary tnode(ternary a0, unsigned int a1, ternary a2, ternary a3) {
+    static ternary tnode(ternary a0, uint64_t a1, ternary a2, ternary a3) {
       return ternary(TNode{std::make_unique<ternary>(std::move(a0)), a1,
                            std::make_unique<ternary>(std::move(a2)),
                            std::make_unique<ternary>(std::move(a3))});
@@ -129,7 +129,7 @@ struct LoopifyTreeVariants {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int ternary_count() const {
+    uint64_t ternary_count() const {
       const ternary *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -141,28 +141,28 @@ struct LoopifyTreeVariants {
       struct _After_TNode {
         const ternary *_s0;
         const ternary *_s1;
-        decltype(1u) _s2;
+        decltype(UINT64_C(1)) _s2;
       };
 
       /// _After_TNode_1: saves [_result, _s1, _s2], dispatches next recursive
       /// call.
       struct _After_TNode_1 {
-        unsigned int _result;
+        uint64_t _result;
         const ternary *_s1;
-        decltype(1u) _s2;
+        decltype(UINT64_C(1)) _s2;
       };
 
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        decltype(1u) _s2;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        decltype(UINT64_C(1)) _s2;
       };
 
       using _Frame =
           std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -176,11 +176,11 @@ struct LoopifyTreeVariants {
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename ternary::TNode>(_sv.v());
-            _stack.emplace_back(_After_TNode{a2.get(), a0.get(), 1u});
+            _stack.emplace_back(_After_TNode{a2.get(), a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a3.get()});
           }
         } else if (std::holds_alternative<_After_TNode>(_frame)) {
@@ -199,7 +199,7 @@ struct LoopifyTreeVariants {
       return _result;
     }
 
-    unsigned int ternary_sum() const {
+    uint64_t ternary_sum() const {
       const ternary *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -211,28 +211,28 @@ struct LoopifyTreeVariants {
       struct _After_TNode {
         const ternary *_s0;
         const ternary *_s1;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _After_TNode_1: saves [_result, _s1, a1], dispatches next recursive
       /// call.
       struct _After_TNode_1 {
-        unsigned int _result;
+        uint64_t _result;
         const ternary *_s1;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        unsigned int a1;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t a1;
       };
 
       using _Frame =
           std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -246,7 +246,7 @@ struct LoopifyTreeVariants {
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename ternary::TNode>(_sv.v());
@@ -270,7 +270,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, unsigned int &,
+      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, uint64_t &,
                                      ternary &, T1 &, ternary &, T1 &>
     T1 ternary_rec(T1 f, F1 &&f0) const {
       const ternary *_self = this;
@@ -287,7 +287,7 @@ struct LoopifyTreeVariants {
         const ternary *_s1;
         ternary a3;
         ternary a2;
-        unsigned int a1;
+        uint64_t a1;
         ternary a0;
       };
 
@@ -298,7 +298,7 @@ struct LoopifyTreeVariants {
         const ternary *_s1;
         ternary a3;
         ternary a2;
-        unsigned int a1;
+        uint64_t a1;
         ternary a0;
       };
 
@@ -309,7 +309,7 @@ struct LoopifyTreeVariants {
         T1 _result_1;
         ternary a3;
         ternary a2;
-        unsigned int a1;
+        uint64_t a1;
         ternary a0;
       };
 
@@ -359,7 +359,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, unsigned int &,
+      requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, uint64_t &,
                                      ternary &, T1 &, ternary &, T1 &>
     T1 ternary_rect(T1 f, F1 &&f0) const {
       const ternary *_self = this;
@@ -376,7 +376,7 @@ struct LoopifyTreeVariants {
         const ternary *_s1;
         ternary a3;
         ternary a2;
-        unsigned int a1;
+        uint64_t a1;
         ternary a0;
       };
 
@@ -387,7 +387,7 @@ struct LoopifyTreeVariants {
         const ternary *_s1;
         ternary a3;
         ternary a2;
-        unsigned int a1;
+        uint64_t a1;
         ternary a0;
       };
 
@@ -398,7 +398,7 @@ struct LoopifyTreeVariants {
         T1 _result_1;
         ternary a3;
         ternary a2;
-        unsigned int a1;
+        uint64_t a1;
         ternary a0;
       };
 
@@ -451,7 +451,7 @@ struct LoopifyTreeVariants {
   struct quadtree {
     // TYPES
     struct QLeaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Quad {
@@ -534,7 +534,7 @@ struct LoopifyTreeVariants {
     }
 
     // CREATORS
-    static quadtree qleaf(unsigned int a0) { return quadtree(QLeaf{a0}); }
+    static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
@@ -579,7 +579,7 @@ struct LoopifyTreeVariants {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int quad_sum() const {
+    uint64_t quad_sum() const {
       const quadtree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -597,7 +597,7 @@ struct LoopifyTreeVariants {
       /// _After_Quad_1: saves [_result, _s1, _s2], dispatches next recursive
       /// call.
       struct _After_Quad_1 {
-        unsigned int _result;
+        uint64_t _result;
         const quadtree *_s1;
         const quadtree *_s2;
       };
@@ -605,22 +605,22 @@ struct LoopifyTreeVariants {
       /// _After_Quad_2: saves [_result_0, _result_1, _s2], dispatches next
       /// recursive call.
       struct _After_Quad_2 {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
         const quadtree *_s2;
       };
 
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        unsigned int _result_2;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t _result_2;
       };
 
       using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
                                   _After_Quad_2, _Combine_Quad>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -664,7 +664,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
@@ -776,7 +776,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
@@ -891,7 +891,7 @@ struct LoopifyTreeVariants {
   struct leaf_tree {
     // TYPES
     struct LLeaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct LNode {
@@ -964,7 +964,7 @@ struct LoopifyTreeVariants {
     }
 
     // CREATORS
-    static leaf_tree lleaf(unsigned int a0) { return leaf_tree(LLeaf{a0}); }
+    static leaf_tree lleaf(uint64_t a0) { return leaf_tree(LLeaf{a0}); }
 
     static leaf_tree lnode(leaf_tree a0, leaf_tree a1) {
       return leaf_tree(LNode{std::make_unique<leaf_tree>(std::move(a0)),
@@ -1001,7 +1001,7 @@ struct LoopifyTreeVariants {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int leaf_tree_max() const {
+    uint64_t leaf_tree_max() const {
       const leaf_tree *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename leaf_tree::LLeaf>(_sv.v())) {
@@ -1009,8 +1009,8 @@ struct LoopifyTreeVariants {
         return a0;
       } else {
         const auto &[a0, a1] = std::get<typename leaf_tree::LNode>(_sv.v());
-        unsigned int lmax = (*a0).leaf_tree_max();
-        unsigned int rmax = (*a1).leaf_tree_max();
+        uint64_t lmax = (*a0).leaf_tree_max();
+        uint64_t rmax = (*a1).leaf_tree_max();
         if (lmax < rmax) {
           return rmax;
         } else {
@@ -1019,7 +1019,7 @@ struct LoopifyTreeVariants {
       }
     }
 
-    unsigned int leaf_tree_sum() const {
+    uint64_t leaf_tree_sum() const {
       const leaf_tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1035,11 +1035,11 @@ struct LoopifyTreeVariants {
       /// _Combine_LNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_LNode {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After_LNode, _Combine_LNode>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -1072,7 +1072,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, leaf_tree &, T1 &, leaf_tree &,
                                      T1 &>
     T1 leaf_tree_rec(F0 &&f, F1 &&f0) const {
@@ -1133,7 +1133,7 @@ struct LoopifyTreeVariants {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, leaf_tree &, T1 &, leaf_tree &,
                                      T1 &>
     T1 leaf_tree_rect(F0 &&f, F1 &&f0) const {

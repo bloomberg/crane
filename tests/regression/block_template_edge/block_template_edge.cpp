@@ -17,7 +17,8 @@ std::string BlockTemplateEdge::block_in_if() {
 int64_t BlockTemplateEdge::block_in_arith() {
   std::string n;
   std::getline(std::cin, n);
-  return ((n.length() + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL);
+  return ((static_cast<int64_t>(n.length()) + int64_t(1)) &
+          0x7FFFFFFFFFFFFFFFLL);
 }
 
 /// 3. Two block templates of same type back-to-back
@@ -30,16 +31,16 @@ std::string BlockTemplateEdge::two_strings() {
 }
 
 /// 4. Block template result bound but unused
-unsigned int BlockTemplateEdge::block_unused() {
+uint64_t BlockTemplateEdge::block_unused() {
   std::string _x;
   std::getline(std::cin, _x);
-  return 42u;
+  return UINT64_C(42);
 }
 
 /// 5. Block template followed by non-block operation
 int64_t BlockTemplateEdge::block_then_pure() {
   std::string s;
   std::getline(std::cin, s);
-  int64_t n = s.length();
+  int64_t n = static_cast<int64_t>(s.length());
   return ((n + n) & 0x7FFFFFFFFFFFFFFFLL);
 }

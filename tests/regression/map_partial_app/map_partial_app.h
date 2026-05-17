@@ -139,7 +139,7 @@ struct MapPartialApp {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -209,7 +209,7 @@ struct MapPartialApp {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -246,8 +246,8 @@ struct MapPartialApp {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -259,8 +259,8 @@ struct MapPartialApp {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -271,11 +271,11 @@ struct MapPartialApp {
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
   /// wrap: takes tree and nat, builds Node with leaves.
-  static tree wrap(tree t, unsigned int v);
+  static tree wrap(tree t, uint64_t v);
   /// Sum a list of nats.
-  static unsigned int sum_list(const List<unsigned int> &l);
+  static uint64_t sum_list(const List<uint64_t> &l);
   /// BUG HYPOTHESIS: Create a partial application (wrap t), store it,
   /// then apply it to multiple values from a list via map.
   /// The same closure is invoked repeatedly through list traversal.
@@ -289,59 +289,67 @@ struct MapPartialApp {
   /// = tree_sum(Node(t,1,Leaf)); tree_sum(Node(t,2,Leaf));
   /// tree_sum(Node(t,3,Leaf)) = 10+1; 10+2; 10+3 = 11; 12; 13 sum_list 11; 12;
   /// 13 = 36
-  static inline const unsigned int map_partial_bug = []() {
+  static inline const uint64_t map_partial_bug = []() {
     return []() {
-      tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<tree(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> tree { return wrap(t, _x0); };
-      List<unsigned int> results =
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              .template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(f(v)); });
+      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      std::function<tree(uint64_t)> f = [=](uint64_t _x0) mutable -> tree {
+        return wrap(t, _x0);
+      };
+      List<uint64_t> results =
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
+              .template map<uint64_t>(
+                  [=](uint64_t v) mutable { return tree_sum(f(v)); });
       return sum_list(std::move(results));
     }();
   }();
   /// Variation: store the partial app in a pair, extract it, then map.
   /// Extra indirection through pair.
-  static inline const unsigned int map_partial_pair = []() {
+  static inline const uint64_t map_partial_pair = []() {
     return []() {
-      tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<tree(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> tree { return wrap(t, _x0); };
-      std::pair<std::function<tree(unsigned int)>, unsigned int> p =
-          std::make_pair(f, 0u);
-      List<unsigned int> results =
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))
-              .template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(p.first(v)); });
+      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      std::function<tree(uint64_t)> f = [=](uint64_t _x0) mutable -> tree {
+        return wrap(t, _x0);
+      };
+      std::pair<std::function<tree(uint64_t)>, uint64_t> p =
+          std::make_pair(f, UINT64_C(0));
+      List<uint64_t> results =
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
+              .template map<uint64_t>(
+                  [=](uint64_t v) mutable { return tree_sum(p.first(v)); });
       return sum_list(std::move(results));
     }();
   }();
   /// Variation: two closures mapped over same list.
-  static inline const unsigned int map_two_closures = []() {
+  static inline const uint64_t map_two_closures = []() {
     return []() {
-      tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-      tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
-      std::function<tree(unsigned int)> f1 =
-          [=](unsigned int _x0) mutable -> tree { return wrap(t1, _x0); };
-      std::function<tree(unsigned int)> f2 =
-          [=](unsigned int _x0) mutable -> tree { return wrap(t2, _x0); };
-      List<unsigned int> r1 =
-          List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))
-              .template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(f1(v)); });
-      List<unsigned int> r2 =
-          List<unsigned int>::cons(
-              3u, List<unsigned int>::cons(4u, List<unsigned int>::nil()))
-              .template map<unsigned int>(
-                  [=](unsigned int v) mutable { return tree_sum(f2(v)); });
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+      std::function<tree(uint64_t)> f1 = [=](uint64_t _x0) mutable -> tree {
+        return wrap(t1, _x0);
+      };
+      std::function<tree(uint64_t)> f2 = [=](uint64_t _x0) mutable -> tree {
+        return wrap(t2, _x0);
+      };
+      List<uint64_t> r1 =
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+              .template map<uint64_t>(
+                  [=](uint64_t v) mutable { return tree_sum(f1(v)); });
+      List<uint64_t> r2 =
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))
+              .template map<uint64_t>(
+                  [=](uint64_t v) mutable { return tree_sum(f2(v)); });
       return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
     }();
   }();

@@ -121,44 +121,46 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct IszOps {
-  static unsigned int nibble_of_nat(unsigned int n);
+  static uint64_t nibble_of_nat(uint64_t n);
 
   struct state {
-    List<unsigned int> regs;
+    List<uint64_t> regs;
 
     // ACCESSORS
     state clone() const { return state{(*this).regs.clone()}; }
   };
 
-  static unsigned int get_reg(const state &s, unsigned int r);
-  static unsigned int cycles_isz(const state &s, unsigned int r);
-  static inline const unsigned int test_cycle_branch = cycles_isz(
-      state{List<unsigned int>::cons(15u, List<unsigned int>::nil())}, 0u);
-  static unsigned int isz_iterations(unsigned int v);
-  static inline const unsigned int test_iterations_remaining =
-      (isz_iterations(0u) + isz_iterations(12u));
-  static bool isz_loops(const state &s, unsigned int r);
-  static bool isz_terminates(const state &s, unsigned int r);
-  static inline const unsigned int test_loop_flags = []() {
+  static uint64_t get_reg(const state &s, uint64_t r);
+  static uint64_t cycles_isz(const state &s, uint64_t r);
+  static inline const uint64_t test_cycle_branch = cycles_isz(
+      state{List<uint64_t>::cons(UINT64_C(15), List<uint64_t>::nil())},
+      UINT64_C(0));
+  static uint64_t isz_iterations(uint64_t v);
+  static inline const uint64_t test_iterations_remaining =
+      (isz_iterations(UINT64_C(0)) + isz_iterations(UINT64_C(12)));
+  static bool isz_loops(const state &s, uint64_t r);
+  static bool isz_terminates(const state &s, uint64_t r);
+  static inline const uint64_t test_loop_flags = []() {
     return []() {
-      state s = state{List<unsigned int>::cons(
-          15u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))};
-      return ((isz_loops(s, 0u) ? 1u : 0u) + (isz_terminates(s, 0u) ? 1u : 0u));
+      state s = state{List<uint64_t>::cons(
+          UINT64_C(15),
+          List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))};
+      return ((isz_loops(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)) +
+              (isz_terminates(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)));
     }();
   }();
-  static inline const std::pair<std::pair<unsigned int, unsigned int>,
-                                unsigned int>
-      t = std::make_pair(
+  static inline const std::pair<std::pair<uint64_t, uint64_t>, uint64_t> t =
+      std::make_pair(
           std::make_pair(test_cycle_branch, test_iterations_remaining),
           test_loop_flags);
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -167,7 +169,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

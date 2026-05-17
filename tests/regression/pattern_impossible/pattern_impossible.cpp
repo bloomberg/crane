@@ -1,23 +1,22 @@
 #include "pattern_impossible.h"
 
-unsigned int PatternImpossible::complex_match(PatternImpossible::Three x) {
+uint64_t PatternImpossible::complex_match(PatternImpossible::Three x) {
   switch (x) {
   case Three::ONE: {
-    return 1u;
+    return UINT64_C(1);
   }
   case Three::TWO: {
-    return 2u;
+    return UINT64_C(2);
   }
   case Three::THREE: {
-    return 3u;
+    return UINT64_C(3);
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int
-PatternImpossible::nested_match(const PatternImpossible::nested &n) {
+uint64_t PatternImpossible::nested_match(const PatternImpossible::nested &n) {
   if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(n.v())) {
     const auto &[a0] =
         std::get<typename PatternImpossible::nested::Leaf>(n.v());
@@ -37,47 +36,47 @@ PatternImpossible::nested_match(const PatternImpossible::nested &n) {
             std::get<typename PatternImpossible::nested::Leaf>(_sv1.v());
         return (a00 + a01);
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }
 }
 
-unsigned int PatternImpossible::double_match(PatternImpossible::Three x,
-                                             PatternImpossible::Three y) {
+uint64_t PatternImpossible::double_match(PatternImpossible::Three x,
+                                         PatternImpossible::Three y) {
   switch (x) {
   case Three::ONE: {
     switch (y) {
     case Three::ONE: {
-      return 1u;
+      return UINT64_C(1);
     }
     case Three::TWO: {
-      return 2u;
+      return UINT64_C(2);
     }
     case Three::THREE: {
-      return 3u;
+      return UINT64_C(3);
     }
     default:
       std::unreachable();
     }
   }
   case Three::TWO: {
-    return 10u;
+    return UINT64_C(10);
   }
   case Three::THREE: {
-    return 20u;
+    return UINT64_C(20);
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int
+uint64_t
 PatternImpossible::multi_arg_pattern(const PatternImpossible::nested &n) {
   if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(n.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
         std::get<typename PatternImpossible::nested::Node>(n.v());
@@ -89,7 +88,7 @@ PatternImpossible::multi_arg_pattern(const PatternImpossible::nested &n) {
       auto &&_sv1 = *a1;
       if (std::holds_alternative<typename PatternImpossible::nested::Leaf>(
               _sv1.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a01, a11] =
             std::get<typename PatternImpossible::nested::Node>(_sv1.v());
@@ -105,14 +104,14 @@ PatternImpossible::multi_arg_pattern(const PatternImpossible::nested &n) {
                 std::get<typename PatternImpossible::nested::Leaf>(_sv3.v());
             return ((a00 + a02) + a03);
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         } else {
-          return 0u;
+          return UINT64_C(0);
         }
       }
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }
 }

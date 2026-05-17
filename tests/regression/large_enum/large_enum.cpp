@@ -1,42 +1,42 @@
 #include "large_enum.h"
 
-unsigned int LargeEnum::color_to_nat(LargeEnum::Color c) {
+uint64_t LargeEnum::color_to_nat(LargeEnum::Color c) {
   switch (c) {
   case Color::RED: {
-    return 0u;
+    return UINT64_C(0);
   }
   case Color::ORANGE: {
-    return 1u;
+    return UINT64_C(1);
   }
   case Color::YELLOW: {
-    return 2u;
+    return UINT64_C(2);
   }
   case Color::GREEN: {
-    return 3u;
+    return UINT64_C(3);
   }
   case Color::BLUE: {
-    return 4u;
+    return UINT64_C(4);
   }
   case Color::INDIGO: {
-    return 5u;
+    return UINT64_C(5);
   }
   case Color::VIOLET: {
-    return 6u;
+    return UINT64_C(6);
   }
   case Color::BLACK: {
-    return 7u;
+    return UINT64_C(7);
   }
   case Color::WHITE: {
-    return 8u;
+    return UINT64_C(8);
   }
   case Color::GRAY: {
-    return 9u;
+    return UINT64_C(9);
   }
   case Color::BROWN: {
-    return 10u;
+    return UINT64_C(10);
   }
   case Color::PINK: {
-    return 11u;
+    return UINT64_C(11);
   }
   default:
     std::unreachable();
@@ -83,34 +83,34 @@ bool LargeEnum::is_neutral(LargeEnum::Color c) {
   }
 }
 
-unsigned int LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
+uint64_t LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
   if (std::holds_alternative<typename LargeEnum::tok::TNum>(t.v())) {
     const auto &[a0] = std::get<typename LargeEnum::tok::TNum>(t.v());
     return a0;
   } else if (std::holds_alternative<typename LargeEnum::tok::TPlus>(t.v())) {
-    return 100u;
+    return UINT64_C(100);
   } else if (std::holds_alternative<typename LargeEnum::tok::TMinus>(t.v())) {
-    return 101u;
+    return UINT64_C(101);
   } else if (std::holds_alternative<typename LargeEnum::tok::TStar>(t.v())) {
-    return 102u;
+    return UINT64_C(102);
   } else if (std::holds_alternative<typename LargeEnum::tok::TSlash>(t.v())) {
-    return 103u;
+    return UINT64_C(103);
   } else if (std::holds_alternative<typename LargeEnum::tok::TLParen>(t.v())) {
-    return 104u;
+    return UINT64_C(104);
   } else if (std::holds_alternative<typename LargeEnum::tok::TRParen>(t.v())) {
-    return 105u;
+    return UINT64_C(105);
   } else if (std::holds_alternative<typename LargeEnum::tok::TEq>(t.v())) {
-    return 106u;
+    return UINT64_C(106);
   } else if (std::holds_alternative<typename LargeEnum::tok::TBang>(t.v())) {
-    return 107u;
+    return UINT64_C(107);
   } else if (std::holds_alternative<typename LargeEnum::tok::TSemicolon>(
                  t.v())) {
-    return 108u;
+    return UINT64_C(108);
   } else if (std::holds_alternative<typename LargeEnum::tok::TIdent>(t.v())) {
     const auto &[a0] = std::get<typename LargeEnum::tok::TIdent>(t.v());
-    return (200u + a0);
+    return (UINT64_C(200) + a0);
   } else {
-    return 999u;
+    return UINT64_C(999);
   }
 }
 

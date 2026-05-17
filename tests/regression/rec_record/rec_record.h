@@ -146,7 +146,7 @@ struct RecRecord {
   }
 
   struct RNode {
-    unsigned int rn_value;
+    uint64_t rn_value;
     std::optional<std::unique_ptr<RNode>> rn_next;
 
     // ACCESSORS
@@ -160,10 +160,9 @@ struct RecRecord {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
-                                   std::optional<RNode> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rect(F0 &&f, const RNode &r) {
-    unsigned int rn_value0 = r.rn_value;
+    uint64_t rn_value0 = r.rn_value;
     std::optional<RNode> rn_next0 =
         r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
                               : std::nullopt;
@@ -171,10 +170,9 @@ struct RecRecord {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
-                                   std::optional<RNode> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rec(F0 &&f, const RNode &r) {
-    unsigned int rn_value0 = r.rn_value;
+    uint64_t rn_value0 = r.rn_value;
     std::optional<RNode> rn_next0 =
         r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
                               : std::nullopt;
@@ -182,8 +180,8 @@ struct RecRecord {
   }
 
   struct Employee {
-    unsigned int emp_name;
-    unsigned int emp_dept;
+    uint64_t emp_name;
+    uint64_t emp_dept;
 
     // ACCESSORS
     Employee clone() const {
@@ -192,9 +190,9 @@ struct RecRecord {
   };
 
   struct Department {
-    unsigned int dept_id;
+    uint64_t dept_id;
     Employee dept_head;
-    unsigned int dept_size;
+    uint64_t dept_size;
 
     // ACCESSORS
     Department clone() const {
@@ -203,34 +201,33 @@ struct RecRecord {
     }
   };
 
-  template <typename T1> static unsigned int rlist_length(const rlist<T1> &l) {
+  template <typename T1> static uint64_t rlist_length(const rlist<T1> &l) {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(l.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename rlist<T1>::Rcons>(l.v());
       return (rlist_length<T1>(*a1) + 1);
     }
   }
 
-  static unsigned int rlist_sum(const rlist<unsigned int> &l);
-  static unsigned int rnode_depth(const RNode &r);
-  static inline const rlist<unsigned int> test_rlist =
-      rlist<unsigned int>::rcons(
-          1u,
-          rlist<unsigned int>::rcons(
-              2u, rlist<unsigned int>::rcons(3u, rlist<unsigned int>::rnil())));
-  static inline const unsigned int test_rlist_len =
-      rlist_length<unsigned int>(test_rlist);
-  static inline const unsigned int test_rlist_sum = rlist_sum(test_rlist);
+  static uint64_t rlist_sum(const rlist<uint64_t> &l);
+  static uint64_t rnode_depth(const RNode &r);
+  static inline const rlist<uint64_t> test_rlist = rlist<uint64_t>::rcons(
+      UINT64_C(1), rlist<uint64_t>::rcons(
+                       UINT64_C(2), rlist<uint64_t>::rcons(
+                                        UINT64_C(3), rlist<uint64_t>::rnil())));
+  static inline const uint64_t test_rlist_len =
+      rlist_length<uint64_t>(test_rlist);
+  static inline const uint64_t test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode{
-      1u,
+      UINT64_C(1),
       [](auto &&__x)
           -> std::optional<std::unique_ptr<RNode>> {
         return __x.has_value()
                    ? std::make_optional(std::make_unique<RNode>((*__x).clone()))
                    : std::nullopt;
       }(std::make_optional<RNode>(RNode{
-              2u,
+              UINT64_C(2),
               [](auto &&__x)
                   -> std::optional<std::unique_ptr<RNode>> {
                 return __x.has_value()
@@ -238,17 +235,18 @@ struct RecRecord {
                                  std::make_unique<RNode>((*__x).clone()))
                            : std::nullopt;
               }(std::make_optional<RNode>(RNode{
-                      3u,
+                      UINT64_C(3),
                       [](auto &&__x) -> std::optional<std::unique_ptr<RNode>> {
                         return __x.has_value()
                                    ? std::make_optional(std::make_unique<RNode>(
                                          (*__x).clone()))
                                    : std::nullopt;
                       }(std::optional<RNode>())}))}))};
-  static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
-  static inline const Employee test_emp = Employee{42u, 7u};
-  static inline const Department test_dept = Department{7u, test_emp, 50u};
-  static inline const unsigned int test_dept_head_name =
+  static inline const uint64_t test_rnode_depth = rnode_depth(test_rnode);
+  static inline const Employee test_emp = Employee{UINT64_C(42), UINT64_C(7)};
+  static inline const Department test_dept =
+      Department{UINT64_C(7), test_emp, UINT64_C(50)};
+  static inline const uint64_t test_dept_head_name =
       test_dept.dept_head.emp_name;
 };
 

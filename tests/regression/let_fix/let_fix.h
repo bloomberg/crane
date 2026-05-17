@@ -120,7 +120,7 @@ public:
 };
 
 struct LetFix {
-  static unsigned int local_sum(const List<unsigned int> &l);
+  static uint64_t local_sum(const List<uint64_t> &l);
 
   template <typename T1> static List<T1> local_rev(const List<T1> &l) {
     auto go_impl = [](auto &_self_go, List<T1> acc,
@@ -138,60 +138,74 @@ struct LetFix {
     return go(List<T1>::nil(), l);
   }
 
-  static List<unsigned int> local_flatten(const List<List<unsigned int>> &xss);
-  static bool local_mem(unsigned int n, const List<unsigned int> &l);
+  static List<uint64_t> local_flatten(const List<List<uint64_t>> &xss);
+  static bool local_mem(uint64_t n, const List<uint64_t> &l);
 
-  template <typename T1> static unsigned int local_length(const List<T1> &xs) {
+  template <typename T1> static uint64_t local_length(const List<T1> &xs) {
     if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
       return (local_length<T1>(*a1) + 1);
     }
   }
 
-  static inline const unsigned int test_sum =
-      local_sum(List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::cons(
-                                          5u, List<unsigned int>::nil()))))));
-  static inline const List<unsigned int> test_rev =
-      local_rev<unsigned int>(List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
-  static inline const List<unsigned int> test_flatten =
-      local_flatten(List<List<unsigned int>>::cons(
-          List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
-          List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(3u, List<unsigned int>::nil()),
-              List<List<unsigned int>>::cons(
-                  List<unsigned int>::cons(
-                      4u, List<unsigned int>::cons(
-                              5u, List<unsigned int>::cons(
-                                      6u, List<unsigned int>::nil()))),
-                  List<List<unsigned int>>::nil()))));
+  static inline const uint64_t test_sum = local_sum(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static inline const List<uint64_t> test_rev =
+      local_rev<uint64_t>(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const List<uint64_t> test_flatten =
+      local_flatten(List<List<uint64_t>>::cons(
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+          List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
+              List<List<uint64_t>>::cons(
+                  List<uint64_t>::cons(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(
+                          UINT64_C(5),
+                          List<uint64_t>::cons(UINT64_C(6),
+                                               List<uint64_t>::nil()))),
+                  List<List<uint64_t>>::nil()))));
   static inline const bool test_mem_found = local_mem(
-      3u, List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(
-                      2u, List<unsigned int>::cons(
-                              3u, List<unsigned int>::cons(
-                                      4u, List<unsigned int>::nil())))));
+      UINT64_C(3),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
   static inline const bool test_mem_missing = local_mem(
-      9u, List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(
-                      2u, List<unsigned int>::cons(
-                              3u, List<unsigned int>::cons(
-                                      4u, List<unsigned int>::nil())))));
-  static inline const unsigned int test_length =
-      local_length<unsigned int>(List<unsigned int>::cons(
-          10u, List<unsigned int>::cons(
-                   20u, List<unsigned int>::cons(
-                            30u, List<unsigned int>::cons(
-                                     40u, List<unsigned int>::nil())))));
+      UINT64_C(9),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
+  static inline const uint64_t test_length =
+      local_length<uint64_t>(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(
+                  UINT64_C(30),
+                  List<uint64_t>::cons(UINT64_C(40), List<uint64_t>::nil())))));
 };
 
 #endif // INCLUDED_LET_FIX

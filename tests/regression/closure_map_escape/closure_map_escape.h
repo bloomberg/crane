@@ -160,38 +160,40 @@ struct ClosureMapEscape {
   /// Difference from fix_escape_match: uses a USER-DEFINED list type
   /// (not stdlib option), and the fixpoints are built RECURSIVELY
   /// from list elements (not a single fixpoint).
-  static mylist<std::function<unsigned int(unsigned int)>>
-  map_to_adders(const mylist<unsigned int> &l);
-  static unsigned int
-  apply_first(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-              unsigned int arg);
-  static unsigned int sum_apply(
-      const mylist<std::function<unsigned int(unsigned int)>> &fns,
-      unsigned int arg); /// test1: map_to_adders 10, 20, 30, apply first to 5.
+  static mylist<std::function<uint64_t(uint64_t)>>
+  map_to_adders(const mylist<uint64_t> &l);
+  static uint64_t
+  apply_first(const mylist<std::function<uint64_t(uint64_t)>> &fns,
+              uint64_t arg);
+  static uint64_t sum_apply(
+      const mylist<std::function<uint64_t(uint64_t)>> &fns,
+      uint64_t arg); /// test1: map_to_adders 10, 20, 30, apply first to 5.
   /// add(5) where add(x) = x + 10. So 10 + 5 = 15.
   /// Bug: h=10 captured by &, dangling after match.
-  static inline const unsigned int test1 =
-      apply_first(map_to_adders(mylist<unsigned int>::mycons(
-                      10u, mylist<unsigned int>::mycons(
-                               20u, mylist<unsigned int>::mycons(
-                                        30u, mylist<unsigned int>::mynil())))),
-                  5u);
+  static inline const uint64_t test1 = apply_first(
+      map_to_adders(mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil())))),
+      UINT64_C(5));
   /// test2: Sum of applying all adders to 0.
   /// (0+10) + (0+20) + (0+30) = 60.
-  static inline const unsigned int test2 =
-      sum_apply(map_to_adders(mylist<unsigned int>::mycons(
-                    10u, mylist<unsigned int>::mycons(
-                             20u, mylist<unsigned int>::mycons(
-                                      30u, mylist<unsigned int>::mynil())))),
-                0u);
+  static inline const uint64_t test2 = sum_apply(
+      map_to_adders(mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil())))),
+      UINT64_C(0));
   /// test3: Build adders, noise, then apply.
   /// (1+100) + (1+200) = 302.
-  static inline const unsigned int test3 = []() {
-    mylist<std::function<unsigned int(unsigned int)>> fns =
-        map_to_adders(mylist<unsigned int>::mycons(
-            100u,
-            mylist<unsigned int>::mycons(200u, mylist<unsigned int>::mynil())));
-    return sum_apply(std::move(fns), 1u);
+  static inline const uint64_t test3 = []() {
+    mylist<std::function<uint64_t(uint64_t)>> fns =
+        map_to_adders(mylist<uint64_t>::mycons(
+            UINT64_C(100), mylist<uint64_t>::mycons(
+                               UINT64_C(200), mylist<uint64_t>::mynil())));
+    return sum_apply(std::move(fns), UINT64_C(1));
   }();
 };
 

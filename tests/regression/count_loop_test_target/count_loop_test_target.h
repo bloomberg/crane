@@ -9,8 +9,8 @@ struct CountLoopTestTarget {
   struct instruction {
     // TYPES
     struct ISZ {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     struct NOP {};
@@ -54,7 +54,7 @@ struct CountLoopTestTarget {
     }
 
     // CREATORS
-    static instruction isz(unsigned int a0, unsigned int a1) {
+    static instruction isz(uint64_t a0, uint64_t a1) {
       return instruction(ISZ{a0, a1});
     }
 
@@ -68,7 +68,7 @@ struct CountLoopTestTarget {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
   static T1 instruction_rect(F0 &&f, T1 f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::ISZ>(i.v())) {
       const auto &[a0, a1] = std::get<typename instruction::ISZ>(i.v());
@@ -79,7 +79,7 @@ struct CountLoopTestTarget {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
   static T1 instruction_rec(F0 &&f, T1 f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::ISZ>(i.v())) {
       const auto &[a0, a1] = std::get<typename instruction::ISZ>(i.v());
@@ -89,9 +89,9 @@ struct CountLoopTestTarget {
     }
   }
 
-  static instruction count_loop_test(unsigned int loop_addr);
-  static unsigned int target_of(const instruction &i);
-  static inline const unsigned int t = target_of(count_loop_test(37u));
+  static instruction count_loop_test(uint64_t loop_addr);
+  static uint64_t target_of(const instruction &i);
+  static inline const uint64_t t = target_of(count_loop_test(UINT64_C(37)));
 };
 
 #endif // INCLUDED_COUNT_LOOP_TEST_TARGET

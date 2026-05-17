@@ -26,7 +26,7 @@ template <Elem E> struct Container {
     struct Nothing {};
 
     struct Just {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<Nothing, Just>;
@@ -70,7 +70,7 @@ template <Elem E> struct Container {
     // CREATORS
     static maybe nothing() { return maybe(Nothing{}); }
 
-    static maybe just(unsigned int a0) { return maybe(Just{a0}); }
+    static maybe just(uint64_t a0) { return maybe(Just{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -80,7 +80,7 @@ template <Elem E> struct Container {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 maybe_rect(T1 f, F1 &&f0, const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
@@ -91,7 +91,7 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 maybe_rec(T1 f, F1 &&f0, const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
@@ -323,22 +323,22 @@ template <Elem E> struct Container {
     }
   }
 
-  static unsigned int mlist_length(const mlist &l) {
+  static uint64_t mlist_length(const mlist &l) {
     if (std::holds_alternative<typename mlist::MNil>(l.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename mlist::MCons>(l.v());
       return (mlist_length(*a1) + 1);
     }
   }
 
-  static unsigned int tree_size(const mtree &t0) {
+  static uint64_t tree_size(const mtree &t0) {
     if (std::holds_alternative<typename mtree::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename mtree::Leaf>(t0.v());
       if (is_nothing(a0)) {
-        return 0u;
+        return UINT64_C(0);
       } else {
-        return 1u;
+        return UINT64_C(1);
       }
     } else {
       const auto &[a0] = std::get<typename mtree::Node>(t0.v());
@@ -352,13 +352,14 @@ template <Elem E> struct Container {
   }
 
   static const maybe &some_val() {
-    static const maybe v = maybe::just(42u);
+    static const maybe v = maybe::just(UINT64_C(42));
     return v;
   }
 
   static const mlist &sample_list() {
-    static const mlist v = mlist::mcons(
-        maybe::just(42u), mlist::mcons(maybe::nothing(), mlist::mnil()));
+    static const mlist v =
+        mlist::mcons(maybe::just(UINT64_C(42)),
+                     mlist::mcons(maybe::nothing(), mlist::mnil()));
     return v;
   }
 
@@ -369,17 +370,17 @@ template <Elem E> struct Container {
 };
 
 struct NatElem {
-  using t = unsigned int;
-  static inline const unsigned int dflt = 42u;
+  using t = uint64_t;
+  static inline const uint64_t dflt = UINT64_C(42);
 };
 
 static_assert(Elem<NatElem>);
 using NatContainer = Container<NatElem>;
 const bool test_is_nothing =
     NatContainer::is_nothing(NatContainer::empty_maybe());
-const unsigned int test_list_len =
+const uint64_t test_list_len =
     NatContainer::mlist_length(NatContainer::sample_list());
-const unsigned int test_tree_size =
+const uint64_t test_tree_size =
     NatContainer::tree_size(NatContainer::sample_tree());
 
 #endif // INCLUDED_MULTI_IND_FUNCTOR

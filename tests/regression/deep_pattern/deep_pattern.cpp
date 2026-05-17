@@ -1,10 +1,10 @@
 #include "deep_pattern.h"
 
-unsigned int
+uint64_t
 DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
   if (std::holds_alternative<
           typename DeepPattern::list<DeepPattern::tree>::Nil>(l.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
         std::get<typename DeepPattern::list<DeepPattern::tree>::Cons>(l.v());
@@ -27,10 +27,10 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
                   _sv.v())) {
             return (a00 + a02);
           } else {
-            return 0u;
+            return UINT64_C(0);
           }
         } else {
-          return 0u;
+          return UINT64_C(0);
         }
       }
     } else {
@@ -49,7 +49,7 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
           if (std::holds_alternative<
                   typename DeepPattern::list<DeepPattern::tree>::Nil>(
                   _sv3.v())) {
-            return 0u;
+            return UINT64_C(0);
           } else {
             const auto &[a03, a13] =
                 std::get<typename DeepPattern::list<DeepPattern::tree>::Cons>(
@@ -64,7 +64,7 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
                       _sv.v())) {
                 return ((a01 + a02) + a04);
               } else {
-                return 0u;
+                return UINT64_C(0);
               }
             } else {
               const auto &[a04, a14] =
@@ -85,21 +85,21 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
                           _sv.v())) {
                     return (((a01 + a02) + a05) + a06);
                   } else {
-                    return 0u;
+                    return UINT64_C(0);
                   }
                 } else {
-                  return 0u;
+                  return UINT64_C(0);
                 }
               } else {
-                return 0u;
+                return UINT64_C(0);
               }
             }
           }
         } else {
-          return 0u;
+          return UINT64_C(0);
         }
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   }

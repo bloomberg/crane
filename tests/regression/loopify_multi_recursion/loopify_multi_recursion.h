@@ -9,18 +9,17 @@
 #include <vector>
 
 struct LoopifyMultiRecursion {
-  static unsigned int mixed_arith_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int mixed_arith(unsigned int n);
-  static bool bool_or_chain_fuel(unsigned int fuel, unsigned int n,
-                                 unsigned int target);
-  static unsigned int bool_or_chain(unsigned int n, unsigned int target);
-  static bool bool_and_chain_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int bool_and_chain(unsigned int n);
+  static uint64_t mixed_arith_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t mixed_arith(uint64_t n);
+  static bool bool_or_chain_fuel(uint64_t fuel, uint64_t n, uint64_t target);
+  static uint64_t bool_or_chain(uint64_t n, uint64_t target);
+  static bool bool_and_chain_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t bool_and_chain(uint64_t n);
 
   struct quadtree {
     // TYPES
     struct QLeaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct QQuad {
@@ -103,7 +102,7 @@ struct LoopifyMultiRecursion {
     }
 
     // CREATORS
-    static quadtree qleaf(unsigned int a0) { return quadtree(QLeaf{a0}); }
+    static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(QQuad{std::make_unique<quadtree>(std::move(a0)),
@@ -150,7 +149,7 @@ struct LoopifyMultiRecursion {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
                                    quadtree &, T1 &, quadtree &, T1 &>
   static T1 quadtree_rect(F0 &&f, F1 &&f0, const quadtree &q) {
@@ -167,7 +166,7 @@ struct LoopifyMultiRecursion {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
                                    quadtree &, T1 &, quadtree &, T1 &>
   static T1 quadtree_rec(F0 &&f, F1 &&f0, const quadtree &q) {
@@ -182,10 +181,10 @@ struct LoopifyMultiRecursion {
     }
   }
 
-  static unsigned int quad_count_leaves(const quadtree &t);
-  static unsigned int quad_depth(const quadtree &t);
-  static unsigned int hofstadter_q_fuel(unsigned int fuel, unsigned int n);
-  static unsigned int hofstadter_q(unsigned int n);
+  static uint64_t quad_count_leaves(const quadtree &t);
+  static uint64_t quad_depth(const quadtree &t);
+  static uint64_t hofstadter_q_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t hofstadter_q(uint64_t n);
 };
 
 #endif // INCLUDED_LOOPIFY_MULTI_RECURSION

@@ -122,36 +122,38 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct FetchOps {
   struct state {
-    List<unsigned int> rom;
+    List<uint64_t> rom;
 
     // ACCESSORS
     state clone() const { return state{(*this).rom.clone()}; }
   };
 
-  static unsigned int fetch_byte(const state &s, unsigned int addr);
-  static inline const unsigned int fetch_default_test = fetch_byte(
-      state{List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(2u, List<unsigned int>::nil()))},
-      5u);
-  static unsigned int fetch_byte_direct(const List<unsigned int> &rom_data,
-                                        unsigned int addr);
-  static inline const unsigned int fetch_in_range_test = fetch_byte_direct(
-      List<unsigned int>::cons(
-          11u,
-          List<unsigned int>::cons(
-              22u, List<unsigned int>::cons(33u, List<unsigned int>::nil()))),
-      1u);
+  static uint64_t fetch_byte(const state &s, uint64_t addr);
+  static inline const uint64_t fetch_default_test =
+      fetch_byte(state{List<uint64_t>::cons(
+                     UINT64_C(1),
+                     List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))},
+                 UINT64_C(5));
+  static uint64_t fetch_byte_direct(const List<uint64_t> &rom_data,
+                                    uint64_t addr);
+  static inline const uint64_t fetch_in_range_test = fetch_byte_direct(
+      List<uint64_t>::cons(
+          UINT64_C(11),
+          List<uint64_t>::cons(
+              UINT64_C(22),
+              List<uint64_t>::cons(UINT64_C(33), List<uint64_t>::nil()))),
+      UINT64_C(1));
 
-  template <typename T1> static List<T1> drop(unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
         return List<T1>::nil();
       } else {
@@ -161,38 +163,39 @@ struct FetchOps {
     }
   }
 
-  static std::pair<unsigned int, unsigned int>
-  fetch_pair(const List<unsigned int> &rom_data, unsigned int addr);
-  static inline const unsigned int fetch_pair_test = []() {
-    std::pair<unsigned int, unsigned int> p = fetch_pair(
-        List<unsigned int>::cons(
-            1u,
-            List<unsigned int>::cons(
-                2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
-        0u);
+  static std::pair<uint64_t, uint64_t>
+  fetch_pair(const List<uint64_t> &rom_data, uint64_t addr);
+  static inline const uint64_t fetch_pair_test = []() {
+    std::pair<uint64_t, uint64_t> p = fetch_pair(
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+        UINT64_C(0));
     return (p.first + p.second);
   }();
-  static std::optional<std::pair<unsigned int, unsigned int>>
-  fetch_window(const List<unsigned int> &rom_data, unsigned int addr);
-  static inline const unsigned int fetch_window_test = []() -> unsigned int {
+  static std::optional<std::pair<uint64_t, uint64_t>>
+  fetch_window(const List<uint64_t> &rom_data, uint64_t addr);
+  static inline const uint64_t fetch_window_test = []() -> uint64_t {
     auto _cs = fetch_window(
-        List<unsigned int>::cons(
-            9u,
-            List<unsigned int>::cons(
-                8u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))),
-        0u);
+        List<uint64_t>::cons(
+            UINT64_C(9),
+            List<uint64_t>::cons(
+                UINT64_C(8),
+                List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
+        UINT64_C(0));
     if (_cs.has_value()) {
-      const std::pair<unsigned int, unsigned int> &p = *_cs;
-      const unsigned int &_x = p.first;
-      const unsigned int &next = p.second;
+      const std::pair<uint64_t, uint64_t> &p = *_cs;
+      const uint64_t &_x = p.first;
+      const uint64_t &next = p.second;
       return next;
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
   static inline const std::pair<
-      std::pair<std::pair<unsigned int, unsigned int>, unsigned int>,
-      unsigned int>
+      std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>
       t = std::make_pair(std::make_pair(std::make_pair(fetch_default_test,
                                                        fetch_in_range_test),
                                         fetch_pair_test),
@@ -200,7 +203,7 @@ struct FetchOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -209,7 +212,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

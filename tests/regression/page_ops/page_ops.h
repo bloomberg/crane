@@ -122,36 +122,38 @@ public:
 };
 
 struct Nat {
-  static unsigned int pow(unsigned int n, unsigned int m);
+  static uint64_t pow(uint64_t n, uint64_t m);
 };
 
 struct PageOps {
   struct state {
-    unsigned int pc;
+    uint64_t pc;
 
     // ACCESSORS
     state clone() const { return state{(*this).pc}; }
   };
 
-  static unsigned int addr12_of_nat(unsigned int n);
-  static unsigned int page_of(unsigned int p);
-  static unsigned int page_base(unsigned int p);
-  static unsigned int page_offset(unsigned int p);
-  static unsigned int pc_inc1(const state &s);
-  static unsigned int pc_inc2(const state &s);
-  static unsigned int base_for_next1(const state &s);
-  static unsigned int base_for_next2(const state &s);
-  static unsigned int recompose(unsigned int p);
-  static inline const unsigned int max_addr = ((
-      (Nat::pow(2u, 12u) - 1u) > Nat::pow(2u, 12u) ? 0
-                                                   : (Nat::pow(2u, 12u) - 1u)));
+  static uint64_t addr12_of_nat(uint64_t n);
+  static uint64_t page_of(uint64_t p);
+  static uint64_t page_base(uint64_t p);
+  static uint64_t page_offset(uint64_t p);
+  static uint64_t pc_inc1(const state &s);
+  static uint64_t pc_inc2(const state &s);
+  static uint64_t base_for_next1(const state &s);
+  static uint64_t base_for_next2(const state &s);
+  static uint64_t recompose(uint64_t p);
+  static inline const uint64_t max_addr =
+      (((Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1)) >
+                Nat::pow(UINT64_C(2), UINT64_C(12))
+            ? 0
+            : (Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1))));
 
   struct instruction {
     // TYPES
     struct NOP {};
 
     struct LDM {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP, LDM>;
@@ -195,7 +197,7 @@ struct PageOps {
     // CREATORS
     static instruction nop() { return instruction(NOP{}); }
 
-    static instruction ldm(unsigned int a0) { return instruction(LDM{a0}); }
+    static instruction ldm(uint64_t a0) { return instruction(LDM{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -205,7 +207,7 @@ struct PageOps {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rect(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
@@ -216,7 +218,7 @@ struct PageOps {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rec(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
@@ -226,13 +228,13 @@ struct PageOps {
     }
   }
 
-  static instruction decode(unsigned int b1, unsigned int b2);
+  static instruction decode(uint64_t b1, uint64_t b2);
 
-  template <typename T1> static List<T1> drop(unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
         return List<T1>::nil();
       } else {
@@ -242,47 +244,50 @@ struct PageOps {
     }
   }
 
-  static std::optional<std::pair<instruction, unsigned int>>
-  disassemble(const List<unsigned int> &rom, unsigned int addr);
-  static inline const unsigned int test_page_base_alignment =
-      (256u ? page_base(777u) % 256u : page_base(777u));
-  static inline const unsigned int test_page_base_next_pc = []() {
-    state s = state{511u};
+  static std::optional<std::pair<instruction, uint64_t>>
+  disassemble(const List<uint64_t> &rom, uint64_t addr);
+  static inline const uint64_t test_page_base_alignment =
+      (UINT64_C(256) ? page_base(UINT64_C(777)) % UINT64_C(256)
+                     : page_base(UINT64_C(777)));
+  static inline const uint64_t test_page_base_next_pc = []() {
+    state s = state{UINT64_C(511)};
     return (base_for_next1(s) + base_for_next2(s));
   }();
-  static inline const unsigned int test_page_boundary_cross =
-      base_for_next1(state{255u});
-  static inline const unsigned int test_base_for_next_page_cross_1 =
-      base_for_next1(state{255u});
-  static inline const unsigned int test_base_for_next_page_cross_2 =
-      base_for_next2(state{255u});
+  static inline const uint64_t test_page_boundary_cross =
+      base_for_next1(state{UINT64_C(255)});
+  static inline const uint64_t test_base_for_next_page_cross_1 =
+      base_for_next1(state{UINT64_C(255)});
+  static inline const uint64_t test_base_for_next_page_cross_2 =
+      base_for_next2(state{UINT64_C(255)});
   static inline const bool test_page_decomp_roundtrip =
-      (((256u ? 1027u / 256u : 0) * 256u) + (256u ? 1027u % 256u : 1027u)) ==
-      1027u;
-  static inline const unsigned int test_page_offset_recompose =
-      recompose(addr12_of_nat(1027u));
-  static inline const unsigned int test_page_recompose =
-      recompose(addr12_of_nat(1027u));
-  static inline const unsigned int test_pc_inc2_wraparound =
+      (((UINT64_C(256) ? UINT64_C(1027) / UINT64_C(256) : 0) * UINT64_C(256)) +
+       (UINT64_C(256) ? UINT64_C(1027) % UINT64_C(256) : UINT64_C(1027))) ==
+      UINT64_C(1027);
+  static inline const uint64_t test_page_offset_recompose =
+      recompose(addr12_of_nat(UINT64_C(1027)));
+  static inline const uint64_t test_page_recompose =
+      recompose(addr12_of_nat(UINT64_C(1027)));
+  static inline const uint64_t test_pc_inc2_wraparound =
       pc_inc2(state{max_addr});
-  static inline const unsigned int test_pc_inc1_wrap = pc_inc1(state{max_addr});
-  static inline const unsigned int test_pc_inc2_wrap = pc_inc2(state{max_addr});
-  static inline const unsigned int test_disassemble_edge =
-      []() -> unsigned int {
+  static inline const uint64_t test_pc_inc1_wrap = pc_inc1(state{max_addr});
+  static inline const uint64_t test_pc_inc2_wrap = pc_inc2(state{max_addr});
+  static inline const uint64_t test_disassemble_edge = []() -> uint64_t {
     auto _cs = disassemble(
-        List<unsigned int>::cons(
-            0u, List<unsigned int>::cons(
-                    7u, List<unsigned int>::cons(
-                            9u, List<unsigned int>::cons(
-                                    11u, List<unsigned int>::nil())))),
-        0u);
+        List<uint64_t>::cons(
+            UINT64_C(0),
+            List<uint64_t>::cons(
+                UINT64_C(7),
+                List<uint64_t>::cons(
+                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
+                                                      List<uint64_t>::nil())))),
+        UINT64_C(0));
     if (_cs.has_value()) {
-      const std::pair<instruction, unsigned int> &p = *_cs;
+      const std::pair<instruction, uint64_t> &p = *_cs;
       const instruction &_x = p.first;
-      const unsigned int &next = p.second;
+      const uint64_t &next = p.second;
       return next;
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
   static inline const std::pair<
@@ -292,19 +297,18 @@ struct PageOps {
                   std::pair<
                       std::pair<
                           std::pair<
-                              std::pair<
-                                  std::pair<std::pair<std::pair<unsigned int,
-                                                                unsigned int>,
-                                                      unsigned int>,
-                                            unsigned int>,
-                                  unsigned int>,
+                              std::pair<std::pair<std::pair<std::pair<uint64_t,
+                                                                      uint64_t>,
+                                                            uint64_t>,
+                                                  uint64_t>,
+                                        uint64_t>,
                               bool>,
-                          unsigned int>,
-                      unsigned int>,
-                  unsigned int>,
-              unsigned int>,
-          unsigned int>,
-      unsigned int>
+                          uint64_t>,
+                      uint64_t>,
+                  uint64_t>,
+              uint64_t>,
+          uint64_t>,
+      uint64_t>
       t = std::make_pair(
           std::make_pair(
               std::make_pair(

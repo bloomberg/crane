@@ -9,25 +9,23 @@ struct NameClashCtorField {
   /// Fields named like structured binding names: d_a0, d_a1
   struct clash1 {
     // DATA
-    unsigned int d_a0;
-    unsigned int d_a1;
+    uint64_t d_a0;
+    uint64_t d_a1;
 
     // ACCESSORS
     clash1 clone() const { return {d_a0, d_a1}; }
 
     // CREATORS
-    static clash1 c1(unsigned int d_a0, unsigned int d_a1) {
-      return {d_a0, d_a1};
-    }
+    static clash1 c1(uint64_t d_a0, uint64_t d_a1) { return {d_a0, d_a1}; }
 
-    unsigned int sum_clash1() const {
+    uint64_t sum_clash1() const {
       const auto &_sv = *this;
       const auto &[d_a0, d_a1] = _sv;
       return (d_a0 + d_a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 clash1_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[d_a2, d_a3] = _sv;
@@ -35,7 +33,7 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 clash1_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[d_a2, d_a3] = _sv;
@@ -47,11 +45,11 @@ struct NameClashCtorField {
   struct clash2 {
     // TYPES
     struct C2a {
-      unsigned int v;
+      uint64_t v;
     };
 
     struct C2b {
-      unsigned int result;
+      uint64_t result;
     };
 
     using variant_t = std::variant<C2a, C2b>;
@@ -94,9 +92,9 @@ struct NameClashCtorField {
     }
 
     // CREATORS
-    static clash2 c2a(unsigned int v) { return clash2(C2a{v}); }
+    static clash2 c2a(uint64_t v) { return clash2(C2a{v}); }
 
-    static clash2 c2b(unsigned int result) { return clash2(C2b{result}); }
+    static clash2 c2b(uint64_t result) { return clash2(C2b{result}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -104,7 +102,7 @@ struct NameClashCtorField {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int get_clash2() const {
+    uint64_t get_clash2() const {
       if (std::holds_alternative<typename clash2::C2a>(this->v())) {
         const auto &[v0] = std::get<typename clash2::C2a>(this->v());
         return v0;
@@ -115,8 +113,8 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 clash2_rec(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename clash2::C2a>(this->v())) {
         const auto &[v0] = std::get<typename clash2::C2a>(this->v());
@@ -128,8 +126,8 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 clash2_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename clash2::C2a>(this->v())) {
         const auto &[v0] = std::get<typename clash2::C2a>(this->v());
@@ -144,16 +142,14 @@ struct NameClashCtorField {
   /// Two constructors with fields, match on both in sequence
   struct pair_ind {
     // DATA
-    unsigned int a0;
-    unsigned int a1;
+    uint64_t a0;
+    uint64_t a1;
 
     // ACCESSORS
     pair_ind clone() const { return {a0, a1}; }
 
     // CREATORS
-    static pair_ind mkpair(unsigned int a0, unsigned int a1) {
-      return {a0, a1};
-    }
+    static pair_ind mkpair(uint64_t a0, uint64_t a1) { return {a0, a1}; }
 
     pair_ind swap_pair() const {
       const auto &_sv = *this;
@@ -162,7 +158,7 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_ind_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0, a1] = _sv;
@@ -170,7 +166,7 @@ struct NameClashCtorField {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_ind_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0, a1] = _sv;
@@ -236,13 +232,13 @@ struct NameClashCtorField {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int unbox_sum() const {
+    uint64_t unbox_sum() const {
       if (std::holds_alternative<typename box::Box0>(this->v())) {
         const auto &[a0] = std::get<typename box::Box0>(this->v());
         const auto &[a00, a10] = a0;
         return (a00 + a10);
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   };

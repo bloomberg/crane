@@ -1,7 +1,7 @@
 #include "record_closure_escape.h"
 
-unsigned int RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
-                                             unsigned int x) {
+uint64_t RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
+                                         uint64_t x) {
   if (std::holds_alternative<typename RecordClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -33,13 +33,12 @@ unsigned int RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
 /// record constructor arguments.
 RecordClosureEscape::fn_record
 RecordClosureEscape::record_escape(RecordClosureEscape::tree t) {
-  return fn_record{[=](unsigned int _x0) mutable -> unsigned int {
-                     return sum_values(t, _x0);
-                   },
-                   42u};
+  return fn_record{
+      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); },
+      UINT64_C(42)};
 }
 
-unsigned int
+uint64_t
 RecordClosureEscape::use_record(const RecordClosureEscape::fn_record &r) {
   return r.fn_field(r.val_field);
 }

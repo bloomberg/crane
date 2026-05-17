@@ -5,7 +5,7 @@
 
 namespace {
 
-OptionalSelfDeepCopy::chain make_chain(unsigned int n) {
+OptionalSelfDeepCopy::chain make_chain(uint64_t n) {
   OptionalSelfDeepCopy::chain x = OptionalSelfDeepCopy::chain::stop();
   while (n > 0) {
     x = OptionalSelfDeepCopy::chain::more(

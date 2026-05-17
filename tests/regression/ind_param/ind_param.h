@@ -10,7 +10,7 @@ template <typename M>
 concept Container = requires {
   typename M::elem;
   typename M::t;
-  { M::size(std::declval<typename M::t>()) } -> std::same_as<unsigned int>;
+  { M::size(std::declval<typename M::t>()) } -> std::same_as<uint64_t>;
 };
 
 struct IndParam {
@@ -24,7 +24,7 @@ struct IndParam {
       };
 
       struct Err {
-        unsigned int a0;
+        uint64_t a0;
       };
 
       using variant_t = std::variant<Ok, Err>;
@@ -69,7 +69,7 @@ struct IndParam {
       // CREATORS
       static result ok(typename C::t a0) { return result(Ok{std::move(a0)}); }
 
-      static result err(unsigned int a0) { return result(Err{a0}); }
+      static result err(uint64_t a0) { return result(Err{a0}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return v_; }
@@ -80,7 +80,7 @@ struct IndParam {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     static T1 result_rect(F0 &&f, F1 &&f0, const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
         const auto &[a0] = std::get<typename result::Ok>(r.v());
@@ -93,7 +93,7 @@ struct IndParam {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     static T1 result_rec(F0 &&f, F1 &&f0, const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
         const auto &[a0] = std::get<typename result::Ok>(r.v());
@@ -112,12 +112,12 @@ struct IndParam {
       return result::ok(C::t::pair(e1, e2));
     }
 
-    static unsigned int get_size(const result &r) {
+    static uint64_t get_size(const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
         const auto &[a0] = std::get<typename result::Ok>(r.v());
         return C::size(a0);
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
 
@@ -127,13 +127,13 @@ struct IndParam {
     }
 
     static const result &error_result() {
-      static const result v = result::err(404u);
+      static const result v = result::err(UINT64_C(404));
       return v;
     }
   };
 
   struct NatContainer {
-    using elem = unsigned int;
+    using elem = uint64_t;
 
     struct t {
       // TYPES
@@ -208,8 +208,8 @@ struct IndParam {
     };
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &>
     static T1 t_rect(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
@@ -223,8 +223,8 @@ struct IndParam {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &>
     static T1 t_rec(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
@@ -237,19 +237,18 @@ struct IndParam {
       }
     }
 
-    static unsigned int size(const t &c);
+    static uint64_t size(const t &c);
   };
 
   using NatWrapper = Wrapper<NatContainer>;
   static inline const NatWrapper::result test_single =
-      NatWrapper::make_single(42u);
+      NatWrapper::make_single(UINT64_C(42));
   static inline const NatWrapper::result test_pair =
-      NatWrapper::make_pair(1u, 2u);
-  static inline const unsigned int test_size_single =
+      NatWrapper::make_pair(UINT64_C(1), UINT64_C(2));
+  static inline const uint64_t test_size_single =
       NatWrapper::get_size(test_single);
-  static inline const unsigned int test_size_pair =
-      NatWrapper::get_size(test_pair);
-  static inline const unsigned int test_error =
+  static inline const uint64_t test_size_pair = NatWrapper::get_size(test_pair);
+  static inline const uint64_t test_error =
       NatWrapper::get_size(NatWrapper::error_result());
 };
 

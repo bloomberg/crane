@@ -253,13 +253,13 @@ struct TailrecReorderProbe {
   /// Variant: TWO arguments depend on pattern-matched fields.
   /// l := t, acc1 := mycons h acc1, acc2 := mycons (h+1) acc2
   /// Both acc1 and acc2 need h from the OLD l.
-  static std::pair<mylist<unsigned int>, mylist<unsigned int>>
-  dual_accum(const mylist<unsigned int> &l, mylist<unsigned int> acc1,
-             mylist<unsigned int> acc2);
+  static std::pair<mylist<uint64_t>, mylist<uint64_t>>
+  dual_accum(const mylist<uint64_t> &l, mylist<uint64_t> acc1,
+             mylist<uint64_t> acc2);
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, T1 &>
-  static unsigned int
+    requires std::is_invocable_r_v<uint64_t, F0 &, T1 &>
+  static uint64_t
   mylist_sum(F0 &&f,
              const mylist<T1> &l) { /// _Enter: captures varying parameters for
                                     /// each recursive call.
@@ -270,11 +270,11 @@ struct TailrecReorderProbe {
 
     /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Mycons {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -286,7 +286,7 @@ struct TailrecReorderProbe {
         auto _f = std::move(std::get<_Enter>(_frame));
         const mylist<T1> &l = *_f.l;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
           _stack.emplace_back(_Resume_Mycons{f(a0)});
@@ -300,38 +300,40 @@ struct TailrecReorderProbe {
     return _result;
   }
 
-  static inline const unsigned int test_rev = mylist_sum<unsigned int>(
-      [](unsigned int x) { return x; },
-      my_reverse<unsigned int>(mylist<unsigned int>::mycons(
-          1u, mylist<unsigned int>::mycons(
-                  2u, mylist<unsigned int>::mycons(
-                          3u, mylist<unsigned int>::mynil())))));
-  static inline const unsigned int test_dual = []() -> unsigned int {
+  static inline const uint64_t test_rev = mylist_sum<uint64_t>(
+      [](uint64_t x) { return x; },
+      my_reverse<uint64_t>(mylist<uint64_t>::mycons(
+          UINT64_C(1),
+          mylist<uint64_t>::mycons(
+              UINT64_C(2), mylist<uint64_t>::mycons(
+                               UINT64_C(3), mylist<uint64_t>::mynil())))));
+  static inline const uint64_t test_dual = []() -> uint64_t {
     auto _cs = dual_accum(
-        mylist<unsigned int>::mycons(
-            10u, mylist<unsigned int>::mycons(
-                     20u, mylist<unsigned int>::mycons(
-                              30u, mylist<unsigned int>::mynil()))),
-        mylist<unsigned int>::mynil(), mylist<unsigned int>::mynil());
-    const mylist<unsigned int> &a = _cs.first;
-    const mylist<unsigned int> &b = _cs.second;
-    return (mylist_sum<unsigned int>([](unsigned int x) { return x; }, a) +
-            mylist_sum<unsigned int>([](unsigned int x) { return x; }, b));
+        mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
+        mylist<uint64_t>::mynil(), mylist<uint64_t>::mynil());
+    const mylist<uint64_t> &a = _cs.first;
+    const mylist<uint64_t> &b = _cs.second;
+    return (mylist_sum<uint64_t>([](uint64_t x) { return x; }, a) +
+            mylist_sum<uint64_t>([](uint64_t x) { return x; }, b));
   }();
   /// Tail-recursive function where the recursive argument is a COMPLEX
   /// expression involving multiple pattern variables.
-  static mylist<unsigned int> weave(const mylist<unsigned int> &l1,
-                                    const mylist<unsigned int> &l2,
-                                    mylist<unsigned int> acc);
-  static inline const unsigned int test_weave = mylist_sum<unsigned int>(
-      [](unsigned int x) { return x; },
-      weave(mylist<unsigned int>::mycons(
-                1u, mylist<unsigned int>::mycons(
-                        3u, mylist<unsigned int>::mynil())),
-            mylist<unsigned int>::mycons(
-                2u, mylist<unsigned int>::mycons(
-                        4u, mylist<unsigned int>::mynil())),
-            mylist<unsigned int>::mynil()));
+  static mylist<uint64_t> weave(const mylist<uint64_t> &l1,
+                                const mylist<uint64_t> &l2,
+                                mylist<uint64_t> acc);
+  static inline const uint64_t test_weave = mylist_sum<uint64_t>(
+      [](uint64_t x) { return x; },
+      weave(mylist<uint64_t>::mycons(
+                UINT64_C(1), mylist<uint64_t>::mycons(
+                                 UINT64_C(3), mylist<uint64_t>::mynil())),
+            mylist<uint64_t>::mycons(
+                UINT64_C(2), mylist<uint64_t>::mycons(
+                                 UINT64_C(4), mylist<uint64_t>::mynil())),
+            mylist<uint64_t>::mynil()));
 };
 
 #endif // INCLUDED_TAILREC_REORDER_PROBE

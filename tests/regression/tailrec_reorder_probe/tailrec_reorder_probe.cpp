@@ -3,31 +3,30 @@
 /// Variant: TWO arguments depend on pattern-matched fields.
 /// l := t, acc1 := mycons h acc1, acc2 := mycons (h+1) acc2
 /// Both acc1 and acc2 need h from the OLD l.
-std::pair<TailrecReorderProbe::mylist<unsigned int>,
-          TailrecReorderProbe::mylist<unsigned int>>
-TailrecReorderProbe::dual_accum(
-    const TailrecReorderProbe::mylist<unsigned int> &l,
-    TailrecReorderProbe::mylist<unsigned int> acc1,
-    TailrecReorderProbe::mylist<unsigned int> acc2) {
-  std::pair<TailrecReorderProbe::mylist<unsigned int>,
-            TailrecReorderProbe::mylist<unsigned int>>
+std::pair<TailrecReorderProbe::mylist<uint64_t>,
+          TailrecReorderProbe::mylist<uint64_t>>
+TailrecReorderProbe::dual_accum(const TailrecReorderProbe::mylist<uint64_t> &l,
+                                TailrecReorderProbe::mylist<uint64_t> acc1,
+                                TailrecReorderProbe::mylist<uint64_t> acc2) {
+  std::pair<TailrecReorderProbe::mylist<uint64_t>,
+            TailrecReorderProbe::mylist<uint64_t>>
       _result;
-  TailrecReorderProbe::mylist<unsigned int> _loop_acc2 = std::move(acc2);
-  TailrecReorderProbe::mylist<unsigned int> _loop_acc1 = std::move(acc1);
-  const TailrecReorderProbe::mylist<unsigned int> *_loop_l = &l;
+  TailrecReorderProbe::mylist<uint64_t> _loop_acc2 = std::move(acc2);
+  TailrecReorderProbe::mylist<uint64_t> _loop_acc1 = std::move(acc1);
+  const TailrecReorderProbe::mylist<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
-            typename TailrecReorderProbe::mylist<unsigned int>::Mynil>(
+            typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(
             _loop_l->v())) {
       _result = std::make_pair(std::move(_loop_acc1), std::move(_loop_acc2));
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
+          std::get<typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(
               _loop_l->v());
       _loop_acc2 =
-          mylist<unsigned int>::mycons((a0 + 1u), std::move(_loop_acc2));
-      _loop_acc1 = mylist<unsigned int>::mycons(a0, std::move(_loop_acc1));
+          mylist<uint64_t>::mycons((a0 + UINT64_C(1)), std::move(_loop_acc2));
+      _loop_acc1 = mylist<uint64_t>::mycons(a0, std::move(_loop_acc1));
       _loop_l = a1.get();
     }
   }
@@ -36,35 +35,35 @@ TailrecReorderProbe::dual_accum(
 
 /// Tail-recursive function where the recursive argument is a COMPLEX
 /// expression involving multiple pattern variables.
-TailrecReorderProbe::mylist<unsigned int>
-TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<unsigned int> &l1,
-                           const TailrecReorderProbe::mylist<unsigned int> &l2,
-                           TailrecReorderProbe::mylist<unsigned int> acc) {
-  TailrecReorderProbe::mylist<unsigned int> _result;
-  TailrecReorderProbe::mylist<unsigned int> _loop_acc = std::move(acc);
-  const TailrecReorderProbe::mylist<unsigned int> *_loop_l2 = &l2;
-  const TailrecReorderProbe::mylist<unsigned int> *_loop_l1 = &l1;
+TailrecReorderProbe::mylist<uint64_t>
+TailrecReorderProbe::weave(const TailrecReorderProbe::mylist<uint64_t> &l1,
+                           const TailrecReorderProbe::mylist<uint64_t> &l2,
+                           TailrecReorderProbe::mylist<uint64_t> acc) {
+  TailrecReorderProbe::mylist<uint64_t> _result;
+  TailrecReorderProbe::mylist<uint64_t> _loop_acc = std::move(acc);
+  const TailrecReorderProbe::mylist<uint64_t> *_loop_l2 = &l2;
+  const TailrecReorderProbe::mylist<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<
-            typename TailrecReorderProbe::mylist<unsigned int>::Mynil>(
+            typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(
             _loop_l1->v())) {
-      _result = my_rev_append<unsigned int>(std::move(_loop_acc), *_loop_l2);
+      _result = my_rev_append<uint64_t>(std::move(_loop_acc), *_loop_l2);
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
+          std::get<typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(
               _loop_l1->v());
       if (std::holds_alternative<
-              typename TailrecReorderProbe::mylist<unsigned int>::Mynil>(
+              typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(
               _loop_l2->v())) {
-        _result = my_rev_append<unsigned int>(std::move(_loop_acc), *_loop_l1);
+        _result = my_rev_append<uint64_t>(std::move(_loop_acc), *_loop_l1);
         break;
       } else {
-        const auto &[a00, a10] = std::get<
-            typename TailrecReorderProbe::mylist<unsigned int>::Mycons>(
-            _loop_l2->v());
-        _loop_acc = mylist<unsigned int>::mycons(
-            a00, mylist<unsigned int>::mycons(a0, std::move(_loop_acc)));
+        const auto &[a00, a10] =
+            std::get<typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(
+                _loop_l2->v());
+        _loop_acc = mylist<uint64_t>::mycons(
+            a00, mylist<uint64_t>::mycons(a0, std::move(_loop_acc)));
         _loop_l2 = a10.get();
         _loop_l1 = a1.get();
       }

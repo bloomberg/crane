@@ -1,10 +1,10 @@
 #include "topological_sort.h"
 
-List<unsigned int> ListDef::seq(unsigned int start, unsigned int len) {
+List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
   if (len <= 0) {
-    return List<unsigned int>::nil();
+    return List<uint64_t>::nil();
   } else {
-    unsigned int len0 = len - 1;
-    return List<unsigned int>::cons(start, ListDef::seq((start + 1), len0));
+    uint64_t len0 = len - 1;
+    return List<uint64_t>::cons(start, ListDef::seq((start + 1), len0));
   }
 }

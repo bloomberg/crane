@@ -121,24 +121,19 @@ public:
 };
 
 struct LoopifyOptionMaybe {
-  static std::optional<unsigned int> find_even(const List<unsigned int> &l);
-  static std::optional<unsigned int> find_greater(unsigned int threshold,
-                                                  const List<unsigned int> &l);
-  static std::optional<unsigned int>
-  lookup(unsigned int key,
-         const List<std::pair<unsigned int, unsigned int>> &l);
-  static List<unsigned int>
-  lookup_all(unsigned int key,
-             const List<std::pair<unsigned int, unsigned int>> &l);
-  static std::optional<unsigned int> safe_head(const List<unsigned int> &l);
-  static std::optional<List<unsigned int>>
-  safe_tail(const List<unsigned int> &l);
-  static List<unsigned int>
-  catMaybes(const List<std::optional<unsigned int>> &l);
-  static std::optional<unsigned int>
-  find_index_even_aux(const List<unsigned int> &l, unsigned int idx);
-  static std::optional<unsigned int>
-  find_index_even(const List<unsigned int> &l);
+  static std::optional<uint64_t> find_even(const List<uint64_t> &l);
+  static std::optional<uint64_t> find_greater(uint64_t threshold,
+                                              const List<uint64_t> &l);
+  static std::optional<uint64_t>
+  lookup(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
+  static List<uint64_t>
+  lookup_all(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
+  static std::optional<uint64_t> safe_head(const List<uint64_t> &l);
+  static std::optional<List<uint64_t>> safe_tail(const List<uint64_t> &l);
+  static List<uint64_t> catMaybes(const List<std::optional<uint64_t>> &l);
+  static std::optional<uint64_t> find_index_even_aux(const List<uint64_t> &l,
+                                                     uint64_t idx);
+  static std::optional<uint64_t> find_index_even(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_OPTION_MAYBE

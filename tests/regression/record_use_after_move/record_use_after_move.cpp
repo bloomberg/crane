@@ -10,6 +10,6 @@ RecordUseAfterMove::keep_box(RecordUseAfterMove::box b) {
   return b;
 }
 
-unsigned int RecordUseAfterMove::use_box(const RecordUseAfterMove::box &b) {
+uint64_t RecordUseAfterMove::use_box(const RecordUseAfterMove::box &b) {
   return b.payload;
 }

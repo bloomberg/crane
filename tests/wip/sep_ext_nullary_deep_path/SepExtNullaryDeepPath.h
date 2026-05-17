@@ -9,17 +9,17 @@ template <typename M>
 concept Leaf = requires {
   requires(
       requires {
-        { M::val } -> std::convertible_to<unsigned int>;
+        { M::val } -> std::convertible_to<uint64_t>;
       } ||
       requires {
-        { M::val() } -> std::convertible_to<unsigned int>;
+        { M::val() } -> std::convertible_to<uint64_t>;
       });
   requires(
       requires {
-        { M::extra } -> std::convertible_to<unsigned int>;
+        { M::extra } -> std::convertible_to<uint64_t>;
       } ||
       requires {
-        { M::extra() } -> std::convertible_to<unsigned int>;
+        { M::extra() } -> std::convertible_to<uint64_t>;
       });
 };
 template <typename M>
@@ -28,18 +28,18 @@ template <typename M>
 concept Root = requires { requires Mid<typename M::M>; };
 
 template <Root R> struct Worker {
-  static const unsigned int &deep_val() {
-    static const unsigned int v = R::M::L::val();
+  static const uint64_t &deep_val() {
+    static const uint64_t v = R::M::L::val();
     return v;
   }
 
-  static const unsigned int &deep_extra() {
-    static const unsigned int v = R::M::L::extra();
+  static const uint64_t &deep_extra() {
+    static const uint64_t v = R::M::L::extra();
     return v;
   }
 
-  static const unsigned int &deep_sum() {
-    static const unsigned int v = (R::M::L::val() + R::M::L::extra());
+  static const uint64_t &deep_sum() {
+    static const uint64_t v = (R::M::L::val() + R::M::L::extra());
     return v;
   }
 };

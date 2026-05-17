@@ -12,12 +12,12 @@ struct NameClashReturnThis {
   struct shape {
     // TYPES
     struct Circle {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Square {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     using variant_t = std::variant<Circle, Square>;
@@ -60,9 +60,9 @@ struct NameClashReturnThis {
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) { return shape(Circle{a0}); }
+    static shape circle(uint64_t a0) { return shape(Circle{a0}); }
 
-    static shape square(unsigned int a0, unsigned int a1) {
+    static shape square(uint64_t a0, uint64_t a1) {
       return shape(Square{a0, a1});
     }
 
@@ -74,8 +74,8 @@ struct NameClashReturnThis {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
   static T1 shape_rect(F0 &&f, F1 &&f0, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -87,8 +87,8 @@ struct NameClashReturnThis {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
   static T1 shape_rec(F0 &&f, F1 &&f0, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -108,7 +108,7 @@ struct NameClashReturnThis {
   /// Two shapes, return one of them based on a match on the other.
   static shape pick_shape(shape s1, shape s2);
   /// Nested: match on result of a function that may return this
-  static unsigned int nested_this(const shape &s);
+  static uint64_t nested_this(const shape &s);
 };
 
 #endif // INCLUDED_NAME_CLASH_RETURN_THIS

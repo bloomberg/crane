@@ -156,18 +156,20 @@ template <typename A, typename P> struct SigT {
 };
 
 struct ProgFix {
-  static List<unsigned int>
-  interleave_func(const SigT<List<unsigned int>, List<unsigned int>> &x);
-  static List<unsigned int> interleave(List<unsigned int> l1,
-                                       List<unsigned int> l2);
-  static inline const List<unsigned int> test_interleave = interleave(
-      List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  3u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))),
-      List<unsigned int>::cons(
-          2u,
-          List<unsigned int>::cons(
-              4u, List<unsigned int>::cons(6u, List<unsigned int>::nil()))));
+  static List<uint64_t>
+  interleave_func(const SigT<List<uint64_t>, List<uint64_t>> &x);
+  static List<uint64_t> interleave(List<uint64_t> l1, List<uint64_t> l2);
+  static inline const List<uint64_t> test_interleave = interleave(
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_PROGRAM_FIXPOINT

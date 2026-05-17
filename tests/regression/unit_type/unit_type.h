@@ -7,9 +7,9 @@
 
 struct UnitType {
   static inline const std::monostate unit_val = std::monostate{};
-  static void return_unit(unsigned int _x);
-  static unsigned int take_unit(std::monostate _x);
-  static unsigned int match_unit(std::monostate u);
+  static void return_unit(uint64_t _x);
+  static uint64_t take_unit(std::monostate _x);
+  static uint64_t match_unit(std::monostate u);
 
   template <typename A, typename B> struct pair {
     // DATA
@@ -39,8 +39,8 @@ struct UnitType {
     return f(a0, a1);
   }
 
-  static inline const pair<unsigned int, std::monostate> pair_with_unit =
-      pair<unsigned int, std::monostate>::pair0(3u, std::monostate{});
+  static inline const pair<uint64_t, std::monostate> pair_with_unit =
+      pair<uint64_t, std::monostate>::pair0(UINT64_C(3), std::monostate{});
   static inline const pair<std::monostate, std::monostate> unit_pair =
       pair<std::monostate, std::monostate>::pair0(std::monostate{},
                                                   std::monostate{});
@@ -50,13 +50,12 @@ struct UnitType {
     return b;
   }
 
-  static inline const unsigned int sequenced =
-      seq<std::monostate, unsigned int>(
-          std::monostate{},
-          seq<std::monostate, unsigned int>(std::monostate{}, 5u));
-  static inline const unsigned int test_take = take_unit(std::monostate{});
-  static inline const unsigned int test_match = match_unit(std::monostate{});
-  static inline const unsigned int test_seq = sequenced;
+  static inline const uint64_t sequenced = seq<std::monostate, uint64_t>(
+      std::monostate{},
+      seq<std::monostate, uint64_t>(std::monostate{}, UINT64_C(5)));
+  static inline const uint64_t test_take = take_unit(std::monostate{});
+  static inline const uint64_t test_match = match_unit(std::monostate{});
+  static inline const uint64_t test_seq = sequenced;
 };
 
 #endif // INCLUDED_UNIT_TYPE

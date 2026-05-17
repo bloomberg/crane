@@ -8,25 +8,25 @@ MemSafetyProbe29::outer MemSafetyProbe29::dup_inner(MemSafetyProbe29::inner i) {
 
 /// TEST 5: Deep 3-child tree to stress clone/destructor.
 MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
-    unsigned int
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _After_n_: saves [n__0, n__1, n], dispatches next recursive call.
   struct _After_n_ {
-    unsigned int n__0;
-    unsigned int n__1;
-    unsigned int n;
+    uint64_t n__0;
+    uint64_t n__1;
+    uint64_t n;
   };
 
   /// _After_n__1: saves [_result, n_, n], dispatches next recursive call.
   struct _After_n__1 {
     MemSafetyProbe29::tree3 _result;
-    unsigned int n_;
-    unsigned int n;
+    uint64_t n_;
+    uint64_t n;
   };
 
   /// _Combine_n_: receives partial results, combines with _result from final
@@ -34,7 +34,7 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
   struct _Combine_n_ {
     MemSafetyProbe29::tree3 _result_0;
     MemSafetyProbe29::tree3 _result_1;
-    unsigned int n;
+    uint64_t n;
   };
 
   using _Frame = std::variant<_Enter, _After_n_, _After_n__1, _Combine_n_>;
@@ -48,11 +48,11 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree3::t3leaf();
       } else {
-        unsigned int n_ = n - 1;
+        uint64_t n_ = n - 1;
         _stack.emplace_back(_After_n_{n_, n_, n});
         _stack.emplace_back(_Enter{n_});
       }

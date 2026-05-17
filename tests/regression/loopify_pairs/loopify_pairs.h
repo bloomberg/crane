@@ -270,8 +270,8 @@ struct LoopifyPairs {
   }
 
   /// unzip l splits list of nat pairs into pair of lists.
-  static std::pair<list<unsigned int>, list<unsigned int>>
-  unzip(const list<std::pair<unsigned int, unsigned int>> &l);
+  static std::pair<list<uint64_t>, list<uint64_t>>
+  unzip(const list<std::pair<uint64_t, uint64_t>> &l);
 
   /// zip combines two lists into pairs.
   template <typename T1, typename T2>
@@ -363,13 +363,13 @@ struct LoopifyPairs {
   /// split_at n l splits at position n.
   template <typename T1>
   static std::pair<list<T1>, list<T1>>
-  split_at(unsigned int n,
+  split_at(uint64_t n,
            list<T1> l) { /// _Enter: captures varying parameters for each
                          /// recursive call.
 
     struct _Enter {
       list<T1> l;
-      unsigned int n;
+      uint64_t n;
     };
 
     /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
@@ -390,11 +390,11 @@ struct LoopifyPairs {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         list<T1> l = std::move(_f.l);
-        unsigned int n = _f.n;
+        uint64_t n = _f.n;
         if (n <= 0) {
           _result = std::make_pair(list<T1>::nil(), std::move(l));
         } else {
-          unsigned int m = n - 1;
+          uint64_t m = n - 1;
           if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
             _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
           } else {
@@ -523,41 +523,38 @@ struct LoopifyPairs {
   }
 
   /// partition3 pivot l three-way partition around pivot.
-  static std::pair<list<unsigned int>,
-                   std::pair<list<unsigned int>, list<unsigned int>>>
-  partition3(unsigned int pivot, const list<unsigned int> &l);
+  static std::pair<list<uint64_t>, std::pair<list<uint64_t>, list<uint64_t>>>
+  partition3(uint64_t pivot, const list<uint64_t> &l);
   /// min_max l finds both min and max in one pass.
-  static std::pair<unsigned int, unsigned int>
-  min_max(const list<unsigned int> &l);
+  static std::pair<uint64_t, uint64_t> min_max(const list<uint64_t> &l);
   /// sum_and_count computes both in one pass.
-  static std::pair<unsigned int, unsigned int>
-  sum_and_count(const list<unsigned int> &l);
+  static std::pair<uint64_t, uint64_t> sum_and_count(const list<uint64_t> &l);
   /// sum_prod_count triple accumulator.
-  static std::pair<unsigned int, std::pair<unsigned int, unsigned int>>
-  sum_prod_count(const list<unsigned int> &l);
+  static std::pair<uint64_t, std::pair<uint64_t, uint64_t>>
+  sum_prod_count(const list<uint64_t> &l);
 
   /// mapAccumL f acc l map with accumulator threading.
   template <typename F0>
-    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
-                                   unsigned int &, unsigned int &>
-  static std::pair<unsigned int, list<unsigned int>> mapAccumL(
-      F0 &&f, unsigned int acc,
-      const list<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F0 &,
+                                   uint64_t &, uint64_t &>
+  static std::pair<uint64_t, list<uint64_t>>
+  mapAccumL(F0 &&f, uint64_t acc,
+            const list<uint64_t> &l) { /// _Enter: captures varying parameters
+                                       /// for each recursive call.
 
     struct _Enter {
-      const list<unsigned int> *l;
-      unsigned int acc;
+      const list<uint64_t> *l;
+      uint64_t acc;
     };
 
     /// _Cont_acc_: saves [y], resumes after recursive call, then processes
     /// rest.
     struct _Cont_acc_ {
-      unsigned int y;
+      uint64_t y;
     };
 
     using _Frame = std::variant<_Enter, _Cont_acc_>;
-    std::pair<unsigned int, list<unsigned int>> _result{};
+    std::pair<uint64_t, list<uint64_t>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l, acc});
@@ -567,38 +564,36 @@ struct LoopifyPairs {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> &l = *_f.l;
-        unsigned int acc = _f.acc;
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-          _result = std::make_pair(std::move(acc), list<unsigned int>::nil());
+        const list<uint64_t> &l = *_f.l;
+        uint64_t acc = _f.acc;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+          _result = std::make_pair(std::move(acc), list<uint64_t>::nil());
         } else {
-          const auto &[a0, a1] =
-              std::get<typename list<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
           auto _cs = f(acc, a0);
-          const unsigned int &acc_ = _cs.first;
-          const unsigned int &y = _cs.second;
+          const uint64_t &acc_ = _cs.first;
+          const uint64_t &y = _cs.second;
           _stack.emplace_back(_Cont_acc_{y});
           _stack.emplace_back(_Enter{a1.get(), std::move(_cs.first)});
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
-        unsigned int y = _f.y;
-        const unsigned int &final_acc = _result.first;
-        const list<unsigned int> &ys = _result.second;
+        uint64_t y = _f.y;
+        const uint64_t &final_acc = _result.first;
+        const list<uint64_t> &ys = _result.second;
         _result = std::make_pair(std::move(_result.first),
-                                 list<unsigned int>::cons(y, ys));
+                                 list<uint64_t>::cons(y, ys));
       }
     }
     return _result;
   }
 
   /// lookup_all key l finds all values associated with key.
-  static list<unsigned int>
-  lookup_all(unsigned int key,
-             const list<std::pair<unsigned int, unsigned int>> &l);
+  static list<uint64_t>
+  lookup_all(uint64_t key, const list<std::pair<uint64_t, uint64_t>> &l);
   /// swap_pairs l swaps elements in each pair.
-  static list<std::pair<unsigned int, unsigned int>>
-  swap_pairs(const list<std::pair<unsigned int, unsigned int>> &l);
+  static list<std::pair<uint64_t, uint64_t>>
+  swap_pairs(const list<std::pair<uint64_t, uint64_t>> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_PAIRS

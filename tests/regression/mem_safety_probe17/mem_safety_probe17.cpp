@@ -1,20 +1,20 @@
 #include "mem_safety_probe17.h"
 
-unsigned int MemSafetyProbe17::sum_list(
-    const MemSafetyProbe17::mylist<unsigned int>
+uint64_t MemSafetyProbe17::sum_list(
+    const MemSafetyProbe17::mylist<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const MemSafetyProbe17::mylist<unsigned int> *l;
+    const MemSafetyProbe17::mylist<uint64_t> *l;
   };
 
   /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    unsigned int a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -24,13 +24,13 @@ unsigned int MemSafetyProbe17::sum_list(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe17::mylist<unsigned int> &l = *_f.l;
+      const MemSafetyProbe17::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
-              typename MemSafetyProbe17::mylist<unsigned int>::Mynil>(l.v())) {
-        _result = 0u;
+              typename MemSafetyProbe17::mylist<uint64_t>::Mynil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe17::mylist<unsigned int>::Mycons>(
+            std::get<typename MemSafetyProbe17::mylist<uint64_t>::Mycons>(
                 l.v());
         _stack.emplace_back(_Resume_Mycons{a0});
         _stack.emplace_back(_Enter{a1.get()});
@@ -43,7 +43,7 @@ unsigned int MemSafetyProbe17::sum_list(
   return _result;
 }
 
-MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
+MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
     const MemSafetyProbe17::qtree
         &t) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -56,39 +56,39 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
     const MemSafetyProbe17::qtree *a3;
     const MemSafetyProbe17::qtree *a1;
     const MemSafetyProbe17::qtree *a0;
-    unsigned int a2;
+    uint64_t a2;
   };
 
   /// _After_QNode_1: saves [_result, a1, a0, a2], dispatches next recursive
   /// call.
   struct _After_QNode_1 {
-    MemSafetyProbe17::mylist<unsigned int> _result;
+    MemSafetyProbe17::mylist<uint64_t> _result;
     const MemSafetyProbe17::qtree *a1;
     const MemSafetyProbe17::qtree *a0;
-    unsigned int a2;
+    uint64_t a2;
   };
 
   /// _After_QNode_2: saves [_result_0, _result_1, a0, a2], dispatches next
   /// recursive call.
   struct _After_QNode_2 {
-    MemSafetyProbe17::mylist<unsigned int> _result_0;
-    MemSafetyProbe17::mylist<unsigned int> _result_1;
+    MemSafetyProbe17::mylist<uint64_t> _result_0;
+    MemSafetyProbe17::mylist<uint64_t> _result_1;
     const MemSafetyProbe17::qtree *a0;
-    unsigned int a2;
+    uint64_t a2;
   };
 
   /// _Combine_QNode: receives partial results, combines with _result from final
   /// call.
   struct _Combine_QNode {
-    MemSafetyProbe17::mylist<unsigned int> _result_0;
-    MemSafetyProbe17::mylist<unsigned int> _result_1;
-    MemSafetyProbe17::mylist<unsigned int> _result_2;
-    unsigned int a2;
+    MemSafetyProbe17::mylist<uint64_t> _result_0;
+    MemSafetyProbe17::mylist<uint64_t> _result_1;
+    MemSafetyProbe17::mylist<uint64_t> _result_2;
+    uint64_t a2;
   };
 
   using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
                               _After_QNode_2, _Combine_QNode>;
-  MemSafetyProbe17::mylist<unsigned int> _result{};
+  MemSafetyProbe17::mylist<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&t});
@@ -102,7 +102,7 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
       const MemSafetyProbe17::qtree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe17::qtree::QLeaf>(
               t.v())) {
-        _result = mylist<unsigned int>::mynil();
+        _result = mylist<uint64_t>::mynil();
       } else {
         const auto &[a0, a1, a2, a3, a4] =
             std::get<typename MemSafetyProbe17::qtree::QNode>(t.v());
@@ -127,8 +127,8 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QNode>(_frame));
-      _result = _result.myapp(_f._result_2.myapp(mylist<unsigned int>::mycons(
-          _f.a2, _f._result_1.myapp(_f._result_0))));
+      _result = _result.myapp(_f._result_2.myapp(
+          mylist<uint64_t>::mycons(_f.a2, _f._result_1.myapp(_f._result_0))));
     }
   }
   return _result;
@@ -136,18 +136,18 @@ MemSafetyProbe17::mylist<unsigned int> MemSafetyProbe17::qtree_flatten(
 
 /// TEST 7: Build a 4-ary tree programmatically and check.
 MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
-    unsigned int
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _After_n_: saves [n_, _s1, n, _s3], dispatches next recursive call.
   struct _After_n_ {
-    unsigned int n_;
+    uint64_t n_;
     decltype(qtree::qleaf()) _s1;
-    unsigned int n;
+    uint64_t n;
     decltype(qtree::qleaf()) _s3;
   };
 
@@ -156,7 +156,7 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
   struct _Combine_n_ {
     MemSafetyProbe17::qtree _result;
     decltype(qtree::qleaf()) _s1;
-    unsigned int n;
+    uint64_t n;
     decltype(qtree::qleaf()) _s3;
   };
 
@@ -171,11 +171,11 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
         _result = qtree::qleaf();
       } else {
-        unsigned int n_ = n - 1;
+        uint64_t n_ = n - 1;
         _stack.emplace_back(_After_n_{n_, qtree::qleaf(), n, qtree::qleaf()});
         _stack.emplace_back(_Enter{n_});
       }

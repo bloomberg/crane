@@ -1,9 +1,9 @@
 #include "fold_closure_accum.h"
 
 /// Sum all values in a tree.
-unsigned int FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
+uint64_t FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
   if (std::holds_alternative<typename FoldClosureAccum::tree::Leaf>(t.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename FoldClosureAccum::tree::Node>(t.v());
@@ -20,14 +20,13 @@ unsigned int FoldClosureAccum::tree_sum(const FoldClosureAccum::tree &t) {
 /// captures the previous closure (acc) and the current tree (t).
 /// If captures are by reference, the previous closure is stack-local
 /// and dies when the fold step returns, creating a dangling chain.
-unsigned int
+uint64_t
 FoldClosureAccum::compose_adders(const List<FoldClosureAccum::tree> &trees,
-                                 unsigned int _x0) {
-  return trees.template fold_right<std::function<unsigned int(unsigned int)>>(
-      [](FoldClosureAccum::tree t,
-         std::function<unsigned int(unsigned int)> acc)
-          -> std::function<unsigned int(unsigned int)> {
-        return [=](unsigned int x) mutable { return (acc(x) + tree_sum(t)); };
+                                 uint64_t _x0) {
+  return trees.template fold_right<std::function<uint64_t(uint64_t)>>(
+      [](FoldClosureAccum::tree t, std::function<uint64_t(uint64_t)> acc)
+          -> std::function<uint64_t(uint64_t)> {
+        return [=](uint64_t x) mutable { return (acc(x) + tree_sum(t)); };
       },
-      [](unsigned int x) { return x; })(_x0);
+      [](uint64_t x) { return x; })(_x0);
 }

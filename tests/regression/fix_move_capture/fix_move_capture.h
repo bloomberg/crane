@@ -27,7 +27,7 @@ struct FixMoveCapture {
     struct Mynil {};
 
     struct Mycons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<mylist> a1;
     };
 
@@ -94,7 +94,7 @@ struct FixMoveCapture {
     // CREATORS
     static mylist mynil() { return mylist(Mynil{}); }
 
-    static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(uint64_t a0, mylist a1) {
       return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
@@ -127,7 +127,7 @@ struct FixMoveCapture {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(T1 f0, F1 &&f1, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mynil>(m.v())) {
       return f0;
@@ -138,7 +138,7 @@ struct FixMoveCapture {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(T1 f0, F1 &&f1, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mynil>(m.v())) {
       return f0;
@@ -148,8 +148,8 @@ struct FixMoveCapture {
     }
   }
 
-  static unsigned int length(const mylist &l);
-  static unsigned int sum(const mylist &l);
+  static uint64_t length(const mylist &l);
+  static uint64_t sum(const mylist &l);
   /// dup_head stores l in the constructor → l escapes → owned.
   /// This means the caller passes l by value (move semantics).
   static mylist dup_head(mylist l);
@@ -160,15 +160,17 @@ struct FixMoveCapture {
   /// - Generates dup_head(std::move(l))
   /// - l is now null in caller scope
   /// - g(3) calls fixpoint, which accesses l via & → null → CRASH
-  static unsigned int f(mylist l);
-  static inline const unsigned int test1 = f(mylist::mycons(
-      10u, mylist::mycons(20u, mylist::mycons(30u, mylist::mynil()))));
+  static uint64_t f(mylist l);
+  static inline const uint64_t test1 = f(mylist::mycons(
+      UINT64_C(10),
+      mylist::mycons(UINT64_C(20),
+                     mylist::mycons(UINT64_C(30), mylist::mynil()))));
   /// Even simpler: use the fixpoint, then pass l to a consuming
   /// function. The addition's evaluation order is unspecified in C++,
   /// so we use a let-binding to force the order.
-  static unsigned int f2(mylist l);
-  static inline const unsigned int test2 =
-      f2(mylist::mycons(5u, mylist::mycons(15u, mylist::mynil())));
+  static uint64_t f2(mylist l);
+  static inline const uint64_t test2 = f2(mylist::mycons(
+      UINT64_C(5), mylist::mycons(UINT64_C(15), mylist::mynil())));
 };
 
 #endif // INCLUDED_FIX_MOVE_CAPTURE

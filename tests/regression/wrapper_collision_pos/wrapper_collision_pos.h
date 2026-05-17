@@ -4,18 +4,18 @@
 struct WrapperCollisionPos {
   struct Left {
     struct Pos {
-      static unsigned int id_left(unsigned int n);
+      static uint64_t id_left(uint64_t n);
     };
   };
 
   struct Right {
     struct Pos {
-      static unsigned int inc_right(unsigned int n);
+      static uint64_t inc_right(uint64_t n);
     };
   };
 
-  static inline const unsigned int t1 = Left::Pos::id_left(1u);
-  static inline const unsigned int t2 = Right::Pos::inc_right(1u);
+  static inline const uint64_t t1 = Left::Pos::id_left(UINT64_C(1));
+  static inline const uint64_t t2 = Right::Pos::inc_right(UINT64_C(1));
 };
 
 #endif // INCLUDED_WRAPPER_COLLISION_POS

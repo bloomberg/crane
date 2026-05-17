@@ -135,7 +135,7 @@ struct EffectUnitStress {
   /// 2. Bind where RHS is Ret of the LHS binding
   static std::string bind_identity();
   /// 3. Bind where RHS ignores the binding
-  static unsigned int bind_ignore();
+  static uint64_t bind_ignore();
   /// 4. Multiple Ret tt in if-then-else
   static void conditional_tt(bool b);
   /// 5. Ret in one branch, effect in other
@@ -143,13 +143,13 @@ struct EffectUnitStress {
   /// 6. Tuple of monadic results
   static std::pair<std::string, std::string> pair_of_effects();
   /// 7. match on nat with monadic body
-  static std::string nat_dispatch(unsigned int n);
+  static std::string nat_dispatch(uint64_t n);
   /// 8. let in monadic context with pure computation
   static int64_t let_pure_in_monadic();
   /// 9. Nested if in monadic context
   static std::string nested_if_monadic(bool b1, bool b2);
   /// 10. Monadic function returning option
-  static std::optional<unsigned int> safe_head(const List<unsigned int> &xs);
+  static std::optional<uint64_t> safe_head(const List<uint64_t> &xs);
 };
 
 #endif // INCLUDED_EFFECT_UNIT_STRESS

@@ -200,9 +200,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -220,7 +220,7 @@ public:
 };
 
 struct ListDef {
-  static List<unsigned int> seq(unsigned int start, unsigned int len);
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
 
 struct ToString {
@@ -387,14 +387,14 @@ struct TopologicalSort {
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static T1 cycle_entry_aux(F0 &&eqb_node,
                             const List<std::pair<T1, List<T1>>> &graph0,
-                            List<T1> seens, T1 elem, unsigned int counter) {
+                            List<T1> seens, T1 elem, uint64_t counter) {
     if (contains<T1>(eqb_node, elem, seens)) {
       return elem;
     } else {
       if (counter <= 0) {
         return elem;
       } else {
-        unsigned int c = counter - 1;
+        uint64_t c = counter - 1;
         List<T1> l = graph_lookup<T1>(eqb_node, elem, graph0);
         if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
           return elem;
@@ -427,13 +427,13 @@ struct TopologicalSort {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static List<T1>
-  cycle_extract_aux(F0 &&eqb_node, const List<std::pair<T1, List<T1>>> &graph0,
-                    unsigned int counter, T1 elem, List<T1> cycl) {
+  static List<T1> cycle_extract_aux(F0 &&eqb_node,
+                                    const List<std::pair<T1, List<T1>>> &graph0,
+                                    uint64_t counter, T1 elem, List<T1> cycl) {
     if (counter <= 0) {
       return cycl;
     } else {
-      unsigned int c = counter - 1;
+      uint64_t c = counter - 1;
       if (contains<T1>(eqb_node, elem, cycl)) {
         return cycl;
       } else {
@@ -474,11 +474,11 @@ struct TopologicalSort {
   static order<T1>
   topological_sort_aux(F0 &&eqb_node,
                        const List<std::pair<T1, List<T1>>> &graph0,
-                       unsigned int counter) {
+                       uint64_t counter) {
     if (counter <= 0) {
       return List<List<T1>>::nil();
     } else {
-      unsigned int c = counter - 1;
+      uint64_t c = counter - 1;
       if (null<entry<T1>>(graph0)) {
         return List<List<T1>>::nil();
       } else {
@@ -534,20 +534,20 @@ struct TopologicalSort {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
-  static List<std::pair<T1, unsigned int>>
+  static List<std::pair<T1, uint64_t>>
   topological_rank_list(F0 &&eqb_node,
                         const List<std::pair<T1, List<T1>>> &graph0) {
     List<List<T1>> lorder = topological_sort_graph<T1>(eqb_node, graph0);
     return lorder
-        .template combine<unsigned int>(ListDef::seq(0u, lorder.length()))
-        .template map<List<std::pair<T1, unsigned int>>>(
-            [](const std::pair<List<T1>, unsigned int> &x) {
+        .template combine<uint64_t>(ListDef::seq(UINT64_C(0), lorder.length()))
+        .template map<List<std::pair<T1, uint64_t>>>(
+            [](const std::pair<List<T1>, uint64_t> &x) {
               const List<T1> &fs = x.first;
-              const unsigned int &rk = x.second;
-              return fs.template map<std::pair<T1, unsigned int>>(
+              const uint64_t &rk = x.second;
+              return fs.template map<std::pair<T1, uint64_t>>(
                   [=](T1 f) mutable { return std::make_pair(f, rk); });
             })
-        .template concat<std::pair<T1, unsigned int>>();
+        .template concat<std::pair<T1, uint64_t>>();
   }
 };
 

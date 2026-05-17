@@ -32,8 +32,8 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using List = LoopifyOption::list<unsigned int>;
-  using PList = LoopifyOption::list<std::pair<unsigned int, unsigned int>>;
+  using List = LoopifyOption::list<uint64_t>;
+  using PList = LoopifyOption::list<std::pair<uint64_t, uint64_t>>;
 
   // Build [1, 2, 3, 4, 5]
   auto l5 = List::cons(
@@ -45,8 +45,8 @@ int main() {
   auto empty = List::nil();
 
   // Test find_opt
-  auto gt3 = [](unsigned int x) -> bool { return x > 3; };
-  auto gt10 = [](unsigned int x) -> bool { return x > 10; };
+  auto gt3 = [](uint64_t x) -> bool { return x > 3; };
+  auto gt10 = [](uint64_t x) -> bool { return x > 10; };
 
   auto found = LoopifyOption::find_opt(gt3, l5);
   ASSERT(found.has_value());
@@ -98,14 +98,14 @@ int main() {
   ASSERT(!lk99.has_value());
 
   // Test map_opt (keep only even numbers doubled)
-  auto even_double = [](unsigned int x) -> std::optional<unsigned int> {
+  auto even_double = [](uint64_t x) -> std::optional<uint64_t> {
     if (x % 2 == 0)
-      return std::make_optional<unsigned int>(x * 2);
+      return std::make_optional<uint64_t>(x * 2);
     else
       return std::nullopt;
   };
   auto mapped =
-      LoopifyOption::map_opt<unsigned int, unsigned int>(even_double, l5);
+      LoopifyOption::map_opt<uint64_t, uint64_t>(even_double, l5);
   // l5 = [1,2,3,4,5], evens = [2,4], doubled = [4,8]
   // mapped should be [4,8] - length check removed (length is stdlib)
   ASSERT(std::get<List::Cons>(mapped.v()).a0 == 4u);

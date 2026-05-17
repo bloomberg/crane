@@ -15,7 +15,7 @@ struct ReuseLambdaCapture {
   struct mylist {
     // TYPES
     struct Mycons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<mylist> a1;
     };
 
@@ -82,7 +82,7 @@ struct ReuseLambdaCapture {
     }
 
     // CREATORS
-    static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(uint64_t a0, mylist a1) {
       return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
@@ -117,7 +117,7 @@ struct ReuseLambdaCapture {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -128,7 +128,7 @@ struct ReuseLambdaCapture {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -138,10 +138,10 @@ struct ReuseLambdaCapture {
     }
   }
 
-  static unsigned int length(const mylist &l);
+  static uint64_t length(const mylist &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static mylist map(F0 &&f, const mylist &l) {
     if (std::holds_alternative<typename mylist::Mycons>(l.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(l.v());
@@ -163,22 +163,26 @@ struct ReuseLambdaCapture {
   /// // l.d_a1 is null -> crash
   /// return _rf;
   static mylist add_length_to_each(mylist l, bool b);
-  static inline const unsigned int test1 = length(add_length_to_each(
-      mylist::mycons(10u,
-                     mylist::mycons(20u, mylist::mycons(30u, mylist::mynil()))),
+  static inline const uint64_t test1 = length(add_length_to_each(
+      mylist::mycons(
+          UINT64_C(10),
+          mylist::mycons(UINT64_C(20),
+                         mylist::mycons(UINT64_C(30), mylist::mynil()))),
       true));
   /// Expected: map adds length(original list)=3 to each tail element.
   /// Original: 10, 20, 30
   /// Result:   11, 23, 33  (h+1=11, 20+3=23, 30+3=33)
   /// Length = 3
-  static inline const unsigned int test2 = []() {
+  static inline const uint64_t test2 = []() {
     auto &&_sv0 = add_length_to_each(
-        mylist::mycons(5u, mylist::mycons(6u, mylist::mynil())), true);
+        mylist::mycons(UINT64_C(5),
+                       mylist::mycons(UINT64_C(6), mylist::mynil())),
+        true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv0.v())) {
       const auto &[a00, a10] = std::get<typename mylist::Mycons>(_sv0.v());
       return a00;
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
 };

@@ -122,7 +122,7 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct StepFetchDecodeExec {
@@ -131,7 +131,7 @@ struct StepFetchDecodeExec {
     struct NOP {};
 
     struct ADD_ACC {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP, ADD_ACC>;
@@ -175,9 +175,7 @@ struct StepFetchDecodeExec {
     // CREATORS
     static instruction nop() { return instruction(NOP{}); }
 
-    static instruction add_acc(unsigned int a0) {
-      return instruction(ADD_ACC{a0});
-    }
+    static instruction add_acc(uint64_t a0) { return instruction(ADD_ACC{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -187,7 +185,7 @@ struct StepFetchDecodeExec {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rect(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
@@ -198,7 +196,7 @@ struct StepFetchDecodeExec {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rec(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
@@ -209,9 +207,9 @@ struct StepFetchDecodeExec {
   }
 
   struct state {
-    unsigned int acc;
-    unsigned int pc;
-    List<unsigned int> rom;
+    uint64_t acc;
+    uint64_t pc;
+    List<uint64_t> rom;
 
     // ACCESSORS
     state clone() const {
@@ -219,23 +217,24 @@ struct StepFetchDecodeExec {
     }
   };
 
-  static unsigned int fetch_byte(const state &s, unsigned int addr);
-  static instruction decode(unsigned int b1, unsigned int b2);
+  static uint64_t fetch_byte(const state &s, uint64_t addr);
+  static instruction decode(uint64_t b1, uint64_t b2);
   static state execute(const state &s, const instruction &i);
   static state step(const state &s);
-  static inline const unsigned int t = []() {
+  static inline const uint64_t t = []() {
     state s1 = step(state{
-        3u, 0u,
-        List<unsigned int>::cons(
-            1u,
-            List<unsigned int>::cons(
-                6u, List<unsigned int>::cons(0u, List<unsigned int>::nil())))});
+        UINT64_C(3), UINT64_C(0),
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(6),
+                List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil())))});
     return (s1.acc + s1.pc);
   }();
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -244,7 +243,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

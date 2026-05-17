@@ -17,13 +17,13 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using List = LoopifyPairs::list<unsigned int>;
+  using List = LoopifyPairs::list<uint64_t>;
 
   auto l = List::cons(
       1u, List::cons(2u, List::cons(3u, List::nil())));
 
   // Test unique pair operations
-  auto gt1 = [](unsigned int x) { return x > 1; };
+  auto gt1 = [](uint64_t x) { return x > 1; };
   auto partitioned = LoopifyPairs::partition(gt1, l);
 
   auto l2 = List::cons(

@@ -142,7 +142,7 @@ struct MemSafetyProbe28 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -212,7 +212,7 @@ struct MemSafetyProbe28 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -249,8 +249,8 @@ struct MemSafetyProbe28 {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -262,8 +262,8 @@ struct MemSafetyProbe28 {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -274,64 +274,73 @@ struct MemSafetyProbe28 {
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
-  static unsigned int tree_depth(const tree &t);
+  static uint64_t tree_sum(const tree &t);
+  static uint64_t tree_depth(const tree &t);
   /// TEST 1: zip_trees - Two tree params, t1 structural, t2 non-structural.
   /// t2 is NOT pointer-safe because some calls pass Leaf (not CPPderef).
   /// In the Node/Node branch, t2's children are used for recursion AND
   /// tree_sum t2 uses the whole tree. If the optimization moves *(l2),
   /// tree_sum t2 might see corrupted data.
-  static unsigned int zip_trees(const tree &t1, const tree &t2);
-  static inline const unsigned int test_zip_trees =
-      zip_trees(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                           tree::node(tree::leaf(), 3u, tree::leaf())),
-                tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                           tree::node(tree::leaf(), 30u, tree::leaf())));
+  static uint64_t zip_trees(const tree &t1, const tree &t2);
+  static inline const uint64_t test_zip_trees = zip_trees(
+      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                 UINT64_C(2),
+                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// TEST 2: zip_depth - Similar but uses tree_depth on t2.
   /// Tests a different tree traversal on the non-pointer-safe param.
-  static unsigned int zip_depth(const tree &t1, const tree &t2);
-  static inline const unsigned int test_zip_depth =
-      zip_depth(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                           tree::node(tree::leaf(), 3u, tree::leaf())),
-                tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                           tree::node(tree::leaf(), 30u, tree::leaf())));
+  static uint64_t zip_depth(const tree &t1, const tree &t2);
+  static inline const uint64_t test_zip_depth = zip_depth(
+      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                 UINT64_C(2),
+                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// TEST 3: zip_and_build - Recurse and also construct using t2's children.
   /// t2's left child is used for recursion AND returned as part of result.
-  static unsigned int zip_and_sum(const tree &t1, const tree &t2);
-  static inline const unsigned int test_zip_and_sum =
-      zip_and_sum(tree::node(tree::leaf(), 5u, tree::leaf()),
-                  tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                             tree::node(tree::leaf(), 30u, tree::leaf())));
+  static uint64_t zip_and_sum(const tree &t1, const tree &t2);
+  static inline const uint64_t test_zip_and_sum = zip_and_sum(
+      tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                 UINT64_C(20),
+                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// TEST 4: double_zip - Both t1 and t2 are trees, but t2 is used
   /// in a different way for each call. Makes t2 non-pointer-safe.
-  static unsigned int double_zip(const tree &t1, const tree &t2);
-  static inline const unsigned int test_double_zip =
-      double_zip(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                            tree::node(tree::leaf(), 3u, tree::leaf())),
-                 tree::node(tree::leaf(), 10u, tree::leaf()));
+  static uint64_t double_zip(const tree &t1, const tree &t2);
+  static inline const uint64_t test_double_zip = double_zip(
+      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                 UINT64_C(2),
+                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()));
   /// TEST 5: zip with list accumulator. t2 is tree, acc is list.
   /// t2 non-pointer-safe due to Leaf in some calls.
-  static List<unsigned int> zip_collect(const tree &t1, const tree &t2,
-                                        List<unsigned int> acc);
-  static unsigned int list_sum(const List<unsigned int> &l);
-  static inline const unsigned int test_zip_collect = list_sum(zip_collect(
-      tree::node(tree::leaf(), 5u, tree::leaf()),
-      tree::node(tree::leaf(), 10u, tree::leaf()), List<unsigned int>::nil()));
+  static List<uint64_t> zip_collect(const tree &t1, const tree &t2,
+                                    List<uint64_t> acc);
+  static uint64_t list_sum(const List<uint64_t> &l);
+  static inline const uint64_t test_zip_collect =
+      list_sum(zip_collect(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                           tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                           List<uint64_t>::nil()));
   /// TEST 6: Three-way recursion with non-pointer-safe second tree.
   static tree merge_trees(const tree &t1, tree t2);
-  static inline const unsigned int test_merge_trees =
-      tree_sum(merge_trees(tree::node(tree::leaf(), 5u, tree::leaf()),
-                           tree::node(tree::leaf(), 10u, tree::leaf())));
+  static inline const uint64_t test_merge_trees = tree_sum(
+      merge_trees(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                  tree::node(tree::leaf(), UINT64_C(10), tree::leaf())));
   /// TEST 7: Deep trees to stress the optimization.
-  static tree build_balanced(unsigned int n);
-  static inline const unsigned int test_deep_zip =
-      zip_trees(build_balanced(5u), build_balanced(5u));
+  static tree build_balanced(uint64_t n);
+  static inline const uint64_t test_deep_zip =
+      zip_trees(build_balanced(UINT64_C(5)), build_balanced(UINT64_C(5)));
   /// TEST 8: Nested zip where result of one zip feeds into another.
-  static inline const unsigned int test_nested_zip = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                         tree::node(tree::leaf(), 3u, tree::leaf()));
-    tree t2 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                         tree::node(tree::leaf(), 30u, tree::leaf()));
+  static inline const uint64_t test_nested_zip = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                         UINT64_C(2),
+                         tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
+    tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     return (zip_trees(t1, t2) + zip_depth(t1, t2));
   }();
 };

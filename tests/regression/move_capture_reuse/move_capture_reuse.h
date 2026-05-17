@@ -130,9 +130,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -150,31 +150,29 @@ public:
 };
 
 struct MoveCaptureReuse {
-  static List<List<unsigned int>>
-  prefix_each(const List<unsigned int> &prefix,
-              const List<List<unsigned int>> &xss);
-  static inline const List<List<unsigned int>> sample = prefix_each(
-      List<unsigned int>::cons(1u, List<unsigned int>::nil()),
-      List<List<unsigned int>>::cons(
-          List<unsigned int>::cons(10u, List<unsigned int>::nil()),
-          List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(20u, List<unsigned int>::nil()),
-              List<List<unsigned int>>::nil())));
-  static inline const unsigned int len_sum = []() {
+  static List<List<uint64_t>> prefix_each(const List<uint64_t> &prefix,
+                                          const List<List<uint64_t>> &xss);
+  static inline const List<List<uint64_t>> sample = prefix_each(
+      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
+      List<List<uint64_t>>::cons(
+          List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::nil()),
+          List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil()),
+              List<List<uint64_t>>::nil())));
+  static inline const uint64_t len_sum = []() {
     auto &&_sv = sample;
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _sv.v())) {
-      return 0u;
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_sv.v());
+          std::get<typename List<List<uint64_t>>::Cons>(_sv.v());
       auto &&_sv0 = *a1;
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
               _sv0.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a00, a10] =
-            std::get<typename List<List<unsigned int>>::Cons>(_sv0.v());
+            std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
         return (a0.length() + a00.length());
       }
     }

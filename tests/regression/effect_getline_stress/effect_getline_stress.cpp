@@ -14,11 +14,11 @@ std::string EffectGetlineStress::get_or_default(bool ask) {
 }
 
 /// 2. get_line in a match arm
-std::string EffectGetlineStress::get_nth_line(unsigned int n) {
+std::string EffectGetlineStress::get_nth_line(uint64_t n) {
   if (n <= 0) {
     return "none";
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     if (n0 <= 0) {
       return []() -> std::string {
         std::string _r;
@@ -26,7 +26,7 @@ std::string EffectGetlineStress::get_nth_line(unsigned int n) {
         return _r;
       }();
     } else {
-      unsigned int _x = n0 - 1;
+      uint64_t _x = n0 - 1;
       std::string _x0;
       std::getline(std::cin, _x0);
       return []() -> std::string {
@@ -39,12 +39,12 @@ std::string EffectGetlineStress::get_nth_line(unsigned int n) {
 }
 
 /// 3. Recursive function that uses get_line in a loop
-List<std::string> EffectGetlineStress::read_lines(unsigned int n,
+List<std::string> EffectGetlineStress::read_lines(uint64_t n,
                                                   List<std::string> acc) {
   if (n <= 0) {
     return acc;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
     return read_lines(n_, List<std::string>::cons(line, std::move(acc)));
@@ -63,7 +63,7 @@ void EffectGetlineStress::read_and_echo() {
 int64_t EffectGetlineStress::get_line_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = line.length();
+  int64_t len = static_cast<int64_t>(line.length());
   return len;
 }
 
@@ -80,7 +80,7 @@ std::string EffectGetlineStress::concat_two_lines() {
 std::pair<std::string, int64_t> EffectGetlineStress::get_and_measure() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = line.length();
+  int64_t len = static_cast<int64_t>(line.length());
   return std::make_pair(line, len);
 }
 

@@ -1,66 +1,61 @@
 #include "let_fix_no_stdfun.h"
 
-unsigned int LetFixNoStdfun::sum_list(const List<unsigned int> &l) {
-  auto go_impl = [](auto &_self_go, const List<unsigned int> &xs,
-                    unsigned int acc) -> unsigned int {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(xs.v())) {
+uint64_t LetFixNoStdfun::sum_list(const List<uint64_t> &l) {
+  auto go_impl = [](auto &_self_go, const List<uint64_t> &xs,
+                    uint64_t acc) -> uint64_t {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return acc;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(xs.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       return _self_go(_self_go, *a1, (acc + a0));
     }
   };
-  auto go = [&](const List<unsigned int> &xs,
-                unsigned int acc) -> unsigned int {
+  auto go = [&](const List<uint64_t> &xs, uint64_t acc) -> uint64_t {
     return go_impl(go_impl, xs, acc);
   };
-  return go(l, 0u);
+  return go(l, UINT64_C(0));
 }
 
-unsigned int LetFixNoStdfun::flat_map_sum(const List<List<unsigned int>> &xss) {
-  if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(xss.v())) {
-    return 0u;
+uint64_t LetFixNoStdfun::flat_map_sum(const List<List<uint64_t>> &xss) {
+  if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(xss.v())) {
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
-        std::get<typename List<List<unsigned int>>::Cons>(xss.v());
-    auto inner_sum_impl = [](auto &_self_inner_sum,
-                             const List<unsigned int> &ys,
-                             unsigned int acc) -> unsigned int {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {
+        std::get<typename List<List<uint64_t>>::Cons>(xss.v());
+    auto inner_sum_impl = [](auto &_self_inner_sum, const List<uint64_t> &ys,
+                             uint64_t acc) -> uint64_t {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
         return acc;
       } else {
         const auto &[a00, a10] =
-            std::get<typename List<unsigned int>::Cons>(ys.v());
+            std::get<typename List<uint64_t>::Cons>(ys.v());
         return _self_inner_sum(_self_inner_sum, *a10, (acc + a00));
       }
     };
-    auto inner_sum = [&](const List<unsigned int> &ys,
-                         unsigned int acc) -> unsigned int {
+    auto inner_sum = [&](const List<uint64_t> &ys, uint64_t acc) -> uint64_t {
       return inner_sum_impl(inner_sum_impl, ys, acc);
     };
-    return (inner_sum(a0, 0u) + flat_map_sum(*a1));
+    return (inner_sum(a0, UINT64_C(0)) + flat_map_sum(*a1));
   }
 }
 
-List<unsigned int>
-LetFixNoStdfun::flatten(const List<List<unsigned int>> &xss) {
-  if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(xss.v())) {
-    return List<unsigned int>::nil();
+List<uint64_t> LetFixNoStdfun::flatten(const List<List<uint64_t>> &xss) {
+  if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(xss.v())) {
+    return List<uint64_t>::nil();
   } else {
     const auto &[a0, a1] =
-        std::get<typename List<List<unsigned int>>::Cons>(xss.v());
+        std::get<typename List<List<uint64_t>>::Cons>(xss.v());
     auto inner_impl = [&](auto &_self_inner,
-                          const List<unsigned int> &ys) -> List<unsigned int> {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(ys.v())) {
+                          const List<uint64_t> &ys) -> List<uint64_t> {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
         return flatten(*a1);
       } else {
         const auto &[a00, a10] =
-            std::get<typename List<unsigned int>::Cons>(ys.v());
-        return List<unsigned int>::cons(a00, _self_inner(_self_inner, *a10));
+            std::get<typename List<uint64_t>::Cons>(ys.v());
+        return List<uint64_t>::cons(a00, _self_inner(_self_inner, *a10));
       }
     };
-    auto inner = [&](const List<unsigned int> &ys) -> List<unsigned int> {
+    auto inner = [&](const List<uint64_t> &ys) -> List<uint64_t> {
       return inner_impl(inner_impl, ys);
     };
     return inner(a0);

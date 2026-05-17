@@ -15,35 +15,35 @@ struct ClosureNestedEscape {
   /// Difference from fix_escape_capture: returns TWO fixpoints that both
   /// capture the SAME variable. This tests whether both closures
   /// independently read garbage from the same dangling reference.
-  static std::pair<std::function<unsigned int(unsigned int)>,
-                   std::function<unsigned int(unsigned int)>>
-  make_pair_fix(unsigned int n);
+  static std::pair<std::function<uint64_t(uint64_t)>,
+                   std::function<uint64_t(uint64_t)>>
+  make_pair_fix(uint64_t n);
   /// test1: make_pair_fix(5) returns (add, mul).
   /// add(3) = 5 + 3 = 8, mul(3) = 5 * 3 = 15.
   /// Expected: 8 + 15 = 23.
-  static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs = make_pair_fix(5u);
-    const std::function<unsigned int(unsigned int)> &f = _cs.first;
-    const std::function<unsigned int(unsigned int)> &g = _cs.second;
-    return (f(3u) + g(3u));
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = make_pair_fix(UINT64_C(5));
+    const std::function<uint64_t(uint64_t)> &f = _cs.first;
+    const std::function<uint64_t(uint64_t)> &g = _cs.second;
+    return (f(UINT64_C(3)) + g(UINT64_C(3)));
   }();
   /// test2: With noise.
   /// add(0) = 7, mul(4) = 7 * 4 = 28.
   /// Expected: 7 + 28 = 35.
-  static inline const unsigned int test2 = []() {
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-        p = make_pair_fix(7u);
-    return (p.first(0u) + p.second(4u));
+  static inline const uint64_t test2 = []() {
+    std::pair<std::function<uint64_t(uint64_t)>,
+              std::function<uint64_t(uint64_t)>>
+        p = make_pair_fix(UINT64_C(7));
+    return (p.first(UINT64_C(0)) + p.second(UINT64_C(4)));
   }();
   /// test3: Only use one of the two fixpoints.
   /// mul(10) where n=3 → 3*10 = 30.
   /// Expected: 30.
-  static inline const unsigned int test3 = []() -> unsigned int {
-    auto _cs = make_pair_fix(3u);
-    const std::function<unsigned int(unsigned int)> &_x = _cs.first;
-    const std::function<unsigned int(unsigned int)> &g = _cs.second;
-    return g(10u);
+  static inline const uint64_t test3 = []() -> uint64_t {
+    auto _cs = make_pair_fix(UINT64_C(3));
+    const std::function<uint64_t(uint64_t)> &_x = _cs.first;
+    const std::function<uint64_t(uint64_t)> &g = _cs.second;
+    return g(UINT64_C(10));
   }();
 };
 

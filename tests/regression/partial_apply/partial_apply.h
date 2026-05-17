@@ -145,69 +145,70 @@ public:
 };
 
 struct PartialApply {
-  static List<unsigned int> inc_all(const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  tag_all(const List<unsigned int> &l);
-  static List<std::optional<unsigned int>>
-  wrap_all(const List<unsigned int> &l);
-  static List<std::function<List<unsigned int>(List<unsigned int>)>>
-  prepend_each(const List<unsigned int> &l);
+  static List<uint64_t> inc_all(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>> tag_all(const List<uint64_t> &l);
+  static List<std::optional<uint64_t>> wrap_all(const List<uint64_t> &l);
+  static List<std::function<List<uint64_t>(List<uint64_t>)>>
+  prepend_each(const List<uint64_t> &l);
 
   template <typename A> struct tagged {
     // DATA
-    unsigned int a0;
+    uint64_t a0;
     A a1;
 
     // ACCESSORS
     tagged<A> clone() const { return {a0, a1}; }
 
     // CREATORS
-    static tagged<A> tag(unsigned int a0, A a1) { return {a0, std::move(a1)}; }
+    static tagged<A> tag(uint64_t a0, A a1) { return {a0, std::move(a1)}; }
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, unsigned int &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, uint64_t &, T1 &>
   static T2 tagged_rect(F0 &&f, const tagged<T1> &t) {
     const auto &[a0, a1] = t;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, unsigned int &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, uint64_t &, T1 &>
   static T2 tagged_rec(F0 &&f, const tagged<T1> &t) {
     const auto &[a0, a1] = t;
     return f(a0, a1);
   }
 
-  static List<tagged<bool>> tag_with(unsigned int n, const List<bool> &l);
-  static List<std::pair<unsigned int, std::pair<unsigned int, unsigned int>>>
-  double_tag(const List<unsigned int> &l);
-  static unsigned int sum_with_init(unsigned int init,
-                                    const List<unsigned int> &l);
-  static inline const List<unsigned int> test_inc =
-      inc_all(List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
-  static inline const List<std::pair<unsigned int, unsigned int>> test_tag =
-      tag_all(List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
-  static inline const List<std::optional<unsigned int>> test_wrap =
-      wrap_all(List<unsigned int>::cons(
-          5u,
-          List<unsigned int>::cons(
-              6u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))));
+  static List<tagged<bool>> tag_with(uint64_t n, const List<bool> &l);
+  static List<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>
+  double_tag(const List<uint64_t> &l);
+  static uint64_t sum_with_init(uint64_t init, const List<uint64_t> &l);
+  static inline const List<uint64_t> test_inc = inc_all(List<uint64_t>::cons(
+      UINT64_C(1), List<uint64_t>::cons(
+                       UINT64_C(2), List<uint64_t>::cons(
+                                        UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const List<std::pair<uint64_t, uint64_t>> test_tag =
+      tag_all(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
+  static inline const List<std::optional<uint64_t>> test_wrap =
+      wrap_all(List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(6),
+              List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))));
   static inline const List<tagged<bool>> test_tag_with = tag_with(
-      99u, List<bool>::cons(
-               true, List<bool>::cons(
-                         false, List<bool>::cons(true, List<bool>::nil()))));
-  static inline const unsigned int test_sum =
-      sum_with_init(100u, List<unsigned int>::cons(
-                              1u, List<unsigned int>::cons(
-                                      2u, List<unsigned int>::cons(
-                                              3u, List<unsigned int>::nil()))));
+      UINT64_C(99),
+      List<bool>::cons(
+          true,
+          List<bool>::cons(false, List<bool>::cons(true, List<bool>::nil()))));
+  static inline const uint64_t test_sum = sum_with_init(
+      UINT64_C(100),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_PARTIAL_APPLY

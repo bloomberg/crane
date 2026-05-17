@@ -308,16 +308,16 @@ struct LoopifyLists {
   }
 
   /// replicate n x creates n copies of x.
-  template <typename T1> static list<T1> replicate(unsigned int n, T1 x) {
+  template <typename T1> static list<T1> replicate(uint64_t n, T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         *_write = std::make_unique<list<T1>>(list<T1>::nil());
         break;
       } else {
-        unsigned int m = _loop_n - 1;
+        uint64_t m = _loop_n - 1;
         auto _cell =
             std::make_unique<list<T1>>(typename list<T1>::Cons(x, nullptr));
         *_write = std::move(_cell);
@@ -332,12 +332,12 @@ struct LoopifyLists {
   /// replicate_list n l repeats list l n times.
   template <typename T1>
   static list<T1>
-  replicate_list(unsigned int n,
+  replicate_list(uint64_t n,
                  const list<T1> &l) { /// _Enter: captures varying parameters
                                       /// for each recursive call.
 
     struct _Enter {
-      unsigned int n;
+      uint64_t n;
     };
 
     /// _Resume_m: saves [app, l], resumes after recursive call with _result.
@@ -357,7 +357,7 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        unsigned int n = _f.n;
+        uint64_t n = _f.n;
         auto app_impl = [](auto &_self_app, const list<T1> &l1,
                            list<T1> l2) -> list<T1> {
           if (std::holds_alternative<typename list<T1>::Nil>(l1.v())) {
@@ -373,7 +373,7 @@ struct LoopifyLists {
         if (n <= 0) {
           _result = list<T1>::nil();
         } else {
-          unsigned int m = n - 1;
+          uint64_t m = n - 1;
           _stack.emplace_back(_Resume_m{std::move(app), l});
           _stack.emplace_back(_Enter{m});
         }
@@ -387,23 +387,23 @@ struct LoopifyLists {
 
   /// init_list n f generates f 0, f 1, ..., f (n-1).
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
-  static list<T1> init_list(unsigned int n, F1 &&f) {
-    auto go_impl = [&](auto &_self_go, unsigned int i) -> list<T1> {
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static list<T1> init_list(uint64_t n, F1 &&f) {
+    auto go_impl = [&](auto &_self_go, uint64_t i) -> list<T1> {
       if (i <= 0) {
         return list<T1>::nil();
       } else {
-        unsigned int j = i - 1;
+        uint64_t j = i - 1;
         return list<T1>::cons(f((((n - i) > n ? 0 : (n - i)))),
                               _self_go(_self_go, j));
       }
     };
-    auto go = [&](unsigned int i) -> list<T1> { return go_impl(go_impl, i); };
+    auto go = [&](uint64_t i) -> list<T1> { return go_impl(go_impl, i); };
     return go(n);
   }
 
   /// range start count generates start, start+1, ..., start+count-1.
-  static list<unsigned int> range(unsigned int start, unsigned int count0);
+  static list<uint64_t> range(uint64_t start, uint64_t count0);
 
   /// tails l returns all suffixes.
   template <typename T1> static list<list<T1>> tails(list<T1> l) {
@@ -549,24 +549,24 @@ struct LoopifyLists {
   } /// chunks_of n l splits into chunks of size n.
 
   template <typename T1>
-  static list<list<T1>> chunks_of_aux(unsigned int n, const list<T1> &l,
-                                      unsigned int fuel) {
+  static list<list<T1>> chunks_of_aux(uint64_t n, const list<T1> &l,
+                                      uint64_t fuel) {
     std::unique_ptr<list<list<T1>>> _head{};
     std::unique_ptr<list<list<T1>>> *_write = &_head;
-    unsigned int _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = std::move(fuel);
     list<T1> _loop_l = l;
     while (true) {
       if (_loop_fuel <= 0) {
         *_write = std::make_unique<list<list<T1>>>(list<list<T1>>::nil());
         break;
       } else {
-        unsigned int f = _loop_fuel - 1;
-        auto take_impl = [](auto &_self_take, unsigned int k,
+        uint64_t f = _loop_fuel - 1;
+        auto take_impl = [](auto &_self_take, uint64_t k,
                             const list<T1> &lst) -> list<T1> {
           if (k <= 0) {
             return list<T1>::nil();
           } else {
-            unsigned int m = k - 1;
+            uint64_t m = k - 1;
             if (std::holds_alternative<typename list<T1>::Nil>(lst.v())) {
               return list<T1>::nil();
             } else {
@@ -575,15 +575,15 @@ struct LoopifyLists {
             }
           }
         };
-        auto take = [&](unsigned int k, const list<T1> &lst) -> list<T1> {
+        auto take = [&](uint64_t k, const list<T1> &lst) -> list<T1> {
           return take_impl(take_impl, k, lst);
         };
-        auto drop0_impl = [](auto &_self_drop0, unsigned int k,
+        auto drop0_impl = [](auto &_self_drop0, uint64_t k,
                              list<T1> lst) -> list<T1> {
           if (k <= 0) {
             return lst;
           } else {
-            unsigned int m = k - 1;
+            uint64_t m = k - 1;
             if (std::holds_alternative<typename list<T1>::Nil>(lst.v_mut())) {
               return list<T1>::nil();
             } else {
@@ -592,7 +592,7 @@ struct LoopifyLists {
             }
           }
         };
-        auto drop0 = [&](unsigned int k, list<T1> lst) -> list<T1> {
+        auto drop0 = [&](uint64_t k, list<T1> lst) -> list<T1> {
           return drop0_impl(drop0_impl, k, lst);
         };
         if (std::holds_alternative<typename list<T1>::Nil>(_loop_l.v())) {
@@ -621,17 +621,16 @@ struct LoopifyLists {
   }
 
   template <typename T1>
-  static list<list<T1>> chunks_of(unsigned int n, const list<T1> &l) {
-    auto length_impl = [](auto &_self_length,
-                          const list<T1> &l0) -> unsigned int {
+  static list<list<T1>> chunks_of(uint64_t n, const list<T1> &l) {
+    auto length_impl = [](auto &_self_length, const list<T1> &l0) -> uint64_t {
       if (std::holds_alternative<typename list<T1>::Nil>(l0.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l0.v());
         return (_self_length(_self_length, *a1) + 1);
       }
     };
-    auto length = [&](const list<T1> &l0) -> unsigned int {
+    auto length = [&](const list<T1> &l0) -> uint64_t {
       return length_impl(length_impl, l0);
     };
     return chunks_of_aux<T1>(n, l, (length(l) + 1));
@@ -639,23 +638,23 @@ struct LoopifyLists {
 
   /// step_sum l sums with conditional contributions: even values as-is, odd
   /// doubled.
-  static unsigned int step_sum(const list<unsigned int> &l);
+  static uint64_t step_sum(const list<uint64_t> &l);
   /// sum_abs l sums absolute values (using monus for nat).
-  static unsigned int sum_abs(const list<unsigned int> &l, unsigned int base);
+  static uint64_t sum_abs(const list<uint64_t> &l, uint64_t base);
   /// four_elem l multi-case pattern matching on list structure.
-  static unsigned int four_elem(const list<unsigned int> &l);
+  static uint64_t four_elem(const list<uint64_t> &l);
   /// between lo hi l filters elements in range lo, hi.
-  static list<unsigned int> between(unsigned int lo, unsigned int hi,
-                                    const list<unsigned int> &l);
+  static list<uint64_t> between(uint64_t lo, uint64_t hi,
+                                const list<uint64_t> &l);
 
   /// count_matching p l counts elements satisfying predicate.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static unsigned int count_matching(F0 &&p, const list<unsigned int> &l) {
-    if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-      return 0u;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static uint64_t count_matching(F0 &&p, const list<uint64_t> &l) {
+    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename list<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
       if (p(a0)) {
         return (count_matching(p, *a1) + 1);
       } else {
@@ -665,13 +664,13 @@ struct LoopifyLists {
   }
 
   /// categorize k l categorizes elements: 1 for <k, 2 for =k, 3 for >k.
-  static unsigned int categorize(unsigned int k, const list<unsigned int> &l);
+  static uint64_t categorize(uint64_t k, const list<uint64_t> &l);
   /// max_prefix_sum l maximum prefix sum (Kadane-like).
-  static unsigned int max_prefix_sum(const list<unsigned int> &l);
+  static uint64_t max_prefix_sum(const list<uint64_t> &l);
   /// pairwise_sum l sums consecutive pairs: 1,2,3,4 -> 3,7.
-  static list<unsigned int> pairwise_sum(const list<unsigned int> &l);
+  static list<uint64_t> pairwise_sum(const list<uint64_t> &l);
   /// weighted_sum i l weighted sum with increasing weights.
-  static unsigned int weighted_sum(unsigned int i, const list<unsigned int> &l);
+  static uint64_t weighted_sum(uint64_t i, const list<uint64_t> &l);
 
   /// zip_with f l1 l2 zips two lists with a function.
   template <typename T1, typename T2, typename T3, typename F0>
@@ -709,20 +708,20 @@ struct LoopifyLists {
   /// zip_longest l1 l2 def zips with default for mismatched lengths.
   template <typename T1>
   static list<std::pair<T1, T1>>
-  zip_longest_aux(unsigned int fuel, const list<T1> &l1, const list<T1> &l2,
+  zip_longest_aux(uint64_t fuel, const list<T1> &l1, const list<T1> &l2,
                   T1 default0) {
     std::unique_ptr<list<std::pair<T1, T1>>> _head{};
     std::unique_ptr<list<std::pair<T1, T1>>> *_write = &_head;
     list<T1> _loop_l2 = l2;
     list<T1> _loop_l1 = l1;
-    unsigned int _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
         *_write = std::make_unique<list<std::pair<T1, T1>>>(
             list<std::pair<T1, T1>>::nil());
         break;
       } else {
-        unsigned int f = _loop_fuel - 1;
+        uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1.v())) {
           if (std::holds_alternative<typename list<T1>::Nil>(_loop_l2.v())) {
             *_write = std::make_unique<list<std::pair<T1, T1>>>(
@@ -782,19 +781,18 @@ struct LoopifyLists {
   template <typename T1>
   static list<std::pair<T1, T1>>
   zip_longest(const list<T1> &l1, const list<T1> &l2, const T1 &default0) {
-    auto length_impl = [](auto &_self_length,
-                          const list<T1> &l) -> unsigned int {
+    auto length_impl = [](auto &_self_length, const list<T1> &l) -> uint64_t {
       if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
         return (_self_length(_self_length, *a1) + 1);
       }
     };
-    auto length = [&](const list<T1> &l) -> unsigned int {
+    auto length = [&](const list<T1> &l) -> uint64_t {
       return length_impl(length_impl, l);
     };
-    unsigned int len = (length(l1) + length(l2));
+    uint64_t len = (length(l1) + length(l2));
     return zip_longest_aux<T1>((len + 1), l1, l2, default0);
   }
 
@@ -835,30 +833,27 @@ struct LoopifyLists {
 
   /// partition3 p q l partitions into 3 groups based on 2 predicates.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<bool, F1 &, unsigned int &>
-  static std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
-                   list<unsigned int>>
-  partition3(
-      F0 &&p, F1 &&q,
-      const list<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<bool, F1 &, uint64_t &>
+  static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
+  partition3(F0 &&p, F1 &&q,
+             const list<uint64_t> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
 
     struct _Enter {
-      const list<unsigned int> *l;
+      const list<uint64_t> *l;
     };
 
     /// _Cont_Cons: saves [a0, p, q], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
-      unsigned int a0;
+      uint64_t a0;
       F0 p;
       F1 q;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    std::pair<std::pair<list<unsigned int>, list<unsigned int>>,
-              list<unsigned int>>
+    std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
         _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
@@ -869,37 +864,35 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-          _result = std::make_pair(std::make_pair(list<unsigned int>::nil(),
-                                                  list<unsigned int>::nil()),
-                                   list<unsigned int>::nil());
+        const list<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+          _result = std::make_pair(
+              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
+              list<uint64_t>::nil());
         } else {
-          const auto &[a0, a1] =
-              std::get<typename list<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Cont_Cons{a0, p, q});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        unsigned int a0 = _f.a0;
+        uint64_t a0 = _f.a0;
         F0 p = _f.p;
         F1 q = _f.q;
-        const std::pair<list<unsigned int>, list<unsigned int>> &p0 =
-            _result.first;
-        const list<unsigned int> &cs = _result.second;
-        const list<unsigned int> &as_ = p0.first;
-        const list<unsigned int> &bs = p0.second;
+        const std::pair<list<uint64_t>, list<uint64_t>> &p0 = _result.first;
+        const list<uint64_t> &cs = _result.second;
+        const list<uint64_t> &as_ = p0.first;
+        const list<uint64_t> &bs = p0.second;
         if (p(a0)) {
           _result = std::make_pair(
-              std::make_pair(list<unsigned int>::cons(a0, as_), bs), cs);
+              std::make_pair(list<uint64_t>::cons(a0, as_), bs), cs);
         } else {
           if (q(a0)) {
             _result = std::make_pair(
-                std::make_pair(as_, list<unsigned int>::cons(a0, bs)), cs);
+                std::make_pair(as_, list<uint64_t>::cons(a0, bs)), cs);
           } else {
             _result = std::make_pair(std::make_pair(as_, bs),
-                                     list<unsigned int>::cons(a0, cs));
+                                     list<uint64_t>::cons(a0, cs));
           }
         }
       }
@@ -909,18 +902,17 @@ struct LoopifyLists {
 
   /// transpose m transposes a matrix (list of lists).
   template <typename T1>
-  static list<list<T1>> transpose_fuel(unsigned int fuel,
-                                       const list<list<T1>> &m) {
+  static list<list<T1>> transpose_fuel(uint64_t fuel, const list<list<T1>> &m) {
     std::unique_ptr<list<list<T1>>> _head{};
     std::unique_ptr<list<list<T1>>> *_write = &_head;
     list<list<T1>> _loop_m = m;
-    unsigned int _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
         *_write = std::make_unique<list<list<T1>>>(list<list<T1>>::nil());
         break;
       } else {
-        unsigned int f = _loop_fuel - 1;
+        uint64_t f = _loop_fuel - 1;
         auto map_head_impl = [](auto &_self_map_head,
                                 const list<list<T1>> &l) -> list<T1> {
           if (std::holds_alternative<typename list<list<T1>>::Nil>(l.v())) {
@@ -995,7 +987,7 @@ struct LoopifyLists {
 
   template <typename T1>
   static list<list<T1>> transpose(const list<list<T1>> &m) {
-    return transpose_fuel<T1>(100u, m);
+    return transpose_fuel<T1>(UINT64_C(100), m);
   }
 
   /// map_accum_l f acc l maps with accumulator from left.
@@ -1053,54 +1045,47 @@ struct LoopifyLists {
   }
 
   /// prefix_sums acc l returns all prefix sums: 1,2,3 -> 0,1,3,6.
-  static list<unsigned int> prefix_sums(unsigned int acc,
-                                        const list<unsigned int> &l);
+  static list<uint64_t> prefix_sums(uint64_t acc, const list<uint64_t> &l);
   /// uniq_sorted l removes consecutive duplicates from sorted list.
-  static list<unsigned int> uniq_sorted(const list<unsigned int> &l);
+  static list<uint64_t> uniq_sorted(const list<uint64_t> &l);
   /// Helper: take first n elements.
-  static list<unsigned int> take_n(unsigned int n, const list<unsigned int> &l);
+  static list<uint64_t> take_n(uint64_t n, const list<uint64_t> &l);
   /// Helper: list length.
-  static unsigned int len_list(const list<unsigned int> &l);
+  static uint64_t len_list(const list<uint64_t> &l);
   /// windows n l returns all sliding windows of size n.
-  static list<list<unsigned int>> windows_aux(unsigned int fuel, unsigned int n,
-                                              const list<unsigned int> &l);
-  static list<list<unsigned int>> windows(unsigned int n,
-                                          const list<unsigned int> &l);
+  static list<list<uint64_t>> windows_aux(uint64_t fuel, uint64_t n,
+                                          const list<uint64_t> &l);
+  static list<list<uint64_t>> windows(uint64_t n, const list<uint64_t> &l);
   /// is_prefix_of l1 l2 checks if l1 is a prefix of l2.
-  static bool is_prefix_of(const list<unsigned int> &l1,
-                           const list<unsigned int> &l2);
+  static bool is_prefix_of(const list<uint64_t> &l1, const list<uint64_t> &l2);
   /// lookup_all key l finds all values for key in association list.
-  static list<unsigned int>
-  lookup_all(unsigned int key,
-             const list<std::pair<unsigned int, unsigned int>> &l);
+  static list<uint64_t>
+  lookup_all(uint64_t key, const list<std::pair<uint64_t, uint64_t>> &l);
 
   /// delete_by eq x l deletes first element equal to x by custom equality.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
-  static list<unsigned int> delete_by(F0 &&eq, unsigned int x,
-                                      const list<unsigned int> &l) {
-    std::unique_ptr<list<unsigned int>> _head{};
-    std::unique_ptr<list<unsigned int>> *_write = &_head;
-    const list<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
+  static list<uint64_t> delete_by(F0 &&eq, uint64_t x,
+                                  const list<uint64_t> &l) {
+    std::unique_ptr<list<uint64_t>> _head{};
+    std::unique_ptr<list<uint64_t>> *_write = &_head;
+    const list<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename list<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write =
-            std::make_unique<list<unsigned int>>(list<unsigned int>::nil());
+      if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<list<uint64_t>>(list<uint64_t>::nil());
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename list<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename list<uint64_t>::Cons>(_loop_l->v());
         if (eq(x, a0)) {
-          *_write = std::make_unique<list<unsigned int>>(*a1);
+          *_write = std::make_unique<list<uint64_t>>(*a1);
           break;
         } else {
-          auto _cell = std::make_unique<list<unsigned int>>(
-              typename list<unsigned int>::Cons(a0, nullptr));
+          auto _cell = std::make_unique<list<uint64_t>>(
+              typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename list<unsigned int>::Cons>((*_write)->v_mut())
-                   .a1;
+              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
           _loop_l = a1.get();
           continue;
         }
@@ -1111,15 +1096,15 @@ struct LoopifyLists {
 
   /// find_indices p l returns list of indices where predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static list<unsigned int>
-  find_indices_aux(F0 &&p, const list<unsigned int> &l, unsigned int i) {
-    if (std::holds_alternative<typename list<unsigned int>::Nil>(l.v())) {
-      return list<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static list<uint64_t> find_indices_aux(F0 &&p, const list<uint64_t> &l,
+                                         uint64_t i) {
+    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+      return list<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename list<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
       if (p(a0)) {
-        return list<unsigned int>::cons(i, find_indices_aux(p, *a1, (i + 1)));
+        return list<uint64_t>::cons(i, find_indices_aux(p, *a1, (i + 1)));
       } else {
         return find_indices_aux(p, *a1, (i + 1));
       }
@@ -1127,17 +1112,17 @@ struct LoopifyLists {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static list<unsigned int> find_indices(F0 &&p, const list<unsigned int> &l) {
-    return find_indices_aux(p, l, 0u);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static list<uint64_t> find_indices(F0 &&p, const list<uint64_t> &l) {
+    return find_indices_aux(p, l, UINT64_C(0));
   }
 
   /// member x l checks if x is in the list.
-  static bool member(unsigned int x, const list<unsigned int> &l);
+  static bool member(uint64_t x, const list<uint64_t> &l);
   /// product l multiplies all elements in the list.
-  static unsigned int product(const list<unsigned int> &l);
+  static uint64_t product(const list<uint64_t> &l);
   /// sum_list l sums all elements in the list.
-  static unsigned int sum_list(const list<unsigned int> &l);
+  static uint64_t sum_list(const list<uint64_t> &l);
 
   /// flatten l flattens a list of lists.
   template <typename T1>
@@ -1200,72 +1185,66 @@ struct LoopifyLists {
   /// flatten_nested l alternative flatten with different pattern: flattens one
   /// level at a time. Pattern:  :: rest -> flatten rest, (x :: xs) :: rest -> x
   /// :: flatten (xs :: rest).
-  static list<unsigned int>
-  flatten_nested_fuel(unsigned int fuel, const list<list<unsigned int>> &l);
-  static unsigned int sum_list_lengths(const list<list<unsigned int>> &l);
-  static list<unsigned int> flatten_nested(const list<list<unsigned int>> &l);
+  static list<uint64_t> flatten_nested_fuel(uint64_t fuel,
+                                            const list<list<uint64_t>> &l);
+  static uint64_t sum_list_lengths(const list<list<uint64_t>> &l);
+  static list<uint64_t> flatten_nested(const list<list<uint64_t>> &l);
   /// compress l removes consecutive duplicates: 1,1,2,2,2,3 -> 1,2,3.
-  static list<unsigned int> compress(const list<unsigned int> &l);
+  static list<uint64_t> compress(const list<uint64_t> &l);
   /// group_pairs l groups consecutive elements into pairs: 1,2,3,4 ->
   /// (1,2),(3,4).
-  static list<std::pair<unsigned int, unsigned int>>
-  group_pairs(const list<unsigned int> &l);
+  static list<std::pair<uint64_t, uint64_t>>
+  group_pairs(const list<uint64_t> &l);
   /// swizzle l separates elements by position: 1,2,3,4 -> (1,3,2,4).
-  static std::pair<list<unsigned int>, list<unsigned int>>
-  swizzle(const list<unsigned int> &l);
+  static std::pair<list<uint64_t>, list<uint64_t>>
+  swizzle(const list<uint64_t> &l);
   /// index_of_aux x l i finds first index of x in l starting from i.
-  static unsigned int index_of_aux(unsigned int x, const list<unsigned int> &l,
-                                   unsigned int i);
-  static unsigned int index_of(unsigned int x, const list<unsigned int> &l);
+  static uint64_t index_of_aux(uint64_t x, const list<uint64_t> &l, uint64_t i);
+  static uint64_t index_of(uint64_t x, const list<uint64_t> &l);
   /// interleave l1 l2 interleaves two lists: 1,2 3,4 -> 1,3,2,4.
-  static list<unsigned int> interleave(list<unsigned int> l1,
-                                       list<unsigned int> l2);
+  static list<uint64_t> interleave(list<uint64_t> l1, list<uint64_t> l2);
   /// lookup key l finds value for key in association list.
-  static unsigned int
-  lookup(unsigned int key,
-         const list<std::pair<unsigned int, unsigned int>> &l);
+  static uint64_t lookup(uint64_t key,
+                         const list<std::pair<uint64_t, uint64_t>> &l);
   /// group l groups consecutive equal elements: 1,1,2,2,2,3 ->
   /// [1,1],[2,2,2],[3].
-  static list<list<unsigned int>> group_fuel(unsigned int fuel,
-                                             const list<unsigned int> &l);
-  static list<list<unsigned int>> group(const list<unsigned int> &l);
+  static list<list<uint64_t>> group_fuel(uint64_t fuel,
+                                         const list<uint64_t> &l);
+  static list<list<uint64_t>> group(const list<uint64_t> &l);
   /// Internal helper: reverse a list.
-  static list<unsigned int> rev_helper(list<unsigned int> acc,
-                                       const list<unsigned int> &l);
+  static list<uint64_t> rev_helper(list<uint64_t> acc, const list<uint64_t> &l);
   /// reverse_insert x l inserts x and reverses at each step.
-  static list<unsigned int> reverse_insert(unsigned int x,
-                                           const list<unsigned int> &l);
+  static list<uint64_t> reverse_insert(uint64_t x, const list<uint64_t> &l);
   /// Internal helper: append lists.
-  static list<unsigned int> app_helper(const list<unsigned int> &l1,
-                                       list<unsigned int> l2);
+  static list<uint64_t> app_helper(const list<uint64_t> &l1, list<uint64_t> l2);
   /// double_append l1 l2 appends with doubling: 1,2 3 -> 1,3,3,3,3.
-  static list<unsigned int> double_append(const list<unsigned int> &l1,
-                                          list<unsigned int> l2);
+  static list<uint64_t> double_append(const list<uint64_t> &l1,
+                                      list<uint64_t> l2);
   /// remove_if_sum_even l removes element if sum with next is even.
-  static list<unsigned int> remove_if_sum_even(const list<unsigned int> &l);
+  static list<uint64_t> remove_if_sum_even(const list<uint64_t> &l);
   /// split_at n l splits list at index n into (prefix, suffix).
-  static std::pair<list<unsigned int>, list<unsigned int>>
-  split_at(unsigned int n, list<unsigned int> l);
+  static std::pair<list<uint64_t>, list<uint64_t>> split_at(uint64_t n,
+                                                            list<uint64_t> l);
 
   /// span p l splits list at first element not satisfying p.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::pair<list<unsigned int>, list<unsigned int>>
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::pair<list<uint64_t>, list<uint64_t>>
   span(F0 &&p,
-       list<unsigned int>
+       list<uint64_t>
            l) { /// _Enter: captures varying parameters for each recursive call.
 
     struct _Enter {
-      list<unsigned int> l;
+      list<uint64_t> l;
     };
 
     /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
     struct _Cont1 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont1>;
-    std::pair<list<unsigned int>, list<unsigned int>> _result{};
+    std::pair<list<uint64_t>, list<uint64_t>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{l});
@@ -1275,76 +1254,68 @@ struct LoopifyLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        list<unsigned int> l = std::move(_f.l);
-        if (std::holds_alternative<typename list<unsigned int>::Nil>(
-                l.v_mut())) {
-          _result = std::make_pair(list<unsigned int>::nil(),
-                                   list<unsigned int>::nil());
+        list<uint64_t> l = std::move(_f.l);
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v_mut())) {
+          _result =
+              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
         } else {
-          auto &[a0, a1] =
-              std::get<typename list<unsigned int>::Cons>(l.v_mut());
+          auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v_mut());
           if (p(a0)) {
             _stack.emplace_back(_Cont1{a0});
             _stack.emplace_back(_Enter{std::move(*a1)});
           } else {
-            _result = std::make_pair(list<unsigned int>::nil(), l);
+            _result = std::make_pair(list<uint64_t>::nil(), l);
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int a0 = _f.a0;
-        const list<unsigned int> &a = _result.first;
-        const list<unsigned int> &b = _result.second;
-        _result = std::make_pair(list<unsigned int>::cons(std::move(a0), a), b);
+        uint64_t a0 = _f.a0;
+        const list<uint64_t> &a = _result.first;
+        const list<uint64_t> &b = _result.second;
+        _result = std::make_pair(list<uint64_t>::cons(std::move(a0), a), b);
       }
     }
     return _result;
   }
 
   /// unzip l splits list of pairs into two lists.
-  static std::pair<list<unsigned int>, list<unsigned int>>
-  unzip(const list<std::pair<unsigned int, unsigned int>> &l);
+  static std::pair<list<uint64_t>, list<uint64_t>>
+  unzip(const list<std::pair<uint64_t, uint64_t>> &l);
   /// nth n l default returns nth element or default if out of bounds.
-  static unsigned int nth(unsigned int n, const list<unsigned int> &l,
-                          unsigned int default0);
+  static uint64_t nth(uint64_t n, const list<uint64_t> &l, uint64_t default0);
   /// last l default returns last element or default if empty.
-  static unsigned int last(const list<unsigned int> &l, unsigned int default0);
+  static uint64_t last(const list<uint64_t> &l, uint64_t default0);
   /// drop n l drops first n elements.
-  static list<unsigned int> drop(unsigned int n, list<unsigned int> l);
+  static list<uint64_t> drop(uint64_t n, list<uint64_t> l);
   /// init l returns all but last element.
-  static list<unsigned int> init(const list<unsigned int> &l);
+  static list<uint64_t> init(const list<uint64_t> &l);
   /// count x l counts occurrences of x in l.
-  static unsigned int count(unsigned int x, const list<unsigned int> &l);
+  static uint64_t count(uint64_t x, const list<uint64_t> &l);
   /// maximum l finds maximum element (returns 0 for empty list).
-  static unsigned int maximum(const list<unsigned int> &l);
+  static uint64_t maximum(const list<uint64_t> &l);
   /// minmax l finds both minimum and maximum in one pass.
-  static std::pair<unsigned int, unsigned int>
-  minmax(const list<unsigned int> &l);
+  static std::pair<uint64_t, uint64_t> minmax(const list<uint64_t> &l);
   /// Helper for rotate_left.
-  static list<unsigned int> rotate_left_fuel(unsigned int fuel, unsigned int n,
-                                             list<unsigned int> l);
+  static list<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
+                                         list<uint64_t> l);
   /// rotate_left n l rotates list left by n positions: rotate 2 1,2,3,4 ->
   /// 3,4,1,2.
-  static list<unsigned int> rotate_left(unsigned int n,
-                                        const list<unsigned int> &l);
+  static list<uint64_t> rotate_left(uint64_t n, const list<uint64_t> &l);
   /// intercalate sep lists joins lists with separator: intercalate 0
   /// [1,2],[3,4] -> 1,2,0,3,4.
-  static list<unsigned int> intercalate(const list<unsigned int> &sep,
-                                        const list<list<unsigned int>> &lists);
+  static list<uint64_t> intercalate(const list<uint64_t> &sep,
+                                    const list<list<uint64_t>> &lists);
   /// majority l finds majority element using Boyer-Moore voting algorithm.
   /// Returns (candidate, count).
-  static std::pair<unsigned int, unsigned int>
-  majority(const list<unsigned int> &l);
+  static std::pair<uint64_t, uint64_t> majority(const list<uint64_t> &l);
   /// zip3 l1 l2 l3 zips three lists into triples.
-  static list<std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>
-  zip3(const list<unsigned int> &l1, const list<unsigned int> &l2,
-       const list<unsigned int> &l3);
+  static list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>
+  zip3(const list<uint64_t> &l1, const list<uint64_t> &l2,
+       const list<uint64_t> &l3);
   /// sum_and_count l returns both sum and count in one pass.
-  static std::pair<unsigned int, unsigned int>
-  sum_and_count(const list<unsigned int> &l);
+  static std::pair<uint64_t, uint64_t> sum_and_count(const list<uint64_t> &l);
   /// elem_at n l returns element at index n (like nth but with different name).
-  static std::optional<unsigned int> elem_at(unsigned int n,
-                                             const list<unsigned int> &l);
+  static std::optional<uint64_t> elem_at(uint64_t n, const list<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LISTS

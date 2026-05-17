@@ -40,7 +40,7 @@ bool BoolOps::my_xorb(bool a, bool b) {
   }
 }
 
-unsigned int BoolOps::if_nat(bool b, unsigned int t, unsigned int f) {
+uint64_t BoolOps::if_nat(bool b, uint64_t t, uint64_t f) {
   if (b) {
     return t;
   } else {
@@ -52,8 +52,8 @@ bool BoolOps::complex_bool(bool a, bool b, bool c) {
   return my_orb(my_andb(a, b), my_andb(my_negb(a), c));
 }
 
-bool BoolOps::nat_eq(unsigned int _x0, unsigned int _x1) { return _x0 == _x1; }
+bool BoolOps::nat_eq(uint64_t _x0, uint64_t _x1) { return _x0 == _x1; }
 
-bool BoolOps::nat_lt(unsigned int _x0, unsigned int _x1) { return _x0 < _x1; }
+bool BoolOps::nat_lt(uint64_t _x0, uint64_t _x1) { return _x0 < _x1; }
 
-bool BoolOps::nat_le(unsigned int _x0, unsigned int _x1) { return _x0 <= _x1; }
+bool BoolOps::nat_le(uint64_t _x0, uint64_t _x1) { return _x0 <= _x1; }

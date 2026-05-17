@@ -18,7 +18,7 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using List = LoopifyPatterns::list<unsigned int>;
+  using List = LoopifyPatterns::list<uint64_t>;
 
   // Test multi_let
   ASSERT(LoopifyPatterns::multi_let(5u) > 0u);
@@ -70,14 +70,14 @@ int main() {
 
   // Test max_by
   auto max_result =
-      LoopifyPatterns::max_by([](unsigned int x) { return x * x; }, lst);
+      LoopifyPatterns::max_by([](uint64_t x) { return x * x; }, lst);
   ASSERT(max_result == 16u); // max(4,9,16) = 16
 
   // Test replace_at
   auto replaced = LoopifyPatterns::replace_at(1u, 99u, lst);
 
   // Test nested_pattern
-  using Pair3 = std::pair<std::pair<unsigned int, unsigned int>, unsigned int>;
+  using Pair3 = std::pair<std::pair<uint64_t, uint64_t>, uint64_t>;
   using TupleList = LoopifyPatterns::list<Pair3>;
   auto tpl = TupleList::cons(
       std::make_pair(std::make_pair(1u, 2u), 3u),

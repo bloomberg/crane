@@ -26,7 +26,7 @@ concept Monoid = requires {
 struct TypeApp {
   template <typename T1> static T1 id(T1 x) { return x; }
 
-  static inline const unsigned int id_int = id<unsigned int>(42u);
+  static inline const uint64_t id_int = id<uint64_t>(UINT64_C(42));
   static inline const bool id_bool = id<bool>(true);
 
   template <typename T1, typename T2 = void, typename T3, typename F0,
@@ -186,17 +186,18 @@ struct TypeApp {
     }
   }
 
-  static inline const list<unsigned int> test_map =
-      map<unsigned int, unsigned int>(
-          [](unsigned int x) { return (x + 1u); },
-          list<unsigned int>::cons(
-              1u, list<unsigned int>::cons(
-                      2u, list<unsigned int>::cons(
-                              3u, list<unsigned int>::nil()))));
-  static list<unsigned int> map_succ(const list<unsigned int> &_x0);
-  static inline const list<unsigned int> test_map_succ =
-      map_succ(list<unsigned int>::cons(
-          5u, list<unsigned int>::cons(6u, list<unsigned int>::nil())));
+  static inline const list<uint64_t> test_map = map<uint64_t, uint64_t>(
+      [](uint64_t x) { return (x + UINT64_C(1)); },
+      list<uint64_t>::cons(
+          UINT64_C(1),
+          list<uint64_t>::cons(
+              UINT64_C(2),
+              list<uint64_t>::cons(UINT64_C(3), list<uint64_t>::nil()))));
+  static list<uint64_t> map_succ(const list<uint64_t> &_x0);
+  static inline const list<uint64_t> test_map_succ =
+      map_succ(list<uint64_t>::cons(
+          UINT64_C(5),
+          list<uint64_t>::cons(UINT64_C(6), list<uint64_t>::nil())));
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
@@ -204,13 +205,13 @@ struct TypeApp {
     return f(f(x));
   }
 
-  static inline const unsigned int test_twice =
-      twice<unsigned int>([](unsigned int x) { return (x + 1u); }, 10u);
+  static inline const uint64_t test_twice = twice<uint64_t>(
+      [](uint64_t x) { return (x + UINT64_C(1)); }, UINT64_C(10));
 
   struct NatMonoid {
-    using T = unsigned int;
-    static inline const unsigned int empty = 0u;
-    static unsigned int append(unsigned int _x0, unsigned int _x1);
+    using T = uint64_t;
+    static inline const uint64_t empty = UINT64_C(0);
+    static uint64_t append(uint64_t _x0, uint64_t _x1);
   };
 
   template <Monoid M> struct UseMonoid {

@@ -16,15 +16,15 @@ concept NestedContainer = requires {
 
 struct DependentTemplateStress {
   template <Container C> struct UseContainer {
-    static const typename C::template t<unsigned int> &make_nat_container() {
-      static const typename C::template t<unsigned int> v =
-          C::template empty<unsigned int>;
+    static const typename C::template t<uint64_t> &make_nat_container() {
+      static const typename C::template t<uint64_t> v =
+          C::template empty<uint64_t>;
       return v;
     }
 
-    static const typename C::template inner<unsigned int> &make_inner_nat() {
-      static const typename C::template inner<unsigned int> v =
-          C::template wrap<unsigned int>(0u);
+    static const typename C::template inner<uint64_t> &make_inner_nat() {
+      static const typename C::template inner<uint64_t> v =
+          C::template wrap<uint64_t>(UINT64_C(0));
       return v;
     }
 
@@ -33,23 +33,22 @@ struct DependentTemplateStress {
       return v;
     }
 
-    static const typename C::template t<unsigned int> &use_both() {
-      static const typename C::template t<unsigned int> v =
-          C::template singleton<unsigned int>(42u);
+    static const typename C::template t<uint64_t> &use_both() {
+      static const typename C::template t<uint64_t> v =
+          C::template singleton<uint64_t>(UINT64_C(42));
       return v;
     }
 
-    static typename C::template t<unsigned int> complex_use(unsigned int _x0) {
-      return C::template singleton<unsigned int>(_x0);
+    static typename C::template t<uint64_t> complex_use(uint64_t _x0) {
+      return C::template singleton<uint64_t>(_x0);
     }
   };
 
   template <NestedContainer N> struct UseNested {
-    static const typename N::template outer<unsigned int> &make_outer_nat() {
-      static const typename N::template outer<unsigned int> v =
-          N::template mk_outer<unsigned int>(
-              N::template mk_middle<unsigned int>(
-                  N::template mk_inner<unsigned int>(0u)));
+    static const typename N::template outer<uint64_t> &make_outer_nat() {
+      static const typename N::template outer<uint64_t> v =
+          N::template mk_outer<uint64_t>(N::template mk_middle<uint64_t>(
+              N::template mk_inner<uint64_t>(UINT64_C(0))));
       return v;
     }
 
@@ -59,17 +58,16 @@ struct DependentTemplateStress {
       return v;
     }
 
-    static const typename N::template outer<unsigned int> &get_outer() {
-      static const typename N::template outer<unsigned int> v =
-          make_outer_nat();
+    static const typename N::template outer<uint64_t> &get_outer() {
+      static const typename N::template outer<uint64_t> v = make_outer_nat();
       return v;
     }
   };
 
   template <Container C1, Container C2> struct Compose {
-    static const typename C1::template t<unsigned int> &use_c1() {
-      static const typename C1::template t<unsigned int> v =
-          C1::template empty<unsigned int>;
+    static const typename C1::template t<uint64_t> &use_c1() {
+      static const typename C1::template t<uint64_t> v =
+          C1::template empty<uint64_t>;
       return v;
     }
 
@@ -78,9 +76,9 @@ struct DependentTemplateStress {
       return v;
     }
 
-    static const typename C1::template inner<unsigned int> &use_c1_inner() {
-      static const typename C1::template inner<unsigned int> v =
-          C1::template wrap<unsigned int>(0u);
+    static const typename C1::template inner<uint64_t> &use_c1_inner() {
+      static const typename C1::template inner<uint64_t> v =
+          C1::template wrap<uint64_t>(UINT64_C(0));
       return v;
     }
 

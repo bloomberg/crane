@@ -130,12 +130,13 @@ List<T1> _reverse_onto_go(const List<T1> xs, const List<T1> acc) {
 }
 
 struct LetFixHoistedTemplate {
-  static List<unsigned int> reverse_onto(const List<unsigned int> &l);
-  static inline const List<unsigned int> test_rev =
-      reverse_onto(List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
+  static List<uint64_t> reverse_onto(const List<uint64_t> &l);
+  static inline const List<uint64_t> test_rev =
+      reverse_onto(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_LET_FIX_HOISTED_TEMPLATE

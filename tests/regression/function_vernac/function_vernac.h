@@ -134,38 +134,38 @@ template <typename A> struct Sig {
 
 struct FunctionVernac {
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int div2_F(F0 &&div3, unsigned int n) {
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t div2_F(F0 &&div3, uint64_t n) {
     if (n <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int n0 = n - 1;
+      uint64_t n0 = n - 1;
       if (n0 <= 0) {
-        return 0u;
+        return UINT64_C(0);
       } else {
-        unsigned int p = n0 - 1;
+        uint64_t p = n0 - 1;
         return (div3(p) + 1);
       }
     }
   }
 
-  static Sig<unsigned int> div2_terminate(unsigned int n);
-  static unsigned int div2(unsigned int n);
+  static Sig<uint64_t> div2_terminate(uint64_t n);
+  static uint64_t div2(uint64_t n);
 
   struct R_div2 {
     // TYPES
     struct R_div2_0 {
-      unsigned int n;
+      uint64_t n;
     };
 
     struct R_div2_1 {
-      unsigned int n;
+      uint64_t n;
     };
 
     struct R_div2_2 {
-      unsigned int n;
-      unsigned int p;
-      unsigned int a2;
+      uint64_t n;
+      uint64_t p;
+      uint64_t a2;
       std::unique_ptr<R_div2> _res;
     };
 
@@ -236,12 +236,11 @@ struct FunctionVernac {
     }
 
     // CREATORS
-    static R_div2 r_div2_0(unsigned int n) { return R_div2(R_div2_0{n}); }
+    static R_div2 r_div2_0(uint64_t n) { return R_div2(R_div2_0{n}); }
 
-    static R_div2 r_div2_1(unsigned int n) { return R_div2(R_div2_1{n}); }
+    static R_div2 r_div2_1(uint64_t n) { return R_div2(R_div2_1{n}); }
 
-    static R_div2 r_div2_2(unsigned int n, unsigned int p, unsigned int a2,
-                           R_div2 _res) {
+    static R_div2 r_div2_2(uint64_t n, uint64_t p, uint64_t a2, R_div2 _res) {
       return R_div2(
           R_div2_2{n, p, a2, std::make_unique<R_div2>(std::move(_res))});
     }
@@ -274,11 +273,11 @@ struct FunctionVernac {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
-                                     unsigned int &, R_div2 &, T1 &>
-    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, unsigned int, unsigned int) const {
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                     uint64_t &, R_div2 &, T1 &>
+    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, uint64_t, uint64_t) const {
       if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
         const auto &[n0] = std::get<typename R_div2::R_div2_0>(this->v());
         return f(n0);
@@ -294,11 +293,11 @@ struct FunctionVernac {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
-                                     unsigned int &, R_div2 &, T1 &>
-    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, unsigned int, unsigned int) const {
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                     uint64_t &, R_div2 &, T1 &>
+    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t, uint64_t) const {
       if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
         const auto &[n0] = std::get<typename R_div2::R_div2_0>(this->v());
         return f(n0);
@@ -315,23 +314,23 @@ struct FunctionVernac {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
-                                   T1 &>
-  static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, unsigned int n) {
-    std::function<T1(unsigned int, T1)> f2 =
-        [=](unsigned int _pa0, T1 _pa1) mutable { return f1(n, _pa0, _pa1); };
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &, T1 &>
+  static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t n) {
+    std::function<T1(uint64_t, T1)> f2 = [=](uint64_t _pa0, T1 _pa1) mutable {
+      return f1(n, _pa0, _pa1);
+    };
     T1 f3 = f0(n);
     T1 f4 = f(n);
     if (n <= 0) {
       return f4;
     } else {
-      unsigned int n0 = n - 1;
+      uint64_t n0 = n - 1;
       if (n0 <= 0) {
         return f3;
       } else {
-        unsigned int n1 = n0 - 1;
+        uint64_t n1 = n0 - 1;
         std::function<T1(T1)> f5 = [=](T1 _pa0) mutable {
           return f2(n1, _pa0);
         };
@@ -342,41 +341,40 @@ struct FunctionVernac {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
-                                   T1 &>
-  static T1 div2_rec(F0 &&_x0, F1 &&_x1, F2 &&_x2, unsigned int _x3) {
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &, T1 &>
+  static T1 div2_rec(F0 &&_x0, F1 &&_x1, F2 &&_x2, uint64_t _x3) {
     return div2_rect<T1>(_x0, _x1, _x2, _x3);
   }
 
-  static R_div2 R_div2_correct(unsigned int n, unsigned int _res);
+  static R_div2 R_div2_correct(uint64_t n, uint64_t _res);
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, List<unsigned int> &>
-  static unsigned int list_sum_F(F0 &&list_sum0, const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return 0u;
+    requires std::is_invocable_r_v<uint64_t, F0 &, List<uint64_t> &>
+  static uint64_t list_sum_F(F0 &&list_sum0, const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       return (a0 + list_sum0(*a1));
     }
   }
 
-  static Sig<unsigned int> list_sum_terminate(const List<unsigned int> &l);
-  static unsigned int list_sum(const List<unsigned int> &l);
+  static Sig<uint64_t> list_sum_terminate(const List<uint64_t> &l);
+  static uint64_t list_sum(const List<uint64_t> &l);
 
   struct R_list_sum {
     // TYPES
     struct R_list_sum_0 {
-      List<unsigned int> l;
+      List<uint64_t> l;
     };
 
     struct R_list_sum_1 {
-      List<unsigned int> l;
-      unsigned int x;
-      List<unsigned int> xs;
-      unsigned int a3;
+      List<uint64_t> l;
+      uint64_t x;
+      List<uint64_t> xs;
+      uint64_t a3;
       std::unique_ptr<R_list_sum> _res;
     };
 
@@ -443,12 +441,12 @@ struct FunctionVernac {
     }
 
     // CREATORS
-    static R_list_sum r_list_sum_0(List<unsigned int> l) {
+    static R_list_sum r_list_sum_0(List<uint64_t> l) {
       return R_list_sum(R_list_sum_0{std::move(l)});
     }
 
-    static R_list_sum r_list_sum_1(List<unsigned int> l, unsigned int x,
-                                   List<unsigned int> xs, unsigned int a3,
+    static R_list_sum r_list_sum_1(List<uint64_t> l, uint64_t x,
+                                   List<uint64_t> xs, uint64_t a3,
                                    R_list_sum _res) {
       return R_list_sum(
           R_list_sum_1{std::move(l), x, std::move(xs), a3,
@@ -483,12 +481,11 @@ struct FunctionVernac {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
-               std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
-                                     unsigned int &, List<unsigned int> &,
-                                     unsigned int &, R_list_sum &, T1 &>
-    T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<unsigned int> &,
-                      unsigned int) const {
+      requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
+               std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
+                                     List<uint64_t> &, uint64_t &, R_list_sum &,
+                                     T1 &>
+    T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<uint64_t> &, uint64_t) const {
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
               this->v())) {
         const auto &[l0] =
@@ -503,12 +500,12 @@ struct FunctionVernac {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
-               std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
-                                     unsigned int &, List<unsigned int> &,
-                                     unsigned int &, R_list_sum &, T1 &>
-    T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<unsigned int> &,
-                       unsigned int) const {
+      requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
+               std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
+                                     List<uint64_t> &, uint64_t &, R_list_sum &,
+                                     T1 &>
+    T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &,
+                       uint64_t) const {
       if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
               this->v())) {
         const auto &[l0] =
@@ -524,20 +521,20 @@ struct FunctionVernac {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
-             std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
-                                   unsigned int &, List<unsigned int> &, T1 &>
-  static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<unsigned int> &l) {
-    std::function<T1(unsigned int, List<unsigned int>, T1)> f1 =
-        [=](unsigned int _pa0, List<unsigned int> _pa1, T1 _pa2) mutable {
+    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
+             std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
+                                   List<uint64_t> &, T1 &>
+  static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &l) {
+    std::function<T1(uint64_t, List<uint64_t>, T1)> f1 =
+        [=](uint64_t _pa0, List<uint64_t> _pa1, T1 _pa2) mutable {
           return f0(l, _pa0, _pa1, _pa2);
         };
     T1 f2 = f(l);
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return f2;
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-      const List<unsigned int> &a1_value = *a1;
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      const List<uint64_t> &a1_value = *a1;
       std::function<T1(T1)> f3 = [=](T1 _pa0) mutable {
         return f1(a0, a1_value, _pa0);
       };
@@ -547,22 +544,24 @@ struct FunctionVernac {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, List<unsigned int> &> &&
-             std::is_invocable_r_v<T1, F1 &, List<unsigned int> &,
-                                   unsigned int &, List<unsigned int> &, T1 &>
-  static T1 list_sum_rec(F0 &&_x0, F1 &&_x1, const List<unsigned int> &_x2) {
+    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
+             std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
+                                   List<uint64_t> &, T1 &>
+  static T1 list_sum_rec(F0 &&_x0, F1 &&_x1, const List<uint64_t> &_x2) {
     return list_sum_rect<T1>(_x0, _x1, _x2);
   }
 
-  static R_list_sum R_list_sum_correct(const List<unsigned int> &l,
-                                       unsigned int _res);
-  static inline const unsigned int test_div2 = div2(10u);
-  static inline const unsigned int test_sum = list_sum(List<unsigned int>::cons(
-      1u, List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(
-                      3u, List<unsigned int>::cons(
-                              4u, List<unsigned int>::cons(
-                                      5u, List<unsigned int>::nil()))))));
+  static R_list_sum R_list_sum_correct(const List<uint64_t> &l, uint64_t _res);
+  static inline const uint64_t test_div2 = div2(UINT64_C(10));
+  static inline const uint64_t test_sum = list_sum(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
 };
 
 #endif // INCLUDED_FUNCTION_VERNAC

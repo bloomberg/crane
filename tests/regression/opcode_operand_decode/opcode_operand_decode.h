@@ -52,14 +52,14 @@ struct OpcodeOperandDecode {
     }
   }
 
-  static Instruction decode(unsigned int b1, unsigned int _x);
-  static inline const unsigned int t = []() {
-    switch (decode(224u, 0u)) {
+  static Instruction decode(uint64_t b1, uint64_t _x);
+  static inline const uint64_t t = []() {
+    switch (decode(UINT64_C(224), UINT64_C(0))) {
     case Instruction::WRM_: {
-      return 1u;
+      return UINT64_C(1);
     }
     default: {
-      return 0u;
+      return UINT64_C(0);
     }
     }
   }();

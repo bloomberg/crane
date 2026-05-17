@@ -10,8 +10,8 @@ struct LoopifyMutualCountdown {
   /// still emits even_countdown and odd_countdown as ordinary mutually
   /// recursive C++ calls instead of a loop, so a deep countdown overflows the
   /// C++ stack.
-  static bool even_countdown(unsigned int n);
-  static bool odd_countdown(unsigned int n);
+  static bool even_countdown(uint64_t n);
+  static bool odd_countdown(uint64_t n);
 };
 
 #endif // INCLUDED_LOOPIFY_MUTUAL_COUNTDOWN

@@ -118,7 +118,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -130,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -143,7 +143,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -159,18 +159,18 @@ public:
 };
 
 struct LoopifyListSubsequences {
-  static List<List<unsigned int>>
-  map_cons_helper(unsigned int x, const List<List<unsigned int>> &ll);
-  static List<List<unsigned int>> tails(List<unsigned int> l);
-  static List<List<unsigned int>> inits_fuel(unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<List<unsigned int>> inits(const List<unsigned int> &l);
-  static List<unsigned int> init_list(const List<unsigned int> &l);
-  static List<unsigned int> snoc(const List<unsigned int> &l, unsigned int x);
-  static unsigned int last_elem(const List<unsigned int> &l);
-  static unsigned int nth_elem(unsigned int n, const List<unsigned int> &l);
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  split_at(unsigned int n, List<unsigned int> l);
+  static List<List<uint64_t>> map_cons_helper(uint64_t x,
+                                              const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> tails(List<uint64_t> l);
+  static List<List<uint64_t>> inits_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<List<uint64_t>> inits(const List<uint64_t> &l);
+  static List<uint64_t> init_list(const List<uint64_t> &l);
+  static List<uint64_t> snoc(const List<uint64_t> &l, uint64_t x);
+  static uint64_t last_elem(const List<uint64_t> &l);
+  static uint64_t nth_elem(uint64_t n, const List<uint64_t> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>> split_at(uint64_t n,
+                                                            List<uint64_t> l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_SUBSEQUENCES

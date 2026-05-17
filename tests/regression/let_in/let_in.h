@@ -6,18 +6,18 @@
 #include <variant>
 
 struct LetIn {
-  static inline const unsigned int simple_let = 5u;
-  static inline const unsigned int nested_let = 3u;
-  static inline const unsigned int let_with_add = []() {
-    unsigned int x = 3u;
-    unsigned int y = 4u;
+  static inline const uint64_t simple_let = UINT64_C(5);
+  static inline const uint64_t nested_let = UINT64_C(3);
+  static inline const uint64_t let_with_add = []() {
+    uint64_t x = UINT64_C(3);
+    uint64_t y = UINT64_C(4);
     return (x + y);
   }();
-  static inline const unsigned int shadowed_let = 3u;
-  static unsigned int let_in_fun(unsigned int n);
-  static inline const unsigned int let_fun = []() {
-    unsigned int x = 5u;
-    return (x + 1u);
+  static inline const uint64_t shadowed_let = UINT64_C(3);
+  static uint64_t let_in_fun(uint64_t n);
+  static inline const uint64_t let_fun = []() {
+    uint64_t x = UINT64_C(5);
+    return (x + UINT64_C(1));
   }();
 
   template <typename A, typename B> struct pair {
@@ -48,26 +48,26 @@ struct LetIn {
     return f(a0, a1);
   }
 
-  static inline const unsigned int let_destruct = []() {
-    pair<unsigned int, unsigned int> p =
-        pair<unsigned int, unsigned int>::pair0(3u, 4u);
+  static inline const uint64_t let_destruct = []() {
+    pair<uint64_t, uint64_t> p =
+        pair<uint64_t, uint64_t>::pair0(UINT64_C(3), UINT64_C(4));
     auto &[a0, a1] = p;
     return a0;
   }();
-  static inline const unsigned int multi_let = []() {
-    unsigned int a = 1u;
-    unsigned int b = 2u;
-    unsigned int c = 3u;
+  static inline const uint64_t multi_let = []() {
+    uint64_t a = UINT64_C(1);
+    uint64_t b = UINT64_C(2);
+    uint64_t c = UINT64_C(3);
     return (a + (b + c));
   }();
-  static inline const unsigned int test_simple = simple_let;
-  static inline const unsigned int test_nested = nested_let;
-  static inline const unsigned int test_add = let_with_add;
-  static inline const unsigned int test_shadow = shadowed_let;
-  static inline const unsigned int test_fun_call = let_in_fun(3u);
-  static inline const unsigned int test_let_fun = let_fun;
-  static inline const unsigned int test_destruct = let_destruct;
-  static inline const unsigned int test_multi = multi_let;
+  static inline const uint64_t test_simple = simple_let;
+  static inline const uint64_t test_nested = nested_let;
+  static inline const uint64_t test_add = let_with_add;
+  static inline const uint64_t test_shadow = shadowed_let;
+  static inline const uint64_t test_fun_call = let_in_fun(UINT64_C(3));
+  static inline const uint64_t test_let_fun = let_fun;
+  static inline const uint64_t test_destruct = let_destruct;
+  static inline const uint64_t test_multi = multi_let;
 };
 
 #endif // INCLUDED_LET_IN

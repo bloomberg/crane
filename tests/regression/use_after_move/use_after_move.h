@@ -5,9 +5,9 @@
 
 struct UseAfterMove {
   struct State {
-    unsigned int value;
-    unsigned int data;
-    unsigned int flag;
+    uint64_t value;
+    uint64_t data;
+    uint64_t flag;
 
     // ACCESSORS
     State clone() const {
@@ -15,16 +15,13 @@ struct UseAfterMove {
     }
   };
 
-  static std::pair<State, unsigned int> pattern1(State s);
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
-  pattern2(State s);
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
-  pattern3(State s);
-  static std::pair<State, unsigned int> pattern4(State s1);
-  static std::pair<State, unsigned int> pattern5(State s1);
-  static std::pair<State, unsigned int> pattern6(State s);
-  static std::pair<std::pair<std::pair<State, unsigned int>, unsigned int>,
-                   unsigned int>
+  static std::pair<State, uint64_t> pattern1(State s);
+  static std::pair<std::pair<State, uint64_t>, uint64_t> pattern2(State s);
+  static std::pair<std::pair<State, uint64_t>, uint64_t> pattern3(State s);
+  static std::pair<State, uint64_t> pattern4(State s1);
+  static std::pair<State, uint64_t> pattern5(State s1);
+  static std::pair<State, uint64_t> pattern6(State s);
+  static std::pair<std::pair<std::pair<State, uint64_t>, uint64_t>, uint64_t>
   pattern7(State s);
 };
 

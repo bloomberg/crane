@@ -6,12 +6,12 @@
 
 struct OppositePropertyTransferTraceCase {
   struct PreStableCategory {
-    unsigned int ps_tag;
-    unsigned int ps_shift;
-    std::function<unsigned int(unsigned int)> ps_Susp;
-    std::function<unsigned int(unsigned int)> ps_Loop;
-    std::function<unsigned int(unsigned int)> ps_eta;
-    std::function<unsigned int(unsigned int)> ps_epsilon;
+    uint64_t ps_tag;
+    uint64_t ps_shift;
+    std::function<uint64_t(uint64_t)> ps_Susp;
+    std::function<uint64_t(uint64_t)> ps_Loop;
+    std::function<uint64_t(uint64_t)> ps_eta;
+    std::function<uint64_t(uint64_t)> ps_epsilon;
 
     // ACCESSORS
     PreStableCategory clone() const {
@@ -25,8 +25,8 @@ struct OppositePropertyTransferTraceCase {
   opposite_prestable_category(const PreStableCategory &pS);
 
   struct LeftStableWitness {
-    unsigned int lsw_seed;
-    unsigned int lsw_value;
+    uint64_t lsw_seed;
+    uint64_t lsw_value;
 
     // ACCESSORS
     LeftStableWitness clone() const {
@@ -35,8 +35,8 @@ struct OppositePropertyTransferTraceCase {
   };
 
   struct RightStableWitness {
-    unsigned int rsw_seed;
-    unsigned int rsw_value;
+    uint64_t rsw_seed;
+    uint64_t rsw_value;
 
     // ACCESSORS
     RightStableWitness clone() const {
@@ -45,8 +45,8 @@ struct OppositePropertyTransferTraceCase {
   };
 
   struct Triangle1Witness {
-    unsigned int t1_seed;
-    unsigned int t1_value;
+    uint64_t t1_seed;
+    uint64_t t1_value;
 
     // ACCESSORS
     Triangle1Witness clone() const {
@@ -55,8 +55,8 @@ struct OppositePropertyTransferTraceCase {
   };
 
   struct Triangle2Witness {
-    unsigned int t2_seed;
-    unsigned int t2_value;
+    uint64_t t2_seed;
+    uint64_t t2_value;
 
     // ACCESSORS
     Triangle2Witness clone() const {
@@ -72,9 +72,9 @@ struct OppositePropertyTransferTraceCase {
   using EquivT = std::pair<std::function<b(a)>, std::function<a(b)>>;
 
   struct LeftProperty {
-    unsigned int lp_seed;
-    unsigned int lp_value;
-    unsigned int lp_tag;
+    uint64_t lp_seed;
+    uint64_t lp_value;
+    uint64_t lp_tag;
 
     // ACCESSORS
     LeftProperty clone() const {
@@ -83,9 +83,9 @@ struct OppositePropertyTransferTraceCase {
   };
 
   struct RightProperty {
-    unsigned int rp_seed;
-    unsigned int rp_value;
-    unsigned int rp_tag;
+    uint64_t rp_seed;
+    uint64_t rp_value;
+    uint64_t rp_tag;
 
     // ACCESSORS
     RightProperty clone() const {
@@ -133,31 +133,30 @@ struct OppositePropertyTransferTraceCase {
   }
 
   static inline const PreStableCategory sample_category =
-      PreStableCategory{7u,
-                        4u,
-                        [](unsigned int x) { return (x + 10u); },
-                        [](unsigned int x) { return (x + 3u); },
-                        [](unsigned int x) { return (x + 20u); },
-                        [](unsigned int x) { return (x + 5u); }};
+      PreStableCategory{UINT64_C(7),
+                        UINT64_C(4),
+                        [](uint64_t x) { return (x + UINT64_C(10)); },
+                        [](uint64_t x) { return (x + UINT64_C(3)); },
+                        [](uint64_t x) { return (x + UINT64_C(20)); },
+                        [](uint64_t x) { return (x + UINT64_C(5)); }};
   static inline const is_right_semi_stable sample_right_stable =
-      RightStableWitness{6u, 11u};
+      RightStableWitness{UINT64_C(6), UINT64_C(11)};
   static inline const satisfies_triangle_2 sample_triangle2 =
-      Triangle2Witness{8u, 16u};
+      Triangle2Witness{UINT64_C(8), UINT64_C(16)};
   static inline const RightProperty sample_right_property =
       theorem_doubling_principle_final<LeftProperty, RightProperty>(
           dual_property_equiv, sample_left_property, sample_category,
           sample_right_stable, sample_triangle2);
-  static inline const unsigned int sample_opposite_tag =
+  static inline const uint64_t sample_opposite_tag =
       opposite_prestable_category(sample_category).ps_tag;
-  static inline const unsigned int sample_opposite_loop_value =
-      opposite_prestable_category(sample_category).ps_Loop(5u);
-  static inline const unsigned int sample_result_seed =
+  static inline const uint64_t sample_opposite_loop_value =
+      opposite_prestable_category(sample_category).ps_Loop(UINT64_C(5));
+  static inline const uint64_t sample_result_seed =
       sample_right_property.rp_seed;
-  static inline const unsigned int sample_result_value =
+  static inline const uint64_t sample_result_value =
       sample_right_property.rp_value;
-  static inline const unsigned int sample_result_tag =
-      sample_right_property.rp_tag;
-  static inline const unsigned int sample_checksum =
+  static inline const uint64_t sample_result_tag = sample_right_property.rp_tag;
+  static inline const uint64_t sample_checksum =
       ((((sample_opposite_tag + sample_opposite_loop_value) +
          sample_result_seed) +
         sample_result_value) +

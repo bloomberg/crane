@@ -184,43 +184,44 @@ struct FoldClosureBuild {
   ///
   /// The inner closure fun x => acc(h+x) captures acc (std::function)
   /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
-  static unsigned int compose_adders(const mylist<unsigned int> &l,
-                                     unsigned int _x0);
+  static uint64_t compose_adders(const mylist<uint64_t> &l, uint64_t _x0);
   /// test1: compose_adders 10,20,30 7 = 67
-  static inline const unsigned int test1 = compose_adders(
-      mylist<unsigned int>::mycons(
-          10u, mylist<unsigned int>::mycons(
-                   20u, mylist<unsigned int>::mycons(
-                            30u, mylist<unsigned int>::mynil()))),
-      7u);
+  static inline const uint64_t test1 = compose_adders(
+      mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil()))),
+      UINT64_C(7));
   /// Pattern 2: Store the composed function and call it TWICE.
   /// If the closure chain has dangling references, the second call
   /// might read clobbered stack memory.
-  static inline const unsigned int test2 = []() {
-    std::function<unsigned int(unsigned int)> f =
-        [](unsigned int _x0) -> unsigned int {
-      return compose_adders(mylist<unsigned int>::mycons(
-                                5u, mylist<unsigned int>::mycons(
-                                        10u, mylist<unsigned int>::mynil())),
-                            _x0);
+  static inline const uint64_t test2 = []() {
+    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+      return compose_adders(
+          mylist<uint64_t>::mycons(
+              UINT64_C(5), mylist<uint64_t>::mycons(UINT64_C(10),
+                                                    mylist<uint64_t>::mynil())),
+          _x0);
     };
-    return (f(0u) + f(100u));
+    return (f(UINT64_C(0)) + f(UINT64_C(100)));
   }();
   /// Pattern 3: Fold producing a list of closures (not composing them).
   /// Each closure captures the list element from the fold iteration.
-  static mylist<std::function<unsigned int(unsigned int)>>
-  collect_adders(const mylist<unsigned int> &l);
-  static unsigned int
-  apply_all(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-            unsigned int x); /// test3: collect_adders 10,20,30
+  static mylist<std::function<uint64_t(uint64_t)>>
+  collect_adders(const mylist<uint64_t> &l);
+  static uint64_t
+  apply_all(const mylist<std::function<uint64_t(uint64_t)>> &fns,
+            uint64_t x); /// test3: collect_adders 10,20,30
   /// = (30+_), (20+_), (10+_)  (reversed by fold_left)
   /// apply_all with x=5: (30+5) + (20+5) + (10+5) = 75
-  static inline const unsigned int test3 =
-      apply_all(collect_adders(mylist<unsigned int>::mycons(
-                    10u, mylist<unsigned int>::mycons(
-                             20u, mylist<unsigned int>::mycons(
-                                      30u, mylist<unsigned int>::mynil())))),
-                5u);
+  static inline const uint64_t test3 = apply_all(
+      collect_adders(mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil())))),
+      UINT64_C(5));
   /// Pattern 4: Fold with a FIXPOINT as accumulator.
   /// The fixpoint captures both acc and h from the fold callback.
   ///
@@ -230,23 +231,23 @@ struct FoldClosureBuild {
   /// Both are locals in the fold callback's scope.
   /// When fold returns, these scopes are destroyed, but the
   /// final fixpoint (stored in the accumulator) still references them.
-  static unsigned int compose_with_fix(const mylist<unsigned int> &l,
-                                       unsigned int _x0);
+  static uint64_t compose_with_fix(const mylist<uint64_t> &l, uint64_t _x0);
   /// test4: compose_with_fix 10
   /// first iteration: acc=id, h=10
   /// go(x) = x + acc(h) = x + id(10) = x + 10
   /// test4 = go(5) = 5 + 10 = 15
-  static inline const unsigned int test4 = compose_with_fix(
-      mylist<unsigned int>::mycons(10u, mylist<unsigned int>::mynil()), 5u);
+  static inline const uint64_t test4 = compose_with_fix(
+      mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil()),
+      UINT64_C(5));
   /// test5: compose_with_fix 10, 20
   /// first: acc=id, h=10, go1(x) = x + id(10) = x + 10
   /// second: acc=go1, h=20, go2(x) = x + go1(20) = x + 30
   /// test5 = go2(7) = 7 + 30 = 37
-  static inline const unsigned int test5 = compose_with_fix(
-      mylist<unsigned int>::mycons(
-          10u,
-          mylist<unsigned int>::mycons(20u, mylist<unsigned int>::mynil())),
-      7u);
+  static inline const uint64_t test5 = compose_with_fix(
+      mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mynil())),
+      UINT64_C(7));
 };
 
 #endif // INCLUDED_FOLD_CLOSURE_BUILD

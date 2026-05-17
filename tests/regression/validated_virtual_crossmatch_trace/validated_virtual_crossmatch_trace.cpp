@@ -1,19 +1,19 @@
 #include "validated_virtual_crossmatch_trace.h"
 
-bool PeanoNat::eq_dec(unsigned int n, unsigned int m) {
+bool PeanoNat::eq_dec(uint64_t n, uint64_t m) {
   if (n <= 0) {
     if (m <= 0) {
       return true;
     } else {
-      unsigned int _x = m - 1;
+      uint64_t _x = m - 1;
       return false;
     }
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     if (m <= 0) {
       return false;
     } else {
-      unsigned int n1 = m - 1;
+      uint64_t n1 = m - 1;
       bool s = PeanoNat::eq_dec(n0, n1);
       if (s) {
         return true;
@@ -67,9 +67,9 @@ bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eq_dec(
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &x,
     const ValidatedVirtualCrossmatchTraceCase::HLAAllele &y) {
   ValidatedVirtualCrossmatchTraceCase::HLALocus hla_locus0 = x.hla_locus;
-  unsigned int hla_group0 = x.hla_group;
+  uint64_t hla_group0 = x.hla_group;
   ValidatedVirtualCrossmatchTraceCase::HLALocus hla_locus1 = y.hla_locus;
-  unsigned int hla_group1 = y.hla_group;
+  uint64_t hla_group1 = y.hla_group;
   if (hla_locus_eq_dec(hla_locus0, hla_locus1)) {
     if (PeanoNat::eq_dec(hla_group0, hla_group1)) {
       return true;
@@ -94,11 +94,11 @@ bool ValidatedVirtualCrossmatchTraceCase::hla_allele_eqb(
 bool ValidatedVirtualCrossmatchTraceCase::epitope_eq_dec(
     const ValidatedVirtualCrossmatchTraceCase::HLAEpitope &x,
     const ValidatedVirtualCrossmatchTraceCase::HLAEpitope &y) {
-  unsigned int epitope_id0 = x.epitope_id;
+  uint64_t epitope_id0 = x.epitope_id;
   ValidatedVirtualCrossmatchTraceCase::HLALocus epitope_locus0 =
       x.epitope_locus;
   bool epitope_immunogenic0 = x.epitope_immunogenic;
-  unsigned int epitope_id1 = y.epitope_id;
+  uint64_t epitope_id1 = y.epitope_id;
   ValidatedVirtualCrossmatchTraceCase::HLALocus epitope_locus1 =
       y.epitope_locus;
   bool epitope_immunogenic1 = y.epitope_immunogenic;
@@ -135,11 +135,11 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
     } else {
-      unsigned int n = a.hla_group - 1;
+      uint64_t n = a.hla_group - 1;
       if (n <= 0) {
         return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
       } else {
-        unsigned int n0 = n - 1;
+        uint64_t n0 = n - 1;
         if (n0 <= 0) {
           return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::cons(
               eplet_62GE,
@@ -148,13 +148,13 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
                   List<
                       ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil()));
         } else {
-          unsigned int n1 = n0 - 1;
+          uint64_t n1 = n0 - 1;
           if (n1 <= 0) {
             return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::cons(
                 eplet_62GE,
                 List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil());
           } else {
-            unsigned int _x = n1 - 1;
+            uint64_t _x = n1 - 1;
             return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
           }
         }
@@ -165,34 +165,34 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
     } else {
-      unsigned int n = a.hla_group - 1;
+      uint64_t n = a.hla_group - 1;
       if (n <= 0) {
         return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
       } else {
-        unsigned int n0 = n - 1;
+        uint64_t n0 = n - 1;
         if (n0 <= 0) {
           return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
         } else {
-          unsigned int n1 = n0 - 1;
+          uint64_t n1 = n0 - 1;
           if (n1 <= 0) {
             return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
           } else {
-            unsigned int n2 = n1 - 1;
+            uint64_t n2 = n1 - 1;
             if (n2 <= 0) {
               return List<
                   ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
             } else {
-              unsigned int n3 = n2 - 1;
+              uint64_t n3 = n2 - 1;
               if (n3 <= 0) {
                 return List<
                     ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
               } else {
-                unsigned int n4 = n3 - 1;
+                uint64_t n4 = n3 - 1;
                 if (n4 <= 0) {
                   return List<
                       ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
                 } else {
-                  unsigned int n5 = n4 - 1;
+                  uint64_t n5 = n4 - 1;
                   if (n5 <= 0) {
                     return List<
                         ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::
@@ -200,7 +200,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
                              List<ValidatedVirtualCrossmatchTraceCase::
                                       HLAEpitope>::nil());
                   } else {
-                    unsigned int _x = n5 - 1;
+                    uint64_t _x = n5 - 1;
                     return List<
                         ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
                   }
@@ -216,26 +216,26 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
     } else {
-      unsigned int n = a.hla_group - 1;
+      uint64_t n = a.hla_group - 1;
       if (n <= 0) {
         return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
       } else {
-        unsigned int n0 = n - 1;
+        uint64_t n0 = n - 1;
         if (n0 <= 0) {
           return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
         } else {
-          unsigned int n1 = n0 - 1;
+          uint64_t n1 = n0 - 1;
           if (n1 <= 0) {
             return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
           } else {
-            unsigned int n2 = n1 - 1;
+            uint64_t n2 = n1 - 1;
             if (n2 <= 0) {
               return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::
                   cons(eplet_77N,
                        List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::
                            nil());
             } else {
-              unsigned int _x = n2 - 1;
+              uint64_t _x = n2 - 1;
               return List<
                   ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
             }
@@ -290,7 +290,7 @@ bool ValidatedVirtualCrossmatchTraceCase::mfi_config_valid(
 ValidatedVirtualCrossmatchTraceCase::MFIStrength
 ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
     const ValidatedVirtualCrossmatchTraceCase::MFIThresholdConfig &cfg,
-    unsigned int mfi) {
+    uint64_t mfi) {
   if (mfi <= cfg.mfi_cfg_negative) {
     return MFIStrength::MFI_NEGATIVE;
   } else {
@@ -313,17 +313,17 @@ ValidatedVirtualCrossmatchTraceCase::classify_mfi_with_config(
 ValidatedVirtualCrossmatchTraceCase::MFIStrength
 ValidatedVirtualCrossmatchTraceCase::classify_mfi_safe(
     const ValidatedVirtualCrossmatchTraceCase::ValidatedMFIConfig &vcfg,
-    unsigned int mfi) {
+    uint64_t mfi) {
   return classify_mfi_with_config(vcfg.vmc_config, mfi);
 }
 
-unsigned int ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
+uint64_t ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMProfile &recipient,
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &donor) {
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
       epitope_dedup(typing_epitopes(donor));
-  return recipient.vxm_epitope_abs.template fold_left<unsigned int>(
-      [=](unsigned int acc,
+  return recipient.vxm_epitope_abs.template fold_left<uint64_t>(
+      [=](uint64_t acc,
           const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody
               &ab) mutable {
         if (donor_epitopes.existsb(
@@ -334,7 +334,7 @@ unsigned int ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
           return acc;
         }
       },
-      0u);
+      UINT64_C(0));
 }
 
 bool ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
@@ -358,7 +358,7 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
     const ValidatedVirtualCrossmatchTraceCase::ValidatedMFIConfig &vcfg,
     const ValidatedVirtualCrossmatchTraceCase::VirtualXMProfile &recipient,
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &donor) {
-  unsigned int max_mfi = max_dsa_mfi(recipient, donor);
+  uint64_t max_mfi = max_dsa_mfi(recipient, donor);
   switch (classify_mfi_safe(vcfg, max_mfi)) {
   case MFIStrength::MFI_NEGATIVE: {
     return VirtualXMResult::VXM_NEGATIVE;
@@ -432,15 +432,16 @@ bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
 }
 
 bool ValidatedVirtualCrossmatchTraceCase::order_sample_valid(
-    unsigned int collection_time, unsigned int current_time) {
+    uint64_t collection_time, uint64_t current_time) {
   return (((current_time - collection_time) > current_time
                ? 0
-               : (current_time - collection_time))) <= (72u * 3600u);
+               : (current_time - collection_time))) <=
+         (UINT64_C(72) * UINT64_C(3600));
 }
 
 bool ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
     const ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder &order,
-    unsigned int current_time) {
+    uint64_t current_time) {
   bool compat_ok = order.sto_compatibility_check;
   bool xm_ok = safe_to_release(order.sto_crossmatch);
   bool sample_ok =
@@ -451,10 +452,10 @@ bool ValidatedVirtualCrossmatchTraceCase::transfusion_order_authorized(
 
 std::optional<ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>
 ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
-    unsigned int recipient_id, unsigned int product_id, bool compat_result,
+    uint64_t recipient_id, uint64_t product_id, bool compat_result,
     ValidatedVirtualCrossmatchTraceCase::CrossmatchWithUncertainty xm,
-    unsigned int sample_time, unsigned int current_time,
-    unsigned int authorizer, bool is_emergency) {
+    uint64_t sample_time, uint64_t current_time, uint64_t authorizer,
+    bool is_emergency) {
   ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder order =
       SafeTransfusionOrder{recipient_id, product_id, compat_result, xm,
                            sample_time,  authorizer, is_emergency};
@@ -499,126 +500,145 @@ bool Bool::bool_dec(bool b1, bool b2) {
   }
 }
 
-unsigned int Nat::tail_add(unsigned int n, unsigned int m) {
+uint64_t Nat::tail_add(uint64_t n, uint64_t m) {
   if (n <= 0) {
     return m;
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     return Nat::tail_add(n0, (m + 1));
   }
 }
 
-unsigned int Nat::tail_addmul(unsigned int r, unsigned int n, unsigned int m) {
+uint64_t Nat::tail_addmul(uint64_t r, uint64_t n, uint64_t m) {
   if (n <= 0) {
     return r;
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
   }
 }
 
-unsigned int Nat::tail_mul(unsigned int n, unsigned int m) {
-  return Nat::tail_addmul(0u, n, m);
+uint64_t Nat::tail_mul(uint64_t n, uint64_t m) {
+  return Nat::tail_addmul(UINT64_C(0), n, m);
 }
 
-unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
+uint64_t Nat::of_uint_acc(const Uint &d, uint64_t acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D0>(d.v());
-    return Nat::of_uint_acc(*a0, Nat::tail_mul(10u, acc));
+    return Nat::of_uint_acc(*a0, Nat::tail_mul(UINT64_C(10), acc));
   } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D1>(d.v());
-    return Nat::of_uint_acc(*a0, (Nat::tail_mul(10u, acc) + 1));
+    return Nat::of_uint_acc(*a0, (Nat::tail_mul(UINT64_C(10), acc) + 1));
   } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D2>(d.v());
-    return Nat::of_uint_acc(*a0, ((Nat::tail_mul(10u, acc) + 1) + 1));
+    return Nat::of_uint_acc(*a0, ((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D3>(d.v());
-    return Nat::of_uint_acc(*a0, (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
+    return Nat::of_uint_acc(*a0,
+                            (((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D4>(d.v());
-    return Nat::of_uint_acc(*a0,
-                            ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
+    return Nat::of_uint_acc(
+        *a0, ((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D5>(d.v());
     return Nat::of_uint_acc(
-        *a0, (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D6>(d.v());
     return Nat::of_uint_acc(
-        *a0, ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        ((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D7>(d.v());
     return Nat::of_uint_acc(
-        *a0, (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        (((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+         1));
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D8>(d.v());
     return Nat::of_uint_acc(
         *a0,
-        ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        ((((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+          1) +
          1));
   } else {
     const auto &[a0] = std::get<typename Uint::D9>(d.v());
     return Nat::of_uint_acc(
         *a0,
-        (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        (((((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) +
+            1) +
+           1) +
           1) +
          1));
   }
 }
 
-unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
+uint64_t Nat::of_uint(const Uint &d) {
+  return Nat::of_uint_acc(d, UINT64_C(0));
+}
 
-unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
+uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D10>(d.v());
-    return Nat::of_hex_uint_acc(*a0, Nat::tail_mul(16u, acc));
+    return Nat::of_hex_uint_acc(*a0, Nat::tail_mul(UINT64_C(16), acc));
   } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D11>(d.v());
-    return Nat::of_hex_uint_acc(*a0, (Nat::tail_mul(16u, acc) + 1));
+    return Nat::of_hex_uint_acc(*a0, (Nat::tail_mul(UINT64_C(16), acc) + 1));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return Nat::of_hex_uint_acc(*a0, ((Nat::tail_mul(16u, acc) + 1) + 1));
+    return Nat::of_hex_uint_acc(*a0,
+                                ((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
-    return Nat::of_hex_uint_acc(*a0, (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
+    return Nat::of_hex_uint_acc(
+        *a0, (((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D14>(d.v());
     return Nat::of_hex_uint_acc(
-        *a0, ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
+        *a0, ((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
     return Nat::of_hex_uint_acc(
-        *a0, (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
     return Nat::of_hex_uint_acc(
-        *a0, ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        ((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D17>(d.v());
     return Nat::of_hex_uint_acc(
-        *a0, (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        (((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+         1));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        ((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+          1) +
          1));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        (((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+            1) +
+           1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        ((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+             1) +
+            1) +
            1) +
           1) +
          1));
@@ -626,7 +646,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        (((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+              1) +
+             1) +
             1) +
            1) +
           1) +
@@ -635,7 +657,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        ((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+               1) +
+              1) +
              1) +
             1) +
            1) +
@@ -645,7 +669,8 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+        (((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                1) +
                1) +
               1) +
              1) +
@@ -657,7 +682,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     const auto &[a0] = std::get<typename Uint0::De>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+        ((((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+                  1) +
+                 1) +
                 1) +
                1) +
               1) +
@@ -670,7 +697,9 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
     return Nat::of_hex_uint_acc(
         *a0,
-        (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+        (((((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+                   1) +
+                  1) +
                  1) +
                 1) +
                1) +
@@ -683,11 +712,11 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
   }
 }
 
-unsigned int Nat::of_hex_uint(const Uint0 &d) {
-  return Nat::of_hex_uint_acc(d, 0u);
+uint64_t Nat::of_hex_uint(const Uint0 &d) {
+  return Nat::of_hex_uint_acc(d, UINT64_C(0));
 }
 
-unsigned int Nat::of_num_uint(const Uint1 &d) {
+uint64_t Nat::of_num_uint(const Uint1 &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
     const auto &[u] = std::get<typename Uint1::UIntDecimal>(d.v());
     return Nat::of_uint(u);

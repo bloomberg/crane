@@ -45,7 +45,7 @@ struct PatternImpossible {
   struct nested {
     // TYPES
     struct Leaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Node {
@@ -118,7 +118,7 @@ struct PatternImpossible {
     }
 
     // CREATORS
-    static nested leaf(unsigned int a0) { return nested(Leaf{a0}); }
+    static nested leaf(uint64_t a0) { return nested(Leaf{a0}); }
 
     static nested node(nested a0, nested a1) {
       return nested(Node{std::make_unique<nested>(std::move(a0)),
@@ -157,7 +157,7 @@ struct PatternImpossible {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
   static T1 nested_rect(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
@@ -171,7 +171,7 @@ struct PatternImpossible {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
   static T1 nested_rec(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
@@ -184,14 +184,14 @@ struct PatternImpossible {
     }
   }
 
-  static unsigned int complex_match(Three x);
-  static unsigned int nested_match(const nested &n);
-  static unsigned int double_match(Three x, Three y);
-  static unsigned int multi_arg_pattern(const nested &n);
-  static inline const unsigned int test1 = complex_match(Three::ONE);
-  static inline const unsigned int test2 =
-      nested_match(nested::node(nested::leaf(5u), nested::leaf(10u)));
-  static inline const unsigned int test3 = double_match(Three::ONE, Three::TWO);
+  static uint64_t complex_match(Three x);
+  static uint64_t nested_match(const nested &n);
+  static uint64_t double_match(Three x, Three y);
+  static uint64_t multi_arg_pattern(const nested &n);
+  static inline const uint64_t test1 = complex_match(Three::ONE);
+  static inline const uint64_t test2 = nested_match(
+      nested::node(nested::leaf(UINT64_C(5)), nested::leaf(UINT64_C(10))));
+  static inline const uint64_t test3 = double_match(Three::ONE, Three::TWO);
 };
 
 #endif // INCLUDED_PATTERN_IMPOSSIBLE

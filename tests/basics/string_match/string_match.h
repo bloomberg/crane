@@ -11,8 +11,10 @@ struct StringMatch {
   static inline const std::string str_hello = "hello";
   static inline const std::string str_world = "world";
   static inline const std::string str_cat = "hello "s + "world"s;
-  static inline const int64_t str_len_empty = ""s.length();
-  static inline const int64_t str_len_hello = "hello"s.length();
+  static inline const int64_t str_len_empty =
+      static_cast<int64_t>(""s.length());
+  static inline const int64_t str_len_hello =
+      static_cast<int64_t>("hello"s.length());
   static bool is_empty(std::string s);
   static inline const bool test_empty_true = is_empty("");
   static inline const bool test_empty_false = is_empty("x");

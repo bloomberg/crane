@@ -120,29 +120,27 @@ public:
 };
 
 struct LoopifyListWindows {
-  static unsigned int len(const List<unsigned int> &l);
-  static List<List<unsigned int>>
-  map_cons_helper(unsigned int x, const List<List<unsigned int>> &ll);
-  static List<unsigned int> drop(unsigned int m, List<unsigned int> xs);
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  span_eq(unsigned int first, List<unsigned int> lst);
-  static List<unsigned int> differences(const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  sliding_pairs(const List<unsigned int> &l);
-  static List<List<unsigned int>> inits(const List<unsigned int> &l);
-  static List<List<unsigned int>> tails(List<unsigned int> l);
-  static List<unsigned int> take(unsigned int n, const List<unsigned int> &l);
-  static List<List<unsigned int>>
-  windows_fuel(unsigned int fuel, unsigned int n, const List<unsigned int> &l);
-  static List<List<unsigned int>> windows(unsigned int n,
-                                          const List<unsigned int> &l);
-  static List<List<unsigned int>> chunks_fuel(unsigned int fuel, unsigned int n,
-                                              const List<unsigned int> &l);
-  static List<List<unsigned int>> chunks(unsigned int n,
-                                         const List<unsigned int> &l);
-  static List<List<unsigned int>> group_fuel(unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<List<unsigned int>> group(const List<unsigned int> &l);
+  static uint64_t len(const List<uint64_t> &l);
+  static List<List<uint64_t>> map_cons_helper(uint64_t x,
+                                              const List<List<uint64_t>> &ll);
+  static List<uint64_t> drop(uint64_t m, List<uint64_t> xs);
+  static std::pair<List<uint64_t>, List<uint64_t>> span_eq(uint64_t first,
+                                                           List<uint64_t> lst);
+  static List<uint64_t> differences(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs(const List<uint64_t> &l);
+  static List<List<uint64_t>> inits(const List<uint64_t> &l);
+  static List<List<uint64_t>> tails(List<uint64_t> l);
+  static List<uint64_t> take(uint64_t n, const List<uint64_t> &l);
+  static List<List<uint64_t>> windows_fuel(uint64_t fuel, uint64_t n,
+                                           const List<uint64_t> &l);
+  static List<List<uint64_t>> windows(uint64_t n, const List<uint64_t> &l);
+  static List<List<uint64_t>> chunks_fuel(uint64_t fuel, uint64_t n,
+                                          const List<uint64_t> &l);
+  static List<List<uint64_t>> chunks(uint64_t n, const List<uint64_t> &l);
+  static List<List<uint64_t>> group_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<List<uint64_t>> group(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_WINDOWS

@@ -15,7 +15,7 @@ struct ClosureCaptureMatch {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct ClosureCaptureMatch {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,13 +122,13 @@ struct ClosureCaptureMatch {
 
     /// Closure that captures a shared_ptr and is called AFTER
     /// the original data structure is dropped.
-    unsigned int capture_and_drop() const {
-      std::function<tree(unsigned int)> f = [&](unsigned int _x0) -> tree {
+    uint64_t capture_and_drop() const {
+      std::function<tree(uint64_t)> f = [&](uint64_t _x0) -> tree {
         return std::move(*this).make_inserter(_x0);
       };
-      auto &&_sv = f(42u);
+      auto &&_sv = f(UINT64_C(42));
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
         return a1;
@@ -137,7 +137,7 @@ struct ClosureCaptureMatch {
 
     /// Nested match returning a closure.
     /// The closure captures fields from BOTH match levels.
-    unsigned int deep_capture(unsigned int x) const {
+    uint64_t deep_capture(uint64_t x) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
@@ -163,7 +163,7 @@ struct ClosureCaptureMatch {
     /// The closure captures shared_ptr fields (left, right subtrees).
     /// If capture is by-reference instead of by-value, the closure
     /// would have dangling references after the match lambda returns.
-    tree make_inserter(unsigned int v) const {
+    tree make_inserter(uint64_t v) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::node(tree::leaf(), v, tree::leaf());
       } else {
@@ -173,8 +173,8 @@ struct ClosureCaptureMatch {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -187,7 +187,7 @@ struct ClosureCaptureMatch {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -196,7 +196,7 @@ struct ClosureCaptureMatch {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -234,8 +234,8 @@ struct ClosureCaptureMatch {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -248,7 +248,7 @@ struct ClosureCaptureMatch {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -257,7 +257,7 @@ struct ClosureCaptureMatch {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -298,25 +298,25 @@ struct ClosureCaptureMatch {
   /// Store a closure in a data structure (not directly returned).
   struct fn_box {
     // DATA
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     fn_box clone() const { return {a0}; }
 
     // CREATORS
-    static fn_box box(std::function<unsigned int(unsigned int)> a0) {
+    static fn_box box(std::function<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
-    unsigned int unbox(unsigned int x) const {
+    uint64_t unbox(uint64_t x) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
       return a0(x);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -324,8 +324,8 @@ struct ClosureCaptureMatch {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -335,16 +335,15 @@ struct ClosureCaptureMatch {
 
   static fn_box box_from_match(const tree &t);
   /// Build a tree, extract closures, drop the tree, use closures.
-  static inline const unsigned int test_capture = []() {
+  static inline const uint64_t test_capture = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t.deep_capture(_x0);
-      };
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return t.deep_capture(_x0); };
       fn_box b = box_from_match(std::move(t));
-      return (f(5u) + std::move(b).unbox(7u));
+      return (f(UINT64_C(5)) + std::move(b).unbox(UINT64_C(7)));
     }();
   }();
 };

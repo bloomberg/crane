@@ -15,7 +15,7 @@ struct CpsEscape {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct CpsEscape {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,14 +122,12 @@ struct CpsEscape {
 
     /// CPS-style: take a tree, produce a continuation (nat -> nat)
     /// that adds tree_sum to its argument. The continuation captures t.
-    unsigned int make_adder(unsigned int x) const {
-      return ((*this).tree_sum() + x);
-    }
+    uint64_t make_adder(uint64_t x) const { return ((*this).tree_sum() + x); }
 
     /// Sum all values in a tree.
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
@@ -137,8 +135,8 @@ struct CpsEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -150,8 +148,8 @@ struct CpsEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -165,19 +163,19 @@ struct CpsEscape {
 
   struct box {
     // DATA
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     box clone() const { return {a0}; }
 
     // CREATORS
-    static box box0(std::function<unsigned int(unsigned int)> a0) {
+    static box box0(std::function<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 box_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -185,8 +183,8 @@ struct CpsEscape {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 box_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -197,7 +195,7 @@ struct CpsEscape {
   /// Store the continuation in a Box. The function receives the closure
   /// as an argument and wraps it - the closure flows THROUGH a parameter.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static box store_in_box(F0 &&f) {
     return box::box0(f);
   }
@@ -209,48 +207,46 @@ struct CpsEscape {
   /// Expected: tree_sum(Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf)))
   /// = 10 + 20 + 30 = 60
   /// adder 5 = 60 + 5 = 65
-  static inline const unsigned int cps_escape = []() {
+  static inline const uint64_t cps_escape = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> adder =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t.make_adder(_x0);
-      };
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<uint64_t(uint64_t)> adder =
+          [=](uint64_t _x0) mutable -> uint64_t { return t.make_adder(_x0); };
       box b = store_in_box(adder);
       auto &[a0] = b;
-      return std::move(a0)(5u);
+      return std::move(a0)(UINT64_C(5));
     }();
   }();
   /// Same but inline: no intermediate let for adder.
   /// The closure goes directly from make_adder into store_in_box.
-  static inline const unsigned int cps_escape_inline = []() {
+  static inline const uint64_t cps_escape_inline = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      box b = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
-        return t.make_adder(_x0);
-      });
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      box b = store_in_box(
+          [=](uint64_t _x0) mutable -> uint64_t { return t.make_adder(_x0); });
       auto &[a0] = b;
-      return std::move(a0)(5u);
+      return std::move(a0)(UINT64_C(5));
     }();
   }();
   /// CPS with two stored continuations.
   /// Build two adders from different trees and store both.
-  static inline const unsigned int cps_escape_two = []() {
+  static inline const uint64_t cps_escape_two = []() {
     return []() {
-      tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                           tree::node(tree::leaf(), 30u, tree::leaf()));
-      tree t2 = tree::node(tree::leaf(), 100u, tree::leaf());
-      box b1 = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
-        return t1.make_adder(_x0);
-      });
-      box b2 = store_in_box([=](unsigned int _x0) mutable -> unsigned int {
-        return t2.make_adder(_x0);
-      });
+      tree t1 = tree::node(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
+      box b1 = store_in_box(
+          [=](uint64_t _x0) mutable -> uint64_t { return t1.make_adder(_x0); });
+      box b2 = store_in_box(
+          [=](uint64_t _x0) mutable -> uint64_t { return t2.make_adder(_x0); });
       auto &[a0] = b1;
       auto &[a00] = b2;
-      return (std::move(a0)(0u) + std::move(a00)(0u));
+      return (std::move(a0)(UINT64_C(0)) + std::move(a00)(UINT64_C(0)));
     }();
   }();
 };

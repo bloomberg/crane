@@ -12,7 +12,7 @@ struct ReuseSelfCycle {
   struct mylist {
     // TYPES
     struct Mycons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<mylist> a1;
     };
 
@@ -79,7 +79,7 @@ struct ReuseSelfCycle {
     }
 
     // CREATORS
-    static mylist mycons(unsigned int a0, mylist a1) {
+    static mylist mycons(uint64_t a0, mylist a1) {
       return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
@@ -114,7 +114,7 @@ struct ReuseSelfCycle {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -125,7 +125,7 @@ struct ReuseSelfCycle {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -135,7 +135,7 @@ struct ReuseSelfCycle {
     }
   }
 
-  static unsigned int length(const mylist &l);
+  static uint64_t length(const mylist &l);
   /// BUG: The reuse optimization fires and sets d_a1 = l, where l
   /// is the scrutinee (the very node being mutated).
   /// This creates a CYCLE: the node's tail points to itself.
@@ -155,13 +155,14 @@ struct ReuseSelfCycle {
   /// test1: prepend_self(1, 2, true) should produce 1, 1, 2.
   /// In Rocq: mycons 1 (mycons 1 (mycons 2 mynil)), length = 3.
   /// With reuse bug: mycons 1 -> itself (cycle), length = infinite loop.
-  static inline const unsigned int test1 = length(prepend_self(
-      mylist::mycons(1u, mylist::mycons(2u, mylist::mynil())), true));
+  static inline const uint64_t test1 = length(prepend_self(
+      mylist::mycons(UINT64_C(1), mylist::mycons(UINT64_C(2), mylist::mynil())),
+      true));
   /// test2: Even simpler - single element list.
   /// prepend_self(42, true) should produce 42, 42, length = 2.
   /// With bug: 42 -> itself, length = infinite.
-  static inline const unsigned int test2 =
-      length(prepend_self(mylist::mycons(42u, mylist::mynil()), true));
+  static inline const uint64_t test2 =
+      length(prepend_self(mylist::mycons(UINT64_C(42), mylist::mynil()), true));
 };
 
 #endif // INCLUDED_REUSE_SELF_CYCLE

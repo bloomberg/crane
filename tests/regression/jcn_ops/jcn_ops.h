@@ -5,10 +5,10 @@
 
 struct JcnOps {
   struct state {
-    unsigned int acc;
+    uint64_t acc;
     bool carry;
     bool test_pin;
-    unsigned int pc;
+    uint64_t pc;
 
     // ACCESSORS
     state clone() const {
@@ -16,45 +16,45 @@ struct JcnOps {
     }
   };
 
-  static bool jcn_condition(const state &s, unsigned int cond);
-  static unsigned int addr12_of_nat(unsigned int n);
-  static unsigned int pc_inc2(const state &s);
-  static unsigned int page_of(unsigned int p);
-  static unsigned int page_base(unsigned int p);
-  static unsigned int base_for_next2(const state &s);
-  static unsigned int branch_target(const state &s, unsigned int cond,
-                                    unsigned int off);
-  static inline const unsigned int test_branch_target =
-      branch_target(state{0u, true, false, 300u}, 2u, 17u);
+  static bool jcn_condition(const state &s, uint64_t cond);
+  static uint64_t addr12_of_nat(uint64_t n);
+  static uint64_t pc_inc2(const state &s);
+  static uint64_t page_of(uint64_t p);
+  static uint64_t page_base(uint64_t p);
+  static uint64_t base_for_next2(const state &s);
+  static uint64_t branch_target(const state &s, uint64_t cond, uint64_t off);
+  static inline const uint64_t test_branch_target =
+      branch_target(state{UINT64_C(0), true, false, UINT64_C(300)}, UINT64_C(2),
+                    UINT64_C(17));
   static inline const bool check_carry_clear_gate =
-      jcn_condition(state{1u, false, true, 0u}, 10u);
+      jcn_condition(state{UINT64_C(1), false, true, UINT64_C(0)}, UINT64_C(10));
   static inline const bool check_nonzero_gate =
-      jcn_condition(state{3u, false, true, 0u}, 12u);
+      jcn_condition(state{UINT64_C(3), false, true, UINT64_C(0)}, UINT64_C(12));
   static inline const bool check_test_high =
-      jcn_condition(state{1u, false, true, 0u}, 9u);
+      jcn_condition(state{UINT64_C(1), false, true, UINT64_C(0)}, UINT64_C(9));
   static inline const bool check_test_low =
-      jcn_condition(state{1u, false, false, 0u}, 1u);
+      jcn_condition(state{UINT64_C(1), false, false, UINT64_C(0)}, UINT64_C(1));
   static inline const bool check_zero_gate =
-      jcn_condition(state{0u, false, true, 0u}, 4u);
+      jcn_condition(state{UINT64_C(0), false, true, UINT64_C(0)}, UINT64_C(4));
   static inline const bool test_condition =
       (check_carry_clear_gate &&
        (check_nonzero_gate &&
         (check_test_high && (check_test_low && check_zero_gate))));
-  static inline const unsigned int JCN_JNT = 1u;
-  static inline const unsigned int JCN_JC = 2u;
-  static inline const unsigned int JCN_JZ = 4u;
-  static inline const unsigned int JCN_JT = 9u;
-  static inline const unsigned int JCN_JNC = 10u;
-  static inline const unsigned int JCN_JNZ = 12u;
-  static inline const unsigned int test_constants = []() {
+  static inline const uint64_t JCN_JNT = UINT64_C(1);
+  static inline const uint64_t JCN_JC = UINT64_C(2);
+  static inline const uint64_t JCN_JZ = UINT64_C(4);
+  static inline const uint64_t JCN_JT = UINT64_C(9);
+  static inline const uint64_t JCN_JNC = UINT64_C(10);
+  static inline const uint64_t JCN_JNZ = UINT64_C(12);
+  static inline const uint64_t test_constants = []() {
     return []() {
-      state s = state{0u, true, false, 0u};
-      return (((jcn_condition(s, JCN_JC) ? 1u : 0u) +
-               (jcn_condition(s, JCN_JZ) ? 1u : 0u)) +
-              (jcn_condition(s, JCN_JNT) ? 1u : 0u));
+      state s = state{UINT64_C(0), true, false, UINT64_C(0)};
+      return (((jcn_condition(s, JCN_JC) ? UINT64_C(1) : UINT64_C(0)) +
+               (jcn_condition(s, JCN_JZ) ? UINT64_C(1) : UINT64_C(0))) +
+              (jcn_condition(s, JCN_JNT) ? UINT64_C(1) : UINT64_C(0)));
     }();
   }();
-  static inline const std::pair<std::pair<unsigned int, bool>, unsigned int> t =
+  static inline const std::pair<std::pair<uint64_t, bool>, uint64_t> t =
       std::make_pair(std::make_pair(test_branch_target, test_condition),
                      test_constants);
 };

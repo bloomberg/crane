@@ -1,20 +1,20 @@
 #include "no_mapping_event_probe.h"
 
-void NoMappingEventProbe::draw_hidden_tile(unsigned int x, unsigned int y) {
+void NoMappingEventProbe::draw_hidden_tile(uint64_t x, uint64_t y) {
   {
     reproE::hidden(x, y);
     return;
   }
 }
 
-void NoMappingEventProbe::draw_revealed_tile(unsigned int x, unsigned int y) {
+void NoMappingEventProbe::draw_revealed_tile(uint64_t x, uint64_t y) {
   {
     reproE::revealed(x, y);
     return;
   }
 }
 
-void NoMappingEventProbe::loop(unsigned int x, unsigned int y,
+void NoMappingEventProbe::loop(uint64_t x, uint64_t y,
                                const List<bool> &cells) {
   if (std::holds_alternative<typename List<bool>::Nil>(cells.v())) {
     return;

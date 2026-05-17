@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -24,8 +24,8 @@ int main() {
   auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
     3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
-  auto add = [](unsigned int a, unsigned int b) { return a + b; };
-  auto mul = [](unsigned int a, unsigned int b) { return a * b; };
+  auto add = [](uint64_t a, uint64_t b) { return a + b; };
+  auto mul = [](uint64_t a, uint64_t b) { return a * b; };
 
   // fold_left
   ASSERT(LoopifyFolds::fold_left(add, 0u, nil) == 0u);
@@ -58,13 +58,13 @@ int main() {
   ASSERT(LoopifyFolds::foldr1(mul, l3) == 6u);
 
   // iterate_accum
-  auto dbl = [](unsigned int x) { return x * 2; };
+  auto dbl = [](uint64_t x) { return x * 2; };
   auto iters = LoopifyFolds::iterate_accum(dbl, 4u, 1u);
   // Should be [1, 2, 4, 8]
   ASSERT(LoopifyFolds::fold_left(add, 0u, iters) == 15u);
 
   // unfold
-  auto next = [](unsigned int x) -> std::pair<unsigned int, unsigned int> {
+  auto next = [](uint64_t x) -> std::pair<uint64_t, uint64_t> {
     return {x, x + 1};
   };
   auto unfolded = LoopifyFolds::unfold(5u, next, 0u);

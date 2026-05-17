@@ -120,9 +120,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -131,7 +131,7 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct DisassembleOps {
@@ -142,11 +142,11 @@ struct DisassembleOps {
     struct NOP2 {};
 
     struct LDM {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct LDM2 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP, NOP2, LDM, LDM2>;
@@ -201,9 +201,9 @@ struct DisassembleOps {
 
     static instruction nop2() { return instruction(NOP2{}); }
 
-    static instruction ldm(unsigned int a0) { return instruction(LDM{a0}); }
+    static instruction ldm(uint64_t a0) { return instruction(LDM{a0}); }
 
-    static instruction ldm2(unsigned int a0) { return instruction(LDM2{a0}); }
+    static instruction ldm2(uint64_t a0) { return instruction(LDM2{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -213,8 +213,8 @@ struct DisassembleOps {
   };
 
   template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F3 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, uint64_t &>
   static T1 instruction_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2,
                              const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
@@ -231,8 +231,8 @@ struct DisassembleOps {
   }
 
   template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F3 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, uint64_t &>
   static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2,
                             const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
@@ -248,36 +248,39 @@ struct DisassembleOps {
     }
   }
 
-  static instruction decode1(unsigned int b1, unsigned int b2);
-  static List<unsigned int> drop_(unsigned int n, List<unsigned int> l);
-  static std::optional<std::pair<instruction, unsigned int>>
-  disassemble1(const List<unsigned int> &rom0, unsigned int addr);
-  static inline const unsigned int test_disassemble_drop_window =
-      []() -> unsigned int {
+  static instruction decode1(uint64_t b1, uint64_t b2);
+  static List<uint64_t> drop_(uint64_t n, List<uint64_t> l);
+  static std::optional<std::pair<instruction, uint64_t>>
+  disassemble1(const List<uint64_t> &rom0, uint64_t addr);
+  static inline const uint64_t test_disassemble_drop_window = []() -> uint64_t {
     auto _cs = disassemble1(
-        List<unsigned int>::cons(
-            1u, List<unsigned int>::cons(
-                    2u, List<unsigned int>::cons(
-                            3u, List<unsigned int>::cons(
-                                    4u, List<unsigned int>::cons(
-                                            5u, List<unsigned int>::nil()))))),
-        1u);
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(
+                    UINT64_C(3),
+                    List<uint64_t>::cons(
+                        UINT64_C(4),
+                        List<uint64_t>::cons(UINT64_C(5),
+                                             List<uint64_t>::nil()))))),
+        UINT64_C(1));
     if (_cs.has_value()) {
-      const std::pair<instruction, unsigned int> &p = *_cs;
+      const std::pair<instruction, uint64_t> &p = *_cs;
       const instruction &_x = p.first;
-      const unsigned int &next = p.second;
+      const uint64_t &next = p.second;
       return next;
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
-  static instruction decode2(unsigned int b1, unsigned int b2);
+  static instruction decode2(uint64_t b1, uint64_t b2);
 
-  template <typename T1> static List<T1> drop(unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
         return List<T1>::nil();
       } else {
@@ -287,29 +290,31 @@ struct DisassembleOps {
     }
   }
 
-  static std::optional<std::pair<instruction, unsigned int>>
-  disassemble2(const List<unsigned int> &rom0, unsigned int addr);
-  static inline const unsigned int test_disassemble_next_address =
-      []() -> unsigned int {
+  static std::optional<std::pair<instruction, uint64_t>>
+  disassemble2(const List<uint64_t> &rom0, uint64_t addr);
+  static inline const uint64_t test_disassemble_next_address =
+      []() -> uint64_t {
     auto _cs = disassemble2(
-        List<unsigned int>::cons(
-            0u, List<unsigned int>::cons(
-                    7u, List<unsigned int>::cons(
-                            9u, List<unsigned int>::cons(
-                                    11u, List<unsigned int>::nil())))),
-        0u);
+        List<uint64_t>::cons(
+            UINT64_C(0),
+            List<uint64_t>::cons(
+                UINT64_C(7),
+                List<uint64_t>::cons(
+                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
+                                                      List<uint64_t>::nil())))),
+        UINT64_C(0));
     if (_cs.has_value()) {
-      const std::pair<instruction, unsigned int> &p = *_cs;
+      const std::pair<instruction, uint64_t> &p = *_cs;
       const instruction &_x = p.first;
-      const unsigned int &next = p.second;
+      const uint64_t &next = p.second;
       return next;
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
-  static instruction decode3(unsigned int b1, unsigned int b2);
-  static std::optional<std::pair<instruction, unsigned int>>
-  disassemble3(const List<unsigned int> &rom0, unsigned int addr);
+  static instruction decode3(uint64_t b1, uint64_t b2);
+  static std::optional<std::pair<instruction, uint64_t>>
+  disassemble3(const List<uint64_t> &rom0, uint64_t addr);
 
   template <typename T1> static bool is_none(const std::optional<T1> &o) {
     if (o.has_value()) {
@@ -321,15 +326,16 @@ struct DisassembleOps {
   }
 
   static inline const bool test_disassemble_short_rom_none =
-      is_none<std::pair<instruction, unsigned int>>(disassemble3(
-          List<unsigned int>::cons(9u, List<unsigned int>::nil()), 0u));
-  static instruction decode4(unsigned int b1, unsigned int b2);
-  static std::optional<std::pair<instruction, unsigned int>>
-  disassemble4(const List<unsigned int> &rom0, unsigned int addr);
+      is_none<std::pair<instruction, uint64_t>>(
+          disassemble3(List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()),
+                       UINT64_C(0)));
+  static instruction decode4(uint64_t b1, uint64_t b2);
+  static std::optional<std::pair<instruction, uint64_t>>
+  disassemble4(const List<uint64_t> &rom0, uint64_t addr);
 
   struct state {
-    List<unsigned int> regs;
-    List<unsigned int> rom;
+    List<uint64_t> regs;
+    List<uint64_t> rom;
 
     // ACCESSORS
     state clone() const {
@@ -338,56 +344,55 @@ struct DisassembleOps {
   };
 
   static inline const state init_state =
-      state{ListDef::template repeat<unsigned int>(0u, 16u),
-            ListDef::template repeat<unsigned int>(0u, 4096u)};
-  static inline const unsigned int test_decode_disassemble_1 =
-      []() -> unsigned int {
+      state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+            ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4096))};
+  static inline const uint64_t test_decode_disassemble_1 = []() -> uint64_t {
     auto _cs = disassemble4(
-        List<unsigned int>::cons(
-            0u, List<unsigned int>::cons(
-                    7u, List<unsigned int>::cons(
-                            9u, List<unsigned int>::cons(
-                                    11u, List<unsigned int>::nil())))),
-        0u);
+        List<uint64_t>::cons(
+            UINT64_C(0),
+            List<uint64_t>::cons(
+                UINT64_C(7),
+                List<uint64_t>::cons(
+                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
+                                                      List<uint64_t>::nil())))),
+        UINT64_C(0));
     if (_cs.has_value()) {
-      const std::pair<instruction, unsigned int> &p = *_cs;
+      const std::pair<instruction, uint64_t> &p = *_cs;
       const instruction &_x = p.first;
-      const unsigned int &next = p.second;
+      const uint64_t &next = p.second;
       return next;
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
-  static inline const unsigned int test_decode_disassemble_2 =
-      []() -> unsigned int {
+  static inline const uint64_t test_decode_disassemble_2 = []() -> uint64_t {
     auto _cs = disassemble4(
-        List<unsigned int>::cons(
-            0u, List<unsigned int>::cons(
-                    7u, List<unsigned int>::cons(
-                            9u, List<unsigned int>::cons(
-                                    11u, List<unsigned int>::nil())))),
-        0u);
+        List<uint64_t>::cons(
+            UINT64_C(0),
+            List<uint64_t>::cons(
+                UINT64_C(7),
+                List<uint64_t>::cons(
+                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
+                                                      List<uint64_t>::nil())))),
+        UINT64_C(0));
     if (_cs.has_value()) {
-      const std::pair<instruction, unsigned int> &p = *_cs;
+      const std::pair<instruction, uint64_t> &p = *_cs;
       const instruction &_x = p.first;
-      const unsigned int &next = p.second;
+      const uint64_t &next = p.second;
       return next;
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
-  static inline const unsigned int test_init_state_regs =
-      init_state.regs.length();
-  static inline const unsigned int test_init_state_rom =
-      init_state.rom.length();
+  static inline const uint64_t test_init_state_regs = init_state.regs.length();
+  static inline const uint64_t test_init_state_rom = init_state.rom.length();
   static inline const std::pair<
       std::pair<
-          std::pair<
-              std::pair<std::pair<std::pair<unsigned int, unsigned int>, bool>,
-                        unsigned int>,
-              unsigned int>,
-          unsigned int>,
-      unsigned int>
+          std::pair<std::pair<std::pair<std::pair<uint64_t, uint64_t>, bool>,
+                              uint64_t>,
+                    uint64_t>,
+          uint64_t>,
+      uint64_t>
       t = std::make_pair(
           std::make_pair(
               std::make_pair(
@@ -402,11 +407,11 @@ struct DisassembleOps {
           test_init_state_rom);
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
-    unsigned int k = n - 1;
+    uint64_t k = n - 1;
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }

@@ -10,38 +10,34 @@
 ///
 /// This is different from pointer-based (shared_ptr) types where the
 /// field data lives on the heap and persists as long as the shared_ptr.
-std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<uint64_t(uint64_t)>>
 ValueTypeMatchFix::make_adder_from_triple(const ValueTypeMatchFix::triple &t) {
   const auto &[a0, a1, a2] = t;
-  unsigned int base = ((a0 + a1) + a2);
-  auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
+  uint64_t base = ((a0 + a1) + a2);
+  auto go_impl = [=](auto &_self_go, uint64_t x) mutable -> uint64_t {
     if (x <= 0) {
       return base;
     } else {
-      unsigned int x_ = x - 1;
+      uint64_t x_ = x - 1;
       return (_self_go(_self_go, x_) + 1);
     }
   };
-  auto go = [=](unsigned int x) mutable -> unsigned int {
-    return go_impl(go_impl, x);
-  };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(go);
+  auto go = [=](uint64_t x) mutable -> uint64_t { return go_impl(go_impl, x); };
+  return std::make_optional<std::function<uint64_t(uint64_t)>>(go);
 }
 
 /// Direct capture of pattern fields (no intermediate let binding).
-std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<uint64_t(uint64_t)>>
 ValueTypeMatchFix::make_field_adder(const ValueTypeMatchFix::triple &t) {
   const auto &[a0, a1, a2] = t;
-  auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
+  auto go_impl = [=](auto &_self_go, uint64_t x) mutable -> uint64_t {
     if (x <= 0) {
       return a0;
     } else {
-      unsigned int x_ = x - 1;
+      uint64_t x_ = x - 1;
       return (_self_go(_self_go, x_) + 1);
     }
   };
-  auto go = [=](unsigned int x) mutable -> unsigned int {
-    return go_impl(go_impl, x);
-  };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(go);
+  auto go = [=](uint64_t x) mutable -> uint64_t { return go_impl(go_impl, x); };
+  return std::make_optional<std::function<uint64_t(uint64_t)>>(go);
 }

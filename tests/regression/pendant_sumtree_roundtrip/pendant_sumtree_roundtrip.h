@@ -165,9 +165,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil0>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
       return ((*a1).length() + 1);
@@ -213,7 +213,7 @@ template <typename A> struct T0 {
 
   struct Cons {
     A h;
-    unsigned int n;
+    uint64_t n;
     std::unique_ptr<T0<A>> a2;
   };
 
@@ -268,7 +268,7 @@ public:
 
   static T0<A> nil() { return T0(Nil{}); }
 
-  static T0<A> cons(A h, unsigned int n, T0<A> a2) {
+  static T0<A> cons(A h, uint64_t n, T0<A> a2) {
     return T0(Cons{std::move(h), n, std::make_unique<T0<A>>(std::move(a2))});
   }
 
@@ -282,11 +282,11 @@ public:
 struct T {
   // TYPES
   struct F1 {
-    unsigned int n;
+    uint64_t n;
   };
 
   struct FS {
-    unsigned int n;
+    uint64_t n;
     std::unique_ptr<T> a1;
   };
 
@@ -351,9 +351,9 @@ public:
   }
 
   // CREATORS
-  static T f1(unsigned int n) { return T(F1{n}); }
+  static T f1(uint64_t n) { return T(F1{n}); }
 
-  static T fs(unsigned int n, T a1) {
+  static T fs(uint64_t n, T a1) {
     return T(FS{n, std::make_unique<T>(std::move(a1))});
   }
 
@@ -384,25 +384,24 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Sig<unsigned int> to_nat(unsigned int) const {
+  Sig<uint64_t> to_nat(uint64_t) const {
     if (std::holds_alternative<typename T::F1>(this->v())) {
-      return Sig<unsigned int>::exist(0u);
+      return Sig<uint64_t>::exist(UINT64_C(0));
     } else {
       const auto &[n1, a1] = std::get<typename T::FS>(this->v());
       const auto &_sv0 = (*a1).to_nat(n1);
       const auto &[x0] = _sv0;
-      return Sig<unsigned int>::exist((x0 + 1));
+      return Sig<uint64_t>::exist((x0 + 1));
     }
   }
 };
 
 struct Fin {
-  static T of_nat_lt(unsigned int p, unsigned int n);
+  static T of_nat_lt(uint64_t p, uint64_t n);
 };
 
 struct Vector {
-  template <typename T1>
-  static List<T1> to_list(unsigned int n, const T0<T1> &v);
+  template <typename T1> static List<T1> to_list(uint64_t n, const T0<T1> &v);
 };
 
 struct Datatypes {
@@ -413,24 +412,23 @@ struct Datatypes {
 
 struct PendantSumtreeRoundtripCase {
   using digit = T;
-  static unsigned int digit_to_nat(const T &d);
-  static digit digit_of_nat(unsigned int n);
-  static inline const digit digit0 = digit_of_nat(0u);
-  static inline const digit digit1 = digit_of_nat(1u);
-  static inline const digit digit2 = digit_of_nat(2u);
-  static inline const digit digit3 = digit_of_nat(3u);
-  static inline const digit digit4 = digit_of_nat(4u);
-  static inline const digit digit5 = digit_of_nat(5u);
-  static inline const digit digit6 = digit_of_nat(6u);
-  static inline const digit digit7 = digit_of_nat(7u);
-  static inline const digit digit9 = digit_of_nat(9u);
-  static unsigned int value_digits(unsigned int _x, const T0<T> &ds);
-  static std::optional<T0<digit>> list_to_vector_opt(unsigned int n,
+  static uint64_t digit_to_nat(const T &d);
+  static digit digit_of_nat(uint64_t n);
+  static inline const digit digit0 = digit_of_nat(UINT64_C(0));
+  static inline const digit digit1 = digit_of_nat(UINT64_C(1));
+  static inline const digit digit2 = digit_of_nat(UINT64_C(2));
+  static inline const digit digit3 = digit_of_nat(UINT64_C(3));
+  static inline const digit digit4 = digit_of_nat(UINT64_C(4));
+  static inline const digit digit5 = digit_of_nat(UINT64_C(5));
+  static inline const digit digit6 = digit_of_nat(UINT64_C(6));
+  static inline const digit digit7 = digit_of_nat(UINT64_C(7));
+  static inline const digit digit9 = digit_of_nat(UINT64_C(9));
+  static uint64_t value_digits(uint64_t _x, const T0<T> &ds);
+  static std::optional<T0<digit>> list_to_vector_opt(uint64_t n,
                                                      const List<T> &xs);
-  static List<List<digit>> encode_multi(unsigned int n,
-                                        const List<T0<T>> &nums);
+  static List<List<digit>> encode_multi(uint64_t n, const List<T0<T>> &nums);
   static std::optional<List<T0<digit>>>
-  decode_multi(unsigned int n, const List<List<T>> &segments);
+  decode_multi(uint64_t n, const List<List<T>> &segments);
   enum class Twist { TS, TZ };
 
   template <typename T1> static T1 Twist_rect(T1 f, T1 f0, Twist t1) {
@@ -551,13 +549,13 @@ struct PendantSumtreeRoundtripCase {
     }
   };
 
-  static std::optional<T0<digit>> pendant_digits(unsigned int n,
+  static std::optional<T0<digit>> pendant_digits(uint64_t n,
                                                  const CertifiedPendant &p);
-  static std::optional<unsigned int> pendant_value(unsigned int n,
-                                                   const CertifiedPendant &p);
-  using Ledger = List<SigT<unsigned int, CertifiedPendant>>;
-  static List<std::optional<unsigned int>>
-  ledger_values(const List<SigT<unsigned int, CertifiedPendant>> &l);
+  static std::optional<uint64_t> pendant_value(uint64_t n,
+                                               const CertifiedPendant &p);
+  using Ledger = List<SigT<uint64_t, CertifiedPendant>>;
+  static List<std::optional<uint64_t>>
+  ledger_values(const List<SigT<uint64_t, CertifiedPendant>> &l);
 
   struct PendantGroup {
     CertifiedPendant pg_top;
@@ -569,7 +567,7 @@ struct PendantSumtreeRoundtripCase {
     }
   };
 
-  static bool group_sums_validb(unsigned int n, const PendantGroup &g);
+  static bool group_sums_validb(uint64_t n, const PendantGroup &g);
 
   struct SumTree {
     // TYPES
@@ -720,7 +718,7 @@ struct PendantSumtreeRoundtripCase {
     requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
              std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
                                    List<SumTree> &>
-  static T1 SumTree_rect(unsigned int, F1 &&f, F2 &&f0, const SumTree &s) {
+  static T1 SumTree_rect(uint64_t, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[a0] = std::get<typename SumTree::SumLeaf>(s.v());
       return f(a0);
@@ -734,7 +732,7 @@ struct PendantSumtreeRoundtripCase {
     requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
              std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
                                    List<SumTree> &>
-  static T1 SumTree_rec(unsigned int, F1 &&f, F2 &&f0, const SumTree &s) {
+  static T1 SumTree_rec(uint64_t, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[a0] = std::get<typename SumTree::SumLeaf>(s.v());
       return f(a0);
@@ -744,20 +742,17 @@ struct PendantSumtreeRoundtripCase {
     }
   }
 
-  static CertifiedPendant sumtree_top(unsigned int _x, const SumTree &st);
-  static List<CertifiedPendant> sumtree_leaves(unsigned int n,
-                                               const SumTree &st);
-  static unsigned int sumtree_depth(unsigned int n, const SumTree &st);
-  static bool sumtree_validb_aux(unsigned int n, unsigned int fuel,
-                                 const SumTree &st);
-  static bool sumtree_validb(unsigned int n, const SumTree &st);
-  static std::optional<unsigned int> sumtree_leaf_total(unsigned int n,
-                                                        const SumTree &st);
-  static bool nat_list_eqb(const List<unsigned int> &xs,
-                           const List<unsigned int> &ys);
-  static bool option_nat_eqb(const std::optional<unsigned int> &x,
-                             const std::optional<unsigned int> &y);
-  static bool option_nat_is_some(const std::optional<unsigned int> &x);
+  static CertifiedPendant sumtree_top(uint64_t _x, const SumTree &st);
+  static List<CertifiedPendant> sumtree_leaves(uint64_t n, const SumTree &st);
+  static uint64_t sumtree_depth(uint64_t n, const SumTree &st);
+  static bool sumtree_validb_aux(uint64_t n, uint64_t fuel, const SumTree &st);
+  static bool sumtree_validb(uint64_t n, const SumTree &st);
+  static std::optional<uint64_t> sumtree_leaf_total(uint64_t n,
+                                                    const SumTree &st);
+  static bool nat_list_eqb(const List<uint64_t> &xs, const List<uint64_t> &ys);
+  static bool option_nat_eqb(const std::optional<uint64_t> &x,
+                             const std::optional<uint64_t> &y);
+  static bool option_nat_is_some(const std::optional<uint64_t> &x);
   static T0<digit> digit_vec1(T a);
   static T0<digit> digit_vec3(T a, T b, T c);
   static inline const CordMeta sample_meta_a =
@@ -789,17 +784,19 @@ struct PendantSumtreeRoundtripCase {
       List<T0<T>>::cons0(digits_462,
                          List<T0<T>>::cons0(digits_269, List<T0<T>>::nil0())));
   static inline const bool sample_multi_roundtrip_ok = []() -> bool {
-    auto _cs = decode_multi(3u, encode_multi(3u, sample_multi_digits));
+    auto _cs = decode_multi(UINT64_C(3),
+                            encode_multi(UINT64_C(3), sample_multi_digits));
     if (_cs.has_value()) {
       const List<T0<T>> &decoded = *_cs;
       return nat_list_eqb(
-          decoded.template map<unsigned int>([](T0<digit> _x0) -> unsigned int {
-            return value_digits(3u, _x0);
+          decoded.template map<uint64_t>([](T0<digit> _x0) -> uint64_t {
+            return value_digits(UINT64_C(3), _x0);
           }),
-          List<unsigned int>::cons0(
-              731u, List<unsigned int>::cons0(
-                        462u, List<unsigned int>::cons0(
-                                  269u, List<unsigned int>::nil0()))));
+          List<uint64_t>::cons0(
+              UINT64_C(731),
+              List<uint64_t>::cons0(
+                  UINT64_C(462), List<uint64_t>::cons0(
+                                     UINT64_C(269), List<uint64_t>::nil0()))));
     } else {
       return false;
     }
@@ -820,23 +817,27 @@ struct PendantSumtreeRoundtripCase {
           SumTree::sumleaf(pendant_462),
           List<SumTree>::cons0(sample_subtree, List<SumTree>::nil0())));
   static inline const Ledger sample_ledger =
-      List<SigT<unsigned int, CertifiedPendant>>::cons0(
-          SigT<unsigned int, CertifiedPendant>::existt(3u, pendant_731),
-          List<SigT<unsigned int, CertifiedPendant>>::cons0(
-              SigT<unsigned int, CertifiedPendant>::existt(3u, pendant_462),
-              List<SigT<unsigned int, CertifiedPendant>>::cons0(
-                  SigT<unsigned int, CertifiedPendant>::existt(1u, pendant_5),
-                  List<SigT<unsigned int, CertifiedPendant>>::nil0())));
+      List<SigT<uint64_t, CertifiedPendant>>::cons0(
+          SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_731),
+          List<SigT<uint64_t, CertifiedPendant>>::cons0(
+              SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3),
+                                                       pendant_462),
+              List<SigT<uint64_t, CertifiedPendant>>::cons0(
+                  SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(1),
+                                                           pendant_5),
+                  List<SigT<uint64_t, CertifiedPendant>>::nil0())));
   static inline const bool sample_group_valid =
-      group_sums_validb(3u, sample_group);
+      group_sums_validb(UINT64_C(3), sample_group);
   static inline const bool sample_subtree_valid =
-      sumtree_validb(3u, sample_subtree);
-  static inline const bool sample_tree_valid = sumtree_validb(3u, sample_tree);
-  static inline const bool sample_leaf_total_matches_root = option_nat_eqb(
-      sumtree_leaf_total(3u, sample_tree), pendant_value(3u, pendant_731));
-  static inline const unsigned int sample_tree_depth =
-      sumtree_depth(3u, sample_tree);
-  static inline const unsigned int sample_ledger_entry_count =
+      sumtree_validb(UINT64_C(3), sample_subtree);
+  static inline const bool sample_tree_valid =
+      sumtree_validb(UINT64_C(3), sample_tree);
+  static inline const bool sample_leaf_total_matches_root =
+      option_nat_eqb(sumtree_leaf_total(UINT64_C(3), sample_tree),
+                     pendant_value(UINT64_C(3), pendant_731));
+  static inline const uint64_t sample_tree_depth =
+      sumtree_depth(UINT64_C(3), sample_tree);
+  static inline const uint64_t sample_ledger_entry_count =
       ledger_values(sample_ledger).length();
   static inline const bool sample_ledger_all_present =
       ledger_values(sample_ledger).forallb(option_nat_is_some);
@@ -853,9 +854,8 @@ std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
   }
 }
 
-template <typename T1>
-List<T1> Vector::to_list(unsigned int n, const T0<T1> &v) {
-  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, unsigned int,
+template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
+  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, uint64_t,
                                 const T0<T1> &v0, List<T1> b) -> List<T1> {
     if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
       return b;
@@ -865,7 +865,7 @@ List<T1> Vector::to_list(unsigned int n, const T0<T1> &v) {
           h, _self_fold_right_fix(_self_fold_right_fix, n1, *a2, std::move(b)));
     }
   };
-  auto fold_right_fix = [&](unsigned int _x, const T0<T1> &v0,
+  auto fold_right_fix = [&](uint64_t _x, const T0<T1> &v0,
                             List<T1> b) -> List<T1> {
     return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
   };

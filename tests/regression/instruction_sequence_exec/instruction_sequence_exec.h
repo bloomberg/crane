@@ -122,8 +122,8 @@ public:
 
 struct InstructionSequenceExec {
   struct state {
-    unsigned int pc_;
-    unsigned int acc_;
+    uint64_t pc_;
+    uint64_t acc_;
 
     // ACCESSORS
     state clone() const { return state{(*this).pc_, (*this).acc_}; }
@@ -136,7 +136,7 @@ struct InstructionSequenceExec {
     struct INC_PC {};
 
     struct ADD_ACC {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP_, INC_PC, ADD_ACC>;
@@ -186,9 +186,7 @@ struct InstructionSequenceExec {
 
     static instruction inc_pc() { return instruction(INC_PC{}); }
 
-    static instruction add_acc(unsigned int a0) {
-      return instruction(ADD_ACC{a0});
-    }
+    static instruction add_acc(uint64_t a0) { return instruction(ADD_ACC{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -198,7 +196,7 @@ struct InstructionSequenceExec {
   };
 
   template <typename T1, typename F2>
-    requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
   static T1 instruction_rect(T1 f, T1 f0, F2 &&f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP_>(i.v())) {
       return f;
@@ -211,7 +209,7 @@ struct InstructionSequenceExec {
   }
 
   template <typename T1, typename F2>
-    requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
   static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP_>(i.v())) {
       return f;
@@ -225,13 +223,13 @@ struct InstructionSequenceExec {
 
   static state execute(state s, const instruction &i);
   static state exec_program(const List<instruction> &prog, state s);
-  static inline const state sample = state{0u, 1u};
-  static inline const unsigned int t = []() {
+  static inline const state sample = state{UINT64_C(0), UINT64_C(1)};
+  static inline const uint64_t t = []() {
     state s_ = exec_program(
         List<instruction>::cons(
             instruction::inc_pc(),
             List<instruction>::cons(
-                instruction::add_acc(2u),
+                instruction::add_acc(UINT64_C(2)),
                 List<instruction>::cons(instruction::inc_pc(),
                                         List<instruction>::nil()))),
         sample);

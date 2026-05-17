@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -35,7 +35,7 @@ int main() {
   auto inserted = LoopifySpecialRecursion::reverse_insert(2u, l3);
 
   // nest_apply
-  auto inc = [](unsigned int x) { return x + 1; };
+  auto inc = [](uint64_t x) { return x + 1; };
   ASSERT(LoopifySpecialRecursion::nest_apply(0u, inc, 5u) == 5u);
   ASSERT(LoopifySpecialRecursion::nest_apply(3u, inc, 5u) == 8u);
 
@@ -57,9 +57,9 @@ int main() {
   auto filtered = LoopifySpecialRecursion::between(2u, 4u, l5);
 
   // merge_levels
-  auto ll_nil = List<List<unsigned int>>::nil();
-  auto ll = List<List<unsigned int>>::cons(l3,
-    List<List<unsigned int>>::cons(l3, ll_nil));
+  auto ll_nil = List<List<uint64_t>>::nil();
+  auto ll = List<List<uint64_t>>::cons(l3,
+    List<List<uint64_t>>::cons(l3, ll_nil));
   auto merged = LoopifySpecialRecursion::merge_levels(ll);
 
   if (testStatus > 0) {

@@ -16,7 +16,7 @@ struct AxiomTypes {
   static MysteryType use_axiom(std::monostate _x);
 
   struct AxiomRecord {
-    unsigned int normal_field;
+    uint64_t normal_field;
     MysteryType axiom_field;
 
     // ACCESSORS
@@ -31,7 +31,7 @@ struct AxiomTypes {
   struct AxiomInductive {
     // TYPES
     struct AxConstr1 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct AxConstr2 {
@@ -80,7 +80,7 @@ struct AxiomTypes {
     }
 
     // CREATORS
-    static AxiomInductive axconstr1(unsigned int a0) {
+    static AxiomInductive axconstr1(uint64_t a0) {
       return AxiomInductive(AxConstr1{a0});
     }
 
@@ -96,7 +96,7 @@ struct AxiomTypes {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, MysteryType &>
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
@@ -109,7 +109,7 @@ struct AxiomTypes {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, MysteryType &>
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {

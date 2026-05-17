@@ -30,11 +30,11 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-List<unsigned int>
-vector_to_list(const std::vector<unsigned int> &vec) {
-  auto result = List<unsigned int>::nil();
+List<uint64_t>
+vector_to_list(const std::vector<uint64_t> &vec) {
+  auto result = List<uint64_t>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<unsigned int>::cons(*it, std::move(result));
+    result = List<uint64_t>::cons(*it, std::move(result));
   }
   return result;
 }

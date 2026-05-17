@@ -192,17 +192,17 @@ struct HigherOrder {
   /// iterate n f x applies f to x a total of n times.
   template <typename T1, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, T1 &>
-  static T1 iterate(unsigned int n, F1 &&f, T1 x) {
+  static T1 iterate(uint64_t n, F1 &&f, T1 x) {
     if (n <= 0) {
       return x;
     } else {
-      unsigned int m = n - 1;
+      uint64_t m = n - 1;
       return f(iterate<T1>(m, f, x));
     }
   }
 
   /// adder n returns a function that adds n to its argument.
-  static unsigned int adder(unsigned int _x0, unsigned int _x1);
+  static uint64_t adder(uint64_t _x0, uint64_t _x1);
 
   /// twice f returns a function that applies f two times.
   template <typename T1, typename F0>
@@ -218,43 +218,43 @@ struct HigherOrder {
     return f(x);
   }
 
-  static inline const list<unsigned int> test_list = list<unsigned int>::cons(
-      1u, list<unsigned int>::cons(
-              2u, list<unsigned int>::cons(
-                      3u, list<unsigned int>::cons(
-                              4u, list<unsigned int>::cons(
-                                      5u, list<unsigned int>::nil())))));
-  static inline const unsigned int test_map = foldr<unsigned int, unsigned int>(
-      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-        return (_x0 + _x1);
-      },
-      0u,
-      map<unsigned int, unsigned int>(
-          [](unsigned int _x0) -> unsigned int { return (1u + _x0); },
+  static inline const list<uint64_t> test_list = list<uint64_t>::cons(
+      UINT64_C(1),
+      list<uint64_t>::cons(
+          UINT64_C(2),
+          list<uint64_t>::cons(
+              UINT64_C(3),
+              list<uint64_t>::cons(
+                  UINT64_C(4),
+                  list<uint64_t>::cons(UINT64_C(5), list<uint64_t>::nil())))));
+  static inline const uint64_t test_map = foldr<uint64_t, uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0),
+      map<uint64_t, uint64_t>(
+          [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
           test_list));
-  static inline const unsigned int test_foldr =
-      foldr<unsigned int, unsigned int>(
-          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-            return (_x0 + _x1);
-          },
-          0u, test_list);
-  static inline const unsigned int test_foldl =
-      foldl<unsigned int, unsigned int>(
-          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-            return (_x0 + _x1);
-          },
-          0u, test_list);
-  static inline const unsigned int test_compose =
-      compose<unsigned int, unsigned int, unsigned int>(
-          [](unsigned int _x0) -> unsigned int { return (2u * _x0); },
-          [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 3u);
-  static inline const unsigned int test_iterate = iterate<unsigned int>(
-      3u, [](unsigned int _x0) -> unsigned int { return (2u + _x0); }, 0u);
-  static inline const unsigned int test_adder = adder(5u, 3u);
-  static inline const unsigned int test_twice = twice<unsigned int>(
-      [](unsigned int _x0) -> unsigned int { return (1u + _x0); }, 5u);
-  static inline const unsigned int test_pipe = pipe<unsigned int, unsigned int>(
-      5u, [](unsigned int _x0) -> unsigned int { return adder(3u, _x0); });
+  static inline const uint64_t test_foldr = foldr<uint64_t, uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0), test_list);
+  static inline const uint64_t test_foldl = foldl<uint64_t, uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0), test_list);
+  static inline const uint64_t test_compose =
+      compose<uint64_t, uint64_t, uint64_t>(
+          [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) * _x0); },
+          [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+          UINT64_C(3));
+  static inline const uint64_t test_iterate = iterate<uint64_t>(
+      UINT64_C(3), [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) + _x0); },
+      UINT64_C(0));
+  static inline const uint64_t test_adder = adder(UINT64_C(5), UINT64_C(3));
+  static inline const uint64_t test_twice = twice<uint64_t>(
+      [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+      UINT64_C(5));
+  static inline const uint64_t test_pipe =
+      pipe<uint64_t, uint64_t>(UINT64_C(5), [](uint64_t _x0) -> uint64_t {
+        return adder(UINT64_C(3), _x0);
+      });
 };
 
 #endif // INCLUDED_HIGHER_ORDER

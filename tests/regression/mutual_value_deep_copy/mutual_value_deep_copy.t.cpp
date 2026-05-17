@@ -5,7 +5,7 @@
 
 namespace {
 
-MutualValueDeepCopy::a make_chain(unsigned int n) {
+MutualValueDeepCopy::a make_chain(uint64_t n) {
   MutualValueDeepCopy::a x = MutualValueDeepCopy::a::aend();
   while (n > 0) {
     x = MutualValueDeepCopy::a::anode(

@@ -128,18 +128,18 @@ struct ConstrainedPoly {
     }
   }
 
-  static inline const unsigned int test_id_nat = poly_id<unsigned int>(42u);
+  static inline const uint64_t test_id_nat = poly_id<uint64_t>(UINT64_C(42));
   static inline const bool test_id_bool = poly_id<bool>(true);
-  static inline const UPair<unsigned int, bool> test_pair =
-      wrap_pair<unsigned int, bool>(5u, false);
-  static inline const UPair<bool, unsigned int> test_swap =
-      swap<unsigned int, bool>(test_pair);
-  static inline const unsigned int test_fst = test_pair.ufst;
+  static inline const UPair<uint64_t, bool> test_pair =
+      wrap_pair<uint64_t, bool>(UINT64_C(5), false);
+  static inline const UPair<bool, uint64_t> test_swap =
+      swap<uint64_t, bool>(test_pair);
+  static inline const uint64_t test_fst = test_pair.ufst;
   static inline const bool test_snd = test_pair.usnd;
-  static inline const UOption<unsigned int> test_umap =
-      uoption_map<unsigned int, unsigned int>(
-          [](unsigned int n) { return (n + 1u); },
-          UOption<unsigned int>::usome(9u));
+  static inline const UOption<uint64_t> test_umap =
+      uoption_map<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          UOption<uint64_t>::usome(UINT64_C(9)));
 };
 
 #endif // INCLUDED_CONSTRAINED_POLY

@@ -141,11 +141,9 @@ struct DepRecord {
   using carrier = std::any;
 
   struct nat_magma {
-    using carrier = unsigned int;
+    using carrier = uint64_t;
 
-    static unsigned int op(unsigned int a0, unsigned int a1) {
-      return (a0 + a1);
-    }
+    static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Magma<nat_magma>);
@@ -160,25 +158,21 @@ struct DepRecord {
   using m_carrier = std::any;
 
   struct nat_monoid {
-    using m_carrier = unsigned int;
+    using m_carrier = uint64_t;
 
-    static unsigned int m_op(unsigned int a0, unsigned int a1) {
-      return (a0 + a1);
-    }
+    static uint64_t m_op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
 
-    static unsigned int m_id() { return 0u; }
+    static uint64_t m_id() { return UINT64_C(0); }
   };
 
   static_assert(Monoid<nat_monoid>);
 
   struct nat_mul_monoid {
-    using m_carrier = unsigned int;
+    using m_carrier = uint64_t;
 
-    static unsigned int m_op(unsigned int a0, unsigned int a1) {
-      return (a0 * a1);
-    }
+    static uint64_t m_op(uint64_t a0, uint64_t a1) { return (a0 * a1); }
 
-    static unsigned int m_id() { return 1u; }
+    static uint64_t m_id() { return UINT64_C(1); }
   };
 
   static_assert(Monoid<nat_mul_monoid>);
@@ -196,17 +190,20 @@ struct DepRecord {
     }
   }
 
-  static inline const unsigned int test_fold_add =
-      std::any_cast<unsigned int>(mfold<nat_monoid>(List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::nil()))))));
-  static inline const unsigned int test_fold_mul = std::any_cast<unsigned int>(
-      mfold<nat_mul_monoid>(List<unsigned int>::cons(
-          2u,
-          List<unsigned int>::cons(
-              3u, List<unsigned int>::cons(4u, List<unsigned int>::nil())))));
+  static inline const uint64_t test_fold_add =
+      std::any_cast<uint64_t>(mfold<nat_monoid>(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))))));
+  static inline const uint64_t test_fold_mul =
+      std::any_cast<uint64_t>(mfold<nat_mul_monoid>(List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
   enum class Tag { TNAT, TBOOL };
 
   template <typename T1> static T1 tag_rect(T1 f, T1 f0, Tag t) {
@@ -245,7 +242,7 @@ struct DepRecord {
     Tagged clone() const { return Tagged{(*this).the_tag, (*this).the_value}; }
   };
 
-  static inline const Tagged tagged_nat = Tagged{Tag::TNAT, 42u};
+  static inline const Tagged tagged_nat = Tagged{Tag::TNAT, UINT64_C(42)};
   static inline const Tagged tagged_bool = Tagged{Tag::TBOOL, true};
 };
 

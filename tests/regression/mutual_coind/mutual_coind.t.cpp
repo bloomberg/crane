@@ -38,16 +38,16 @@ int main() {
 
   // Test 3: takeA 5 (countA 0) == [0,1,2,3,4]
   {
-    const List<unsigned int> *l = &MutualCoind::test_take5;
+    const List<uint64_t> *l = &MutualCoind::test_take5;
     unsigned int expected[] = {0, 1, 2, 3, 4};
     for (int i = 0; i < 5; i++) {
       auto &vr = l->v();
-      ASSERT(std::holds_alternative<List<unsigned int>::Cons>(vr));
-      auto &c = std::get<List<unsigned int>::Cons>(vr);
+      ASSERT(std::holds_alternative<List<uint64_t>::Cons>(vr));
+      auto &c = std::get<List<uint64_t>::Cons>(vr);
       ASSERT(c.a0 == expected[i]);
       l = c.a1.get();
     }
-    ASSERT(std::holds_alternative<List<unsigned int>::Nil>(l->v()));
+    ASSERT(std::holds_alternative<List<uint64_t>::Nil>(l->v()));
     std::cout << "Test 3 (takeA 5): PASSED" << std::endl;
   }
 

@@ -118,7 +118,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -130,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -143,7 +143,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -159,22 +159,22 @@ public:
 };
 
 struct LoopifyListPairing {
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  unzip(const List<std::pair<unsigned int, unsigned int>> &l);
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  swizzle(const List<unsigned int> &l);
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  partition(const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  zip_longest_fuel(unsigned int fuel, const List<unsigned int> &l1,
-                   const List<unsigned int> &l2, unsigned int default0);
-  static List<std::pair<unsigned int, unsigned int>>
-  zip_longest(const List<unsigned int> &l1, const List<unsigned int> &l2,
-              unsigned int default0);
-  static List<unsigned int> zipWith(const List<unsigned int> &l1,
-                                    const List<unsigned int> &l2);
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  split_even_odd(const List<unsigned int> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  unzip(const List<std::pair<uint64_t, uint64_t>> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  swizzle(const List<uint64_t> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  partition(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
+                   const List<uint64_t> &l2, uint64_t default0);
+  static List<std::pair<uint64_t, uint64_t>>
+  zip_longest(const List<uint64_t> &l1, const List<uint64_t> &l2,
+              uint64_t default0);
+  static List<uint64_t> zipWith(const List<uint64_t> &l1,
+                                const List<uint64_t> &l2);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  split_even_odd(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_PAIRING

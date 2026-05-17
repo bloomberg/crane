@@ -3,7 +3,7 @@
 
 namespace RetypeErrorExtract {
 
-const unsigned int value = 42u;
+const uint64_t value = UINT64_C(42);
 
 } // namespace RetypeErrorExtract
 

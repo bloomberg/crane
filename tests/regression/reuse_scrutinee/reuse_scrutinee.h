@@ -14,7 +14,7 @@ struct ReuseScrutinee {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -84,7 +84,7 @@ struct ReuseScrutinee {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -121,8 +121,8 @@ struct ReuseScrutinee {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -134,8 +134,8 @@ struct ReuseScrutinee {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -148,11 +148,11 @@ struct ReuseScrutinee {
 
   /// Extract the value from the left subtree.
   /// This accesses the Node's d_a0 field (left subtree).
-  static unsigned int left_val(const tree &t);
+  static uint64_t left_val(const tree &t);
   /// Extract the value from the right subtree.
-  static unsigned int right_val(const tree &t);
+  static uint64_t right_val(const tree &t);
   /// Sum of left and right subtree values.
-  static unsigned int subtree_sum(const tree &t);
+  static uint64_t subtree_sum(const tree &t);
   /// REUSE BUG TRIGGER:
   /// The match on t returns Node Leaf (subtree_sum t) Leaf.
   /// If the reuse optimization fires (t.use_count() == 1):
@@ -160,11 +160,12 @@ struct ReuseScrutinee {
   /// → d_a0 and d_a2 are now null
   /// 2. New values are computed: subtree_sum(t) accesses t's subtrees
   /// → t's d_a0 is null → left_val dereferences null → CRASH
-  static inline const unsigned int reuse_bug = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+  static inline const uint64_t reuse_bug = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       return subtree_sum(t);
     }
@@ -172,8 +173,9 @@ struct ReuseScrutinee {
   /// Direct version: the result directly uses the scrutinee in a
   /// tail constructor that could trigger reuse.
   static inline const tree reuse_direct = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
       return tree::leaf();
     } else {
@@ -183,9 +185,9 @@ struct ReuseScrutinee {
   }();
   /// Expected: subtree_sum on Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf))
   /// = left_val + right_val = 10 + 30 = 40
-  static inline const unsigned int expected_sum =
-      subtree_sum(tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                             tree::node(tree::leaf(), 30u, tree::leaf())));
+  static inline const uint64_t expected_sum = subtree_sum(tree::node(
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
 };
 
 #endif // INCLUDED_REUSE_SCRUTINEE

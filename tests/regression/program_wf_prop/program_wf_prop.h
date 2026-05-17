@@ -125,11 +125,11 @@ struct ProgramWfProp {
   struct instruction {
     // TYPES
     struct JUN {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct JMS {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP {};
@@ -178,9 +178,9 @@ struct ProgramWfProp {
     }
 
     // CREATORS
-    static instruction jun(unsigned int a0) { return instruction(JUN{a0}); }
+    static instruction jun(uint64_t a0) { return instruction(JUN{a0}); }
 
-    static instruction jms(unsigned int a0) { return instruction(JMS{a0}); }
+    static instruction jms(uint64_t a0) { return instruction(JMS{a0}); }
 
     static instruction nop() { return instruction(NOP{}); }
 
@@ -192,8 +192,8 @@ struct ProgramWfProp {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rect(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[a0] = std::get<typename instruction::JUN>(i.v());
@@ -207,8 +207,8 @@ struct ProgramWfProp {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rec(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[a0] = std::get<typename instruction::JUN>(i.v());
@@ -222,8 +222,8 @@ struct ProgramWfProp {
   }
 
   struct layout {
-    unsigned int base_addr;
-    unsigned int code_size;
+    uint64_t base_addr;
+    uint64_t code_size;
 
     // ACCESSORS
     layout clone() const {
@@ -231,13 +231,14 @@ struct ProgramWfProp {
     }
   };
 
-  static std::optional<unsigned int> jump_target(const instruction &i);
-  static inline const layout sample_layout = layout{200u, 20u};
+  static std::optional<uint64_t> jump_target(const instruction &i);
+  static inline const layout sample_layout =
+      layout{UINT64_C(200), UINT64_C(20)};
   static inline const List<instruction> sample_prog = List<instruction>::cons(
       instruction::nop(),
       List<instruction>::cons(
-          instruction::jun(205u),
-          List<instruction>::cons(instruction::jms(218u),
+          instruction::jun(UINT64_C(205)),
+          List<instruction>::cons(instruction::jms(UINT64_C(218)),
                                   List<instruction>::nil())));
 };
 

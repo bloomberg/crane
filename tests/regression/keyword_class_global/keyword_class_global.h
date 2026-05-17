@@ -2,8 +2,8 @@
 #define INCLUDED_KEYWORD_CLASS_GLOBAL
 
 struct KeywordClassGlobal {
-  static unsigned int class_(unsigned int n);
-  static inline const unsigned int t = class_(4u);
+  static uint64_t class_(uint64_t n);
+  static inline const uint64_t t = class_(UINT64_C(4));
 };
 
 #endif // INCLUDED_KEYWORD_CLASS_GLOBAL

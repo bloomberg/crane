@@ -15,7 +15,7 @@ struct MatchClosureEscape {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct MatchClosureEscape {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -120,7 +120,7 @@ struct MatchClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int sum_values(unsigned int x) const {
+    uint64_t sum_values(uint64_t x) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
@@ -143,8 +143,8 @@ struct MatchClosureEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -156,8 +156,8 @@ struct MatchClosureEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -172,25 +172,25 @@ struct MatchClosureEscape {
   /// A box for closures, forces the closure to be stored on the heap.
   struct fn_box {
     // DATA
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     fn_box clone() const { return {a0}; }
 
     // CREATORS
-    static fn_box box(std::function<unsigned int(unsigned int)> a0) {
+    static fn_box box(std::function<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
-    unsigned int apply_box(unsigned int x) const {
+    uint64_t apply_box(uint64_t x) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
       return a0(x);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -198,8 +198,8 @@ struct MatchClosureEscape {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -216,11 +216,11 @@ struct MatchClosureEscape {
   /// holds a dangling reference to a destroyed shared_ptr.
   static fn_box match_arm_box(const tree &t);
   /// Use a top-level definition to get a shared_ptr (not unique_ptr).
-  static inline const tree test_tree =
-      tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                 tree::node(tree::leaf(), 30u, tree::leaf()));
-  static inline const unsigned int bug_match_box =
-      match_arm_box(test_tree).apply_box(99u);
+  static inline const tree test_tree = tree::node(
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+      tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+  static inline const uint64_t bug_match_box =
+      match_arm_box(test_tree).apply_box(UINT64_C(99));
 };
 
 #endif // INCLUDED_MATCH_CLOSURE_ESCAPE

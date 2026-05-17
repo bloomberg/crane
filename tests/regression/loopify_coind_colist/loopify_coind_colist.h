@@ -180,13 +180,12 @@ struct LoopifyCoindColist {
     }
   }
 
-  template <typename T1>
-  static colist<T1> cotake(unsigned int n, colist<T1> l) {
+  template <typename T1> static colist<T1> cotake(uint64_t n, colist<T1> l) {
     if (n <= 0) {
       return colist<T1>::lazy_(
           []() -> colist<T1> { return colist<T1>::conil(); });
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
         return colist<T1>::lazy_(
             []() -> colist<T1> { return colist<T1>::conil(); });
@@ -212,18 +211,17 @@ struct LoopifyCoindColist {
     }
   }
 
-  template <typename T1>
-  static List<T1> to_list(unsigned int fuel, colist<T1> l) {
+  template <typename T1> static List<T1> to_list(uint64_t fuel, colist<T1> l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     colist<T1> _loop_l = std::move(l);
-    unsigned int _loop_fuel = std::move(fuel);
+    uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
         *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
-        unsigned int f = _loop_fuel - 1;
+        uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l.v())) {
           *_write = std::make_unique<List<T1>>(List<T1>::nil());
           break;
@@ -243,19 +241,24 @@ struct LoopifyCoindColist {
     return std::move(*_head);
   }
 
-  static inline const List<unsigned int> test_comap = to_list<unsigned int>(
-      5u, comap<unsigned int, unsigned int>(
-              [](unsigned int n) { return (n * 2u); },
-              from_list<unsigned int>(List<unsigned int>::cons(
-                  1u, List<unsigned int>::cons(
-                          2u, List<unsigned int>::cons(
-                                  3u, List<unsigned int>::nil()))))));
-  static inline const List<unsigned int> test_cotake = to_list<unsigned int>(
-      10u, cotake<unsigned int>(
-               2u, from_list<unsigned int>(List<unsigned int>::cons(
-                       10u, List<unsigned int>::cons(
-                                20u, List<unsigned int>::cons(
-                                         30u, List<unsigned int>::nil()))))));
+  static inline const List<uint64_t> test_comap = to_list<uint64_t>(
+      UINT64_C(5),
+      comap<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n * UINT64_C(2)); },
+          from_list<uint64_t>(List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))));
+  static inline const List<uint64_t> test_cotake = to_list<uint64_t>(
+      UINT64_C(10),
+      cotake<uint64_t>(
+          UINT64_C(2),
+          from_list<uint64_t>(List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(
+                  UINT64_C(20), List<uint64_t>::cons(
+                                    UINT64_C(30), List<uint64_t>::nil()))))));
 };
 
 #endif // INCLUDED_LOOPIFY_COIND_COLIST

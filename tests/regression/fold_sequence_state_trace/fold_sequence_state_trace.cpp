@@ -92,7 +92,7 @@ FoldSequenceStateTraceCase::execute_sequence(
   }
 }
 
-unsigned int FoldSequenceStateTraceCase::line_count_after_sample_sequence(
+uint64_t FoldSequenceStateTraceCase::line_count_after_sample_sequence(
     const FoldSequenceStateTraceCase::ConstructionState &st) {
   return execute_sequence(st, sample_sequence).state_lines.length();
 }

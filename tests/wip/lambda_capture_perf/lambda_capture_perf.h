@@ -130,9 +130,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -144,33 +144,33 @@ template <typename M>
 concept Params = requires { typename M::A; };
 
 template <Params P> struct Worker {
-  static List<typename P::A> replicate(unsigned int n, typename P::A x) {
+  static List<typename P::A> replicate(uint64_t n, typename P::A x) {
     if (n <= 0) {
       return List<typename P::A>::nil();
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       return List<typename P::A>::cons(x, replicate(n_, x));
     }
   }
 
-  static List<unsigned int> process_with_context(const List<typename P::A> &ctx,
-                                                 const List<unsigned int> &xs) {
-    return xs.template map<unsigned int>(
-        [=](unsigned int x) mutable { return (x + ctx.length()); });
+  static List<uint64_t> process_with_context(const List<typename P::A> &ctx,
+                                             const List<uint64_t> &xs) {
+    return xs.template map<uint64_t>(
+        [=](uint64_t x) mutable { return (x + ctx.length()); });
   }
 };
 
 struct NatParams {
-  using A = unsigned int;
+  using A = uint64_t;
 };
 
 using W = Worker<NatParams>;
 
 struct LambdaCapturePerf {
-  static List<unsigned int> iota(unsigned int n);
-  static inline const unsigned int test = []() {
-    List<unsigned int> ctx = W::replicate(500u, 42u);
-    List<unsigned int> input = iota(500u);
+  static List<uint64_t> iota(uint64_t n);
+  static inline const uint64_t test = []() {
+    List<uint64_t> ctx = W::replicate(UINT64_C(500), UINT64_C(42));
+    List<uint64_t> input = iota(UINT64_C(500));
     return W::process_with_context(std::move(ctx), std::move(input)).length();
   }();
 };

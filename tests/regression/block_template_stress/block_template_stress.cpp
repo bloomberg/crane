@@ -1,11 +1,11 @@
 #include "block_template_stress.h"
 
 /// 1. Block template in a fixpoint body
-List<std::string> BlockTemplateStress::read_n_lines(unsigned int n) {
+List<std::string> BlockTemplateStress::read_n_lines(uint64_t n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
     List<std::string> rest = read_n_lines(n_);
@@ -25,26 +25,26 @@ std::string BlockTemplateStress::conditional_read(bool do_read) {
 }
 
 /// 3. Block template of non-string type (nat) in bind
-unsigned int BlockTemplateStress::read_and_add() {
-  unsigned int n;
+uint64_t BlockTemplateStress::read_and_add() {
+  uint64_t n;
   std::cin >> n;
-  return (n + 1u);
+  return (n + UINT64_C(1));
 }
 
 /// 4. Block template used in multiple match arms
-std::string BlockTemplateStress::branch_read(unsigned int choice) {
+std::string BlockTemplateStress::branch_read(uint64_t choice) {
   if (choice <= 0) {
     std::string a;
     std::getline(std::cin, a);
     return "zero: "s + a;
   } else {
-    unsigned int n = choice - 1;
+    uint64_t n = choice - 1;
     if (n <= 0) {
       std::string b;
       std::getline(std::cin, b);
       return "one: "s + b;
     } else {
-      unsigned int _x = n - 1;
+      uint64_t _x = n - 1;
       std::string c;
       std::getline(std::cin, c);
       return "other: "s + c;
@@ -53,17 +53,17 @@ std::string BlockTemplateStress::branch_read(unsigned int choice) {
 }
 
 /// 5. Block template in nested bind chain with arithmetic
-unsigned int BlockTemplateStress::read_two_nats() {
-  unsigned int a;
+uint64_t BlockTemplateStress::read_two_nats() {
+  uint64_t a;
   std::cin >> a;
-  unsigned int b;
+  uint64_t b;
   std::cin >> b;
   return (a + b);
 }
 
 /// 6. Block template result fed to another function
 void BlockTemplateStress::block_result_as_arg() {
-  unsigned int _x;
+  uint64_t _x;
   std::cin >> _x;
   std::string s;
   std::getline(std::cin, s);

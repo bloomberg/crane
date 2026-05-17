@@ -120,9 +120,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -134,11 +134,11 @@ struct JumpTargets {
   struct instr_collection {
     // TYPES
     struct JUN_coll {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct JMS_coll {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP_coll {};
@@ -189,11 +189,11 @@ struct JumpTargets {
     }
 
     // CREATORS
-    static instr_collection jun_coll(unsigned int a0) {
+    static instr_collection jun_coll(uint64_t a0) {
       return instr_collection(JUN_coll{a0});
     }
 
-    static instr_collection jms_coll(unsigned int a0) {
+    static instr_collection jms_coll(uint64_t a0) {
       return instr_collection(JMS_coll{a0});
     }
 
@@ -205,25 +205,25 @@ struct JumpTargets {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    std::optional<unsigned int> jump_target_collection() const {
+    std::optional<uint64_t> jump_target_collection() const {
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
               this->v())) {
         const auto &[a0] =
             std::get<typename instr_collection::JUN_coll>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
                      this->v())) {
         const auto &[a0] =
             std::get<typename instr_collection::JMS_coll>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else {
-        return std::optional<unsigned int>();
+        return std::optional<uint64_t>();
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_collection_rec(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
               this->v())) {
@@ -241,8 +241,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_collection_rect(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_collection::JUN_coll>(
               this->v())) {
@@ -260,14 +260,14 @@ struct JumpTargets {
     }
   };
 
-  static List<unsigned int> collect_targets(const List<instr_collection> &prog);
-  static inline const unsigned int test_collection =
+  static List<uint64_t> collect_targets(const List<instr_collection> &prog);
+  static inline const uint64_t test_collection =
       collect_targets(List<instr_collection>::cons(
-                          instr_collection::jun_coll(17u),
+                          instr_collection::jun_coll(UINT64_C(17)),
                           List<instr_collection>::cons(
                               instr_collection::nop_coll(),
                               List<instr_collection>::cons(
-                                  instr_collection::jms_coll(511u),
+                                  instr_collection::jms_coll(UINT64_C(511)),
                                   List<instr_collection>::cons(
                                       instr_collection::nop_coll(),
                                       List<instr_collection>::nil())))))
@@ -276,11 +276,11 @@ struct JumpTargets {
   struct instr_region {
     // TYPES
     struct JUN_reg {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct JMS_reg {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP_reg {};
@@ -330,11 +330,11 @@ struct JumpTargets {
     }
 
     // CREATORS
-    static instr_region jun_reg(unsigned int a0) {
+    static instr_region jun_reg(uint64_t a0) {
       return instr_region(JUN_reg{a0});
     }
 
-    static instr_region jms_reg(unsigned int a0) {
+    static instr_region jms_reg(uint64_t a0) {
       return instr_region(JMS_reg{a0});
     }
 
@@ -346,22 +346,22 @@ struct JumpTargets {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    std::optional<unsigned int> jump_target_region() const {
+    std::optional<uint64_t> jump_target_region() const {
       if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
         const auto &[a0] = std::get<typename instr_region::JUN_reg>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else if (std::holds_alternative<typename instr_region::JMS_reg>(
                      this->v())) {
         const auto &[a0] = std::get<typename instr_region::JMS_reg>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else {
-        return std::optional<unsigned int>();
+        return std::optional<uint64_t>();
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_region_rec(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
         const auto &[a0] = std::get<typename instr_region::JUN_reg>(this->v());
@@ -376,8 +376,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_region_rect(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
         const auto &[a0] = std::get<typename instr_region::JUN_reg>(this->v());
@@ -393,26 +393,26 @@ struct JumpTargets {
   };
 
   struct layout {
-    unsigned int base_;
-    unsigned int code_;
+    uint64_t base_;
+    uint64_t code_;
 
     // ACCESSORS
     layout clone() const { return layout{(*this).base_, (*this).code_}; }
   };
 
-  static bool addr_in_region(unsigned int addr, const layout &l);
+  static bool addr_in_region(uint64_t addr, const layout &l);
   static bool in_layout(const layout &l, const instr_region &i);
-  static inline const bool test_region_check =
-      in_layout(layout{16u, 32u}, instr_region::jun_reg(40u));
+  static inline const bool test_region_check = in_layout(
+      layout{UINT64_C(16), UINT64_C(32)}, instr_region::jun_reg(UINT64_C(40)));
 
   struct instr_jms {
     // TYPES
     struct JUN_jms {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct JMS_jms {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP_jms {};
@@ -461,9 +461,9 @@ struct JumpTargets {
     }
 
     // CREATORS
-    static instr_jms jun_jms(unsigned int a0) { return instr_jms(JUN_jms{a0}); }
+    static instr_jms jun_jms(uint64_t a0) { return instr_jms(JUN_jms{a0}); }
 
-    static instr_jms jms_jms(unsigned int a0) { return instr_jms(JMS_jms{a0}); }
+    static instr_jms jms_jms(uint64_t a0) { return instr_jms(JMS_jms{a0}); }
 
     static instr_jms nop_jms() { return instr_jms(NOP_jms{}); }
 
@@ -473,22 +473,22 @@ struct JumpTargets {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    std::optional<unsigned int> jump_target_jms() const {
+    std::optional<uint64_t> jump_target_jms() const {
       if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
         const auto &[a0] = std::get<typename instr_jms::JUN_jms>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
                      this->v())) {
         const auto &[a0] = std::get<typename instr_jms::JMS_jms>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else {
-        return std::optional<unsigned int>();
+        return std::optional<uint64_t>();
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_jms_rec(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
         const auto &[a0] = std::get<typename instr_jms::JUN_jms>(this->v());
@@ -503,8 +503,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_jms_rect(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
         const auto &[a0] = std::get<typename instr_jms::JUN_jms>(this->v());
@@ -519,18 +519,18 @@ struct JumpTargets {
     }
   };
 
-  static unsigned int option_nat_or_zero(const std::optional<unsigned int> &o);
-  static inline const unsigned int test_jms =
-      option_nat_or_zero(instr_jms::jms_jms(144u).jump_target_jms());
+  static uint64_t option_nat_or_zero(const std::optional<uint64_t> &o);
+  static inline const uint64_t test_jms =
+      option_nat_or_zero(instr_jms::jms_jms(UINT64_C(144)).jump_target_jms());
 
   struct instr_jun {
     // TYPES
     struct JUN_jun {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct JMS_jun {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct NOP_jun {};
@@ -579,9 +579,9 @@ struct JumpTargets {
     }
 
     // CREATORS
-    static instr_jun jun_jun(unsigned int a0) { return instr_jun(JUN_jun{a0}); }
+    static instr_jun jun_jun(uint64_t a0) { return instr_jun(JUN_jun{a0}); }
 
-    static instr_jun jms_jun(unsigned int a0) { return instr_jun(JMS_jun{a0}); }
+    static instr_jun jms_jun(uint64_t a0) { return instr_jun(JMS_jun{a0}); }
 
     static instr_jun nop_jun() { return instr_jun(NOP_jun{}); }
 
@@ -591,22 +591,22 @@ struct JumpTargets {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    std::optional<unsigned int> jump_target_jun() const {
+    std::optional<uint64_t> jump_target_jun() const {
       if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
         const auto &[a0] = std::get<typename instr_jun::JUN_jun>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
                      this->v())) {
         const auto &[a0] = std::get<typename instr_jun::JMS_jun>(this->v());
-        return std::make_optional<unsigned int>(a0);
+        return std::make_optional<uint64_t>(a0);
       } else {
-        return std::optional<unsigned int>();
+        return std::optional<uint64_t>();
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_jun_rec(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
         const auto &[a0] = std::get<typename instr_jun::JUN_jun>(this->v());
@@ -621,8 +621,8 @@ struct JumpTargets {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 instr_jun_rect(F0 &&f, F1 &&f0, T1 f1) const {
       if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
         const auto &[a0] = std::get<typename instr_jun::JUN_jun>(this->v());
@@ -637,12 +637,12 @@ struct JumpTargets {
     }
   };
 
-  static unsigned int target_default(const std::optional<unsigned int> &o);
-  static inline const unsigned int test_jun =
-      target_default(instr_jun::jun_jun(511u).jump_target_jun());
+  static uint64_t target_default(const std::optional<uint64_t> &o);
+  static inline const uint64_t test_jun =
+      target_default(instr_jun::jun_jun(UINT64_C(511)).jump_target_jun());
 
-  static inline const std::pair<
-      std::pair<std::pair<unsigned int, bool>, unsigned int>, unsigned int>
+  static inline const std::pair<std::pair<std::pair<uint64_t, bool>, uint64_t>,
+                                uint64_t>
       t = std::make_pair(
           std::make_pair(std::make_pair(test_collection, test_region_check),
                          test_jms),

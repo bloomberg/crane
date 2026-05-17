@@ -52,13 +52,13 @@ struct EffectHofVoid {
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
-  static unsigned int apply_n(F0 &&f, std::string x, unsigned int n) {
+  static uint64_t apply_n(F0 &&f, std::string x, uint64_t n) {
     if (n <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       f(x);
-      unsigned int rest = apply_n(f, x, n_);
+      uint64_t rest = apply_n(f, x, n_);
       return (rest + 1);
     }
   }

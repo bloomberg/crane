@@ -1,34 +1,34 @@
 #include "extract_directives.h"
 
-unsigned int ExtractDirectives::offset(unsigned int base, unsigned int x) {
+uint64_t ExtractDirectives::offset(uint64_t base, uint64_t x) {
   return (x + base);
 }
 
-unsigned int ExtractDirectives::scale(unsigned int base, unsigned int x) {
+uint64_t ExtractDirectives::scale(uint64_t base, uint64_t x) {
   return (x * base);
 }
 
-unsigned int ExtractDirectives::transform(unsigned int base, unsigned int x) {
+uint64_t ExtractDirectives::transform(uint64_t base, uint64_t x) {
   return scale(base, offset(base, x));
 }
 
-unsigned int ExtractDirectives::safe_pred(unsigned int n) {
+uint64_t ExtractDirectives::safe_pred(uint64_t n) {
   if (n <= 0) {
     throw std::logic_error("absurd case");
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     return n0;
   }
 }
 
-unsigned int ExtractDirectives::inner_add(unsigned int _x0, unsigned int _x1) {
+uint64_t ExtractDirectives::inner_add(uint64_t _x0, uint64_t _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int ExtractDirectives::inner_mul(unsigned int _x0, unsigned int _x1) {
+uint64_t ExtractDirectives::inner_mul(uint64_t _x0, uint64_t _x1) {
   return (_x0 * _x1);
 }
 
-unsigned int ExtractDirectives::outer_use(unsigned int a, unsigned int b) {
+uint64_t ExtractDirectives::outer_use(uint64_t a, uint64_t b) {
   return (inner_add(a, b) + inner_mul(a, b));
 }

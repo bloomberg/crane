@@ -122,38 +122,35 @@ public:
 
 struct CustomInlineBug {
   struct State {
-    unsigned int value;
-    unsigned int data;
+    uint64_t value;
+    uint64_t data;
 
     // ACCESSORS
     State clone() const { return State{(*this).value, (*this).data}; }
   };
 
-  static std::optional<unsigned int> bug_some_proj(const State &s);
-  static std::pair<State, unsigned int> bug_pair_proj(State s);
-  static std::optional<std::optional<unsigned int>>
+  static std::optional<uint64_t> bug_some_proj(const State &s);
+  static std::pair<State, uint64_t> bug_pair_proj(State s);
+  static std::optional<std::optional<uint64_t>>
   bug_nested_option(const State &s);
-  static std::optional<std::pair<State, unsigned int>> bug_option_pair(State s);
-  static State get_state(unsigned int n);
-  static std::optional<unsigned int> bug_some_of_call(unsigned int n);
-  static std::pair<State, unsigned int> pair_simple(State s);
-  static std::pair<State, unsigned int> pair_let(unsigned int n);
-  static std::pair<std::pair<State, unsigned int>,
-                   std::pair<unsigned int, unsigned int>>
+  static std::optional<std::pair<State, uint64_t>> bug_option_pair(State s);
+  static State get_state(uint64_t n);
+  static std::optional<uint64_t> bug_some_of_call(uint64_t n);
+  static std::pair<State, uint64_t> pair_simple(State s);
+  static std::pair<State, uint64_t> pair_let(uint64_t n);
+  static std::pair<std::pair<State, uint64_t>, std::pair<uint64_t, uint64_t>>
   pair_nested(State s);
-  static std::pair<State, unsigned int> pair_if(bool b, State s);
-  static std::optional<std::pair<State, unsigned int>>
+  static std::pair<State, uint64_t> pair_if(bool b, State s);
+  static std::optional<std::pair<State, uint64_t>>
   pair_match(const std::optional<State> &o);
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  static std::pair<std::pair<State, uint64_t>, uint64_t>
   pair_multi_proj(State s);
-  static std::pair<State, unsigned int> pair_chain(const State &s1);
-  static std::pair<std::pair<State, State>,
-                   std::pair<unsigned int, unsigned int>>
+  static std::pair<State, uint64_t> pair_chain(const State &s1);
+  static std::pair<std::pair<State, State>, std::pair<uint64_t, uint64_t>>
   pair_extreme(State s);
-  static std::pair<State, unsigned int> make_pair(State s);
-  static std::pair<State, unsigned int> outer_pair(unsigned int n);
-  static List<std::pair<State, unsigned int>> count_pairs(unsigned int n,
-                                                          State s);
+  static std::pair<State, uint64_t> make_pair(State s);
+  static std::pair<State, uint64_t> outer_pair(uint64_t n);
+  static List<std::pair<State, uint64_t>> count_pairs(uint64_t n, State s);
 };
 
 #endif // INCLUDED_CUSTOM_INLINE_BUG

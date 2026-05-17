@@ -1,7 +1,7 @@
 #include "pair_closure_escape.h"
 
-unsigned int PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
-                                           unsigned int x) {
+uint64_t PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
+                                       uint64_t x) {
   if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -29,17 +29,14 @@ unsigned int PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
 
 /// BUG: Partial application stored in fst of a pair (std::make_pair).
 /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
-std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
+std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
 PairClosureEscape::pair_escape(PairClosureEscape::tree t) {
   return std::make_pair(
-      [=](unsigned int _x0) mutable -> unsigned int {
-        return sum_values(t, _x0);
-      },
-      0u);
+      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); },
+      UINT64_C(0));
 }
 
-unsigned int PairClosureEscape::use_pair(
-    const std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
-        &p) {
+uint64_t PairClosureEscape::use_pair(
+    const std::pair<std::function<uint64_t(uint64_t)>, uint64_t> &p) {
   return p.first(p.second);
 }

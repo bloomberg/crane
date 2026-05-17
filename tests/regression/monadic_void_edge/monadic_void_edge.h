@@ -129,15 +129,15 @@ public:
 
 struct MonadicVoidEdge {
   /// 1. Bind where LHS is void and RHS returns a value
-  static unsigned int bind_void_then_value();
+  static uint64_t bind_void_then_value();
   /// 2. Bind where both sides are void
   static void bind_void_void();
   /// 3. Let-binding the result of a monadic void call
-  static unsigned int let_bind_monadic_void();
+  static uint64_t let_bind_monadic_void();
   /// 4. Passing unit through a chain of binds
   static void unit_chain();
   /// 5. Match on a value obtained from a bind
-  static unsigned int match_after_bind();
+  static uint64_t match_after_bind();
   /// 6. Void function called in a non-tail bind position
   static std::string void_nontail();
   /// 7. Nested binds returning unit at every level
@@ -145,8 +145,8 @@ struct MonadicVoidEdge {
 
   /// 8. Higher-order: pass a monadic void function as callback
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, unsigned int &>
-  static void apply_effect(F0 &&f, unsigned int _x0) {
+    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
+  static void apply_effect(F0 &&f, uint64_t _x0) {
     f(_x0);
     return;
   }
@@ -155,11 +155,11 @@ struct MonadicVoidEdge {
   /// 9. Monadic function returning option unit
   static std::optional<std::monostate> maybe_print(bool b);
   /// 10. Bind result used in a pair
-  static std::pair<unsigned int, unsigned int> bind_into_pair();
+  static std::pair<uint64_t, uint64_t> bind_into_pair();
   /// 11. Void function result stored in list (should stay Unit, not void)
   static List<std::monostate> unit_in_list();
   /// 12. Mixed: some binds void, some value, interleaved
-  static unsigned int mixed_binds();
+  static uint64_t mixed_binds();
   /// 13. Function that takes itree as argument and sequences
   static void sequence_effects(const std::monostate &e1,
                                const std::monostate &e2);

@@ -1,14 +1,14 @@
 #include "sprop.h"
 
-unsigned int SPropTest::guarded_pred(unsigned int n) {
+uint64_t SPropTest::guarded_pred(uint64_t n) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     return m;
   }
 }
 
-unsigned int SPropTest::safe_div(unsigned int _x0, unsigned int _x1) {
+uint64_t SPropTest::safe_div(uint64_t _x0, uint64_t _x1) {
   return (_x1 ? _x0 / _x1 : 0);
 }

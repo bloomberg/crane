@@ -34,11 +34,10 @@ struct EnumSwitchQualified {
     }
 
     static Color flip(Color c);
-    static unsigned int code(Color c);
+    static uint64_t code(Color c);
   };
 
-  static inline const unsigned int t =
-      Outer::code(Outer::flip(Outer::Color::RED));
+  static inline const uint64_t t = Outer::code(Outer::flip(Outer::Color::RED));
 };
 
 #endif // INCLUDED_ENUM_SWITCH_QUALIFIED

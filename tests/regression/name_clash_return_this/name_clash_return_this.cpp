@@ -28,7 +28,7 @@ NameClashReturnThis::identity_or_double(const NameClashReturnThis::shape &s) {
           s.v())) {
     const auto &[a0] =
         std::get<typename NameClashReturnThis::shape::Circle>(s.v());
-    return shape::circle((a0 * 2u));
+    return shape::circle((a0 * UINT64_C(2)));
   } else {
     const auto &[a0, a1] =
         std::get<typename NameClashReturnThis::shape::Square>(s.v());
@@ -49,8 +49,7 @@ NameClashReturnThis::pick_shape(NameClashReturnThis::shape s1,
 }
 
 /// Nested: match on result of a function that may return this
-unsigned int
-NameClashReturnThis::nested_this(const NameClashReturnThis::shape &s) {
+uint64_t NameClashReturnThis::nested_this(const NameClashReturnThis::shape &s) {
   auto &&_sv = identity_or_double(s);
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
           _sv.v())) {

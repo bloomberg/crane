@@ -5,7 +5,7 @@
 
 struct RecordUseAfterMove {
   struct box {
-    unsigned int payload;
+    uint64_t payload;
     bool enabled;
 
     // ACCESSORS
@@ -14,8 +14,8 @@ struct RecordUseAfterMove {
 
   static box clone_box(const box &b);
   static box keep_box(box b);
-  static unsigned int use_box(const box &b);
-  static inline const box initial_box = box{41u, true};
+  static uint64_t use_box(const box &b);
+  static inline const box initial_box = box{UINT64_C(41), true};
   /// BUG: The same shared_ptr local b is moved into multiple call sites.
   /// After the first std::move(b), subsequent uses dereference a
   /// moved-from shared_ptr, causing a segfault.
@@ -34,15 +34,15 @@ struct RecordUseAfterMove {
     }
   }();
   /// Simple case: same record used twice in let bindings.
-  static inline const unsigned int double_let = []() {
-    unsigned int x = initial_box.payload;
-    unsigned int y = initial_box.payload;
+  static inline const uint64_t double_let = []() {
+    uint64_t x = initial_box.payload;
+    uint64_t y = initial_box.payload;
     return (x + y);
   }();
   /// Record passed to two different functions.
-  static inline const unsigned int two_consumers = []() {
-    unsigned int p = use_box(initial_box);
-    unsigned int q = use_box(initial_box);
+  static inline const uint64_t two_consumers = []() {
+    uint64_t p = use_box(initial_box);
+    uint64_t q = use_box(initial_box);
     return (p + q);
   }();
 };

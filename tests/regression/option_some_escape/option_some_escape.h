@@ -16,7 +16,7 @@ struct OptionSomeEscape {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -86,7 +86,7 @@ struct OptionSomeEscape {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -123,8 +123,8 @@ struct OptionSomeEscape {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -136,8 +136,8 @@ struct OptionSomeEscape {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -148,22 +148,23 @@ struct OptionSomeEscape {
     }
   }
 
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static uint64_t sum_values(const tree &t, uint64_t x);
   /// BUG: Partial application stored in Some (std::make_optional).
   /// The & lambda captures parameter t by reference.
   /// return_captures_by_value doesn't handle lambdas inside
   /// std::make_optional. When the function returns, t is destroyed.
-  static std::optional<std::function<unsigned int(unsigned int)>>
-  option_escape(tree t);
-  static unsigned int apply_option(
-      const std::optional<std::function<unsigned int(unsigned int)>> &o,
-      unsigned int x); /// Clobber stack, then use the closure from the option.
-  static inline const unsigned int bug_option_some = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    std::optional<std::function<unsigned int(unsigned int)>> o1 =
+  static std::optional<std::function<uint64_t(uint64_t)>> option_escape(tree t);
+  static uint64_t
+  apply_option(const std::optional<std::function<uint64_t(uint64_t)>> &o,
+               uint64_t x);
+  /// Clobber stack, then use the closure from the option.
+  static inline const uint64_t bug_option_some = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    std::optional<std::function<uint64_t(uint64_t)>> o1 =
         option_escape(std::move(t1));
-    return apply_option(o1, 0u);
+    return apply_option(o1, UINT64_C(0));
   }();
 };
 

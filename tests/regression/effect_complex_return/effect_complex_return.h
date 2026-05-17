@@ -139,7 +139,7 @@ struct EffectComplexReturn {
   /// 5. Clock effect in arithmetic
   static int64_t elapsed_ms();
   /// 6. Effect result used to build a list
-  static List<std::string> read_n(unsigned int n);
+  static List<std::string> read_n(uint64_t n);
   /// 7. Env effect result used in conditional
   static std::string env_or_prompt(std::string name);
 };

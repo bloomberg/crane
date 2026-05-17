@@ -3,8 +3,8 @@
 
 struct RegionMembershipBounds {
   struct layout {
-    unsigned int base_addr;
-    unsigned int code_size;
+    uint64_t base_addr;
+    uint64_t code_size;
 
     // ACCESSORS
     layout clone() const {
@@ -12,12 +12,12 @@ struct RegionMembershipBounds {
     }
   };
 
-  static bool addr_in_regionb(unsigned int addr, const layout &l);
-  static inline const unsigned int t = []() {
+  static bool addr_in_regionb(uint64_t addr, const layout &l);
+  static inline const uint64_t t = []() {
     return []() {
-      layout l = layout{100u, 20u};
-      return ((addr_in_regionb(110u, l) ? 1u : 0u) +
-              (addr_in_regionb(121u, l) ? 1u : 0u));
+      layout l = layout{UINT64_C(100), UINT64_C(20)};
+      return ((addr_in_regionb(UINT64_C(110), l) ? UINT64_C(1) : UINT64_C(0)) +
+              (addr_in_regionb(UINT64_C(121), l) ? UINT64_C(1) : UINT64_C(0)));
     }();
   }();
 };

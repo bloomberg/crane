@@ -66,17 +66,17 @@ int64_t EffectComplexReturn::elapsed_ms() {
 }
 
 /// 6. Effect result used to build a list
-List<std::string> EffectComplexReturn::read_n(unsigned int n) {
+List<std::string> EffectComplexReturn::read_n(uint64_t n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     if (n0 <= 0) {
       std::string x;
       std::getline(std::cin, x);
       return List<std::string>::cons(x, List<std::string>::nil());
     } else {
-      unsigned int n1 = n0 - 1;
+      uint64_t n1 = n0 - 1;
       if (n1 <= 0) {
         std::string x;
         std::getline(std::cin, x);
@@ -85,7 +85,7 @@ List<std::string> EffectComplexReturn::read_n(unsigned int n) {
         return List<std::string>::cons(
             x, List<std::string>::cons(y, List<std::string>::nil()));
       } else {
-        unsigned int _x = n1 - 1;
+        uint64_t _x = n1 - 1;
         return List<std::string>::nil();
       }
     }

@@ -130,9 +130,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -141,15 +141,17 @@ public:
 };
 
 struct EvenLengthByteValidation {
-  static bool valid_program(const List<unsigned int> &bytes);
-  static inline const unsigned int t =
-      (valid_program(List<unsigned int>::cons(
-           1u, List<unsigned int>::cons(
-                   2u, List<unsigned int>::cons(
-                           3u, List<unsigned int>::cons(
-                                   4u, List<unsigned int>::nil())))))
-           ? 1u
-           : 0u);
+  static bool valid_program(const List<uint64_t> &bytes);
+  static inline const uint64_t t =
+      (valid_program(List<uint64_t>::cons(
+           UINT64_C(1),
+           List<uint64_t>::cons(
+               UINT64_C(2),
+               List<uint64_t>::cons(
+                   UINT64_C(3),
+                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))))
+           ? UINT64_C(1)
+           : UINT64_C(0));
 };
 
 #endif // INCLUDED_EVEN_LENGTH_BYTE_VALIDATION

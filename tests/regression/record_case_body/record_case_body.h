@@ -9,26 +9,26 @@
 
 struct RecordCaseBody {
   struct Rec {
-    unsigned int f1;
-    unsigned int f2;
-    unsigned int f3;
+    uint64_t f1;
+    uint64_t f2;
+    uint64_t f3;
 
     // ACCESSORS
     Rec clone() const { return Rec{(*this).f1, (*this).f2, (*this).f3}; }
   };
 
-  static unsigned int case_in_body(const Rec &r);
-  static unsigned int helper(unsigned int n);
-  static unsigned int fix_in_body(const Rec &r);
-  static unsigned int let_in_body(const Rec &r);
-  static unsigned int apply_nonfld(const Rec &r);
-  static unsigned int conditional_body(const Rec &r, bool flag);
-  static unsigned int outer_ref(unsigned int x, const Rec &r);
-  static unsigned int lambda_body(const Rec &r, unsigned int n);
+  static uint64_t case_in_body(const Rec &r);
+  static uint64_t helper(uint64_t n);
+  static uint64_t fix_in_body(const Rec &r);
+  static uint64_t let_in_body(const Rec &r);
+  static uint64_t apply_nonfld(const Rec &r);
+  static uint64_t conditional_body(const Rec &r, bool flag);
+  static uint64_t outer_ref(uint64_t x, const Rec &r);
+  static uint64_t lambda_body(const Rec &r, uint64_t n);
 
   struct RecRec {
     Rec inner;
-    unsigned int outer_field;
+    uint64_t outer_field;
 
     // ACCESSORS
     RecRec clone() const {
@@ -36,10 +36,10 @@ struct RecordCaseBody {
     }
   };
 
-  static unsigned int nested_record_match(const RecRec &rr);
-  static inline const unsigned int global_const = 42u;
-  static unsigned int global_in_body(const Rec &r);
-  static unsigned int guarded_body(const Rec &r);
+  static uint64_t nested_record_match(const RecRec &rr);
+  static inline const uint64_t global_const = UINT64_C(42);
+  static uint64_t global_in_body(const Rec &r);
+  static uint64_t guarded_body(const Rec &r);
   static Rec constructor_body(const Rec &r);
 
   template <typename A> struct list {
@@ -178,11 +178,14 @@ struct RecordCaseBody {
     }
   }
 
-  static unsigned int sum_list(const list<unsigned int> &l);
-  static unsigned int list_in_body(const Rec &r);
-  static inline const unsigned int test1 = case_in_body(Rec{1u, 2u, 3u});
-  static inline const unsigned int test2 = fix_in_body(Rec{4u, 5u, 6u});
-  static inline const unsigned int test3 = let_in_body(Rec{0u, 1u, 2u});
+  static uint64_t sum_list(const list<uint64_t> &l);
+  static uint64_t list_in_body(const Rec &r);
+  static inline const uint64_t test1 =
+      case_in_body(Rec{UINT64_C(1), UINT64_C(2), UINT64_C(3)});
+  static inline const uint64_t test2 =
+      fix_in_body(Rec{UINT64_C(4), UINT64_C(5), UINT64_C(6)});
+  static inline const uint64_t test3 =
+      let_in_body(Rec{UINT64_C(0), UINT64_C(1), UINT64_C(2)});
 };
 
 #endif // INCLUDED_RECORD_CASE_BODY

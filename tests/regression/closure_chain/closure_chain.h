@@ -15,7 +15,7 @@ struct ClosureChain {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct ClosureChain {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,8 +122,8 @@ struct ClosureChain {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,8 +135,8 @@ struct ClosureChain {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -147,7 +147,7 @@ struct ClosureChain {
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
   /// Build a chain of closures via recursion.
   /// Each level wraps the previous closure in a new one.
   ///
@@ -158,34 +158,33 @@ struct ClosureChain {
   /// BUG HYPOTHESIS: make_chain (S n') t creates a local binding
   /// f := make_chain n' t, then returns fun x => f (x + 1).
   /// If f is captured by &, it dies when make_chain returns.
-  static unsigned int make_chain(unsigned int n, const tree &t,
-                                 unsigned int _x0);
+  static uint64_t make_chain(uint64_t n, const tree &t, uint64_t _x0);
   /// Test: make_chain 0 t 5 = tree_sum(t) + 5 = 10 + 5 = 15
-  static inline const unsigned int chain_0 = []() {
-    tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-    return make_chain(0u, std::move(t), 5u);
+  static inline const uint64_t chain_0 = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    return make_chain(UINT64_C(0), std::move(t), UINT64_C(5));
   }();
   /// Test: make_chain 1 t 5 = (make_chain 0 t) (5 + 1) = 10 + 6 = 16
-  static inline const unsigned int chain_1 = []() {
-    tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-    return make_chain(1u, std::move(t), 5u);
+  static inline const uint64_t chain_1 = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    return make_chain(UINT64_C(1), std::move(t), UINT64_C(5));
   }();
   /// Test: make_chain 3 t 0 = (make_chain 0 t) 3 = 10 + 3 = 13
-  static inline const unsigned int chain_3 = []() {
-    tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-    return make_chain(3u, std::move(t), 0u);
+  static inline const uint64_t chain_3 = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    return make_chain(UINT64_C(3), std::move(t), UINT64_C(0));
   }();
   /// Store the chain result and call it twice.
   /// If make_chain returns a chain with dangling references,
   /// the second call through clobbered stack would give wrong result.
-  static inline const unsigned int chain_double_call = []() {
+  static inline const uint64_t chain_double_call = []() {
     return []() {
-      tree t = tree::node(tree::leaf(), 10u, tree::leaf());
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return make_chain(2u, t, _x0);
+      tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t {
+        return make_chain(UINT64_C(2), t, _x0);
       };
-      return (f(0u) + f(100u));
+      return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();
 };

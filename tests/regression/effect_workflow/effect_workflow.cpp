@@ -44,17 +44,17 @@ void EffectWorkflow::read_and_set() {
 }
 
 /// 4. Recursive function using effects
-unsigned int EffectWorkflow::repeat_log(unsigned int n, std::string msg) {
+uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     int64_t _x = static_cast<int64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch())
             .count());
     std::cout << msg << '\n';
-    unsigned int r = repeat_log(n_, msg);
+    uint64_t r = repeat_log(n_, msg);
     return (r + 1);
   }
 }
@@ -79,7 +79,7 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
 int64_t EffectWorkflow::read_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = line.length();
+  int64_t len = static_cast<int64_t>(line.length());
   return len;
 }
 

@@ -38,7 +38,7 @@ Crane Extract Inlined Constant Z.max => "std::max(%a0, %a1)" From "algorithm".
 
 (* Conversions *)
 Crane Extract Inlined Constant Z.of_nat => "static_cast<int64_t>(%a0)".
-Crane Extract Inlined Constant Z.to_nat => "static_cast<unsigned int>(%a0 < 0 ? 0 : %a0)".
+Crane Extract Inlined Constant Z.to_nat => "static_cast<uint64_t>(%a0 < 0 ? 0 : %a0)".
 Crane Extract Inlined Constant Z.of_N => "static_cast<int64_t>(%a0)".
 Crane Extract Inlined Constant Z.to_N => "static_cast<unsigned int>(%a0 < 0 ? 0 : %a0)".
 Crane Extract Inlined Constant Z.abs_N => "static_cast<unsigned int>(std::abs(%a0))" From "cstdlib".

@@ -17,8 +17,8 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using List = ::List<unsigned int>;
-  using PairList = ::List<std::pair<unsigned int, unsigned int>>;
+  using List = ::List<uint64_t>;
+  using PairList = ::List<std::pair<uint64_t, uint64_t>>;
 
   // Test knapsack
   auto item1 = std::make_pair(2u, 3u); // weight=2, value=3
@@ -46,7 +46,7 @@ int main() {
   auto lis = LoopifySearch::longest_increasing_subseq(seq);
 
   // Test maximum_by
-  auto cmp = [](unsigned int x, unsigned int y) -> unsigned int {
+  auto cmp = [](uint64_t x, uint64_t y) -> unsigned int {
     if (x == y)
       return 0u;
     if (x > y)

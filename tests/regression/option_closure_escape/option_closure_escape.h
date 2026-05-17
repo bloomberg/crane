@@ -15,7 +15,7 @@ struct OptionClosureEscape {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct OptionClosureEscape {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,8 +122,8 @@ struct OptionClosureEscape {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,8 +135,8 @@ struct OptionClosureEscape {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -147,30 +147,32 @@ struct OptionClosureEscape {
     }
   }
 
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static uint64_t sum_values(const tree &t, uint64_t x);
   /// BUG: pair_escape stores a & lambda in a pair.
   /// The lambda captures parameter t by reference.
   /// When pair_escape returns, t is destroyed → dangling.
-  static std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
+  static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
   pair_escape(tree t);
   /// Call pair_escape, then call it again to clobber the stack,
   /// then use the first result's closure.
-  static inline const unsigned int bug_pair_clobber = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p1 =
+  static inline const uint64_t bug_pair_clobber = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
         pair_escape(std::move(t1));
-    return p1.first(0u);
+    return p1.first(UINT64_C(0));
   }();
   /// BUG: match_pair — & captures _args from visit scope.
-  static std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
+  static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
   match_pair(const tree &t);
-  static inline const unsigned int bug_match_pair_clobber = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                         tree::node(tree::leaf(), 30u, tree::leaf()));
-    std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p1 =
+  static inline const uint64_t bug_match_pair_clobber = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
         match_pair(std::move(t1));
-    return p1.first(0u);
+    return p1.first(UINT64_C(0));
   }();
 };
 

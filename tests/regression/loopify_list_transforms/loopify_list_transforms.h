@@ -118,7 +118,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -130,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -143,7 +143,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -182,33 +182,29 @@ public:
 };
 
 struct LoopifyListTransforms {
-  static List<std::pair<unsigned int, unsigned int>>
-  run_length_encode(const List<unsigned int> &l);
-  static List<unsigned int> prefix_sums(unsigned int acc,
-                                        const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  sliding_pairs_fuel(unsigned int fuel, const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  sliding_pairs(const List<unsigned int> &l);
-  static unsigned int abs_diff(unsigned int x, unsigned int y);
-  static List<unsigned int> differences_fuel(unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<unsigned int> differences(const List<unsigned int> &l);
-  static List<unsigned int> take(unsigned int n, const List<unsigned int> &l);
-  static List<unsigned int> drop(unsigned int n, List<unsigned int> l);
-  static List<List<unsigned int>> chunks_of_fuel(unsigned int fuel,
-                                                 unsigned int n,
-                                                 const List<unsigned int> &l);
-  static List<List<unsigned int>> chunks_of(unsigned int n,
-                                            const List<unsigned int> &l);
-  static List<unsigned int> rotate_left_fuel(unsigned int fuel, unsigned int n,
-                                             List<unsigned int> l);
-  static List<unsigned int> rotate_left(unsigned int n,
-                                        const List<unsigned int> &l);
-  static List<unsigned int> uniq_sorted_fuel(unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<unsigned int> uniq_sorted(const List<unsigned int> &l);
-  static unsigned int step_sum(const List<unsigned int> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_encode(const List<uint64_t> &l);
+  static List<uint64_t> prefix_sums(uint64_t acc, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs(const List<uint64_t> &l);
+  static uint64_t abs_diff(uint64_t x, uint64_t y);
+  static List<uint64_t> differences_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> differences(const List<uint64_t> &l);
+  static List<uint64_t> take(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> drop(uint64_t n, List<uint64_t> l);
+  static List<List<uint64_t>> chunks_of_fuel(uint64_t fuel, uint64_t n,
+                                             const List<uint64_t> &l);
+  static List<List<uint64_t>> chunks_of(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
+                                         List<uint64_t> l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> uniq_sorted_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
+  static uint64_t step_sum(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_TRANSFORMS

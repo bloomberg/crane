@@ -1,7 +1,7 @@
 #include "option_some_escape.h"
 
-unsigned int OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
-                                          unsigned int x) {
+uint64_t OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
+                                      uint64_t x) {
   if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
@@ -31,19 +31,16 @@ unsigned int OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
 /// The & lambda captures parameter t by reference.
 /// return_captures_by_value doesn't handle lambdas inside
 /// std::make_optional. When the function returns, t is destroyed.
-std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<uint64_t(uint64_t)>>
 OptionSomeEscape::option_escape(OptionSomeEscape::tree t) {
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(
-      [=](unsigned int _x0) mutable -> unsigned int {
-        return sum_values(t, _x0);
-      });
+  return std::make_optional<std::function<uint64_t(uint64_t)>>(
+      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); });
 }
 
-unsigned int OptionSomeEscape::apply_option(
-    const std::optional<std::function<unsigned int(unsigned int)>> &o,
-    unsigned int x) {
+uint64_t OptionSomeEscape::apply_option(
+    const std::optional<std::function<uint64_t(uint64_t)>> &o, uint64_t x) {
   if (o.has_value()) {
-    const std::function<unsigned int(unsigned int)> &f = *o;
+    const std::function<uint64_t(uint64_t)> &f = *o;
     return f(x);
   } else {
     return x;

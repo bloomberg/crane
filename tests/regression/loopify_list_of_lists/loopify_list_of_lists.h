@@ -144,24 +144,23 @@ public:
 };
 
 struct LoopifyListOfLists {
-  static List<unsigned int> intercalate(const List<unsigned int> &sep,
-                                        const List<List<unsigned int>> &ll);
-  static List<unsigned int> map_hd(const List<List<unsigned int>> &ll);
-  static List<List<unsigned int>> map_tl(const List<List<unsigned int>> &ll);
-  static bool all_empty(const List<List<unsigned int>> &ll);
-  static List<List<unsigned int>>
-  transpose_fuel(unsigned int fuel, const List<List<unsigned int>> &ll);
-  static unsigned int list_len(const List<unsigned int> &l);
-  static unsigned int total_length(const List<List<unsigned int>> &ll);
-  static List<List<unsigned int>> transpose(const List<List<unsigned int>> &ll);
-  static List<unsigned int> flatten(const List<List<unsigned int>> &ll);
-  static unsigned int count_total(const List<List<unsigned int>> &ll);
-  static List<unsigned int> firsts(const List<List<unsigned int>> &ll);
-  static bool all_nil(const List<List<unsigned int>> &ll);
-  static List<std::pair<List<unsigned int>, List<unsigned int>>>
-  zip_lists(const List<List<unsigned int>> &ll1,
-            const List<List<unsigned int>> &ll2);
-  static unsigned int max_length(const List<List<unsigned int>> &ll);
+  static List<uint64_t> intercalate(const List<uint64_t> &sep,
+                                    const List<List<uint64_t>> &ll);
+  static List<uint64_t> map_hd(const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> map_tl(const List<List<uint64_t>> &ll);
+  static bool all_empty(const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> transpose_fuel(uint64_t fuel,
+                                             const List<List<uint64_t>> &ll);
+  static uint64_t list_len(const List<uint64_t> &l);
+  static uint64_t total_length(const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> transpose(const List<List<uint64_t>> &ll);
+  static List<uint64_t> flatten(const List<List<uint64_t>> &ll);
+  static uint64_t count_total(const List<List<uint64_t>> &ll);
+  static List<uint64_t> firsts(const List<List<uint64_t>> &ll);
+  static bool all_nil(const List<List<uint64_t>> &ll);
+  static List<std::pair<List<uint64_t>, List<uint64_t>>>
+  zip_lists(const List<List<uint64_t>> &ll1, const List<List<uint64_t>> &ll2);
+  static uint64_t max_length(const List<List<uint64_t>> &ll);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_OF_LISTS

@@ -142,9 +142,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -973,52 +973,51 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(unsigned int n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, unsigned int n,
-                                  unsigned int m);
-  static unsigned int tail_mul(unsigned int n, unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 struct ValidatedPumpDeliveryTraceCase {
   struct Mg_dL {
-    unsigned int mg_dL_val;
+    uint64_t mg_dL_val;
 
     // ACCESSORS
     Mg_dL clone() const { return Mg_dL{(*this).mg_dL_val}; }
   };
 
   struct Grams {
-    unsigned int grams_val;
+    uint64_t grams_val;
 
     // ACCESSORS
     Grams clone() const { return Grams{(*this).grams_val}; }
   };
 
   using Carbs_g = Grams;
-  using Minutes = unsigned int;
-  using DIA_minutes = unsigned int;
-  using Insulin_twentieth = unsigned int;
-  static inline const unsigned int ONE_UNIT = 20u;
-  static inline const unsigned int BG_LEVEL2_HYPO = 54u;
-  static inline const unsigned int BG_HYPO = 70u;
-  static inline const unsigned int BG_HYPER = 180u;
-  static inline const unsigned int BG_METER_MIN = 20u;
-  static inline const unsigned int BG_METER_MAX = 600u;
-  static inline const unsigned int CARBS_SANITY_MAX = 200u;
+  using Minutes = uint64_t;
+  using DIA_minutes = uint64_t;
+  using Insulin_twentieth = uint64_t;
+  static inline const uint64_t ONE_UNIT = UINT64_C(20);
+  static inline const uint64_t BG_LEVEL2_HYPO = UINT64_C(54);
+  static inline const uint64_t BG_HYPO = UINT64_C(70);
+  static inline const uint64_t BG_HYPER = UINT64_C(180);
+  static inline const uint64_t BG_METER_MIN = UINT64_C(20);
+  static inline const uint64_t BG_METER_MAX = UINT64_C(600);
+  static inline const uint64_t CARBS_SANITY_MAX = UINT64_C(200);
   static bool bg_in_meter_range(const Mg_dL &bg);
   static bool carbs_reasonable(const Grams &carbs);
 
   struct Config {
-    unsigned int cfg_bg_rise_per_gram;
-    unsigned int cfg_conservative_cob_absorption_percent;
-    unsigned int cfg_suspend_threshold_mg_dl;
-    unsigned int cfg_stacking_warning_threshold_min;
-    unsigned int cfg_iob_high_threshold_twentieths;
+    uint64_t cfg_bg_rise_per_gram;
+    uint64_t cfg_conservative_cob_absorption_percent;
+    uint64_t cfg_suspend_threshold_mg_dl;
+    uint64_t cfg_stacking_warning_threshold_min;
+    uint64_t cfg_iob_high_threshold_twentieths;
 
     // ACCESSORS
     Config clone() const {
@@ -1030,7 +1029,8 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static inline const Config default_config = Config{4u, 30u, 80u, 60u, 200u};
+  static inline const Config default_config = Config{
+      UINT64_C(4), UINT64_C(30), UINT64_C(80), UINT64_C(60), UINT64_C(200)};
   enum class ActivityState {
     ACTIVITY_NORMAL,
     ACTIVITY_LIGHTEXERCISE,
@@ -1094,8 +1094,8 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static unsigned int isf_activity_modifier(ActivityState state);
-  static unsigned int icr_activity_modifier(ActivityState state);
+  static uint64_t isf_activity_modifier(ActivityState state);
+  static uint64_t icr_activity_modifier(ActivityState state);
 
   struct FaultStatus {
     // TYPES
@@ -1104,7 +1104,7 @@ struct ValidatedPumpDeliveryTraceCase {
     struct Fault_Occlusion {};
 
     struct Fault_LowReservoir {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Fault_BatteryLow {};
@@ -1170,7 +1170,7 @@ struct ValidatedPumpDeliveryTraceCase {
       return FaultStatus(Fault_Occlusion{});
     }
 
-    static FaultStatus fault_lowreservoir(unsigned int a0) {
+    static FaultStatus fault_lowreservoir(uint64_t a0) {
       return FaultStatus(Fault_LowReservoir{a0});
     }
 
@@ -1193,7 +1193,7 @@ struct ValidatedPumpDeliveryTraceCase {
                      typename FaultStatus::Fault_LowReservoir>(this->v())) {
         const auto &[a0] =
             std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
-        return a0 < 10u;
+        return a0 < UINT64_C(10);
       } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
                      this->v())) {
         return false;
@@ -1203,7 +1203,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     template <typename T1, typename F2>
-      requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
     T1 FaultStatus_rec(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
       if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
         return f;
@@ -1224,7 +1224,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
 
     template <typename T1, typename F2>
-      requires std::is_invocable_r_v<T1, F2 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
     T1 FaultStatus_rect(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
       if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
         return f;
@@ -1280,10 +1280,10 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static Minutes peak_time(InsulinType itype, unsigned int _x);
+  static Minutes peak_time(InsulinType itype, uint64_t _x);
 
   struct BolusEvent {
-    unsigned int be_dose_twentieths;
+    uint64_t be_dose_twentieths;
     Minutes be_time_minutes;
 
     // ACCESSORS
@@ -1292,35 +1292,33 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static unsigned int div_ceil(unsigned int a, unsigned int b);
-  static bool event_time_valid(unsigned int now, const BolusEvent &event);
-  static bool history_times_valid(unsigned int now,
-                                  const List<BolusEvent> &events);
-  static bool history_sorted_from(unsigned int prev,
+  static uint64_t div_ceil(uint64_t a, uint64_t b);
+  static bool event_time_valid(uint64_t now, const BolusEvent &event);
+  static bool history_times_valid(uint64_t now, const List<BolusEvent> &events);
+  static bool history_sorted_from(uint64_t prev,
                                   const List<BolusEvent> &events);
   static bool history_sorted_desc(const List<BolusEvent> &events);
-  static bool history_valid(unsigned int now, const List<BolusEvent> &events);
-  static unsigned int bilinear_iob_fraction(unsigned int elapsed,
-                                            unsigned int dia,
-                                            InsulinType itype);
-  static Insulin_twentieth bilinear_iob_from_bolus(unsigned int now,
+  static bool history_valid(uint64_t now, const List<BolusEvent> &events);
+  static uint64_t bilinear_iob_fraction(uint64_t elapsed, uint64_t dia,
+                                        InsulinType itype);
+  static Insulin_twentieth bilinear_iob_from_bolus(uint64_t now,
                                                    const BolusEvent &event,
-                                                   unsigned int dia,
+                                                   uint64_t dia,
                                                    InsulinType itype);
-  static Insulin_twentieth total_bilinear_iob(unsigned int now,
+  static Insulin_twentieth total_bilinear_iob(uint64_t now,
                                               const List<BolusEvent> &events,
-                                              unsigned int dia,
-                                              InsulinType itype);
+                                              uint64_t dia, InsulinType itype);
   static Mg_dL apply_sensor_margin(Mg_dL bg, const Mg_dL &target);
-  static unsigned int adjusted_isf_tenths(const Mg_dL &bg,
-                                          unsigned int base_isf_tenths);
+  static uint64_t adjusted_isf_tenths(const Mg_dL &bg,
+                                      uint64_t base_isf_tenths);
+  static Insulin_twentieth correction_twentieths_full(uint64_t _x,
+                                                      const Mg_dL &current_bg,
+                                                      const Mg_dL &target_bg,
+                                                      uint64_t base_isf_tenths);
   static Insulin_twentieth
-  correction_twentieths_full(unsigned int _x, const Mg_dL &current_bg,
-                             const Mg_dL &target_bg,
-                             unsigned int base_isf_tenths);
-  static Insulin_twentieth apply_reverse_correction_twentieths(
-      unsigned int carb, const Mg_dL &current_bg, const Mg_dL &target_bg,
-      unsigned int isf_tenths);
+  apply_reverse_correction_twentieths(uint64_t carb, const Mg_dL &current_bg,
+                                      const Mg_dL &target_bg,
+                                      uint64_t isf_tenths);
 
   struct SuspendDecision {
     // TYPES
@@ -1398,7 +1396,7 @@ struct ValidatedPumpDeliveryTraceCase {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 SuspendDecision_rect(T1 f, F1 &&f0, T1 f1,
                                  const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
@@ -1414,7 +1412,7 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 SuspendDecision_rec(T1 f, F1 &&f0, T1 f1,
                                 const SuspendDecision &s) {
     if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
@@ -1429,27 +1427,26 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static unsigned int predict_bg_drop_tenths(unsigned int iob_twentieths,
-                                             unsigned int isf_tenths);
-  static unsigned int conservative_cob_rise(const Config &cfg,
-                                            unsigned int cob_grams);
-  static unsigned int predicted_eventual_bg_tenths(const Config &cfg,
-                                                   const Mg_dL &current_bg,
-                                                   unsigned int iob_twentieths,
-                                                   unsigned int cob_grams,
-                                                   unsigned int isf_tenths);
-  static SuspendDecision suspend_check_tenths_with_cob(
-      const Config &cfg, const Mg_dL &current_bg, unsigned int iob_twentieths,
-      unsigned int cob_grams, unsigned int isf_tenths, unsigned int proposed);
-  static Insulin_twentieth apply_suspend(unsigned int proposed,
+  static uint64_t predict_bg_drop_tenths(uint64_t iob_twentieths,
+                                         uint64_t isf_tenths);
+  static uint64_t conservative_cob_rise(const Config &cfg, uint64_t cob_grams);
+  static uint64_t predicted_eventual_bg_tenths(const Config &cfg,
+                                               const Mg_dL &current_bg,
+                                               uint64_t iob_twentieths,
+                                               uint64_t cob_grams,
+                                               uint64_t isf_tenths);
+  static SuspendDecision
+  suspend_check_tenths_with_cob(const Config &cfg, const Mg_dL &current_bg,
+                                uint64_t iob_twentieths, uint64_t cob_grams,
+                                uint64_t isf_tenths, uint64_t proposed);
+  static Insulin_twentieth apply_suspend(uint64_t proposed,
                                          const SuspendDecision &decision);
-  static Insulin_twentieth pediatric_max_twentieths(unsigned int weight_kg);
-  static Insulin_twentieth cap_pediatric(unsigned int bolus,
-                                         unsigned int weight_kg);
+  static Insulin_twentieth pediatric_max_twentieths(uint64_t weight_kg);
+  static Insulin_twentieth cap_pediatric(uint64_t bolus, uint64_t weight_kg);
 
   struct PrecisionParams {
-    unsigned int prec_icr_tenths;
-    unsigned int prec_isf_tenths;
+    uint64_t prec_icr_tenths;
+    uint64_t prec_isf_tenths;
     Mg_dL prec_target_bg;
     DIA_minutes prec_dia;
     InsulinType prec_insulin_type;
@@ -1472,7 +1469,7 @@ struct ValidatedPumpDeliveryTraceCase {
     ActivityState pi_activity;
     bool pi_use_sensor_margin;
     FaultStatus pi_fault;
-    std::optional<unsigned int> pi_weight_kg;
+    std::optional<uint64_t> pi_weight_kg;
 
     // ACCESSORS
     PrecisionInput clone() const {
@@ -1484,15 +1481,15 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static Insulin_twentieth carb_bolus_twentieths(unsigned int carbs_g,
-                                                 unsigned int icr_tenths);
+  static Insulin_twentieth carb_bolus_twentieths(uint64_t carbs_g,
+                                                 uint64_t icr_tenths);
   static Insulin_twentieth
   calculate_precision_bolus(const PrecisionInput &input,
                             const PrecisionParams &params);
-  static bool time_reasonable(unsigned int now);
+  static bool time_reasonable(uint64_t now);
   static bool history_extraction_safe(const List<BolusEvent> &events);
-  static unsigned int iob_high_threshold(const Config &cfg);
-  static bool iob_dangerously_high(unsigned int iob);
+  static uint64_t iob_high_threshold(const Config &cfg);
+  static bool iob_dangerously_high(uint64_t iob);
 
   struct PrecisionResult {
     // TYPES
@@ -1502,7 +1499,7 @@ struct ValidatedPumpDeliveryTraceCase {
     };
 
     struct PrecError {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<PrecOK, PrecError>;
@@ -1551,7 +1548,7 @@ struct ValidatedPumpDeliveryTraceCase {
       return PrecisionResult(PrecOK{std::move(a0), a1});
     }
 
-    static PrecisionResult precerror(unsigned int a0) {
+    static PrecisionResult precerror(uint64_t a0) {
       return PrecisionResult(PrecError{a0});
     }
 
@@ -1571,9 +1568,9 @@ struct ValidatedPumpDeliveryTraceCase {
       }
     }
 
-    unsigned int precision_result_code() const {
+    uint64_t precision_result_code() const {
       if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0] =
             std::get<typename PrecisionResult::PrecError>(this->v());
@@ -1583,8 +1580,8 @@ struct ValidatedPumpDeliveryTraceCase {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, bool &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 PrecisionResult_rect(F0 &&f, F1 &&f0, const PrecisionResult &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[a0, a1] = std::get<typename PrecisionResult::PrecOK>(p.v());
@@ -1596,8 +1593,8 @@ struct ValidatedPumpDeliveryTraceCase {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, bool &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 PrecisionResult_rec(F0 &&f, F1 &&f0, const PrecisionResult &p) {
     if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
       const auto &[a0, a1] = std::get<typename PrecisionResult::PrecOK>(p.v());
@@ -1608,18 +1605,18 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static inline const unsigned int prec_error_invalid_params = 1u;
-  static inline const unsigned int prec_error_invalid_input = 2u;
-  static inline const unsigned int prec_error_hypo = 3u;
-  static inline const unsigned int prec_error_invalid_history = 4u;
-  static inline const unsigned int prec_error_invalid_time = 5u;
-  static inline const unsigned int prec_error_stacking = 6u;
-  static inline const unsigned int prec_error_fault = 7u;
-  static inline const unsigned int prec_error_tdd_exceeded = 8u;
-  static inline const unsigned int prec_error_iob_high = 9u;
-  static inline const unsigned int prec_error_extraction_unsafe = 10u;
-  static bool bolus_too_soon(unsigned int now, const List<BolusEvent> &history);
-  static Insulin_twentieth cap_twentieths(unsigned int t);
+  static inline const uint64_t prec_error_invalid_params = UINT64_C(1);
+  static inline const uint64_t prec_error_invalid_input = UINT64_C(2);
+  static inline const uint64_t prec_error_hypo = UINT64_C(3);
+  static inline const uint64_t prec_error_invalid_history = UINT64_C(4);
+  static inline const uint64_t prec_error_invalid_time = UINT64_C(5);
+  static inline const uint64_t prec_error_stacking = UINT64_C(6);
+  static inline const uint64_t prec_error_fault = UINT64_C(7);
+  static inline const uint64_t prec_error_tdd_exceeded = UINT64_C(8);
+  static inline const uint64_t prec_error_iob_high = UINT64_C(9);
+  static inline const uint64_t prec_error_extraction_unsafe = UINT64_C(10);
+  static bool bolus_too_soon(uint64_t now, const List<BolusEvent> &history);
+  static Insulin_twentieth cap_twentieths(uint64_t t);
   static PrecisionResult
   validated_precision_bolus(PrecisionInput input,
                             const PrecisionParams &params);
@@ -1628,13 +1625,13 @@ struct ValidatedPumpDeliveryTraceCase {
 
   struct MmolPrecisionInput {
     Carbs_g mpi_carbs_g;
-    unsigned int mpi_current_bg_mmol_tenths;
+    uint64_t mpi_current_bg_mmol_tenths;
     Minutes mpi_now;
     List<BolusEvent> mpi_bolus_history;
     ActivityState mpi_activity;
     bool mpi_use_sensor_margin;
     FaultStatus mpi_fault;
-    std::optional<unsigned int> mpi_weight_kg;
+    std::optional<uint64_t> mpi_weight_kg;
 
     // ACCESSORS
     MmolPrecisionInput clone() const {
@@ -1646,7 +1643,7 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static unsigned int mmol_tenths_to_mg_dL(unsigned int mmol_tenths);
+  static uint64_t mmol_tenths_to_mg_dL(uint64_t mmol_tenths);
   static PrecisionInput convert_mmol_input(const MmolPrecisionInput &input);
   static PrecisionResult validated_mmol_bolus(const MmolPrecisionInput &input,
                                               const PrecisionParams &params);
@@ -1692,18 +1689,17 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   }
 
-  static unsigned int round_down_to_increment(unsigned int t,
-                                              unsigned int increment);
-  static Insulin_twentieth apply_rounding(RoundingMode mode, unsigned int t);
+  static uint64_t round_down_to_increment(uint64_t t, uint64_t increment);
+  static Insulin_twentieth apply_rounding(RoundingMode mode, uint64_t t);
   static std::optional<Insulin_twentieth>
   final_delivery(RoundingMode mode, const PrecisionResult &result);
 
   struct PumpState {
-    unsigned int ps_reservoir_twentieths;
-    unsigned int ps_basal_rate_hundredths;
+    uint64_t ps_reservoir_twentieths;
+    uint64_t ps_basal_rate_hundredths;
     Minutes ps_last_bolus_time;
     bool ps_occlusion_detected;
-    unsigned int ps_battery_percent;
+    uint64_t ps_battery_percent;
 
     // ACCESSORS
     PumpState clone() const {
@@ -1714,92 +1710,90 @@ struct ValidatedPumpDeliveryTraceCase {
     }
   };
 
-  static bool pump_can_deliver(const PumpState &state, unsigned int dose);
-  static unsigned int reservoir_after_bolus(const PumpState &state,
-                                            unsigned int dose);
-  static unsigned int option_nat_default(const std::optional<unsigned int> &x,
-                                         unsigned int d);
+  static bool pump_can_deliver(const PumpState &state, uint64_t dose);
+  static uint64_t reservoir_after_bolus(const PumpState &state, uint64_t dose);
+  static uint64_t option_nat_default(const std::optional<uint64_t> &x,
+                                     uint64_t d);
   static bool pump_accepts_result(const PumpState &pump, RoundingMode mode,
                                   const PrecisionResult &r);
-  static unsigned int pump_reservoir_after_result(const PumpState &pump,
-                                                  RoundingMode mode,
-                                                  const PrecisionResult &r);
-  static inline const PrecisionParams witness_prec_params = PrecisionParams{
-      100u, 500u, Mg_dL{100u}, 240u, InsulinType::INSULIN_HUMALOG};
-  static inline const PrecisionInput standard_input =
-      PrecisionInput{Grams{60u},
-                     Mg_dL{150u},
-                     0u,
-                     List<BolusEvent>::nil(),
-                     ActivityState::ACTIVITY_NORMAL,
-                     false,
-                     FaultStatus::fault_none(),
-                     std::optional<unsigned int>()};
+  static uint64_t pump_reservoir_after_result(const PumpState &pump,
+                                              RoundingMode mode,
+                                              const PrecisionResult &r);
+  static inline const PrecisionParams witness_prec_params =
+      PrecisionParams{UINT64_C(100), UINT64_C(500), Mg_dL{UINT64_C(100)},
+                      UINT64_C(240), InsulinType::INSULIN_HUMALOG};
+  static inline const PrecisionInput standard_input = PrecisionInput{
+      Grams{UINT64_C(60)},       Mg_dL{UINT64_C(150)},           UINT64_C(0),
+      List<BolusEvent>::nil(),   ActivityState::ACTIVITY_NORMAL, false,
+      FaultStatus::fault_none(), std::optional<uint64_t>()};
   static inline const MmolPrecisionInput mmol_input =
-      MmolPrecisionInput{Grams{60u},
-                         83u,
-                         0u,
+      MmolPrecisionInput{Grams{UINT64_C(60)},
+                         UINT64_C(83),
+                         UINT64_C(0),
                          List<BolusEvent>::nil(),
                          ActivityState::ACTIVITY_NORMAL,
                          false,
                          FaultStatus::fault_none(),
-                         std::optional<unsigned int>()};
+                         std::optional<uint64_t>()};
   static inline const PrecisionInput high_iob_input = PrecisionInput{
-      Grams{0u},
-      Mg_dL{150u},
-      100u,
-      List<BolusEvent>::cons(BolusEvent{120u, 85u},
-                             List<BolusEvent>::cons(BolusEvent{100u, 80u},
-                                                    List<BolusEvent>::nil())),
+      Grams{UINT64_C(0)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(100),
+      List<BolusEvent>::cons(
+          BolusEvent{UINT64_C(120), UINT64_C(85)},
+          List<BolusEvent>::cons(BolusEvent{UINT64_C(100), UINT64_C(80)},
+                                 List<BolusEvent>::nil())),
       ActivityState::ACTIVITY_NORMAL,
       false,
       FaultStatus::fault_none(),
-      std::optional<unsigned int>()};
-  static inline const PrecisionInput tdd_exceeded_input =
-      PrecisionInput{Grams{60u},
-                     Mg_dL{150u},
-                     2000u,
-                     List<BolusEvent>::cons(
-                         BolusEvent{500u, 1800u},
-                         List<BolusEvent>::cons(
-                             BolusEvent{500u, 1500u},
-                             List<BolusEvent>::cons(BolusEvent{500u, 1000u},
-                                                    List<BolusEvent>::nil()))),
-                     ActivityState::ACTIVITY_NORMAL,
-                     false,
-                     FaultStatus::fault_none(),
-                     std::make_optional<unsigned int>(70u)};
+      std::optional<uint64_t>()};
+  static inline const PrecisionInput tdd_exceeded_input = PrecisionInput{
+      Grams{UINT64_C(60)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(2000),
+      List<BolusEvent>::cons(
+          BolusEvent{UINT64_C(500), UINT64_C(1800)},
+          List<BolusEvent>::cons(
+              BolusEvent{UINT64_C(500), UINT64_C(1500)},
+              List<BolusEvent>::cons(BolusEvent{UINT64_C(500), UINT64_C(1000)},
+                                     List<BolusEvent>::nil()))),
+      ActivityState::ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_none(),
+      std::make_optional<uint64_t>(UINT64_C(70))};
   static inline const PrecisionInput occlusion_input = PrecisionInput{
-      Grams{60u},
-      Mg_dL{150u},
-      120u,
-      List<BolusEvent>::cons(BolusEvent{40u, 100u}, List<BolusEvent>::nil()),
+      Grams{UINT64_C(60)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(120),
+      List<BolusEvent>::cons(BolusEvent{UINT64_C(40), UINT64_C(100)},
+                             List<BolusEvent>::nil()),
       ActivityState::ACTIVITY_NORMAL,
       false,
       FaultStatus::fault_occlusion(),
-      std::optional<unsigned int>()};
+      std::optional<uint64_t>()};
   static inline const PrecisionInput battery_low_input = PrecisionInput{
-      Grams{60u},
-      Mg_dL{150u},
-      120u,
-      List<BolusEvent>::cons(BolusEvent{40u, 100u}, List<BolusEvent>::nil()),
+      Grams{UINT64_C(60)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(120),
+      List<BolusEvent>::cons(BolusEvent{UINT64_C(40), UINT64_C(100)},
+                             List<BolusEvent>::nil()),
       ActivityState::ACTIVITY_NORMAL,
       false,
       FaultStatus::fault_batterylow(),
-      std::optional<unsigned int>()};
+      std::optional<uint64_t>()};
   static inline const PrecisionInput pediatric_capped_input =
-      PrecisionInput{Grams{200u},
-                     Mg_dL{400u},
-                     0u,
+      PrecisionInput{Grams{UINT64_C(200)},
+                     Mg_dL{UINT64_C(400)},
+                     UINT64_C(0),
                      List<BolusEvent>::nil(),
                      ActivityState::ACTIVITY_NORMAL,
                      false,
                      FaultStatus::fault_none(),
-                     std::make_optional<unsigned int>(20u)};
-  static inline const PumpState standard_pump =
-      PumpState{2000u, 100u, 0u, false, 80u};
+                     std::make_optional<uint64_t>(UINT64_C(20))};
+  static inline const PumpState standard_pump = PumpState{
+      UINT64_C(2000), UINT64_C(100), UINT64_C(0), false, UINT64_C(80)};
   static inline const PumpState low_battery_pump =
-      PumpState{2000u, 100u, 0u, false, 4u};
+      PumpState{UINT64_C(2000), UINT64_C(100), UINT64_C(0), false, UINT64_C(4)};
   static inline const PrecisionResult standard_result =
       validated_precision_bolus(standard_input, witness_prec_params);
   static inline const PrecisionResult mmol_result =
@@ -1808,45 +1802,45 @@ struct ValidatedPumpDeliveryTraceCase {
       validated_precision_bolus(battery_low_input, witness_prec_params);
   static inline const PrecisionResult pediatric_result =
       validated_precision_bolus(pediatric_capped_input, witness_prec_params);
-  static inline const unsigned int standard_result_code =
+  static inline const uint64_t standard_result_code =
       standard_result.precision_result_code();
   static inline const bool standard_modified =
       standard_result.result_modified();
-  static inline const unsigned int standard_final_delivery_half =
+  static inline const uint64_t standard_final_delivery_half =
       option_nat_default(
-          final_delivery(RoundingMode::ROUNDHALF, standard_result), 0u);
+          final_delivery(RoundingMode::ROUNDHALF, standard_result),
+          UINT64_C(0));
   static inline const bool standard_pump_accepts = pump_accepts_result(
       standard_pump, RoundingMode::ROUNDHALF, standard_result);
-  static inline const unsigned int standard_reservoir_after =
+  static inline const uint64_t standard_reservoir_after =
       pump_reservoir_after_result(standard_pump, RoundingMode::ROUNDHALF,
                                   standard_result);
-  static inline const unsigned int mmol_result_code =
+  static inline const uint64_t mmol_result_code =
       mmol_result.precision_result_code();
-  static inline const unsigned int mmol_final_delivery_tenth =
-      option_nat_default(final_delivery(RoundingMode::ROUNDTENTH, mmol_result),
-                         0u);
-  static inline const unsigned int high_iob_error_code =
+  static inline const uint64_t mmol_final_delivery_tenth = option_nat_default(
+      final_delivery(RoundingMode::ROUNDTENTH, mmol_result), UINT64_C(0));
+  static inline const uint64_t high_iob_error_code =
       validated_precision_bolus(high_iob_input, witness_prec_params)
           .precision_result_code();
-  static inline const unsigned int tdd_error_code =
+  static inline const uint64_t tdd_error_code =
       validated_precision_bolus(tdd_exceeded_input, witness_prec_params)
           .precision_result_code();
-  static inline const unsigned int occlusion_error_code =
+  static inline const uint64_t occlusion_error_code =
       validated_precision_bolus(occlusion_input, witness_prec_params)
           .precision_result_code();
-  static inline const unsigned int battery_low_result_code =
+  static inline const uint64_t battery_low_result_code =
       battery_low_result.precision_result_code();
   static inline const bool battery_low_pump_denied = !(pump_accepts_result(
       low_battery_pump, RoundingMode::ROUNDHALF, battery_low_result));
-  static inline const unsigned int pediatric_result_code =
+  static inline const uint64_t pediatric_result_code =
       pediatric_result.precision_result_code();
   static inline const bool pediatric_modified =
       pediatric_result.result_modified();
-  static inline const unsigned int pediatric_final_delivery =
-      option_nat_default(
-          final_delivery(RoundingMode::ROUNDTWENTIETH, pediatric_result), 0u);
+  static inline const uint64_t pediatric_final_delivery = option_nat_default(
+      final_delivery(RoundingMode::ROUNDTWENTIETH, pediatric_result),
+      UINT64_C(0));
   static inline const bool low_reservoir_blocks =
-      FaultStatus::fault_lowreservoir(5u).fault_blocks_bolus();
+      FaultStatus::fault_lowreservoir(UINT64_C(5)).fault_blocks_bolus();
   static inline const bool unknown_fault_blocks =
       FaultStatus::fault_unknown().fault_blocks_bolus();
 };

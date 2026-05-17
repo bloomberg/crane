@@ -148,23 +148,23 @@ template <typename M>
 concept HasRecord = requires {
   typename M::R;
   {
-    M::mk(std::declval<unsigned int>(), std::declval<unsigned int>())
+    M::mk(std::declval<uint64_t>(), std::declval<uint64_t>())
   } -> std::same_as<typename M::R>;
-  { M::get_x(std::declval<typename M::R>()) } -> std::same_as<unsigned int>;
-  { M::get_y(std::declval<typename M::R>()) } -> std::same_as<unsigned int>;
+  { M::get_x(std::declval<typename M::R>()) } -> std::same_as<uint64_t>;
+  { M::get_y(std::declval<typename M::R>()) } -> std::same_as<uint64_t>;
 };
 
 struct RecordFieldPatterns {
   struct Point {
-    unsigned int px;
-    unsigned int py;
+    uint64_t px;
+    uint64_t py;
 
     // ACCESSORS
     Point clone() const { return Point{(*this).px, (*this).py}; }
   };
 
-  static unsigned int classify_point(const Point &p);
-  static unsigned int zero_x(const Point &p);
+  static uint64_t classify_point(const Point &p);
+  static uint64_t zero_x(const Point &p);
 
   template <typename T1> static T1 identity(T1 x) { return x; }
 
@@ -179,13 +179,13 @@ struct RecordFieldPatterns {
     return _x0.first;
   }
 
-  static std::pair<unsigned int, unsigned int> point_pair(const Point &p);
-  static unsigned int first_coord(const Point &p);
+  static std::pair<uint64_t, uint64_t> point_pair(const Point &p);
+  static uint64_t first_coord(const Point &p);
 
   /// Record whose field default depends on the section variable.
   struct ScaledPoint {
-    unsigned int sp_x;
-    unsigned int sp_y;
+    uint64_t sp_x;
+    uint64_t sp_y;
 
     // ACCESSORS
     ScaledPoint clone() const {
@@ -193,29 +193,29 @@ struct RecordFieldPatterns {
     }
   };
 
-  static unsigned int scaled_sum(unsigned int scale, const ScaledPoint &sp);
+  static uint64_t scaled_sum(uint64_t scale, const ScaledPoint &sp);
   /// After section closing, scaled_sum is parameterized by scale : nat.
   /// The record type itself is NOT parameterized (scale is only used in
   /// the function body), but the function signature changes.
-  static inline const unsigned int test_labeled =
-      scaled_sum(3u, ScaledPoint{10u, 20u});
+  static inline const uint64_t test_labeled =
+      scaled_sum(UINT64_C(3), ScaledPoint{UINT64_C(10), UINT64_C(20)});
 
   struct PointImpl {
     using R = Point;
-    static Point mk(unsigned int x, unsigned int x0);
-    static unsigned int get_x(const Point &p);
-    static unsigned int get_y(const Point &p);
+    static Point mk(uint64_t x, uint64_t x0);
+    static uint64_t get_x(const Point &p);
+    static uint64_t get_y(const Point &p);
   };
 
   template <HasRecord M> struct UseRecord {
-    static unsigned int sum_fields(typename M::R r) {
+    static uint64_t sum_fields(typename M::R r) {
       return (M::get_x(r) + M::get_y(r));
     }
   };
 
   using UR = UseRecord<PointImpl>;
-  static inline const unsigned int test_functor =
-      UR::sum_fields(Point{100u, 200u});
+  static inline const uint64_t test_functor =
+      UR::sum_fields(Point{UINT64_C(100), UINT64_C(200)});
 
   struct Segment {
     Point seg_start;
@@ -227,12 +227,12 @@ struct RecordFieldPatterns {
     }
   };
 
-  static unsigned int segment_length_sq(const Segment &s);
+  static uint64_t segment_length_sq(const Segment &s);
 
   struct Bounded {
-    unsigned int lo;
-    unsigned int hi;
-    unsigned int mid;
+    uint64_t lo;
+    uint64_t hi;
+    uint64_t mid;
 
     // ACCESSORS
     Bounded clone() const {
@@ -240,43 +240,51 @@ struct RecordFieldPatterns {
     }
   };
 
-  static unsigned int bounded_range(const Bounded &b);
-  static unsigned int sum_px(const List<Point> &points);
-  static List<unsigned int> map_py(const List<Point> &points);
+  static uint64_t bounded_range(const Bounded &b);
+  static uint64_t sum_px(const List<Point> &points);
+  static List<uint64_t> map_py(const List<Point> &points);
   static Point swap(const Point &p);
   static Point double_swap(const Point &p);
 
   struct Container {
     std::any elem;
-    unsigned int count;
+    uint64_t count;
 
     // ACCESSORS
     Container clone() const { return Container{(*this).elem, (*this).count}; }
   };
 
   using elem_type = std::any;
-  static unsigned int get_count(const Container &c);
-  static inline const unsigned int test_container =
-      get_count(Container{42u, 5u});
-  static inline const unsigned int test_origin = classify_point(Point{0u, 0u});
-  static inline const unsigned int test_y_axis = classify_point(Point{0u, 5u});
-  static inline const unsigned int test_x_axis = classify_point(Point{3u, 0u});
-  static inline const unsigned int test_general = classify_point(Point{3u, 4u});
-  static inline const unsigned int test_zero_x = zero_x(Point{0u, 42u});
-  static inline const unsigned int test_nonzero = zero_x(Point{5u, 10u});
-  static inline const Point test_id = id_point(Point{99u, 1u});
-  static inline const unsigned int test_seg =
-      segment_length_sq(Segment{Point{1u, 2u}, Point{4u, 6u}});
-  static inline const unsigned int test_sum = sum_px(List<Point>::cons(
-      Point{10u, 0u},
-      List<Point>::cons(
-          Point{20u, 0u},
-          List<Point>::cons(Point{30u, 0u}, List<Point>::nil()))));
-  static inline const List<unsigned int> test_map = map_py(List<Point>::cons(
-      Point{0u, 1u},
-      List<Point>::cons(Point{0u, 2u},
-                        List<Point>::cons(Point{0u, 3u}, List<Point>::nil()))));
-  static inline const Point test_swap = swap(Point{3u, 7u});
+  static uint64_t get_count(const Container &c);
+  static inline const uint64_t test_container =
+      get_count(Container{UINT64_C(42), UINT64_C(5)});
+  static inline const uint64_t test_origin =
+      classify_point(Point{UINT64_C(0), UINT64_C(0)});
+  static inline const uint64_t test_y_axis =
+      classify_point(Point{UINT64_C(0), UINT64_C(5)});
+  static inline const uint64_t test_x_axis =
+      classify_point(Point{UINT64_C(3), UINT64_C(0)});
+  static inline const uint64_t test_general =
+      classify_point(Point{UINT64_C(3), UINT64_C(4)});
+  static inline const uint64_t test_zero_x =
+      zero_x(Point{UINT64_C(0), UINT64_C(42)});
+  static inline const uint64_t test_nonzero =
+      zero_x(Point{UINT64_C(5), UINT64_C(10)});
+  static inline const Point test_id =
+      id_point(Point{UINT64_C(99), UINT64_C(1)});
+  static inline const uint64_t test_seg = segment_length_sq(Segment{
+      Point{UINT64_C(1), UINT64_C(2)}, Point{UINT64_C(4), UINT64_C(6)}});
+  static inline const uint64_t test_sum = sum_px(List<Point>::cons(
+      Point{UINT64_C(10), UINT64_C(0)},
+      List<Point>::cons(Point{UINT64_C(20), UINT64_C(0)},
+                        List<Point>::cons(Point{UINT64_C(30), UINT64_C(0)},
+                                          List<Point>::nil()))));
+  static inline const List<uint64_t> test_map = map_py(List<Point>::cons(
+      Point{UINT64_C(0), UINT64_C(1)},
+      List<Point>::cons(Point{UINT64_C(0), UINT64_C(2)},
+                        List<Point>::cons(Point{UINT64_C(0), UINT64_C(3)},
+                                          List<Point>::nil()))));
+  static inline const Point test_swap = swap(Point{UINT64_C(3), UINT64_C(7)});
 };
 
 #endif // INCLUDED_RECORD_FIELD_PATTERNS

@@ -15,7 +15,7 @@ struct LetClosureEscape {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct LetClosureEscape {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -120,7 +120,7 @@ struct LetClosureEscape {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int sum_values(unsigned int x) const {
+    uint64_t sum_values(uint64_t x) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
@@ -143,8 +143,8 @@ struct LetClosureEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -156,8 +156,8 @@ struct LetClosureEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -171,25 +171,25 @@ struct LetClosureEscape {
 
   struct fn_box {
     // DATA
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     fn_box clone() const { return {a0}; }
 
     // CREATORS
-    static fn_box box(std::function<unsigned int(unsigned int)> a0) {
+    static fn_box box(std::function<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
-    unsigned int apply_box(unsigned int x) const {
+    uint64_t apply_box(uint64_t x) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
       return a0(x);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -197,8 +197,8 @@ struct LetClosureEscape {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -212,11 +212,12 @@ struct LetClosureEscape {
   /// When let_escape returns, t is destroyed → dangling reference in Box.
   static fn_box let_escape(tree t);
   /// Clobber stack after let_escape returns, then use the closure.
-  static inline const unsigned int bug_let_clobber = []() {
-    tree t1 = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                         tree::node(tree::leaf(), 30u, tree::leaf()));
+  static inline const uint64_t bug_let_clobber = []() {
+    tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20),
+                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     fn_box b1 = let_escape(std::move(t1));
-    return std::move(b1).apply_box(0u);
+    return std::move(b1).apply_box(UINT64_C(0));
   }();
 };
 

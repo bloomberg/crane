@@ -120,30 +120,34 @@ public:
 };
 
 struct LetFixIntermediateRef {
-  static unsigned int sum_heads(const List<List<unsigned int>> &ll);
-  static unsigned int zip_sum(const List<unsigned int> &l1,
-                              const List<unsigned int> &l2);
-  static inline const unsigned int test_heads =
-      sum_heads(List<List<unsigned int>>::cons(
-          List<unsigned int>::cons(
-              10u, List<unsigned int>::cons(20u, List<unsigned int>::nil())),
-          List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(30u, List<unsigned int>::nil()),
-              List<List<unsigned int>>::cons(
-                  List<unsigned int>::nil(),
-                  List<List<unsigned int>>::cons(
-                      List<unsigned int>::cons(
-                          40u, List<unsigned int>::cons(
-                                   50u, List<unsigned int>::nil())),
-                      List<List<unsigned int>>::nil())))));
-  static inline const unsigned int test_zip = zip_sum(
-      List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
-      List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
+  static uint64_t sum_heads(const List<List<uint64_t>> &ll);
+  static uint64_t zip_sum(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  static inline const uint64_t test_heads =
+      sum_heads(List<List<uint64_t>>::cons(
+          List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil())),
+          List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()),
+              List<List<uint64_t>>::cons(
+                  List<uint64_t>::nil(),
+                  List<List<uint64_t>>::cons(
+                      List<uint64_t>::cons(
+                          UINT64_C(40),
+                          List<uint64_t>::cons(UINT64_C(50),
+                                               List<uint64_t>::nil())),
+                      List<List<uint64_t>>::nil())))));
+  static inline const uint64_t test_zip = zip_sum(
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_LET_FIX_INTERMEDIATE_REF

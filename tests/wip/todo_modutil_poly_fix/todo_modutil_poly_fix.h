@@ -120,18 +120,18 @@ public:
 };
 
 struct TodoModutilPolyFix {
-  template <typename T1> static List<T1> build_nil_list(unsigned int n) {
+  template <typename T1> static List<T1> build_nil_list(uint64_t n) {
     if (n <= 0) {
       return List<T1>::nil();
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       return build_nil_list<T1>(n_);
     }
   }
 
-  static inline const List<unsigned int> test_nat =
-      build_nil_list<unsigned int>(3u);
-  static inline const List<bool> test_bool = build_nil_list<bool>(2u);
+  static inline const List<uint64_t> test_nat =
+      build_nil_list<uint64_t>(UINT64_C(3));
+  static inline const List<bool> test_bool = build_nil_list<bool>(UINT64_C(2));
 };
 
 #endif // INCLUDED_TODO_MODUTIL_POLY_FIX

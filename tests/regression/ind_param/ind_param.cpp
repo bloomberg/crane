@@ -1,13 +1,13 @@
 #include "ind_param.h"
 
-unsigned int IndParam::NatContainer::size(const IndParam::NatContainer::t &c) {
+uint64_t IndParam::NatContainer::size(const IndParam::NatContainer::t &c) {
   if (std::holds_alternative<typename IndParam::NatContainer::t::Empty>(
           c.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else if (std::holds_alternative<typename IndParam::NatContainer::t::Single>(
                  c.v())) {
-    return 1u;
+    return UINT64_C(1);
   } else {
-    return 2u;
+    return UINT64_C(2);
   }
 }

@@ -135,14 +135,14 @@ template <typename A> struct Sig {
 
 struct ConstructorBugs {
   struct field_a {
-    unsigned int a_value;
+    uint64_t a_value;
 
     // ACCESSORS
     field_a clone() const { return field_a{(*this).a_value}; }
   };
 
   struct field_b {
-    unsigned int b_value;
+    uint64_t b_value;
 
     // ACCESSORS
     field_b clone() const { return field_b{(*this).b_value}; }
@@ -151,7 +151,7 @@ struct ConstructorBugs {
   struct source_state {
     field_a source_a;
     field_b source_b;
-    unsigned int source_flag;
+    uint64_t source_flag;
 
     // ACCESSORS
     source_state clone() const {
@@ -182,7 +182,7 @@ struct ConstructorBugs {
   struct source_state_list {
     field_a source_a_list;
     List<field_b> source_b_list;
-    unsigned int source_flag_list;
+    uint64_t source_flag_list;
 
     // ACCESSORS
     source_state_list clone() const {
@@ -210,43 +210,42 @@ struct ConstructorBugs {
   bad_branch_list(const source_state_list &s1);
 
   struct state {
-    unsigned int value;
-    List<unsigned int> data;
+    uint64_t value;
+    List<uint64_t> data;
 
     // ACCESSORS
     state clone() const { return state{(*this).value, (*this).data.clone()}; }
   };
 
-  static state get_state(unsigned int n);
-  static std::pair<std::pair<state, state>, unsigned int>
-  tuple_from_call(unsigned int n);
-  static std::pair<std::pair<state, unsigned int>,
-                   std::pair<unsigned int, List<unsigned int>>>
+  static state get_state(uint64_t n);
+  static std::pair<std::pair<state, state>, uint64_t>
+  tuple_from_call(uint64_t n);
+  static std::pair<std::pair<state, uint64_t>,
+                   std::pair<uint64_t, List<uint64_t>>>
   nested_tuples(state s);
-  static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
-  conditional_tuple(bool b, unsigned int n);
-  static unsigned int extract_value(const state &s);
-  static List<unsigned int> extract_data(const state &s);
-  static std::pair<std::pair<state, unsigned int>, List<unsigned int>>
-  multi_call_tuple(unsigned int n);
-  static std::pair<unsigned int, std::pair<state, unsigned int>>
-  pair_test(unsigned int n);
-  static std::optional<std::pair<state, unsigned int>>
+  static std::pair<std::pair<state, uint64_t>, List<uint64_t>>
+  conditional_tuple(bool b, uint64_t n);
+  static uint64_t extract_value(const state &s);
+  static List<uint64_t> extract_data(const state &s);
+  static std::pair<std::pair<state, uint64_t>, List<uint64_t>>
+  multi_call_tuple(uint64_t n);
+  static std::pair<uint64_t, std::pair<state, uint64_t>> pair_test(uint64_t n);
+  static std::optional<std::pair<state, uint64_t>>
   match_test(const std::optional<state> &o);
   static List<state> list_test(state s);
-  static std::pair<std::pair<std::pair<state, unsigned int>,
-                             std::pair<unsigned int, List<unsigned int>>>,
-                   List<unsigned int>>
+  static std::pair<std::pair<std::pair<state, uint64_t>,
+                             std::pair<uint64_t, List<uint64_t>>>,
+                   List<uint64_t>>
   triple_proj(state s);
-  static std::pair<state, unsigned int> inner_pair(state s);
-  static std::pair<state, unsigned int> outer_call(unsigned int n);
+  static std::pair<state, uint64_t> inner_pair(state s);
+  static std::pair<state, uint64_t> outer_call(uint64_t n);
   static std::pair<
-      std::pair<std::pair<std::pair<state, state>, unsigned int>, unsigned int>,
-      List<unsigned int>>
+      std::pair<std::pair<std::pair<state, state>, uint64_t>, uint64_t>,
+      List<uint64_t>>
   extreme_reuse(state s);
 
   struct Inner {
-    unsigned int inner_val;
+    uint64_t inner_val;
 
     // ACCESSORS
     Inner clone() const { return Inner{(*this).inner_val}; }
@@ -254,7 +253,7 @@ struct ConstructorBugs {
 
   struct Outer {
     Inner outer_inner;
-    unsigned int outer_data;
+    uint64_t outer_data;
 
     // ACCESSORS
     Outer clone() const {
@@ -264,14 +263,13 @@ struct ConstructorBugs {
 
   static Outer nested_record(Inner i);
   static Outer self_referential(const Outer &o);
-  static std::pair<Inner, unsigned int> pair_with_proj(Inner i);
-  static std::pair<std::pair<Inner, unsigned int>,
-                   std::pair<unsigned int, unsigned int>>
+  static std::pair<Inner, uint64_t> pair_with_proj(Inner i);
+  static std::pair<std::pair<Inner, uint64_t>, std::pair<uint64_t, uint64_t>>
   nested_pairs(Inner i);
   static std::pair<Inner, Inner> pair_duplicate(Inner i);
-  static Inner mk_inner(unsigned int n);
-  static std::pair<Inner, unsigned int> pair_from_func(unsigned int n);
-  static std::optional<std::pair<Inner, unsigned int>>
+  static Inner mk_inner(uint64_t n);
+  static std::pair<Inner, uint64_t> pair_from_func(uint64_t n);
+  static std::optional<std::pair<Inner, uint64_t>>
   match_option_record(const std::optional<Inner> &o);
 
   struct MySum {
@@ -281,7 +279,7 @@ struct ConstructorBugs {
     };
 
     struct Right {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<Left, Right>;
@@ -326,7 +324,7 @@ struct ConstructorBugs {
     // CREATORS
     static MySum left(Inner a0) { return MySum(Left{std::move(a0)}); }
 
-    static MySum right(unsigned int a0) { return MySum(Right{a0}); }
+    static MySum right(uint64_t a0) { return MySum(Right{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -337,7 +335,7 @@ struct ConstructorBugs {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 MySum_rect(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
       const auto &[a0] = std::get<typename MySum::Left>(m.v());
@@ -350,7 +348,7 @@ struct ConstructorBugs {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
       const auto &[a0] = std::get<typename MySum::Left>(m.v());
@@ -361,10 +359,9 @@ struct ConstructorBugs {
     }
   }
 
-  static std::pair<Inner, unsigned int> match_sum(const MySum &s);
-  static std::pair<Inner, unsigned int> with_cast(Inner i);
-  static std::pair<std::pair<Inner, unsigned int>,
-                   std::pair<Inner, unsigned int>>
+  static std::pair<Inner, uint64_t> match_sum(const MySum &s);
+  static std::pair<Inner, uint64_t> with_cast(Inner i);
+  static std::pair<std::pair<Inner, uint64_t>, std::pair<Inner, uint64_t>>
   chain_lets(const Inner &i1);
 
   struct Container {
@@ -374,24 +371,23 @@ struct ConstructorBugs {
     Container clone() const { return Container{(*this).cont_outer.clone()}; }
   };
 
-  static std::pair<std::pair<Outer, Inner>, unsigned int>
+  static std::pair<std::pair<Outer, Inner>, uint64_t>
   deep_proj(const Container &c);
-  static std::pair<List<Inner>, unsigned int> list_with_proj(Inner i);
-  static std::pair<Inner, unsigned int> tail_pair(Inner i, bool b);
-  static std::pair<std::pair<Inner, Inner>,
-                   std::pair<unsigned int, unsigned int>>
+  static std::pair<List<Inner>, uint64_t> list_with_proj(Inner i);
+  static std::pair<Inner, uint64_t> tail_pair(Inner i, bool b);
+  static std::pair<std::pair<Inner, Inner>, std::pair<uint64_t, uint64_t>>
   quad_tuple(Inner i);
-  static std::pair<std::optional<Inner>, unsigned int>
+  static std::pair<std::optional<Inner>, uint64_t>
   match_both_branches(const std::optional<Inner> &o);
   static Sig<Inner> sigma_test(Inner i);
-  static unsigned int extract(const Inner &i);
-  static std::pair<Inner, unsigned int> nested_extract(Inner i);
-  static std::pair<Outer, unsigned int> update_test(const Outer &o);
+  static uint64_t extract(const Inner &i);
+  static std::pair<Inner, uint64_t> nested_extract(Inner i);
+  static std::pair<Outer, uint64_t> update_test(const Outer &o);
 
   struct State {
-    unsigned int value_inline;
-    unsigned int data_inline;
-    unsigned int flag;
+    uint64_t value_inline;
+    uint64_t data_inline;
+    uint64_t flag;
 
     // ACCESSORS
     State clone() const {
@@ -399,22 +395,20 @@ struct ConstructorBugs {
     }
   };
 
-  static std::pair<State, unsigned int> inline_pair(State s);
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
-  inline_triple(State s);
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
-  inline_nested(State s);
-  static State get_state_inline(unsigned int n);
-  static std::pair<State, unsigned int> inline_from_call(unsigned int n);
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
-  same_call_multi_proj(unsigned int n);
-  static std::optional<std::pair<State, unsigned int>>
+  static std::pair<State, uint64_t> inline_pair(State s);
+  static std::pair<std::pair<State, uint64_t>, uint64_t> inline_triple(State s);
+  static std::pair<std::pair<State, uint64_t>, uint64_t> inline_nested(State s);
+  static State get_state_inline(uint64_t n);
+  static std::pair<State, uint64_t> inline_from_call(uint64_t n);
+  static std::pair<std::pair<State, uint64_t>, uint64_t>
+  same_call_multi_proj(uint64_t n);
+  static std::optional<std::pair<State, uint64_t>>
   inline_match(const std::optional<State> &o);
-  static std::pair<State, unsigned int> inline_if(bool b, State s);
+  static std::pair<State, uint64_t> inline_if(bool b, State s);
 
   struct OuterInline {
     State outer_state;
-    unsigned int outer_num;
+    uint64_t outer_num;
 
     // ACCESSORS
     OuterInline clone() const {
@@ -422,41 +416,37 @@ struct ConstructorBugs {
     }
   };
 
-  static std::pair<std::pair<OuterInline, State>, unsigned int>
+  static std::pair<std::pair<OuterInline, State>, uint64_t>
   inline_deep(OuterInline o);
-  static std::pair<State, unsigned int>
-  inline_double_proj(const OuterInline &o);
-  static std::pair<std::pair<State, unsigned int>,
-                   std::pair<unsigned int, unsigned int>>
+  static std::pair<State, uint64_t> inline_double_proj(const OuterInline &o);
+  static std::pair<std::pair<State, uint64_t>, std::pair<uint64_t, uint64_t>>
   inline_many(State s);
-  static std::pair<std::pair<unsigned int, State>, unsigned int>
+  static std::pair<std::pair<uint64_t, State>, uint64_t>
   inline_pattern(State s);
-  static List<std::pair<State, unsigned int>> inline_recursive(unsigned int n,
-                                                               State s);
-  static std::pair<std::pair<std::pair<State, unsigned int>, unsigned int>,
-                   std::pair<unsigned int, State>>
+  static List<std::pair<State, uint64_t>> inline_recursive(uint64_t n, State s);
+  static std::pair<std::pair<std::pair<State, uint64_t>, uint64_t>,
+                   std::pair<uint64_t, State>>
   inline_complex(State s);
-  static std::pair<std::pair<State, State>,
-                   std::pair<unsigned int, unsigned int>>
+  static std::pair<std::pair<State, State>, std::pair<uint64_t, uint64_t>>
   inline_quad(State s);
-  static std::pair<State, unsigned int> inline_both_branches(bool b, State s);
+  static std::pair<State, uint64_t> inline_both_branches(bool b, State s);
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, State &>
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
-  apply_twice(F0 &&f, State s) {
+    requires std::is_invocable_r_v<uint64_t, F0 &, State &>
+  static std::pair<std::pair<State, uint64_t>, uint64_t> apply_twice(F0 &&f,
+                                                                     State s) {
     return std::make_pair(std::make_pair(s, f(s)), f(s));
   }
 
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  static std::pair<std::pair<State, uint64_t>, uint64_t>
   test_apply(const State &s);
-  static unsigned int get_value_inline(const State &s);
-  static unsigned int get_data_inline(const State &s);
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
+  static uint64_t get_value_inline(const State &s);
+  static uint64_t get_data_inline(const State &s);
+  static std::pair<std::pair<State, uint64_t>, uint64_t>
   inline_nested_calls(State s);
-  static std::pair<std::optional<State>, std::optional<unsigned int>>
+  static std::pair<std::optional<State>, std::optional<uint64_t>>
   inline_option(State s);
-  static std::pair<List<State>, List<unsigned int>> inline_list(State s);
+  static std::pair<List<State>, List<uint64_t>> inline_list(State s);
 };
 
 #endif // INCLUDED_CONSTRUCTOR_BUGS

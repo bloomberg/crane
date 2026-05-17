@@ -35,8 +35,7 @@ struct TodoIotaComplexPattern {
     return f(a0, a1, a2);
   }
 
-  static unsigned int
-  sum_triple(const Triple<unsigned int, unsigned int, unsigned int> &t);
+  static uint64_t sum_triple(const Triple<uint64_t, uint64_t, uint64_t> &t);
 
   template <typename T1, typename T2, typename T3>
   static Triple<T2, T3, T1> rotate_triple(const Triple<T1, T2, T3> &t) {
@@ -44,11 +43,13 @@ struct TodoIotaComplexPattern {
     return Triple<T2, T3, T1>::mktriple(a1, a2, a0);
   }
 
-  static inline const unsigned int test1 = sum_triple(
-      Triple<unsigned int, unsigned int, unsigned int>::mktriple(1u, 2u, 3u));
-  static inline const Triple<bool, unsigned int, unsigned int> test2 =
-      rotate_triple<unsigned int, bool, unsigned int>(
-          Triple<unsigned int, bool, unsigned int>::mktriple(10u, true, 20u));
+  static inline const uint64_t test1 =
+      sum_triple(Triple<uint64_t, uint64_t, uint64_t>::mktriple(
+          UINT64_C(1), UINT64_C(2), UINT64_C(3)));
+  static inline const Triple<bool, uint64_t, uint64_t> test2 =
+      rotate_triple<uint64_t, bool, uint64_t>(
+          Triple<uint64_t, bool, uint64_t>::mktriple(UINT64_C(10), true,
+                                                     UINT64_C(20)));
 };
 
 #endif // INCLUDED_TODO_IOTA_COMPLEX_PATTERN

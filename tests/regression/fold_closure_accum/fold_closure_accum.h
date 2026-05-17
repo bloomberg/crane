@@ -139,7 +139,7 @@ struct FoldClosureAccum {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -209,7 +209,7 @@ struct FoldClosureAccum {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -246,8 +246,8 @@ struct FoldClosureAccum {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -259,8 +259,8 @@ struct FoldClosureAccum {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -271,7 +271,7 @@ struct FoldClosureAccum {
     }
   } /// Sum all values in a tree.
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
   /// Build a composed function by folding over a list of trees.
   /// Each step takes the accumulated function and the current tree,
   /// producing a new function that adds tree_sum of the current tree
@@ -281,47 +281,47 @@ struct FoldClosureAccum {
   /// captures the previous closure (acc) and the current tree (t).
   /// If captures are by reference, the previous closure is stack-local
   /// and dies when the fold step returns, creating a dangling chain.
-  static unsigned int compose_adders(const List<tree> &trees, unsigned int _x0);
+  static uint64_t compose_adders(const List<tree> &trees, uint64_t _x0);
   /// Test: compose adders from 3 trees.
   /// t1 sums to 10, t2 sums to 20, t3 sums to 30.
   /// compose_adders t1; t2; t3 x = x + 30 + 20 + 10 = x + 60
   /// Expected: compose_adders t1; t2; t3 0 = 60
-  static inline const unsigned int fold_bug = []() {
-    tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-    tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
-    tree t3 = tree::node(tree::leaf(), 30u, tree::leaf());
+  static inline const uint64_t fold_bug = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
     return compose_adders(
         List<tree>::cons(std::move(t1),
                          List<tree>::cons(std::move(t2),
                                           List<tree>::cons(std::move(t3),
                                                            List<tree>::nil()))),
-        0u);
+        UINT64_C(0));
   }();
   /// Test with non-zero starting value.
   /// Expected: compose_adders t1; t2; t3 7 = 67
-  static inline const unsigned int fold_bug_offset = []() {
-    tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-    tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
-    tree t3 = tree::node(tree::leaf(), 30u, tree::leaf());
+  static inline const uint64_t fold_bug_offset = []() {
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+    tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
     return compose_adders(
         List<tree>::cons(std::move(t1),
                          List<tree>::cons(std::move(t2),
                                           List<tree>::cons(std::move(t3),
                                                            List<tree>::nil()))),
-        7u);
+        UINT64_C(7));
   }();
   /// Invoke the composed function twice — tests if closures survive
   /// multiple invocations.
-  static inline const unsigned int fold_bug_double = []() {
+  static inline const uint64_t fold_bug_double = []() {
     return []() {
-      tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-      tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+      tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t {
         return compose_adders(
             List<tree>::cons(t1, List<tree>::cons(t2, List<tree>::nil())), _x0);
       };
-      return (f(0u) + f(100u));
+      return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();
 };

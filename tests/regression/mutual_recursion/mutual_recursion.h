@@ -8,27 +8,27 @@
 #include <vector>
 
 struct MutualRecursion {
-  static bool even(unsigned int n);
-  static bool odd(unsigned int n);
-  static unsigned int sum_even_indices(unsigned int n, unsigned int acc);
-  static unsigned int sum_odd_indices(unsigned int n, unsigned int acc);
-  static unsigned int process_a(unsigned int n, unsigned int m);
-  static unsigned int process_b(unsigned int n, unsigned int m);
+  static bool even(uint64_t n);
+  static bool odd(uint64_t n);
+  static uint64_t sum_even_indices(uint64_t n, uint64_t acc);
+  static uint64_t sum_odd_indices(uint64_t n, uint64_t acc);
+  static uint64_t process_a(uint64_t n, uint64_t m);
+  static uint64_t process_b(uint64_t n, uint64_t m);
 
   struct expr {
     // TYPES
     struct Val {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct BinOp {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<expr> a1;
       std::unique_ptr<expr> a2;
     };
 
     struct UnOp {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<expr> a1;
     };
 
@@ -108,14 +108,14 @@ struct MutualRecursion {
     }
 
     // CREATORS
-    static expr val(unsigned int a0) { return expr(Val{a0}); }
+    static expr val(uint64_t a0) { return expr(Val{a0}); }
 
-    static expr binop(unsigned int a0, expr a1, expr a2) {
+    static expr binop(uint64_t a0, expr a1, expr a2) {
       return expr(BinOp{a0, std::make_unique<expr>(std::move(a1)),
                         std::make_unique<expr>(std::move(a2))});
     }
 
-    static expr unop(unsigned int a0, expr a1) {
+    static expr unop(uint64_t a0, expr a1) {
       return expr(UnOp{a0, std::make_unique<expr>(std::move(a1))});
     }
 
@@ -157,10 +157,10 @@ struct MutualRecursion {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, expr &, T1 &,
-                                   expr &, T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &, expr &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, expr &, T1 &, expr &,
+                                   T1 &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &, expr &, T1 &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
     if (std::holds_alternative<typename expr::Val>(e.v())) {
       const auto &[a0] = std::get<typename expr::Val>(e.v());
@@ -176,10 +176,10 @@ struct MutualRecursion {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, expr &, T1 &,
-                                   expr &, T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, unsigned int &, expr &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, expr &, T1 &, expr &,
+                                   T1 &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &, expr &, T1 &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
     if (std::holds_alternative<typename expr::Val>(e.v())) {
       const auto &[a0] = std::get<typename expr::Val>(e.v());
@@ -194,14 +194,15 @@ struct MutualRecursion {
     }
   }
 
-  static unsigned int eval_expr(const expr &e);
-  static unsigned int f1(unsigned int n);
-  static unsigned int f2(unsigned int n);
-  static unsigned int f3(unsigned int n);
-  static inline const bool test_even = even(10u);
-  static inline const unsigned int test_sum = sum_even_indices(5u, 0u);
-  static inline const unsigned int test_eval =
-      eval_expr(expr::binop(0u, expr::val(5u), expr::val(10u)));
+  static uint64_t eval_expr(const expr &e);
+  static uint64_t f1(uint64_t n);
+  static uint64_t f2(uint64_t n);
+  static uint64_t f3(uint64_t n);
+  static inline const bool test_even = even(UINT64_C(10));
+  static inline const uint64_t test_sum =
+      sum_even_indices(UINT64_C(5), UINT64_C(0));
+  static inline const uint64_t test_eval = eval_expr(expr::binop(
+      UINT64_C(0), expr::val(UINT64_C(5)), expr::val(UINT64_C(10))));
 };
 
 #endif // INCLUDED_MUTUAL_RECURSION

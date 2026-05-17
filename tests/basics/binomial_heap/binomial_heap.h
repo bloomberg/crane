@@ -123,7 +123,7 @@ public:
 };
 
 struct BinomialHeap {
-  using key = unsigned int;
+  using key = uint64_t;
 
   struct tree {
     // TYPES
@@ -238,8 +238,8 @@ struct BinomialHeap {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, tree &, T1 &, tree &,
+                                   T1 &>
   static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
@@ -251,8 +251,8 @@ struct BinomialHeap {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, tree &, T1 &, tree &,
+                                   T1 &>
   static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
@@ -267,7 +267,7 @@ struct BinomialHeap {
   static inline const priqueue empty = List<tree>::nil();
   static tree smash(const tree &t, const tree &u);
   static List<tree> carry(const List<tree> &q, tree t);
-  static priqueue insert(unsigned int x, const List<tree> &q);
+  static priqueue insert(uint64_t x, const List<tree> &q);
   static priqueue join(const List<tree> &p, const List<tree> &q, tree c);
 
   static priqueue unzip(const tree &t,
@@ -288,23 +288,26 @@ struct BinomialHeap {
   }
 
   static priqueue heap_delete_max(const tree &t);
-  static key find_max_helper(unsigned int current, const List<tree> &q);
+  static key find_max_helper(uint64_t current, const List<tree> &q);
   static std::optional<key> find_max(const List<tree> &q);
-  static std::pair<priqueue, priqueue> delete_max_aux(unsigned int m,
+  static std::pair<priqueue, priqueue> delete_max_aux(uint64_t m,
                                                       const List<tree> &p);
   static std::optional<std::pair<key, priqueue>>
   delete_max(const List<tree> &q);
   static priqueue merge(const List<tree> &p, const List<tree> &q);
-  static priqueue insert_list(const List<unsigned int> &l, List<tree> q);
-  static List<unsigned int> make_list(unsigned int n, List<unsigned int> l);
+  static priqueue insert_list(const List<uint64_t> &l, List<tree> q);
+  static List<uint64_t> make_list(uint64_t n, List<uint64_t> l);
   static key help(const List<tree> &c);
-  static inline const key example1 =
-      help(merge(insert(5u, insert(3u, insert(7u, List<tree>::nil()))),
-                 insert(3u, insert(6u, insert(9u, List<tree>::nil())))));
-  static inline const key example2 = help(merge(
-      insert_list(make_list(10u, List<unsigned int>::nil()), List<tree>::nil()),
-      insert_list(make_list(11u, List<unsigned int>::nil()),
-                  List<tree>::nil())));
+  static inline const key example1 = help(merge(
+      insert(UINT64_C(5),
+             insert(UINT64_C(3), insert(UINT64_C(7), List<tree>::nil()))),
+      insert(UINT64_C(3),
+             insert(UINT64_C(6), insert(UINT64_C(9), List<tree>::nil())))));
+  static inline const key example2 =
+      help(merge(insert_list(make_list(UINT64_C(10), List<uint64_t>::nil()),
+                             List<tree>::nil()),
+                 insert_list(make_list(UINT64_C(11), List<uint64_t>::nil()),
+                             List<tree>::nil())));
 };
 
 #endif // INCLUDED_BINOMIAL_HEAP

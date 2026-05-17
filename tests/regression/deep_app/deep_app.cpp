@@ -1,19 +1,19 @@
 #include "deep_app.h"
 
 /// Tail-recursive builder — loopified.
-DeepApp::mylist<unsigned int>
-DeepApp::build(unsigned int n, DeepApp::mylist<unsigned int> acc) {
-  DeepApp::mylist<unsigned int> _result;
-  DeepApp::mylist<unsigned int> _loop_acc = std::move(acc);
-  unsigned int _loop_n = std::move(n);
+DeepApp::mylist<uint64_t> DeepApp::build(uint64_t n,
+                                         DeepApp::mylist<uint64_t> acc) {
+  DeepApp::mylist<uint64_t> _result;
+  DeepApp::mylist<uint64_t> _loop_acc = std::move(acc);
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       _result = std::move(_loop_acc);
       break;
     } else {
-      unsigned int n_ = _loop_n - 1;
-      unsigned int _next_n = n_;
-      _loop_acc = mylist<unsigned int>::mycons(_loop_n, std::move(_loop_acc));
+      uint64_t n_ = _loop_n - 1;
+      uint64_t _next_n = n_;
+      _loop_acc = mylist<uint64_t>::mycons(_loop_n, std::move(_loop_acc));
       _loop_n = _next_n;
     }
   }
@@ -21,25 +21,24 @@ DeepApp::build(unsigned int n, DeepApp::mylist<unsigned int> acc) {
 }
 
 /// Identity map to force traversal.
-DeepApp::mylist<unsigned int>
-DeepApp::map_id(const DeepApp::mylist<unsigned int> &l) {
-  return map<unsigned int, unsigned int>([](unsigned int x) { return x; }, l);
+DeepApp::mylist<uint64_t> DeepApp::map_id(const DeepApp::mylist<uint64_t> &l) {
+  return map<uint64_t, uint64_t>([](uint64_t x) { return x; }, l);
 }
 
 /// Append two lists.
-DeepApp::mylist<unsigned int>
-DeepApp::append_lists(const DeepApp::mylist<unsigned int> &_x0,
-                      const DeepApp::mylist<unsigned int> &_x1) {
-  return app<unsigned int>(_x0, _x1);
+DeepApp::mylist<uint64_t>
+DeepApp::append_lists(const DeepApp::mylist<uint64_t> &_x0,
+                      const DeepApp::mylist<uint64_t> &_x1) {
+  return app<uint64_t>(_x0, _x1);
 }
 
-unsigned int DeepApp::head_or_zero(const DeepApp::mylist<unsigned int> &l) {
-  if (std::holds_alternative<typename DeepApp::mylist<unsigned int>::Mynil>(
+uint64_t DeepApp::head_or_zero(const DeepApp::mylist<uint64_t> &l) {
+  if (std::holds_alternative<typename DeepApp::mylist<uint64_t>::Mynil>(
           l.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
-        std::get<typename DeepApp::mylist<unsigned int>::Mycons>(l.v());
+        std::get<typename DeepApp::mylist<uint64_t>::Mycons>(l.v());
     return a0;
   }
 }

@@ -37,19 +37,18 @@ concept Monoid = requires {
 };
 
 struct SectionsModules {
-  static unsigned int add_params(unsigned int x, unsigned int y,
-                                 unsigned int n);
-  static unsigned int count_down_from_x(unsigned int x, unsigned int y,
-                                        unsigned int n);
+  static uint64_t add_params(uint64_t x, uint64_t y, uint64_t n);
+  static uint64_t count_down_from_x(uint64_t x, uint64_t y, uint64_t n);
 
   struct NatMonoid {
-    using T = unsigned int;
-    static unsigned int op(unsigned int _x0, unsigned int _x1);
-    static inline const unsigned int id = 0u;
+    using T = uint64_t;
+    static uint64_t op(uint64_t _x0, uint64_t _x1);
+    static inline const uint64_t id = UINT64_C(0);
   };
 
   using TransparentMod = NatMonoid;
-  static inline const unsigned int use_monoid = TransparentMod::op(5u, 10u);
+  static inline const uint64_t use_monoid =
+      TransparentMod::op(UINT64_C(5), UINT64_C(10));
 
   template <Semigroup M> struct MakeDoubleOp {
     constexpr static typename M::T double_(typename M::T x) {
@@ -62,29 +61,30 @@ struct SectionsModules {
   };
 
   using NatDoubleOp = MakeDoubleOp<NatMonoid>;
-  static inline const NatMonoid::T test_double = NatDoubleOp::double_(5u);
+  static inline const NatMonoid::T test_double =
+      NatDoubleOp::double_(UINT64_C(5));
 
   struct LocalDefs {
-    static unsigned int private_helper(unsigned int n);
-    static unsigned int public_use(unsigned int n);
+    static uint64_t private_helper(uint64_t n);
+    static uint64_t public_use(uint64_t n);
   };
 
-  static unsigned int use_both(unsigned int a, unsigned int b, unsigned int c);
-  static unsigned int use_outer(unsigned int _x0, unsigned int _x1);
+  static uint64_t use_both(uint64_t a, uint64_t b, uint64_t c);
+  static uint64_t use_outer(uint64_t _x0, uint64_t _x1);
 
   struct Base {
-    static inline const unsigned int base_val = 42u;
-    static unsigned int base_fun(unsigned int n);
+    static inline const uint64_t base_val = UINT64_C(42);
+    static uint64_t base_fun(uint64_t n);
   };
 
   struct Extended {
-    static inline const unsigned int base_val = 42u;
-    static unsigned int base_fun(unsigned int n);
-    static inline const unsigned int extended_val = 100u;
-    static unsigned int extended_fun(unsigned int n);
+    static inline const uint64_t base_val = UINT64_C(42);
+    static uint64_t base_fun(uint64_t n);
+    static inline const uint64_t extended_val = UINT64_C(100);
+    static uint64_t extended_fun(uint64_t n);
   };
 
-  static inline const unsigned int test_extended =
+  static inline const uint64_t test_extended =
       Extended::extended_fun(Extended::base_val);
 };
 

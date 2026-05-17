@@ -5,16 +5,16 @@
 
 struct SingletonRecord {
   struct wrapper {
-    unsigned int value;
+    uint64_t value;
 
     // ACCESSORS
     wrapper clone() const { return wrapper{(*this).value}; }
   };
 
-  static inline const wrapper wrapped_five = wrapper{5u};
-  static unsigned int get_value(const wrapper &w);
-  static unsigned int get_value2(const wrapper &w);
-  static unsigned int unwrap(const wrapper &w);
+  static inline const wrapper wrapped_five = wrapper{UINT64_C(5)};
+  static uint64_t get_value(const wrapper &w);
+  static uint64_t get_value2(const wrapper &w);
+  static uint64_t unwrap(const wrapper &w);
   static wrapper double_wrapped(const wrapper &w);
 
   template <typename A> struct box {
@@ -24,35 +24,34 @@ struct SingletonRecord {
     box<A> clone() const { return box<A>{(*this).contents}; }
   };
 
-  static inline const box<unsigned int> boxed_three = box<unsigned int>{3u};
+  static inline const box<uint64_t> boxed_three = box<uint64_t>{UINT64_C(3)};
 
   template <typename T1> static T1 unbox(const box<T1> &b) {
     return b.contents;
   }
 
-  static inline const box<box<unsigned int>> nested_box =
-      box<box<unsigned int>>{boxed_three};
-  static inline const unsigned int double_unbox = nested_box.contents.contents;
+  static inline const box<box<uint64_t>> nested_box =
+      box<box<uint64_t>>{boxed_three};
+  static inline const uint64_t double_unbox = nested_box.contents.contents;
 
   struct fn_wrapper {
-    std::function<unsigned int(unsigned int)> fn;
+    std::function<uint64_t(uint64_t)> fn;
 
     // ACCESSORS
     fn_wrapper clone() const { return fn_wrapper{(*this).fn}; }
   };
 
   static inline const fn_wrapper my_fn_wrapper =
-      fn_wrapper{[](unsigned int _x0) -> unsigned int { return (1u + _x0); }};
-  static unsigned int apply_wrapped(const fn_wrapper &w, unsigned int n);
-  static inline const unsigned int test_get = get_value(wrapped_five);
-  static inline const unsigned int test_get2 = get_value2(wrapped_five);
-  static inline const unsigned int test_unwrap = unwrap(wrapped_five);
-  static inline const unsigned int test_double =
-      double_wrapped(wrapped_five).value;
-  static inline const unsigned int test_unbox =
-      unbox<unsigned int>(boxed_three);
-  static inline const unsigned int test_double_unbox = double_unbox;
-  static inline const unsigned int test_fn = apply_wrapped(my_fn_wrapper, 7u);
+      fn_wrapper{[](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); }};
+  static uint64_t apply_wrapped(const fn_wrapper &w, uint64_t n);
+  static inline const uint64_t test_get = get_value(wrapped_five);
+  static inline const uint64_t test_get2 = get_value2(wrapped_five);
+  static inline const uint64_t test_unwrap = unwrap(wrapped_five);
+  static inline const uint64_t test_double = double_wrapped(wrapped_five).value;
+  static inline const uint64_t test_unbox = unbox<uint64_t>(boxed_three);
+  static inline const uint64_t test_double_unbox = double_unbox;
+  static inline const uint64_t test_fn =
+      apply_wrapped(my_fn_wrapper, UINT64_C(7));
 };
 
 #endif // INCLUDED_SINGLETON_RECORD

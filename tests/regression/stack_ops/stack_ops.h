@@ -119,9 +119,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -131,7 +131,7 @@ public:
 
 struct StackOps {
   struct state_basic {
-    List<unsigned int> stack_basic;
+    List<uint64_t> stack_basic;
 
     // ACCESSORS
     state_basic clone() const {
@@ -140,8 +140,8 @@ struct StackOps {
   };
 
   struct state_with_acc {
-    List<unsigned int> stack_with_acc;
-    unsigned int acc;
+    List<uint64_t> stack_with_acc;
+    uint64_t acc;
 
     // ACCESSORS
     state_with_acc clone() const {
@@ -149,65 +149,71 @@ struct StackOps {
     }
   };
 
-  static std::pair<std::optional<unsigned int>, state_basic>
+  static std::pair<std::optional<uint64_t>, state_basic>
   pop_stack(state_basic s);
-  static bool is_none(const std::optional<unsigned int> &o);
-  static unsigned int option_or_zero(const std::optional<unsigned int> &o);
+  static bool is_none(const std::optional<uint64_t> &o);
+  static uint64_t option_or_zero(const std::optional<uint64_t> &o);
   static inline const bool empty_is_none =
-      is_none(pop_stack(state_basic{List<unsigned int>::nil()}).first);
-  static inline const unsigned int some_addr = option_or_zero(
-      pop_stack(
-          state_basic{List<unsigned int>::cons(
-              9u, List<unsigned int>::cons(8u, List<unsigned int>::nil()))})
+      is_none(pop_stack(state_basic{List<uint64_t>::nil()}).first);
+  static inline const uint64_t some_addr = option_or_zero(
+      pop_stack(state_basic{List<uint64_t>::cons(
+                    UINT64_C(9),
+                    List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil()))})
           .first);
-  static std::pair<std::optional<unsigned int>, state_with_acc>
+  static std::pair<std::optional<uint64_t>, state_with_acc>
   pop_stack_acc(state_with_acc s);
-  static inline const unsigned int pop_acc_test = []() -> unsigned int {
+  static inline const uint64_t pop_acc_test = []() -> uint64_t {
     auto _cs = pop_stack_acc(state_with_acc{
-        List<unsigned int>::cons(
-            9u, List<unsigned int>::cons(8u, List<unsigned int>::nil())),
-        3u});
-    const std::optional<unsigned int> &o = _cs.first;
+        List<uint64_t>::cons(
+            UINT64_C(9),
+            List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())),
+        UINT64_C(3)});
+    const std::optional<uint64_t> &o = _cs.first;
     const state_with_acc &s_ = _cs.second;
     if (o.has_value()) {
-      const unsigned int &a = *o;
+      const uint64_t &a = *o;
       return ((a + s_.stack_with_acc.length()) + s_.acc);
     } else {
       return s_.acc;
     }
   }();
-  static state_basic push_stack(const state_basic &s, unsigned int addr);
-  static unsigned int top_or_zero(const state_basic &s);
-  static inline const unsigned int empty_len =
-      push_stack(state_basic{List<unsigned int>::nil()}, 12u)
+  static state_basic push_stack(const state_basic &s, uint64_t addr);
+  static uint64_t top_or_zero(const state_basic &s);
+  static inline const uint64_t empty_len =
+      push_stack(state_basic{List<uint64_t>::nil()}, UINT64_C(12))
           .stack_basic.length();
-  static inline const unsigned int overflow_head = top_or_zero(push_stack(
-      state_basic{List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())))},
-      9u));
-  static inline const unsigned int overflow_len =
-      push_stack(state_basic{List<unsigned int>::cons(
-                     1u, List<unsigned int>::cons(
-                             2u, List<unsigned int>::cons(
-                                     3u, List<unsigned int>::nil())))},
-                 9u)
+  static inline const uint64_t overflow_head = top_or_zero(push_stack(
+      state_basic{List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))},
+      UINT64_C(9)));
+  static inline const uint64_t overflow_len =
+      push_stack(
+          state_basic{List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))},
+          UINT64_C(9))
           .stack_basic.length();
-  static state_basic push_stack_cap(const state_basic &s, unsigned int addr);
-  static inline const unsigned int push_cap_test =
-      push_stack_cap(
-          state_basic{List<unsigned int>::cons(
-              10u, List<unsigned int>::cons(
-                       20u, List<unsigned int>::cons(
-                                30u, List<unsigned int>::cons(
-                                         40u, List<unsigned int>::nil()))))},
-          7u)
+  static state_basic push_stack_cap(const state_basic &s, uint64_t addr);
+  static inline const uint64_t push_cap_test =
+      push_stack_cap(state_basic{List<uint64_t>::cons(
+                         UINT64_C(10),
+                         List<uint64_t>::cons(
+                             UINT64_C(20),
+                             List<uint64_t>::cons(
+                                 UINT64_C(30),
+                                 List<uint64_t>::cons(
+                                     UINT64_C(40), List<uint64_t>::nil()))))},
+                     UINT64_C(7))
           .stack_basic.length();
   static inline const std::pair<
-      std::pair<std::pair<std::pair<unsigned int, bool>, unsigned int>,
-                std::pair<std::pair<unsigned int, unsigned int>, unsigned int>>,
-      unsigned int>
+      std::pair<std::pair<std::pair<uint64_t, bool>, uint64_t>,
+                std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>,
+      uint64_t>
       t = std::make_pair(
           std::make_pair(
               std::make_pair(std::make_pair(some_addr, empty_is_none),

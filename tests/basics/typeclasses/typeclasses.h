@@ -123,7 +123,7 @@ public:
 
 template <typename I, typename A>
 concept Numeric = requires(A a0) {
-  { I::to_nat(a0) } -> std::convertible_to<unsigned int>;
+  { I::to_nat(a0) } -> std::convertible_to<uint64_t>;
 };
 template <typename I, typename A>
 concept Eq = requires(A a0, A a1) {
@@ -136,17 +136,17 @@ concept Ord = requires(A a0, A a1) {
 
 struct Typeclasses {
   struct numNat {
-    static unsigned int to_nat(unsigned int n) { return n; }
+    static uint64_t to_nat(uint64_t n) { return n; }
   };
 
-  static_assert(Numeric<numNat, unsigned int>);
+  static_assert(Numeric<numNat, uint64_t>);
 
   struct numBool {
-    static unsigned int to_nat(bool b) {
+    static uint64_t to_nat(bool b) {
       if (b) {
-        return 1u;
+        return UINT64_C(1);
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   };
@@ -154,27 +154,27 @@ struct Typeclasses {
   static_assert(Numeric<numBool, bool>);
 
   template <typename _tcI0, typename T1> struct numOption {
-    static unsigned int to_nat(std::optional<T1> o) {
+    static uint64_t to_nat(std::optional<T1> o) {
       if (o.has_value()) {
         const T1 &x = *o;
         return (_tcI0::to_nat(x) + 1);
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   };
 
   template <typename _tcI0, typename T1> struct numList {
-    static unsigned int to_nat(List<T1> a0) {
-      auto sum_impl = [&](auto &_self_sum, const List<T1> &l) -> unsigned int {
+    static uint64_t to_nat(List<T1> a0) {
+      auto sum_impl = [&](auto &_self_sum, const List<T1> &l) -> uint64_t {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-          return 0u;
+          return UINT64_C(0);
         } else {
           const auto &[a1, a2] = std::get<typename List<T1>::Cons>(l.v());
           return (_tcI0::to_nat(a1) + _self_sum(_self_sum, *a2));
         }
       };
-      auto sum = [&](const List<T1> &l) -> unsigned int {
+      auto sum = [&](const List<T1> &l) -> uint64_t {
         return sum_impl(sum_impl, l);
       };
       return sum(a0);
@@ -182,26 +182,26 @@ struct Typeclasses {
   };
 
   template <typename _tcI0, typename T1>
-  static unsigned int numeric_sum(const List<T1> &l) {
+  static uint64_t numeric_sum(const List<T1> &l) {
     return numList<_tcI0, T1>::to_nat(l);
   }
 
   template <typename _tcI0, typename T1>
-  static unsigned int numeric_double(const T1 &x) {
+  static uint64_t numeric_double(const T1 &x) {
     return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
   }
 
   struct eqNat {
-    static bool eqb(unsigned int a0, unsigned int a1) { return a0 == a1; }
+    static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
   };
 
-  static_assert(Eq<eqNat, unsigned int>);
+  static_assert(Eq<eqNat, uint64_t>);
 
   struct ordNat {
-    static bool leb(unsigned int a0, unsigned int a1) { return a0 <= a1; }
+    static bool leb(uint64_t a0, uint64_t a1) { return a0 <= a1; }
   };
 
-  static_assert(Ord<ordNat, unsigned int>);
+  static_assert(Ord<ordNat, uint64_t>);
 
   template <typename _tcI0, typename _tcI1, typename T1>
   static std::pair<T1, T1> sort_pair(T1 x, T1 y) {
@@ -231,7 +231,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
-  static unsigned int describe(const T1 &x, const T1 &y) {
+  static uint64_t describe(const T1 &x, const T1 &y) {
     if (_tcI0::eqb(x, y)) {
       return _tcI1::to_nat(x);
     } else {
@@ -239,37 +239,40 @@ struct Typeclasses {
     }
   }
 
-  static inline const unsigned int test_nat = numNat::to_nat(42u);
-  static inline const unsigned int test_bool_true = numBool::to_nat(true);
-  static inline const unsigned int test_bool_false = numBool::to_nat(false);
-  static inline const unsigned int test_option_some =
-      numOption<numNat, unsigned int>::to_nat(
-          std::make_optional<unsigned int>(5u));
-  static inline const unsigned int test_option_none =
-      numOption<numNat, unsigned int>::to_nat(std::optional<unsigned int>());
-  static inline const unsigned int test_list =
-      numList<numNat, unsigned int>::to_nat(List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::nil())))));
-  static inline const unsigned int test_sum =
-      numeric_sum<numNat, unsigned int>(List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
-  static inline const unsigned int test_double =
-      numeric_double<numNat, unsigned int>(7u);
-  static inline const std::pair<unsigned int, unsigned int> test_sort_pair =
-      sort_pair<ordNat, eqNat, unsigned int>(5u, 3u);
-  static inline const unsigned int test_min =
-      min_of<ordNat, eqNat, unsigned int>(8u, 3u);
-  static inline const unsigned int test_max =
-      max_of<ordNat, eqNat, unsigned int>(8u, 3u);
-  static inline const unsigned int test_describe_eq =
-      describe<eqNat, numNat, unsigned int>(5u, 5u);
-  static inline const unsigned int test_describe_ne =
-      describe<eqNat, numNat, unsigned int>(3u, 7u);
+  static inline const uint64_t test_nat = numNat::to_nat(UINT64_C(42));
+  static inline const uint64_t test_bool_true = numBool::to_nat(true);
+  static inline const uint64_t test_bool_false = numBool::to_nat(false);
+  static inline const uint64_t test_option_some =
+      numOption<numNat, uint64_t>::to_nat(
+          std::make_optional<uint64_t>(UINT64_C(5)));
+  static inline const uint64_t test_option_none =
+      numOption<numNat, uint64_t>::to_nat(std::optional<uint64_t>());
+  static inline const uint64_t test_list =
+      numList<numNat, uint64_t>::to_nat(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))));
+  static inline const uint64_t test_sum =
+      numeric_sum<numNat, uint64_t>(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
+  static inline const uint64_t test_double =
+      numeric_double<numNat, uint64_t>(UINT64_C(7));
+  static inline const std::pair<uint64_t, uint64_t> test_sort_pair =
+      sort_pair<ordNat, eqNat, uint64_t>(UINT64_C(5), UINT64_C(3));
+  static inline const uint64_t test_min =
+      min_of<ordNat, eqNat, uint64_t>(UINT64_C(8), UINT64_C(3));
+  static inline const uint64_t test_max =
+      max_of<ordNat, eqNat, uint64_t>(UINT64_C(8), UINT64_C(3));
+  static inline const uint64_t test_describe_eq =
+      describe<eqNat, numNat, uint64_t>(UINT64_C(5), UINT64_C(5));
+  static inline const uint64_t test_describe_ne =
+      describe<eqNat, numNat, uint64_t>(UINT64_C(3), UINT64_C(7));
 };
 
 #endif // INCLUDED_TYPECLASSES

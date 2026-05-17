@@ -1,6 +1,6 @@
 #include "large_mutual.h"
 
-unsigned int LargeMutual::expr_size(const LargeMutual::expr &e) {
+uint64_t LargeMutual::expr_size(const LargeMutual::expr &e) {
   if (std::holds_alternative<typename LargeMutual::expr::EAdd>(e.v())) {
     const auto &[a0, a1] = std::get<typename LargeMutual::expr::EAdd>(e.v());
     return ((expr_size(*a0) + expr_size(*a1)) + 1);
@@ -12,11 +12,11 @@ unsigned int LargeMutual::expr_size(const LargeMutual::expr &e) {
         std::get<typename LargeMutual::expr::ECond>(e.v());
     return (((bexpr_size(*a0) + expr_size(*a1)) + expr_size(*a2)) + 1);
   } else {
-    return 1u;
+    return UINT64_C(1);
   }
 }
 
-unsigned int LargeMutual::bexpr_size(const LargeMutual::bexpr &b) {
+uint64_t LargeMutual::bexpr_size(const LargeMutual::bexpr &b) {
   if (std::holds_alternative<typename LargeMutual::bexpr::BEq>(b.v())) {
     const auto &[a0, a1] = std::get<typename LargeMutual::bexpr::BEq>(b.v());
     return ((expr_size(*a0) + expr_size(*a1)) + 1);
@@ -33,11 +33,11 @@ unsigned int LargeMutual::bexpr_size(const LargeMutual::bexpr &b) {
     const auto &[a0] = std::get<typename LargeMutual::bexpr::BNot>(b.v());
     return (bexpr_size(*a0) + 1);
   } else {
-    return 1u;
+    return UINT64_C(1);
   }
 }
 
-unsigned int LargeMutual::stmt_size(const LargeMutual::stmt &s) {
+uint64_t LargeMutual::stmt_size(const LargeMutual::stmt &s) {
   if (std::holds_alternative<typename LargeMutual::stmt::SAssign>(s.v())) {
     const auto &[a0, a1] = std::get<typename LargeMutual::stmt::SAssign>(s.v());
     return (expr_size(*a1) + 1);
@@ -52,6 +52,6 @@ unsigned int LargeMutual::stmt_size(const LargeMutual::stmt &s) {
     const auto &[a0, a1] = std::get<typename LargeMutual::stmt::SWhile>(s.v());
     return ((bexpr_size(*a0) + stmt_size(*a1)) + 1);
   } else {
-    return 1u;
+    return UINT64_C(1);
   }
 }

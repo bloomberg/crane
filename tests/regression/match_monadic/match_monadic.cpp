@@ -32,16 +32,16 @@ std::string MatchMonadic::conditional_read(bool b) {
 }
 
 /// 3. Nested match: match on result of another match
-std::string MatchMonadic::nested_match(unsigned int n, bool b) {
+std::string MatchMonadic::nested_match(uint64_t n, bool b) {
   std::string label;
   if (n <= 0) {
     label = "zero";
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     if (n0 <= 0) {
       label = "one";
     } else {
-      unsigned int _x = n0 - 1;
+      uint64_t _x = n0 - 1;
       label = "many";
     }
   }
@@ -54,38 +54,37 @@ std::string MatchMonadic::nested_match(unsigned int n, bool b) {
 }
 
 /// 4. Match on option in monadic context
-unsigned int MatchMonadic::handle_option(const std::optional<unsigned int> &o) {
+uint64_t MatchMonadic::handle_option(const std::optional<uint64_t> &o) {
   if (o.has_value()) {
-    const unsigned int &n = *o;
+    const uint64_t &n = *o;
     std::cout << "found"s << '\n';
     return n;
   } else {
     std::cout << "missing"s << '\n';
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
 /// 5. Recursive function matching on tree
-unsigned int MatchMonadic::tree_sum(const Tree<unsigned int> &t) {
-  if (std::holds_alternative<typename Tree<unsigned int>::Leaf>(t.v())) {
-    return 0u;
+uint64_t MatchMonadic::tree_sum(const Tree<uint64_t> &t) {
+  if (std::holds_alternative<typename Tree<uint64_t>::Leaf>(t.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[a0, a1, a2] =
-        std::get<typename Tree<unsigned int>::Node>(t.v());
+    const auto &[a0, a1, a2] = std::get<typename Tree<uint64_t>::Node>(t.v());
     std::cout << "visiting"s << '\n';
-    unsigned int sl = tree_sum(*a0);
-    unsigned int sr = tree_sum(*a2);
+    uint64_t sl = tree_sum(*a0);
+    uint64_t sr = tree_sum(*a2);
     return ((sl + a1) + sr);
   }
 }
 
 /// 6. Match result used in bind
-std::string MatchMonadic::match_then_bind(unsigned int n) {
+std::string MatchMonadic::match_then_bind(uint64_t n) {
   std::string tag;
   if (n <= 0) {
     tag = "A";
   } else {
-    unsigned int _x = n - 1;
+    uint64_t _x = n - 1;
     tag = "B";
   }
   std::string line;
@@ -97,7 +96,7 @@ std::string MatchMonadic::match_then_bind(unsigned int n) {
 int64_t MatchMonadic::bind_then_match() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = line.length();
+  int64_t len = static_cast<int64_t>(line.length());
   if (len == int64_t(0)) {
     std::cout << "empty"s << '\n';
     return int64_t(0);

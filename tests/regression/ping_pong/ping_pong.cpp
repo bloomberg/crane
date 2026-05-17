@@ -13,8 +13,8 @@ bool PingPong::string_eq(std::string s1, std::string s2) {
   }
 }
 
-void PingPong::run_game(unsigned int round) {
-  unsigned int _loop_round = std::move(round);
+void PingPong::run_game(uint64_t round) {
+  uint64_t _loop_round = std::move(round);
   while (true) {
     std::cout << "ping"s << '\n';
     std::string response;
@@ -33,6 +33,6 @@ void PingPong::run_game(unsigned int round) {
 
 /// Entry point.
 void PingPong::play() {
-  run_game(1u);
+  run_game(UINT64_C(1));
   return;
 }

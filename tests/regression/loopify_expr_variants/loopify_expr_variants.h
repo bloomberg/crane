@@ -144,14 +144,14 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct LoopifyExprVariants {
   struct cond_expr {
     // TYPES
     struct Lit {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Add {
@@ -247,7 +247,7 @@ struct LoopifyExprVariants {
     }
 
     // CREATORS
-    static cond_expr lit(unsigned int a0) { return cond_expr(Lit{a0}); }
+    static cond_expr lit(uint64_t a0) { return cond_expr(Lit{a0}); }
 
     static cond_expr add(cond_expr a0, cond_expr a1) {
       return cond_expr(Add{std::make_unique<cond_expr>(std::move(a0)),
@@ -302,7 +302,7 @@ struct LoopifyExprVariants {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int size_cond() const {
+    uint64_t size_cond() const {
       const cond_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -313,42 +313,42 @@ struct LoopifyExprVariants {
       /// _After_Add: saves [_s0, _s1], dispatches next recursive call.
       struct _After_Add {
         cond_expr *_s0;
-        decltype(1u) _s1;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _After_Cond: saves [_s0, _s1, _s2], dispatches next recursive call.
       struct _After_Cond {
         const cond_expr *_s0;
         const cond_expr *_s1;
-        decltype(1u) _s2;
+        decltype(UINT64_C(1)) _s2;
       };
 
       /// _After_Cond_1: saves [_result, _s1, _s2], dispatches next recursive
       /// call.
       struct _After_Cond_1 {
-        unsigned int _result;
+        uint64_t _result;
         const cond_expr *_s1;
-        decltype(1u) _s2;
+        decltype(UINT64_C(1)) _s2;
       };
 
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        unsigned int _result;
-        decltype(1u) _s1;
+        uint64_t _result;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _Combine_Cond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Cond {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        decltype(1u) _s2;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        decltype(UINT64_C(1)) _s2;
       };
 
       using _Frame = std::variant<_Enter, _After_Add, _After_Cond,
                                   _After_Cond_1, _Combine_Add, _Combine_Cond>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -362,15 +362,15 @@ struct LoopifyExprVariants {
           const cond_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
-            _result = 1u;
+            _result = UINT64_C(1);
           } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename cond_expr::Add>(_sv.v());
-            _stack.emplace_back(_After_Add{a0.get(), 1u});
+            _stack.emplace_back(_After_Add{a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           } else {
             const auto &[a0, a1, a2] =
                 std::get<typename cond_expr::Cond>(_sv.v());
-            _stack.emplace_back(_After_Cond{a1.get(), a0.get(), 1u});
+            _stack.emplace_back(_After_Cond{a1.get(), a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Add>(_frame)) {
@@ -396,7 +396,7 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    unsigned int eval_cond() const {
+    uint64_t eval_cond() const {
       const cond_expr *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
@@ -407,7 +407,7 @@ struct LoopifyExprVariants {
         return ((*a0).eval_cond() + (*a1).eval_cond());
       } else {
         const auto &[a0, a1, a2] = std::get<typename cond_expr::Cond>(_sv.v());
-        if (0u < (*a0).eval_cond()) {
+        if (UINT64_C(0) < (*a0).eval_cond()) {
           return (*a1).eval_cond();
         } else {
           return (*a2).eval_cond();
@@ -416,7 +416,7 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
@@ -532,7 +532,7 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
@@ -651,7 +651,7 @@ struct LoopifyExprVariants {
   struct arith_expr {
     // TYPES
     struct ANum {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct AAdd {
@@ -760,7 +760,7 @@ struct LoopifyExprVariants {
     }
 
     // CREATORS
-    static arith_expr anum(unsigned int a0) { return arith_expr(ANum{a0}); }
+    static arith_expr anum(uint64_t a0) { return arith_expr(ANum{a0}); }
 
     static arith_expr aadd(arith_expr a0, arith_expr a1) {
       return arith_expr(AAdd{std::make_unique<arith_expr>(std::move(a0)),
@@ -825,7 +825,7 @@ struct LoopifyExprVariants {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int count_ops() const {
+    uint64_t count_ops() const {
       const arith_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -836,45 +836,45 @@ struct LoopifyExprVariants {
       /// _After_AAdd: saves [_s0, _s1], dispatches next recursive call.
       struct _After_AAdd {
         arith_expr *_s0;
-        decltype(1u) _s1;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _After_ADiv: saves [_s0, _s1], dispatches next recursive call.
       struct _After_ADiv {
         arith_expr *_s0;
-        decltype(1u) _s1;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _After_AMul: saves [_s0, _s1], dispatches next recursive call.
       struct _After_AMul {
         arith_expr *_s0;
-        decltype(1u) _s1;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _Combine_AAdd: receives partial results, combines with _result from
       /// final call.
       struct _Combine_AAdd {
-        unsigned int _result;
-        decltype(1u) _s1;
+        uint64_t _result;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _Combine_ADiv: receives partial results, combines with _result from
       /// final call.
       struct _Combine_ADiv {
-        unsigned int _result;
-        decltype(1u) _s1;
+        uint64_t _result;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _Combine_AMul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_AMul {
-        unsigned int _result;
-        decltype(1u) _s1;
+        uint64_t _result;
+        decltype(UINT64_C(1)) _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_AAdd, _After_ADiv, _After_AMul,
                                   _Combine_AAdd, _Combine_ADiv, _Combine_AMul>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -888,20 +888,20 @@ struct LoopifyExprVariants {
           const arith_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else if (std::holds_alternative<typename arith_expr::AAdd>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename arith_expr::AAdd>(_sv.v());
-            _stack.emplace_back(_After_AAdd{a0.get(), 1u});
+            _stack.emplace_back(_After_AAdd{a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           } else if (std::holds_alternative<typename arith_expr::AMul>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename arith_expr::AMul>(_sv.v());
-            _stack.emplace_back(_After_AMul{a0.get(), 1u});
+            _stack.emplace_back(_After_AMul{a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           } else {
             const auto &[a0, a1] = std::get<typename arith_expr::ADiv>(_sv.v());
-            _stack.emplace_back(_After_ADiv{a0.get(), 1u});
+            _stack.emplace_back(_After_ADiv{a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           }
         } else if (std::holds_alternative<_After_AAdd>(_frame)) {
@@ -930,7 +930,7 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    unsigned int eval_arith() const {
+    uint64_t eval_arith() const {
       const arith_expr *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
@@ -946,16 +946,16 @@ struct LoopifyExprVariants {
         const auto &[a0, a1] = std::get<typename arith_expr::ADiv>(_sv.v());
         auto _cs = (*a1).eval_arith();
         if (_cs <= 0) {
-          return 0u;
+          return UINT64_C(0);
         } else {
-          unsigned int n = _cs - 1;
+          uint64_t n = _cs - 1;
           return ((n + 1) ? (*a0).eval_arith() / (n + 1) : 0);
         }
       }
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, arith_expr &, T1 &, arith_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F2 &, arith_expr &, T1 &, arith_expr &,
@@ -1078,7 +1078,7 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, arith_expr &, T1 &, arith_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F2 &, arith_expr &, T1 &, arith_expr &,
@@ -1909,7 +1909,7 @@ struct LoopifyExprVariants {
     struct LNil {};
 
     struct LCons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<list_expr> a1;
     };
 
@@ -1919,8 +1919,8 @@ struct LoopifyExprVariants {
     };
 
     struct LReplicate {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     using variant_t = std::variant<LNil, LCons, LAppend, LReplicate>;
@@ -2004,7 +2004,7 @@ struct LoopifyExprVariants {
     // CREATORS
     static list_expr lnil() { return list_expr(LNil{}); }
 
-    static list_expr lcons(unsigned int a0, list_expr a1) {
+    static list_expr lcons(uint64_t a0, list_expr a1) {
       return list_expr(LCons{a0, std::make_unique<list_expr>(std::move(a1))});
     }
 
@@ -2013,7 +2013,7 @@ struct LoopifyExprVariants {
                                std::make_unique<list_expr>(std::move(a1))});
     }
 
-    static list_expr lreplicate(unsigned int a0, unsigned int a1) {
+    static list_expr lreplicate(uint64_t a0, uint64_t a1) {
       return list_expr(LReplicate{a0, a1});
     }
 
@@ -2053,7 +2053,7 @@ struct LoopifyExprVariants {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int list_expr_size() const {
+    uint64_t list_expr_size() const {
       const list_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2064,24 +2064,24 @@ struct LoopifyExprVariants {
       /// _After_LAppend: saves [_s0, _s1], dispatches next recursive call.
       struct _After_LAppend {
         list_expr *_s0;
-        decltype(1u) _s1;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _Combine_LAppend: receives partial results, combines with _result from
       /// final call.
       struct _Combine_LAppend {
-        unsigned int _result;
-        decltype(1u) _s1;
+        uint64_t _result;
+        decltype(UINT64_C(1)) _s1;
       };
 
       /// _Resume_LCons: saves [_s0], resumes after recursive call with _result.
       struct _Resume_LCons {
-        decltype(1u) _s0;
+        decltype(UINT64_C(1)) _s0;
       };
 
       using _Frame =
           std::variant<_Enter, _After_LAppend, _Combine_LAppend, _Resume_LCons>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -2096,16 +2096,16 @@ struct LoopifyExprVariants {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LCons>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
-            _stack.emplace_back(_Resume_LCons{1u});
+            _stack.emplace_back(_Resume_LCons{UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           } else if (std::holds_alternative<typename list_expr::LAppend>(
                          _sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
-            _stack.emplace_back(_After_LAppend{a0.get(), 1u});
+            _stack.emplace_back(_After_LAppend{a0.get(), UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           } else {
-            _result = 1u;
+            _result = UINT64_C(1);
           }
         } else if (std::holds_alternative<_After_LAppend>(_frame)) {
           auto _f = std::move(std::get<_After_LAppend>(_frame));
@@ -2122,7 +2122,7 @@ struct LoopifyExprVariants {
       return _result;
     }
 
-    List<unsigned int> eval_list() const {
+    List<uint64_t> eval_list() const {
       const list_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2138,17 +2138,17 @@ struct LoopifyExprVariants {
       /// _Combine_LAppend: receives partial results, combines with _result from
       /// final call.
       struct _Combine_LAppend {
-        List<unsigned int> _result;
+        List<uint64_t> _result;
       };
 
       /// _Resume_LCons: saves [a0], resumes after recursive call with _result.
       struct _Resume_LCons {
-        unsigned int a0;
+        uint64_t a0;
       };
 
       using _Frame =
           std::variant<_Enter, _After_LAppend, _Combine_LAppend, _Resume_LCons>;
-      List<unsigned int> _result{};
+      List<uint64_t> _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -2162,7 +2162,7 @@ struct LoopifyExprVariants {
           const list_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
-            _result = List<unsigned int>::nil();
+            _result = List<uint64_t>::nil();
           } else if (std::holds_alternative<typename list_expr::LCons>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
@@ -2177,7 +2177,7 @@ struct LoopifyExprVariants {
           } else {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LReplicate>(_sv.v());
-            _result = ListDef::template repeat<unsigned int>(a1, a0);
+            _result = ListDef::template repeat<uint64_t>(a1, a0);
           }
         } else if (std::holds_alternative<_After_LAppend>(_frame)) {
           auto _f = std::move(std::get<_After_LAppend>(_frame));
@@ -2188,18 +2188,17 @@ struct LoopifyExprVariants {
           _result = _result.app(_f._result);
         } else {
           auto _f = std::move(std::get<_Resume_LCons>(_frame));
-          _result = List<unsigned int>::cons(_f.a0, _result);
+          _result = List<uint64_t>::cons(_f.a0, _result);
         }
       }
       return _result;
     }
 
     template <typename T1, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, list_expr &,
-                                     T1 &> &&
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, list_expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
                                      T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
+               std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &>
     T1 list_expr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
@@ -2228,7 +2227,7 @@ struct LoopifyExprVariants {
       struct _Resume_LCons {
         F1 f0;
         list_expr a1;
-        unsigned int a0;
+        uint64_t a0;
       };
 
       using _Frame =
@@ -2281,11 +2280,10 @@ struct LoopifyExprVariants {
     }
 
     template <typename T1, typename F1, typename F2, typename F3>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &, list_expr &,
-                                     T1 &> &&
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, list_expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, list_expr &, T1 &, list_expr &,
                                      T1 &> &&
-               std::is_invocable_r_v<T1, F3 &, unsigned int &, unsigned int &>
+               std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &>
     T1 list_expr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2) const {
       const list_expr *_self = this;
 
@@ -2314,7 +2312,7 @@ struct LoopifyExprVariants {
       struct _Resume_LCons {
         F1 f0;
         list_expr a1;
-        unsigned int a0;
+        uint64_t a0;
       };
 
       using _Frame =
@@ -2368,16 +2366,16 @@ struct LoopifyExprVariants {
   };
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   std::unique_ptr<List<T1>> _head{};
   std::unique_ptr<List<T1>> *_write = &_head;
-  unsigned int _loop_n = std::move(n);
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       *_write = std::make_unique<List<T1>>(List<T1>::nil());
       break;
     } else {
-      unsigned int k = _loop_n - 1;
+      uint64_t k = _loop_n - 1;
       auto _cell =
           std::make_unique<List<T1>>(typename List<T1>::Cons(x, nullptr));
       *_write = std::move(_cell);

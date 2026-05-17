@@ -15,7 +15,7 @@ struct MoveSafety {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct MoveSafety {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -127,10 +127,10 @@ struct MoveSafety {
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
     tree wrap_tree() const {
-      return tree::node(std::move(*this), 0u, tree::leaf());
+      return tree::node(std::move(*this), UINT64_C(0), tree::leaf());
     }
 
-    unsigned int sum_values(unsigned int x) const {
+    uint64_t sum_values(uint64_t x) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return x;
       } else {
@@ -153,8 +153,8 @@ struct MoveSafety {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -167,7 +167,7 @@ struct MoveSafety {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -176,7 +176,7 @@ struct MoveSafety {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -214,8 +214,8 @@ struct MoveSafety {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -228,7 +228,7 @@ struct MoveSafety {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -237,7 +237,7 @@ struct MoveSafety {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -278,25 +278,25 @@ struct MoveSafety {
   /// A wrapper for closures.
   struct fn_box {
     // DATA
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     fn_box clone() const { return {a0}; }
 
     // CREATORS
-    static fn_box box(std::function<unsigned int(unsigned int)> a0) {
+    static fn_box box(std::function<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
-    unsigned int apply_box(unsigned int x) const {
+    uint64_t apply_box(uint64_t x) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
       return a0(x);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -304,8 +304,8 @@ struct MoveSafety {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -317,50 +317,49 @@ struct MoveSafety {
   /// The & lambda from partial application captures t by reference.
   /// Then wrap_tree takes t by value, so std::move(t) is generated.
   /// The lambda then holds a dangling reference.
-  static inline const unsigned int bug_partial_then_wrap = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
-    return std::move(t).sum_values(99u);
+  static inline const uint64_t bug_partial_then_wrap = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    return std::move(t).sum_values(UINT64_C(99));
   }();
   /// TEST 2: Store partial application in a Box.
   /// If the eta-expanded lambda uses & capture,
   /// the Box will hold a dangling reference after the
   /// function returns.
   static fn_box make_box(tree t);
-  static inline const unsigned int bug_box_escape = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
+  static inline const uint64_t bug_box_escape = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     fn_box b = make_box(std::move(t));
-    return std::move(b).apply_box(99u);
+    return std::move(b).apply_box(UINT64_C(99));
   }();
   /// TEST 3: Two partial applications of same variable.
   /// Second one should not move t.
-  static inline const unsigned int bug_double_partial = []() {
+  static inline const uint64_t bug_double_partial = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t.sum_values(_x0);
-      };
-      std::function<unsigned int(unsigned int)> g =
-          [&](unsigned int _x0) -> unsigned int {
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return t.sum_values(_x0); };
+      std::function<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
         return std::move(t).sum_values(_x0);
       };
-      return (f(1u) + g(2u));
+      return (f(UINT64_C(1)) + g(UINT64_C(2)));
     }();
   }();
-  static inline const unsigned int bug_partial_then_id = []() {
+  static inline const uint64_t bug_partial_then_id = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return t.sum_values(_x0);
-      };
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return t.sum_values(_x0); };
       tree t2 = std::move(t).tree_id();
       if (std::holds_alternative<typename tree::Leaf>(t2.v_mut())) {
-        return f(0u);
+        return f(UINT64_C(0));
       } else {
         auto &[a0, a1, a2] = std::get<typename tree::Node>(t2.v_mut());
         return f(std::move(a1));

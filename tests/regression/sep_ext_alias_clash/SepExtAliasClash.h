@@ -19,7 +19,7 @@ template <Sig ST> struct LemmasFn {
 };
 
 struct MySig {
-  using t = unsigned int;
+  using t = uint64_t;
 };
 
 using Impl = ImplFn<MySig>;

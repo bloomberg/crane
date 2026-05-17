@@ -127,15 +127,15 @@ public:
 
 struct BlockTemplateStress {
   /// 1. Block template in a fixpoint body
-  static List<std::string> read_n_lines(unsigned int n);
+  static List<std::string> read_n_lines(uint64_t n);
   /// 2. Block template inside a monadic if-then-else
   static std::string conditional_read(bool do_read);
   /// 3. Block template of non-string type (nat) in bind
-  static unsigned int read_and_add();
+  static uint64_t read_and_add();
   /// 4. Block template used in multiple match arms
-  static std::string branch_read(unsigned int choice);
+  static std::string branch_read(uint64_t choice);
   /// 5. Block template in nested bind chain with arithmetic
-  static unsigned int read_two_nats();
+  static uint64_t read_two_nats();
   /// 6. Block template result fed to another function
   static void block_result_as_arg();
   /// 9. Block template with %a0 inside a fixpoint

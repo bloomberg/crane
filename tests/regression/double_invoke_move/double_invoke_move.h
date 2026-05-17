@@ -15,7 +15,7 @@ struct DoubleInvokeMove {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct DoubleInvokeMove {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,8 +122,8 @@ struct DoubleInvokeMove {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,8 +135,8 @@ struct DoubleInvokeMove {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -149,8 +149,8 @@ struct DoubleInvokeMove {
 
   /// wrap_with takes TWO args. Partial application creates a closure.
   /// Since t is stored in a constructor, wrap_with takes t as owned (by value).
-  static tree wrap_with(tree t, unsigned int v);
-  static unsigned int left_value(const tree &t);
+  static tree wrap_with(tree t, uint64_t v);
+  static uint64_t left_value(const tree &t);
   /// BUG HYPOTHESIS: partial application wrap_with t creates a & lambda.
   /// If t is marked dead-after (not used in continuation), std::move(t)
   /// appears INSIDE the lambda body. First call moves t, second call
@@ -170,14 +170,16 @@ struct DoubleInvokeMove {
   /// w2 = Node(t, 1, Leaf)  if t is still valid
   /// left_value w2: same as w1 → 20
   /// Total: 40
-  static inline const unsigned int bug_double_invoke = []() {
+  static inline const uint64_t bug_double_invoke = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<tree(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> tree { return wrap_with(t, _x0); };
-      tree w1 = f(0u);
-      tree w2 = f(1u);
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<tree(uint64_t)> f = [=](uint64_t _x0) mutable -> tree {
+        return wrap_with(t, _x0);
+      };
+      tree w1 = f(UINT64_C(0));
+      tree w2 = f(UINT64_C(1));
       return (left_value(std::move(w1)) + left_value(std::move(w2)));
     }();
   }();

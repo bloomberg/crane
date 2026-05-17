@@ -15,7 +15,7 @@ struct EvenOdd {
     struct ENil {};
 
     struct ECons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<odd_list> a1;
     };
 
@@ -92,7 +92,7 @@ struct EvenOdd {
     // CREATORS
     static even_list enil() { return even_list(ENil{}); }
 
-    static even_list econs(unsigned int a0, odd_list a1) {
+    static even_list econs(uint64_t a0, odd_list a1) {
       return even_list(ECons{a0, std::make_unique<odd_list>(std::move(a1))});
     }
 
@@ -134,7 +134,7 @@ struct EvenOdd {
   struct odd_list {
     // TYPES
     struct OCons {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<even_list> a1;
     };
 
@@ -173,7 +173,7 @@ struct EvenOdd {
     }
 
     // CREATORS
-    static odd_list ocons(unsigned int a0, even_list a1) {
+    static odd_list ocons(uint64_t a0, even_list a1) {
       return odd_list(OCons{a0, std::make_unique<even_list>(std::move(a1))});
     }
 
@@ -212,15 +212,17 @@ struct EvenOdd {
     const variant_t &v() const { return v_; }
   };
 
-  static unsigned int even_length(const even_list &e);
-  static unsigned int odd_length(const odd_list &o);
-  static inline const even_list two =
-      even_list::econs(2u, odd_list::ocons(1u, even_list::enil()));
+  static uint64_t even_length(const even_list &e);
+  static uint64_t odd_length(const odd_list &o);
+  static inline const even_list two = even_list::econs(
+      UINT64_C(2), odd_list::ocons(UINT64_C(1), even_list::enil()));
   static inline const odd_list three = odd_list::ocons(
-      3u, even_list::econs(2u, odd_list::ocons(1u, even_list::enil())));
+      UINT64_C(3),
+      even_list::econs(UINT64_C(2),
+                       odd_list::ocons(UINT64_C(1), even_list::enil())));
 };
 
-const unsigned int test_even_len = EvenOdd::even_length(EvenOdd::two);
-const unsigned int test_odd_len = EvenOdd::odd_length(EvenOdd::three);
+const uint64_t test_even_len = EvenOdd::even_length(EvenOdd::two);
+const uint64_t test_odd_len = EvenOdd::odd_length(EvenOdd::three);
 
 #endif // INCLUDED_MUTUAL_MOD

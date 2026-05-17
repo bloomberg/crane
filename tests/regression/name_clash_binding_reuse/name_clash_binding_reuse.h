@@ -10,16 +10,14 @@ struct NameClashBindingReuse {
   /// (i.e. statement-position matches vs expression-position matches).
   struct pair_nat {
     // DATA
-    unsigned int a0;
-    unsigned int a1;
+    uint64_t a0;
+    uint64_t a1;
 
     // ACCESSORS
     pair_nat clone() const { return {a0, a1}; }
 
     // CREATORS
-    static pair_nat mkpairnat(unsigned int a0, unsigned int a1) {
-      return {a0, a1};
-    }
+    static pair_nat mkpairnat(uint64_t a0, uint64_t a1) { return {a0, a1}; }
 
     /// Single-constructor match inside single-constructor match.
     /// Neither needs an if guard, just structured bindings.
@@ -32,13 +30,13 @@ struct NameClashBindingReuse {
     }
 
     /// Same but as let-bindings (each match is an expression → IIFE).
-    unsigned int add_pairs_let(const pair_nat &p2) const {
-      unsigned int sum1 = [&]() {
+    uint64_t add_pairs_let(const pair_nat &p2) const {
+      uint64_t sum1 = [&]() {
         const auto &_sv = *this;
         const auto &[a0, a1] = _sv;
         return (a0 + a1);
       }();
-      unsigned int sum2 = [&]() {
+      uint64_t sum2 = [&]() {
         const auto &[a00, a10] = p2;
         return (a00 + a10);
       }();
@@ -47,7 +45,7 @@ struct NameClashBindingReuse {
 
     /// Two matches in sequence, both on pair_nat.
     /// Both generate d_a0, d_a1 structured bindings.
-    unsigned int add_pairs(const pair_nat &p2) const {
+    uint64_t add_pairs(const pair_nat &p2) const {
       const auto &_sv = *this;
       const auto &[a0, a2] = _sv;
       const auto &[a00, a10] = p2;
@@ -55,7 +53,7 @@ struct NameClashBindingReuse {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_nat_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0, a1] = _sv;
@@ -63,7 +61,7 @@ struct NameClashBindingReuse {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_nat_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0, a1] = _sv;
@@ -73,20 +71,19 @@ struct NameClashBindingReuse {
 
   struct triple_nat {
     // DATA
-    unsigned int a0;
-    unsigned int a1;
-    unsigned int a2;
+    uint64_t a0;
+    uint64_t a1;
+    uint64_t a2;
 
     // ACCESSORS
     triple_nat clone() const { return {a0, a1, a2}; }
 
     // CREATORS
-    static triple_nat mktriplenat(unsigned int a0, unsigned int a1,
-                                  unsigned int a2) {
+    static triple_nat mktriplenat(uint64_t a0, uint64_t a1, uint64_t a2) {
       return {a0, a1, a2};
     }
 
-    unsigned int cascade_and_match() const {
+    uint64_t cascade_and_match() const {
       const auto &_sv = (*this).cascade();
       const auto &[a0, a1] = _sv;
       return (a0 + a1);
@@ -101,7 +98,7 @@ struct NameClashBindingReuse {
 
     /// Nested match: outer match on triple, inner match on pair.
     /// Both have d_a0, d_a1; inner should get d_a00, d_a10.
-    unsigned int combine(const pair_nat &p) const {
+    uint64_t combine(const pair_nat &p) const {
       const auto &_sv = *this;
       const auto &[a0, a1, a2] = _sv;
       const auto &[a00, a10] = p;
@@ -109,8 +106,8 @@ struct NameClashBindingReuse {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
-                                     unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
+                                     uint64_t &>
     T1 triple_nat_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0, a1, a2] = _sv;
@@ -118,8 +115,8 @@ struct NameClashBindingReuse {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
-                                     unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
+                                     uint64_t &>
     T1 triple_nat_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0, a1, a2] = _sv;

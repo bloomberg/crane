@@ -18,14 +18,14 @@ void aSsErT(bool condition, const char *message, int line) {
 
 using LE = LoopifyExprVariants;
 
-// Helper to compare List<unsigned int> with an initializer list
-bool list_eq(const List<unsigned int> &l,
+// Helper to compare List<uint64_t> with an initializer list
+bool list_eq(const List<uint64_t> &l,
              std::initializer_list<unsigned int> expected) {
   auto it = expected.begin();
-  const List<unsigned int> *cur = &l;
+  const List<uint64_t> *cur = &l;
   while (it != expected.end()) {
     auto &v = cur->v();
-    if (auto *cons = std::get_if<List<unsigned int>::Cons>(&v)) {
+    if (auto *cons = std::get_if<List<uint64_t>::Cons>(&v)) {
       if (cons->a0 != *it)
         return false;
       cur = cons->a1.get();
@@ -35,11 +35,11 @@ bool list_eq(const List<unsigned int> &l,
     }
   }
   // cur should be Nil
-  return std::holds_alternative<List<unsigned int>::Nil>(cur->v());
+  return std::holds_alternative<List<uint64_t>::Nil>(cur->v());
 }
 
-bool list_empty(const List<unsigned int> &l) {
-  return std::holds_alternative<List<unsigned int>::Nil>(l.v());
+bool list_empty(const List<uint64_t> &l) {
+  return std::holds_alternative<List<uint64_t>::Nil>(l.v());
 }
 
 int main() {

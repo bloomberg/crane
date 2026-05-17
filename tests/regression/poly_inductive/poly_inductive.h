@@ -316,9 +316,9 @@ struct PolyInductive {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int ptree_size() const {
+    uint64_t ptree_size() const {
       if (std::holds_alternative<typename ptree<A>::PLeaf>(this->v())) {
-        return 1u;
+        return UINT64_C(1);
       } else {
         const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(this->v());
         return (((*a0).ptree_size() + (*a1).ptree_size()) + 1);
@@ -356,26 +356,25 @@ struct PolyInductive {
     }
   };
 
-  static inline const unsigned int test_pbox =
-      pbox<unsigned int>::PBox_(42u).punbox();
-  static inline const unsigned int test_ppair_fst =
-      ppair<unsigned int, bool>::PPair_(7u, true).pfst();
+  static inline const uint64_t test_pbox =
+      pbox<uint64_t>::PBox_(UINT64_C(42)).punbox();
+  static inline const uint64_t test_ppair_fst =
+      ppair<uint64_t, bool>::PPair_(UINT64_C(7), true).pfst();
   static inline const bool test_ppair_snd =
-      ppair<unsigned int, bool>::PPair_(7u, true).psnd();
-  static inline const unsigned int test_pjust =
-      pmaybe<unsigned int>::pjust(99u).pmaybe_default(0u);
-  static inline const unsigned int test_pnothing =
-      pmaybe<unsigned int>::pnothing().pmaybe_default(0u);
-  static inline const unsigned int test_pmap =
-      pmaybe<unsigned int>::pjust(5u)
-          .template pmaybe_map<unsigned int>(
-              [](unsigned int x) { return (x + 1); })
-          .pmaybe_default(0u);
-  static inline const unsigned int test_ptree =
-      ptree<unsigned int>::pnode(
-          ptree<unsigned int>::pleaf(1u),
-          ptree<unsigned int>::pnode(ptree<unsigned int>::pleaf(2u),
-                                     ptree<unsigned int>::pleaf(3u)))
+      ppair<uint64_t, bool>::PPair_(UINT64_C(7), true).psnd();
+  static inline const uint64_t test_pjust =
+      pmaybe<uint64_t>::pjust(UINT64_C(99)).pmaybe_default(UINT64_C(0));
+  static inline const uint64_t test_pnothing =
+      pmaybe<uint64_t>::pnothing().pmaybe_default(UINT64_C(0));
+  static inline const uint64_t test_pmap =
+      pmaybe<uint64_t>::pjust(UINT64_C(5))
+          .template pmaybe_map<uint64_t>([](uint64_t x) { return (x + 1); })
+          .pmaybe_default(UINT64_C(0));
+  static inline const uint64_t test_ptree =
+      ptree<uint64_t>::pnode(
+          ptree<uint64_t>::pleaf(UINT64_C(1)),
+          ptree<uint64_t>::pnode(ptree<uint64_t>::pleaf(UINT64_C(2)),
+                                 ptree<uint64_t>::pleaf(UINT64_C(3))))
           .ptree_size();
 };
 

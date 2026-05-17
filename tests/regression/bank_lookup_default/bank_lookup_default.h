@@ -118,9 +118,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -130,12 +130,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct BankLookupDefault {
   struct ram_chip {
-    unsigned int chip_port;
+    uint64_t chip_port;
 
     // ACCESSORS
     ram_chip clone() const { return ram_chip{(*this).chip_port}; }
@@ -155,18 +155,18 @@ struct BankLookupDefault {
     state clone() const { return state{(*this).ram_sys.clone()}; }
   };
 
-  static inline const ram_chip empty_chip = ram_chip{0u};
+  static inline const ram_chip empty_chip = ram_chip{UINT64_C(0)};
   static inline const ram_bank empty_bank = ram_bank{List<ram_chip>::nil()};
-  static ram_bank get_bank(const state &s, unsigned int b);
+  static ram_bank get_bank(const state &s, uint64_t b);
   static inline const state sample_state = state{List<ram_bank>::cons(
       ram_bank{List<ram_chip>::cons(empty_chip, List<ram_chip>::nil())},
       List<ram_bank>::nil())};
-  static inline const unsigned int t =
-      get_bank(sample_state, 7u).bank_chips.length();
+  static inline const uint64_t t =
+      get_bank(sample_state, UINT64_C(7)).bank_chips.length();
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -175,7 +175,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

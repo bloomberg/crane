@@ -122,18 +122,18 @@ public:
 struct LoopifyDecltype {
   /// Minimal trigger: fold over a list with a conditional per-element
   /// contribution.
-  static unsigned int count_true(const List<bool> &xs);
+  static uint64_t count_true(const List<bool> &xs);
 
   /// Same pattern with a record field access inside the conditional.
   struct item {
     bool item_flag;
-    unsigned int item_val;
+    uint64_t item_val;
 
     // ACCESSORS
     item clone() const { return item{(*this).item_flag, (*this).item_val}; }
   };
 
-  static unsigned int sum_flagged(const List<item> &xs);
+  static uint64_t sum_flagged(const List<item> &xs);
 };
 
 #endif // INCLUDED_LOOPIFY_DECLTYPE

@@ -127,29 +127,30 @@ struct FixEscapeMatch {
   /// shared_ptr's data. The fixpoint captures it by &, then escapes
   /// through an option constructor. After the match IIFE returns,
   /// h is destroyed — invoking the closure is use-after-free.
-  static std::optional<std::function<unsigned int(unsigned int)>>
-  make_fn_from_head(const List<unsigned int> &l);
-  static inline const unsigned int test_match = []() -> unsigned int {
+  static std::optional<std::function<uint64_t(uint64_t)>>
+  make_fn_from_head(const List<uint64_t> &l);
+  static inline const uint64_t test_match = []() -> uint64_t {
     auto _cs = make_fn_from_head(
-        List<unsigned int>::cons(10u, List<unsigned int>::nil()));
+        List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::nil()));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(3u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(3));
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
   /// Variant: fixpoint captures TWO pattern variables from the match.
-  static std::optional<std::function<unsigned int(unsigned int)>>
-  make_fn_from_pair(const List<unsigned int> &l);
-  static inline const unsigned int test_match2 = []() -> unsigned int {
-    auto _cs = make_fn_from_pair(List<unsigned int>::cons(
-        10u, List<unsigned int>::cons(20u, List<unsigned int>::nil())));
+  static std::optional<std::function<uint64_t(uint64_t)>>
+  make_fn_from_pair(const List<uint64_t> &l);
+  static inline const uint64_t test_match2 = []() -> uint64_t {
+    auto _cs = make_fn_from_pair(List<uint64_t>::cons(
+        UINT64_C(10),
+        List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil())));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(3u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(3));
     } else {
-      return 0u;
+      return UINT64_C(0);
     }
   }();
 };

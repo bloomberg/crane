@@ -141,15 +141,17 @@ struct ConceptQualifyArgs {
   };
 
   struct NatElems {
-    using t = unsigned int;
-    static inline const List<unsigned int> elements = List<unsigned int>::cons(
-        1u, List<unsigned int>::cons(
-                2u, List<unsigned int>::cons(3u, List<unsigned int>::nil())));
-    static unsigned int head_or(unsigned int d);
+    using t = uint64_t;
+    static inline const List<uint64_t> elements = List<uint64_t>::cons(
+        UINT64_C(1), List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3), List<uint64_t>::nil())));
+    static uint64_t head_or(uint64_t d);
   };
 
   using UseNatElems = UseElements<NatElems>;
-  static inline const unsigned int test = UseNatElems::first_or_default(0u);
+  static inline const uint64_t test =
+      UseNatElems::first_or_default(UINT64_C(0));
 };
 
 #endif // INCLUDED_CONCEPT_QUALIFY_ARGS

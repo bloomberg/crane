@@ -1,24 +1,24 @@
 #include "reuse_use_after_move.h"
 
-unsigned int ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
+uint64_t ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
   if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
           l.v())) {
     const auto &[a0, a1] =
         std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
-    return (1u + length(*a1));
+    return (UINT64_C(1) + length(*a1));
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-unsigned int ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
+uint64_t ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
   if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
           l.v())) {
     const auto &[a0, a1] =
         std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
     return (a0 + sum(*a1));
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 

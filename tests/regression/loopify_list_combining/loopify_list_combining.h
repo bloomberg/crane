@@ -120,18 +120,15 @@ public:
 };
 
 struct LoopifyListCombining {
-  static List<unsigned int> append(const List<unsigned int> &a,
-                                   List<unsigned int> b);
-  static List<unsigned int> intersperse(unsigned int sep,
-                                        const List<unsigned int> &l);
-  static List<unsigned int> intercalate(const List<unsigned int> &sep,
-                                        const List<List<unsigned int>> &ll);
-  static List<unsigned int> concat(const List<List<unsigned int>> &ll);
-  static List<unsigned int> mapcat(const List<unsigned int> &l);
-  static List<unsigned int> interleave_two(List<unsigned int> l1,
-                                           List<unsigned int> l2);
-  static List<unsigned int> concat_sep(unsigned int sep,
-                                       const List<List<unsigned int>> &ll);
+  static List<uint64_t> append(const List<uint64_t> &a, List<uint64_t> b);
+  static List<uint64_t> intersperse(uint64_t sep, const List<uint64_t> &l);
+  static List<uint64_t> intercalate(const List<uint64_t> &sep,
+                                    const List<List<uint64_t>> &ll);
+  static List<uint64_t> concat(const List<List<uint64_t>> &ll);
+  static List<uint64_t> mapcat(const List<uint64_t> &l);
+  static List<uint64_t> interleave_two(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> concat_sep(uint64_t sep,
+                                   const List<List<uint64_t>> &ll);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_COMBINING

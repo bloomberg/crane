@@ -120,8 +120,8 @@ public:
 };
 
 struct LoopifyUnitVoidRepro {
-  static inline const unsigned int cell_size = 42u;
-  static void loop(unsigned int x, unsigned int y, const List<bool> &cells);
+  static inline const uint64_t cell_size = UINT64_C(42);
+  static void loop(uint64_t x, uint64_t y, const List<bool> &cells);
   static int run();
 };
 

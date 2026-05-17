@@ -111,14 +111,14 @@ struct LargeEnum {
     }
   }
 
-  static unsigned int color_to_nat(Color c);
+  static uint64_t color_to_nat(Color c);
   static bool is_warm(Color c);
   static bool is_neutral(Color c);
 
   struct tok {
     // TYPES
     struct TNum {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct TPlus {};
@@ -140,7 +140,7 @@ struct LargeEnum {
     struct TSemicolon {};
 
     struct TIdent {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct TEOF {};
@@ -227,7 +227,7 @@ struct LargeEnum {
     }
 
     // CREATORS
-    static tok tnum(unsigned int a0) { return tok(TNum{a0}); }
+    static tok tnum(uint64_t a0) { return tok(TNum{a0}); }
 
     static tok tplus() { return tok(TPlus{}); }
 
@@ -247,7 +247,7 @@ struct LargeEnum {
 
     static tok tsemicolon() { return tok(TSemicolon{}); }
 
-    static tok tident(unsigned int a0) { return tok(TIdent{a0}); }
+    static tok tident(uint64_t a0) { return tok(TIdent{a0}); }
 
     static tok teof() { return tok(TEOF{}); }
 
@@ -259,8 +259,8 @@ struct LargeEnum {
   };
 
   template <typename T1, typename F0, typename F10>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F10 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F10 &, uint64_t &>
   static T1 tok_rect(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                      T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {
@@ -293,8 +293,8 @@ struct LargeEnum {
   }
 
   template <typename T1, typename F0, typename F10>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F10 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F10 &, uint64_t &>
   static T1 tok_rec(F0 &&f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                     T1 f7, T1 f8, F10 &&f9, T1 f10, const tok &t) {
     if (std::holds_alternative<typename tok::TNum>(t.v())) {
@@ -326,20 +326,22 @@ struct LargeEnum {
     }
   }
 
-  static unsigned int tok_to_nat(const tok &t);
+  static uint64_t tok_to_nat(const tok &t);
   static bool is_operator(const tok &t);
-  static inline const unsigned int test_red = color_to_nat(Color::RED);
-  static inline const unsigned int test_pink = color_to_nat(Color::PINK);
+  static inline const uint64_t test_red = color_to_nat(Color::RED);
+  static inline const uint64_t test_pink = color_to_nat(Color::PINK);
   static inline const bool test_warm_red = is_warm(Color::RED);
   static inline const bool test_warm_blue = is_warm(Color::BLUE);
   static inline const bool test_neutral_black = is_neutral(Color::BLACK);
   static inline const bool test_neutral_red = is_neutral(Color::RED);
-  static inline const unsigned int test_tok_num = tok_to_nat(tok::tnum(42u));
-  static inline const unsigned int test_tok_plus = tok_to_nat(tok::tplus());
-  static inline const unsigned int test_tok_ident = tok_to_nat(tok::tident(3u));
-  static inline const unsigned int test_tok_eof = tok_to_nat(tok::teof());
+  static inline const uint64_t test_tok_num =
+      tok_to_nat(tok::tnum(UINT64_C(42)));
+  static inline const uint64_t test_tok_plus = tok_to_nat(tok::tplus());
+  static inline const uint64_t test_tok_ident =
+      tok_to_nat(tok::tident(UINT64_C(3)));
+  static inline const uint64_t test_tok_eof = tok_to_nat(tok::teof());
   static inline const bool test_is_op_plus = is_operator(tok::tplus());
-  static inline const bool test_is_op_num = is_operator(tok::tnum(0u));
+  static inline const bool test_is_op_num = is_operator(tok::tnum(UINT64_C(0)));
 };
 
 #endif // INCLUDED_LARGE_ENUM

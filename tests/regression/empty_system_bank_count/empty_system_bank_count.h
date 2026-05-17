@@ -118,9 +118,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -129,13 +129,13 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct EmptySystemBankCount {
   struct ram_reg {
-    List<unsigned int> reg_main;
-    List<unsigned int> reg_status;
+    List<uint64_t> reg_main;
+    List<uint64_t> reg_status;
 
     // ACCESSORS
     ram_reg clone() const {
@@ -145,7 +145,7 @@ struct EmptySystemBankCount {
 
   struct ram_chip {
     List<ram_reg> chip_regs;
-    unsigned int chip_port;
+    uint64_t chip_port;
 
     // ACCESSORS
     ram_chip clone() const {
@@ -160,28 +160,28 @@ struct EmptySystemBankCount {
     ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
   };
 
-  static inline const unsigned int NBANKS = 4u;
-  static inline const unsigned int NCHIPS = 4u;
-  static inline const unsigned int NREGS = 4u;
-  static inline const unsigned int NMAIN = 16u;
-  static inline const unsigned int NSTAT = 4u;
+  static inline const uint64_t NBANKS = UINT64_C(4);
+  static inline const uint64_t NCHIPS = UINT64_C(4);
+  static inline const uint64_t NREGS = UINT64_C(4);
+  static inline const uint64_t NMAIN = UINT64_C(16);
+  static inline const uint64_t NSTAT = UINT64_C(4);
   static inline const ram_reg empty_reg =
-      ram_reg{ListDef::template repeat<unsigned int>(0u, NMAIN),
-              ListDef::template repeat<unsigned int>(0u, NSTAT)};
-  static inline const ram_chip empty_chip =
-      ram_chip{ListDef::template repeat<ram_reg>(empty_reg, NREGS), 0u};
+      ram_reg{ListDef::template repeat<uint64_t>(UINT64_C(0), NMAIN),
+              ListDef::template repeat<uint64_t>(UINT64_C(0), NSTAT)};
+  static inline const ram_chip empty_chip = ram_chip{
+      ListDef::template repeat<ram_reg>(empty_reg, NREGS), UINT64_C(0)};
   static inline const ram_bank empty_bank =
       ram_bank{ListDef::template repeat<ram_chip>(empty_chip, NCHIPS)};
   static inline const List<ram_bank> empty_sys =
       ListDef::template repeat<ram_bank>(empty_bank, NBANKS);
-  static inline const unsigned int t = empty_sys.length();
+  static inline const uint64_t t = empty_sys.length();
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
-    unsigned int k = n - 1;
+    uint64_t k = n - 1;
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }

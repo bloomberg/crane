@@ -148,9 +148,9 @@ struct ClosureEscapeMatch {
     }
   }
 
-  template <typename T1> static unsigned int length(const mylist<T1> &l) {
+  template <typename T1> static uint64_t length(const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       return (length<T1>(*a1) + 1);
@@ -170,22 +170,19 @@ struct ClosureEscapeMatch {
   /// Return a closure wrapped in option — prevents uncurrying.
   /// The closure captures a pattern variable hd (a shared_ptr),
   /// which is an inlined _args.d_a0 inside the std::visit callback.
-  static std::optional<
-      std::function<mylist<unsigned int>(mylist<unsigned int>)>>
-  make_prepender_opt(const mylist<mylist<unsigned int>> &l);
+  static std::optional<std::function<mylist<uint64_t>(mylist<uint64_t>)>>
+  make_prepender_opt(const mylist<mylist<uint64_t>> &l);
   /// Return a closure in a pair — prevents uncurrying.
   /// Captures pattern variables x and xs.
   static std::optional<
-      std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>
-  make_pair_fn_opt(const mylist<unsigned int> &l);
+      std::function<std::pair<uint64_t, uint64_t>(std::monostate)>>
+  make_pair_fn_opt(const mylist<uint64_t> &l);
   /// Nested matches with closures returned in option.
-  static std::optional<std::function<unsigned int(unsigned int)>>
-  nested_closure_opt(const mylist<unsigned int> &a,
-                     const mylist<unsigned int> &b);
+  static std::optional<std::function<uint64_t(uint64_t)>>
+  nested_closure_opt(const mylist<uint64_t> &a, const mylist<uint64_t> &b);
   /// Closure stored in a product, capturing shared_ptr pattern variable.
-  static std::pair<unsigned int,
-                   std::function<mylist<unsigned int>(mylist<unsigned int>)>>
-  closure_in_pair(const mylist<mylist<unsigned int>> &l);
+  static std::pair<uint64_t, std::function<mylist<uint64_t>(mylist<uint64_t>)>>
+  closure_in_pair(const mylist<mylist<uint64_t>> &l);
 };
 
 #endif // INCLUDED_CLOSURE_ESCAPE_MATCH

@@ -15,7 +15,7 @@ struct LargeMutual {
   struct stmt {
     // TYPES
     struct SAssign {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<expr> a1;
     };
 
@@ -137,7 +137,7 @@ struct LargeMutual {
     }
 
     // CREATORS
-    static stmt sassign(unsigned int a0, expr a1) {
+    static stmt sassign(uint64_t a0, expr a1) {
       return stmt(SAssign{a0, std::make_unique<expr>(std::move(a1))});
     }
 
@@ -208,11 +208,11 @@ struct LargeMutual {
   struct expr {
     // TYPES
     struct ENum {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct EVar {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct EAdd {
@@ -330,9 +330,9 @@ struct LargeMutual {
     }
 
     // CREATORS
-    static expr ENum_(unsigned int a0) { return expr(ENum{a0}); }
+    static expr ENum_(uint64_t a0) { return expr(ENum{a0}); }
 
-    static expr evar(unsigned int a0) { return expr(EVar{a0}); }
+    static expr evar(uint64_t a0) { return expr(EVar{a0}); }
 
     static expr eadd(expr a0, expr a1) {
       return expr(EAdd{std::make_unique<expr>(std::move(a0)),
@@ -612,7 +612,7 @@ struct LargeMutual {
   };
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, expr &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, expr &> &&
              std::is_invocable_r_v<T1, F1 &, stmt &, T1 &, stmt &, T1 &> &&
              std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
                                    T1 &> &&
@@ -638,7 +638,7 @@ struct LargeMutual {
   }
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, expr &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, expr &> &&
              std::is_invocable_r_v<T1, F1 &, stmt &, T1 &, stmt &, T1 &> &&
              std::is_invocable_r_v<T1, F2 &, bexpr &, stmt &, T1 &, stmt &,
                                    T1 &> &&
@@ -665,8 +665,8 @@ struct LargeMutual {
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
              std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
              std::is_invocable_r_v<T1, F4 &, bexpr &, expr &, T1 &, expr &,
@@ -696,8 +696,8 @@ struct LargeMutual {
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
              std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
              std::is_invocable_r_v<T1, F4 &, bexpr &, expr &, T1 &, expr &,
@@ -791,21 +791,23 @@ struct LargeMutual {
     }
   }
 
-  static unsigned int expr_size(const expr &e);
-  static unsigned int bexpr_size(const bexpr &b);
-  static unsigned int stmt_size(const stmt &s);
-  static inline const expr test_expr =
-      expr::eadd(expr::ENum_(1u), expr::emul(expr::ENum_(2u), expr::ENum_(3u)));
-  static inline const bexpr test_bexpr =
-      bexpr::band(bexpr::beq(expr::evar(0u), expr::ENum_(5u)),
-                  bexpr::blt(expr::evar(1u), expr::ENum_(10u)));
-  static inline const stmt test_stmt =
-      stmt::sseq(stmt::sassign(0u, expr::ENum_(42u)),
-                 stmt::sif(bexpr::beq(expr::evar(0u), expr::ENum_(42u)),
-                           stmt::sskip(), stmt::sassign(0u, expr::ENum_(0u))));
-  static inline const unsigned int test_expr_size = expr_size(test_expr);
-  static inline const unsigned int test_bexpr_size = bexpr_size(test_bexpr);
-  static inline const unsigned int test_stmt_size = stmt_size(test_stmt);
+  static uint64_t expr_size(const expr &e);
+  static uint64_t bexpr_size(const bexpr &b);
+  static uint64_t stmt_size(const stmt &s);
+  static inline const expr test_expr = expr::eadd(
+      expr::ENum_(UINT64_C(1)),
+      expr::emul(expr::ENum_(UINT64_C(2)), expr::ENum_(UINT64_C(3))));
+  static inline const bexpr test_bexpr = bexpr::band(
+      bexpr::beq(expr::evar(UINT64_C(0)), expr::ENum_(UINT64_C(5))),
+      bexpr::blt(expr::evar(UINT64_C(1)), expr::ENum_(UINT64_C(10))));
+  static inline const stmt test_stmt = stmt::sseq(
+      stmt::sassign(UINT64_C(0), expr::ENum_(UINT64_C(42))),
+      stmt::sif(bexpr::beq(expr::evar(UINT64_C(0)), expr::ENum_(UINT64_C(42))),
+                stmt::sskip(),
+                stmt::sassign(UINT64_C(0), expr::ENum_(UINT64_C(0)))));
+  static inline const uint64_t test_expr_size = expr_size(test_expr);
+  static inline const uint64_t test_bexpr_size = bexpr_size(test_bexpr);
+  static inline const uint64_t test_stmt_size = stmt_size(test_stmt);
 };
 
 #endif // INCLUDED_LARGE_MUTUAL

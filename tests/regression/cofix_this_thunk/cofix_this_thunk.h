@@ -197,49 +197,50 @@ public:
   }
 
   /// Take n elements
-  List<A> take(unsigned int n) const {
+  List<A> take(uint64_t n) const {
     if (n <= 0) {
       return List<A>::nil();
     } else {
-      unsigned int m = n - 1;
+      uint64_t m = n - 1;
       return List<A>::cons(this->shead(), this->stail().take(m));
     }
   }
 
-  static Sseq<unsigned int> nats_from(unsigned int n) {
-    return Sseq<unsigned int>::lazy_([=]() mutable -> Sseq<unsigned int> {
-      return Sseq<unsigned int>::scons(n, nats_from((n + 1)));
+  static Sseq<uint64_t> nats_from(uint64_t n) {
+    return Sseq<uint64_t>::lazy_([=]() mutable -> Sseq<uint64_t> {
+      return Sseq<uint64_t>::scons(n, nats_from((n + 1)));
     });
   }
 
   /// Sum of a list
-  static unsigned int sum(const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return 0u;
+  static uint64_t sum(const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       return (a0 + sum(*a1));
     }
   }
 
   /// test1: smap (nats_from 0) S gives 1, 2, 3, 4, ...
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
-  static const unsigned int &test1() {
-    static const unsigned int v = []() {
-      Sseq<unsigned int> s =
-          nats_from(0u).smap([](unsigned int x) { return (x + 1); });
-      return sum(s.take(4u));
+  static const uint64_t &test1() {
+    static const uint64_t v = []() {
+      Sseq<uint64_t> s =
+          nats_from(UINT64_C(0)).smap([](uint64_t x) { return (x + 1); });
+      return sum(s.take(UINT64_C(4)));
     }();
     return v;
   }
 
   /// test2: smap_direct (nats_from 0) S gives 1, 2, 3, 4, ...
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
-  static const unsigned int &test2() {
-    static const unsigned int v = []() {
-      Sseq<unsigned int> s =
-          nats_from(0u).smap_direct([](unsigned int x) { return (x + 1); });
-      return sum(s.take(4u));
+  static const uint64_t &test2() {
+    static const uint64_t v = []() {
+      Sseq<uint64_t> s = nats_from(UINT64_C(0)).smap_direct([](uint64_t x) {
+        return (x + 1);
+      });
+      return sum(s.take(UINT64_C(4)));
     }();
     return v;
   }

@@ -1,10 +1,10 @@
 #include "lambda_capture_perf.h"
 
-List<unsigned int> LambdaCapturePerf::iota(unsigned int n) {
+List<uint64_t> LambdaCapturePerf::iota(uint64_t n) {
   if (n <= 0) {
-    return List<unsigned int>::nil();
+    return List<uint64_t>::nil();
   } else {
-    unsigned int n_ = n - 1;
-    return List<unsigned int>::cons(n_, iota(n_));
+    uint64_t n_ = n - 1;
+    return List<uint64_t>::cons(n_, iota(n_));
   }
 }

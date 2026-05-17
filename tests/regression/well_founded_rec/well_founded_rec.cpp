@@ -1,38 +1,38 @@
 #include "well_founded_rec.h"
 
-List<unsigned int> WellFoundedRec::countdown_acc(unsigned int n) {
+List<uint64_t> WellFoundedRec::countdown_acc(uint64_t n) {
   if (n <= 0) {
-    return List<unsigned int>::cons(0u, List<unsigned int>::nil());
+    return List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil());
   } else {
-    unsigned int m = n - 1;
-    return List<unsigned int>::cons(n, countdown_acc(m));
+    uint64_t m = n - 1;
+    return List<uint64_t>::cons(n, countdown_acc(m));
   }
 }
 
-List<unsigned int> WellFoundedRec::countdown(unsigned int _x0) {
+List<uint64_t> WellFoundedRec::countdown(uint64_t _x0) {
   return countdown_acc(_x0);
 }
 
-unsigned int WellFoundedRec::div2_wf(unsigned int x) {
+uint64_t WellFoundedRec::div2_wf(uint64_t x) {
   if (x <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n0 = x - 1;
+    uint64_t n0 = x - 1;
     if (n0 <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int m = n0 - 1;
+      uint64_t m = n0 - 1;
       return (div2_wf(m) + 1);
     }
   }
 }
 
-unsigned int WellFoundedRec::gcd_wf(unsigned int x, unsigned int b) {
+uint64_t WellFoundedRec::gcd_wf(uint64_t x, uint64_t b) {
   if (x <= 0) {
     return b;
   } else {
-    unsigned int a_ = x - 1;
-    unsigned int y = ((a_ + 1) ? b % (a_ + 1) : b);
+    uint64_t a_ = x - 1;
+    uint64_t y = ((a_ + 1) ? b % (a_ + 1) : b);
     return gcd_wf(y, (a_ + 1));
   }
 }

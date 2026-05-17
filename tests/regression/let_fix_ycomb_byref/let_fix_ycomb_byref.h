@@ -120,25 +120,31 @@ public:
 };
 
 struct LetFixYcombByref {
-  static unsigned int sum_list(const List<unsigned int> &l);
-  static List<unsigned int> zip_sum(const List<unsigned int> &xs,
-                                    const List<unsigned int> &ys);
-  static List<unsigned int> countdown(unsigned int k);
-  static inline const unsigned int test_sum = sum_list(List<unsigned int>::cons(
-      1u, List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(
-                      3u, List<unsigned int>::cons(
-                              4u, List<unsigned int>::cons(
-                                      5u, List<unsigned int>::nil()))))));
-  static inline const List<unsigned int> test_zip = zip_sum(
-      List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
-      List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
-  static inline const List<unsigned int> test_countdown = countdown(3u);
+  static uint64_t sum_list(const List<uint64_t> &l);
+  static List<uint64_t> zip_sum(const List<uint64_t> &xs,
+                                const List<uint64_t> &ys);
+  static List<uint64_t> countdown(uint64_t k);
+  static inline const uint64_t test_sum = sum_list(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static inline const List<uint64_t> test_zip = zip_sum(
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
+  static inline const List<uint64_t> test_countdown = countdown(UINT64_C(3));
 };
 
 #endif // INCLUDED_LET_FIX_YCOMB_BYREF

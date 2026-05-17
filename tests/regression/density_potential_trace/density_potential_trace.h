@@ -27,7 +27,8 @@ struct DensityPotentialTraceCase {
              std::is_invocable_r_v<Real, F3 &, Real &>
   static Real proper_time_density_path(F0 &&f, F1 &&mu, F2 &&gamma, F3 &&v,
                                        Real t) {
-    return r_sqrt((r_pow(lapse(f, mu, gamma(t)), 2u) - r_pow(v(t), 2u)));
+    return r_sqrt((r_pow(lapse(f, mu, gamma(t)), UINT64_C(2)) -
+                   r_pow(v(t), UINT64_C(2))));
   }
 
   template <typename F0>
@@ -39,7 +40,7 @@ struct DensityPotentialTraceCase {
   template <typename F0>
     requires std::is_invocable_r_v<Real, F0 &, Real &>
   static Real V_eff_massive(F0 &&n, Real m, Real x) {
-    return (r_pow(m, 2u) * V_eff(n, x));
+    return (r_pow(m, UINT64_C(2)) * V_eff(n, x));
   }
 
   static Real sample_activation(Real z);
@@ -49,20 +50,20 @@ struct DensityPotentialTraceCase {
   static Real sample_N(Real x);
   static inline const Real sample_mass = Real::from_z(INT64_C(3));
   static inline const Real sample_time = Real::from_z(INT64_C(2));
-  static Real density_radicand_at(unsigned int n);
-  static bool static_time_nonnegative_at(unsigned int n);
-  static bool density_radicand_nonnegative_at(unsigned int n);
-  static Real density_value_at(unsigned int n);
-  static bool density_value_nonnegative_at(unsigned int n);
-  static bool massive_potential_nonnegative_at(unsigned int n);
+  static Real density_radicand_at(uint64_t n);
+  static bool static_time_nonnegative_at(uint64_t n);
+  static bool density_radicand_nonnegative_at(uint64_t n);
+  static Real density_value_at(uint64_t n);
+  static bool density_value_nonnegative_at(uint64_t n);
+  static bool massive_potential_nonnegative_at(uint64_t n);
   static inline const bool sample_static_nonneg =
-      static_time_nonnegative_at(1u);
+      static_time_nonnegative_at(UINT64_C(1));
   static inline const bool sample_density_radicand_nonneg =
-      density_radicand_nonnegative_at(1u);
+      density_radicand_nonnegative_at(UINT64_C(1));
   static inline const bool sample_density_value_nonneg =
-      density_value_nonnegative_at(1u);
+      density_value_nonnegative_at(UINT64_C(1));
   static inline const bool sample_massive_nonneg =
-      massive_potential_nonnegative_at(2u);
+      massive_potential_nonnegative_at(UINT64_C(2));
 };
 
 #endif // INCLUDED_DENSITY_POTENTIAL_TRACE

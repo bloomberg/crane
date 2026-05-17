@@ -123,32 +123,28 @@ public:
 
 struct LoopifyPredicates {
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> take_while(F0 &&p, const List<unsigned int> &l) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> take_while(F0 &&p, const List<uint64_t> &l) {
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(a0, nullptr));
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
           _loop_l = a1.get();
           continue;
         } else {
-          *_write =
-              std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+          *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
           break;
         }
       }
@@ -157,18 +153,18 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> drop_while(F0 &&p, List<unsigned int> l) {
-    List<unsigned int> _result;
-    List<unsigned int> _loop_l = std::move(l);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> drop_while(F0 &&p, List<uint64_t> l) {
+    List<uint64_t> _result;
+    List<uint64_t> _loop_l = std::move(l);
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        _result = List<unsigned int>::nil();
+        _result = List<uint64_t>::nil();
         break;
       } else {
         auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
+            std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
         if (p(std::move(a0))) {
           _loop_l = std::move(*a1);
         } else {
@@ -181,23 +177,23 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::pair<List<unsigned int>, List<unsigned int>>
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::pair<List<uint64_t>, List<uint64_t>>
   span(F0 &&p,
-       List<unsigned int>
+       List<uint64_t>
            l) { /// _Enter: captures varying parameters for each recursive call.
 
     struct _Enter {
-      List<unsigned int> l;
+      List<uint64_t> l;
     };
 
     /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
     struct _Cont1 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont1>;
-    std::pair<List<unsigned int>, List<unsigned int>> _result{};
+    std::pair<List<uint64_t>, List<uint64_t>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{l});
@@ -207,51 +203,48 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        List<unsigned int> l = std::move(_f.l);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                l.v_mut())) {
-          _result = std::make_pair(List<unsigned int>::nil(),
-                                   List<unsigned int>::nil());
+        List<uint64_t> l = std::move(_f.l);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+          _result =
+              std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v_mut());
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           if (p(a0)) {
             _stack.emplace_back(_Cont1{a0});
             _stack.emplace_back(_Enter{std::move(*a1)});
           } else {
-            _result = std::make_pair(List<unsigned int>::nil(), l);
+            _result = std::make_pair(List<uint64_t>::nil(), l);
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int a0 = _f.a0;
-        const List<unsigned int> &yes = _result.first;
-        const List<unsigned int> &no = _result.second;
-        _result =
-            std::make_pair(List<unsigned int>::cons(std::move(a0), yes), no);
+        uint64_t a0 = _f.a0;
+        const List<uint64_t> &yes = _result.first;
+        const List<uint64_t> &no = _result.second;
+        _result = std::make_pair(List<uint64_t>::cons(std::move(a0), yes), no);
       }
     }
     return _result;
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::pair<List<unsigned int>, List<unsigned int>>
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::pair<List<uint64_t>, List<uint64_t>>
   break_at(F0 &&p,
-           List<unsigned int> l) { /// _Enter: captures varying parameters for
-                                   /// each recursive call.
+           List<uint64_t> l) { /// _Enter: captures varying parameters for each
+                               /// recursive call.
 
     struct _Enter {
-      List<unsigned int> l;
+      List<uint64_t> l;
     };
 
     /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
     struct _Cont1 {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont1>;
-    std::pair<List<unsigned int>, List<unsigned int>> _result{};
+    std::pair<List<uint64_t>, List<uint64_t>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{l});
@@ -261,16 +254,14 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        List<unsigned int> l = std::move(_f.l);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                l.v_mut())) {
-          _result = std::make_pair(List<unsigned int>::nil(),
-                                   List<unsigned int>::nil());
+        List<uint64_t> l = std::move(_f.l);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+          _result =
+              std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
         } else {
-          auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v_mut());
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           if (p(a0)) {
-            _result = std::make_pair(List<unsigned int>::nil(), l);
+            _result = std::make_pair(List<uint64_t>::nil(), l);
           } else {
             _stack.emplace_back(_Cont1{a0});
             _stack.emplace_back(_Enter{std::move(*a1)});
@@ -278,25 +269,25 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        unsigned int a0 = _f.a0;
-        const List<unsigned int> &before = _result.first;
-        const List<unsigned int> &after = _result.second;
-        _result = std::make_pair(
-            List<unsigned int>::cons(std::move(a0), before), after);
+        uint64_t a0 = _f.a0;
+        const List<uint64_t> &before = _result.first;
+        const List<uint64_t> &after = _result.second;
+        _result =
+            std::make_pair(List<uint64_t>::cons(std::move(a0), before), after);
       }
     }
     return _result;
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> filter(F0 &&p, const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> filter(F0 &&p, const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       if (p(a0)) {
-        return List<unsigned int>::cons(a0, filter(p, *a1));
+        return List<uint64_t>::cons(a0, filter(p, *a1));
       } else {
         return filter(p, *a1);
       }
@@ -304,29 +295,29 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> reject(F0 &&p, const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> reject(F0 &&p, const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       if (p(a0)) {
         return reject(p, *a1);
       } else {
-        return List<unsigned int>::cons(a0, reject(p, *a1));
+        return List<uint64_t>::cons(a0, reject(p, *a1));
       }
     }
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool forall_pred(
-      F0 &&p,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool
+  forall_pred(F0 &&p,
+              const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
@@ -345,12 +336,11 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = true;
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{p(a0)});
           _stack.emplace_back(_Enter{a1.get()});
         }
@@ -363,14 +353,14 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool exists_pred(
-      F0 &&p,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool
+  exists_pred(F0 &&p,
+              const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
@@ -389,12 +379,11 @@ struct LoopifyPredicates {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = false;
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{p(a0)});
           _stack.emplace_back(_Enter{a1.get()});
         }
@@ -407,25 +396,24 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::optional<unsigned int>
-  find_index_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
-    std::optional<unsigned int> _result;
-    unsigned int _loop_idx = std::move(idx);
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::optional<uint64_t> find_index_aux(F0 &&p, const List<uint64_t> &l,
+                                                uint64_t idx) {
+    std::optional<uint64_t> _result;
+    uint64_t _loop_idx = std::move(idx);
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        _result = std::optional<unsigned int>();
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        _result = std::optional<uint64_t>();
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<unsigned int>(_loop_idx);
+          _result = std::make_optional<uint64_t>(_loop_idx);
           break;
         } else {
-          _loop_idx = (_loop_idx + 1u);
+          _loop_idx = (_loop_idx + UINT64_C(1));
           _loop_l = a1.get();
         }
       }
@@ -434,61 +422,57 @@ struct LoopifyPredicates {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::optional<unsigned int> find_index(F0 &&p,
-                                                const List<unsigned int> &l) {
-    return find_index_aux(p, l, 0u);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::optional<uint64_t> find_index(F0 &&p, const List<uint64_t> &l) {
+    return find_index_aux(p, l, UINT64_C(0));
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int>
-  find_indices_aux(F0 &&p, const List<unsigned int> &l, unsigned int idx) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> find_indices_aux(F0 &&p, const List<uint64_t> &l,
+                                         uint64_t idx) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       if (p(a0)) {
-        return List<unsigned int>::cons(idx,
-                                        find_indices_aux(p, *a1, (idx + 1u)));
+        return List<uint64_t>::cons(
+            idx, find_indices_aux(p, *a1, (idx + UINT64_C(1))));
       } else {
-        return find_indices_aux(p, *a1, (idx + 1u));
+        return find_indices_aux(p, *a1, (idx + UINT64_C(1)));
       }
     }
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> find_indices(F0 &&p, const List<unsigned int> &l) {
-    return find_indices_aux(p, l, 0u);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> find_indices(F0 &&p, const List<uint64_t> &l) {
+    return find_indices_aux(p, l, UINT64_C(0));
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
-  static List<unsigned int> delete_by(F0 &&eq, unsigned int x,
-                                      const List<unsigned int> &l) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
+  static List<uint64_t> delete_by(F0 &&eq, uint64_t x,
+                                  const List<uint64_t> &l) {
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        *_write =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (eq(x, a0)) {
-          *_write = std::make_unique<List<unsigned int>>(*a1);
+          *_write = std::make_unique<List<uint64_t>>(*a1);
           break;
         } else {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(a0, nullptr));
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
           _loop_l = a1.get();
           continue;
         }
@@ -497,8 +481,7 @@ struct LoopifyPredicates {
     return std::move(*_head);
   }
 
-  static List<unsigned int> remove_all(unsigned int x,
-                                       const List<unsigned int> &l);
+  static List<uint64_t> remove_all(uint64_t x, const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_PREDICATES

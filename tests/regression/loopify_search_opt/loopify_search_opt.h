@@ -119,7 +119,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -131,7 +131,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -144,7 +144,7 @@ public:
         const List *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -160,26 +160,23 @@ public:
 };
 
 struct LoopifySearchOpt {
-  static List<unsigned int> lis(const List<unsigned int> &l);
-  static List<unsigned int> longest_run_fuel(unsigned int fuel,
-                                             List<unsigned int> current,
-                                             List<unsigned int> best,
-                                             const List<unsigned int> &l);
-  static List<unsigned int> longest_run(const List<unsigned int> &l);
-  static unsigned int
-  knapsack_fuel(unsigned int fuel, unsigned int capacity,
-                const List<std::pair<unsigned int, unsigned int>> &items);
-  static unsigned int
-  knapsack(unsigned int capacity,
-           const List<std::pair<unsigned int, unsigned int>> &items);
-  static bool subset_sum_fuel(unsigned int fuel, unsigned int target,
-                              const List<unsigned int> &l);
-  static bool subset_sum(unsigned int target, const List<unsigned int> &l);
-  static std::pair<unsigned int, unsigned int>
-  majority(const List<unsigned int> &l);
-  static bool binary_search_fuel(unsigned int fuel, unsigned int target,
-                                 const List<unsigned int> &l);
-  static bool binary_search(unsigned int target, const List<unsigned int> &l);
+  static List<uint64_t> lis(const List<uint64_t> &l);
+  static List<uint64_t> longest_run_fuel(uint64_t fuel, List<uint64_t> current,
+                                         List<uint64_t> best,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> longest_run(const List<uint64_t> &l);
+  static uint64_t
+  knapsack_fuel(uint64_t fuel, uint64_t capacity,
+                const List<std::pair<uint64_t, uint64_t>> &items);
+  static uint64_t knapsack(uint64_t capacity,
+                           const List<std::pair<uint64_t, uint64_t>> &items);
+  static bool subset_sum_fuel(uint64_t fuel, uint64_t target,
+                              const List<uint64_t> &l);
+  static bool subset_sum(uint64_t target, const List<uint64_t> &l);
+  static std::pair<uint64_t, uint64_t> majority(const List<uint64_t> &l);
+  static bool binary_search_fuel(uint64_t fuel, uint64_t target,
+                                 const List<uint64_t> &l);
+  static bool binary_search(uint64_t target, const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SEARCH_OPT

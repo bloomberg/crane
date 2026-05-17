@@ -120,18 +120,13 @@ public:
 };
 
 struct LoopifyScans {
-  static List<unsigned int> scanl(unsigned int acc,
-                                  const List<unsigned int> &l);
-  static List<unsigned int> scanl_mult(unsigned int acc,
-                                       const List<unsigned int> &l);
-  static List<unsigned int> running_max(unsigned int current,
-                                        const List<unsigned int> &l);
-  static List<unsigned int> running_min(unsigned int current,
-                                        const List<unsigned int> &l);
-  static List<unsigned int> pairwise_diff(unsigned int prev,
-                                          const List<unsigned int> &l);
-  static List<unsigned int> accumulate_if_even(unsigned int acc,
-                                               const List<unsigned int> &l);
+  static List<uint64_t> scanl(uint64_t acc, const List<uint64_t> &l);
+  static List<uint64_t> scanl_mult(uint64_t acc, const List<uint64_t> &l);
+  static List<uint64_t> running_max(uint64_t current, const List<uint64_t> &l);
+  static List<uint64_t> running_min(uint64_t current, const List<uint64_t> &l);
+  static List<uint64_t> pairwise_diff(uint64_t prev, const List<uint64_t> &l);
+  static List<uint64_t> accumulate_if_even(uint64_t acc,
+                                           const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SCANS

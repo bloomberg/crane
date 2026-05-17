@@ -1,19 +1,17 @@
 #include "loopify_option_maybe.h"
 
-std::optional<unsigned int>
-LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
-  std::optional<unsigned int> _result;
-  const List<unsigned int> *_loop_l = &l;
+std::optional<uint64_t> LoopifyOptionMaybe::find_even(const List<uint64_t> &l) {
+  std::optional<uint64_t> _result;
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l->v())) {
-      _result = std::optional<unsigned int>();
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+      _result = std::optional<uint64_t>();
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if ((2u ? a0 % 2u : a0) == 0u) {
-        _result = std::make_optional<unsigned int>(a0);
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
+        _result = std::make_optional<uint64_t>(a0);
         break;
       } else {
         _loop_l = a1.get();
@@ -23,21 +21,19 @@ LoopifyOptionMaybe::find_even(const List<unsigned int> &l) {
   return _result;
 }
 
-std::optional<unsigned int>
-LoopifyOptionMaybe::find_greater(unsigned int threshold,
-                                 const List<unsigned int> &l) {
-  std::optional<unsigned int> _result;
-  const List<unsigned int> *_loop_l = &l;
+std::optional<uint64_t>
+LoopifyOptionMaybe::find_greater(uint64_t threshold, const List<uint64_t> &l) {
+  std::optional<uint64_t> _result;
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l->v())) {
-      _result = std::optional<unsigned int>();
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+      _result = std::optional<uint64_t>();
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (threshold < a0) {
-        _result = std::make_optional<unsigned int>(a0);
+        _result = std::make_optional<uint64_t>(a0);
         break;
       } else {
         _loop_l = a1.get();
@@ -47,24 +43,24 @@ LoopifyOptionMaybe::find_greater(unsigned int threshold,
   return _result;
 }
 
-std::optional<unsigned int> LoopifyOptionMaybe::lookup(
-    unsigned int key, const List<std::pair<unsigned int, unsigned int>> &l) {
-  std::optional<unsigned int> _result;
-  const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
+std::optional<uint64_t>
+LoopifyOptionMaybe::lookup(uint64_t key,
+                           const List<std::pair<uint64_t, uint64_t>> &l) {
+  std::optional<uint64_t> _result;
+  const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
-            typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-            _loop_l->v())) {
-      _result = std::optional<unsigned int>();
+            typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
+      _result = std::optional<uint64_t>();
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               _loop_l->v());
-      const unsigned int &k = a0.first;
-      const unsigned int &v = a0.second;
+      const uint64_t &k = a0.first;
+      const uint64_t &v = a0.second;
       if (key == k) {
-        _result = std::make_optional<unsigned int>(v);
+        _result = std::make_optional<uint64_t>(v);
         break;
       } else {
         _loop_l = a1.get();
@@ -74,29 +70,29 @@ std::optional<unsigned int> LoopifyOptionMaybe::lookup(
   return _result;
 }
 
-List<unsigned int> LoopifyOptionMaybe::lookup_all(
-    unsigned int key, const List<std::pair<unsigned int, unsigned int>> &l) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  const List<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
+List<uint64_t>
+LoopifyOptionMaybe::lookup_all(uint64_t key,
+                               const List<std::pair<uint64_t, uint64_t>> &l) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
-            typename List<std::pair<unsigned int, unsigned int>>::Nil>(
-            _loop_l->v())) {
-      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+            typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
+      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<std::pair<unsigned int, unsigned int>>::Cons>(
+          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               _loop_l->v());
-      const unsigned int &k = a0.first;
-      const unsigned int &v = a0.second;
+      const uint64_t &k = a0.first;
+      const uint64_t &v = a0.second;
       if (key == k) {
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(v, nullptr));
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(v, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
         _loop_l = a1.get();
         continue;
       } else {
@@ -108,47 +104,45 @@ List<unsigned int> LoopifyOptionMaybe::lookup_all(
   return std::move(*_head);
 }
 
-std::optional<unsigned int>
-LoopifyOptionMaybe::safe_head(const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return std::optional<unsigned int>();
+std::optional<uint64_t> LoopifyOptionMaybe::safe_head(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return std::optional<uint64_t>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-    return std::make_optional<unsigned int>(a0);
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    return std::make_optional<uint64_t>(a0);
   }
 }
 
-std::optional<List<unsigned int>>
-LoopifyOptionMaybe::safe_tail(const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return std::optional<List<unsigned int>>();
+std::optional<List<uint64_t>>
+LoopifyOptionMaybe::safe_tail(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return std::optional<List<uint64_t>>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-    return std::make_optional<List<unsigned int>>(*a1);
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    return std::make_optional<List<uint64_t>>(*a1);
   }
 }
 
-List<unsigned int>
-LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  const List<std::optional<unsigned int>> *_loop_l = &l;
+List<uint64_t>
+LoopifyOptionMaybe::catMaybes(const List<std::optional<uint64_t>> &l) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  const List<std::optional<uint64_t>> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<std::optional<unsigned int>>::Nil>(
+    if (std::holds_alternative<typename List<std::optional<uint64_t>>::Nil>(
             _loop_l->v())) {
-      *_write = std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<std::optional<unsigned int>>::Cons>(
-              _loop_l->v());
+          std::get<typename List<std::optional<uint64_t>>::Cons>(_loop_l->v());
       if (a0.has_value()) {
-        const unsigned int &x = *a0;
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(x, nullptr));
+        const uint64_t &x = *a0;
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(x, nullptr));
         *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut()).a1;
+            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
         _loop_l = a1.get();
         continue;
       } else {
@@ -160,25 +154,23 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<unsigned int>> &l) {
   return std::move(*_head);
 }
 
-std::optional<unsigned int>
-LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
-                                        unsigned int idx) {
-  std::optional<unsigned int> _result;
-  unsigned int _loop_idx = std::move(idx);
-  const List<unsigned int> *_loop_l = &l;
+std::optional<uint64_t>
+LoopifyOptionMaybe::find_index_even_aux(const List<uint64_t> &l, uint64_t idx) {
+  std::optional<uint64_t> _result;
+  uint64_t _loop_idx = std::move(idx);
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l->v())) {
-      _result = std::optional<unsigned int>();
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+      _result = std::optional<uint64_t>();
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if ((2u ? a0 % 2u : a0) == 0u) {
-        _result = std::make_optional<unsigned int>(_loop_idx);
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+      if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
+        _result = std::make_optional<uint64_t>(_loop_idx);
         break;
       } else {
-        _loop_idx = (_loop_idx + 1u);
+        _loop_idx = (_loop_idx + UINT64_C(1));
         _loop_l = a1.get();
       }
     }
@@ -186,7 +178,7 @@ LoopifyOptionMaybe::find_index_even_aux(const List<unsigned int> &l,
   return _result;
 }
 
-std::optional<unsigned int>
-LoopifyOptionMaybe::find_index_even(const List<unsigned int> &l) {
-  return find_index_even_aux(l, 0u);
+std::optional<uint64_t>
+LoopifyOptionMaybe::find_index_even(const List<uint64_t> &l) {
+  return find_index_even_aux(l, UINT64_C(0));
 }

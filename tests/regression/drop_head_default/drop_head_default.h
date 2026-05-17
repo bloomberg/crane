@@ -120,11 +120,11 @@ public:
 };
 
 struct DropHeadDefault {
-  template <typename T1> static List<T1> drop(unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
     if (n <= 0) {
       return l;
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
         return List<T1>::nil();
       } else {
@@ -134,13 +134,14 @@ struct DropHeadDefault {
     }
   }
 
-  static unsigned int head_after_drop(const List<unsigned int> &rom,
-                                      unsigned int addr);
-  static inline const unsigned int t = head_after_drop(
-      List<unsigned int>::cons(
-          5u, List<unsigned int>::cons(
-                  7u, List<unsigned int>::cons(9u, List<unsigned int>::nil()))),
-      1u);
+  static uint64_t head_after_drop(const List<uint64_t> &rom, uint64_t addr);
+  static inline const uint64_t t = head_after_drop(
+      List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(7),
+              List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()))),
+      UINT64_C(1));
 };
 
 #endif // INCLUDED_DROP_HEAD_DEFAULT

@@ -34,7 +34,7 @@ Real PolygonWindingAreaTraceCase::lon_diff(Real lon1, Real lon2) {
 
 Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
     const List<PolygonWindingAreaTraceCase::Point> &pts,
-    const List<PolygonWindingAreaTraceCase::Point> &all_pts, unsigned int idx) {
+    const List<PolygonWindingAreaTraceCase::Point> &all_pts, uint64_t idx) {
   if (std::holds_alternative<
           typename List<PolygonWindingAreaTraceCase::Point>::Nil>(pts.v())) {
     return Real::from_z(INT64_C(0));
@@ -42,23 +42,24 @@ Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
     const auto &[a0, a1] =
         std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
             pts.v());
-    unsigned int n = all_pts.length();
-    Real lambda_prev =
-        nth_cyclic<PolygonWindingAreaTraceCase::Point>(
-            a0, all_pts,
-            ((((idx + n) - 1u) > (idx + n) ? 0 : ((idx + n) - 1u))))
-            .lambda;
-    Real lambda_next =
-        nth_cyclic<PolygonWindingAreaTraceCase::Point>(a0, all_pts, (idx + 1u))
-            .lambda;
+    uint64_t n = all_pts.length();
+    Real lambda_prev = nth_cyclic<PolygonWindingAreaTraceCase::Point>(
+                           a0, all_pts,
+                           ((((idx + n) - UINT64_C(1)) > (idx + n)
+                                 ? 0
+                                 : ((idx + n) - UINT64_C(1)))))
+                           .lambda;
+    Real lambda_next = nth_cyclic<PolygonWindingAreaTraceCase::Point>(
+                           a0, all_pts, (idx + UINT64_C(1)))
+                           .lambda;
     Real term = (lon_diff(lambda_prev, lambda_next) * r_sin(a0.phi));
-    return (term + spherical_shoelace_aux(*a1, all_pts, (idx + 1u)));
+    return (term + spherical_shoelace_aux(*a1, all_pts, (idx + UINT64_C(1))));
   }
 }
 
 Real PolygonWindingAreaTraceCase::spherical_shoelace(
     const List<PolygonWindingAreaTraceCase::Point> &pts) {
-  return spherical_shoelace_aux(pts, pts, 0u);
+  return spherical_shoelace_aux(pts, pts, UINT64_C(0));
 }
 
 Real PolygonWindingAreaTraceCase::spherical_polygon_area(

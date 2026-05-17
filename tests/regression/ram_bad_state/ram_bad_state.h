@@ -120,12 +120,12 @@ public:
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct RamBadState {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -134,7 +134,7 @@ struct RamBadState {
         return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -145,8 +145,8 @@ struct RamBadState {
   }
 
   struct ram_reg {
-    List<unsigned int> reg_main;
-    List<unsigned int> reg_status;
+    List<uint64_t> reg_main;
+    List<uint64_t> reg_status;
 
     // ACCESSORS
     ram_reg clone() const {
@@ -156,7 +156,7 @@ struct RamBadState {
 
   struct ram_chip {
     List<ram_reg> chip_regs;
-    unsigned int chip_port;
+    uint64_t chip_port;
 
     // ACCESSORS
     ram_chip clone() const {
@@ -172,10 +172,10 @@ struct RamBadState {
   };
 
   struct ram_sel {
-    unsigned int sel_bank;
-    unsigned int sel_chip;
-    unsigned int sel_reg;
-    unsigned int sel_char;
+    uint64_t sel_bank;
+    uint64_t sel_chip;
+    uint64_t sel_reg;
+    uint64_t sel_char;
 
     // ACCESSORS
     ram_sel clone() const {
@@ -185,14 +185,14 @@ struct RamBadState {
   };
 
   struct state {
-    List<unsigned int> state_regs;
-    unsigned int state_acc;
+    List<uint64_t> state_regs;
+    uint64_t state_acc;
     bool state_carry;
-    unsigned int state_pc;
-    List<unsigned int> state_stack;
+    uint64_t state_pc;
+    List<uint64_t> state_stack;
     List<ram_bank> state_ram;
     ram_sel state_sel;
-    List<unsigned int> state_rom;
+    List<uint64_t> state_rom;
 
     // ACCESSORS
     state clone() const {
@@ -204,64 +204,66 @@ struct RamBadState {
   };
 
   static inline const ram_reg empty_reg =
-      ram_reg{ListDef::template repeat<unsigned int>(0u, 16u),
-              ListDef::template repeat<unsigned int>(0u, 4u)};
-  static inline const ram_chip empty_chip =
-      ram_chip{ListDef::template repeat<ram_reg>(empty_reg, 4u), 0u};
+      ram_reg{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+              ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4))};
+  static inline const ram_chip empty_chip = ram_chip{
+      ListDef::template repeat<ram_reg>(empty_reg, UINT64_C(4)), UINT64_C(0)};
   static inline const ram_bank empty_bank =
-      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, 4u)};
+      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, UINT64_C(4))};
   static inline const List<ram_bank> empty_ram =
-      ListDef::template repeat<ram_bank>(empty_bank, 4u);
-  static inline const ram_sel default_sel = ram_sel{0u, 0u, 0u, 0u};
+      ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));
+  static inline const ram_sel default_sel =
+      ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state bad_state_acc_overflow =
-      state{ListDef::template repeat<unsigned int>(0u, 16u),
-            16u,
+      state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+            UINT64_C(16),
             false,
-            0u,
-            List<unsigned int>::nil(),
+            UINT64_C(0),
+            List<uint64_t>::nil(),
             empty_ram,
             default_sel,
-            ListDef::template repeat<unsigned int>(0u, 8u)};
+            ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_pc_overflow =
-      state{ListDef::template repeat<unsigned int>(0u, 16u),
-            0u,
+      state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+            UINT64_C(0),
             false,
-            4096u,
-            List<unsigned int>::nil(),
+            UINT64_C(4096),
+            List<uint64_t>::nil(),
             empty_ram,
             default_sel,
-            ListDef::template repeat<unsigned int>(0u, 8u)};
-  static inline const state bad_state_stack_overflow =
-      state{ListDef::template repeat<unsigned int>(0u, 16u),
-            0u,
-            false,
-            0u,
-            List<unsigned int>::cons(
-                0u, List<unsigned int>::cons(
-                        1u, List<unsigned int>::cons(
-                                2u, List<unsigned int>::cons(
-                                        3u, List<unsigned int>::nil())))),
-            empty_ram,
-            default_sel,
-            ListDef::template repeat<unsigned int>(0u, 8u)};
+            ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
+  static inline const state bad_state_stack_overflow = state{
+      ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+      UINT64_C(0),
+      false,
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
+      empty_ram,
+      default_sel,
+      ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_wrong_reg_count =
-      state{ListDef::template repeat<unsigned int>(0u, 15u),
-            0u,
+      state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(15)),
+            UINT64_C(0),
             false,
-            0u,
-            List<unsigned int>::nil(),
+            UINT64_C(0),
+            List<uint64_t>::nil(),
             empty_ram,
             default_sel,
-            ListDef::template repeat<unsigned int>(0u, 8u)};
-  static inline const unsigned int overflow_acc =
-      bad_state_acc_overflow.state_acc;
+            ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
+  static inline const uint64_t overflow_acc = bad_state_acc_overflow.state_acc;
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
-    unsigned int k = n - 1;
+    uint64_t k = n - 1;
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }

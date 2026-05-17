@@ -8,8 +8,8 @@
 #include <vector>
 
 struct MutualRecursion {
-  static bool is_even(unsigned int n);
-  static bool is_odd(unsigned int n);
+  static bool is_even(uint64_t n);
+  static bool is_odd(uint64_t n);
   template <typename A> struct tree;
   template <typename A> struct forest;
 
@@ -284,47 +284,47 @@ struct MutualRecursion {
     }
   }
 
-  template <typename T1> static unsigned int tree_size(const tree<T1> &t) {
+  template <typename T1> static uint64_t tree_size(const tree<T1> &t) {
     if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-      return 1u;
+      return UINT64_C(1);
     } else {
       const auto &[a0] = std::get<typename tree<T1>::Node>(t.v());
       return forest_size<T1>(*a0);
     }
   }
 
-  template <typename T1> static unsigned int forest_size(const forest<T1> &f) {
+  template <typename T1> static uint64_t forest_size(const forest<T1> &f) {
     if (std::holds_alternative<typename forest<T1>::Empty>(f.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename forest<T1>::Trees>(f.v());
       return (tree_size<T1>(*a0) + forest_size<T1>(*a1));
     }
   }
 
-  static unsigned int tree_sum(const tree<unsigned int> &t);
-  static unsigned int forest_sum(const forest<unsigned int> &f);
-  static inline const bool test_even_0 = is_even(0u);
-  static inline const bool test_even_4 = is_even(4u);
-  static inline const bool test_odd_3 = is_odd(3u);
-  static inline const bool test_odd_4 = is_odd(4u);
-  static inline const tree<unsigned int> simple_tree =
-      tree<unsigned int>::node(forest<unsigned int>::trees(
-          tree<unsigned int>::leaf(1u),
-          forest<unsigned int>::trees(tree<unsigned int>::leaf(2u),
-                                      forest<unsigned int>::empty())));
-  static inline const tree<unsigned int> nested_tree =
-      tree<unsigned int>::node(forest<unsigned int>::trees(
-          tree<unsigned int>::node(forest<unsigned int>::trees(
-              tree<unsigned int>::leaf(3u), forest<unsigned int>::empty())),
-          forest<unsigned int>::trees(tree<unsigned int>::leaf(4u),
-                                      forest<unsigned int>::empty())));
-  static inline const unsigned int test_size_simple =
-      tree_size<unsigned int>(simple_tree);
-  static inline const unsigned int test_size_nested =
-      tree_size<unsigned int>(nested_tree);
-  static inline const unsigned int test_sum_simple = tree_sum(simple_tree);
-  static inline const unsigned int test_sum_nested = tree_sum(nested_tree);
+  static uint64_t tree_sum(const tree<uint64_t> &t);
+  static uint64_t forest_sum(const forest<uint64_t> &f);
+  static inline const bool test_even_0 = is_even(UINT64_C(0));
+  static inline const bool test_even_4 = is_even(UINT64_C(4));
+  static inline const bool test_odd_3 = is_odd(UINT64_C(3));
+  static inline const bool test_odd_4 = is_odd(UINT64_C(4));
+  static inline const tree<uint64_t> simple_tree =
+      tree<uint64_t>::node(forest<uint64_t>::trees(
+          tree<uint64_t>::leaf(UINT64_C(1)),
+          forest<uint64_t>::trees(tree<uint64_t>::leaf(UINT64_C(2)),
+                                  forest<uint64_t>::empty())));
+  static inline const tree<uint64_t> nested_tree =
+      tree<uint64_t>::node(forest<uint64_t>::trees(
+          tree<uint64_t>::node(forest<uint64_t>::trees(
+              tree<uint64_t>::leaf(UINT64_C(3)), forest<uint64_t>::empty())),
+          forest<uint64_t>::trees(tree<uint64_t>::leaf(UINT64_C(4)),
+                                  forest<uint64_t>::empty())));
+  static inline const uint64_t test_size_simple =
+      tree_size<uint64_t>(simple_tree);
+  static inline const uint64_t test_size_nested =
+      tree_size<uint64_t>(nested_tree);
+  static inline const uint64_t test_sum_simple = tree_sum(simple_tree);
+  static inline const uint64_t test_sum_nested = tree_sum(nested_tree);
 };
 
 #endif // INCLUDED_MUTUAL_RECURSION

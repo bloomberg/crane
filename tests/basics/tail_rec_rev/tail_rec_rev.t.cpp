@@ -69,8 +69,8 @@ List<T> vector_to_list(const std::vector<T> &vec) {
 int main() {
   // Test 1: Reverse empty list
   {
-    auto empty = List<unsigned int>::nil();
-    auto result = better_rev<unsigned int>(empty);
+    auto empty = List<uint64_t>::nil();
+    auto result = better_rev<uint64_t>(empty);
     auto vec = list_to_vector(result);
     ASSERT(vec.size() == 0);
     std::cout << "Test 1 (reverse empty list): PASSED" << std::endl;
@@ -79,8 +79,8 @@ int main() {
   // Test 2: Reverse single element
   {
     auto single =
-        List<unsigned int>::cons(42, List<unsigned int>::nil());
-    auto result = better_rev<unsigned int>(single);
+        List<uint64_t>::cons(42, List<uint64_t>::nil());
+    auto result = better_rev<uint64_t>(single);
     auto vec = list_to_vector(result);
     ASSERT(vec.size() == 1);
     ASSERT(vec[0] == 42);
@@ -89,8 +89,8 @@ int main() {
 
   // Test 3: Reverse two elements
   {
-    auto input = vector_to_list<unsigned int>({1, 2});
-    auto result = better_rev<unsigned int>(input);
+    auto input = vector_to_list<uint64_t>({1, 2});
+    auto result = better_rev<uint64_t>(input);
     auto vec = list_to_vector(result);
     ASSERT(vec.size() == 2);
     ASSERT(vec[0] == 2 && vec[1] == 1);
@@ -99,8 +99,8 @@ int main() {
 
   // Test 4: Reverse longer list
   {
-    auto input = vector_to_list<unsigned int>({1, 2, 3, 4, 5});
-    auto result = better_rev<unsigned int>(input);
+    auto input = vector_to_list<uint64_t>({1, 2, 3, 4, 5});
+    auto result = better_rev<uint64_t>(input);
     auto vec = list_to_vector(result);
     ASSERT(vec.size() == 5);
     ASSERT(vec[0] == 5 && vec[1] == 4 && vec[2] == 3 && vec[3] == 2 &&
@@ -110,9 +110,9 @@ int main() {
 
   // Test 5: Double reverse should give original
   {
-    auto input = vector_to_list<unsigned int>({3, 1, 4, 1, 5});
-    auto reversed = better_rev<unsigned int>(input);
-    auto double_reversed = better_rev<unsigned int>(reversed);
+    auto input = vector_to_list<uint64_t>({3, 1, 4, 1, 5});
+    auto reversed = better_rev<uint64_t>(input);
+    auto double_reversed = better_rev<uint64_t>(reversed);
     auto vec1 = list_to_vector(input);
     auto vec2 = list_to_vector(double_reversed);
     ASSERT(vec1 == vec2);

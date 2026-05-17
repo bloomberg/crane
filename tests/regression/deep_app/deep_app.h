@@ -217,7 +217,7 @@ struct DeepApp {
   }
 
   /// Tail-recursive builder — loopified.
-  static mylist<unsigned int> build(unsigned int n, mylist<unsigned int> acc);
+  static mylist<uint64_t> build(uint64_t n, mylist<uint64_t> acc);
 
   /// Recursive app — NOT tail-recursive, so loopification won't help
   /// unless TMC kicks in.  Even with TMC, the destructor chain for
@@ -271,14 +271,14 @@ struct DeepApp {
   }
 
   /// Identity map to force traversal.
-  static mylist<unsigned int> map_id(const mylist<unsigned int> &l);
+  static mylist<uint64_t> map_id(const mylist<uint64_t> &l);
   /// Append two lists.
-  static mylist<unsigned int> append_lists(const mylist<unsigned int> &_x0,
-                                           const mylist<unsigned int> &_x1);
-  static unsigned int head_or_zero(const mylist<unsigned int> &l);
+  static mylist<uint64_t> append_lists(const mylist<uint64_t> &_x0,
+                                       const mylist<uint64_t> &_x1);
+  static uint64_t head_or_zero(const mylist<uint64_t> &l);
 
   template <typename T1>
-  static unsigned int
+  static uint64_t
   length(const mylist<T1> &l) { /// _Enter: captures varying parameters for each
                                 /// recursive call.
 
@@ -290,7 +290,7 @@ struct DeepApp {
     struct _Resume_Mycons {};
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -302,7 +302,7 @@ struct DeepApp {
         auto _f = std::move(std::get<_Enter>(_frame));
         const mylist<T1> &l = *_f.l;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
           _stack.emplace_back(_Resume_Mycons{});

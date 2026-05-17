@@ -18,16 +18,16 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
-using UIntPair = std::pair<unsigned int, unsigned int>;
+using UIntList = List<uint64_t>;
+using UIntPair = std::pair<uint64_t, uint64_t>;
 using PairList = List<UIntPair>;
 using PairVec = std::vector<UIntPair>;
-using ListOfLists = List<List<unsigned int>>;
+using ListOfLists = List<List<uint64_t>>;
 
 // Helper: build a List from initializer list
-UIntList make_list(std::initializer_list<unsigned int> vals) {
+UIntList make_list(std::initializer_list<uint64_t> vals) {
   auto result = UIntList::nil();
-  std::vector<unsigned int> v(vals);
+  std::vector<uint64_t> v(vals);
   for (auto it = v.rbegin(); it != v.rend(); ++it) {
     result = UIntList::cons(*it, result);
   }
@@ -35,8 +35,8 @@ UIntList make_list(std::initializer_list<unsigned int> vals) {
 }
 
 // Helper: convert List to vector for comparison
-std::vector<unsigned int> to_vec(const UIntList &l) {
-  std::vector<unsigned int> result;
+std::vector<uint64_t> to_vec(const UIntList &l) {
+  std::vector<uint64_t> result;
   const UIntList *cur = &l;
   while (true) {
     auto &v = cur->v();
@@ -49,9 +49,9 @@ std::vector<unsigned int> to_vec(const UIntList &l) {
 }
 
 // Helper: convert pair list to vector for comparison
-std::vector<std::pair<unsigned int, unsigned int>>
+std::vector<std::pair<uint64_t, uint64_t>>
 to_pair_vec(const PairList &l) {
-  std::vector<std::pair<unsigned int, unsigned int>> result;
+  std::vector<std::pair<uint64_t, uint64_t>> result;
   const PairList *cur = &l;
   while (true) {
     auto &v = cur->v();
@@ -63,11 +63,11 @@ to_pair_vec(const PairList &l) {
   return result;
 }
 
-// Helper: build a List<List<unsigned int>> from a vector of initializer lists
+// Helper: build a List<List<uint64_t>> from a vector of initializer lists
 ListOfLists
-make_list_of_lists(std::initializer_list<std::initializer_list<unsigned int>> vals) {
+make_list_of_lists(std::initializer_list<std::initializer_list<uint64_t>> vals) {
   auto result = ListOfLists::nil();
-  std::vector<std::initializer_list<unsigned int>> v(vals);
+  std::vector<std::initializer_list<uint64_t>> v(vals);
   for (auto it = v.rbegin(); it != v.rend(); ++it) {
     result = ListOfLists::cons(make_list(*it), result);
   }
@@ -76,32 +76,32 @@ make_list_of_lists(std::initializer_list<std::initializer_list<unsigned int>> va
 
 int main() {
   // product
-  ASSERT(LoopifyAdvancedLists::product(make_list({})) == 1u);
-  ASSERT(LoopifyAdvancedLists::product(make_list({1, 2, 3, 4})) == 24u);
-  ASSERT(LoopifyAdvancedLists::product(make_list({5, 2, 3})) == 30u);
-  ASSERT(LoopifyAdvancedLists::product(make_list({0, 5, 10})) == 0u);
+  ASSERT(LoopifyAdvancedLists::product(make_list({})) == 1ULL);
+  ASSERT(LoopifyAdvancedLists::product(make_list({1, 2, 3, 4})) == 24ULL);
+  ASSERT(LoopifyAdvancedLists::product(make_list({5, 2, 3})) == 30ULL);
+  ASSERT(LoopifyAdvancedLists::product(make_list({0, 5, 10})) == 0ULL);
 
   // compress
   ASSERT(to_vec(LoopifyAdvancedLists::compress(make_list({}))) ==
-         std::vector<unsigned int>{});
+         std::vector<uint64_t>{});
   ASSERT(to_vec(LoopifyAdvancedLists::compress(make_list({1}))) ==
-         std::vector<unsigned int>{1});
+         std::vector<uint64_t>{1});
   ASSERT(to_vec(LoopifyAdvancedLists::compress(make_list({1, 1, 2, 2, 3, 3}))) ==
-         std::vector<unsigned int>({1, 2, 3}));
+         std::vector<uint64_t>({1, 2, 3}));
   ASSERT(to_vec(LoopifyAdvancedLists::compress(make_list({1, 2, 2, 3, 3, 3, 4}))) ==
-         std::vector<unsigned int>({1, 2, 3, 4}));
+         std::vector<uint64_t>({1, 2, 3, 4}));
   ASSERT(to_vec(LoopifyAdvancedLists::compress(make_list({1, 2, 3}))) ==
-         std::vector<unsigned int>({1, 2, 3}));
+         std::vector<uint64_t>({1, 2, 3}));
 
   // pairwise_sum
   ASSERT(to_vec(LoopifyAdvancedLists::pairwise_sum(make_list({}))) ==
-         std::vector<unsigned int>{});
+         std::vector<uint64_t>{});
   ASSERT(to_vec(LoopifyAdvancedLists::pairwise_sum(make_list({1}))) ==
-         std::vector<unsigned int>{});
+         std::vector<uint64_t>{});
   ASSERT(to_vec(LoopifyAdvancedLists::pairwise_sum(make_list({1, 2, 3, 4}))) ==
-         std::vector<unsigned int>({3, 7}));
+         std::vector<uint64_t>({3, 7}));
   ASSERT(to_vec(LoopifyAdvancedLists::pairwise_sum(make_list({1, 2, 3, 4, 5}))) ==
-         std::vector<unsigned int>({3, 7}));
+         std::vector<uint64_t>({3, 7}));
 
   // group_pairs
   ASSERT(to_pair_vec(LoopifyAdvancedLists::group_pairs(make_list({}))) ==
@@ -116,41 +116,41 @@ int main() {
 
   // interleave
   ASSERT(to_vec(LoopifyAdvancedLists::interleave(make_list({}), make_list({}))) ==
-         std::vector<unsigned int>{});
+         std::vector<uint64_t>{});
   ASSERT(to_vec(LoopifyAdvancedLists::interleave(make_list({1, 2}), make_list({}))) ==
-         std::vector<unsigned int>({1, 2}));
+         std::vector<uint64_t>({1, 2}));
   ASSERT(to_vec(LoopifyAdvancedLists::interleave(make_list({}), make_list({3, 4}))) ==
-         std::vector<unsigned int>({3, 4}));
+         std::vector<uint64_t>({3, 4}));
   ASSERT(to_vec(LoopifyAdvancedLists::interleave(make_list({1, 2, 3}),
                                                   make_list({10, 20, 30}))) ==
-         std::vector<unsigned int>({1, 10, 2, 20, 3, 30}));
+         std::vector<uint64_t>({1, 10, 2, 20, 3, 30}));
 
   // concat_lists (uses ++ internally, loopification may affect results)
 
   // flat_map (uses ++ internally, loopification may affect results)
-  auto double_list = [](unsigned int x) -> UIntList {
+  auto double_list = [](uint64_t x) -> UIntList {
     return UIntList::cons(x, UIntList::cons(x, UIntList::nil()));
   };
 
   // all_satisfy
-  auto is_positive = [](unsigned int x) -> bool { return x > 0; };
+  auto is_positive = [](uint64_t x) -> bool { return x > 0; };
   ASSERT(LoopifyAdvancedLists::all_satisfy(is_positive, make_list({})) == true);
   ASSERT(LoopifyAdvancedLists::all_satisfy(is_positive, make_list({1, 2, 3})) == true);
   ASSERT(LoopifyAdvancedLists::all_satisfy(is_positive, make_list({1, 0, 3})) == false);
 
   // any_satisfy
-  auto is_even = [](unsigned int x) -> bool { return x % 2 == 0; };
+  auto is_even = [](uint64_t x) -> bool { return x % 2 == 0; };
   ASSERT(LoopifyAdvancedLists::any_satisfy(is_even, make_list({})) == false);
   ASSERT(LoopifyAdvancedLists::any_satisfy(is_even, make_list({1, 3, 5})) == false);
   ASSERT(LoopifyAdvancedLists::any_satisfy(is_even, make_list({1, 2, 3})) == true);
 
   // find_first
   ASSERT(LoopifyAdvancedLists::find_first(is_even, make_list({})) ==
-         std::optional<unsigned int>());
+         std::optional<uint64_t>());
   ASSERT(LoopifyAdvancedLists::find_first(is_even, make_list({1, 3, 5})) ==
-         std::optional<unsigned int>());
+         std::optional<uint64_t>());
   ASSERT(LoopifyAdvancedLists::find_first(is_even, make_list({1, 2, 3, 4})) ==
-         std::optional<unsigned int>{2u});
+         std::optional<uint64_t>{2ULL});
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

@@ -124,13 +124,13 @@ struct NoMappingEventProbe {
   struct reproE {
     // TYPES
     struct Hidden {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     struct Revealed {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     using variant_t = std::variant<Hidden, Revealed>;
@@ -173,11 +173,11 @@ struct NoMappingEventProbe {
     }
 
     // CREATORS
-    static reproE hidden(unsigned int a0, unsigned int a1) {
+    static reproE hidden(uint64_t a0, uint64_t a1) {
       return reproE(Hidden{a0, a1});
     }
 
-    static reproE revealed(unsigned int a0, unsigned int a1) {
+    static reproE revealed(uint64_t a0, uint64_t a1) {
       return reproE(Revealed{a0, a1});
     }
 
@@ -189,8 +189,8 @@ struct NoMappingEventProbe {
   };
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
   static T1 reproE_rect(F0 &&f, F1 &&f0, const reproE &r) {
     if (std::holds_alternative<typename reproE::Hidden>(r.v())) {
       const auto &[a0, a1] = std::get<typename reproE::Hidden>(r.v());
@@ -202,8 +202,8 @@ struct NoMappingEventProbe {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
   static T1 reproE_rec(F0 &&f, F1 &&f0, const reproE &r) {
     if (std::holds_alternative<typename reproE::Hidden>(r.v())) {
       const auto &[a0, a1] = std::get<typename reproE::Hidden>(r.v());
@@ -214,10 +214,10 @@ struct NoMappingEventProbe {
     }
   }
 
-  static inline const unsigned int cell_size = 42u;
-  static void draw_hidden_tile(unsigned int x, unsigned int y);
-  static void draw_revealed_tile(unsigned int x, unsigned int y);
-  static void loop(unsigned int x, unsigned int y, const List<bool> &cells);
+  static inline const uint64_t cell_size = UINT64_C(42);
+  static void draw_hidden_tile(uint64_t x, uint64_t y);
+  static void draw_revealed_tile(uint64_t x, uint64_t y);
+  static void loop(uint64_t x, uint64_t y, const List<bool> &cells);
 };
 
 #endif // INCLUDED_NO_MAPPING_EVENT_PROBE

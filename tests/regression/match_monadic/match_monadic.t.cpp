@@ -10,12 +10,12 @@ int main() {
   // auto r3 = MatchMonadic::nested_match(0, true);
 
   // Test 4: handle_option
-  auto r4a = MatchMonadic::handle_option(std::make_optional(42u));
-  auto r4b = MatchMonadic::handle_option(std::optional<unsigned int>());
+  auto r4a = MatchMonadic::handle_option(std::make_optional(42ULL));
+  auto r4b = MatchMonadic::handle_option(std::optional<uint64_t>());
 
   // Test 5: tree_sum — recursive function matching on tree
-  auto leaf = Tree<unsigned int>::leaf();
-  auto node = Tree<unsigned int>::node(leaf, 10u, Tree<unsigned int>::leaf());
+  auto leaf = Tree<uint64_t>::leaf();
+  auto node = Tree<uint64_t>::node(leaf, 10ULL, Tree<uint64_t>::leaf());
   auto r5 = MatchMonadic::tree_sum(node);
 
   // Test 6: match_then_bind — EXPOSES BUG: std::any for tag variable

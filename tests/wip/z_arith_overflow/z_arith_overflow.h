@@ -828,21 +828,21 @@ public:
 };
 
 struct Nat {
-  static unsigned int tail_add(unsigned int n, unsigned int m);
-  static unsigned int tail_addmul(unsigned int r, unsigned int n,
-                                  unsigned int m);
-  static unsigned int tail_mul(unsigned int n, unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 struct ZArithOverflow {
   /// Compute 3,100,000,000 via nat -> Z conversion.
   /// 3,100,000,000 fits in unsigned int (< 2^32) and int64_t.
-  static inline const int64_t big_z = static_cast<int64_t>(3100000000u);
+  static inline const int64_t big_z =
+      static_cast<int64_t>(UINT64_C(3100000000));
   /// 3,100,000,000^2 = 9,610,000,000,000,000,000 > INT64_MAX.
   /// In Rocq: perfectly fine (Z is arbitrary precision).
   /// In C++: signed integer multiplication overflow — UB.
@@ -851,10 +851,14 @@ struct ZArithOverflow {
   /// In C++ the overflowed result wraps to a negative value.
   static inline const bool is_positive = INT64_C(0) < overflow_mul;
   /// Addition near INT64_MAX
-  static inline const int64_t near_max = static_cast<int64_t>(4000000000u);
-  static inline const int64_t near_max_sq = (near_max * near_max);
-  /// Negation of the most negative int64_t is also UB
-  static inline const int64_t neg_big = (-static_cast<int64_t>(4000000000u));
+  static inline const int64_t near_max =
+      static_cast<int64_t>(UINT64_C(4000000000));
+  static inline const int64_t near_max_sq =
+      (near_max *
+       near_max); /// Negation of the most negative int64_t is also UB
+  static inline const int64_t neg_big =
+      (-static_cast<int64_t>(UINT64_C(4000000000)));
+
   static inline const int64_t neg_sq = (neg_big * neg_big);
 };
 

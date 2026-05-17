@@ -145,33 +145,32 @@ public:
 };
 
 struct LoopifyAdvancedLists {
-  static unsigned int product(const List<unsigned int> &l);
-  static List<unsigned int> compress(const List<unsigned int> &l);
-  static List<unsigned int> pairwise_sum(const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  group_pairs(const List<unsigned int> &l);
-  static List<unsigned int> interleave(List<unsigned int> l1,
-                                       List<unsigned int> l2);
-  static List<unsigned int> concat_lists(const List<List<unsigned int>> &ll);
+  static uint64_t product(const List<uint64_t> &l);
+  static List<uint64_t> compress(const List<uint64_t> &l);
+  static List<uint64_t> pairwise_sum(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  group_pairs(const List<uint64_t> &l);
+  static List<uint64_t> interleave(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> concat_lists(const List<List<uint64_t>> &ll);
 
   template <typename F0>
-    requires std::is_invocable_r_v<List<unsigned int>, F0 &, unsigned int &>
-  static List<unsigned int> flat_map(
-      F0 &&f,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<List<uint64_t>, F0 &, uint64_t &>
+  static List<uint64_t>
+  flat_map(F0 &&f,
+           const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                      /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<unsigned int> a0;
+      List<uint64_t> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    List<unsigned int> _result{};
+    List<uint64_t> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -181,12 +180,11 @@ struct LoopifyAdvancedLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = List<unsigned int>::nil();
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = List<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{f(a0)});
           _stack.emplace_back(_Enter{a1.get()});
         }
@@ -199,14 +197,14 @@ struct LoopifyAdvancedLists {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool all_satisfy(
-      F0 &&p,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool
+  all_satisfy(F0 &&p,
+              const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
@@ -225,12 +223,11 @@ struct LoopifyAdvancedLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = true;
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{p(a0)});
           _stack.emplace_back(_Enter{a1.get()});
         }
@@ -243,14 +240,14 @@ struct LoopifyAdvancedLists {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool any_satisfy(
-      F0 &&p,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool
+  any_satisfy(F0 &&p,
+              const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
@@ -269,12 +266,11 @@ struct LoopifyAdvancedLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *_f.l;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = false;
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{p(a0)});
           _stack.emplace_back(_Enter{a1.get()});
         }
@@ -287,21 +283,19 @@ struct LoopifyAdvancedLists {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::optional<unsigned int> find_first(F0 &&p,
-                                                const List<unsigned int> &l) {
-    std::optional<unsigned int> _result;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::optional<uint64_t> find_first(F0 &&p, const List<uint64_t> &l) {
+    std::optional<uint64_t> _result;
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        _result = std::optional<unsigned int>();
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        _result = std::optional<uint64_t>();
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = std::make_optional<unsigned int>(a0);
+          _result = std::make_optional<uint64_t>(a0);
           break;
         } else {
           _loop_l = a1.get();

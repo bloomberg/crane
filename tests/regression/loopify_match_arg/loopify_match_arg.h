@@ -156,10 +156,10 @@ struct LoopifyMatchArg {
 
   /// Count the number of Dot cells in a list.
   /// The match on c inside the Cons branch triggers bug 2.
-  static unsigned int count_dots(const List<Cell> &xs);
+  static uint64_t count_dots(const List<Cell> &xs);
   /// A plain recursive length — triggers bug 1 (missing <vector>)
   /// when loopify converts it to an explicit-stack loop.
-  static unsigned int my_length(const List<Cell> &xs);
+  static uint64_t my_length(const List<Cell> &xs);
 };
 
 #endif // INCLUDED_LOOPIFY_MATCH_ARG

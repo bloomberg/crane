@@ -33,23 +33,22 @@ struct DependentTypename {
   };
 
   struct NatType {
-    using t = unsigned int;
-    static inline const t default_ = 42u;
+    using t = uint64_t;
+    static inline const t default_ = UINT64_C(42);
   };
 
   using NatUser = UsesType<NatType>;
   static inline const NatType::t test = NatUser::get_default();
 
   template <Container C> struct UseContainer {
-    static const typename C::template t<unsigned int> &make_nat_container() {
-      static const typename C::template t<unsigned int> v =
-          C::template empty<unsigned int>;
+    static const typename C::template t<uint64_t> &make_nat_container() {
+      static const typename C::template t<uint64_t> v =
+          C::template empty<uint64_t>;
       return v;
     }
 
-    static typename C::template t<unsigned int>
-    use_singleton(unsigned int _x0) {
-      return C::template singleton<unsigned int>(_x0);
+    static typename C::template t<uint64_t> use_singleton(uint64_t _x0) {
+      return C::template singleton<uint64_t>(_x0);
     }
   };
 };

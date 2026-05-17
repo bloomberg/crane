@@ -23,7 +23,7 @@ struct EffectWorkflow {
   /// 3. get_line (block template) followed by env set using the result
   static void read_and_set();
   /// 4. Recursive function using effects
-  static unsigned int repeat_log(unsigned int n, std::string msg);
+  static uint64_t repeat_log(uint64_t n, std::string msg);
   /// 5. Effect returning option, matched, then another effect
   static std::string env_or_create(std::string name, std::string path);
   /// 6. Pure let after block template

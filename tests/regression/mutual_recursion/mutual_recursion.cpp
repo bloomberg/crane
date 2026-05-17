@@ -1,62 +1,60 @@
 #include "mutual_recursion.h"
 
-bool MutualRecursion::even(unsigned int n) {
+bool MutualRecursion::even(uint64_t n) {
   if (n <= 0) {
     return true;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     return odd(n_);
   }
 }
 
-bool MutualRecursion::odd(unsigned int n) {
+bool MutualRecursion::odd(uint64_t n) {
   if (n <= 0) {
     return false;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     return even(n_);
   }
 }
 
-unsigned int MutualRecursion::sum_even_indices(unsigned int n,
-                                               unsigned int acc) {
+uint64_t MutualRecursion::sum_even_indices(uint64_t n, uint64_t acc) {
   if (n <= 0) {
     return acc;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     return sum_odd_indices(n_, acc);
   }
 }
 
-unsigned int MutualRecursion::sum_odd_indices(unsigned int n,
-                                              unsigned int acc) {
+uint64_t MutualRecursion::sum_odd_indices(uint64_t n, uint64_t acc) {
   if (n <= 0) {
     return acc;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     return sum_even_indices(n_, (acc + n));
   }
 }
 
-unsigned int MutualRecursion::process_a(unsigned int n, unsigned int m) {
+uint64_t MutualRecursion::process_a(uint64_t n, uint64_t m) {
   if (n <= 0) {
     return m;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     return (process_b(n_, m) + n);
   }
 }
 
-unsigned int MutualRecursion::process_b(unsigned int n, unsigned int m) {
+uint64_t MutualRecursion::process_b(uint64_t n, uint64_t m) {
   if (n <= 0) {
     return m;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     return (process_a(n_, m) + m);
   }
 }
 
-unsigned int MutualRecursion::eval_expr(const MutualRecursion::expr &e) {
+uint64_t MutualRecursion::eval_expr(const MutualRecursion::expr &e) {
   if (std::holds_alternative<typename MutualRecursion::expr::Val>(e.v())) {
     const auto &[a0] = std::get<typename MutualRecursion::expr::Val>(e.v());
     return a0;
@@ -67,7 +65,7 @@ unsigned int MutualRecursion::eval_expr(const MutualRecursion::expr &e) {
     if (a0 <= 0) {
       return (eval_expr(*a1) + eval_expr(*a2));
     } else {
-      unsigned int _x = a0 - 1;
+      uint64_t _x = a0 - 1;
       return (eval_expr(*a1) * eval_expr(*a2));
     }
   } else {
@@ -76,35 +74,35 @@ unsigned int MutualRecursion::eval_expr(const MutualRecursion::expr &e) {
     if (a0 <= 0) {
       return eval_expr(*a1);
     } else {
-      unsigned int _x = a0 - 1;
-      return 0u;
+      uint64_t _x = a0 - 1;
+      return UINT64_C(0);
     }
   }
 }
 
-unsigned int MutualRecursion::f1(unsigned int n) {
+uint64_t MutualRecursion::f1(uint64_t n) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n_ = n - 1;
-    return (1u + f2(n_));
+    uint64_t n_ = n - 1;
+    return (UINT64_C(1) + f2(n_));
   }
 }
 
-unsigned int MutualRecursion::f2(unsigned int n) {
+uint64_t MutualRecursion::f2(uint64_t n) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n_ = n - 1;
-    return (2u + f3(n_));
+    uint64_t n_ = n - 1;
+    return (UINT64_C(2) + f3(n_));
   }
 }
 
-unsigned int MutualRecursion::f3(unsigned int n) {
+uint64_t MutualRecursion::f3(uint64_t n) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n_ = n - 1;
-    return (3u + f1(n_));
+    uint64_t n_ = n - 1;
+    return (UINT64_C(3) + f1(n_));
   }
 }

@@ -121,16 +121,16 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct SrcUsesPairValue {
   struct state {
-    List<unsigned int> regs;
-    unsigned int sel_rom;
-    unsigned int sel_chip;
-    unsigned int sel_reg;
-    unsigned int sel_char;
+    List<uint64_t> regs;
+    uint64_t sel_rom;
+    uint64_t sel_chip;
+    uint64_t sel_reg;
+    uint64_t sel_char;
 
     // ACCESSORS
     state clone() const {
@@ -139,28 +139,32 @@ struct SrcUsesPairValue {
     }
   };
 
-  static unsigned int get_reg(const state &s, unsigned int r);
-  static unsigned int get_reg_pair(const state &s, unsigned int r);
-  static state execute_src(const state &s, unsigned int r);
-  static inline const state sample = state{
-      List<unsigned int>::cons(
-          0u,
-          List<unsigned int>::cons(
-              0u,
-              List<unsigned int>::cons(
-                  1u, List<unsigned int>::cons(
-                          11u, List<unsigned int>::cons(
-                                   0u, List<unsigned int>::cons(
-                                           0u, List<unsigned int>::nil())))))),
-      0u, 0u, 0u, 0u};
-  static inline const state after = execute_src(sample, 3u);
+  static uint64_t get_reg(const state &s, uint64_t r);
+  static uint64_t get_reg_pair(const state &s, uint64_t r);
+  static state execute_src(const state &s, uint64_t r);
+  static inline const state sample =
+      state{List<uint64_t>::cons(
+                UINT64_C(0),
+                List<uint64_t>::cons(
+                    UINT64_C(0),
+                    List<uint64_t>::cons(
+                        UINT64_C(1),
+                        List<uint64_t>::cons(
+                            UINT64_C(11),
+                            List<uint64_t>::cons(
+                                UINT64_C(0),
+                                List<uint64_t>::cons(
+                                    UINT64_C(0), List<uint64_t>::nil())))))),
+            UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
+  static inline const state after = execute_src(sample, UINT64_C(3));
   static inline const bool t =
-      (after.sel_rom == 1u && (after.sel_chip == 0u &&
-                               (after.sel_reg == 1u && after.sel_char == 11u)));
+      (after.sel_rom == UINT64_C(1) &&
+       (after.sel_chip == UINT64_C(0) &&
+        (after.sel_reg == UINT64_C(1) && after.sel_char == UINT64_C(11))));
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -169,7 +173,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

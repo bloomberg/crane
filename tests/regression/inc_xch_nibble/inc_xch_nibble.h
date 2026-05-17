@@ -121,12 +121,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct IncXchNibble {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -135,7 +135,7 @@ struct IncXchNibble {
         return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -146,49 +146,61 @@ struct IncXchNibble {
   }
 
   struct state {
-    List<unsigned int> regs;
-    unsigned int acc;
+    List<uint64_t> regs;
+    uint64_t acc;
 
     // ACCESSORS
     state clone() const { return state{(*this).regs.clone(), (*this).acc}; }
   };
 
-  static unsigned int get_reg(const state &s, unsigned int r);
-  static unsigned int nibble_of_nat(unsigned int n);
-  static unsigned int get_reg_pair(const state &s, unsigned int r);
-  static state execute_inc(const state &s, unsigned int r);
-  static state execute_xch(const state &s, unsigned int r);
-  static inline const state sample = state{
-      List<unsigned int>::cons(
-          2u,
-          List<unsigned int>::cons(
-              9u,
-              List<unsigned int>::cons(
-                  4u, List<unsigned int>::cons(
-                          7u, List<unsigned int>::cons(
-                                  8u, List<unsigned int>::cons(
-                                          1u, List<unsigned int>::nil())))))),
-      13u};
+  static uint64_t get_reg(const state &s, uint64_t r);
+  static uint64_t nibble_of_nat(uint64_t n);
+  static uint64_t get_reg_pair(const state &s, uint64_t r);
+  static state execute_inc(const state &s, uint64_t r);
+  static state execute_xch(const state &s, uint64_t r);
+  static inline const state sample =
+      state{List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(
+                    UINT64_C(9),
+                    List<uint64_t>::cons(
+                        UINT64_C(4),
+                        List<uint64_t>::cons(
+                            UINT64_C(7),
+                            List<uint64_t>::cons(
+                                UINT64_C(8),
+                                List<uint64_t>::cons(
+                                    UINT64_C(1), List<uint64_t>::nil())))))),
+            UINT64_C(13)};
   static inline const bool inc_modifies_single_nibble_even =
-      get_reg_pair(execute_inc(sample, 2u), 2u) ==
-      ((nibble_of_nat((get_reg(sample, 2u) + 1u)) * 16u) + get_reg(sample, 3u));
+      get_reg_pair(execute_inc(sample, UINT64_C(2)), UINT64_C(2)) ==
+      ((nibble_of_nat((get_reg(sample, UINT64_C(2)) + UINT64_C(1))) *
+        UINT64_C(16)) +
+       get_reg(sample, UINT64_C(3)));
   static inline const bool inc_modifies_single_nibble_odd =
-      get_reg_pair(execute_inc(sample, 3u), 3u) ==
-      ((get_reg(sample, 2u) * 16u) + nibble_of_nat((get_reg(sample, 3u) + 1u)));
+      get_reg_pair(execute_inc(sample, UINT64_C(3)), UINT64_C(3)) ==
+      ((get_reg(sample, UINT64_C(2)) * UINT64_C(16)) +
+       nibble_of_nat((get_reg(sample, UINT64_C(3)) + UINT64_C(1))));
   static inline const bool inc_preserves_pair_partner =
-      get_reg(execute_inc(sample, 2u), 3u) == get_reg(sample, 3u);
+      get_reg(execute_inc(sample, UINT64_C(2)), UINT64_C(3)) ==
+      get_reg(sample, UINT64_C(3));
   static inline const bool inc_preserves_pair_partner_odd =
-      get_reg(execute_inc(sample, 3u), 2u) == get_reg(sample, 2u);
+      get_reg(execute_inc(sample, UINT64_C(3)), UINT64_C(2)) ==
+      get_reg(sample, UINT64_C(2));
   static inline const bool xch_modifies_single_nibble_even =
-      get_reg_pair(execute_xch(sample, 2u), 2u) ==
-      ((nibble_of_nat(sample.acc) * 16u) + get_reg(sample, 3u));
+      get_reg_pair(execute_xch(sample, UINT64_C(2)), UINT64_C(2)) ==
+      ((nibble_of_nat(sample.acc) * UINT64_C(16)) +
+       get_reg(sample, UINT64_C(3)));
   static inline const bool xch_modifies_single_nibble_odd =
-      get_reg_pair(execute_xch(sample, 3u), 3u) ==
-      ((get_reg(sample, 2u) * 16u) + nibble_of_nat(sample.acc));
+      get_reg_pair(execute_xch(sample, UINT64_C(3)), UINT64_C(3)) ==
+      ((get_reg(sample, UINT64_C(2)) * UINT64_C(16)) +
+       nibble_of_nat(sample.acc));
   static inline const bool xch_preserves_pair_partner =
-      get_reg(execute_xch(sample, 2u), 3u) == get_reg(sample, 3u);
+      get_reg(execute_xch(sample, UINT64_C(2)), UINT64_C(3)) ==
+      get_reg(sample, UINT64_C(3));
   static inline const bool xch_preserves_pair_partner_odd =
-      get_reg(execute_xch(sample, 3u), 2u) == get_reg(sample, 2u);
+      get_reg(execute_xch(sample, UINT64_C(3)), UINT64_C(2)) ==
+      get_reg(sample, UINT64_C(2));
   static inline const bool t = (((((((inc_modifies_single_nibble_even &&
                                       inc_modifies_single_nibble_odd) &&
                                      inc_preserves_pair_partner) &&
@@ -200,7 +212,7 @@ struct IncXchNibble {
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -209,7 +221,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

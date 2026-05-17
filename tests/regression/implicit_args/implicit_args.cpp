@@ -1,54 +1,48 @@
 #include "implicit_args.h"
 
-unsigned int ImplicitArgs::add_one(unsigned int _x0) { return (1u + _x0); }
+uint64_t ImplicitArgs::add_one(uint64_t _x0) { return (UINT64_C(1) + _x0); }
 
-unsigned int ImplicitArgs::double_nat(unsigned int n) { return (n + n); }
+uint64_t ImplicitArgs::double_nat(uint64_t n) { return (n + n); }
 
-unsigned int ImplicitArgs::add_implicit(unsigned int _x0, unsigned int _x1) {
+uint64_t ImplicitArgs::add_implicit(uint64_t _x0, uint64_t _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int ImplicitArgs::scale(unsigned int _x0, unsigned int _x1) {
-  return (_x0 * _x1);
-}
+uint64_t ImplicitArgs::scale(uint64_t _x0, uint64_t _x1) { return (_x0 * _x1); }
 
-unsigned int ImplicitArgs::combine(unsigned int a, unsigned int b,
-                                   unsigned int x) {
+uint64_t ImplicitArgs::combine(uint64_t a, uint64_t b, uint64_t x) {
   return (a + (b + x));
 }
 
-unsigned int ImplicitArgs::with_base(unsigned int _x0, unsigned int _x1) {
+uint64_t ImplicitArgs::with_base(uint64_t _x0, uint64_t _x1) {
   return (_x0 + _x1);
 }
 
-unsigned int ImplicitArgs::from_zero(unsigned int _x0) {
-  return with_base(0u, _x0);
+uint64_t ImplicitArgs::from_zero(uint64_t _x0) {
+  return with_base(UINT64_C(0), _x0);
 }
 
-unsigned int ImplicitArgs::from_ten(unsigned int _x0) {
-  return with_base(10u, _x0);
+uint64_t ImplicitArgs::from_ten(uint64_t _x0) {
+  return with_base(UINT64_C(10), _x0);
 }
 
-unsigned int
-ImplicitArgs::sum_with_init(unsigned int init,
-                            const ImplicitArgs::mylist<unsigned int> &l) {
-  if (std::holds_alternative<
-          typename ImplicitArgs::mylist<unsigned int>::Mynil>(l.v())) {
+uint64_t ImplicitArgs::sum_with_init(uint64_t init,
+                                     const ImplicitArgs::mylist<uint64_t> &l) {
+  if (std::holds_alternative<typename ImplicitArgs::mylist<uint64_t>::Mynil>(
+          l.v())) {
     return init;
   } else {
     const auto &[a0, a1] =
-        std::get<typename ImplicitArgs::mylist<unsigned int>::Mycons>(l.v());
+        std::get<typename ImplicitArgs::mylist<uint64_t>::Mycons>(l.v());
     return (a0 + sum_with_init(init, *a1));
   }
 }
 
-unsigned int ImplicitArgs::nested_implicits(unsigned int a, unsigned int b,
-                                            unsigned int c) {
+uint64_t ImplicitArgs::nested_implicits(uint64_t a, uint64_t b, uint64_t c) {
   return (a + (b + c));
 }
 
-unsigned int ImplicitArgs::choose_branch(bool flag, unsigned int t,
-                                         unsigned int f) {
+uint64_t ImplicitArgs::choose_branch(bool flag, uint64_t t, uint64_t f) {
   if (flag) {
     return t;
   } else {

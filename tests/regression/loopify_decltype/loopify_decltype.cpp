@@ -2,7 +2,7 @@
 
 /// Minimal trigger: fold over a list with a conditional per-element
 /// contribution.
-unsigned int LoopifyDecltype::count_true(
+uint64_t LoopifyDecltype::count_true(
     const List<bool>
         &xs) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -12,11 +12,11 @@ unsigned int LoopifyDecltype::count_true(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&xs});
@@ -28,10 +28,10 @@ unsigned int LoopifyDecltype::count_true(
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<bool> &xs = *_f.xs;
       if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<bool>::Cons>(xs.v());
-        _stack.emplace_back(_Resume_Cons{(a0 ? 1u : 0u)});
+        _stack.emplace_back(_Resume_Cons{(a0 ? UINT64_C(1) : UINT64_C(0))});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
@@ -42,7 +42,7 @@ unsigned int LoopifyDecltype::count_true(
   return _result;
 }
 
-unsigned int LoopifyDecltype::sum_flagged(
+uint64_t LoopifyDecltype::sum_flagged(
     const List<LoopifyDecltype::item>
         &xs) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -52,11 +52,11 @@ unsigned int LoopifyDecltype::sum_flagged(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&xs});
@@ -69,11 +69,12 @@ unsigned int LoopifyDecltype::sum_flagged(
       const List<LoopifyDecltype::item> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyDecltype::item>::Nil>(
               xs.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
             std::get<typename List<LoopifyDecltype::item>::Cons>(xs.v());
-        _stack.emplace_back(_Resume_Cons{(a0.item_flag ? a0.item_val : 0u)});
+        _stack.emplace_back(
+            _Resume_Cons{(a0.item_flag ? a0.item_val : UINT64_C(0))});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {

@@ -24,7 +24,7 @@ struct MemSafetyProbe19 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -94,7 +94,7 @@ struct MemSafetyProbe19 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -130,7 +130,7 @@ struct MemSafetyProbe19 {
     const variant_t &v() const { return v_; }
 
     /// TEST 7: Nested match returning closures at multiple levels.
-    unsigned int nested_match_fn(bool b1, bool b2, unsigned int n) const {
+    uint64_t nested_match_fn(bool b1, bool b2, uint64_t n) const {
       if (b1) {
         if (b2) {
           return ((*this).tree_sum() + n);
@@ -145,7 +145,7 @@ struct MemSafetyProbe19 {
     /// TEST 1: Return closure from if-branch.
     /// The if becomes a top-level Sif in the function body.
     /// return_captures_by_value won't recurse into it.
-    unsigned int choose_fn(bool b, unsigned int n) const {
+    uint64_t choose_fn(bool b, uint64_t n) const {
       if (b) {
         return ((*this).tree_sum() + n);
       } else {
@@ -153,7 +153,7 @@ struct MemSafetyProbe19 {
       }
     }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -164,18 +164,18 @@ struct MemSafetyProbe19 {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -188,7 +188,7 @@ struct MemSafetyProbe19 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), a1});
@@ -207,8 +207,8 @@ struct MemSafetyProbe19 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -221,7 +221,7 @@ struct MemSafetyProbe19 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -230,7 +230,7 @@ struct MemSafetyProbe19 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -268,8 +268,8 @@ struct MemSafetyProbe19 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -282,7 +282,7 @@ struct MemSafetyProbe19 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -291,7 +291,7 @@ struct MemSafetyProbe19 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -329,8 +329,9 @@ struct MemSafetyProbe19 {
     }
   };
 
-  static inline const unsigned int test_choose =
-      tree::node(tree::leaf(), 42u, tree::leaf()).choose_fn(true, 0u);
+  static inline const uint64_t test_choose =
+      tree::node(tree::leaf(), UINT64_C(42), tree::leaf())
+          .choose_fn(true, UINT64_C(0));
 
   /// TEST 2: Return closure from match on option.
   /// The match becomes a top-level Smatch.
@@ -423,11 +424,11 @@ struct MemSafetyProbe19 {
     }
   };
 
-  static unsigned int option_fn(const tree &t, const myopt<unsigned int> &o,
-                                unsigned int n);
-  static inline const unsigned int test_option_fn =
-      option_fn(tree::node(tree::leaf(), 10u, tree::leaf()),
-                myopt<unsigned int>::mysome(5u), 3u);
+  static uint64_t option_fn(const tree &t, const myopt<uint64_t> &o,
+                            uint64_t n);
+  static inline const uint64_t test_option_fn =
+      option_fn(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                myopt<uint64_t>::mysome(UINT64_C(5)), UINT64_C(3));
   /// TEST 3: Return closure from match on custom 3-constructor type.
   enum class Choice { CLEFT, CRIGHT, CBOTH };
 
@@ -463,62 +464,65 @@ struct MemSafetyProbe19 {
     }
   }
 
-  static unsigned int choice_fn(const tree &t, Choice c, unsigned int n);
-  static inline const unsigned int test_choice_left = choice_fn(
-      tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u, tree::leaf()),
-      Choice::CLEFT, 0u);
+  static uint64_t choice_fn(const tree &t, Choice c, uint64_t n);
+  static inline const uint64_t test_choice_left =
+      choice_fn(tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                           UINT64_C(7), tree::leaf()),
+                Choice::CLEFT, UINT64_C(0));
   /// tree_sum = 3 + 7 = 10. f(0) = 10
-  static inline const unsigned int test_choice_both =
-      choice_fn(tree::node(tree::leaf(), 5u, tree::leaf()), Choice::CBOTH, 1u);
+  static inline const uint64_t test_choice_both =
+      choice_fn(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                Choice::CBOTH, UINT64_C(1));
   /// TEST 4: Closure returned from if, capturing a locally-built tree.
   /// The let-bound tree is on the stack. If the returned lambda
   /// captures by &, it holds a reference to the dead stack frame.
-  static unsigned int make_adder(unsigned int n, bool b, unsigned int _x0);
-  static inline const unsigned int test_make_adder = make_adder(20u, true, 5u);
+  static uint64_t make_adder(uint64_t n, bool b, uint64_t _x0);
+  static inline const uint64_t test_make_adder =
+      make_adder(UINT64_C(20), true, UINT64_C(5));
   /// TEST 5: Double use of returned closure.
   /// Ensures the closure is a real std::function, not inlined.
-  static inline const unsigned int test_double_use = []() {
-    std::function<unsigned int(unsigned int)> f =
-        [](unsigned int _x0) -> unsigned int {
-      return tree::node(tree::leaf(), 7u, tree::leaf()).choose_fn(true, _x0);
+  static inline const uint64_t test_double_use = []() {
+    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+      return tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
+          .choose_fn(true, _x0);
     };
-    return (f(1u) + f(2u));
+    return (f(UINT64_C(1)) + f(UINT64_C(2)));
   }();
 
   /// TEST 6: Pass returned closure to a higher-order function.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int apply_to(F0 &&f, unsigned int _x0) {
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t apply_to(F0 &&f, uint64_t _x0) {
     return f(_x0);
   }
 
-  static inline const unsigned int test_pass_closure = []() {
-    std::function<unsigned int(unsigned int)> f =
-        [](unsigned int _x0) -> unsigned int {
-      return tree::node(tree::leaf(), 15u, tree::leaf()).choose_fn(true, _x0);
+  static inline const uint64_t test_pass_closure = []() {
+    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+      return tree::node(tree::leaf(), UINT64_C(15), tree::leaf())
+          .choose_fn(true, _x0);
     };
-    return apply_to(f, 10u);
+    return apply_to(f, UINT64_C(10));
   }();
-  static inline const unsigned int test_nested_match =
-      tree::node(tree::leaf(), 4u, tree::leaf())
-          .nested_match_fn(true, true, 0u);
+  static inline const uint64_t test_nested_match =
+      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
+          .nested_match_fn(true, true, UINT64_C(0));
   /// f(0) = 4
-  static inline const unsigned int test_nested_match2 =
-      tree::node(tree::leaf(), 4u, tree::leaf())
-          .nested_match_fn(true, false, 0u);
+  static inline const uint64_t test_nested_match2 =
+      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
+          .nested_match_fn(true, false, UINT64_C(0));
   /// TEST 8: Closure from match, used across let-bindings.
   /// Maximum distance between closure creation and use.
-  static inline const unsigned int test_delayed_use = []() {
-    std::function<unsigned int(unsigned int)> f =
-        [](unsigned int _x0) -> unsigned int {
-      return choice_fn(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()),
-                                  2u,
-                                  tree::node(tree::leaf(), 3u, tree::leaf())),
-                       Choice::CLEFT, _x0);
+  static inline const uint64_t test_delayed_use = []() {
+    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+      return choice_fn(
+          tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                     UINT64_C(2),
+                     tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+          Choice::CLEFT, _x0);
     };
-    unsigned int a = 100u;
-    unsigned int b = (a + 200u);
-    unsigned int c = (b + 300u);
+    uint64_t a = UINT64_C(100);
+    uint64_t b = (a + UINT64_C(200));
+    uint64_t c = (b + UINT64_C(300));
     return f(c);
   }();
 };

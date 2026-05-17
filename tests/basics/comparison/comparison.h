@@ -38,23 +38,29 @@ struct Comparison {
     }
   }
 
-  static unsigned int cmp_to_nat(Cmp c);
-  static Cmp compare_nats(unsigned int a, unsigned int b);
-  static unsigned int max_nat(unsigned int a, unsigned int b);
-  static unsigned int min_nat(unsigned int a, unsigned int b);
-  static unsigned int clamp(unsigned int val, unsigned int lo, unsigned int hi);
+  static uint64_t cmp_to_nat(Cmp c);
+  static Cmp compare_nats(uint64_t a, uint64_t b);
+  static uint64_t max_nat(uint64_t a, uint64_t b);
+  static uint64_t min_nat(uint64_t a, uint64_t b);
+  static uint64_t clamp(uint64_t val, uint64_t lo, uint64_t hi);
   static Cmp flip_cmp(Cmp c);
-  static inline const unsigned int test_lt_nat = cmp_to_nat(Cmp::CMPLT);
-  static inline const unsigned int test_eq_nat = cmp_to_nat(Cmp::CMPEQ);
-  static inline const unsigned int test_gt_nat = cmp_to_nat(Cmp::CMPGT);
-  static inline const Cmp test_compare_lt = compare_nats(3u, 5u);
-  static inline const Cmp test_compare_eq = compare_nats(5u, 5u);
-  static inline const Cmp test_compare_gt = compare_nats(7u, 5u);
-  static inline const unsigned int test_max = max_nat(3u, 7u);
-  static inline const unsigned int test_min = min_nat(3u, 7u);
-  static inline const unsigned int test_clamp_lo = clamp(1u, 3u, 7u);
-  static inline const unsigned int test_clamp_mid = clamp(5u, 3u, 7u);
-  static inline const unsigned int test_clamp_hi = clamp(9u, 3u, 7u);
+  static inline const uint64_t test_lt_nat = cmp_to_nat(Cmp::CMPLT);
+  static inline const uint64_t test_eq_nat = cmp_to_nat(Cmp::CMPEQ);
+  static inline const uint64_t test_gt_nat = cmp_to_nat(Cmp::CMPGT);
+  static inline const Cmp test_compare_lt =
+      compare_nats(UINT64_C(3), UINT64_C(5));
+  static inline const Cmp test_compare_eq =
+      compare_nats(UINT64_C(5), UINT64_C(5));
+  static inline const Cmp test_compare_gt =
+      compare_nats(UINT64_C(7), UINT64_C(5));
+  static inline const uint64_t test_max = max_nat(UINT64_C(3), UINT64_C(7));
+  static inline const uint64_t test_min = min_nat(UINT64_C(3), UINT64_C(7));
+  static inline const uint64_t test_clamp_lo =
+      clamp(UINT64_C(1), UINT64_C(3), UINT64_C(7));
+  static inline const uint64_t test_clamp_mid =
+      clamp(UINT64_C(5), UINT64_C(3), UINT64_C(7));
+  static inline const uint64_t test_clamp_hi =
+      clamp(UINT64_C(9), UINT64_C(3), UINT64_C(7));
   static inline const Cmp test_flip = flip_cmp(Cmp::CMPLT);
 };
 

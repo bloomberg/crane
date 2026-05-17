@@ -8,18 +8,18 @@ struct BlockTemplateNonlocal {
   /// with an expression-position IIFE.
   /// Generates: static inline const unsigned int x = (&() -> unsigned int { ...
   /// }() + 42u); Bug: & is invalid in non-local lambda. Should be ().
-  static inline const unsigned int pure_block_let = ([]() -> unsigned int {
-    unsigned int _r;
+  static inline const uint64_t pure_block_let = ([]() -> uint64_t {
+    uint64_t _r;
     std::cin >> _r;
     return _r;
-  }() + 42u);
+  }() + UINT64_C(42));
   /// Two pure block templates in same expression
-  static inline const unsigned int two_pure_blocks = ([]() -> unsigned int {
-    unsigned int _r;
+  static inline const uint64_t two_pure_blocks = ([]() -> uint64_t {
+    uint64_t _r;
     std::cin >> _r;
     return _r;
-  }() + []() -> unsigned int {
-    unsigned int _r;
+  }() + []() -> uint64_t {
+    uint64_t _r;
     std::cin >> _r;
     return _r;
   }());

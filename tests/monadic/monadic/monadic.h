@@ -149,10 +149,10 @@ struct Monadic {
     }
   }
 
-  static std::optional<unsigned int> safe_div(unsigned int n, unsigned int m);
-  static std::optional<unsigned int> safe_sub(unsigned int n, unsigned int m);
-  static std::optional<unsigned int>
-  div_then_sub(unsigned int a, unsigned int b, unsigned int c);
+  static std::optional<uint64_t> safe_div(uint64_t n, uint64_t m);
+  static std::optional<uint64_t> safe_sub(uint64_t n, uint64_t m);
+  static std::optional<uint64_t> div_then_sub(uint64_t a, uint64_t b,
+                                              uint64_t c);
   template <typename s, typename a>
   using State = std::function<std::pair<a, s>(s)>;
 
@@ -184,54 +184,55 @@ struct Monadic {
   }
 
   template <typename T1>
-  static State<unsigned int, unsigned int> count_elements(const List<T1> &l) {
-    return l.template fold_left<State<unsigned int, unsigned int>>(
-        [](std::function<std::pair<unsigned int, unsigned int>(unsigned int)>
-               acc,
+  static State<uint64_t, uint64_t> count_elements(const List<T1> &l) {
+    return l.template fold_left<State<uint64_t, uint64_t>>(
+        [](std::function<std::pair<uint64_t, uint64_t>(uint64_t)> acc,
            const T1 &) {
-          return state_bind<unsigned int, unsigned int,
-                            unsigned int>(acc, [](unsigned int) {
-            return state_bind<unsigned int, unsigned int, unsigned int>(
-                state_get<unsigned int>(), [](unsigned int n) {
-                  return state_bind<unsigned int, std::monostate, unsigned int>(
-                      state_put<unsigned int>((n + 1)),
+          return state_bind<uint64_t, uint64_t, uint64_t>(acc, [](uint64_t) {
+            return state_bind<uint64_t, uint64_t, uint64_t>(
+                state_get<uint64_t>(), [](uint64_t n) {
+                  return state_bind<uint64_t, std::monostate, uint64_t>(
+                      state_put<uint64_t>((n + 1)),
                       [=](std::monostate) mutable {
-                        return state_return<unsigned int, unsigned int>(n);
+                        return state_return<uint64_t, uint64_t>(n);
                       });
                 });
           });
         },
-        state_return<unsigned int, unsigned int>(0u));
+        state_return<uint64_t, uint64_t>(UINT64_C(0)));
   }
 
-  static inline const std::optional<unsigned int> test_return =
-      option_return<unsigned int>(42u);
-  static inline const std::optional<unsigned int> test_bind_some =
-      option_bind<unsigned int, unsigned int>(
-          std::make_optional<unsigned int>(10u), [](unsigned int x) {
-            return std::make_optional<unsigned int>((x + 1u));
+  static inline const std::optional<uint64_t> test_return =
+      option_return<uint64_t>(UINT64_C(42));
+  static inline const std::optional<uint64_t> test_bind_some =
+      option_bind<uint64_t, uint64_t>(
+          std::make_optional<uint64_t>(UINT64_C(10)), [](uint64_t x) {
+            return std::make_optional<uint64_t>((x + UINT64_C(1)));
           });
-  static inline const std::optional<unsigned int> test_bind_none =
-      option_bind<unsigned int, unsigned int>(
-          std::optional<unsigned int>(), [](unsigned int x) {
-            return std::make_optional<unsigned int>((x + 1u));
+  static inline const std::optional<uint64_t> test_bind_none =
+      option_bind<uint64_t, uint64_t>(
+          std::optional<uint64_t>(), [](uint64_t x) {
+            return std::make_optional<uint64_t>((x + UINT64_C(1)));
           });
-  static inline const std::optional<unsigned int> test_safe_div_ok =
-      safe_div(10u, 3u);
-  static inline const std::optional<unsigned int> test_safe_div_zero =
-      safe_div(10u, 0u);
-  static inline const std::optional<unsigned int> test_chain_ok =
-      div_then_sub(20u, 4u, 2u);
-  static inline const std::optional<unsigned int> test_chain_fail =
-      div_then_sub(20u, 0u, 2u);
-  static inline const std::pair<unsigned int, unsigned int> test_state =
-      count_elements<unsigned int>(List<unsigned int>::cons(
-          1u, List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::cons(
-                                          5u, List<unsigned int>::nil()))))))(
-          0u);
+  static inline const std::optional<uint64_t> test_safe_div_ok =
+      safe_div(UINT64_C(10), UINT64_C(3));
+  static inline const std::optional<uint64_t> test_safe_div_zero =
+      safe_div(UINT64_C(10), UINT64_C(0));
+  static inline const std::optional<uint64_t> test_chain_ok =
+      div_then_sub(UINT64_C(20), UINT64_C(4), UINT64_C(2));
+  static inline const std::optional<uint64_t> test_chain_fail =
+      div_then_sub(UINT64_C(20), UINT64_C(0), UINT64_C(2));
+  static inline const std::pair<uint64_t, uint64_t> test_state =
+      count_elements<uint64_t>(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(
+                      UINT64_C(4), List<uint64_t>::cons(
+                                       UINT64_C(5), List<uint64_t>::nil()))))))(
+          UINT64_C(0));
 };
 
 #endif // INCLUDED_MONADIC

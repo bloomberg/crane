@@ -251,12 +251,10 @@ Comparison Pos::compare(const Positive &_x0, const Positive &_x1) {
   return compare_cont(Comparison::EQ, _x0, _x1);
 }
 
-unsigned int Pos::to_nat(const Positive &x) {
-  return iter_op<unsigned int>(
-      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-        return (_x0 + _x1);
-      },
-      x, 1u);
+uint64_t Pos::to_nat(const Positive &x) {
+  return iter_op<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      UINT64_C(1));
 }
 
 Positive Coq_Pos::succ(const Positive &x) {
@@ -355,12 +353,10 @@ Positive Coq_Pos::mul(const Positive &x, Positive y) {
   }
 }
 
-unsigned int Coq_Pos::to_nat(const Positive &x) {
-  return iter_op<unsigned int>(
-      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-        return (_x0 + _x1);
-      },
-      x, 1u);
+uint64_t Coq_Pos::to_nat(const Positive &x) {
+  return iter_op<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      UINT64_C(1));
 }
 
 N BinNat::sub(N n, const N &m) {
@@ -438,9 +434,9 @@ N BinNat::mul(const N &n, const N &m) {
   }
 }
 
-unsigned int BinNat::to_nat(const N &a) {
+uint64_t BinNat::to_nat(const N &a) {
   if (std::holds_alternative<typename N::N0>(a.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0] = std::get<typename N::Npos>(a.v());
     return Pos::to_nat(a0);
@@ -617,12 +613,12 @@ Comparison BinInt::compare(const Z &x, const Z &y) {
   }
 }
 
-unsigned int BinInt::to_nat(const Z &z) {
+uint64_t BinInt::to_nat(const Z &z) {
   if (std::holds_alternative<typename Z::Zpos>(z.v())) {
     const auto &[a0] = std::get<typename Z::Zpos>(z.v());
     return Pos::to_nat(a0);
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 

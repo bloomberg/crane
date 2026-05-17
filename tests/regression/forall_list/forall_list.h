@@ -118,9 +118,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -130,7 +130,7 @@ public:
 
 struct ForallList {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -139,7 +139,7 @@ struct ForallList {
         return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -149,14 +149,15 @@ struct ForallList {
     }
   }
 
-  static inline const List<unsigned int> sample = List<unsigned int>::cons(
-      1u,
-      List<unsigned int>::cons(
-          2u,
-          List<unsigned int>::cons(
-              3u, List<unsigned int>::cons(4u, List<unsigned int>::nil()))));
-  static inline const unsigned int updated_length =
-      update_nth<unsigned int>(1u, 9u, sample).length();
+  static inline const List<uint64_t> sample = List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))));
+  static inline const uint64_t updated_length =
+      update_nth<uint64_t>(UINT64_C(1), UINT64_C(9), sample).length();
 };
 
 #endif // INCLUDED_FORALL_LIST

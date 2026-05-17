@@ -130,9 +130,9 @@ public:
     }
   }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -141,9 +141,9 @@ public:
 };
 
 struct ValidProgramByteReject {
-  static bool valid_program(const List<unsigned int> &bytes);
-  static inline const bool t = valid_program(List<unsigned int>::cons(
-      0u, List<unsigned int>::cons(256u, List<unsigned int>::nil())));
+  static bool valid_program(const List<uint64_t> &bytes);
+  static inline const bool t = valid_program(List<uint64_t>::cons(
+      UINT64_C(0), List<uint64_t>::cons(UINT64_C(256), List<uint64_t>::nil())));
 };
 
 #endif // INCLUDED_VALID_PROGRAM_BYTE_REJECT

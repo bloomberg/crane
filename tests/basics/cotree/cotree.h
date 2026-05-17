@@ -426,11 +426,11 @@ struct Cotree {
   }
 
   template <typename T1>
-  static List<T1> list_of_colist(unsigned int fuel, colist<T1> l) {
+  static List<T1> list_of_colist(uint64_t fuel, colist<T1> l) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
-      unsigned int fuel_ = fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -441,12 +441,12 @@ struct Cotree {
   }
 
   template <typename T1>
-  static tree<T1> tree_of_cotree(unsigned int fuel, cotree<T1> t) {
+  static tree<T1> tree_of_cotree(uint64_t fuel, cotree<T1> t) {
     const auto &[a0, a1] = std::get<typename cotree<T1>::Conode>(t.v());
     if (fuel <= 0) {
       return tree<T1>::node(a0, List<tree<T1>>::nil());
     } else {
-      unsigned int fuel_ = fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       return tree<T1>::node(
           a0, list_of_colist<cotree<T1>>(fuel, *a1).template map<tree<T1>>(
                   [=](cotree<T1> _x0) mutable -> tree<T1> {
@@ -455,52 +455,50 @@ struct Cotree {
     }
   }
 
-  template <typename T1> static unsigned int tree_size(const tree<T1> &t) {
+  template <typename T1> static uint64_t tree_size(const tree<T1> &t) {
     const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t.v());
     return ([&]() {
-      auto aux_impl = [](auto &_self_aux,
-                         const List<tree<T1>> &l) -> unsigned int {
+      auto aux_impl = [](auto &_self_aux, const List<tree<T1>> &l) -> uint64_t {
         if (std::holds_alternative<typename List<tree<T1>>::Nil>(l.v())) {
-          return 0u;
+          return UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<tree<T1>>::Cons>(l.v());
           return (tree_size<T1>(a0) + _self_aux(_self_aux, *a1));
         }
       };
-      auto aux = [&](const List<tree<T1>> &l) -> unsigned int {
+      auto aux = [&](const List<tree<T1>> &l) -> uint64_t {
         return aux_impl(aux_impl, l);
       };
       return aux(*a1);
     }() + 1);
   }
 
-  static inline const cotree<unsigned int> sample_cotree =
-      cotree<unsigned int>::conode(
-          1u, colist<cotree<unsigned int>>::cocons(
-                  singleton_cotree<unsigned int>(2u),
-                  colist<cotree<unsigned int>>::cocons(
-                      singleton_cotree<unsigned int>(3u),
-                      colist<cotree<unsigned int>>::conil())));
-  static inline const unsigned int test_root = sample_cotree.root();
-  static inline const unsigned int test_doubled_root =
+  static inline const cotree<uint64_t> sample_cotree = cotree<uint64_t>::conode(
+      UINT64_C(1), colist<cotree<uint64_t>>::cocons(
+                       singleton_cotree<uint64_t>(UINT64_C(2)),
+                       colist<cotree<uint64_t>>::cocons(
+                           singleton_cotree<uint64_t>(UINT64_C(3)),
+                           colist<cotree<uint64_t>>::conil())));
+  static inline const uint64_t test_root = sample_cotree.root();
+  static inline const uint64_t test_doubled_root =
       sample_cotree
-          .template comap_cotree<unsigned int>(
-              [](unsigned int n) { return (n * 2u); })
+          .template comap_cotree<uint64_t>(
+              [](uint64_t n) { return (n * UINT64_C(2)); })
           .root();
-  static colist<unsigned int> nats(unsigned int n);
-  static inline const List<unsigned int> test_first_five =
-      list_of_colist<unsigned int>(5u, nats(0u));
-  static colist<unsigned int> binary_children(unsigned int n);
-  static inline const cotree<unsigned int> binary_tree =
-      unfold_cotree<unsigned int>(binary_children, 0u);
-  static inline const unsigned int test_binary_root = binary_tree.root();
-  static inline const tree<unsigned int> test_approx =
-      tree_of_cotree<unsigned int>(2u, binary_tree);
-  static inline const unsigned int test_approx_root =
-      tree_root<unsigned int>(test_approx);
+  static colist<uint64_t> nats(uint64_t n);
+  static inline const List<uint64_t> test_first_five =
+      list_of_colist<uint64_t>(UINT64_C(5), nats(UINT64_C(0)));
+  static colist<uint64_t> binary_children(uint64_t n);
+  static inline const cotree<uint64_t> binary_tree =
+      unfold_cotree<uint64_t>(binary_children, UINT64_C(0));
+  static inline const uint64_t test_binary_root = binary_tree.root();
+  static inline const tree<uint64_t> test_approx =
+      tree_of_cotree<uint64_t>(UINT64_C(2), binary_tree);
+  static inline const uint64_t test_approx_root =
+      tree_root<uint64_t>(test_approx);
 
-  static inline const unsigned int test_approx_size =
-      tree_size<unsigned int>(test_approx);
+  static inline const uint64_t test_approx_size =
+      tree_size<uint64_t>(test_approx);
 };
 
 #endif // INCLUDED_COTREE

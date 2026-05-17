@@ -5,7 +5,7 @@ std::pair<std::optional<std::basic_string_view<char>>,
 Tokenizer::next_token(std::basic_string_view<char> input,
                       std::basic_string_view<char> soft,
                       std::basic_string_view<char> hard) {
-  auto aux_impl = [&](auto &_self_aux, unsigned int fuel, int64_t index,
+  auto aux_impl = [&](auto &_self_aux, uint64_t fuel, int64_t index,
                       std::basic_string_view<char> s)
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
@@ -18,7 +18,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
             std::make_optional<std::basic_string_view<char>>(s),
             std::string_view(nullptr, 0));
       } else {
-        unsigned int fuel_ = fuel - 1;
+        uint64_t fuel_ = fuel - 1;
         int64_t c = s[index];
         if (hard.contains(c)) {
           return std::make_pair(
@@ -52,26 +52,25 @@ Tokenizer::next_token(std::basic_string_view<char> input,
       }
     }
   };
-  auto aux = [&](unsigned int fuel, int64_t index,
-                 std::basic_string_view<char> s)
+  auto aux = [&](uint64_t fuel, int64_t index, std::basic_string_view<char> s)
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
     return aux_impl(aux_impl, fuel, index, s);
   };
-  return aux(static_cast<unsigned int>(input.length()), int64_t(0), input);
+  return aux(static_cast<uint64_t>(input.length()), int64_t(0), input);
 }
 
 List<std::basic_string_view<char>>
 Tokenizer::list_tokens(std::basic_string_view<char> input,
                        std::basic_string_view<char> soft,
                        std::basic_string_view<char> hard) {
-  auto aux_impl = [&](auto &_self_aux, unsigned int fuel,
+  auto aux_impl = [&](auto &_self_aux, uint64_t fuel,
                       std::basic_string_view<char> rest)
       -> List<std::basic_string_view<char>> {
     if (fuel <= 0) {
       return List<std::basic_string_view<char>>::nil();
     } else {
-      unsigned int fuel_ = fuel - 1;
+      uint64_t fuel_ = fuel - 1;
       std::pair<std::optional<std::basic_string_view<char>>,
                 std::basic_string_view<char>>
           t = next_token(rest, soft, hard);
@@ -85,9 +84,9 @@ Tokenizer::list_tokens(std::basic_string_view<char> input,
       }
     }
   };
-  auto aux = [&](unsigned int fuel, std::basic_string_view<char> rest)
+  auto aux = [&](uint64_t fuel, std::basic_string_view<char> rest)
       -> List<std::basic_string_view<char>> {
     return aux_impl(aux_impl, fuel, rest);
   };
-  return aux(static_cast<unsigned int>(input.length()), input);
+  return aux(static_cast<uint64_t>(input.length()), input);
 }

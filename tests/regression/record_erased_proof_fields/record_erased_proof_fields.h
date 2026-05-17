@@ -342,31 +342,31 @@ struct RecordErasedProofFieldsCase {
     }
   };
 
-  static unsigned int kind_code(ItemKind k);
-  static unsigned int tag_code(const StoredTag &t);
-  static unsigned int bucket_code(TraceBucket b);
+  static uint64_t kind_code(ItemKind k);
+  static uint64_t tag_code(const StoredTag &t);
+  static uint64_t bucket_code(TraceBucket b);
   static StoredTag bucket_to_tag(TraceBucket b);
   static inline const PrimaryRecord sample_primary_record = PrimaryRecord{
       ItemKind::KINDC, ItemKind::KINDE, StoredTag::tagprimary(ItemKind::KINDC)};
   static inline const ErasedProofRecord sample_erased_proof_record =
       ErasedProofRecord{TraceBucket::BUCKETC};
-  static unsigned int left_kind_code_of(const PrimaryRecord &r);
-  static unsigned int right_kind_code_of(const PrimaryRecord &r);
-  static unsigned int tag_code_of(const PrimaryRecord &r);
-  static unsigned int bucket_code_of(const ErasedProofRecord &r);
-  static List<unsigned int> trace_codes_of(const PrimaryRecord &primary,
-                                           const ErasedProofRecord &erased);
-  static unsigned int trace_checksum_of(const PrimaryRecord &primary,
-                                        const ErasedProofRecord &erased);
-  static inline const unsigned int sample_left_kind_code =
+  static uint64_t left_kind_code_of(const PrimaryRecord &r);
+  static uint64_t right_kind_code_of(const PrimaryRecord &r);
+  static uint64_t tag_code_of(const PrimaryRecord &r);
+  static uint64_t bucket_code_of(const ErasedProofRecord &r);
+  static List<uint64_t> trace_codes_of(const PrimaryRecord &primary,
+                                       const ErasedProofRecord &erased);
+  static uint64_t trace_checksum_of(const PrimaryRecord &primary,
+                                    const ErasedProofRecord &erased);
+  static inline const uint64_t sample_left_kind_code =
       left_kind_code_of(sample_primary_record);
-  static inline const unsigned int sample_right_kind_code =
+  static inline const uint64_t sample_right_kind_code =
       right_kind_code_of(sample_primary_record);
-  static inline const unsigned int sample_tag_code =
+  static inline const uint64_t sample_tag_code =
       tag_code_of(sample_primary_record);
-  static inline const unsigned int sample_bucket_code =
+  static inline const uint64_t sample_bucket_code =
       bucket_code_of(sample_erased_proof_record);
-  static inline const unsigned int sample_trace_checksum =
+  static inline const uint64_t sample_trace_checksum =
       trace_checksum_of(sample_primary_record, sample_erased_proof_record);
 };
 

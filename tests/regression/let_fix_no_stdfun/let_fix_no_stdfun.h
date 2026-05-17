@@ -120,38 +120,45 @@ public:
 };
 
 struct LetFixNoStdfun {
-  static unsigned int sum_list(const List<unsigned int> &l);
-  static unsigned int flat_map_sum(const List<List<unsigned int>> &xss);
-  static List<unsigned int> flatten(const List<List<unsigned int>> &xss);
-  static inline const unsigned int test_sum = sum_list(List<unsigned int>::cons(
-      1u, List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(
-                      3u, List<unsigned int>::cons(
-                              4u, List<unsigned int>::cons(
-                                      5u, List<unsigned int>::nil()))))));
-  static inline const unsigned int test_flat_map_sum =
-      flat_map_sum(List<List<unsigned int>>::cons(
-          List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
-          List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(3u, List<unsigned int>::nil()),
-              List<List<unsigned int>>::cons(
-                  List<unsigned int>::cons(
-                      4u, List<unsigned int>::cons(
-                              5u, List<unsigned int>::cons(
-                                      6u, List<unsigned int>::nil()))),
-                  List<List<unsigned int>>::nil()))));
-  static inline const List<unsigned int> test_flatten =
-      flatten(List<List<unsigned int>>::cons(
-          List<unsigned int>::cons(
-              10u, List<unsigned int>::cons(20u, List<unsigned int>::nil())),
-          List<List<unsigned int>>::cons(
-              List<unsigned int>::cons(30u, List<unsigned int>::nil()),
-              List<List<unsigned int>>::cons(
-                  List<unsigned int>::cons(
-                      40u,
-                      List<unsigned int>::cons(50u, List<unsigned int>::nil())),
-                  List<List<unsigned int>>::nil()))));
+  static uint64_t sum_list(const List<uint64_t> &l);
+  static uint64_t flat_map_sum(const List<List<uint64_t>> &xss);
+  static List<uint64_t> flatten(const List<List<uint64_t>> &xss);
+  static inline const uint64_t test_sum = sum_list(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static inline const uint64_t test_flat_map_sum =
+      flat_map_sum(List<List<uint64_t>>::cons(
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+          List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
+              List<List<uint64_t>>::cons(
+                  List<uint64_t>::cons(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(
+                          UINT64_C(5),
+                          List<uint64_t>::cons(UINT64_C(6),
+                                               List<uint64_t>::nil()))),
+                  List<List<uint64_t>>::nil()))));
+  static inline const List<uint64_t> test_flatten =
+      flatten(List<List<uint64_t>>::cons(
+          List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil())),
+          List<List<uint64_t>>::cons(
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()),
+              List<List<uint64_t>>::cons(
+                  List<uint64_t>::cons(
+                      UINT64_C(40), List<uint64_t>::cons(
+                                        UINT64_C(50), List<uint64_t>::nil())),
+                  List<List<uint64_t>>::nil()))));
 };
 
 #endif // INCLUDED_LET_FIX_NO_STDFUN

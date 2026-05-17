@@ -4,7 +4,7 @@
 
 namespace {
 
-MutualValueDeepDestruct::a make_chain(unsigned int n) {
+MutualValueDeepDestruct::a make_chain(uint64_t n) {
   MutualValueDeepDestruct::a x = MutualValueDeepDestruct::a::aend();
   while (n > 0) {
     x = MutualValueDeepDestruct::a::anode(

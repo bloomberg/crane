@@ -232,10 +232,10 @@ struct LoopifyTail {
   } /// Tail-recursive: length with accumulator
 
   template <typename T1>
-  static unsigned int length_acc(unsigned int acc, const list<T1> &l) {
-    unsigned int _result;
+  static uint64_t length_acc(uint64_t acc, const list<T1> &l) {
+    uint64_t _result;
     const list<T1> *_loop_l = &l;
-    unsigned int _loop_acc = std::move(acc);
+    uint64_t _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         _result = std::move(_loop_acc);
@@ -249,15 +249,15 @@ struct LoopifyTail {
     return _result;
   }
 
-  template <typename T1> static unsigned int length(const list<T1> &l) {
-    return length_acc<T1>(0u, l);
+  template <typename T1> static uint64_t length(const list<T1> &l) {
+    return length_acc<T1>(UINT64_C(0), l);
   } /// Tail-recursive: membership test
 
-  static bool member(unsigned int x, const list<unsigned int> &l);
+  static bool member(uint64_t x, const list<uint64_t> &l);
   /// Tail-recursive: nth element
-  static unsigned int nth(unsigned int n, const list<unsigned int> &l,
-                          unsigned int default0); /// Tail-recursive: fold_left
+  static uint64_t nth(uint64_t n, const list<uint64_t> &l, uint64_t default0);
 
+  /// Tail-recursive: fold_left
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
   static T2 fold_left(F0 &&f, T2 acc, const list<T1> &l) {
@@ -278,9 +278,8 @@ struct LoopifyTail {
   }
 
   /// Tail-recursive: lookup in association list
-  static unsigned int
-  lookup(unsigned int key,
-         const list<std::pair<unsigned int, unsigned int>> &l);
+  static uint64_t lookup(uint64_t key,
+                         const list<std::pair<uint64_t, uint64_t>> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_TAIL

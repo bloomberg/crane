@@ -304,16 +304,16 @@ struct LoopifyTmc {
   }
 
   /// replicate n x creates n copies of x. Nat recursion producing list.
-  template <typename T1> static list<T1> replicate(unsigned int n, T1 x) {
+  template <typename T1> static list<T1> replicate(uint64_t n, T1 x) {
     std::unique_ptr<list<T1>> _head{};
     std::unique_ptr<list<T1>> *_write = &_head;
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         *_write = std::make_unique<list<T1>>(list<T1>::nil());
         break;
       } else {
-        unsigned int m = _loop_n - 1;
+        uint64_t m = _loop_n - 1;
         auto _cell =
             std::make_unique<list<T1>>(typename list<T1>::Cons(x, nullptr));
         *_write = std::move(_cell);
@@ -326,7 +326,7 @@ struct LoopifyTmc {
   }
 
   /// range lo hi creates lo, lo+1, ..., hi-1.
-  static list<unsigned int> range(unsigned int lo, unsigned int hi);
+  static list<uint64_t> range(uint64_t lo, uint64_t hi);
 
   /// zip_with f l1 l2 combines two lists element-wise. Two varying params.
   template <typename T1, typename T2, typename T3, typename F0>
@@ -362,8 +362,7 @@ struct LoopifyTmc {
   }
 
   /// prefix_sums acc l computes running prefix sums.
-  static list<unsigned int> prefix_sums(unsigned int acc,
-                                        const list<unsigned int> &l);
+  static list<uint64_t> prefix_sums(uint64_t acc, const list<uint64_t> &l);
 
   /// stutter l duplicates each element: 1,2 -> 1,1,2,2. Nested TMC.
   template <typename T1> static list<T1> stutter(const list<T1> &l) {

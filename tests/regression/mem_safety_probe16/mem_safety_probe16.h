@@ -25,7 +25,7 @@ struct MemSafetyProbe16 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -95,7 +95,7 @@ struct MemSafetyProbe16 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -143,14 +143,14 @@ struct MemSafetyProbe16 {
       /// _After_Node: saves [_s0, _s1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         tree _result;
-        unsigned int _s1;
+        uint64_t _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -170,7 +170,7 @@ struct MemSafetyProbe16 {
             _result = tree::leaf();
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{a0.get(), (a1 + 1u)});
+            _stack.emplace_back(_After_Node{a0.get(), (a1 + UINT64_C(1))});
             _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -186,7 +186,7 @@ struct MemSafetyProbe16 {
     }
 
     /// TEST 6: Non-recursive closure from a deeply nested match.
-    unsigned int deep_nested_closure(unsigned int n) const {
+    uint64_t deep_nested_closure(uint64_t n) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return n;
       } else {
@@ -214,18 +214,16 @@ struct MemSafetyProbe16 {
 
     /// TEST 5: A function that takes TWO trees and returns a closure
     /// capturing both. Tests double ownership.
-    unsigned int pair_closure(const tree &t2, unsigned int n) const {
+    uint64_t pair_closure(const tree &t2, uint64_t n) const {
       return (((*this).tree_sum() + t2.tree_sum()) + n);
     }
 
     /// TEST 1: Store a closure derived from a tree in a list,
     /// then invoke it after the tree goes out of scope.
     /// The closure should capture by value.
-    unsigned int make_summer(unsigned int n) const {
-      return ((*this).tree_sum() + n);
-    }
+    uint64_t make_summer(uint64_t n) const { return ((*this).tree_sum() + n); }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -236,18 +234,18 @@ struct MemSafetyProbe16 {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -260,7 +258,7 @@ struct MemSafetyProbe16 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), a1});
@@ -279,8 +277,8 @@ struct MemSafetyProbe16 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -293,7 +291,7 @@ struct MemSafetyProbe16 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -302,7 +300,7 @@ struct MemSafetyProbe16 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -340,8 +338,8 @@ struct MemSafetyProbe16 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -354,7 +352,7 @@ struct MemSafetyProbe16 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -363,7 +361,7 @@ struct MemSafetyProbe16 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -516,7 +514,7 @@ struct MemSafetyProbe16 {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int length() const {
+    uint64_t length() const {
       const mylist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -527,11 +525,11 @@ struct MemSafetyProbe16 {
       /// _Resume_Mycons: saves [_s0], resumes after recursive call with
       /// _result.
       struct _Resume_Mycons {
-        decltype(1u) _s0;
+        decltype(UINT64_C(1)) _s0;
       };
 
       using _Frame = std::variant<_Enter, _Resume_Mycons>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -544,11 +542,11 @@ struct MemSafetyProbe16 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{1u});
+            _stack.emplace_back(_Resume_Mycons{UINT64_C(1)});
             _stack.emplace_back(_Enter{a1.get()});
           }
         } else {
@@ -677,39 +675,39 @@ struct MemSafetyProbe16 {
     }
   };
 
-  static unsigned int sum_list(const mylist<unsigned int> &l);
-  static mylist<std::function<unsigned int(unsigned int)>>
+  static uint64_t sum_list(const mylist<uint64_t> &l);
+  static mylist<std::function<uint64_t(uint64_t)>>
   build_summers(const mylist<tree> &trees);
-  static unsigned int
-  apply_fns(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-            unsigned int x);
-  static inline const unsigned int test_store_closures = []() {
+  static uint64_t
+  apply_fns(const mylist<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
+  static inline const uint64_t test_store_closures = []() {
     mylist<tree> trees = mylist<tree>::mycons(
-        tree::node(tree::leaf(), 10u, tree::leaf()),
+        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
         mylist<tree>::mycons(
-            tree::node(tree::leaf(), 20u, tree::leaf()),
-            mylist<tree>::mycons(tree::node(tree::leaf(), 30u, tree::leaf()),
-                                 mylist<tree>::mynil())));
-    mylist<std::function<unsigned int(unsigned int)>> fns =
+            tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+            mylist<tree>::mycons(
+                tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                mylist<tree>::mynil())));
+    mylist<std::function<uint64_t(uint64_t)>> fns =
         build_summers(std::move(trees));
-    return apply_fns(std::move(fns), 0u);
+    return apply_fns(std::move(fns), UINT64_C(0));
   }();
 
   /// TEST 2: Fold that accumulates a function by composing closures.
   /// Each step captures the tree from the current list element.
-  static unsigned int
+  static uint64_t
   compose_summers(const mylist<tree> &trees,
-                  std::function<unsigned int(unsigned int)> acc,
-                  unsigned int _x0) { /// _Enter: captures varying parameters
-                                      /// for each recursive call.
+                  std::function<uint64_t(uint64_t)> acc,
+                  uint64_t _x0) { /// _Enter: captures varying parameters for
+                                  /// each recursive call.
 
     struct _Enter {
-      std::function<unsigned int(unsigned int)> acc;
+      std::function<uint64_t(uint64_t)> acc;
       mylist<tree> trees;
     };
 
     using _Frame = std::variant<_Enter>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{acc, trees});
@@ -718,21 +716,19 @@ struct MemSafetyProbe16 {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
-      std::function<unsigned int(unsigned int)> acc = std::move(_f.acc);
+      std::function<uint64_t(uint64_t)> acc = std::move(_f.acc);
       const mylist<tree> &trees = _f.trees;
-      _result = [=]() mutable -> std::function<unsigned int(unsigned int)> {
+      _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
         if (std::holds_alternative<typename mylist<tree>::Mynil>(trees.v())) {
           return acc;
         } else {
           const auto &[a0, a1] =
               std::get<typename mylist<tree>::Mycons>(trees.v());
           const mylist<tree> &a1_value = *a1;
-          return [=](unsigned int _x0) mutable -> unsigned int {
+          return [=](uint64_t _x0) mutable -> uint64_t {
             return compose_summers(
                 a1_value,
-                [=](unsigned int n) mutable {
-                  return acc((a0.tree_sum() + n));
-                },
+                [=](uint64_t n) mutable { return acc((a0.tree_sum() + n)); },
                 _x0);
           };
         }
@@ -741,98 +737,106 @@ struct MemSafetyProbe16 {
     return _result;
   }
 
-  static inline const unsigned int test_compose = []() {
+  static inline const uint64_t test_compose = []() {
     mylist<tree> trees = mylist<tree>::mycons(
-        tree::node(tree::leaf(), 5u, tree::leaf()),
+        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
         mylist<tree>::mycons(
-            tree::node(tree::leaf(), 10u, tree::leaf()),
-            mylist<tree>::mycons(tree::node(tree::leaf(), 15u, tree::leaf()),
-                                 mylist<tree>::mynil())));
+            tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+            mylist<tree>::mycons(
+                tree::node(tree::leaf(), UINT64_C(15), tree::leaf()),
+                mylist<tree>::mynil())));
     return compose_summers(
-        std::move(trees), [](unsigned int n) { return n; }, 0u);
+        std::move(trees), [](uint64_t n) { return n; }, UINT64_C(0));
   }();
   /// TEST 3: Build a list of closures where each closure captures
   /// the SAME tree at different levels.
   /// Tests whether the tree is properly cloned for each closure.
-  static mylist<std::function<unsigned int(unsigned int)>>
-  multi_capture_tree(tree t, unsigned int n);
-  static inline const unsigned int test_multi_capture = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u,
-                        tree::node(tree::leaf(), 11u, tree::leaf()));
-    mylist<std::function<unsigned int(unsigned int)>> fns =
-        multi_capture_tree(std::move(t), 3u);
-    return apply_fns(std::move(fns), 0u);
+  static mylist<std::function<uint64_t(uint64_t)>>
+  multi_capture_tree(tree t, uint64_t n);
+  static inline const uint64_t test_multi_capture = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                        UINT64_C(7),
+                        tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
+    mylist<std::function<uint64_t(uint64_t)>> fns =
+        multi_capture_tree(std::move(t), UINT64_C(3));
+    return apply_fns(std::move(fns), UINT64_C(0));
   }();
   /// TEST 4: Return a closure from inside a NESTED match.
   /// The closure captures bindings from BOTH match levels.
-  static unsigned int nested_match_closure(const tree &t,
-                                           const mylist<unsigned int> &l,
-                                           unsigned int n);
-  static inline const unsigned int test_nested_match = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 5u, tree::leaf()), 10u,
-                        tree::node(tree::leaf(), 15u, tree::leaf()));
-    mylist<unsigned int> l = mylist<unsigned int>::mycons(
-        7u, mylist<unsigned int>::mycons(99u, mylist<unsigned int>::mynil()));
-    return nested_match_closure(std::move(t), std::move(l), 3u);
+  static uint64_t nested_match_closure(const tree &t, const mylist<uint64_t> &l,
+                                       uint64_t n);
+  static inline const uint64_t test_nested_match = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                        UINT64_C(10),
+                        tree::node(tree::leaf(), UINT64_C(15), tree::leaf()));
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(7),
+        mylist<uint64_t>::mycons(UINT64_C(99), mylist<uint64_t>::mynil()));
+    return nested_match_closure(std::move(t), std::move(l), UINT64_C(3));
   }();
-  static inline const unsigned int test_pair_closure = []() {
+  static inline const uint64_t test_pair_closure = []() {
     return []() {
-      tree t1 = tree::node(tree::leaf(), 100u, tree::leaf());
-      tree t2 = tree::node(tree::node(tree::leaf(), 50u, tree::leaf()), 25u,
-                           tree::leaf());
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
+      tree t1 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
+      tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
+                           UINT64_C(25), tree::leaf());
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t {
         return t1.pair_closure(t2, _x0);
       };
-      return (f(0u) + f(0u));
+      return (f(UINT64_C(0)) + f(UINT64_C(0)));
     }();
   }();
-  static inline const unsigned int test_deep_nested = []() {
-    tree t =
-        tree::node(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                              tree::node(tree::leaf(), 3u, tree::leaf())),
-                   10u,
-                   tree::node(tree::node(tree::leaf(), 4u, tree::leaf()), 5u,
-                              tree::node(tree::leaf(), 6u, tree::leaf())));
-    return std::move(t).deep_nested_closure(0u);
+  static inline const uint64_t test_deep_nested = []() {
+    tree t = tree::node(
+        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                   UINT64_C(2),
+                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+        UINT64_C(10),
+        tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
+                   UINT64_C(5),
+                   tree::node(tree::leaf(), UINT64_C(6), tree::leaf())));
+    return std::move(t).deep_nested_closure(UINT64_C(0));
   }();
   /// TEST 7: Map + apply pattern: build closures from tree children,
   /// apply them to values from another list.
-  static mylist<unsigned int>
-  zip_apply(const mylist<std::function<unsigned int(unsigned int)>> &fns,
-            const mylist<unsigned int> &vals);
-  static inline const unsigned int test_zip_apply = []() {
+  static mylist<uint64_t>
+  zip_apply(const mylist<std::function<uint64_t(uint64_t)>> &fns,
+            const mylist<uint64_t> &vals);
+  static inline const uint64_t test_zip_apply = []() {
     mylist<tree> trees = mylist<tree>::mycons(
-        tree::node(tree::leaf(), 10u, tree::leaf()),
-        mylist<tree>::mycons(tree::node(tree::leaf(), 20u, tree::leaf()),
-                             mylist<tree>::mynil()));
-    mylist<std::function<unsigned int(unsigned int)>> fns =
+        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+        mylist<tree>::mycons(
+            tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+            mylist<tree>::mynil()));
+    mylist<std::function<uint64_t(uint64_t)>> fns =
         build_summers(std::move(trees));
-    mylist<unsigned int> vals = mylist<unsigned int>::mycons(
-        1u, mylist<unsigned int>::mycons(2u, mylist<unsigned int>::mynil()));
-    mylist<unsigned int> results = zip_apply(std::move(fns), std::move(vals));
+    mylist<uint64_t> vals = mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(UINT64_C(2), mylist<uint64_t>::mynil()));
+    mylist<uint64_t> results = zip_apply(std::move(fns), std::move(vals));
     return sum_list(std::move(results));
   }();
-  static inline const unsigned int test_tree_map = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                        tree::node(tree::leaf(), 3u, tree::leaf()));
+  static inline const uint64_t test_tree_map = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                        UINT64_C(2),
+                        tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
     return std::move(t).tree_map_val().tree_sum();
   }();
 
   /// TEST 9: CPS-style flattening where each step builds a continuation
   /// that captures tree structure.
-  static mylist<unsigned int> flatten_cps_aux(
+  static mylist<uint64_t> flatten_cps_aux(
       const tree &t,
-      std::function<mylist<unsigned int>(mylist<unsigned int>)>
+      std::function<mylist<uint64_t>(mylist<uint64_t>)>
           k) { /// _Enter: captures varying parameters for each recursive call.
 
     struct _Enter {
-      std::function<mylist<unsigned int>(mylist<unsigned int>)> k;
+      std::function<mylist<uint64_t>(mylist<uint64_t>)> k;
       const tree *t;
     };
 
     using _Frame = std::variant<_Enter>;
-    mylist<unsigned int> _result{};
+    mylist<uint64_t> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{k, &t});
@@ -841,32 +845,32 @@ struct MemSafetyProbe16 {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
-      std::function<mylist<unsigned int>(mylist<unsigned int>)> k =
-          std::move(_f.k);
+      std::function<mylist<uint64_t>(mylist<uint64_t>)> k = std::move(_f.k);
       const tree &t = *_f.t;
       if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-        _result = k(mylist<unsigned int>::mynil());
+        _result = k(mylist<uint64_t>::mynil());
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        _stack.emplace_back(_Enter{
-            [=](const mylist<unsigned int> &ll) mutable {
-              return flatten_cps_aux(
-                  a2_value, [=](mylist<unsigned int> rl) mutable {
-                    return k(ll.myapp(mylist<unsigned int>::mycons(a1, rl)));
-                  });
-            },
-            a0.get()});
+        _stack.emplace_back(
+            _Enter{[=](const mylist<uint64_t> &ll) mutable {
+                     return flatten_cps_aux(
+                         a2_value, [=](mylist<uint64_t> rl) mutable {
+                           return k(ll.myapp(mylist<uint64_t>::mycons(a1, rl)));
+                         });
+                   },
+                   a0.get()});
       }
     }
     return _result;
   }
 
-  static mylist<unsigned int> flatten_cps(const tree &t);
-  static inline const unsigned int test_flatten_cps = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                        tree::node(tree::leaf(), 3u, tree::leaf()));
+  static mylist<uint64_t> flatten_cps(const tree &t);
+  static inline const uint64_t test_flatten_cps = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                        UINT64_C(2),
+                        tree::node(tree::leaf(), UINT64_C(3), tree::leaf()));
     return sum_list(flatten_cps(std::move(t)));
   }();
 };

@@ -16,7 +16,7 @@ struct ThisCaptureDangling {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -86,7 +86,7 @@ struct ThisCaptureDangling {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -134,21 +134,21 @@ struct ThisCaptureDangling {
     /// tree's shared_ptr, we have use-after-free.
     ///
     /// Note: option is custom-extracted to std::optional.
-    std::optional<std::function<unsigned int(unsigned int)>> get_fn() const {
+    std::optional<std::function<uint64_t(uint64_t)>> get_fn() const {
       tree _self_val = *this;
       auto _cs = (*this).tree_sum();
       if (_cs <= 0) {
-        return std::optional<std::function<unsigned int(unsigned int)>>();
+        return std::optional<std::function<uint64_t(uint64_t)>>();
       } else {
-        unsigned int _x = _cs - 1;
-        return std::make_optional<std::function<unsigned int(unsigned int)>>(
-            [=](unsigned int x) mutable { return (x + _self_val.tree_sum()); });
+        uint64_t _x = _cs - 1;
+        return std::make_optional<std::function<uint64_t(uint64_t)>>(
+            [=](uint64_t x) mutable { return (x + _self_val.tree_sum()); });
       }
     }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
@@ -156,8 +156,8 @@ struct ThisCaptureDangling {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -169,8 +169,8 @@ struct ThisCaptureDangling {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -212,43 +212,45 @@ struct ThisCaptureDangling {
   /// Unwrapping the option and calling the closure dereferences
   /// the dangling this.
   /// Expected: match result is Some f, then f 10 = 10 + 42 = 52.
-  static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs = tree::node(tree::leaf(), 42u, tree::leaf()).get_fn();
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = tree::node(tree::leaf(), UINT64_C(42), tree::leaf()).get_fn();
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(10u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(10));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// test2: Same pattern with a larger tree (sum = 42).
   /// Expected: 5 + 42 = 47.
-  static inline const unsigned int test2 = []() -> unsigned int {
-    auto _cs = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 12u, tree::leaf()))
+  static inline const uint64_t test2 = []() -> uint64_t {
+    auto _cs = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
                    .get_fn();
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(5u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(5));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// test3: Allocate another tree between getting the closure and calling it.
   /// This increases memory pressure on the freed region.
   /// Expected: f noise = noise + 100 where noise = 1+2+3 = 6. So 106.
-  static inline const unsigned int test3 = []() {
-    std::optional<std::function<unsigned int(unsigned int)>> opt =
-        tree::node(tree::leaf(), 100u, tree::leaf()).get_fn();
-    unsigned int noise =
-        tree::node(tree::node(tree::leaf(), 1u, tree::leaf()), 2u,
-                   tree::node(tree::leaf(), 3u, tree::leaf()))
+  static inline const uint64_t test3 = []() {
+    std::optional<std::function<uint64_t(uint64_t)>> opt =
+        tree::node(tree::leaf(), UINT64_C(100), tree::leaf()).get_fn();
+    uint64_t noise =
+        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                   UINT64_C(2),
+                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
             .tree_sum();
     if (opt.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *opt;
+      const std::function<uint64_t(uint64_t)> &f = *opt;
       return f(noise);
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
 };

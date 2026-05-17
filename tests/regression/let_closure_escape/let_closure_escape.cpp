@@ -6,8 +6,7 @@
 /// When let_escape returns, t is destroyed → dangling reference in Box.
 LetClosureEscape::fn_box
 LetClosureEscape::let_escape(LetClosureEscape::tree t) {
-  std::function<unsigned int(unsigned int)> f =
-      [=](unsigned int _x0) mutable -> unsigned int {
+  std::function<uint64_t(uint64_t)> f = [=](uint64_t _x0) mutable -> uint64_t {
     return t.sum_values(_x0);
   };
   return fn_box::box(f);

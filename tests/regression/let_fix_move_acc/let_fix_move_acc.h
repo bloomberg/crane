@@ -152,15 +152,17 @@ struct LetFixMoveAcc {
     return rev(rev(l, List<T1>::nil()), List<T1>::cons(x, List<T1>::nil()));
   }
 
-  static inline const List<unsigned int> test_rev =
-      reverse_list<unsigned int>(List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
-  static inline const List<unsigned int> test_snoc = snoc<unsigned int>(
-      List<unsigned int>::cons(
-          10u, List<unsigned int>::cons(20u, List<unsigned int>::nil())),
-      30u);
+  static inline const List<uint64_t> test_rev =
+      reverse_list<uint64_t>(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const List<uint64_t> test_snoc = snoc<uint64_t>(
+      List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil())),
+      UINT64_C(30));
 };
 
 #endif // INCLUDED_LET_FIX_MOVE_ACC

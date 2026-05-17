@@ -1,11 +1,11 @@
 #include "count_loop_test_target.h"
 
 CountLoopTestTarget::instruction
-CountLoopTestTarget::count_loop_test(unsigned int loop_addr) {
-  return instruction::isz(0u, loop_addr);
+CountLoopTestTarget::count_loop_test(uint64_t loop_addr) {
+  return instruction::isz(UINT64_C(0), loop_addr);
 }
 
-unsigned int
+uint64_t
 CountLoopTestTarget::target_of(const CountLoopTestTarget::instruction &i) {
   if (std::holds_alternative<typename CountLoopTestTarget::instruction::ISZ>(
           i.v())) {
@@ -13,6 +13,6 @@ CountLoopTestTarget::target_of(const CountLoopTestTarget::instruction &i) {
         std::get<typename CountLoopTestTarget::instruction::ISZ>(i.v());
     return a1;
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }

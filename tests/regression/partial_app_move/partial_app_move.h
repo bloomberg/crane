@@ -15,7 +15,7 @@ struct PartialAppMove {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct PartialAppMove {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,8 +122,8 @@ struct PartialAppMove {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,8 +135,8 @@ struct PartialAppMove {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -150,7 +150,7 @@ struct PartialAppMove {
   /// A function taking two args: tree -> nat -> nat.
   /// Partial application of this to a tree creates a
   /// closure nat -> nat in C++ via & lambda.
-  static unsigned int sum_values(const tree &t, unsigned int x);
+  static uint64_t sum_values(const tree &t, uint64_t x);
   /// Wrap a tree inside another Node.
   /// In C++, this calls tree::node() which has rvalue ref overloads.
   /// If escape analysis adds std::move(t) here, the move is REAL.
@@ -158,43 +158,41 @@ struct PartialAppMove {
   /// BUG TRIGGER: partial application creates a & lambda capturing t,
   /// then t is passed to a constructor (actually moved via rvalue ref),
   /// then the lambda accesses the moved-from t.
-  static unsigned int trigger_bug(tree t);
+  static uint64_t trigger_bug(tree t);
   /// Build a tree and trigger the bug.
-  static inline const unsigned int run_bug =
-      trigger_bug(tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                             tree::node(tree::leaf(), 30u, tree::leaf())));
+  static inline const uint64_t run_bug = trigger_bug(tree::node(
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// Inline version: t is a local variable, not a function parameter.
   /// This is where move optimization might actually move t.
-  static inline const unsigned int inline_bug = []() {
+  static inline const uint64_t inline_bug = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return sum_values(t, _x0);
-      };
-      tree w = tree::node(std::move(t), 42u, tree::leaf());
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); };
+      tree w = tree::node(std::move(t), UINT64_C(42), tree::leaf());
       if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
-        return f(0u);
+        return f(UINT64_C(0));
       } else {
-        return f(99u);
+        return f(UINT64_C(99));
       }
     }();
   }();
   /// Same but using wrap function.
-  static inline const unsigned int inline_bug2 = []() {
+  static inline const uint64_t inline_bug2 = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                          tree::node(tree::leaf(), 30u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return sum_values(t, _x0);
-      };
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                          UINT64_C(20),
+                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); };
       tree w = wrap(std::move(t));
       if (std::holds_alternative<typename tree::Leaf>(w.v_mut())) {
-        return f(0u);
+        return f(UINT64_C(0));
       } else {
-        return f(99u);
+        return f(UINT64_C(99));
       }
     }();
   }();

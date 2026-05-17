@@ -13,7 +13,7 @@ struct ReuseMoveShadow {
   struct tree {
     // TYPES
     struct Node {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<tree> a1;
       std::unique_ptr<tree> a2;
     };
@@ -84,7 +84,7 @@ struct ReuseMoveShadow {
     }
 
     // CREATORS
-    static tree node(unsigned int a0, tree a1, tree a2) {
+    static tree node(uint64_t a0, tree a1, tree a2) {
       return tree(Node{a0, std::make_unique<tree>(std::move(a1)),
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -123,8 +123,8 @@ struct ReuseMoveShadow {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, tree &, T1 &, tree &,
+                                   T1 &>
   static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
@@ -136,8 +136,8 @@ struct ReuseMoveShadow {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, tree &, T1 &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, tree &, T1 &, tree &,
+                                   T1 &>
   static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
@@ -148,7 +148,7 @@ struct ReuseMoveShadow {
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
   /// BUG: The reuse branch does not shift move_dead_after or
   /// move_owned_vars when pushing pattern variables.
   ///
@@ -178,27 +178,30 @@ struct ReuseMoveShadow {
   /// Expected result: node 10 (node 1 leaf leaf) (node 1 leaf leaf)
   /// tree_sum = 10 + 1 + 0 + 0 + 1 + 0 + 0 = 12
   /// BUG: right subtree is null -> crash in tree_sum.
-  static inline const unsigned int test1 = tree_sum(
-      dup_left(tree::node(10u, tree::node(1u, tree::leaf(), tree::leaf()),
-                          tree::node(2u, tree::leaf(), tree::leaf())),
+  static inline const uint64_t test1 = tree_sum(
+      dup_left(tree::node(UINT64_C(10),
+                          tree::node(UINT64_C(1), tree::leaf(), tree::leaf()),
+                          tree::node(UINT64_C(2), tree::leaf(), tree::leaf())),
                true));
   /// test2: Deeper tree to stress memory.
   /// dup_left (node 5 (node 3 (node 4 leaf leaf) leaf) leaf) true
   /// Expected: node 5 (node 3 (node 4 leaf leaf) leaf) (node 3 (node 4 leaf
   /// leaf) leaf) tree_sum = 5 + (3 + 4 + 0) + (3 + 4 + 0) = 19 BUG: right
   /// subtree is null -> crash.
-  static inline const unsigned int test2 = tree_sum(dup_left(
-      tree::node(5u,
-                 tree::node(3u, tree::node(4u, tree::leaf(), tree::leaf()),
+  static inline const uint64_t test2 = tree_sum(dup_left(
+      tree::node(UINT64_C(5),
+                 tree::node(UINT64_C(3),
+                            tree::node(UINT64_C(4), tree::leaf(), tree::leaf()),
                             tree::leaf()),
                  tree::leaf()),
       true));
   /// test3: Non-reuse path (use_count > 1).
   /// This should work correctly because the normal branch uses
   /// with_shifted_move_tracking which properly shifts the indices.
-  static inline const unsigned int test3 = []() {
-    tree t = tree::node(7u, tree::node(8u, tree::leaf(), tree::leaf()),
-                        tree::node(9u, tree::leaf(), tree::leaf()));
+  static inline const uint64_t test3 = []() {
+    tree t = tree::node(UINT64_C(7),
+                        tree::node(UINT64_C(8), tree::leaf(), tree::leaf()),
+                        tree::node(UINT64_C(9), tree::leaf(), tree::leaf()));
     return (tree_sum(dup_left(t, true)) + tree_sum(t));
   }();
 };

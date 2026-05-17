@@ -121,12 +121,12 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct FinOperatesOnPairs {
   template <typename T1>
-  static List<T1> update_nth(unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
@@ -135,7 +135,7 @@ struct FinOperatesOnPairs {
         return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
@@ -146,8 +146,8 @@ struct FinOperatesOnPairs {
   }
 
   struct state {
-    List<unsigned int> regs;
-    List<unsigned int> rom;
+    List<uint64_t> regs;
+    List<uint64_t> rom;
 
     // ACCESSORS
     state clone() const {
@@ -155,31 +155,37 @@ struct FinOperatesOnPairs {
     }
   };
 
-  static unsigned int get_reg(const state &s, unsigned int r);
-  static state set_reg(const state &s, unsigned int r, unsigned int v);
-  static unsigned int get_reg_pair(const state &s, unsigned int r);
-  static state set_reg_pair(const state &s, unsigned int r, unsigned int v);
-  static state execute_fin(const state &s, unsigned int r);
+  static uint64_t get_reg(const state &s, uint64_t r);
+  static state set_reg(const state &s, uint64_t r, uint64_t v);
+  static uint64_t get_reg_pair(const state &s, uint64_t r);
+  static state set_reg_pair(const state &s, uint64_t r, uint64_t v);
+  static state execute_fin(const state &s, uint64_t r);
   static inline const state sample = state{
-      List<unsigned int>::cons(
-          0u,
-          List<unsigned int>::cons(
-              2u,
-              List<unsigned int>::cons(
-                  0u, List<unsigned int>::cons(
-                          0u, List<unsigned int>::cons(
-                                  0u, List<unsigned int>::cons(
-                                          0u, List<unsigned int>::nil())))))),
-      List<unsigned int>::cons(
-          33u, List<unsigned int>::cons(
-                   44u, List<unsigned int>::cons(
-                            55u, List<unsigned int>::cons(
-                                     66u, List<unsigned int>::nil()))))};
-  static inline const bool t = get_reg_pair(execute_fin(sample, 2u), 2u) == 55u;
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(0),
+                  List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(
+                          UINT64_C(0),
+                          List<uint64_t>::cons(UINT64_C(0),
+                                               List<uint64_t>::nil())))))),
+      List<uint64_t>::cons(
+          UINT64_C(33),
+          List<uint64_t>::cons(
+              UINT64_C(44),
+              List<uint64_t>::cons(
+                  UINT64_C(55),
+                  List<uint64_t>::cons(UINT64_C(66), List<uint64_t>::nil()))))};
+  static inline const bool t = get_reg_pair(execute_fin(sample, UINT64_C(2)),
+                                            UINT64_C(2)) == UINT64_C(55);
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -188,7 +194,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

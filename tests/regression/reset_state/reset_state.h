@@ -118,9 +118,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -130,18 +130,18 @@ public:
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct ResetState {
   struct state_full {
-    unsigned int acc;
-    List<unsigned int> regs_full;
+    uint64_t acc;
+    List<uint64_t> regs_full;
     bool carry;
-    unsigned int pc_full;
-    List<unsigned int> stack;
-    List<unsigned int> ram_sys;
-    List<unsigned int> rom;
+    uint64_t pc_full;
+    List<uint64_t> stack;
+    List<uint64_t> ram_sys;
+    List<uint64_t> rom;
 
     // ACCESSORS
     state_full clone() const {
@@ -153,11 +153,11 @@ struct ResetState {
   };
 
   struct state_minimal {
-    List<unsigned int> regs_minimal;
+    List<uint64_t> regs_minimal;
     bool carry_minimal;
-    unsigned int pc_minimal;
-    List<unsigned int> ram_sys_minimal;
-    List<unsigned int> rom_minimal;
+    uint64_t pc_minimal;
+    List<uint64_t> ram_sys_minimal;
+    List<uint64_t> rom_minimal;
 
     // ACCESSORS
     state_minimal clone() const {
@@ -168,44 +168,51 @@ struct ResetState {
   };
 
   static state_full reset_state_full(const state_full &s);
-  static inline const unsigned int memory_preserve_test = []() {
+  static inline const uint64_t memory_preserve_test = []() {
     state_full s = state_full{
-        9u,
-        List<unsigned int>::cons(
-            1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
+        UINT64_C(9),
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
         true,
-        55u,
-        List<unsigned int>::cons(
-            8u, List<unsigned int>::cons(7u, List<unsigned int>::nil())),
-        List<unsigned int>::cons(
-            3u,
-            List<unsigned int>::cons(
-                4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))),
-        List<unsigned int>::cons(
-            10u, List<unsigned int>::cons(11u, List<unsigned int>::nil()))};
+        UINT64_C(55),
+        List<uint64_t>::cons(
+            UINT64_C(8),
+            List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())),
+        List<uint64_t>::cons(
+            UINT64_C(3),
+            List<uint64_t>::cons(
+                UINT64_C(4),
+                List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))),
+        List<uint64_t>::cons(
+            UINT64_C(10),
+            List<uint64_t>::cons(UINT64_C(11), List<uint64_t>::nil()))};
     state_full s_ = reset_state_full(std::move(s));
     return (
-        ((s_.acc + ListDef::template nth<unsigned int>(1u, s_.ram_sys, 0u)) +
-         ListDef::template nth<unsigned int>(0u, s_.rom, 0u)) +
+        ((s_.acc + ListDef::template nth<uint64_t>(UINT64_C(1), s_.ram_sys,
+                                                   UINT64_C(0))) +
+         ListDef::template nth<uint64_t>(UINT64_C(0), s_.rom, UINT64_C(0))) +
         s_.stack.length());
   }();
   static state_minimal reset_state_minimal(const state_minimal &s);
-  static inline const unsigned int pc_clear_test =
+  static inline const uint64_t pc_clear_test =
       reset_state_minimal(
           state_minimal{
-              List<unsigned int>::cons(
-                  1u, List<unsigned int>::cons(2u, List<unsigned int>::nil())),
-              true, 99u,
-              List<unsigned int>::cons(3u, List<unsigned int>::nil()),
-              List<unsigned int>::cons(
-                  4u, List<unsigned int>::cons(5u, List<unsigned int>::nil()))})
+              List<uint64_t>::cons(
+                  UINT64_C(1),
+                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+              true, UINT64_C(99),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))})
           .pc_minimal;
-  static inline const std::pair<unsigned int, unsigned int> t =
+  static inline const std::pair<uint64_t, uint64_t> t =
       std::make_pair(memory_preserve_test, pc_clear_test);
 };
 
 template <typename T1>
-T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
@@ -214,7 +221,7 @@ T1 ListDef::nth(unsigned int n, const List<T1> &l, T1 default0) {
       return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {

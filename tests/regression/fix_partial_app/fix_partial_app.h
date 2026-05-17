@@ -15,7 +15,7 @@ struct FixPartialApp {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -85,7 +85,7 @@ struct FixPartialApp {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -122,8 +122,8 @@ struct FixPartialApp {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -135,8 +135,8 @@ struct FixPartialApp {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -148,7 +148,7 @@ struct FixPartialApp {
   }
 
   /// count_nodes: counts nodes in a tree. Will be partially applied.
-  static unsigned int count_nodes(const tree &t, unsigned int base);
+  static uint64_t count_nodes(const tree &t, uint64_t base);
   /// BUG HYPOTHESIS: Partially applying a fixpoint.
   /// f := count_nodes big_tree creates a closure (nat -> nat).
   /// The closure captures the fixpoint AND the tree.
@@ -180,35 +180,33 @@ struct FixPartialApp {
   /// = 3
   ///
   /// So count_nodes tree 0 = 3
-  static inline const unsigned int fix_partial_bug = []() {
+  static inline const uint64_t fix_partial_bug = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 0u, tree::leaf()), 0u,
-                          tree::node(tree::leaf(), 0u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return count_nodes(t, _x0);
-      };
-      return (f(0u) + f(100u));
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
+                          UINT64_C(0),
+                          tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return count_nodes(t, _x0); };
+      return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();
   /// Same but store partial app in pair
-  static inline const unsigned int fix_partial_pair = []() {
+  static inline const uint64_t fix_partial_pair = []() {
     return []() {
-      tree t = tree::node(tree::node(tree::leaf(), 0u, tree::leaf()), 0u,
-                          tree::node(tree::leaf(), 0u, tree::leaf()));
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
-        return count_nodes(t, _x0);
-      };
-      std::pair<std::function<unsigned int(unsigned int)>, unsigned int> p =
-          std::make_pair(f, 42u);
-      return (p.first(0u) + p.first(100u));
+      tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
+                          UINT64_C(0),
+                          tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t { return count_nodes(t, _x0); };
+      std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p =
+          std::make_pair(f, UINT64_C(42));
+      return (p.first(UINT64_C(0)) + p.first(UINT64_C(100)));
     }();
   }();
 
   /// More complex: partial app of tree_map, a structure-preserving function.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static tree tree_map(F0 &&f, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return tree::leaf();
@@ -218,16 +216,16 @@ struct FixPartialApp {
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
   /// Partial app of tree_map: g := tree_map (fun x => x + 1)
   /// Then apply g to two different trees.
   /// If the closure for g captures the function arg by &, it could dangle.
-  static inline const unsigned int map_partial_bug = []() {
+  static inline const uint64_t map_partial_bug = []() {
     std::function<tree(tree)> g = [](tree _x0) -> tree {
-      return tree_map([](unsigned int x) { return (x + 1u); }, _x0);
+      return tree_map([](uint64_t x) { return (x + UINT64_C(1)); }, _x0);
     };
-    tree t1 = tree::node(tree::leaf(), 10u, tree::leaf());
-    tree t2 = tree::node(tree::leaf(), 20u, tree::leaf());
+    tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
+    tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
     return (tree_sum(g(std::move(t1))) + tree_sum(g(std::move(t2))));
   }();
 };

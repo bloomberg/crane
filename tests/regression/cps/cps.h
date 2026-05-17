@@ -120,9 +120,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -131,47 +131,44 @@ public:
 };
 
 struct Nat {
-  static bool even(unsigned int n);
+  static bool even(uint64_t n);
 };
 
 struct CPS {
-  static unsigned int fact_cps(unsigned int n,
-                               std::function<unsigned int(unsigned int)> k) {
+  static uint64_t fact_cps(uint64_t n, std::function<uint64_t(uint64_t)> k) {
     if (n <= 0) {
-      return k(1u);
+      return k(UINT64_C(1));
     } else {
-      unsigned int n_ = n - 1;
-      return fact_cps(
-          n_, [=](unsigned int r) mutable { return k(((n_ + 1) * r)); });
+      uint64_t n_ = n - 1;
+      return fact_cps(n_,
+                      [=](uint64_t r) mutable { return k(((n_ + 1) * r)); });
     }
   }
 
-  static unsigned int factorial(unsigned int n);
+  static uint64_t factorial(uint64_t n);
 
-  static unsigned int fib_cps(unsigned int n,
-                              std::function<unsigned int(unsigned int)> k) {
+  static uint64_t fib_cps(uint64_t n, std::function<uint64_t(uint64_t)> k) {
     if (n <= 0) {
-      return k(0u);
+      return k(UINT64_C(0));
     } else {
-      unsigned int n1 = n - 1;
+      uint64_t n1 = n - 1;
       if (n1 <= 0) {
-        return k(1u);
+        return k(UINT64_C(1));
       } else {
-        unsigned int n_ = n1 - 1;
-        return fib_cps(n_, [=](unsigned int a) mutable {
-          return fib_cps(n1,
-                         [=](unsigned int b) mutable { return k((a + b)); });
+        uint64_t n_ = n1 - 1;
+        return fib_cps(n_, [=](uint64_t a) mutable {
+          return fib_cps(n1, [=](uint64_t b) mutable { return k((a + b)); });
         });
       }
     }
   }
 
-  static unsigned int fibonacci(unsigned int n);
+  static uint64_t fibonacci(uint64_t n);
 
   struct tree {
     // TYPES
     struct Leaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Node {
@@ -244,7 +241,7 @@ struct CPS {
     }
 
     // CREATORS
-    static tree leaf(unsigned int a0) { return tree(Leaf{a0}); }
+    static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
     static tree node(tree a0, tree a1) {
       return tree(Node{std::make_unique<tree>(std::move(a0)),
@@ -283,7 +280,7 @@ struct CPS {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, tree &, T1 &, tree &, T1 &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
@@ -296,7 +293,7 @@ struct CPS {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, tree &, T1 &, tree &, T1 &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
@@ -308,8 +305,8 @@ struct CPS {
     }
   }
 
-  static unsigned int
-  tree_sum_cps(const tree &t, std::function<unsigned int(unsigned int)> k) {
+  static uint64_t tree_sum_cps(const tree &t,
+                               std::function<uint64_t(uint64_t)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t.v());
       return k(a0);
@@ -317,71 +314,72 @@ struct CPS {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
       const tree &a0_value = *a0;
       const tree &a1_value = *a1;
-      return tree_sum_cps(a0_value, [=](unsigned int sl) mutable {
-        return tree_sum_cps(
-            a1_value, [=](unsigned int sr) mutable { return k((sl + sr)); });
+      return tree_sum_cps(a0_value, [=](uint64_t sl) mutable {
+        return tree_sum_cps(a1_value,
+                            [=](uint64_t sr) mutable { return k((sl + sr)); });
       });
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
 
-  static unsigned int sum_cps(const List<unsigned int> &l,
-                              std::function<unsigned int(unsigned int)> k) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return k(0u);
+  static uint64_t sum_cps(const List<uint64_t> &l,
+                          std::function<uint64_t(uint64_t)> k) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return k(UINT64_C(0));
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-      const List<unsigned int> &a1_value = *a1;
-      return sum_cps(a1_value,
-                     [=](unsigned int r) mutable { return k((a0 + r)); });
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      const List<uint64_t> &a1_value = *a1;
+      return sum_cps(a1_value, [=](uint64_t r) mutable { return k((a0 + r)); });
     }
   }
 
-  static unsigned int list_sum(const List<unsigned int> &l);
+  static uint64_t list_sum(const List<uint64_t> &l);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static unsigned int partition_cps(
-      F0 &&p, const List<unsigned int> &l,
-      std::function<unsigned int(List<unsigned int>, List<unsigned int>)> k) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return k(List<unsigned int>::nil(), List<unsigned int>::nil());
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static uint64_t
+  partition_cps(F0 &&p, const List<uint64_t> &l,
+                std::function<uint64_t(List<uint64_t>, List<uint64_t>)> k) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return k(List<uint64_t>::nil(), List<uint64_t>::nil());
     } else {
-      const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-      const List<unsigned int> &a1_value = *a1;
-      return partition_cps(
-          p, a1_value,
-          [=](List<unsigned int> yes, List<unsigned int> no) mutable {
-            if (p(a0)) {
-              return k(List<unsigned int>::cons(a0, yes), no);
-            } else {
-              return k(yes, List<unsigned int>::cons(a0, no));
-            }
-          });
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      const List<uint64_t> &a1_value = *a1;
+      return partition_cps(p, a1_value,
+                           [=](List<uint64_t> yes, List<uint64_t> no) mutable {
+                             if (p(a0)) {
+                               return k(List<uint64_t>::cons(a0, yes), no);
+                             } else {
+                               return k(yes, List<uint64_t>::cons(a0, no));
+                             }
+                           });
     }
   }
 
-  static unsigned int count_evens(const List<unsigned int> &l);
-  static inline const unsigned int test_fact_5 = factorial(5u);
-  static inline const unsigned int test_fib_7 = fibonacci(7u);
-  static inline const unsigned int test_tree = tree_sum(
-      tree::node(tree::node(tree::leaf(1u), tree::leaf(2u)), tree::leaf(3u)));
-  static inline const unsigned int test_list_sum =
-      list_sum(List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
-  static inline const unsigned int test_evens =
-      count_evens(List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u,
-              List<unsigned int>::cons(
-                  3u, List<unsigned int>::cons(
-                          4u, List<unsigned int>::cons(
-                                  5u, List<unsigned int>::cons(
-                                          6u, List<unsigned int>::nil())))))));
+  static uint64_t count_evens(const List<uint64_t> &l);
+  static inline const uint64_t test_fact_5 = factorial(UINT64_C(5));
+  static inline const uint64_t test_fib_7 = fibonacci(UINT64_C(7));
+  static inline const uint64_t test_tree = tree_sum(
+      tree::node(tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))),
+                 tree::leaf(UINT64_C(3))));
+  static inline const uint64_t test_list_sum = list_sum(List<uint64_t>::cons(
+      UINT64_C(10),
+      List<uint64_t>::cons(
+          UINT64_C(20),
+          List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
+  static inline const uint64_t test_evens = count_evens(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(
+                      UINT64_C(5),
+                      List<uint64_t>::cons(UINT64_C(6),
+                                           List<uint64_t>::nil())))))));
 };
 
 #endif // INCLUDED_CPS

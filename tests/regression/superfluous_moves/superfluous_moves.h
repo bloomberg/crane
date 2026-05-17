@@ -122,7 +122,7 @@ public:
 struct SuperfluousMoves {
   /// Tiny position record so projections become shared-pointer field accesses.
   struct position {
-    unsigned int px;
+    uint64_t px;
 
     // ACCESSORS
     position clone() const { return position{(*this).px}; }
@@ -160,7 +160,7 @@ struct SuperfluousMoves {
   struct game_state {
     position pacpos;
     List<position> ghosts;
-    unsigned int lives;
+    uint64_t lives;
 
     // ACCESSORS
     game_state clone() const {
@@ -190,12 +190,12 @@ struct SuperfluousMoves {
   /// Forces the same control-flow path as the original bug.
   static inline const Mode forced_mode = Mode::CHASE;
   /// Concrete state that makes the game-over branch fire after lose_one_life.
-  static inline const game_state sample_state =
-      game_state{position{7u},
-                 List<position>::cons(
-                     position{1u},
-                     List<position>::cons(position{2u}, List<position>::nil())),
-                 1u};
+  static inline const game_state sample_state = game_state{
+      position{UINT64_C(7)},
+      List<position>::cons(
+          position{UINT64_C(1)},
+          List<position>::cons(position{UINT64_C(2)}, List<position>::nil())),
+      UINT64_C(1)};
   /// Concrete loop state used by the standalone entrypoint.
   static inline const loop_state sample_loop =
       loop_state{sample_state, sample_state.pacpos, sample_state.ghosts};

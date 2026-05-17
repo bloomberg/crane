@@ -217,36 +217,35 @@ struct MutualCoind {
     return streamA<T1>::lazy_([=]() mutable -> streamA<T1> { return *a1; });
   }
 
-  static streamA<unsigned int> countA(unsigned int n);
-  static streamB<unsigned int> countB(unsigned int n);
+  static streamA<uint64_t> countA(uint64_t n);
+  static streamB<uint64_t> countB(uint64_t n);
 
-  template <typename T1>
-  static List<T1> takeA(unsigned int fuel, streamA<T1> s) {
+  template <typename T1> static List<T1> takeA(uint64_t fuel, streamA<T1> s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
-      unsigned int f = fuel - 1;
+      uint64_t f = fuel - 1;
       const auto &[a0, a1] = std::get<typename streamA<T1>::ConsA>(s.v());
       return List<T1>::cons(a0, takeB<T1>(f, *a1));
     }
   }
 
-  template <typename T1>
-  static List<T1> takeB(unsigned int fuel, streamB<T1> s) {
+  template <typename T1> static List<T1> takeB(uint64_t fuel, streamB<T1> s) {
     if (fuel <= 0) {
       return List<T1>::nil();
     } else {
-      unsigned int f = fuel - 1;
+      uint64_t f = fuel - 1;
       const auto &[a0, a1] = std::get<typename streamB<T1>::ConsB>(s.v());
       return List<T1>::cons(a0, takeA<T1>(f, *a1));
     }
   }
 
-  static inline const unsigned int test_headA = headA<unsigned int>(countA(0u));
-  static inline const unsigned int test_headB =
-      headB<unsigned int>(countB(10u));
-  static inline const List<unsigned int> test_take5 =
-      takeA<unsigned int>(5u, countA(0u));
+  static inline const uint64_t test_headA =
+      headA<uint64_t>(countA(UINT64_C(0)));
+  static inline const uint64_t test_headB =
+      headB<uint64_t>(countB(UINT64_C(10)));
+  static inline const List<uint64_t> test_take5 =
+      takeA<uint64_t>(UINT64_C(5), countA(UINT64_C(0)));
 };
 
 #endif // INCLUDED_MUTUAL_COIND

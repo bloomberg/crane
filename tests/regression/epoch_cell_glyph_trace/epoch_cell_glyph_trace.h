@@ -340,7 +340,7 @@ struct Pos {
     }
   }
 
-  static unsigned int to_nat(const Positive &x);
+  static uint64_t to_nat(const Positive &x);
 };
 
 struct BinInt {
@@ -356,7 +356,7 @@ struct BinInt {
   static bool leb(const Z &x, const Z &y);
   static bool ltb(const Z &x, const Z &y);
   static bool eqb(const Z &x, const Z &y);
-  static unsigned int to_nat(const Z &z);
+  static uint64_t to_nat(const Z &z);
   static std::pair<Z, Z> pos_div_eucl(const Positive &a, const Z &b);
   static std::pair<Z, Z> div_eucl(Z a, const Z &b);
   static Z div(const Z &a, const Z &b);
@@ -423,7 +423,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int phase_code(LunarPhase p);
+  static uint64_t phase_code(LunarPhase p);
   static LunarPhase phase_from_angle(const Z &angle_deg);
   enum class ZodiacSign {
     ARIES,
@@ -530,7 +530,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int zodiac_code(ZodiacSign z);
+  static uint64_t zodiac_code(ZodiacSign z);
   static bool eclipse_possible_at_dial(const Z &dial_pos);
 
   struct MechanismState {
@@ -571,7 +571,7 @@ struct EpochCellGlyphTraceCase {
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static MechanismState step(const MechanismState &s);
   static MechanismState step_reverse(const MechanismState &s);
-  static MechanismState step_n(unsigned int n, MechanismState s);
+  static MechanismState step_n(uint64_t n, MechanismState s);
   static MechanismState state_at_cell(Z cell);
   static LunarPhase predict_moon_phase_from_state(const MechanismState &s);
   static Z predict_olympiad_year(const MechanismState &s);
@@ -632,7 +632,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int eclipse_category_code(EclipseCategory c);
+  static uint64_t eclipse_category_code(EclipseCategory c);
 
   struct HistoricalEclipse {
     Z he_year;
@@ -707,7 +707,7 @@ struct EpochCellGlyphTraceCase {
     }
   }
 
-  static unsigned int glyph_code(DialGlyph g);
+  static uint64_t glyph_code(DialGlyph g);
   static bool category_matches_glyph(EclipseCategory cat, DialGlyph g);
   static DialGlyph glyph_at_cell(const Z &cell);
   static inline const HistoricalEclipse eclipse_may_205_bc = HistoricalEclipse{
@@ -817,11 +817,9 @@ struct EpochCellGlyphTraceCase {
                           List<HistoricalEclipse>::cons(
                               eclipse_jun_178_bc,
                               List<HistoricalEclipse>::nil()))))));
-  static unsigned int count_total_lunar(const List<HistoricalEclipse> &es);
-  static unsigned int
-  count_visible_total_lunar(const List<HistoricalEclipse> &es);
-  static unsigned int
-  visible_series_checksum(const List<HistoricalEclipse> &es);
+  static uint64_t count_total_lunar(const List<HistoricalEclipse> &es);
+  static uint64_t count_visible_total_lunar(const List<HistoricalEclipse> &es);
+  static uint64_t visible_series_checksum(const List<HistoricalEclipse> &es);
   static Z months_from_epoch(const Z &epoch_year, const Z &eclipse_year,
                              const Z &epoch_month, const Z &eclipse_month);
   static Z saros_cell(const Z &epoch_year, const Z &epoch_month,
@@ -846,8 +844,8 @@ struct EpochCellGlyphTraceCase {
                                           const Z &epoch_month,
                                           HistoricalEclipse e);
   static bool reading_matches(const EpochReading &reading);
-  static unsigned int reading_phase_code(const EpochReading &reading);
-  static unsigned int reading_zodiac_code(const EpochReading &reading);
+  static uint64_t reading_phase_code(const EpochReading &reading);
+  static uint64_t reading_zodiac_code(const EpochReading &reading);
 
   struct ValidEpoch {
     Z ve_year;
@@ -868,21 +866,21 @@ struct EpochCellGlyphTraceCase {
   static inline const EpochReading sample_epoch_reading = build_epoch_reading(
       epoch_205_bc_valid.ve_year, epoch_205_bc_valid.ve_month,
       epoch_205_bc_valid.ve_eclipse);
-  static unsigned int phase_code_after_steps(unsigned int n);
-  static unsigned int zodiac_code_after_steps(unsigned int n);
-  static inline const unsigned int sample_total_lunar_count =
+  static uint64_t phase_code_after_steps(uint64_t n);
+  static uint64_t zodiac_code_after_steps(uint64_t n);
+  static inline const uint64_t sample_total_lunar_count =
       count_total_lunar(eclipse_database);
-  static inline const unsigned int sample_total_lunar_visible_count =
+  static inline const uint64_t sample_total_lunar_visible_count =
       count_visible_total_lunar(eclipse_database);
-  static inline const unsigned int sample_visible_series_checksum =
+  static inline const uint64_t sample_visible_series_checksum =
       visible_series_checksum(eclipse_database);
   static inline const bool sample_epoch_cell_zero =
       BinInt::eqb(sample_epoch_reading.reading_cell, Z::z0());
   static inline const bool sample_epoch_glyph_match =
       reading_matches(sample_epoch_reading);
-  static inline const unsigned int sample_epoch_phase_code =
+  static inline const uint64_t sample_epoch_phase_code =
       reading_phase_code(sample_epoch_reading);
-  static inline const unsigned int sample_epoch_zodiac_code =
+  static inline const uint64_t sample_epoch_zodiac_code =
       reading_zodiac_code(sample_epoch_reading);
   static inline const bool sample_valid_epoch_visible =
       epoch_205_bc_valid.ve_eclipse.he_visible_mediterranean;
@@ -896,10 +894,10 @@ struct EpochCellGlyphTraceCase {
   static inline const bool sample_step_roundtrip_saros =
       BinInt::eqb(step_reverse(step(initial_state)).saros_dial, Z::z0());
   static inline const bool sample_olympiad_year_is_one_after_4 =
-      BinInt::eqb(predict_olympiad_year(step_n(4u, initial_state)),
+      BinInt::eqb(predict_olympiad_year(step_n(UINT64_C(4), initial_state)),
                   Z::zpos(Positive::xh()));
   static inline const bool sample_eclipse_possible_after_6 =
-      eclipse_possible_at_dial(step_n(6u, initial_state).saros_dial);
+      eclipse_possible_at_dial(step_n(UINT64_C(6), initial_state).saros_dial);
   static inline const bool sample_epoch_178_misaligned = !(BinInt::eqb(
       saros_cell(
           Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(

@@ -14,7 +14,7 @@ struct SharedUptrEscape {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -84,7 +84,7 @@ struct SharedUptrEscape {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -121,7 +121,7 @@ struct SharedUptrEscape {
 
     /// Pattern 2: Return tree from match, then use it twice.
     /// The match result is a temporary that might be unique_ptr.
-    tree extract_subtree(unsigned int which) const {
+    tree extract_subtree(uint64_t which) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return tree::leaf();
       } else {
@@ -129,7 +129,7 @@ struct SharedUptrEscape {
         if (which <= 0) {
           return *a0;
         } else {
-          unsigned int _x0 = which - 1;
+          uint64_t _x0 = which - 1;
           return *a2;
         }
       }
@@ -144,9 +144,9 @@ struct SharedUptrEscape {
     /// The tree enters as owned and leaves as owned.
     tree identity() const { return std::move(*this); }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         return (((*a0).tree_sum() + a1) + (*a2).tree_sum());
@@ -154,8 +154,8 @@ struct SharedUptrEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -167,8 +167,8 @@ struct SharedUptrEscape {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
@@ -184,11 +184,12 @@ struct SharedUptrEscape {
   /// (unique_ptr sufficient) or duplicate it (needs shared_ptr).
   /// If escape analysis optimistically picks unique_ptr based on
   /// one branch, the other branch's sharing crashes.
-  static unsigned int conditional_share(unsigned int flag);
-  static inline const unsigned int use_extracted_twice = []() {
-    tree t = tree::node(tree::node(tree::leaf(), 10u, tree::leaf()), 20u,
-                        tree::node(tree::leaf(), 30u, tree::leaf()));
-    tree sub = std::move(t).extract_subtree(0u);
+  static uint64_t conditional_share(uint64_t flag);
+  static inline const uint64_t use_extracted_twice = []() {
+    tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                        UINT64_C(20),
+                        tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+    tree sub = std::move(t).extract_subtree(UINT64_C(0));
     return (sub.tree_sum() + sub.tree_sum());
   }();
 
@@ -220,8 +221,8 @@ struct SharedUptrEscape {
   }
 
   static wrapper wrap_tree(tree t);
-  static inline const unsigned int unwrap_and_dup = []() {
-    tree t = tree::node(tree::leaf(), 42u, tree::leaf());
+  static inline const uint64_t unwrap_and_dup = []() {
+    tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     wrapper w = wrap_tree(std::move(t));
     auto &[a0] = w;
     return (a0.tree_sum() + a0.tree_sum());

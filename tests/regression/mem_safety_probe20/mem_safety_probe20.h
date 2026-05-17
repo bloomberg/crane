@@ -22,7 +22,7 @@ struct MemSafetyProbe20 {
 
     struct Node {
       std::unique_ptr<tree> a0;
-      unsigned int a1;
+      uint64_t a1;
       std::unique_ptr<tree> a2;
     };
 
@@ -92,7 +92,7 @@ struct MemSafetyProbe20 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
+    static tree node(tree a0, uint64_t a1, tree a2) {
       return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
@@ -127,7 +127,7 @@ struct MemSafetyProbe20 {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -138,18 +138,18 @@ struct MemSafetyProbe20 {
       /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -162,7 +162,7 @@ struct MemSafetyProbe20 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), a1});
@@ -181,8 +181,8 @@ struct MemSafetyProbe20 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -195,7 +195,7 @@ struct MemSafetyProbe20 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -204,7 +204,7 @@ struct MemSafetyProbe20 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -242,8 +242,8 @@ struct MemSafetyProbe20 {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -256,7 +256,7 @@ struct MemSafetyProbe20 {
       struct _After_Node {
         tree *_s0;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -265,7 +265,7 @@ struct MemSafetyProbe20 {
       struct _Combine_Node {
         T1 _result;
         tree a2;
-        unsigned int a1;
+        uint64_t a1;
         tree a0;
       };
 
@@ -307,25 +307,25 @@ struct MemSafetyProbe20 {
   /// the function from being fully uncurried.
   struct wrapped {
     // DATA
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
 
     // ACCESSORS
     wrapped clone() const { return {a0}; }
 
     // CREATORS
-    static wrapped wrap(std::function<unsigned int(unsigned int)> a0) {
+    static wrapped wrap(std::function<uint64_t(uint64_t)> a0) {
       return {std::move(a0)};
     }
 
-    unsigned int unwrap(unsigned int x) const {
+    uint64_t unwrap(uint64_t x) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
       return a0(x);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 wrapped_rec(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -333,8 +333,8 @@ struct MemSafetyProbe20 {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<
-          T1, F0 &, std::function<unsigned int(unsigned int)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     std::function<uint64_t(uint64_t)> &>
     T1 wrapped_rect(F0 &&f) const {
       const auto &_sv = *this;
       const auto &[a0] = _sv;
@@ -346,9 +346,10 @@ struct MemSafetyProbe20 {
   /// The if becomes top-level Sif. return_captures_by_value sees
   /// Sif, matches s -> s, leaves lambda as &.
   static wrapped wrap_if(tree t, bool b);
-  static inline const unsigned int test_wrap_if = []() {
-    wrapped w = wrap_if(tree::node(tree::leaf(), 42u, tree::leaf()), true);
-    return std::move(w).unwrap(0u);
+  static inline const uint64_t test_wrap_if = []() {
+    wrapped w =
+        wrap_if(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()), true);
+    return std::move(w).unwrap(UINT64_C(0));
   }();
   /// TEST 2: Return wrapped closure from match on custom type.
   enum class Choice { CLEFT, CRIGHT };
@@ -380,41 +381,42 @@ struct MemSafetyProbe20 {
   }
 
   static wrapped wrap_match(tree t, Choice c);
-  static inline const unsigned int test_wrap_match = []() {
-    wrapped w =
-        wrap_match(tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u,
-                              tree::leaf()),
-                   Choice::CLEFT);
-    return std::move(w).unwrap(0u);
+  static inline const uint64_t test_wrap_match = []() {
+    wrapped w = wrap_match(
+        tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                   UINT64_C(7), tree::leaf()),
+        Choice::CLEFT);
+    return std::move(w).unwrap(UINT64_C(0));
   }();
   /// TEST 3: Pair of closure and value, returned from if.
   /// Uses prod to wrap the closure.
-  static std::pair<wrapped, unsigned int> pair_from_if(tree t, bool b);
-  static inline const unsigned int test_pair_if = []() {
-    std::pair<wrapped, unsigned int> p =
-        pair_from_if(tree::node(tree::leaf(), 15u, tree::leaf()), true);
+  static std::pair<wrapped, uint64_t> pair_from_if(tree t, bool b);
+  static inline const uint64_t test_pair_if = []() {
+    std::pair<wrapped, uint64_t> p = pair_from_if(
+        tree::node(tree::leaf(), UINT64_C(15), tree::leaf()), true);
     wrapped w = p.first;
-    unsigned int v = p.second;
+    uint64_t v = p.second;
     return std::move(w).unwrap(v);
   }();
   /// TEST 4: Wrapped closure captured in a locally-constructed tree.
   /// The let-bound tree is stack-allocated.
-  static wrapped wrap_local(unsigned int n, bool b);
-  static inline const unsigned int test_wrap_local = []() {
-    wrapped w = wrap_local(20u, true);
-    return std::move(w).unwrap(5u);
+  static wrapped wrap_local(uint64_t n, bool b);
+  static inline const uint64_t test_wrap_local = []() {
+    wrapped w = wrap_local(UINT64_C(20), true);
+    return std::move(w).unwrap(UINT64_C(5));
   }();
   /// TEST 5: Double use of unwrapped closure.
-  static inline const unsigned int test_double_unwrap = []() {
-    wrapped w = wrap_if(tree::node(tree::leaf(), 7u, tree::leaf()), true);
-    return (w.unwrap(1u) + w.unwrap(2u));
+  static inline const uint64_t test_double_unwrap = []() {
+    wrapped w =
+        wrap_if(tree::node(tree::leaf(), UINT64_C(7), tree::leaf()), true);
+    return (w.unwrap(UINT64_C(1)) + w.unwrap(UINT64_C(2)));
   }();
   /// TEST 6: Nested wrapped closure: wrapped inside a pair inside if.
   static wrapped nested_wrap(tree t, bool b1, bool b2);
-  static inline const unsigned int test_nested_wrap = []() {
-    wrapped w =
-        nested_wrap(tree::node(tree::leaf(), 5u, tree::leaf()), true, false);
-    return std::move(w).unwrap(0u);
+  static inline const uint64_t test_nested_wrap = []() {
+    wrapped w = nested_wrap(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                            true, false);
+    return std::move(w).unwrap(UINT64_C(0));
   }(); /// TEST 7: List of wrapped closures from if branches.
 
   template <typename A> struct mylist {
@@ -628,11 +630,11 @@ struct MemSafetyProbe20 {
   };
 
   static mylist<wrapped> wrap_list(tree t, bool b);
-  static unsigned int sum_wrapped(const mylist<wrapped> &l, unsigned int x);
-  static inline const unsigned int test_wrap_list = []() {
+  static uint64_t sum_wrapped(const mylist<wrapped> &l, uint64_t x);
+  static inline const uint64_t test_wrap_list = []() {
     mylist<wrapped> l =
-        wrap_list(tree::node(tree::leaf(), 3u, tree::leaf()), true);
-    return sum_wrapped(std::move(l), 0u);
+        wrap_list(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), true);
+    return sum_wrapped(std::move(l), UINT64_C(0));
   }();
 };
 

@@ -27,7 +27,7 @@ template <class... Ts> struct Overloaded : Ts... {
 };
 template <class... Ts> Overloaded(Ts...) -> Overloaded<Ts...>;
 
-using Tree = HofTreeLoopify::tree<unsigned int>;
+using Tree = HofTreeLoopify::tree<uint64_t>;
 
 // Helper: extract root value (non-recursive, safe for deep trees)
 unsigned int root_value(const Tree &t) {
@@ -39,7 +39,7 @@ unsigned int root_value(const Tree &t) {
 
 // Build a left-leaning tree of given depth, iteratively.
 // Avoids recursion so the tree is always constructed safely.
-Tree build_deep_tree(unsigned int depth) {
+Tree build_deep_tree(uint64_t depth) {
   auto t = Tree::leaf();
   for (unsigned int i = 1; i <= depth; i++) {
     t = Tree::node(std::move(t), i, Tree::leaf());
@@ -113,8 +113,8 @@ constexpr unsigned int DEEP = 500000;
 
 void deep_tree_map_impl() {
   auto deep = build_deep_tree(DEEP);
-  auto doubled = HofTreeLoopify::tree_map<unsigned int, unsigned int>(
-      [](unsigned int x) { return x * 2u; }, deep);
+  auto doubled = HofTreeLoopify::tree_map<uint64_t, uint64_t>(
+      [](uint64_t x) { return x * 2u; }, deep);
   // Verify correctness: root value should be doubled.
   if (root_value(doubled) != DEEP * 2) _exit(1);
   // Use _exit to skip destructors (unique_ptr chain would itself overflow).
@@ -125,9 +125,9 @@ void deep_tree_fold_impl() {
   auto deep = build_deep_tree(DEEP);
   // Just verify tree_fold completes without stack overflow.
   // (The sum wraps in unsigned int, so we don't check its exact value.)
-  auto sum = HofTreeLoopify::tree_fold<unsigned int, unsigned int>(
+  auto sum = HofTreeLoopify::tree_fold<uint64_t, uint64_t>(
       0u,
-      [](unsigned int l, unsigned int x, unsigned int r) {
+      [](uint64_t l, uint64_t x, uint64_t r) {
         return l + x + r;
       },
       deep);

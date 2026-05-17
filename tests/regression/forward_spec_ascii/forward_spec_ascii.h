@@ -9,11 +9,11 @@ struct ForwardSpecAscii {
   struct node {
     // TYPES
     struct ANode {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct BNode {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<ANode, BNode>;
@@ -56,9 +56,9 @@ struct ForwardSpecAscii {
     }
 
     // CREATORS
-    static node anode(unsigned int a0) { return node(ANode{a0}); }
+    static node anode(uint64_t a0) { return node(ANode{a0}); }
 
-    static node bnode(unsigned int a0) { return node(BNode{a0}); }
+    static node bnode(uint64_t a0) { return node(BNode{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -68,8 +68,8 @@ struct ForwardSpecAscii {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 node_rect(F0 &&f, F1 &&f0, const node &n) {
     if (std::holds_alternative<typename node::ANode>(n.v())) {
       const auto &[a0] = std::get<typename node::ANode>(n.v());
@@ -81,8 +81,8 @@ struct ForwardSpecAscii {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 node_rec(F0 &&f, F1 &&f0, const node &n) {
     if (std::holds_alternative<typename node::ANode>(n.v())) {
       const auto &[a0] = std::get<typename node::ANode>(n.v());
@@ -93,9 +93,9 @@ struct ForwardSpecAscii {
     }
   }
 
-  static unsigned int helper_nat(unsigned int n);
-  static unsigned int bump_node(const node &x);
-  static inline const unsigned int t = bump_node(node::anode(2u));
+  static uint64_t helper_nat(uint64_t n);
+  static uint64_t bump_node(const node &x);
+  static inline const uint64_t t = bump_node(node::anode(UINT64_C(2)));
 };
 
 #endif // INCLUDED_FORWARD_SPEC_ASCII

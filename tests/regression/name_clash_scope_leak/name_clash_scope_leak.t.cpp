@@ -4,7 +4,7 @@
 
 int main() {
   using NS = NameClashScopeLeak;
-  using L = List<unsigned int>;
+  using L = List<uint64_t>;
 
   auto nil = L::nil();
   auto l1 = L::cons(1u, L::cons(2u, L::cons(3u, nil)));

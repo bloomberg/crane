@@ -120,18 +120,18 @@ public:
 };
 
 struct WellFoundedRec {
-  static List<unsigned int> countdown_acc(unsigned int n);
-  static List<unsigned int> countdown(unsigned int _x0);
-  static unsigned int div2_wf(unsigned int x);
-  static unsigned int gcd_wf(unsigned int x, unsigned int b);
-  static inline const unsigned int test_div2_0 = div2_wf(0u);
-  static inline const unsigned int test_div2_1 = div2_wf(1u);
-  static inline const unsigned int test_div2_7 = div2_wf(7u);
-  static inline const unsigned int test_div2_10 = div2_wf(10u);
-  static inline const List<unsigned int> test_countdown = countdown(5u);
-  static inline const unsigned int test_gcd_1 = gcd_wf(12u, 8u);
-  static inline const unsigned int test_gcd_2 = gcd_wf(35u, 14u);
-  static inline const unsigned int test_gcd_3 = gcd_wf(0u, 5u);
+  static List<uint64_t> countdown_acc(uint64_t n);
+  static List<uint64_t> countdown(uint64_t _x0);
+  static uint64_t div2_wf(uint64_t x);
+  static uint64_t gcd_wf(uint64_t x, uint64_t b);
+  static inline const uint64_t test_div2_0 = div2_wf(UINT64_C(0));
+  static inline const uint64_t test_div2_1 = div2_wf(UINT64_C(1));
+  static inline const uint64_t test_div2_7 = div2_wf(UINT64_C(7));
+  static inline const uint64_t test_div2_10 = div2_wf(UINT64_C(10));
+  static inline const List<uint64_t> test_countdown = countdown(UINT64_C(5));
+  static inline const uint64_t test_gcd_1 = gcd_wf(UINT64_C(12), UINT64_C(8));
+  static inline const uint64_t test_gcd_2 = gcd_wf(UINT64_C(35), UINT64_C(14));
+  static inline const uint64_t test_gcd_3 = gcd_wf(UINT64_C(0), UINT64_C(5));
 };
 
 #endif // INCLUDED_WELL_FOUNDED_REC

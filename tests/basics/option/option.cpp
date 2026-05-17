@@ -1,29 +1,28 @@
 #include "option.h"
 
-unsigned int Option::get_or_default(const std::optional<unsigned int> &o,
-                                    unsigned int default0) {
+uint64_t Option::get_or_default(const std::optional<uint64_t> &o,
+                                uint64_t default0) {
   if (o.has_value()) {
-    const unsigned int &x = *o;
+    const uint64_t &x = *o;
     return x;
   } else {
     return default0;
   }
 }
 
-std::optional<unsigned int> Option::safe_pred(unsigned int n) {
+std::optional<uint64_t> Option::safe_pred(uint64_t n) {
   if (n <= 0) {
-    return std::optional<unsigned int>();
+    return std::optional<uint64_t>();
   } else {
-    unsigned int m = n - 1;
-    return std::make_optional<unsigned int>(m);
+    uint64_t m = n - 1;
+    return std::make_optional<uint64_t>(m);
   }
 }
 
-std::optional<unsigned int>
-Option::chain_options(std::optional<unsigned int> o1,
-                      std::optional<unsigned int> o2) {
+std::optional<uint64_t> Option::chain_options(std::optional<uint64_t> o1,
+                                              std::optional<uint64_t> o2) {
   if (o1.has_value()) {
-    const unsigned int &_x = *o1;
+    const uint64_t &_x = *o1;
     return o1;
   } else {
     return o2;

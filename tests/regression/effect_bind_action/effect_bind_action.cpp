@@ -90,12 +90,12 @@ std::string EffectBindAction::use_helper(bool flag) {
 }
 
 /// 7. Let-binding of a match result, then use in effect
-std::string EffectBindAction::let_match_then_effect(unsigned int n) {
+std::string EffectBindAction::let_match_then_effect(uint64_t n) {
   std::string msg;
   if (n <= 0) {
     msg = "zero";
   } else {
-    unsigned int _x = n - 1;
+    uint64_t _x = n - 1;
     msg = "other";
   }
   std::cout << msg << '\n';
@@ -103,7 +103,7 @@ std::string EffectBindAction::let_match_then_effect(unsigned int n) {
 }
 
 /// 8. Discard result of conditional effect
-unsigned int EffectBindAction::discard_conditional(bool flag) {
+uint64_t EffectBindAction::discard_conditional(bool flag) {
   [&]() -> void {
     if (flag) {
       std::cout << "flagged"s << '\n';
@@ -112,5 +112,5 @@ unsigned int EffectBindAction::discard_conditional(bool flag) {
       return;
     }
   }();
-  return 42u;
+  return UINT64_C(42);
 }

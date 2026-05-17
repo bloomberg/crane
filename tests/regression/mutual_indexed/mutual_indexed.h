@@ -16,8 +16,8 @@ struct MutualIndexed {
     struct ELeaf {};
 
     struct ENode {
-      unsigned int n;
-      unsigned int a1;
+      uint64_t n;
+      uint64_t a1;
       std::unique_ptr<OddTree> a2;
     };
 
@@ -95,7 +95,7 @@ struct MutualIndexed {
     // CREATORS
     static EvenTree eleaf() { return EvenTree(ELeaf{}); }
 
-    static EvenTree enode(unsigned int n, unsigned int a1, OddTree a2) {
+    static EvenTree enode(uint64_t n, uint64_t a1, OddTree a2) {
       return EvenTree(ENode{n, a1, std::make_unique<OddTree>(std::move(a2))});
     }
 
@@ -137,8 +137,8 @@ struct MutualIndexed {
   struct OddTree {
     // TYPES
     struct ONode {
-      unsigned int n;
-      unsigned int a1;
+      uint64_t n;
+      uint64_t a1;
       std::unique_ptr<EvenTree> a2;
     };
 
@@ -178,7 +178,7 @@ struct MutualIndexed {
     }
 
     // CREATORS
-    static OddTree onode(unsigned int n, unsigned int a1, EvenTree a2) {
+    static OddTree onode(uint64_t n, uint64_t a1, EvenTree a2) {
       return OddTree(ONode{n, a1, std::make_unique<EvenTree>(std::move(a2))});
     }
 
@@ -218,9 +218,8 @@ struct MutualIndexed {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &,
-                                   OddTree &>
-  static T1 EvenTree_rect(T1 f, F1 &&f0, unsigned int, const EvenTree &e) {
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &, OddTree &>
+  static T1 EvenTree_rect(T1 f, F1 &&f0, uint64_t, const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
       return f;
     } else {
@@ -230,9 +229,8 @@ struct MutualIndexed {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &,
-                                   OddTree &>
-  static T1 EvenTree_rec(T1 f, F1 &&f0, unsigned int, const EvenTree &e) {
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &, OddTree &>
+  static T1 EvenTree_rec(T1 f, F1 &&f0, uint64_t, const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
       return f;
     } else {
@@ -242,31 +240,30 @@ struct MutualIndexed {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
-                                   EvenTree &>
-  static T1 OddTree_rect(F0 &&f, unsigned int, const OddTree &o) {
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &, EvenTree &>
+  static T1 OddTree_rect(F0 &&f, uint64_t, const OddTree &o) {
     const auto &[n1, a1, a2] = std::get<typename OddTree::ONode>(o.v());
     return f(n1, a1, *a2);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
-                                   EvenTree &>
-  static T1 OddTree_rec(F0 &&f, unsigned int, const OddTree &o) {
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &, EvenTree &>
+  static T1 OddTree_rec(F0 &&f, uint64_t, const OddTree &o) {
     const auto &[n1, a1, a2] = std::get<typename OddTree::ONode>(o.v());
     return f(n1, a1, *a2);
   }
 
-  static unsigned int even_val(unsigned int _x, const EvenTree &t);
-  static unsigned int odd_val(unsigned int _x, const OddTree &t);
+  static uint64_t even_val(uint64_t _x, const EvenTree &t);
+  static uint64_t odd_val(uint64_t _x, const OddTree &t);
   static inline const EvenTree leaf = EvenTree::eleaf();
   static inline const OddTree tree1 =
-      OddTree::onode(0u, 10u, EvenTree::eleaf());
-  static inline const EvenTree tree2 =
-      EvenTree::enode(1u, 20u, OddTree::onode(0u, 10u, EvenTree::eleaf()));
-  static inline const unsigned int test_leaf_val = even_val(0u, leaf);
-  static inline const unsigned int test_tree1_val = odd_val(1u, tree1);
-  static inline const unsigned int test_tree2_val = even_val(2u, tree2);
+      OddTree::onode(UINT64_C(0), UINT64_C(10), EvenTree::eleaf());
+  static inline const EvenTree tree2 = EvenTree::enode(
+      UINT64_C(1), UINT64_C(20),
+      OddTree::onode(UINT64_C(0), UINT64_C(10), EvenTree::eleaf()));
+  static inline const uint64_t test_leaf_val = even_val(UINT64_C(0), leaf);
+  static inline const uint64_t test_tree1_val = odd_val(UINT64_C(1), tree1);
+  static inline const uint64_t test_tree2_val = even_val(UINT64_C(2), tree2);
 };
 
 #endif // INCLUDED_MUTUAL_INDEXED

@@ -30,15 +30,15 @@ int main() {
 
   // Test 2: count_taus can also be called directly
   {
-    auto t = ITree<unsigned int>::ret(42u);
+    auto t = ITree<uint64_t>::ret(42ULL);
     ASSERT(LoopifyItreeReified::count_taus(10, t) == 0);
     std::cout << "Test 2 (count_taus direct call): PASSED" << std::endl;
   }
 
   // Test 3: pass cofixpoint on Ret 42 preserves structure (0 Taus)
   {
-    auto ret_tree = ITree<unsigned int>::ret(42u);
-    auto passed = LoopifyItreeReified::pass<unsigned int>(ret_tree);
+    auto ret_tree = ITree<uint64_t>::ret(42ULL);
+    auto passed = LoopifyItreeReified::pass<uint64_t>(ret_tree);
     ASSERT(LoopifyItreeReified::count_taus(10, passed) == 0);
     std::cout << "Test 3 (pass on Ret): PASSED" << std::endl;
   }
@@ -46,8 +46,8 @@ int main() {
   // Test 4: pass cofixpoint on Tau(Ret 42) preserves the Tau (1 Tau)
   {
     auto tau_tree =
-        ITree<unsigned int>::tau(ITree<unsigned int>::ret(42u));
-    auto passed = LoopifyItreeReified::pass<unsigned int>(tau_tree);
+        ITree<uint64_t>::tau(ITree<uint64_t>::ret(42ULL));
+    auto passed = LoopifyItreeReified::pass<uint64_t>(tau_tree);
     ASSERT(LoopifyItreeReified::count_taus(10, passed) == 1);
     std::cout << "Test 4 (pass on Tau): PASSED" << std::endl;
   }

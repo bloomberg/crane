@@ -11,11 +11,11 @@ using namespace std::string_literals;
 
 struct EffectCompose {
   /// Spawn a future that doubles a number, retrieve the result.
-  static unsigned int par_double(unsigned int n);
+  static uint64_t par_double(uint64_t n);
   /// Use parE to compute two values in parallel and add them.
-  static unsigned int par_add(unsigned int a, unsigned int b);
+  static uint64_t par_add(uint64_t a, uint64_t b);
   /// Parallel computation with IO: compute then print.
-  static unsigned int par_compute_and_greet(unsigned int n);
+  static uint64_t par_compute_and_greet(uint64_t n);
 };
 
 #endif // INCLUDED_EFFECT_COMPOSE

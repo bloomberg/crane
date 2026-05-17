@@ -46,10 +46,11 @@ struct TodoEtaExpansionTaxiom {
     return a0;
   }
 
-  static inline const Pair<bool, unsigned int> test_swap =
-      swap_pair<unsigned int, bool>(Pair<unsigned int, bool>::mkpair(3u, true));
-  static inline const unsigned int test_fst =
-      fst_pair<unsigned int, bool>(Pair<unsigned int, bool>::mkpair(42u, true));
+  static inline const Pair<bool, uint64_t> test_swap =
+      swap_pair<uint64_t, bool>(
+          Pair<uint64_t, bool>::mkpair(UINT64_C(3), true));
+  static inline const uint64_t test_fst = fst_pair<uint64_t, bool>(
+      Pair<uint64_t, bool>::mkpair(UINT64_C(42), true));
 };
 
 #endif // INCLUDED_TODO_ETA_EXPANSION_TAXIOM

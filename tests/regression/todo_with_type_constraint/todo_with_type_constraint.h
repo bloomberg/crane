@@ -20,20 +20,20 @@ concept NAT_BASE = BASE<M>;
 
 struct TodoWithTypeConstraint {
   struct NatBase {
-    using t = unsigned int;
-    static inline const unsigned int zero = 0u;
-    static unsigned int bump(unsigned int n);
+    using t = uint64_t;
+    static inline const uint64_t zero = UINT64_C(0);
+    static uint64_t bump(uint64_t n);
   };
 
   template <NAT_BASE X> struct UseNat {
-    static const unsigned int &twice() {
-      static const unsigned int v = X::bump(X::bump(X::zero));
+    static const uint64_t &twice() {
+      static const uint64_t v = X::bump(X::bump(X::zero));
       return v;
     }
   };
 
   using Applied = UseNat<NatBase>;
-  static inline const unsigned int test_twice = Applied::twice();
+  static inline const uint64_t test_twice = Applied::twice();
 };
 
 #endif // INCLUDED_TODO_WITH_TYPE_CONSTRAINT

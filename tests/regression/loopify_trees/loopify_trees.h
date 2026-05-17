@@ -449,7 +449,7 @@ struct LoopifyTrees {
     }
 
     /// count_leaves counts leaf nodes.
-    unsigned int count_leaves() const {
+    uint64_t count_leaves() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -465,11 +465,11 @@ struct LoopifyTrees {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -482,7 +482,7 @@ struct LoopifyTrees {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = 1u;
+            _result = UINT64_C(1);
           } else {
             const auto &[a0, a1, a2] =
                 std::get<typename tree<A>::Node>(_sv.v());
@@ -626,7 +626,7 @@ struct LoopifyTrees {
       return _result;
     }
 
-    unsigned int tree_size() const {
+    uint64_t tree_size() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -642,11 +642,11 @@ struct LoopifyTrees {
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -659,7 +659,7 @@ struct LoopifyTrees {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] =
                 std::get<typename tree<A>::Node>(_sv.v());
@@ -678,15 +678,15 @@ struct LoopifyTrees {
       return _result;
     }
 
-    unsigned int tree_height() const {
+    uint64_t tree_height() const {
       const tree *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
-        unsigned int lh = (*a0).tree_height();
-        unsigned int rh = (*a2).tree_height();
+        uint64_t lh = (*a0).tree_height();
+        uint64_t rh = (*a2).tree_height();
         return ((lh <= rh ? rh : lh) + 1);
       }
     }
@@ -816,16 +816,15 @@ struct LoopifyTrees {
     }
   };
 
-  static unsigned int tree_sum(const tree<unsigned int> &t);
+  static uint64_t tree_sum(const tree<uint64_t> &t);
   /// leaf_sum sums only leaf values.
-  static unsigned int leaf_sum(const tree<unsigned int> &t);
+  static uint64_t leaf_sum(const tree<uint64_t> &t);
   /// insert_bst BST insertion.
-  static tree<unsigned int> insert_bst(unsigned int x,
-                                       const tree<unsigned int> &t);
+  static tree<uint64_t> insert_bst(uint64_t x, const tree<uint64_t> &t);
   /// count_paths t n counts root-to-leaf paths that sum to n.
-  static unsigned int count_paths(const tree<unsigned int> &t, unsigned int n);
+  static uint64_t count_paths(const tree<uint64_t> &t, uint64_t n);
   /// sum_of_max_branches sums maximum values along each path.
-  static unsigned int sum_of_max_branches(const tree<unsigned int> &t);
+  static uint64_t sum_of_max_branches(const tree<uint64_t> &t);
 
   struct ternary {
     // TYPES
@@ -835,7 +834,7 @@ struct LoopifyTrees {
       std::unique_ptr<ternary> a0;
       std::unique_ptr<ternary> a1;
       std::unique_ptr<ternary> a2;
-      unsigned int a3;
+      uint64_t a3;
     };
 
     using variant_t = std::variant<TLeaf, TNode>;
@@ -909,7 +908,7 @@ struct LoopifyTrees {
     // CREATORS
     static ternary tleaf() { return ternary(TLeaf{}); }
 
-    static ternary tnode(ternary a0, ternary a1, ternary a2, unsigned int a3) {
+    static ternary tnode(ternary a0, ternary a1, ternary a2, uint64_t a3) {
       return ternary(TNode{std::make_unique<ternary>(std::move(a0)),
                            std::make_unique<ternary>(std::move(a1)),
                            std::make_unique<ternary>(std::move(a2)), a3});
@@ -948,18 +947,18 @@ struct LoopifyTrees {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    unsigned int ternary_depth() const {
+    uint64_t ternary_depth() const {
       const ternary *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
-        return 0u;
+        return UINT64_C(0);
       } else {
         const auto &[a0, a1, a2, a3] =
             std::get<typename ternary::TNode>(_sv.v());
-        unsigned int d1 = (*a0).ternary_depth();
-        unsigned int d2 = (*a1).ternary_depth();
-        unsigned int d3 = (*a2).ternary_depth();
-        return ([&]() -> unsigned int {
+        uint64_t d1 = (*a0).ternary_depth();
+        uint64_t d2 = (*a1).ternary_depth();
+        uint64_t d3 = (*a2).ternary_depth();
+        return ([&]() -> uint64_t {
           if ((d1 <= d2 ? d2 : d1) <= d3) {
             return d3;
           } else {
@@ -973,7 +972,7 @@ struct LoopifyTrees {
       }
     }
 
-    unsigned int ternary_sum() const {
+    uint64_t ternary_sum() const {
       const ternary *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -985,28 +984,28 @@ struct LoopifyTrees {
       struct _After_TNode {
         const ternary *_s0;
         const ternary *_s1;
-        unsigned int a3;
+        uint64_t a3;
       };
 
       /// _After_TNode_1: saves [_result, _s1, a3], dispatches next recursive
       /// call.
       struct _After_TNode_1 {
-        unsigned int _result;
+        uint64_t _result;
         const ternary *_s1;
-        unsigned int a3;
+        uint64_t a3;
       };
 
       /// _Combine_TNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_TNode {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        unsigned int a3;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t a3;
       };
 
       using _Frame =
           std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -1020,7 +1019,7 @@ struct LoopifyTrees {
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename ternary::TNode>(_sv.v());
@@ -1045,7 +1044,7 @@ struct LoopifyTrees {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
-                                     ternary &, T1 &, unsigned int &>
+                                     ternary &, T1 &, uint64_t &>
     T1 ternary_rec(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
@@ -1059,7 +1058,7 @@ struct LoopifyTrees {
       struct _After_TNode {
         const ternary *_s0;
         const ternary *_s1;
-        unsigned int a3;
+        uint64_t a3;
         ternary a2;
         ternary a1;
         ternary a0;
@@ -1070,7 +1069,7 @@ struct LoopifyTrees {
       struct _After_TNode_1 {
         T1 _result;
         const ternary *_s1;
-        unsigned int a3;
+        uint64_t a3;
         ternary a2;
         ternary a1;
         ternary a0;
@@ -1081,7 +1080,7 @@ struct LoopifyTrees {
       struct _Combine_TNode {
         T1 _result_0;
         T1 _result_1;
-        unsigned int a3;
+        uint64_t a3;
         ternary a2;
         ternary a1;
         ternary a0;
@@ -1134,7 +1133,7 @@ struct LoopifyTrees {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
-                                     ternary &, T1 &, unsigned int &>
+                                     ternary &, T1 &, uint64_t &>
     T1 ternary_rect(T1 f, F1 &&f0) const {
       const ternary *_self = this;
 
@@ -1148,7 +1147,7 @@ struct LoopifyTrees {
       struct _After_TNode {
         const ternary *_s0;
         const ternary *_s1;
-        unsigned int a3;
+        uint64_t a3;
         ternary a2;
         ternary a1;
         ternary a0;
@@ -1159,7 +1158,7 @@ struct LoopifyTrees {
       struct _After_TNode_1 {
         T1 _result;
         const ternary *_s1;
-        unsigned int a3;
+        uint64_t a3;
         ternary a2;
         ternary a1;
         ternary a0;
@@ -1170,7 +1169,7 @@ struct LoopifyTrees {
       struct _Combine_TNode {
         T1 _result_0;
         T1 _result_1;
-        unsigned int a3;
+        uint64_t a3;
         ternary a2;
         ternary a1;
         ternary a0;
@@ -1226,7 +1225,7 @@ struct LoopifyTrees {
   struct rose {
     // TYPES
     struct RNode {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<List<rose>> a1;
     };
 
@@ -1308,7 +1307,7 @@ struct LoopifyTrees {
     }
 
     // CREATORS
-    static rose rnode(unsigned int a0, List<rose> a1) {
+    static rose rnode(uint64_t a0, List<rose> a1) {
       return rose(RNode{a0, std::make_unique<List<rose>>(std::move(a1))});
     }
 
@@ -1350,40 +1349,41 @@ struct LoopifyTrees {
     const variant_t &v() const { return v_; }
 
     /// rose_depth t computes the depth of a rose tree.
-    unsigned int rose_depth() const {
+    uint64_t rose_depth() const {
       const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
-      return (depth_rose_list_fuel(1000u, *a1) + 1);
+      return (depth_rose_list_fuel(UINT64_C(1000), *a1) + 1);
     }
 
     /// rose_flatten t flattens a rose tree to a list (pre-order).
-    List<unsigned int> rose_flatten() const {
+    List<uint64_t> rose_flatten() const {
       const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
-      return List<unsigned int>::cons(a0, flatten_rose_list_fuel(1000u, *a1));
+      return List<uint64_t>::cons(a0,
+                                  flatten_rose_list_fuel(UINT64_C(1000), *a1));
     }
 
     /// rose_map f t applies f to all values in a rose tree.
     template <typename F0>
-      requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
+      requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
     rose rose_map(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
-      return rose::rnode(f(a0), map_rose_list_fuel(1000u, f, *a1));
+      return rose::rnode(f(a0), map_rose_list_fuel(UINT64_C(1000), f, *a1));
     }
 
     /// rose_sum t sums all values in a rose tree.
-    unsigned int rose_sum() const {
+    uint64_t rose_sum() const {
       const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
-      return (a0 + sum_rose_list_fuel(1000u, *a1));
+      return (a0 + sum_rose_list_fuel(UINT64_C(1000), *a1));
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<rose> &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<rose> &>
     T1 rose_rec(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
       return f(a0, *a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<rose> &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<rose> &>
     T1 rose_rect(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
       return f(a0, *a1);
@@ -1392,18 +1392,17 @@ struct LoopifyTrees {
 
   /// Helper: sum all values in a list of rose trees (processes both tree and
   /// list levels in one recursive function to enable full loopification).
-  static unsigned int sum_rose_list_fuel(unsigned int fuel,
-                                         const List<rose> &cs);
+  static uint64_t sum_rose_list_fuel(uint64_t fuel, const List<rose> &cs);
 
   /// Helper: map function over all values in a list of rose trees.
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static List<rose> map_rose_list_fuel(unsigned int fuel, F1 &&f,
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static List<rose> map_rose_list_fuel(uint64_t fuel, F1 &&f,
                                        const List<rose> &cs) {
     if (fuel <= 0) {
       return List<rose>::nil();
     } else {
-      unsigned int g = fuel - 1;
+      uint64_t g = fuel - 1;
       if (std::holds_alternative<typename List<rose>::Nil>(cs.v())) {
         return List<rose>::nil();
       } else {
@@ -1417,53 +1416,46 @@ struct LoopifyTrees {
   }
 
   /// Helper: flatten a list of rose trees to a flat list of nats.
-  static List<unsigned int> flatten_rose_list_fuel(unsigned int fuel,
-                                                   const List<rose> &cs);
+  static List<uint64_t> flatten_rose_list_fuel(uint64_t fuel,
+                                               const List<rose> &cs);
   /// Helper: compute maximum depth among a list of rose trees.
-  static unsigned int depth_rose_list_fuel(unsigned int fuel,
-                                           const List<rose> &cs);
+  static uint64_t depth_rose_list_fuel(uint64_t fuel, const List<rose> &cs);
   /// tree_max t1 t2 element-wise maximum of two trees.
-  static tree<unsigned int> tree_max(tree<unsigned int> t1,
-                                     tree<unsigned int> t2);
+  static tree<uint64_t> tree_max(tree<uint64_t> t1, tree<uint64_t> t2);
   /// Helper: extract values from trees.
-  static List<unsigned int>
-  extract_tree_values(const List<tree<unsigned int>> &ts);
+  static List<uint64_t> extract_tree_values(const List<tree<uint64_t>> &ts);
   /// Helper: extract children from trees.
-  static List<tree<unsigned int>>
-  extract_tree_children(const List<tree<unsigned int>> &ts);
+  static List<tree<uint64_t>>
+  extract_tree_children(const List<tree<uint64_t>> &ts);
   /// tree_levels t returns list of lists, one per level (breadth-first).
-  static List<List<unsigned int>>
-  tree_levels_fuel(unsigned int fuel, const List<tree<unsigned int>> &trees);
-  static List<List<unsigned int>> tree_levels(tree<unsigned int> t);
+  static List<List<uint64_t>>
+  tree_levels_fuel(uint64_t fuel, const List<tree<uint64_t>> &trees);
+  static List<List<uint64_t>> tree_levels(tree<uint64_t> t);
   /// count_nodes t returns tuple (node_count, sum_of_values).
-  static std::pair<unsigned int, unsigned int>
-  count_nodes(const tree<unsigned int> &t);
+  static std::pair<uint64_t, uint64_t> count_nodes(const tree<uint64_t> &t);
   /// Helper: append two lists of lists.
-  static List<List<unsigned int>>
-  append_list_lists(const List<List<unsigned int>> &l1,
-                    List<List<unsigned int>> l2);
+  static List<List<uint64_t>> append_list_lists(const List<List<uint64_t>> &l1,
+                                                List<List<uint64_t>> l2);
   /// Helper: prepend value to all lists in a list of lists.
-  static List<List<unsigned int>>
-  map_cons_to_all(unsigned int x, const List<List<unsigned int>> &lsts);
+  static List<List<uint64_t>> map_cons_to_all(uint64_t x,
+                                              const List<List<uint64_t>> &lsts);
   /// paths t returns all root-to-leaf paths in tree.
-  static List<List<unsigned int>> paths(const tree<unsigned int> &t);
+  static List<List<uint64_t>> paths(const tree<uint64_t> &t);
   /// collect_sorted t collects and sorts all tree values.
-  static List<unsigned int> collect_unsorted(const tree<unsigned int> &t);
+  static List<uint64_t> collect_unsorted(const tree<uint64_t> &t);
   /// Simple insertion sort for collect_sorted.
-  static List<unsigned int> insert_sorted(unsigned int x,
-                                          const List<unsigned int> &l);
-  static List<unsigned int> sort_list(const List<unsigned int> &l);
-  static List<unsigned int> collect_sorted(const tree<unsigned int> &t);
+  static List<uint64_t> insert_sorted(uint64_t x, const List<uint64_t> &l);
+  static List<uint64_t> sort_list(const List<uint64_t> &l);
+  static List<uint64_t> collect_sorted(const tree<uint64_t> &t);
 
   /// or_search p t searches tree for element satisfying predicate.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool or_search(F0 &&p, const tree<unsigned int> &t) {
-    if (std::holds_alternative<typename tree<unsigned int>::Leaf>(t.v())) {
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool or_search(F0 &&p, const tree<uint64_t> &t) {
+    if (std::holds_alternative<typename tree<uint64_t>::Leaf>(t.v())) {
       return false;
     } else {
-      const auto &[a0, a1, a2] =
-          std::get<typename tree<unsigned int>::Node>(t.v());
+      const auto &[a0, a1, a2] = std::get<typename tree<uint64_t>::Node>(t.v());
       if (p(a1)) {
         return true;
       } else {
@@ -1475,7 +1467,7 @@ struct LoopifyTrees {
   struct quadtree {
     // TYPES
     struct QLeaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Quad {
@@ -1558,7 +1550,7 @@ struct LoopifyTrees {
     }
 
     // CREATORS
-    static quadtree qleaf(unsigned int a0) { return quadtree(QLeaf{a0}); }
+    static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
       return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
@@ -1604,7 +1596,7 @@ struct LoopifyTrees {
     const variant_t &v() const { return v_; }
 
     /// quad_depth t computes depth of quadtree.
-    unsigned int quad_depth() const {
+    uint64_t quad_depth() const {
       const quadtree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1622,7 +1614,7 @@ struct LoopifyTrees {
       /// _After_Quad_1: saves [_result, _s1, _s2], dispatches next recursive
       /// call.
       struct _After_Quad_1 {
-        unsigned int _result;
+        uint64_t _result;
         const quadtree *_s1;
         const quadtree *_s2;
       };
@@ -1630,22 +1622,22 @@ struct LoopifyTrees {
       /// _After_Quad_2: saves [_result_0, _result_1, _s2], dispatches next
       /// recursive call.
       struct _After_Quad_2 {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
         const quadtree *_s2;
       };
 
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        unsigned int _result_2;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t _result_2;
       };
 
       using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
                                   _After_Quad_2, _Combine_Quad>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -1659,7 +1651,7 @@ struct LoopifyTrees {
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
@@ -1690,7 +1682,7 @@ struct LoopifyTrees {
     }
 
     /// quad_sum t sums all values in a quadtree.
-    unsigned int quad_sum() const {
+    uint64_t quad_sum() const {
       const quadtree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1708,7 +1700,7 @@ struct LoopifyTrees {
       /// _After_Quad_1: saves [_result, _s1, _s2], dispatches next recursive
       /// call.
       struct _After_Quad_1 {
-        unsigned int _result;
+        uint64_t _result;
         const quadtree *_s1;
         const quadtree *_s2;
       };
@@ -1716,22 +1708,22 @@ struct LoopifyTrees {
       /// _After_Quad_2: saves [_result_0, _result_1, _s2], dispatches next
       /// recursive call.
       struct _After_Quad_2 {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
         const quadtree *_s2;
       };
 
       /// _Combine_Quad: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Quad {
-        unsigned int _result_0;
-        unsigned int _result_1;
-        unsigned int _result_2;
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t _result_2;
       };
 
       using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
                                   _After_Quad_2, _Combine_Quad>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -1775,7 +1767,7 @@ struct LoopifyTrees {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
@@ -1887,7 +1879,7 @@ struct LoopifyTrees {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
@@ -2000,14 +1992,13 @@ struct LoopifyTrees {
   };
 
   /// Helper: max of 4 values using nested max.
-  static unsigned int max4_impl(unsigned int a, unsigned int b, unsigned int c,
-                                unsigned int d);
+  static uint64_t max4_impl(uint64_t a, uint64_t b, uint64_t c, uint64_t d);
 
   /// Simple binary tree with values only at leaves.
   struct simple_tree {
     // TYPES
     struct SLeaf {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct SNode {
@@ -2080,7 +2071,7 @@ struct LoopifyTrees {
     }
 
     // CREATORS
-    static simple_tree sleaf(unsigned int a0) { return simple_tree(SLeaf{a0}); }
+    static simple_tree sleaf(uint64_t a0) { return simple_tree(SLeaf{a0}); }
 
     static simple_tree snode(simple_tree a0, simple_tree a1) {
       return simple_tree(SNode{std::make_unique<simple_tree>(std::move(a0)),
@@ -2118,32 +2109,32 @@ struct LoopifyTrees {
     const variant_t &v() const { return v_; }
 
     /// count_paths_simple t n counts paths with sum n (simpler variant).
-    unsigned int count_paths_simple(unsigned int n) const {
+    uint64_t count_paths_simple(uint64_t n) const {
       const simple_tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const simple_tree *_self;
-        unsigned int n;
+        uint64_t n;
       };
 
       /// _After2: saves [_s0, _s1], dispatches next recursive call.
       struct _After2 {
         simple_tree *_s0;
-        decltype((((std::declval<unsigned int &>() - 1u) >
-                           std::declval<unsigned int &>()
+        decltype((((std::declval<uint64_t &>() - UINT64_C(1)) >
+                           std::declval<uint64_t &>()
                        ? 0
-                       : (std::declval<unsigned int &>() - 1u)))) _s1;
+                       : (std::declval<uint64_t &>() - UINT64_C(1))))) _s1;
       };
 
       /// _Combine1: receives partial results, combines with _result from final
       /// call.
       struct _Combine1 {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After2, _Combine1>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self, n});
@@ -2154,25 +2145,25 @@ struct LoopifyTrees {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const simple_tree *_self = _f._self;
-          unsigned int n = _f.n;
+          uint64_t n = _f.n;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
             if (a0 == n) {
-              _result = 1u;
+              _result = UINT64_C(1);
             } else {
-              _result = 0u;
+              _result = UINT64_C(0);
             }
           } else {
             const auto &[a0, a1] =
                 std::get<typename simple_tree::SNode>(_sv.v());
-            if (n <= 0u) {
-              _result = 0u;
+            if (n <= UINT64_C(0)) {
+              _result = UINT64_C(0);
             } else {
-              _stack.emplace_back(
-                  _After2{a0.get(), (((n - 1u) > n ? 0 : (n - 1u)))});
-              _stack.emplace_back(
-                  _Enter{a1.get(), (((n - 1u) > n ? 0 : (n - 1u)))});
+              _stack.emplace_back(_After2{
+                  a0.get(), (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+              _stack.emplace_back(_Enter{
+                  a1.get(), (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
             }
           }
         } else if (std::holds_alternative<_After2>(_frame)) {
@@ -2188,7 +2179,7 @@ struct LoopifyTrees {
     }
 
     /// simple_tree_sum t sums all leaf values.
-    unsigned int simple_tree_sum() const {
+    uint64_t simple_tree_sum() const {
       const simple_tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2204,11 +2195,11 @@ struct LoopifyTrees {
       /// _Combine_SNode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_SNode {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After_SNode, _Combine_SNode>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -2242,7 +2233,7 @@ struct LoopifyTrees {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, simple_tree &, T1 &,
                                      simple_tree &, T1 &>
     T1 simple_tree_rec(F0 &&f, F1 &&f0) const {
@@ -2304,7 +2295,7 @@ struct LoopifyTrees {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, simple_tree &, T1 &,
                                      simple_tree &, T1 &>
     T1 simple_tree_rect(F0 &&f, F1 &&f0) const {
@@ -2367,16 +2358,15 @@ struct LoopifyTrees {
   };
 
   /// Helper: compute minimum of three values.
-  static unsigned int min3(unsigned int a, unsigned int b, unsigned int c);
+  static uint64_t min3(uint64_t a, uint64_t b, uint64_t c);
   /// Helper: compute maximum of three values.
-  static unsigned int max3(unsigned int a, unsigned int b, unsigned int c);
+  static uint64_t max3(uint64_t a, uint64_t b, uint64_t c);
   /// tree_min_max t finds minimum and maximum values in tree.
-  static std::pair<unsigned int, unsigned int>
-  tree_min_max(const tree<unsigned int> &t);
+  static std::pair<uint64_t, uint64_t> tree_min_max(const tree<uint64_t> &t);
   /// all_paths_sum t sums all root-to-leaf path sums.
-  static unsigned int all_paths_sum(const tree<unsigned int> &t);
+  static uint64_t all_paths_sum(const tree<uint64_t> &t);
   /// tree_contains x t checks if value exists in tree.
-  static bool tree_contains(unsigned int x, const tree<unsigned int> &t);
+  static bool tree_contains(uint64_t x, const tree<uint64_t> &t);
 };
 
 #endif // INCLUDED_LOOPIFY_TREES

@@ -122,21 +122,21 @@ public:
 
 struct LetMatchType2 {
   /// 1. Match returning bool — should be fine
-  static bool let_match_bool(unsigned int n);
+  static bool let_match_bool(uint64_t n);
   /// 2. Match returning pair — might trigger std::any
-  static unsigned int let_match_pair(bool b);
+  static uint64_t let_match_pair(bool b);
   /// 3. Match returning list — might trigger std::any
-  static List<unsigned int> let_match_list(bool b);
+  static List<uint64_t> let_match_list(bool b);
   /// 4. Match returning option — might trigger std::any
-  static std::optional<unsigned int> let_match_opt(bool b);
+  static std::optional<uint64_t> let_match_opt(bool b);
   /// 5. Cascading let-matches all returning nat — should be fine
-  static unsigned int cascading_nat(bool a, bool b, bool c);
+  static uint64_t cascading_nat(bool a, bool b, bool c);
   /// 6. Match returning function type
-  static unsigned int let_match_fun(bool b);
+  static uint64_t let_match_fun(bool b);
   /// 7. Match result used in another match
-  static unsigned int match_of_match(unsigned int n);
+  static uint64_t match_of_match(uint64_t n);
   /// 8. let-bound match where arms have bindings
-  static unsigned int let_match_bindings(unsigned int n);
+  static uint64_t let_match_bindings(uint64_t n);
 };
 
 #endif // INCLUDED_LET_MATCH_TYPE2

@@ -8,25 +8,25 @@ struct FixEscapeCapture {
   /// A local fixpoint that captures a function parameter and is returned
   /// in a pair. The fixpoint's & capture creates a dangling reference
   /// to the captured parameter after the enclosing function returns.
-  static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-  make_pair_fn(unsigned int base);
+  static std::pair<uint64_t, std::function<uint64_t(uint64_t)>>
+  make_pair_fn(uint64_t base);
   /// Invokes the escaped fixpoint — use-after-free if & capture.
-  static inline const unsigned int test_pair = []() -> unsigned int {
-    auto _cs = make_pair_fn(5u);
-    const unsigned int &_x = _cs.first;
-    const std::function<unsigned int(unsigned int)> &f = _cs.second;
-    return f(3u);
+  static inline const uint64_t test_pair = []() -> uint64_t {
+    auto _cs = make_pair_fn(UINT64_C(5));
+    const uint64_t &_x = _cs.first;
+    const std::function<uint64_t(uint64_t)> &f = _cs.second;
+    return f(UINT64_C(3));
   }();
   /// Same pattern with a non-recursive local fixpoint to isolate the
   /// capture issue from self-reference.
-  static std::pair<unsigned int, std::function<unsigned int(unsigned int)>>
-  make_pair_fn2(unsigned int base);
+  static std::pair<uint64_t, std::function<uint64_t(uint64_t)>>
+  make_pair_fn2(uint64_t base);
 
-  static inline const unsigned int test_pair2 = []() -> unsigned int {
-    auto _cs = make_pair_fn2(5u);
-    const unsigned int &n = _cs.first;
-    const std::function<unsigned int(unsigned int)> &f = _cs.second;
-    return (n + f(3u));
+  static inline const uint64_t test_pair2 = []() -> uint64_t {
+    auto _cs = make_pair_fn2(UINT64_C(5));
+    const uint64_t &n = _cs.first;
+    const std::function<uint64_t(uint64_t)> &f = _cs.second;
+    return (n + f(UINT64_C(3)));
   }();
 };
 

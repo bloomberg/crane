@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -30,7 +30,7 @@ int main() {
   auto inter = LoopifyListCombining::intersperse(0u, l3);
 
   // intercalate
-  using ListList = List<List<unsigned int>>;
+  using ListList = List<List<uint64_t>>;
   auto ll_nil = ListList::nil();
   auto ll = ListList::cons(l3, ListList::cons(l4, ll_nil));
   auto sep = UIntList::cons(99u, nil);

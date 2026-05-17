@@ -1,6 +1,6 @@
 #include "mutual_record.h"
 
-unsigned int MutualRecord::dept_id(const MutualRecord::department &d) {
+uint64_t MutualRecord::dept_id(const MutualRecord::department &d) {
   const auto &[a0, a1] =
       std::get<typename MutualRecord::department::Mk_department>(d.v());
   return a0;
@@ -13,30 +13,28 @@ MutualRecord::dept_employees(const MutualRecord::department &d) {
   return *a1;
 }
 
-unsigned int MutualRecord::emp_id(const MutualRecord::employee &e) {
+uint64_t MutualRecord::emp_id(const MutualRecord::employee &e) {
   const auto &[a0, a1] =
       std::get<typename MutualRecord::employee::Mk_employee>(e.v());
   return a0;
 }
 
-unsigned int MutualRecord::emp_salary(const MutualRecord::employee &e) {
+uint64_t MutualRecord::emp_salary(const MutualRecord::employee &e) {
   const auto &[a0, a1] =
       std::get<typename MutualRecord::employee::Mk_employee>(e.v());
   return a1;
 }
 
-unsigned int
-MutualRecord::dept_total_salary(const MutualRecord::department &d) {
+uint64_t MutualRecord::dept_total_salary(const MutualRecord::department &d) {
   const auto &[a0, a1] =
       std::get<typename MutualRecord::department::Mk_department>(d.v());
   return emp_list_salary(*a1);
 }
 
-unsigned int
-MutualRecord::emp_list_salary(const List<MutualRecord::employee> &l) {
+uint64_t MutualRecord::emp_list_salary(const List<MutualRecord::employee> &l) {
   if (std::holds_alternative<typename List<MutualRecord::employee>::Nil>(
           l.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
         std::get<typename List<MutualRecord::employee>::Cons>(l.v());
@@ -44,20 +42,19 @@ MutualRecord::emp_list_salary(const List<MutualRecord::employee> &l) {
   }
 }
 
-unsigned int MutualRecord::dept_count(const MutualRecord::department &d) {
+uint64_t MutualRecord::dept_count(const MutualRecord::department &d) {
   const auto &[a0, a1] =
       std::get<typename MutualRecord::department::Mk_department>(d.v());
   return emp_list_count(*a1);
 }
 
-unsigned int
-MutualRecord::emp_list_count(const List<MutualRecord::employee> &l) {
+uint64_t MutualRecord::emp_list_count(const List<MutualRecord::employee> &l) {
   if (std::holds_alternative<typename List<MutualRecord::employee>::Nil>(
           l.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
         std::get<typename List<MutualRecord::employee>::Cons>(l.v());
-    return (1u + emp_list_count(*a1));
+    return (UINT64_C(1) + emp_list_count(*a1));
   }
 }

@@ -19,29 +19,35 @@ struct FixViaSimpleLambda {
   /// the fixpoints don't escape directly through a constructor —
   /// they escape INDIRECTLY by being captured in a simple lambda
   /// that is then stored in Some.
-  static std::optional<std::function<unsigned int(unsigned int)>>
-  make_combined(unsigned int n);
+  static std::optional<std::function<uint64_t(uint64_t)>>
+  make_combined(uint64_t n);
   /// test1: base=42, double_add(5) = 42+10 = 52,
   /// triple_add(5) = 42+15 = 57. Total = 109.
-  static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs = make_combined(21u);
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = make_combined(UINT64_C(21));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(5u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(5));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// test2: With intervening computation to clobber the stack.
   /// base=200, double_add(0) = 200, triple_add(0) = 200. Total = 400.
-  static inline const unsigned int test2 = []() {
-    std::optional<std::function<unsigned int(unsigned int)>> opt =
-        make_combined(100u);
-    unsigned int noise =
-        (((((((((1u + 2u) + 3u) + 4u) + 5u) + 6u) + 7u) + 8u) + 9u) + 10u);
+  static inline const uint64_t test2 = []() {
+    std::optional<std::function<uint64_t(uint64_t)>> opt =
+        make_combined(UINT64_C(100));
+    uint64_t noise =
+        (((((((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
+              UINT64_C(5)) +
+             UINT64_C(6)) +
+            UINT64_C(7)) +
+           UINT64_C(8)) +
+          UINT64_C(9)) +
+         UINT64_C(10));
     if (opt.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *opt;
-      return f(0u);
+      const std::function<uint64_t(uint64_t)> &f = *opt;
+      return f(UINT64_C(0));
     } else {
       return noise;
     }
@@ -49,13 +55,13 @@ struct FixViaSimpleLambda {
   /// test3: Larger recursion depth to increase chance of stack corruption.
   /// base=10, double_add(20) = 10+40 = 50,
   /// triple_add(20) = 10+60 = 70. Total = 120.
-  static inline const unsigned int test3 = []() -> unsigned int {
-    auto _cs = make_combined(5u);
+  static inline const uint64_t test3 = []() -> uint64_t {
+    auto _cs = make_combined(UINT64_C(5));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(20u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(20));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
 };

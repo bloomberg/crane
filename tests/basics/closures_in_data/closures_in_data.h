@@ -146,24 +146,23 @@ public:
 
 struct ClosuresInData {
   /// A list of functions: successor, doubling, and squaring.
-  static inline const List<std::function<unsigned int(unsigned int)>> fn_list =
-      List<std::function<unsigned int(unsigned int)>>::cons(
-          [](unsigned int x) { return (x + 1); },
-          List<std::function<unsigned int(unsigned int)>>::cons(
-              [](unsigned int x) { return (x + x); },
-              List<std::function<unsigned int(unsigned int)>>::cons(
-                  [](unsigned int x) { return (x * x); },
-                  List<std::function<unsigned int(unsigned int)>>::nil())));
+  static inline const List<std::function<uint64_t(uint64_t)>> fn_list =
+      List<std::function<uint64_t(uint64_t)>>::cons(
+          [](uint64_t x) { return (x + 1); },
+          List<std::function<uint64_t(uint64_t)>>::cons(
+              [](uint64_t x) { return (x + x); },
+              List<std::function<uint64_t(uint64_t)>>::cons(
+                  [](uint64_t x) { return (x * x); },
+                  List<std::function<uint64_t(uint64_t)>>::nil())));
   /// apply_all fns x applies every function in fns to x,
   /// returning the list of results.
-  static List<unsigned int>
-  apply_all(const List<std::function<unsigned int(unsigned int)>> &fns,
-            unsigned int x);
+  static List<uint64_t>
+  apply_all(const List<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
 
   /// A pair of invertible transformations: forward and backward.
   struct transform {
-    std::function<unsigned int(unsigned int)> forward;
-    std::function<unsigned int(unsigned int)> backward;
+    std::function<uint64_t(uint64_t)> forward;
+    std::function<uint64_t(uint64_t)> backward;
 
     // ACCESSORS
     transform clone() const {
@@ -173,42 +172,42 @@ struct ClosuresInData {
 
   /// A transform that doubles via addition and halves via division.
   static inline const transform double_transform =
-      transform{[](unsigned int x) { return (x + x); },
-                [](unsigned int x) { return (2u ? x / 2u : 0); }};
-  static unsigned int apply_forward(const transform &t, unsigned int x);
-  static unsigned int apply_backward(const transform &t, unsigned int x);
+      transform{[](uint64_t x) { return (x + x); },
+                [](uint64_t x) { return (UINT64_C(2) ? x / UINT64_C(2) : 0); }};
+  static uint64_t apply_forward(const transform &t, uint64_t x);
+  static uint64_t apply_backward(const transform &t, uint64_t x);
   /// compose_all fns x folds fns left, threading x through each
   /// function in sequence.
-  static unsigned int
-  compose_all(const List<std::function<unsigned int(unsigned int)>> &fns,
-              unsigned int x);
+  static uint64_t
+  compose_all(const List<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
   /// A pipeline of transformations: increment, double, then add 10.
-  static inline const List<std::function<unsigned int(unsigned int)>> pipeline =
-      List<std::function<unsigned int(unsigned int)>>::cons(
-          [](unsigned int x) { return (x + 1u); },
-          List<std::function<unsigned int(unsigned int)>>::cons(
-              [](unsigned int x) { return (x * 2u); },
-              List<std::function<unsigned int(unsigned int)>>::cons(
-                  [](unsigned int x) { return (x + 10u); },
-                  List<std::function<unsigned int(unsigned int)>>::nil())));
+  static inline const List<std::function<uint64_t(uint64_t)>> pipeline =
+      List<std::function<uint64_t(uint64_t)>>::cons(
+          [](uint64_t x) { return (x + UINT64_C(1)); },
+          List<std::function<uint64_t(uint64_t)>>::cons(
+              [](uint64_t x) { return (x * UINT64_C(2)); },
+              List<std::function<uint64_t(uint64_t)>>::cons(
+                  [](uint64_t x) { return (x + UINT64_C(10)); },
+                  List<std::function<uint64_t(uint64_t)>>::nil())));
   /// maybe_apply mf x applies function mf to x if present,
   /// otherwise returns x unchanged.
-  static unsigned int maybe_apply(
-      const std::optional<std::function<unsigned int(unsigned int)>> &mf,
-      unsigned int x);
-  static inline const List<unsigned int> test_apply_all =
-      apply_all(fn_list, 5u);
-  static inline const unsigned int test_forward =
-      apply_forward(double_transform, 7u);
-  static inline const unsigned int test_backward =
-      apply_backward(double_transform, 14u);
-  static inline const unsigned int test_compose = compose_all(pipeline, 3u);
-  static inline const unsigned int test_maybe_some =
-      maybe_apply(std::make_optional<std::function<unsigned int(unsigned int)>>(
-                      [](unsigned int x) { return (x + 1); }),
-                  41u);
-  static inline const unsigned int test_maybe_none = maybe_apply(
-      std::optional<std::function<unsigned int(unsigned int)>>(), 42u);
+  static uint64_t
+  maybe_apply(const std::optional<std::function<uint64_t(uint64_t)>> &mf,
+              uint64_t x);
+  static inline const List<uint64_t> test_apply_all =
+      apply_all(fn_list, UINT64_C(5));
+  static inline const uint64_t test_forward =
+      apply_forward(double_transform, UINT64_C(7));
+  static inline const uint64_t test_backward =
+      apply_backward(double_transform, UINT64_C(14));
+  static inline const uint64_t test_compose =
+      compose_all(pipeline, UINT64_C(3));
+  static inline const uint64_t test_maybe_some =
+      maybe_apply(std::make_optional<std::function<uint64_t(uint64_t)>>(
+                      [](uint64_t x) { return (x + 1); }),
+                  UINT64_C(41));
+  static inline const uint64_t test_maybe_none = maybe_apply(
+      std::optional<std::function<uint64_t(uint64_t)>>(), UINT64_C(42));
 };
 
 #endif // INCLUDED_CLOSURES_IN_DATA

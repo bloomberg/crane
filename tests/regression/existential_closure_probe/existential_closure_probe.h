@@ -39,22 +39,23 @@ struct ExistentialClosureProbe {
   }
 
   /// Pack a closure into a type-erased wrapper.
-  static wrap pack_fn(unsigned int base);
+  static wrap pack_fn(uint64_t base);
   /// Unpack and apply.
-  static unsigned int apply_packed(const wrap &_x0, unsigned int _x1);
+  static uint64_t apply_packed(const wrap &_x0, uint64_t _x1);
   /// test1: pack base=10, apply to 5. Expected: 15.
-  static inline const unsigned int test1 = apply_packed(pack_fn(10u), 5u);
+  static inline const uint64_t test1 =
+      apply_packed(pack_fn(UINT64_C(10)), UINT64_C(5));
   /// test2: Pack and unpack through a let binding.
   /// base=42, apply to 0. Expected: 42.
-  static inline const unsigned int test2 = []() {
-    wrap p = pack_fn(42u);
-    return apply_packed(std::move(p), 0u);
+  static inline const uint64_t test2 = []() {
+    wrap p = pack_fn(UINT64_C(42));
+    return apply_packed(std::move(p), UINT64_C(0));
   }();
   /// Store a closure that captures another closure.
-  static wrap pack_composed(unsigned int a, unsigned int b);
+  static wrap pack_composed(uint64_t a, uint64_t b);
   /// test3: a=3, b=2, g(5) = (5+3)*2 = 16.
-  static inline const unsigned int test3 =
-      apply_packed(pack_composed(3u, 2u), 5u);
+  static inline const uint64_t test3 =
+      apply_packed(pack_composed(UINT64_C(3), UINT64_C(2)), UINT64_C(5));
 };
 
 #endif // INCLUDED_EXISTENTIAL_CLOSURE_PROBE

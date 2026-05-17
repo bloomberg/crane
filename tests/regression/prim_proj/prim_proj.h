@@ -3,16 +3,16 @@
 
 struct PrimProj {
   struct point {
-    unsigned int px;
-    unsigned int py;
+    uint64_t px;
+    uint64_t py;
 
     // ACCESSORS
     point clone() const { return point{(*this).px, (*this).py}; }
   };
 
   static point add_points(const point &p1, const point &p2);
-  static inline const point origin = point{0u, 0u};
-  static point translate(unsigned int dx, unsigned int dy, const point &p);
+  static inline const point origin = point{UINT64_C(0), UINT64_C(0)};
+  static point translate(uint64_t dx, uint64_t dy, const point &p);
 };
 
 #endif // INCLUDED_PRIM_PROJ

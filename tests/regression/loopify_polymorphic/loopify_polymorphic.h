@@ -146,7 +146,7 @@ public:
 
 struct LoopifyPolymorphic {
   template <typename T1>
-  static unsigned int
+  static uint64_t
   poly_length(const List<T1> &l) { /// _Enter: captures varying parameters for
                                    /// each recursive call.
 
@@ -156,11 +156,11 @@ struct LoopifyPolymorphic {
 
     /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      decltype(1u) _s0;
+      decltype(UINT64_C(1)) _s0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -172,10 +172,10 @@ struct LoopifyPolymorphic {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{1u});
+          _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
@@ -273,17 +273,17 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1>
-  static List<T1> poly_take(unsigned int n, const List<T1> &l) {
+  static List<T1> poly_take(uint64_t n, const List<T1> &l) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
     const List<T1> *_loop_l = &l;
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
-        unsigned int n_ = _loop_n - 1;
+        uint64_t n_ = _loop_n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           *_write = std::make_unique<List<T1>>(List<T1>::nil());
           break;
@@ -303,16 +303,16 @@ struct LoopifyPolymorphic {
     return std::move(*_head);
   }
 
-  template <typename T1> static List<T1> poly_drop(unsigned int n, List<T1> l) {
+  template <typename T1> static List<T1> poly_drop(uint64_t n, List<T1> l) {
     List<T1> _result;
     List<T1> _loop_l = std::move(l);
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         _result = std::move(_loop_l);
         break;
       } else {
-        unsigned int n_ = _loop_n - 1;
+        uint64_t n_ = _loop_n - 1;
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l.v_mut())) {
           _result = List<T1>::nil();
           break;
@@ -327,22 +327,23 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1>
-  static std::optional<T1> poly_nth(unsigned int n, const List<T1> &l) {
+  static std::optional<T1> poly_nth(uint64_t n, const List<T1> &l) {
     std::optional<T1> _result;
     const List<T1> *_loop_l = &l;
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
         _result = std::optional<T1>();
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
-        if (_loop_n == 0u) {
+        if (_loop_n == UINT64_C(0)) {
           _result = std::make_optional<T1>(a0);
           break;
         } else {
           _loop_l = a1.get();
-          _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+          _loop_n = ((
+              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         }
       }
     }
@@ -550,16 +551,16 @@ struct LoopifyPolymorphic {
     return _result;
   }
 
-  template <typename T1> static List<T1> poly_replicate(unsigned int n, T1 x) {
+  template <typename T1> static List<T1> poly_replicate(uint64_t n, T1 x) {
     std::unique_ptr<List<T1>> _head{};
     std::unique_ptr<List<T1>> *_write = &_head;
-    unsigned int _loop_n = std::move(n);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
         *_write = std::make_unique<List<T1>>(List<T1>::nil());
         break;
       } else {
-        unsigned int n_ = _loop_n - 1;
+        uint64_t n_ = _loop_n - 1;
         auto _cell =
             std::make_unique<List<T1>>(typename List<T1>::Cons(x, nullptr));
         *_write = std::move(_cell);
@@ -571,42 +572,39 @@ struct LoopifyPolymorphic {
     return std::move(*_head);
   }
 
-  static unsigned int nat_length(const List<unsigned int> &_x0);
-  static List<unsigned int> nat_reverse(const List<unsigned int> &_x0);
-  static List<unsigned int> nat_append(const List<unsigned int> &_x0,
-                                       const List<unsigned int> &_x1);
-  static std::optional<unsigned int> nat_last(const List<unsigned int> &_x0);
-  static List<unsigned int> nat_take(unsigned int _x0,
-                                     const List<unsigned int> &_x1);
-  static List<unsigned int> nat_drop(unsigned int _x0,
-                                     const List<unsigned int> &_x1);
-  static std::optional<unsigned int> nat_nth(unsigned int _x0,
-                                             const List<unsigned int> &_x1);
-  static bool nat_eq(unsigned int _x0, unsigned int _x1);
-  static bool is_even(unsigned int x);
+  static uint64_t nat_length(const List<uint64_t> &_x0);
+  static List<uint64_t> nat_reverse(const List<uint64_t> &_x0);
+  static List<uint64_t> nat_append(const List<uint64_t> &_x0,
+                                   const List<uint64_t> &_x1);
+  static std::optional<uint64_t> nat_last(const List<uint64_t> &_x0);
+  static List<uint64_t> nat_take(uint64_t _x0, const List<uint64_t> &_x1);
+  static List<uint64_t> nat_drop(uint64_t _x0, const List<uint64_t> &_x1);
+  static std::optional<uint64_t> nat_nth(uint64_t _x0,
+                                         const List<uint64_t> &_x1);
+  static bool nat_eq(uint64_t _x0, uint64_t _x1);
+  static bool is_even(uint64_t x);
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> nat_filter(F0 &&_x0,
-                                       const List<unsigned int> &_x1) {
-    return poly_filter<unsigned int>(_x0, _x1);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> nat_filter(F0 &&_x0, const List<uint64_t> &_x1) {
+    return poly_filter<uint64_t>(_x0, _x1);
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static List<unsigned int> nat_map(F0 &&_x0, const List<unsigned int> &_x1) {
-    return poly_map<unsigned int, unsigned int>(_x0, _x1);
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static List<uint64_t> nat_map(F0 &&_x0, const List<uint64_t> &_x1) {
+    return poly_map<uint64_t, uint64_t>(_x0, _x1);
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  nat_partition(F0 &&_x0, const List<unsigned int> &_x1) {
-    return poly_partition<unsigned int>(_x0, _x1);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  nat_partition(F0 &&_x0, const List<uint64_t> &_x1) {
+    return poly_partition<uint64_t>(_x0, _x1);
   }
 
-  static bool nat_member(unsigned int _x0, const List<unsigned int> &_x1);
-  static List<unsigned int> nat_replicate(unsigned int _x0, unsigned int _x1);
+  static bool nat_member(uint64_t _x0, const List<uint64_t> &_x1);
+  static List<uint64_t> nat_replicate(uint64_t _x0, uint64_t _x1);
 };
 
 #endif // INCLUDED_LOOPIFY_POLYMORPHIC

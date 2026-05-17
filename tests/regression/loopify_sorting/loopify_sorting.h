@@ -146,7 +146,7 @@ public:
 /// Consolidated UNIQUE sorting algorithms and related operations.
 struct LoopifySorting {
   template <typename T1>
-  static unsigned int
+  static uint64_t
   len_impl(const List<T1> &l) { /// _Enter: captures varying parameters for each
                                 /// recursive call.
 
@@ -158,7 +158,7 @@ struct LoopifySorting {
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -170,7 +170,7 @@ struct LoopifySorting {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{});
@@ -184,8 +184,8 @@ struct LoopifySorting {
     return _result;
   }
 
-  static List<unsigned int> insert(unsigned int x, List<unsigned int> l);
-  static List<unsigned int> insertion_sort(const List<unsigned int> &l);
+  static List<uint64_t> insert(uint64_t x, List<uint64_t> l);
+  static List<uint64_t> insertion_sort(const List<uint64_t> &l);
 
   template <typename T1>
   static std::pair<List<T1>, List<T1>>
@@ -243,49 +243,43 @@ struct LoopifySorting {
     return _result;
   }
 
-  static List<unsigned int> merge_fuel(unsigned int fuel, List<unsigned int> l1,
-                                       List<unsigned int> l2);
-  static List<unsigned int> merge(const List<unsigned int> &l1,
-                                  const List<unsigned int> &l2);
-  static List<unsigned int> merge_sort_fuel(unsigned int fuel,
-                                            List<unsigned int> l);
-  static List<unsigned int> merge_sort(const List<unsigned int> &l);
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  partition(unsigned int pivot, const List<unsigned int> &l);
-  static List<unsigned int> quicksort_fuel(unsigned int fuel,
-                                           List<unsigned int> l);
-  static List<unsigned int> quicksort(const List<unsigned int> &l);
-  static bool is_sorted_aux(unsigned int prev, const List<unsigned int> &l);
-  static bool is_sorted(const List<unsigned int> &l);
+  static List<uint64_t> merge_fuel(uint64_t fuel, List<uint64_t> l1,
+                                   List<uint64_t> l2);
+  static List<uint64_t> merge(const List<uint64_t> &l1,
+                              const List<uint64_t> &l2);
+  static List<uint64_t> merge_sort_fuel(uint64_t fuel, List<uint64_t> l);
+  static List<uint64_t> merge_sort(const List<uint64_t> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  partition(uint64_t pivot, const List<uint64_t> &l);
+  static List<uint64_t> quicksort_fuel(uint64_t fuel, List<uint64_t> l);
+  static List<uint64_t> quicksort(const List<uint64_t> &l);
+  static bool is_sorted_aux(uint64_t prev, const List<uint64_t> &l);
+  static bool is_sorted(const List<uint64_t> &l);
 
   /// merge_by cmp merges with custom comparator.
   template <typename F1>
-    requires std::is_invocable_r_v<bool, F1 &, unsigned int &, unsigned int &>
-  static List<unsigned int> merge_by_fuel(unsigned int fuel, F1 &&cmp,
-                                          List<unsigned int> l1,
-                                          List<unsigned int> l2) {
+    requires std::is_invocable_r_v<bool, F1 &, uint64_t &, uint64_t &>
+  static List<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
+                                      List<uint64_t> l1, List<uint64_t> l2) {
     if (fuel <= 0) {
-      return List<unsigned int>::nil();
+      return List<uint64_t>::nil();
     } else {
-      unsigned int f = fuel - 1;
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              l1.v_mut())) {
+      uint64_t f = fuel - 1;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v_mut())) {
         return l2;
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<unsigned int>::Cons>(l1.v_mut());
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                l2.v_mut())) {
+        auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v_mut());
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v_mut())) {
           return l1;
         } else {
           auto &[a00, a10] =
-              std::get<typename List<unsigned int>::Cons>(l2.v_mut());
+              std::get<typename List<uint64_t>::Cons>(l2.v_mut());
           if (cmp(a0, a00)) {
-            return List<unsigned int>::cons(std::move(a0),
-                                            merge_by_fuel(f, cmp, *a1, l2));
+            return List<uint64_t>::cons(std::move(a0),
+                                        merge_by_fuel(f, cmp, *a1, l2));
           } else {
-            return List<unsigned int>::cons(std::move(a00),
-                                            merge_by_fuel(f, cmp, l1, *a10));
+            return List<uint64_t>::cons(std::move(a00),
+                                        merge_by_fuel(f, cmp, l1, *a10));
           }
         }
       }
@@ -293,19 +287,19 @@ struct LoopifySorting {
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &, unsigned int &>
-  static List<unsigned int> merge_by(F0 &&cmp, const List<unsigned int> &l1,
-                                     const List<unsigned int> &l2) {
-    return merge_by_fuel(
-        (len_impl<unsigned int>(l1) + len_impl<unsigned int>(l2)), cmp, l1, l2);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &, uint64_t &>
+  static List<uint64_t> merge_by(F0 &&cmp, const List<uint64_t> &l1,
+                                 const List<uint64_t> &l2) {
+    return merge_by_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), cmp,
+                         l1, l2);
   }
 
   /// remove_duplicates removes consecutive duplicates from sorted list.
-  static List<unsigned int> remove_duplicates(const List<unsigned int> &l);
+  static List<uint64_t> remove_duplicates(const List<uint64_t> &l);
   /// uniq_sorted variant that preserves order.
-  static List<unsigned int> uniq_sorted_aux(unsigned int prev, bool seen,
-                                            const List<unsigned int> &l);
-  static List<unsigned int> uniq_sorted(const List<unsigned int> &l);
+  static List<uint64_t> uniq_sorted_aux(uint64_t prev, bool seen,
+                                        const List<uint64_t> &l);
+  static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SORTING

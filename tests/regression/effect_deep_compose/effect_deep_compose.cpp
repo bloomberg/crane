@@ -58,11 +58,11 @@ int64_t EffectDeepCompose::maybe_time(bool measure) {
 }
 
 /// 6. Recursive function over all three effects
-void EffectDeepCompose::repeat_n(unsigned int n) {
+void EffectDeepCompose::repeat_n(uint64_t n) {
   if (n <= 0) {
     return;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     int64_t _x = static_cast<int64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch())

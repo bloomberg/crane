@@ -16,8 +16,8 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
-using UIntPairList = List<std::pair<unsigned int, unsigned int>>;
+using UIntList = List<uint64_t>;
+using UIntPairList = List<std::pair<uint64_t, uint64_t>>;
 using ListOfLists = List<std::shared_ptr<UIntList>>;
 
 int main() {

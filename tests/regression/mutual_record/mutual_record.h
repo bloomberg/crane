@@ -127,7 +127,7 @@ struct MutualRecord {
   struct department {
     // TYPES
     struct Mk_department {
-      unsigned int a0;
+      uint64_t a0;
       std::unique_ptr<List<employee>> a1;
     };
 
@@ -166,7 +166,7 @@ struct MutualRecord {
     }
 
     // CREATORS
-    static department mk_department(unsigned int a0, List<employee> a1) {
+    static department mk_department(uint64_t a0, List<employee> a1) {
       return department(
           Mk_department{a0, std::make_unique<List<employee>>(std::move(a1))});
     }
@@ -181,8 +181,8 @@ struct MutualRecord {
   struct employee {
     // TYPES
     struct Mk_employee {
-      unsigned int a0;
-      unsigned int a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     using variant_t = std::variant<Mk_employee>;
@@ -218,7 +218,7 @@ struct MutualRecord {
     }
 
     // CREATORS
-    static employee mk_employee(unsigned int a0, unsigned int a1) {
+    static employee mk_employee(uint64_t a0, uint64_t a1) {
       return employee(Mk_employee{a0, a1});
     }
 
@@ -230,53 +230,55 @@ struct MutualRecord {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<employee> &>
   static T1 department_rect(F0 &&f, const department &d) {
     const auto &[a0, a1] = std::get<typename department::Mk_department>(d.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<employee> &>
   static T1 department_rec(F0 &&f, const department &d) {
     const auto &[a0, a1] = std::get<typename department::Mk_department>(d.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
   static T1 employee_rect(F0 &&f, const employee &e) {
     const auto &[a0, a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(a0, a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
   static T1 employee_rec(F0 &&f, const employee &e) {
     const auto &[a0, a1] = std::get<typename employee::Mk_employee>(e.v());
     return f(a0, a1);
   }
 
-  static unsigned int dept_id(const department &d);
+  static uint64_t dept_id(const department &d);
   static List<employee> dept_employees(const department &d);
-  static unsigned int emp_id(const employee &e);
-  static unsigned int emp_salary(const employee &e);
-  static unsigned int dept_total_salary(const department &d);
-  static unsigned int emp_list_salary(const List<employee> &l);
-  static unsigned int dept_count(const department &d);
-  static unsigned int emp_list_count(const List<employee> &l);
-  static inline const employee emp1 = employee::mk_employee(1u, 50u);
-  static inline const employee emp2 = employee::mk_employee(2u, 60u);
-  static inline const employee emp3 = employee::mk_employee(3u, 70u);
+  static uint64_t emp_id(const employee &e);
+  static uint64_t emp_salary(const employee &e);
+  static uint64_t dept_total_salary(const department &d);
+  static uint64_t emp_list_salary(const List<employee> &l);
+  static uint64_t dept_count(const department &d);
+  static uint64_t emp_list_count(const List<employee> &l);
+  static inline const employee emp1 =
+      employee::mk_employee(UINT64_C(1), UINT64_C(50));
+  static inline const employee emp2 =
+      employee::mk_employee(UINT64_C(2), UINT64_C(60));
+  static inline const employee emp3 =
+      employee::mk_employee(UINT64_C(3), UINT64_C(70));
   static inline const department test_dept = department::mk_department(
-      100u,
+      UINT64_C(100),
       List<employee>::cons(
           emp1, List<employee>::cons(
                     emp2, List<employee>::cons(emp3, List<employee>::nil()))));
-  static inline const unsigned int test_total_salary =
-      dept_total_salary(test_dept);
-  static inline const unsigned int test_dept_count = dept_count(test_dept);
-  static inline const unsigned int test_dept_id = dept_id(test_dept);
+  static inline const uint64_t test_total_salary = dept_total_salary(test_dept);
+  static inline const uint64_t test_dept_count = dept_count(test_dept);
+  static inline const uint64_t test_dept_id = dept_id(test_dept);
 };
 
 #endif // INCLUDED_MUTUAL_RECORD

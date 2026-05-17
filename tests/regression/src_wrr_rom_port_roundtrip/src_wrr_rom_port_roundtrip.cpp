@@ -1,29 +1,28 @@
 #include "src_wrr_rom_port_roundtrip.h"
 
-unsigned int
-SrcWrrRomPortRoundtrip::get_reg(const SrcWrrRomPortRoundtrip::state &s,
-                                unsigned int r) {
-  return ListDef::template nth<unsigned int>(r, s.regs, 0u);
+uint64_t SrcWrrRomPortRoundtrip::get_reg(const SrcWrrRomPortRoundtrip::state &s,
+                                         uint64_t r) {
+  return ListDef::template nth<uint64_t>(r, s.regs, UINT64_C(0));
 }
 
-unsigned int
+uint64_t
 SrcWrrRomPortRoundtrip::get_reg_pair(const SrcWrrRomPortRoundtrip::state &s,
-                                     unsigned int r) {
-  unsigned int base =
-      (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
-  return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
+                                     uint64_t r) {
+  uint64_t base = (((r - (UINT64_C(2) ? r % UINT64_C(2) : r)) > r
+                        ? 0
+                        : (r - (UINT64_C(2) ? r % UINT64_C(2) : r))));
+  return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }
 
 SrcWrrRomPortRoundtrip::state
 SrcWrrRomPortRoundtrip::execute_src(const SrcWrrRomPortRoundtrip::state &s,
-                                    unsigned int r) {
+                                    uint64_t r) {
   return state{s.regs, s.acc, s.rom_ports,
-               (16u ? get_reg_pair(s, r) / 16u : 0)};
+               (UINT64_C(16) ? get_reg_pair(s, r) / UINT64_C(16) : 0)};
 }
 
 SrcWrrRomPortRoundtrip::state
 SrcWrrRomPortRoundtrip::execute_wrr(const SrcWrrRomPortRoundtrip::state &s) {
   return state{s.regs, s.acc,
-               update_nth<unsigned int>(s.sel_rom, s.acc, s.rom_ports),
-               s.sel_rom};
+               update_nth<uint64_t>(s.sel_rom, s.acc, s.rom_ports), s.sel_rom};
 }

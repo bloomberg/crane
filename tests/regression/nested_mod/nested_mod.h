@@ -45,17 +45,17 @@ struct NestedMod {
       struct shape {
         // TYPES
         struct Circle {
-          unsigned int a0;
+          uint64_t a0;
         };
 
         struct Square {
-          unsigned int a0;
+          uint64_t a0;
         };
 
         struct Triangle {
-          unsigned int a0;
-          unsigned int a1;
-          unsigned int a2;
+          uint64_t a0;
+          uint64_t a1;
+          uint64_t a2;
         };
 
         using variant_t = std::variant<Circle, Square, Triangle>;
@@ -103,12 +103,11 @@ struct NestedMod {
         }
 
         // CREATORS
-        static shape circle(unsigned int a0) { return shape(Circle{a0}); }
+        static shape circle(uint64_t a0) { return shape(Circle{a0}); }
 
-        static shape square(unsigned int a0) { return shape(Square{a0}); }
+        static shape square(uint64_t a0) { return shape(Square{a0}); }
 
-        static shape triangle(unsigned int a0, unsigned int a1,
-                              unsigned int a2) {
+        static shape triangle(uint64_t a0, uint64_t a1, uint64_t a2) {
           return shape(Triangle{a0, a1, a2});
         }
 
@@ -120,10 +119,10 @@ struct NestedMod {
       };
 
       template <typename T1, typename F0, typename F1, typename F2>
-        requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-                 std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-                 std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
-                                       unsigned int &>
+        requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                       uint64_t &>
       static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
         if (std::holds_alternative<typename shape::Circle>(s.v())) {
           const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -138,10 +137,10 @@ struct NestedMod {
       }
 
       template <typename T1, typename F0, typename F1, typename F2>
-        requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-                 std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-                 std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &,
-                                       unsigned int &>
+        requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                       uint64_t &>
       static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
         if (std::holds_alternative<typename shape::Circle>(s.v())) {
           const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -155,20 +154,20 @@ struct NestedMod {
         }
       }
 
-      static unsigned int area(const shape &s);
+      static uint64_t area(const shape &s);
     };
 
-    static unsigned int shape_with_color(const Inner::shape &s, Color c);
-    static unsigned int color_code(Color c);
+    static uint64_t shape_with_color(const Inner::shape &s, Color c);
+    static uint64_t color_code(Color c);
   };
 
   static inline const Outer::Inner::shape my_circle =
-      Outer::Inner::shape::circle(5u);
+      Outer::Inner::shape::circle(UINT64_C(5));
   static inline const Outer::Color my_color = Outer::Color::RED;
-  static inline const unsigned int test_area = Outer::Inner::area(my_circle);
-  static inline const unsigned int test_combined =
+  static inline const uint64_t test_area = Outer::Inner::area(my_circle);
+  static inline const uint64_t test_combined =
       Outer::shape_with_color(my_circle, my_color);
-  static inline const unsigned int test_color = Outer::color_code(my_color);
+  static inline const uint64_t test_color = Outer::color_code(my_color);
 };
 
 #endif // INCLUDED_NESTED_MOD

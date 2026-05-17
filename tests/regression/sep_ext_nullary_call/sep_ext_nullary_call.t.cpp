@@ -28,11 +28,11 @@ struct MyCfg {
     return v;
   }
 
-  static const Datatypes::List<unsigned int> &default_list() {
-    static const Datatypes::List<unsigned int> v =
-        Datatypes::List<unsigned int>::cons(
-            10u, Datatypes::List<unsigned int>::cons(
-                     20u, Datatypes::List<unsigned int>::nil()));
+  static const Datatypes::List<uint64_t> &default_list() {
+    static const Datatypes::List<uint64_t> v =
+        Datatypes::List<uint64_t>::cons(
+            10u, Datatypes::List<uint64_t>::cons(
+                     20u, Datatypes::List<uint64_t>::nil()));
     return v;
   }
 };
@@ -47,7 +47,7 @@ int main() {
 
   auto prepended = W::prepend(5u);
   const auto &[h, t] =
-      std::get<typename Datatypes::List<unsigned int>::Cons>(prepended.v());
+      std::get<typename Datatypes::List<uint64_t>::Cons>(prepended.v());
   ASSERT(h == 5u);
 
   ASSERT(W::default_head() == 10u);

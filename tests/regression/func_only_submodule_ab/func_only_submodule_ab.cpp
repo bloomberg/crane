@@ -1,9 +1,7 @@
 #include "func_only_submodule_ab.h"
 
-unsigned int FuncOnlySubmoduleAb::Root::A::inc(unsigned int n) {
-  return (n + 1);
-}
+uint64_t FuncOnlySubmoduleAb::Root::A::inc(uint64_t n) { return (n + 1); }
 
-unsigned int FuncOnlySubmoduleAb::Root::B::dec(unsigned int _x0) {
+uint64_t FuncOnlySubmoduleAb::Root::B::dec(uint64_t _x0) {
   return (_x0 ? _x0 - 1 : _x0);
 }

@@ -1,39 +1,36 @@
 #include "mem_safety_probe6.h"
 
 /// TEST 5: Chain of closures each pre-computing from the tail.
-MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>
-MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<unsigned int> &l) {
-  std::unique_ptr<
-      MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>>
+MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
+  std::unique_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
       _head{};
-  std::unique_ptr<
-      MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>>
+  std::unique_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
       *_write = &_head;
-  MemSafetyProbe6::mylist<unsigned int> _loop_l = l;
+  MemSafetyProbe6::mylist<uint64_t> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
-            typename MemSafetyProbe6::mylist<unsigned int>::Mynil>(
-            _loop_l.v())) {
+            typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(_loop_l.v())) {
       *_write = std::make_unique<
-          MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>>(
-          mylist<std::function<unsigned int(unsigned int)>>::mynil());
+          MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>(
+          mylist<std::function<uint64_t(uint64_t)>>::mynil());
       break;
     } else {
       const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe6::mylist<unsigned int>::Mycons>(
+          std::get<typename MemSafetyProbe6::mylist<uint64_t>::Mycons>(
               _loop_l.v());
-      const MemSafetyProbe6::mylist<unsigned int> &a1_value = *a1;
-      unsigned int rest_len = a1_value.length();
+      const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
+      uint64_t rest_len = a1_value.length();
       auto _cell = std::make_unique<
-          MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>>(
-          typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
-              [=](unsigned int n) mutable { return ((a0 + rest_len) + n); },
+          MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>(
+          typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
+              [=](uint64_t n) mutable { return ((a0 + rest_len) + n); },
               nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename mylist<
-          std::function<unsigned int(unsigned int)>>::Mycons>(
-                    (*_write)->v_mut())
-                    .a1;
+      _write =
+          &std::get<typename mylist<std::function<uint64_t(uint64_t)>>::Mycons>(
+               (*_write)->v_mut())
+               .a1;
       _loop_l = a1_value;
       continue;
     }
@@ -41,24 +38,22 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<unsigned int> &l) {
   return std::move(*_head);
 }
 
-unsigned int MemSafetyProbe6::apply_chain(
-    const MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>
-        &fns,
-    unsigned int
+uint64_t MemSafetyProbe6::apply_chain(
+    const MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    uint64_t
         x) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>
-        *fns;
+    const MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>> *fns;
   };
 
   /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    std::function<unsigned int(unsigned int)> a0;
+    std::function<uint64_t(uint64_t)> a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&fns});
@@ -68,14 +63,14 @@ unsigned int MemSafetyProbe6::apply_chain(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>
-          &fns = *_f.fns;
+      const MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>> &fns =
+          *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe6::mylist<
-              std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
+              std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
         _result = std::move(x);
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe6::mylist<
-            std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
+            std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());
         _stack.emplace_back(_Resume_Mycons{std::move(a0)});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -89,19 +84,20 @@ unsigned int MemSafetyProbe6::apply_chain(
 
 /// TEST 6: Closure captures tail, then tail is used again
 /// after the closure is created — tests double use.
-unsigned int MemSafetyProbe6::capture_and_reuse(
-    unsigned int, const MemSafetyProbe6::mylist<unsigned int> &l) {
-  if (std::holds_alternative<
-          typename MemSafetyProbe6::mylist<unsigned int>::Mynil>(l.v())) {
-    return 0u;
+uint64_t
+MemSafetyProbe6::capture_and_reuse(uint64_t,
+                                   const MemSafetyProbe6::mylist<uint64_t> &l) {
+  if (std::holds_alternative<typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(
+          l.v())) {
+    return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
-        std::get<typename MemSafetyProbe6::mylist<unsigned int>::Mycons>(l.v());
-    const MemSafetyProbe6::mylist<unsigned int> &a1_value = *a1;
-    std::function<unsigned int(unsigned int)> f = [=](unsigned int n) mutable {
+        std::get<typename MemSafetyProbe6::mylist<uint64_t>::Mycons>(l.v());
+    const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
+    std::function<uint64_t(uint64_t)> f = [=](uint64_t n) mutable {
       return (a1_value.length() + n);
     };
-    unsigned int tail_len = a1_value.length();
+    uint64_t tail_len = a1_value.length();
     return (f(a0) + tail_len);
   }
 }

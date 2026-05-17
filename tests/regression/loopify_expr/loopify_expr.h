@@ -126,7 +126,7 @@ struct LoopifyExpr {
   struct expr {
     // TYPES
     struct Val {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Succ {
@@ -253,7 +253,7 @@ struct LoopifyExpr {
     }
 
     // CREATORS
-    static expr val(unsigned int a0) { return expr(Val{a0}); }
+    static expr val(uint64_t a0) { return expr(Val{a0}); }
 
     static expr succ(expr a0) {
       return expr(Succ{std::make_unique<expr>(std::move(a0))});
@@ -353,7 +353,7 @@ struct LoopifyExpr {
           if (a00 <= 0) {
             return (*a1).simplify();
           } else {
-            unsigned int n0 = a00 - 1;
+            uint64_t n0 = a00 - 1;
             expr s1 = expr::val((n0 + 1));
             auto &&_sv1 = (*a1).simplify();
             if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
@@ -361,7 +361,7 @@ struct LoopifyExpr {
               if (a01 <= 0) {
                 return s1;
               } else {
-                unsigned int n2 = a01 - 1;
+                uint64_t n2 = a01 - 1;
                 return expr::add(std::move(s1), expr::val((n2 + 1)));
               }
             } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
@@ -388,7 +388,7 @@ struct LoopifyExpr {
             if (a01 <= 0) {
               return s1;
             } else {
-              unsigned int n0 = a01 - 1;
+              uint64_t n0 = a01 - 1;
               return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
@@ -414,7 +414,7 @@ struct LoopifyExpr {
             if (a01 <= 0) {
               return s1;
             } else {
-              unsigned int n0 = a01 - 1;
+              uint64_t n0 = a01 - 1;
               return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
@@ -440,7 +440,7 @@ struct LoopifyExpr {
             if (a01 <= 0) {
               return s1;
             } else {
-              unsigned int n0 = a01 - 1;
+              uint64_t n0 = a01 - 1;
               return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
@@ -466,7 +466,7 @@ struct LoopifyExpr {
             if (a01 <= 0) {
               return s1;
             } else {
-              unsigned int n0 = a01 - 1;
+              uint64_t n0 = a01 - 1;
               return expr::add(std::move(s1), expr::val((n0 + 1)));
             }
           } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
@@ -490,18 +490,18 @@ struct LoopifyExpr {
         if (std::holds_alternative<typename expr::Val>(_sv0.v())) {
           const auto &[a00] = std::get<typename expr::Val>(_sv0.v());
           if (a00 <= 0) {
-            return expr::val(0u);
+            return expr::val(UINT64_C(0));
           } else {
-            unsigned int _x = a00 - 1;
+            uint64_t _x = a00 - 1;
             auto &&_sv1 = (*a1).simplify();
             if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
               const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
               if (a01 <= 0) {
-                return expr::val(0u);
+                return expr::val(UINT64_C(0));
               } else {
-                unsigned int n1 = a01 - 1;
+                uint64_t n1 = a01 - 1;
                 expr s2 = expr::val((n1 + 1));
-                if (a00 == 1u) {
+                if (a00 == UINT64_C(1)) {
                   return s2;
                 } else {
                   return expr::mul(expr::val(a00), std::move(s2));
@@ -510,7 +510,7 @@ struct LoopifyExpr {
             } else if (std::holds_alternative<typename expr::Succ>(_sv1.v())) {
               const auto &[a01] = std::get<typename expr::Succ>(_sv1.v());
               expr s2 = expr::succ(*a01);
-              if (a00 == 1u) {
+              if (a00 == UINT64_C(1)) {
                 return s2;
               } else {
                 return expr::mul(expr::val(a00), std::move(s2));
@@ -518,7 +518,7 @@ struct LoopifyExpr {
             } else if (std::holds_alternative<typename expr::Add>(_sv1.v())) {
               const auto &[a01, a11] = std::get<typename expr::Add>(_sv1.v());
               expr s2 = expr::add(*a01, *a11);
-              if (a00 == 1u) {
+              if (a00 == UINT64_C(1)) {
                 return s2;
               } else {
                 return expr::mul(expr::val(a00), std::move(s2));
@@ -526,7 +526,7 @@ struct LoopifyExpr {
             } else if (std::holds_alternative<typename expr::Mul>(_sv1.v())) {
               const auto &[a01, a11] = std::get<typename expr::Mul>(_sv1.v());
               expr s2 = expr::mul(*a01, *a11);
-              if (a00 == 1u) {
+              if (a00 == UINT64_C(1)) {
                 return s2;
               } else {
                 return expr::mul(expr::val(a00), std::move(s2));
@@ -535,7 +535,7 @@ struct LoopifyExpr {
               const auto &[a01, a11, a21] =
                   std::get<typename expr::Cond>(_sv1.v());
               expr s2 = expr::cond(*a01, *a11, *a21);
-              if (a00 == 1u) {
+              if (a00 == UINT64_C(1)) {
                 return s2;
               } else {
                 return expr::mul(expr::val(a00), std::move(s2));
@@ -549,10 +549,10 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
-              return expr::val(0u);
+              return expr::val(UINT64_C(0));
             } else {
-              unsigned int _x = a01 - 1;
-              if (a01 == 1u) {
+              uint64_t _x = a01 - 1;
+              if (a01 == UINT64_C(1)) {
                 return s1;
               } else {
                 return expr::mul(std::move(s1), expr::val(a01));
@@ -579,10 +579,10 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
-              return expr::val(0u);
+              return expr::val(UINT64_C(0));
             } else {
-              unsigned int _x = a01 - 1;
-              if (a01 == 1u) {
+              uint64_t _x = a01 - 1;
+              if (a01 == UINT64_C(1)) {
                 return s1;
               } else {
                 return expr::mul(std::move(s1), expr::val(a01));
@@ -609,10 +609,10 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
-              return expr::val(0u);
+              return expr::val(UINT64_C(0));
             } else {
-              unsigned int _x = a01 - 1;
-              if (a01 == 1u) {
+              uint64_t _x = a01 - 1;
+              if (a01 == UINT64_C(1)) {
                 return s1;
               } else {
                 return expr::mul(std::move(s1), expr::val(a01));
@@ -639,10 +639,10 @@ struct LoopifyExpr {
           if (std::holds_alternative<typename expr::Val>(_sv1.v())) {
             const auto &[a01] = std::get<typename expr::Val>(_sv1.v());
             if (a01 <= 0) {
-              return expr::val(0u);
+              return expr::val(UINT64_C(0));
             } else {
-              unsigned int _x = a01 - 1;
-              if (a01 == 1u) {
+              uint64_t _x = a01 - 1;
+              if (a01 == UINT64_C(1)) {
                 return s1;
               } else {
                 return expr::mul(std::move(s1), expr::val(a01));
@@ -670,7 +670,7 @@ struct LoopifyExpr {
     }
 
     /// size e counts total number of nodes.
-    unsigned int size() const {
+    uint64_t size() const {
       const expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -691,7 +691,7 @@ struct LoopifyExpr {
 
       /// _After_Cond_1: saves [_result, _s1], dispatches next recursive call.
       struct _After_Cond_1 {
-        unsigned int _result;
+        uint64_t _result;
         const expr *_s1;
       };
 
@@ -703,20 +703,20 @@ struct LoopifyExpr {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       /// _Combine_Cond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Cond {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
       };
 
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       /// _Resume_Succ: resumes after recursive call with _result.
@@ -725,7 +725,7 @@ struct LoopifyExpr {
       using _Frame = std::variant<_Enter, _After_Add, _After_Cond,
                                   _After_Cond_1, _After_Mul, _Combine_Add,
                                   _Combine_Cond, _Combine_Mul, _Resume_Succ>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -740,7 +740,7 @@ struct LoopifyExpr {
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Val>(_sv.v())) {
-            _result = 1u;
+            _result = UINT64_C(1);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
             _stack.emplace_back(_Resume_Succ{});
@@ -792,7 +792,7 @@ struct LoopifyExpr {
     }
 
     /// count_vals e counts the number of Val nodes.
-    unsigned int count_vals() const {
+    uint64_t count_vals() const {
       const expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -813,7 +813,7 @@ struct LoopifyExpr {
 
       /// _After_Cond_1: saves [_result, _s1], dispatches next recursive call.
       struct _After_Cond_1 {
-        unsigned int _result;
+        uint64_t _result;
         const expr *_s1;
       };
 
@@ -825,26 +825,26 @@ struct LoopifyExpr {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       /// _Combine_Cond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Cond {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
       };
 
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame =
           std::variant<_Enter, _After_Add, _After_Cond, _After_Cond_1,
                        _After_Mul, _Combine_Add, _Combine_Cond, _Combine_Mul>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -859,7 +859,7 @@ struct LoopifyExpr {
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Val>(_sv.v())) {
-            _result = 1u;
+            _result = UINT64_C(1);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
             _stack.emplace_back(_Enter{a0.get()});
@@ -907,7 +907,7 @@ struct LoopifyExpr {
     }
 
     /// depth e computes expression depth.
-    unsigned int depth() const {
+    uint64_t depth() const {
       const expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -928,7 +928,7 @@ struct LoopifyExpr {
 
       /// _After_Cond_1: saves [_result, _s1], dispatches next recursive call.
       struct _After_Cond_1 {
-        unsigned int _result;
+        uint64_t _result;
         const expr *_s1;
       };
 
@@ -940,20 +940,20 @@ struct LoopifyExpr {
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       /// _Combine_Cond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Cond {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
       };
 
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       /// _Resume_Succ: resumes after recursive call with _result.
@@ -962,7 +962,7 @@ struct LoopifyExpr {
       using _Frame = std::variant<_Enter, _After_Add, _After_Cond,
                                   _After_Cond_1, _After_Mul, _Combine_Add,
                                   _Combine_Cond, _Combine_Mul, _Resume_Succ>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -977,7 +977,7 @@ struct LoopifyExpr {
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Val>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else if (std::holds_alternative<typename expr::Succ>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Succ>(_sv.v());
             _stack.emplace_back(_Resume_Succ{});
@@ -1030,7 +1030,7 @@ struct LoopifyExpr {
     }
 
     /// eval e evaluates an expression. Multi-constructor recursion.
-    unsigned int eval() const {
+    uint64_t eval() const {
       const expr *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename expr::Val>(_sv.v())) {
@@ -1047,7 +1047,7 @@ struct LoopifyExpr {
         return ((*a0).eval() * (*a1).eval());
       } else {
         const auto &[a0, a1, a2] = std::get<typename expr::Cond>(_sv.v());
-        if (0u < (*a0).eval()) {
+        if (UINT64_C(0) < (*a0).eval()) {
           return (*a1).eval();
         } else {
           return (*a2).eval();
@@ -1057,7 +1057,7 @@ struct LoopifyExpr {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
@@ -1217,7 +1217,7 @@ struct LoopifyExpr {
 
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
                std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &> &&
@@ -1380,7 +1380,7 @@ struct LoopifyExpr {
   struct simple_expr {
     // TYPES
     struct Lit {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Plus {
@@ -1476,7 +1476,7 @@ struct LoopifyExpr {
     }
 
     // CREATORS
-    static simple_expr lit(unsigned int a0) { return simple_expr(Lit{a0}); }
+    static simple_expr lit(uint64_t a0) { return simple_expr(Lit{a0}); }
 
     static simple_expr plus(simple_expr a0, simple_expr a1) {
       return simple_expr(Plus{std::make_unique<simple_expr>(std::move(a0)),
@@ -1532,7 +1532,7 @@ struct LoopifyExpr {
     const variant_t &v() const { return v_; }
 
     /// depth_simple e computes depth of simple expression tree.
-    unsigned int depth_simple() const {
+    uint64_t depth_simple() const {
       const simple_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -1548,7 +1548,7 @@ struct LoopifyExpr {
 
       /// _After_IfPos_1: saves [_result, _s1], dispatches next recursive call.
       struct _After_IfPos_1 {
-        unsigned int _result;
+        uint64_t _result;
         const simple_expr *_s1;
       };
 
@@ -1560,19 +1560,19 @@ struct LoopifyExpr {
       /// _Combine_IfPos: receives partial results, combines with _result from
       /// final call.
       struct _Combine_IfPos {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
       };
 
       /// _Combine_Plus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Plus {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After_IfPos, _After_IfPos_1,
                                   _After_Plus, _Combine_IfPos, _Combine_Plus>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -1586,7 +1586,7 @@ struct LoopifyExpr {
           const simple_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_expr::Lit>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else if (std::holds_alternative<typename simple_expr::Plus>(
                          _sv.v())) {
             const auto &[a0, a1] =
@@ -1624,7 +1624,7 @@ struct LoopifyExpr {
     }
 
     /// eval_simple e evaluates simple expression with positive test.
-    unsigned int eval_simple() const {
+    uint64_t eval_simple() const {
       const simple_expr *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename simple_expr::Lit>(_sv.v())) {
@@ -1636,7 +1636,7 @@ struct LoopifyExpr {
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename simple_expr::IfPos>(_sv.v());
-        if (0u < (*a0).eval_simple()) {
+        if (UINT64_C(0) < (*a0).eval_simple()) {
           return (*a1).eval_simple();
         } else {
           return (*a2).eval_simple();
@@ -1645,7 +1645,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, simple_expr &, T1 &,
                                      simple_expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, simple_expr &, T1 &,
@@ -1764,7 +1764,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, simple_expr &, T1 &,
                                      simple_expr &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, simple_expr &, T1 &,
@@ -1887,15 +1887,15 @@ struct LoopifyExpr {
   struct shape {
     // TYPES
     struct Circle {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Square {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct Triangle {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<Circle, Square, Triangle>;
@@ -1943,11 +1943,11 @@ struct LoopifyExpr {
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) { return shape(Circle{a0}); }
+    static shape circle(uint64_t a0) { return shape(Circle{a0}); }
 
-    static shape square(unsigned int a0) { return shape(Square{a0}); }
+    static shape square(uint64_t a0) { return shape(Square{a0}); }
 
-    static shape triangle(unsigned int a0) { return shape(Triangle{a0}); }
+    static shape triangle(uint64_t a0) { return shape(Triangle{a0}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -1956,9 +1956,9 @@ struct LoopifyExpr {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &>
     T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
@@ -1973,9 +1973,9 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &>
     T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename shape::Circle>(this->v())) {
         const auto &[a0] = std::get<typename shape::Circle>(this->v());
@@ -1992,9 +1992,9 @@ struct LoopifyExpr {
 
   /// sum_shapes l sums values from shapes using unified pattern.
   /// Tests or-pattern style matching in Coq.
-  static unsigned int sum_shapes(const List<shape> &l);
+  static uint64_t sum_shapes(const List<shape> &l);
   /// count_by_shape l counts shapes: (circles, squares, triangles).
-  static std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
+  static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
   count_by_shape(const List<shape> &l);
 
   /// Alternative expression type with conditionals for testing different
@@ -2002,7 +2002,7 @@ struct LoopifyExpr {
   struct cond_expr {
     // TYPES
     struct CLit {
-      unsigned int a0;
+      uint64_t a0;
     };
 
     struct CPlus {
@@ -2098,7 +2098,7 @@ struct LoopifyExpr {
     }
 
     // CREATORS
-    static cond_expr clit(unsigned int a0) { return cond_expr(CLit{a0}); }
+    static cond_expr clit(uint64_t a0) { return cond_expr(CLit{a0}); }
 
     static cond_expr cplus(cond_expr a0, cond_expr a1) {
       return cond_expr(CPlus{std::make_unique<cond_expr>(std::move(a0)),
@@ -2154,7 +2154,7 @@ struct LoopifyExpr {
     const variant_t &v() const { return v_; }
 
     /// depth_cond e computes depth of conditional expression tree.
-    unsigned int depth_cond() const {
+    uint64_t depth_cond() const {
       const cond_expr *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -2170,7 +2170,7 @@ struct LoopifyExpr {
 
       /// _After_CCond_1: saves [_result, _s1], dispatches next recursive call.
       struct _After_CCond_1 {
-        unsigned int _result;
+        uint64_t _result;
         const cond_expr *_s1;
       };
 
@@ -2182,19 +2182,19 @@ struct LoopifyExpr {
       /// _Combine_CCond: receives partial results, combines with _result from
       /// final call.
       struct _Combine_CCond {
-        unsigned int _result_0;
-        unsigned int _result_1;
+        uint64_t _result_0;
+        uint64_t _result_1;
       };
 
       /// _Combine_CPlus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_CPlus {
-        unsigned int _result;
+        uint64_t _result;
       };
 
       using _Frame = std::variant<_Enter, _After_CCond, _After_CCond_1,
                                   _After_CPlus, _Combine_CCond, _Combine_CPlus>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -2208,7 +2208,7 @@ struct LoopifyExpr {
           const cond_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::CLit>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else if (std::holds_alternative<typename cond_expr::CPlus>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename cond_expr::CPlus>(_sv.v());
@@ -2245,7 +2245,7 @@ struct LoopifyExpr {
     }
 
     /// eval_cond e evaluates conditional expression.
-    unsigned int eval_cond() const {
+    uint64_t eval_cond() const {
       const cond_expr *_self = this;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename cond_expr::CLit>(_sv.v())) {
@@ -2256,7 +2256,7 @@ struct LoopifyExpr {
         return ((*a0).eval_cond() + (*a1).eval_cond());
       } else {
         const auto &[a0, a1, a2] = std::get<typename cond_expr::CCond>(_sv.v());
-        if (0u < (*a0).eval_cond()) {
+        if (UINT64_C(0) < (*a0).eval_cond()) {
           return (*a1).eval_cond();
         } else {
           return (*a2).eval_cond();
@@ -2265,7 +2265,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,
@@ -2383,7 +2383,7 @@ struct LoopifyExpr {
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F1 &, cond_expr &, T1 &, cond_expr &,
                                      T1 &> &&
                std::is_invocable_r_v<T1, F2 &, cond_expr &, T1 &, cond_expr &,

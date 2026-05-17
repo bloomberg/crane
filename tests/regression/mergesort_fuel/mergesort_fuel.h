@@ -118,9 +118,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return ((*a1).length() + 1);
@@ -129,20 +129,19 @@ public:
 };
 
 struct Compare_dec {
-  static bool le_lt_dec(unsigned int n, unsigned int m);
+  static bool le_lt_dec(uint64_t n, uint64_t m);
 };
 
 struct MergesortFuel {
   /// * Split
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  split(const List<unsigned int> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  split(const List<uint64_t> &l);
   /// * Merge
-  static List<unsigned int> merge(List<unsigned int> l1,
-                                  const List<unsigned int> &l2);
+  static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
   /// * Fuel-based merge sort
-  static List<unsigned int> msort_go(unsigned int fuel, List<unsigned int> l);
+  static List<uint64_t> msort_go(uint64_t fuel, List<uint64_t> l);
   /// * Top-level sort and correctness
-  static List<unsigned int> msort(const List<unsigned int> &l);
+  static List<uint64_t> msort(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_MERGESORT_FUEL

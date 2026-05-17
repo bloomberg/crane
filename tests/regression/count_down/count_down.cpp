@@ -1,13 +1,13 @@
 #include "count_down.h"
 
 /// Single effect then recurse: effect ;; recursive_call
-void CountDown::count_down(unsigned int n) {
-  unsigned int _loop_n = std::move(n);
+void CountDown::count_down(uint64_t n) {
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
     } else {
-      unsigned int n_ = _loop_n - 1;
+      uint64_t n_ = _loop_n - 1;
       std::cout << "tick"s << '\n';
       _loop_n = n_;
     }
@@ -16,13 +16,13 @@ void CountDown::count_down(unsigned int n) {
 }
 
 /// Two effects then recurse: effect ;; effect ;; recursive_call
-void CountDown::two_prints(unsigned int n) {
-  unsigned int _loop_n = std::move(n);
+void CountDown::two_prints(uint64_t n) {
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
     } else {
-      unsigned int n_ = _loop_n - 1;
+      uint64_t n_ = _loop_n - 1;
       std::cout << "step "s + std::to_string(_loop_n) << '\n';
       std::cout << "---"s << '\n';
       _loop_n = n_;
@@ -32,13 +32,13 @@ void CountDown::two_prints(unsigned int n) {
 }
 
 /// Read from user, echo back, then recurse
-void CountDown::echo_loop(unsigned int n) {
-  unsigned int _loop_n = std::move(n);
+void CountDown::echo_loop(uint64_t n) {
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
     } else {
-      unsigned int n_ = _loop_n - 1;
+      uint64_t n_ = _loop_n - 1;
       std::string line;
       std::getline(std::cin, line);
       std::cout << "echo: "s + line << '\n';
@@ -49,14 +49,14 @@ void CountDown::echo_loop(unsigned int n) {
 }
 
 /// Effect in base case too: both branches do IO
-void CountDown::announce(unsigned int n) {
-  unsigned int _loop_n = std::move(n);
+void CountDown::announce(uint64_t n) {
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       std::cout << "done"s << '\n';
       return;
     } else {
-      unsigned int n_ = _loop_n - 1;
+      uint64_t n_ = _loop_n - 1;
       std::cout << "counting "s + std::to_string(_loop_n) << '\n';
       _loop_n = n_;
     }
@@ -65,13 +65,13 @@ void CountDown::announce(unsigned int n) {
 }
 
 /// Multiple arguments: two nat params, recurse on first
-void CountDown::repeat_msg(unsigned int n, std::string msg) {
-  unsigned int _loop_n = std::move(n);
+void CountDown::repeat_msg(uint64_t n, std::string msg) {
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       return;
     } else {
-      unsigned int n_ = _loop_n - 1;
+      uint64_t n_ = _loop_n - 1;
       std::cout << msg << '\n';
       _loop_n = n_;
     }
@@ -80,11 +80,11 @@ void CountDown::repeat_msg(unsigned int n, std::string msg) {
 }
 
 void CountDown::run_fixpoint() {
-  count_down(3u);
-  two_prints(3u);
-  echo_loop(0u);
-  announce(2u);
-  repeat_msg(2u, "hello");
+  count_down(UINT64_C(3));
+  two_prints(UINT64_C(3));
+  echo_loop(UINT64_C(0));
+  announce(UINT64_C(2));
+  repeat_msg(UINT64_C(2), "hello");
   return;
 }
 
@@ -141,8 +141,8 @@ void CountDown::co_echo_loop() {
   return;
 }
 
-void CountDown::co_announce(unsigned int round) {
-  unsigned int _loop_round = std::move(round);
+void CountDown::co_announce(uint64_t round) {
+  uint64_t _loop_round = std::move(round);
   while (true) {
     std::string line;
     std::getline(std::cin, line);

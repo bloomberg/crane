@@ -10,17 +10,17 @@ concept Boxed = requires {
 
 struct TodoTypeAppInstanceAlias {
   struct natBoxed {
-    static unsigned int boxed_default() { return 7u; }
+    static uint64_t boxed_default() { return UINT64_C(7); }
   };
 
-  static_assert(Boxed<natBoxed, unsigned int>);
+  static_assert(Boxed<natBoxed, uint64_t>);
 
   template <typename _tcI0, typename T1> static T1 pick() {
     return _tcI0::boxed_default();
   }
 
-  static inline const unsigned int test_value = []() {
-    return (pick<natBoxed, unsigned int>() + pick<natBoxed, unsigned int>());
+  static inline const uint64_t test_value = []() {
+    return (pick<natBoxed, uint64_t>() + pick<natBoxed, uint64_t>());
   }();
 };
 

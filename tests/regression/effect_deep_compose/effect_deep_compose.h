@@ -24,7 +24,7 @@ struct EffectDeepCompose {
   /// 5. Conditional clock read
   static int64_t maybe_time(bool measure);
   /// 6. Recursive function over all three effects
-  static void repeat_n(unsigned int n);
+  static void repeat_n(uint64_t n);
 };
 
 #endif // INCLUDED_EFFECT_DEEP_COMPOSE

@@ -38,7 +38,7 @@ int main() {
   // eval (ENat 42) = 42
   auto e1 = Expr::enat(42);
   auto r1 = e1.eval(Ty::TNAT);
-  ASSERT(std::any_cast<unsigned int>(r1) == 42);
+  ASSERT(std::any_cast<uint64_t>(r1) == 42);
   std::cout << "Test 1 passed: ENat 42 evaluates to 42\n";
 
   // Test 2: Simple boolean literal
@@ -52,7 +52,7 @@ int main() {
   // eval (EAdd (ENat 10) (ENat 32)) = 42
   auto e3 = Expr::eadd(Expr::enat(10), Expr::enat(32));
   auto r3 = e3.eval(Ty::TNAT);
-  ASSERT(std::any_cast<unsigned int>(r3) == 42);
+  ASSERT(std::any_cast<uint64_t>(r3) == 42);
   std::cout << "Test 3 passed: 10 + 32 = 42\n";
 
   // Test 4: Equality (true case)
@@ -74,7 +74,7 @@ int main() {
   auto e6 = Expr::eif(Ty::TNAT, Expr::ebool(true),
                              Expr::enat(100), Expr::enat(200));
   auto r6 = e6.eval(Ty::TNAT);
-  ASSERT(std::any_cast<unsigned int>(r6) == 100);
+  ASSERT(std::any_cast<uint64_t>(r6) == 100);
   std::cout << "Test 6 passed: if true then 100 else 200 = 100\n";
 
   // Test 7: If-then-else (false branch)
@@ -82,7 +82,7 @@ int main() {
   auto e7 = Expr::eif(Ty::TNAT, Expr::ebool(false),
                              Expr::enat(100), Expr::enat(200));
   auto r7 = e7.eval(Ty::TNAT);
-  ASSERT(std::any_cast<unsigned int>(r7) == 200);
+  ASSERT(std::any_cast<uint64_t>(r7) == 200);
   std::cout << "Test 7 passed: if false then 100 else 200 = 200\n";
 
   // Test 8: Complex expression combining multiple operations
@@ -95,7 +95,7 @@ int main() {
                                         Expr::enat(5)),
                        Expr::enat(42), Expr::enat(0));
   auto r8 = e8.eval(Ty::TNAT);
-  ASSERT(std::any_cast<unsigned int>(r8) == 42);
+  ASSERT(std::any_cast<uint64_t>(r8) == 42);
   std::cout << "Test 8 passed: if (2 + 3 == 5) then 42 else 0 = 42\n";
 
   // Test 9: Nested conditionals

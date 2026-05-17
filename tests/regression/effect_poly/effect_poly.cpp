@@ -1,12 +1,12 @@
 #include "effect_poly.h"
 
-unsigned int EffectPoly::test_map_result() {
-  return map_result<unsigned int, unsigned int>(
-      [](unsigned int x) { return (x + 1); }, 41u);
+uint64_t EffectPoly::test_map_result() {
+  return map_result<uint64_t, uint64_t>([](uint64_t x) { return (x + 1); },
+                                        UINT64_C(41));
 }
 
-unsigned int EffectPoly::test_lift_nat() {
-  return lift_pure<unsigned int>(42u);
+uint64_t EffectPoly::test_lift_nat() {
+  return lift_pure<uint64_t>(UINT64_C(42));
 }
 
 std::string EffectPoly::test_lift_string() {
@@ -77,18 +77,19 @@ void EffectPoly::test_sequence_void() {
   return;
 }
 
-unsigned int EffectPoly::sum_with_logging(unsigned int acc, unsigned int n) {
+uint64_t EffectPoly::sum_with_logging(uint64_t acc, uint64_t n) {
   std::cout << "adding"s << '\n';
   return (acc + n);
 }
 
-unsigned int EffectPoly::test_fold() {
-  return fold_m<unsigned int, unsigned int>(
-      sum_with_logging, 0u,
-      List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
+uint64_t EffectPoly::test_fold() {
+  return fold_m<uint64_t, uint64_t>(
+      sum_with_logging, UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 }
 
 /// 7. Returning a pair from a monadic computation
@@ -105,6 +106,6 @@ int64_t EffectPoly::chain_types() {
   std::cout << "enter a number:"s << '\n';
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = line.length();
+  int64_t len = static_cast<int64_t>(line.length());
   return len;
 }
