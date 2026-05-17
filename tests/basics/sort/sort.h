@@ -141,7 +141,6 @@ template <typename A> struct Sig {
 };
 
 struct Compare_dec {
-  static bool le_lt_dec(unsigned int n, unsigned int m);
   static bool le_gt_dec(unsigned int _x0, unsigned int _x1);
   static bool le_dec(unsigned int n, unsigned int m);
 };
@@ -153,7 +152,7 @@ struct Sort {
              std::is_invocable_r_v<T2, F2 &, T1 &> &&
              std::is_invocable_r_v<T2, F3 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq(F0 &&splitF, T2 x, F2 &&x0, F3 &&x1, const List<T1> &ls) {
-    bool s = Compare_dec::le_lt_dec(2u, ls.length());
+    bool s = 2u <= ls.length();
     if (s) {
       return x1(ls, div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).first),
                 div_conq<T1, T2>(splitF, x, x0, x1, splitF(ls).second));
