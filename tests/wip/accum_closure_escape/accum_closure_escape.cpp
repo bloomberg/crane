@@ -16,7 +16,7 @@ AccumClosureEscape::build_adders(
     const auto &[a0, a1] =
         std::get<typename AccumClosureEscape::mylist<unsigned int>::Mycons>(
             l.v());
-    AccumClosureEscape::mylist<unsigned int> a1_value = *a1;
+    const AccumClosureEscape::mylist<unsigned int> &a1_value = *a1;
     return build_adders(
         a1_value,
         mylist<std::function<unsigned int(unsigned int)>>::mycons(

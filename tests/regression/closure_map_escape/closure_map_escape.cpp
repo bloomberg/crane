@@ -23,7 +23,7 @@ ClosureMapEscape::map_to_adders(
     const auto &[a0, a1] =
         std::get<typename ClosureMapEscape::mylist<unsigned int>::Mycons>(
             l.v());
-    ClosureMapEscape::mylist<unsigned int> a1_value = *a1;
+    const ClosureMapEscape::mylist<unsigned int> &a1_value = *a1;
     auto add_impl = [=](auto &_self_add,
                         unsigned int x) mutable -> unsigned int {
       if (x <= 0) {

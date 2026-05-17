@@ -359,7 +359,7 @@ struct LoopifySpecialRecursion {
         auto _f = std::move(std::get<_Enter>(_frame));
         unsigned int n = _f.n;
         if (n <= 0) {
-          _result = x;
+          _result = std::move(x);
         } else {
           unsigned int n_ = n - 1;
           _stack.emplace_back(_Resume_n_{f});

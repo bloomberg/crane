@@ -197,7 +197,7 @@ struct LoopifyNumbers {
     unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        _result = _loop_x;
+        _result = std::move(_loop_x);
         break;
       } else {
         unsigned int m = _loop_n - 1;
@@ -243,7 +243,7 @@ struct LoopifyNumbers {
         auto _f = std::move(std::get<_Enter>(_frame));
         unsigned int n = _f.n;
         if (n <= 0) {
-          _result = x;
+          _result = std::move(x);
         } else {
           unsigned int n_ = n - 1;
           if (n_ <= 0) {

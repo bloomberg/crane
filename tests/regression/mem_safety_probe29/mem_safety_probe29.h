@@ -270,7 +270,7 @@ struct MemSafetyProbe29 {
           const inner *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
             _stack.emplace_back(_After_INode{a0.get(), *a2, a1, *a0});
@@ -331,7 +331,7 @@ struct MemSafetyProbe29 {
           const inner *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
             _stack.emplace_back(_After_INode{a0.get(), *a2, a1, *a0});
@@ -617,7 +617,7 @@ struct MemSafetyProbe29 {
           const outer *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
             _stack.emplace_back(_After_ONode{a0.get(), *a2, a1, *a0});
@@ -678,7 +678,7 @@ struct MemSafetyProbe29 {
           const outer *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
             _stack.emplace_back(_After_ONode{a0.get(), *a2, a1, *a0});
@@ -1086,7 +1086,7 @@ struct MemSafetyProbe29 {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-            _result = a0;
+            _result = std::move(a0);
           } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
             const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
             _stack.emplace_back(_Enter{a0.get()});
@@ -1581,7 +1581,7 @@ struct MemSafetyProbe29 {
           const tree3 *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename tree3::T3Node>(_sv.v());
@@ -1670,7 +1670,7 @@ struct MemSafetyProbe29 {
           const tree3 *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename tree3::T3Node>(_sv.v());

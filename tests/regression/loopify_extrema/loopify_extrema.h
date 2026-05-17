@@ -178,9 +178,9 @@ struct LoopifyExtrema {
         unsigned int rest_max = _result;
         unsigned int fx = f(a0);
         if (rest_max < fx) {
-          _result = fx;
+          _result = std::move(fx);
         } else {
-          _result = rest_max;
+          _result = std::move(rest_max);
         }
       }
     }
@@ -238,9 +238,9 @@ struct LoopifyExtrema {
         unsigned int rest_min = _result;
         unsigned int fx = f(a0);
         if (fx < rest_min) {
-          _result = fx;
+          _result = std::move(fx);
         } else {
-          _result = rest_min;
+          _result = std::move(rest_min);
         }
       }
     }
@@ -285,7 +285,7 @@ struct LoopifyExtrema {
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = a0;
+            _result = std::move(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, f});
             _stack.emplace_back(_Enter{a1.get()});
@@ -299,9 +299,9 @@ struct LoopifyExtrema {
         unsigned int fx = f(a0);
         unsigned int f_rest = f(rest_best);
         if (f_rest < fx) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
-          _result = rest_best;
+          _result = std::move(rest_best);
         }
       }
     }
@@ -346,7 +346,7 @@ struct LoopifyExtrema {
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = a0;
+            _result = std::move(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, f});
             _stack.emplace_back(_Enter{a1.get()});
@@ -360,9 +360,9 @@ struct LoopifyExtrema {
         unsigned int fx = f(a0);
         unsigned int f_rest = f(rest_best);
         if (fx < f_rest) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
-          _result = rest_best;
+          _result = std::move(rest_best);
         }
       }
     }

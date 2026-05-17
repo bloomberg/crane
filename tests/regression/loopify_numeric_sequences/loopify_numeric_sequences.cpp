@@ -399,7 +399,7 @@ LoopifyNumericSequences::alternate_sum(bool sign, unsigned int acc,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else {
       const auto &[a0, a1] =

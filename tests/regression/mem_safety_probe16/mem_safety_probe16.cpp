@@ -65,7 +65,7 @@ MemSafetyProbe16::build_summers(
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mycons>(
           _loop_trees.v());
-      MemSafetyProbe16::mylist<MemSafetyProbe16::tree> a1_value = *a1;
+      const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &a1_value = *a1;
       auto _cell = std::make_unique<
           MemSafetyProbe16::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(

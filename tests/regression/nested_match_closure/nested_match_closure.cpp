@@ -20,7 +20,7 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
-    NestedMatchClosure::tree a0_value = *a0;
+    const NestedMatchClosure::tree &a0_value = *a0;
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             a0_value.v())) {
       return std::make_optional<std::function<unsigned int(unsigned int)>>(
@@ -54,14 +54,14 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
-    NestedMatchClosure::tree a0_value = *a0;
+    const NestedMatchClosure::tree &a0_value = *a0;
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             a0_value.v())) {
       return std::optional<std::function<unsigned int(unsigned int)>>();
     } else {
       const auto &[a00, a10, a20] =
           std::get<typename NestedMatchClosure::tree::Node>(a0_value.v());
-      NestedMatchClosure::tree a00_value = *a00;
+      const NestedMatchClosure::tree &a00_value = *a00;
       if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
               a00_value.v())) {
         return std::optional<std::function<unsigned int(unsigned int)>>();
@@ -100,8 +100,8 @@ NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
-    NestedMatchClosure::tree a0_value = *a0;
-    NestedMatchClosure::tree a2_value = *a2;
+    const NestedMatchClosure::tree &a0_value = *a0;
+    const NestedMatchClosure::tree &a2_value = *a2;
     auto go_impl = [=](auto &_self_go, unsigned int x) mutable -> unsigned int {
       if (x <= 0) {
         return (((base + a1) + tree_sum(a0_value)) + tree_sum(a2_value));

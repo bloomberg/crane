@@ -7,8 +7,8 @@ MemSafetyProbe26::build_tree_closures(const MemSafetyProbe26::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe26::tree::Node>(t.v());
-    MemSafetyProbe26::tree a0_value = *a0;
-    MemSafetyProbe26::tree a2_value = *a2;
+    const MemSafetyProbe26::tree &a0_value = *a0;
+    const MemSafetyProbe26::tree &a2_value = *a2;
     return mylist<std::function<unsigned int(unsigned int)>>::mycons(
         [=](unsigned int x) mutable {
           return (((x + a0_value.tree_sum()) + a1) + a2_value.tree_sum());

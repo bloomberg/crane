@@ -123,8 +123,8 @@ BinomialHeap::heap_delete_max(const BinomialHeap::tree &t) {
   if (std::holds_alternative<typename BinomialHeap::tree::Node>(t.v())) {
     const auto &[a0, a1, a2] =
         std::get<typename BinomialHeap::tree::Node>(t.v());
-    BinomialHeap::tree a1_value = *a1;
-    BinomialHeap::tree a2_value = *a2;
+    const BinomialHeap::tree &a1_value = *a1;
+    const BinomialHeap::tree &a2_value = *a2;
     if (std::holds_alternative<typename BinomialHeap::tree::Node>(
             a2_value.v())) {
       return List<BinomialHeap::tree>::nil();

@@ -256,7 +256,7 @@ struct MemSafetyProbe5 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
@@ -317,7 +317,7 @@ struct MemSafetyProbe5 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
@@ -484,7 +484,7 @@ struct MemSafetyProbe5 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
@@ -531,7 +531,7 @@ struct MemSafetyProbe5 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());

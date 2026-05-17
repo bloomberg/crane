@@ -210,8 +210,8 @@ struct MemSafetyProbe21 {
         _result = k(0u);
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-        tree a0_value = *a0;
-        tree a2_value = *a2;
+        const tree &a0_value = *a0;
+        const tree &a2_value = *a2;
         _stack.emplace_back(
             _Enter{[=](unsigned int lsum) mutable {
                      return cps_sum(a2_value, [=](unsigned int rsum) mutable {

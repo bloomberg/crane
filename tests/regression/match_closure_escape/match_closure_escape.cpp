@@ -14,7 +14,7 @@ MatchClosureEscape::match_arm_box(const MatchClosureEscape::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename MatchClosureEscape::tree::Node>(t.v());
-    MatchClosureEscape::tree a0_value = *a0;
+    const MatchClosureEscape::tree &a0_value = *a0;
     return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
       return a0_value.sum_values(_x0);
     });

@@ -37,7 +37,7 @@ ClosureEscapeMatch::make_pair_fn_opt(
     const auto &[a0, a1] =
         std::get<typename ClosureEscapeMatch::mylist<unsigned int>::Mycons>(
             l.v());
-    ClosureEscapeMatch::mylist<unsigned int> a1_value = *a1;
+    const ClosureEscapeMatch::mylist<unsigned int> &a1_value = *a1;
     return std::make_optional<
         std::function<std::pair<unsigned int, unsigned int>(std::monostate)>>(
         [=](std::monostate) mutable {

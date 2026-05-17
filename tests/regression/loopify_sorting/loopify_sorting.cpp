@@ -184,7 +184,7 @@ List<unsigned int> LoopifySorting::merge_sort_fuel(
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = l;
+            _result = std::move(l);
           } else {
             auto _cs = split<unsigned int>(l);
             const List<unsigned int> &l1 = _cs.first;

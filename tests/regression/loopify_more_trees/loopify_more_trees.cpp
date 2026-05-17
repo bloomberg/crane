@@ -284,7 +284,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
             std::get<typename LoopifyMoreTrees::tree::Node>(t1.v_mut());
         if (std::holds_alternative<typename LoopifyMoreTrees::tree::Leaf>(
                 t2.v_mut())) {
-          _result = t1;
+          _result = std::move(t1);
         } else {
           auto &[a00, a10, a20] =
               std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());

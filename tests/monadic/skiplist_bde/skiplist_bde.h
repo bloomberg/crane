@@ -674,7 +674,7 @@ template <typename K, typename V> struct SkipList {
     unsigned int _loop_fuel = bsl::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        _result = _loop_curr;
+        _result = bsl::move(_loop_curr);
         break;
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
@@ -687,11 +687,11 @@ template <typename K, typename V> struct SkipList {
             _loop_curr = next0;
             _loop_fuel = fuel_;
           } else {
-            _result = _loop_curr;
+            _result = bsl::move(_loop_curr);
             break;
           }
         } else {
-          _result = _loop_curr;
+          _result = bsl::move(_loop_curr);
           break;
         }
       }
@@ -720,7 +720,7 @@ template <typename K, typename V> struct SkipList {
                                                         _loop_level);
       path.set(_loop_level, pred);
       if (_loop_level <= 0) {
-        _result = path;
+        _result = bsl::move(path);
         break;
       } else {
         unsigned int level_ = _loop_level - 1;
@@ -884,7 +884,7 @@ template <typename K, typename V> struct SkipList {
     unsigned int _loop_fuel = bsl::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        _result = _loop_acc;
+        _result = bsl::move(_loop_acc);
         break;
       } else {
         unsigned int fuel_ = _loop_fuel - 1;
@@ -896,7 +896,7 @@ template <typename K, typename V> struct SkipList {
           _loop_node = nextOpt;
           _loop_fuel = fuel_;
         } else {
-          _result = _loop_acc;
+          _result = bsl::move(_loop_acc);
           break;
         }
       }

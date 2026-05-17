@@ -14,7 +14,7 @@ unsigned int LoopifyListAccess::nth(unsigned int n,
       const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
-        _result = a0;
+        _result = std::move(a0);
         break;
       } else {
         _loop_l = a1.get();
@@ -38,7 +38,7 @@ unsigned int LoopifyListAccess::last(const List<unsigned int> &l) {
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-        _result = a0;
+        _result = std::move(a0);
         break;
       } else {
         _loop_l = a1.get();
@@ -63,7 +63,7 @@ unsigned int LoopifyListAccess::index_of_aux(unsigned int x,
       const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (x == a0) {
-        _result = _loop_idx;
+        _result = std::move(_loop_idx);
         break;
       } else {
         _loop_idx = (_loop_idx + 1u);
@@ -118,7 +118,7 @@ unsigned int LoopifyListAccess::lookup(
       const unsigned int &k = a0.first;
       const unsigned int &v = a0.second;
       if (k == key) {
-        _result = v;
+        _result = std::move(v);
         break;
       } else {
         _loop_l = a1.get();
@@ -242,13 +242,13 @@ unsigned int LoopifyListAccess::nth_default(unsigned int n,
   while (true) {
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             _loop_l->v())) {
-      _result = default0;
+      _result = std::move(default0);
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<unsigned int>::Cons>(_loop_l->v());
       if (_loop_n == 0u) {
-        _result = a0;
+        _result = std::move(a0);
         break;
       } else {
         _loop_l = a1.get();

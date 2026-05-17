@@ -828,7 +828,7 @@ struct ComprehensivePatterns {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
             const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = a0;
+            _result = std::move(a0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), a1});

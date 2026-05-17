@@ -315,8 +315,8 @@ struct CPS {
       return k(a0);
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
-      tree a0_value = *a0;
-      tree a1_value = *a1;
+      const tree &a0_value = *a0;
+      const tree &a1_value = *a1;
       return tree_sum_cps(a0_value, [=](unsigned int sl) mutable {
         return tree_sum_cps(
             a1_value, [=](unsigned int sr) mutable { return k((sl + sr)); });
@@ -332,7 +332,7 @@ struct CPS {
       return k(0u);
     } else {
       const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> a1_value = *a1;
+      const List<unsigned int> &a1_value = *a1;
       return sum_cps(a1_value,
                      [=](unsigned int r) mutable { return k((a0 + r)); });
     }
@@ -349,7 +349,7 @@ struct CPS {
       return k(List<unsigned int>::nil(), List<unsigned int>::nil());
     } else {
       const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-      List<unsigned int> a1_value = *a1;
+      const List<unsigned int> &a1_value = *a1;
       return partition_cps(
           p, a1_value,
           [=](List<unsigned int> yes, List<unsigned int> no) mutable {

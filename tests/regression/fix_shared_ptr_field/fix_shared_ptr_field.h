@@ -137,7 +137,7 @@ struct FixSharedPtrField {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
-        mylist a1_value = *a1;
+        const mylist &a1_value = *a1;
         auto compute_impl = [=](auto &_self_compute,
                                 unsigned int x) mutable -> unsigned int {
           if (x <= 0) {

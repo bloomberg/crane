@@ -667,7 +667,7 @@ struct LoopifyStructures {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[a0] = std::get<typename quadtree::QLeaf>(_sv.v());
-            _result = a0;
+            _result = std::move(a0);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
@@ -1148,7 +1148,7 @@ struct LoopifyStructures {
               _result =
                   ltree::lleaf((a0 <= a00 ? std::move(a00) : std::move(a0)));
             } else {
-              _result = t2;
+              _result = std::move(t2);
             }
           } else {
             const auto &[a0, a1, a2] = std::get<typename ltree::LNode>(_sv.v());

@@ -36,7 +36,7 @@ List<unsigned int> LoopifyListOfLists::intercalate(
         auto &&_sv = *a1;
         if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
                 _sv.v())) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
           _stack.emplace_back(_Resume_Cons{a0, sep});
           _stack.emplace_back(_Enter{a1.get()});

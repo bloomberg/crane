@@ -1752,10 +1752,10 @@ struct LoopifyExprVariants {
           const bool_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
                          _sv.v())) {
-            _result = f0;
+            _result = std::move(f0);
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
@@ -1861,10 +1861,10 @@ struct LoopifyExprVariants {
           const bool_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
                          _sv.v())) {
-            _result = f0;
+            _result = std::move(f0);
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
@@ -2247,7 +2247,7 @@ struct LoopifyExprVariants {
           const list_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else if (std::holds_alternative<typename list_expr::LCons>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
@@ -2333,7 +2333,7 @@ struct LoopifyExprVariants {
           const list_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else if (std::holds_alternative<typename list_expr::LCons>(
                          _sv.v())) {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());

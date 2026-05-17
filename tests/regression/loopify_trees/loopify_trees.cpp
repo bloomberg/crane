@@ -112,7 +112,7 @@ unsigned int LoopifyTrees::leaf_sum(
           auto &&_sv = *a2;
           if (std::holds_alternative<
                   typename LoopifyTrees::tree<unsigned int>::Leaf>(_sv.v())) {
-            _result = a1;
+            _result = std::move(a1);
           } else {
             _stack.emplace_back(_After_Node{a0.get()});
             _stack.emplace_back(_Enter{a2.get()});
@@ -512,7 +512,7 @@ LoopifyTrees::tree<unsigned int> LoopifyTrees::tree_max(
                 typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v_mut())) {
           _result = tree<unsigned int>::leaf();
         } else {
-          _result = t2;
+          _result = std::move(t2);
         }
       } else {
         auto &[a0, a1, a2] =
@@ -520,7 +520,7 @@ LoopifyTrees::tree<unsigned int> LoopifyTrees::tree_max(
                 t1.v_mut());
         if (std::holds_alternative<
                 typename LoopifyTrees::tree<unsigned int>::Leaf>(t2.v_mut())) {
-          _result = t1;
+          _result = std::move(t1);
         } else {
           auto &[a00, a10, a20] =
               std::get<typename LoopifyTrees::tree<unsigned int>::Node>(

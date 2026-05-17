@@ -65,8 +65,8 @@ MemSafetyProbe10::collect_adders(const MemSafetyProbe10::tree &t) {
     } else {
       const auto &[a0, a1, a2] =
           std::get<typename MemSafetyProbe10::tree::Node>(_loop_t.v());
-      MemSafetyProbe10::tree a0_value = *a0;
-      MemSafetyProbe10::tree a2_value = *a2;
+      const MemSafetyProbe10::tree &a0_value = *a0;
+      const MemSafetyProbe10::tree &a2_value = *a2;
       auto _cell = std::make_unique<
           MemSafetyProbe10::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
@@ -163,8 +163,8 @@ MemSafetyProbe10::build_tree_fns(const MemSafetyProbe10::tree &t,
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe10::tree::Node>(_loop_t.v());
-        MemSafetyProbe10::tree a0_value = *a0;
-        MemSafetyProbe10::tree a2_value = *a2;
+        const MemSafetyProbe10::tree &a0_value = *a0;
+        const MemSafetyProbe10::tree &a2_value = *a2;
         auto _cell = std::make_unique<MemSafetyProbe10::mylist<
             std::function<unsigned int(unsigned int)>>>(
             typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(

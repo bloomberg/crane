@@ -108,8 +108,8 @@ MemSafetyProbe14::tree_level_fns(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe14::tree::Node>(t.v());
-        MemSafetyProbe14::tree a0_value = *a0;
-        MemSafetyProbe14::tree a2_value = *a2;
+        const MemSafetyProbe14::tree &a0_value = *a0;
+        const MemSafetyProbe14::tree &a2_value = *a2;
         _stack.emplace_back(_After_Node{
             (1u + depth), a0.get(),
             [=](unsigned int n) mutable {
@@ -198,8 +198,8 @@ MemSafetyProbe14::collect_closures(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe14::tree::Node>(t.v());
-        MemSafetyProbe14::tree a0_value = *a0;
-        MemSafetyProbe14::tree a2_value = *a2;
+        const MemSafetyProbe14::tree &a0_value = *a0;
+        const MemSafetyProbe14::tree &a2_value = *a2;
         _stack.emplace_back(_After_Node{
             a0.get(), [=](unsigned int n) mutable { return (a1 + n); }});
         _stack.emplace_back(_Enter{a2.get()});

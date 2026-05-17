@@ -6280,12 +6280,16 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             let value_id =
               Id.of_string (Id.to_string binding_name ^ "_value")
             in
-            let clone =
-              gen_clone_field_expr
-                ~src_ty:(Tunique_ptr bare_ty) ~dst_ty:bare_ty
-                (CPPvar binding_name)
-            in
-            Some (Sasgn (value_id, Some bare_ty, clone))
+            (* Bind as [const T& a_value = *a] rather than [T a_value = *a].
+               [=] capture of a ref-typed local copies the referenced object
+               into the closure (same semantics, no intermediate copy).
+               [&] capture is safe because unique_ptr pre-extracts only occur
+               inside non-escaping lambda scopes. *)
+            Some
+              (Sasgn
+                 ( value_id,
+                   Some (Tref (Tmod (TMconst, bare_ty))),
+                   CPPderef (CPPvar binding_name) ))
           else None
         else None)
       (List.mapi (fun i x -> (i, x)) rev_ids)

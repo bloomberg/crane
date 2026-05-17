@@ -167,8 +167,8 @@ struct CpsClosureChain {
       return k(0u);
     } else {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      tree a0_value = *a0;
-      tree a2_value = *a2;
+      const tree &a0_value = *a0;
+      const tree &a2_value = *a2;
       return tree_sum_cps(a0_value, [=](unsigned int left_sum) mutable {
         return tree_sum_cps(a2_value, [=](unsigned int right_sum) mutable {
           return k(((left_sum + a1) + right_sum));
@@ -206,8 +206,8 @@ struct CpsClosureChain {
       return k(base);
     } else {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      tree a0_value = *a0;
-      tree a2_value = *a2;
+      const tree &a0_value = *a0;
+      const tree &a2_value = *a2;
       return tree_fold_cps(
           a0_value, base, combine, [=](unsigned int left_result) mutable {
             return tree_fold_cps(a2_value, base, combine,

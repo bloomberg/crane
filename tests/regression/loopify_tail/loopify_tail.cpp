@@ -35,14 +35,14 @@ unsigned int LoopifyTail::nth(unsigned int n,
   while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
             _loop_l->v())) {
-      _result = default0;
+      _result = std::move(default0);
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyTail::list<unsigned int>::Cons>(
               _loop_l->v());
       if (_loop_n == 0u) {
-        _result = a0;
+        _result = std::move(a0);
         break;
       } else {
         _loop_l = a1.get();

@@ -210,7 +210,7 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
     const auto &[a0, a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
             st.v());
-    List<PendantSumtreeRoundtripCase::SumTree> a1_value = *a1;
+    const List<PendantSumtreeRoundtripCase::SumTree> &a1_value = *a1;
     return a1_value
         .template map<List<PendantSumtreeRoundtripCase::CertifiedPendant>>(
             [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
@@ -230,7 +230,7 @@ unsigned int PendantSumtreeRoundtripCase::sumtree_depth(
     const auto &[a0, a1] =
         std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
             st.v());
-    List<PendantSumtreeRoundtripCase::SumTree> a1_value = *a1;
+    const List<PendantSumtreeRoundtripCase::SumTree> &a1_value = *a1;
     return (a1_value
                 .template map<unsigned int>(
                     [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable
@@ -258,7 +258,7 @@ bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
       const auto &[a0, a1] =
           std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
               st.v());
-      List<PendantSumtreeRoundtripCase::SumTree> a1_value = *a1;
+      const List<PendantSumtreeRoundtripCase::SumTree> &a1_value = *a1;
       List<PendantSumtreeRoundtripCase::CertifiedPendant> child_tops =
           a1_value.template map<PendantSumtreeRoundtripCase::CertifiedPendant>(
               [=](PendantSumtreeRoundtripCase::SumTree _x0) mutable

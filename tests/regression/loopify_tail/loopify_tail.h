@@ -154,7 +154,7 @@ struct LoopifyTail {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = f;
+          _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
@@ -200,7 +200,7 @@ struct LoopifyTail {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = f;
+          _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
@@ -220,7 +220,7 @@ struct LoopifyTail {
     T1 _loop_x = std::move(x);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = _loop_x;
+        _result = std::move(_loop_x);
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -238,7 +238,7 @@ struct LoopifyTail {
     unsigned int _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = _loop_acc;
+        _result = std::move(_loop_acc);
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -266,7 +266,7 @@ struct LoopifyTail {
     T2 _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = _loop_acc;
+        _result = std::move(_loop_acc);
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());

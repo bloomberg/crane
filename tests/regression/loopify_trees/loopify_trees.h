@@ -507,13 +507,13 @@ struct LoopifyTrees {
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-          _result = default0;
+          _result = std::move(default0);
           break;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a2;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = a1;
+            _result = std::move(a1);
             break;
           } else {
             _loop_self = a2.get();
@@ -530,13 +530,13 @@ struct LoopifyTrees {
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-          _result = default0;
+          _result = std::move(default0);
           break;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a0;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = a1;
+            _result = std::move(a1);
             break;
           } else {
             _loop_self = a0.get();
@@ -733,7 +733,7 @@ struct LoopifyTrees {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] =
                 std::get<typename tree<A>::Node>(_sv.v());
@@ -795,7 +795,7 @@ struct LoopifyTrees {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] =
                 std::get<typename tree<A>::Node>(_sv.v());
@@ -1103,7 +1103,7 @@ struct LoopifyTrees {
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename ternary::TNode>(_sv.v());
@@ -1192,7 +1192,7 @@ struct LoopifyTrees {
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename ternary::TNode>(_sv.v());
@@ -1746,7 +1746,7 @@ struct LoopifyTrees {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
             const auto &[a0] = std::get<typename quadtree::QLeaf>(_sv.v());
-            _result = a0;
+            _result = std::move(a0);
           } else {
             const auto &[a0, a1, a2, a3] =
                 std::get<typename quadtree::Quad>(_sv.v());
@@ -2222,7 +2222,7 @@ struct LoopifyTrees {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
             const auto &[a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
-            _result = a0;
+            _result = std::move(a0);
           } else {
             const auto &[a0, a1] =
                 std::get<typename simple_tree::SNode>(_sv.v());

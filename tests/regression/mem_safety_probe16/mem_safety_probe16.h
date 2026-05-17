@@ -320,7 +320,7 @@ struct MemSafetyProbe16 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
@@ -381,7 +381,7 @@ struct MemSafetyProbe16 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
@@ -614,7 +614,7 @@ struct MemSafetyProbe16 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
@@ -661,7 +661,7 @@ struct MemSafetyProbe16 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
@@ -726,7 +726,7 @@ struct MemSafetyProbe16 {
         } else {
           const auto &[a0, a1] =
               std::get<typename mylist<tree>::Mycons>(trees.v());
-          mylist<tree> a1_value = *a1;
+          const mylist<tree> &a1_value = *a1;
           return [=](unsigned int _x0) mutable -> unsigned int {
             return compose_summers(
                 a1_value,
@@ -848,8 +848,8 @@ struct MemSafetyProbe16 {
         _result = k(mylist<unsigned int>::mynil());
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-        tree a0_value = *a0;
-        tree a2_value = *a2;
+        const tree &a0_value = *a0;
+        const tree &a2_value = *a2;
         _stack.emplace_back(_Enter{
             [=](const mylist<unsigned int> &ll) mutable {
               return flatten_cps_aux(

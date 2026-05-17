@@ -192,12 +192,12 @@ unsigned int LoopifyNumbers::gcd_fuel(unsigned int fuel, unsigned int a,
   unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = _loop_a;
+      _result = std::move(_loop_a);
       break;
     } else {
       unsigned int f = _loop_fuel - 1;
       if (_loop_b <= 0) {
-        _result = _loop_a;
+        _result = std::move(_loop_a);
         break;
       } else {
         unsigned int _x = _loop_b - 1;
@@ -656,7 +656,7 @@ unsigned int LoopifyNumbers::alternating_sum(bool sign, unsigned int acc,
   bool _loop_sign = std::move(sign);
   while (true) {
     if (_loop_n <= 0) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else {
       unsigned int m = _loop_n - 1;

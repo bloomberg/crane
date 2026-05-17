@@ -1177,13 +1177,21 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
 
 (** Assign [expr] to the [_result] accumulator variable.
     Generates the statement list [[\[_result = expr;\]]]. *)
+(** Wrap [e] in [std::move] only when it is an lvalue (a plain variable
+    reference).  Wrapping rvalues (function calls, literals, binary ops) in
+    [std::move] is a pessimising move — it prevents copy elision on the
+    assignment and is rejected by [-Wpessimizing-move]. *)
+let move_if_lvalue = function
+  | CPPvar _ as e -> CPPmove e
+  | e -> e
+
 let assign_result expr =
-  [Sexpr (CPPbinop ("=", CPPvar (id_result), expr))]
+  [Sexpr (CPPbinop ("=", CPPvar (id_result), move_if_lvalue expr))]
 
 (** Assign [expr] to [_result] and set [_continue = false] to exit
     the tail-recursion while loop.  Used only in tail-recursion rewriting. *)
 let assign_result_and_stop expr =
-  [ Sexpr (CPPbinop ("=", CPPvar (id_result), expr));
+  [ Sexpr (CPPbinop ("=", CPPvar (id_result), move_if_lvalue expr));
     Sbreak ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For

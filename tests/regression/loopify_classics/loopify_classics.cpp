@@ -315,12 +315,12 @@ unsigned int LoopifyClassics::gcd_fuel(unsigned int fuel, unsigned int a,
   unsigned int _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = _loop_a;
+      _result = std::move(_loop_a);
       break;
     } else {
       unsigned int fuel_ = _loop_fuel - 1;
       if (_loop_b == 0u) {
-        _result = _loop_a;
+        _result = std::move(_loop_a);
         break;
       } else {
         unsigned int _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);

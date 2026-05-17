@@ -148,7 +148,7 @@ struct LoopifyListAccess {
         const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
         if (p(a0)) {
-          _result = a0;
+          _result = std::move(a0);
           break;
         } else {
           _loop_l = a1.get();

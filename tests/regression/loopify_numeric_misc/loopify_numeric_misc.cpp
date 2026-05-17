@@ -306,7 +306,7 @@ unsigned int LoopifyNumericMisc::list_max(
             std::get<typename List<unsigned int>::Cons>(l.v());
         auto &&_sv = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
           _stack.emplace_back(_Resume_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
@@ -352,7 +352,7 @@ unsigned int LoopifyNumericMisc::list_min(
             std::get<typename List<unsigned int>::Cons>(l.v());
         auto &&_sv = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
           _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
@@ -363,9 +363,9 @@ unsigned int LoopifyNumericMisc::list_min(
       unsigned int a0 = _f.a0;
       unsigned int min_rest = _result;
       if (a0 < min_rest) {
-        _result = a0;
+        _result = std::move(a0);
       } else {
-        _result = min_rest;
+        _result = std::move(min_rest);
       }
     }
   }

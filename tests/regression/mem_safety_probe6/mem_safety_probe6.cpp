@@ -22,7 +22,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<unsigned int> &l) {
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe6::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe6::mylist<unsigned int> a1_value = *a1;
+      const MemSafetyProbe6::mylist<unsigned int> &a1_value = *a1;
       unsigned int rest_len = a1_value.length();
       auto _cell = std::make_unique<
           MemSafetyProbe6::mylist<std::function<unsigned int(unsigned int)>>>(
@@ -72,7 +72,7 @@ unsigned int MemSafetyProbe6::apply_chain(
           &fns = *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe6::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
-        _result = x;
+        _result = std::move(x);
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe6::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
@@ -97,7 +97,7 @@ unsigned int MemSafetyProbe6::capture_and_reuse(
   } else {
     const auto &[a0, a1] =
         std::get<typename MemSafetyProbe6::mylist<unsigned int>::Mycons>(l.v());
-    MemSafetyProbe6::mylist<unsigned int> a1_value = *a1;
+    const MemSafetyProbe6::mylist<unsigned int> &a1_value = *a1;
     std::function<unsigned int(unsigned int)> f = [=](unsigned int n) mutable {
       return (a1_value.length() + n);
     };

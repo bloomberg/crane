@@ -32,7 +32,7 @@ unsigned int LoopifyComparators::maximum_by(
             std::get<typename List<unsigned int>::Cons>(l.v());
         auto &&_sv = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
           _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
@@ -43,9 +43,9 @@ unsigned int LoopifyComparators::maximum_by(
       unsigned int a0 = _f.a0;
       unsigned int m = _result;
       if (m < a0) {
-        _result = a0;
+        _result = std::move(a0);
       } else {
-        _result = m;
+        _result = std::move(m);
       }
     }
   }
@@ -84,7 +84,7 @@ unsigned int LoopifyComparators::minimum_by(
             std::get<typename List<unsigned int>::Cons>(l.v());
         auto &&_sv = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
           _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
@@ -95,9 +95,9 @@ unsigned int LoopifyComparators::minimum_by(
       unsigned int a0 = _f.a0;
       unsigned int m = _result;
       if (a0 < m) {
-        _result = a0;
+        _result = std::move(a0);
       } else {
-        _result = m;
+        _result = std::move(m);
       }
     }
   }

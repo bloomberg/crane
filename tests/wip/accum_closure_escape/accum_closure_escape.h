@@ -284,8 +284,8 @@ struct AccumClosureEscape {
         return mylist<std::function<unsigned int(unsigned int)>>::mynil();
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
-        tree a0_value = *a0;
-        tree a2_value = *a2;
+        const tree &a0_value = *a0;
+        const tree &a2_value = *a2;
         return mylist<std::function<unsigned int(unsigned int)>>::mycons(
             [=](unsigned int x) mutable { return (a1 + x); },
             a0_value.tree_to_adders().mylist_append(a2_value.tree_to_adders()));
@@ -379,7 +379,7 @@ struct AccumClosureEscape {
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<unsigned int>::Mycons>(l.v());
-        mylist<unsigned int> a1_value = *a1;
+        const mylist<unsigned int> &a1_value = *a1;
         return [=](unsigned int _x0) mutable -> unsigned int {
           return compose_from_list(
               a1_value, [=](unsigned int x) mutable { return acc((a0 + x)); },

@@ -160,7 +160,7 @@ unsigned int LoopifySearch::nth_impl(unsigned int n,
       } else {
         const auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        _result = a0;
+        _result = std::move(a0);
         break;
       }
     } else {
@@ -506,7 +506,7 @@ List<unsigned int> LoopifySearch::sieve_fuel(unsigned int fuel,
       } else {
         auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> a1_value = *a1;
+        const List<unsigned int> &a1_value = *a1;
         auto _cell = std::make_unique<List<unsigned int>>(
             typename List<unsigned int>::Cons(a0, nullptr));
         *_write = std::move(_cell);
@@ -617,7 +617,7 @@ List<unsigned int> LoopifySearch::remove_duplicates_fuel(unsigned int fuel,
       } else {
         auto &[a0, a1] =
             std::get<typename List<unsigned int>::Cons>(_loop_l.v_mut());
-        List<unsigned int> a1_value = *a1;
+        const List<unsigned int> &a1_value = *a1;
         if (elem_impl(a0, a1_value)) {
           _loop_l = a1_value;
           _loop_fuel = f;
@@ -693,7 +693,7 @@ List<unsigned int> LoopifySearch::quicksort_fuel(
         } else {
           auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v_mut());
-          List<unsigned int> a1_value = *a1;
+          const List<unsigned int> &a1_value = *a1;
           List<unsigned int> smaller = filter_impl(
               [=](unsigned int y) mutable { return y < a0; }, a1_value);
           List<unsigned int> greater = filter_impl(
@@ -892,7 +892,7 @@ List<unsigned int> LoopifySearch::merge_sort_fuel(
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = l;
+            _result = std::move(l);
           } else {
             auto _cs = split_list(l);
             const List<unsigned int> &a = _cs.first;
@@ -1193,7 +1193,7 @@ unsigned int LoopifySearch::min_element(
             std::get<typename List<unsigned int>::Cons>(l.v());
         auto &&_sv = *a1;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
           _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
@@ -1204,9 +1204,9 @@ unsigned int LoopifySearch::min_element(
       unsigned int a0 = _f.a0;
       unsigned int min_rest = _result;
       if (a0 <= min_rest) {
-        _result = a0;
+        _result = std::move(a0);
       } else {
-        _result = min_rest;
+        _result = std::move(min_rest);
       }
     }
   }

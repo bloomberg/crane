@@ -97,14 +97,14 @@ MemSafetyProbe13::tree_vals_and_fns(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe13::tree::Node>(t.v());
-        MemSafetyProbe13::tree a0_value = *a0;
-        MemSafetyProbe13::tree a2_value = *a2;
+        const MemSafetyProbe13::tree &a0_value = *a0;
+        const MemSafetyProbe13::tree &a2_value = *a2;
         _stack.emplace_back(_Cont_Node{a0_value, a1, a2.get()});
         _stack.emplace_back(_Enter{a0.get()});
       }
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
-      MemSafetyProbe13::tree a0_value = std::move(_f.a0_value);
+      const MemSafetyProbe13::tree &a0_value = _f.a0_value;
       unsigned int a1 = _f.a1;
       const MemSafetyProbe13::tree &a2_value = *_f.a2_value;
       const MemSafetyProbe13::mylist<unsigned int> &lvals = _result.first;
@@ -114,9 +114,9 @@ MemSafetyProbe13::tree_vals_and_fns(
       _stack.emplace_back(_Enter{&a2_value});
     } else {
       auto _f = std::move(std::get<_Cont_lvals>(_frame));
-      MemSafetyProbe13::tree a0_value = std::move(_f.a0_value);
+      const MemSafetyProbe13::tree &a0_value = _f.a0_value;
       unsigned int a1 = _f.a1;
-      MemSafetyProbe13::tree a2_value = std::move(_f.a2_value);
+      const MemSafetyProbe13::tree &a2_value = _f.a2_value;
       MemSafetyProbe13::mylist<std::function<unsigned int(unsigned int)>> lfns =
           std::move(_f.lfns);
       MemSafetyProbe13::mylist<unsigned int> lvals = std::move(_f.lvals);
@@ -182,7 +182,7 @@ MemSafetyProbe13::depth_fns(const MemSafetyProbe13::tree &t,
     } else {
       const auto &[a0, a1, a2] =
           std::get<typename MemSafetyProbe13::tree::Node>(_loop_t.v());
-      MemSafetyProbe13::tree a0_value = *a0;
+      const MemSafetyProbe13::tree &a0_value = *a0;
       std::function<unsigned int(unsigned int)> f =
           [=](unsigned int n) mutable { return ((_loop_parent_val + a1) + n); };
       auto _cell = std::make_unique<
@@ -241,8 +241,8 @@ MemSafetyProbe13::ftree MemSafetyProbe13::tree_to_ftree(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe13::tree::Node>(t.v());
-        MemSafetyProbe13::tree a0_value = *a0;
-        MemSafetyProbe13::tree a2_value = *a2;
+        const MemSafetyProbe13::tree &a0_value = *a0;
+        const MemSafetyProbe13::tree &a2_value = *a2;
         _stack.emplace_back(_After_Node{
             a0.get(), [=](unsigned int n) mutable { return (a1 + n); }});
         _stack.emplace_back(_Enter{a2.get()});
@@ -301,8 +301,8 @@ MemSafetyProbe13::flatten_tree_fns(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe13::tree::Node>(t.v());
-        MemSafetyProbe13::tree a0_value = *a0;
-        MemSafetyProbe13::tree a2_value = *a2;
+        const MemSafetyProbe13::tree &a0_value = *a0;
+        const MemSafetyProbe13::tree &a2_value = *a2;
         _stack.emplace_back(_After_Node{
             a0.get(), [=](unsigned int n) mutable { return (a1 + n); }});
         _stack.emplace_back(_Enter{a2.get()});

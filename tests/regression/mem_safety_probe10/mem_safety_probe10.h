@@ -177,8 +177,8 @@ struct MemSafetyProbe10 {
           } else {
             const auto &[a0, a1, a2] =
                 std::get<typename tree::Node>(_self_val.v());
-            tree a0_value = *a0;
-            tree a2_value = *a2;
+            const tree &a0_value = *a0;
+            const tree &a2_value = *a2;
             std::function<unsigned int(unsigned int)> fl =
                 [=](unsigned int _x0) mutable -> unsigned int {
               return a0_value.tree_to_adder(_x0);
@@ -289,7 +289,7 @@ struct MemSafetyProbe10 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
@@ -350,7 +350,7 @@ struct MemSafetyProbe10 {
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
@@ -517,7 +517,7 @@ struct MemSafetyProbe10 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
@@ -564,7 +564,7 @@ struct MemSafetyProbe10 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
@@ -621,7 +621,7 @@ struct MemSafetyProbe10 {
         } else {
           const auto &[a0, a1] =
               std::get<typename mylist<unsigned int>::Mycons>(l.v());
-          mylist<unsigned int> a1_value = *a1;
+          const mylist<unsigned int> &a1_value = *a1;
           return [=](unsigned int _x0) mutable -> unsigned int {
             return chain_adders(
                 a1_value, [=](unsigned int n) mutable { return acc((a0 + n)); },

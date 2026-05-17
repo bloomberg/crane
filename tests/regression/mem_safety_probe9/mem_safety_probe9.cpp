@@ -80,8 +80,8 @@ MemSafetyProbe9::collect_subtree_sums(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe9::tree::Node>(t.v());
-        MemSafetyProbe9::tree a0_value = *a0;
-        MemSafetyProbe9::tree a2_value = *a2;
+        const MemSafetyProbe9::tree &a0_value = *a0;
+        const MemSafetyProbe9::tree &a2_value = *a2;
         _stack.emplace_back(_Resume_Node{a0.get()});
         _stack.emplace_back(
             _Enter{mylist<std::function<unsigned int(unsigned int)>>::mycons(
@@ -137,8 +137,8 @@ MemSafetyProbe9::collect_left_sums(
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe9::tree::Node>(t.v());
-        MemSafetyProbe9::tree a0_value = *a0;
-        MemSafetyProbe9::tree a2_value = *a2;
+        const MemSafetyProbe9::tree &a0_value = *a0;
+        const MemSafetyProbe9::tree &a2_value = *a2;
         _stack.emplace_back(_Resume_Node{a0.get()});
         _stack.emplace_back(
             _Enter{mylist<std::function<unsigned int(unsigned int)>>::mycons(
@@ -176,7 +176,7 @@ MemSafetyProbe9::list_accum_closures(
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe9::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe9::mylist<unsigned int> a1_value = *a1;
+      const MemSafetyProbe9::mylist<unsigned int> &a1_value = *a1;
       unsigned int tail_len = a1_value.length();
       _loop_acc = mylist<std::function<unsigned int(unsigned int)>>::mycons(
           [=](auto _xarg0) mutable {

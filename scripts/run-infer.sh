@@ -86,6 +86,11 @@ REPORT="$PROJECT_ROOT/infer-out/report.txt"
 #   - n_, m_, fuel_ : similar predecessor bindings in loopified code
 #   - f        : function shadow variables in loopified HOFs
 # These are all genuinely used but only via lambda captures Infer can't see.
+#
+# Infer v1.2.0 also reports UNINITIALIZED_VALUE for __param_0 in TMC code:
+#   auto _cell = std::make_unique<List<T>>(List<T>::Cons(a0, nullptr));
+# Infer cannot trace initialization of `a0` through std::get<> structured
+# bindings, so it flags the Cons constructor parameter as uninitialized.
 SUPPRESS_PATTERN='DEAD_STORE.*"(&_loop_|&_x[0-9]*`|&n_`|&m_`|&fuel_`|&f`)"'
 
 if [ -f "$REPORT" ] && [ -s "$REPORT" ]; then
@@ -105,16 +110,24 @@ with open(infile) as f:
 blocks = re.split(r'(?=^#\d+$)', content, flags=re.MULTILINE)
 
 # False-positive DEAD_STORE patterns: variable names from [&] lambda capture context
-FP_VAR_RE = re.compile(
+FP_DEAD_STORE_RE = re.compile(
     r"written to `&(_loop_\w+|_x\d*|n_|m_|fuel_|f)`",
 )
+
+# False-positive UNINITIALIZED_VALUE pattern: Infer cannot trace initialization
+# of values extracted via std::get<> structured bindings into Cons constructors
+# in TMC-generated code.  Infer names the constructor parameter __param_0.
+FP_UNINIT_RE = re.compile(r"`__param_0\b")
 
 kept = []
 for block in blocks:
     if block.strip() == '':
         continue
     # Check if this is a DEAD_STORE false positive
-    if 'Dead Store' in block and FP_VAR_RE.search(block):
+    if 'Dead Store' in block and FP_DEAD_STORE_RE.search(block):
+        continue  # suppress
+    # Check if this is an UNINITIALIZED_VALUE false positive from TMC Cons init
+    if 'Uninitialized Value' in block and FP_UNINIT_RE.search(block):
         continue  # suppress
     kept.append(block)
 

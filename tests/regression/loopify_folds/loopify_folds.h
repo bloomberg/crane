@@ -171,7 +171,7 @@ struct LoopifyFolds {
     while (true) {
       if (std::holds_alternative<typename List<unsigned int>::Nil>(
               _loop_l->v())) {
-        _result = _loop_acc;
+        _result = std::move(_loop_acc);
         break;
       } else {
         const auto &[a0, a1] =
@@ -214,7 +214,7 @@ struct LoopifyFolds {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = acc;
+          _result = std::move(acc);
         } else {
           const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());
@@ -304,7 +304,7 @@ struct LoopifyFolds {
           auto &&_sv0 = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv0.v())) {
-            _result = a0;
+            _result = std::move(a0);
             break;
           } else {
             const auto &[a00, a10] =
@@ -363,7 +363,7 @@ struct LoopifyFolds {
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = a0;
+            _result = std::move(a0);
           } else {
             _stack.emplace_back(_Resume_Cons{f, a0});
             _stack.emplace_back(_Enter{a1.get()});

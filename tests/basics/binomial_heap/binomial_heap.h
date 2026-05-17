@@ -274,8 +274,8 @@ struct BinomialHeap {
                         std::function<List<tree>(List<tree>)> cont) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      tree a1_value = *a1;
-      tree a2_value = *a2;
+      const tree &a1_value = *a1;
+      const tree &a2_value = *a2;
       std::function<List<tree>(List<tree>)> f =
           [=](const List<tree> &q) mutable {
             return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),

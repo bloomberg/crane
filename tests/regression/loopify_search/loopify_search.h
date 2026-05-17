@@ -244,7 +244,7 @@ struct LoopifySearch {
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = a0;
+            _result = std::move(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, cmp});
             _stack.emplace_back(_Enter{a1.get()});
@@ -256,9 +256,9 @@ struct LoopifySearch {
         F0 cmp = _f.cmp;
         unsigned int m = _result;
         if (cmp(a0, m) == 1u) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
-          _result = m;
+          _result = std::move(m);
         }
       }
     }

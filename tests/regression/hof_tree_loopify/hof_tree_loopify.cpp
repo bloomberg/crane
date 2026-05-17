@@ -32,7 +32,7 @@ unsigned int Nat::tail_add(unsigned int n, unsigned int m) {
   unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = _loop_m;
+      _result = std::move(_loop_m);
       break;
     } else {
       unsigned int n0 = _loop_n - 1;
@@ -49,7 +49,7 @@ unsigned int Nat::tail_addmul(unsigned int r, unsigned int n, unsigned int m) {
   unsigned int _loop_r = std::move(r);
   while (true) {
     if (_loop_n <= 0) {
-      _result = _loop_r;
+      _result = std::move(_loop_r);
       break;
     } else {
       unsigned int n0 = _loop_n - 1;
@@ -70,7 +70,7 @@ unsigned int Nat::of_uint_acc(const Uint &d, unsigned int acc) {
   const Uint *_loop_d = &d;
   while (true) {
     if (std::holds_alternative<typename Uint::Nil>(_loop_d->v())) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else if (std::holds_alternative<typename Uint::D0>(_loop_d->v())) {
       const auto &[a0] = std::get<typename Uint::D0>(_loop_d->v());
@@ -135,7 +135,7 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
   const Uint0 *_loop_d = &d;
   while (true) {
     if (std::holds_alternative<typename Uint0::Nil0>(_loop_d->v())) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else if (std::holds_alternative<typename Uint0::D10>(_loop_d->v())) {
       const auto &[a0] = std::get<typename Uint0::D10>(_loop_d->v());

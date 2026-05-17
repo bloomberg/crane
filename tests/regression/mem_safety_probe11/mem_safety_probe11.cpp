@@ -27,8 +27,8 @@ MemSafetyProbe11::collect_dual_captures(
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
-    MemSafetyProbe11::tree a0_value = *a0;
-    MemSafetyProbe11::tree a2_value = *a2;
+    const MemSafetyProbe11::tree &a0_value = *a0;
+    const MemSafetyProbe11::tree &a2_value = *a2;
     MemSafetyProbe11::mylist<std::function<unsigned int(unsigned int)>> acc2 =
         mylist<std::function<unsigned int(unsigned int)>>::mycons(
             [=](auto _xarg0) mutable {
@@ -54,7 +54,7 @@ MemSafetyProbe11::capture_tails(
     const auto &[a0, a1] =
         std::get<typename MemSafetyProbe11::mylist<unsigned int>::Mycons>(
             l.v());
-    MemSafetyProbe11::mylist<unsigned int> a1_value = *a1;
+    const MemSafetyProbe11::mylist<unsigned int> &a1_value = *a1;
     return capture_tails(
         a1_value, mylist<std::function<unsigned int(unsigned int)>>::mycons(
                       [=](auto _xarg0) mutable {
@@ -76,8 +76,8 @@ MemSafetyProbe11::triple_use_tree(
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
-    MemSafetyProbe11::tree a0_value = *a0;
-    MemSafetyProbe11::tree a2_value = *a2;
+    const MemSafetyProbe11::tree &a0_value = *a0;
+    const MemSafetyProbe11::tree &a2_value = *a2;
     MemSafetyProbe11::mylist<std::function<unsigned int(unsigned int)>> acc2 =
         mylist<std::function<unsigned int(unsigned int)>>::mycons(
             [=](auto _xarg0) mutable {
@@ -108,7 +108,7 @@ MemSafetyProbe11::dual_accum(
     const auto &[a0, a1] =
         std::get<typename MemSafetyProbe11::mylist<unsigned int>::Mycons>(
             l.v());
-    MemSafetyProbe11::mylist<unsigned int> a1_value = *a1;
+    const MemSafetyProbe11::mylist<unsigned int> &a1_value = *a1;
     unsigned int new_sum = (sum_acc + a0);
     return dual_accum(
         a1_value, new_sum,

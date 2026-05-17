@@ -284,7 +284,7 @@ struct TopologicalSort {
       } else {
         const auto &[a0, a1] =
             std::get<typename List<std::pair<T1, T1>>::Cons>(l0.v());
-        List<std::pair<T1, T1>> a1_value = *a1;
+        const List<std::pair<T1, T1>> &a1_value = *a1;
         const T1 &e1 = a0.first;
         const T1 &e2 = a0.second;
         std::optional<T1> f1 =

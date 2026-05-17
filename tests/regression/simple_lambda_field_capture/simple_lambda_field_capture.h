@@ -127,7 +127,7 @@ struct SimpleLambdaFieldCapture {
         return std::optional<std::function<unsigned int(unsigned int)>>();
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
-        mylist a1_value = *a1;
+        const mylist &a1_value = *a1;
         return std::make_optional<std::function<unsigned int(unsigned int)>>(
             [=](unsigned int x) mutable {
               return ((x + a0) + a1_value.mylist_sum());

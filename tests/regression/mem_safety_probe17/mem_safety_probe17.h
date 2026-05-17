@@ -740,7 +740,7 @@ struct MemSafetyProbe17 {
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
@@ -855,7 +855,7 @@ struct MemSafetyProbe17 {
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
@@ -1096,7 +1096,7 @@ struct MemSafetyProbe17 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
@@ -1143,7 +1143,7 @@ struct MemSafetyProbe17 {
           const mylist *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());

@@ -67,7 +67,7 @@ MemSafetyProbe7::build_len_closures(
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe7::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe7::mylist<unsigned int> a1_value = *a1;
+      const MemSafetyProbe7::mylist<unsigned int> &a1_value = *a1;
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           typename mylist<std::function<unsigned int(std::monostate)>>::Mycons(
@@ -153,7 +153,7 @@ MemSafetyProbe7::build_sum_closures(
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe7::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe7::mylist<unsigned int> a1_value = *a1;
+      const MemSafetyProbe7::mylist<unsigned int> &a1_value = *a1;
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(std::monostate)>>>(
           typename mylist<std::function<unsigned int(std::monostate)>>::Mycons(
@@ -196,7 +196,7 @@ MemSafetyProbe7::build_accum_closures(
       const auto &[a0, a1] =
           std::get<typename MemSafetyProbe7::mylist<unsigned int>::Mycons>(
               _loop_l.v());
-      MemSafetyProbe7::mylist<unsigned int> a1_value = *a1;
+      const MemSafetyProbe7::mylist<unsigned int> &a1_value = *a1;
       auto _cell = std::make_unique<
           MemSafetyProbe7::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
@@ -245,7 +245,7 @@ unsigned int MemSafetyProbe7::apply_all(
           &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe7::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(l.v())) {
-        _result = x;
+        _result = std::move(x);
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe7::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(l.v());

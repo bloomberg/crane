@@ -139,7 +139,7 @@ struct LoopifyNumericSequences {
     unsigned int _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        _result = _loop_x;
+        _result = std::move(_loop_x);
         break;
       } else {
         unsigned int n_ = _loop_n - 1;

@@ -70,7 +70,7 @@ MemSafetyProbe5::build_getters(
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
           _loop_l.v());
-      MemSafetyProbe5::mylist<MemSafetyProbe5::tree> a1_value = *a1;
+      const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &a1_value = *a1;
       auto _cell = std::make_unique<
           MemSafetyProbe5::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
@@ -119,7 +119,7 @@ unsigned int MemSafetyProbe5::apply_all(
           &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
               std::function<unsigned int(unsigned int)>>::Mynil>(l.v())) {
-        _result = x;
+        _result = std::move(x);
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe5::mylist<
             std::function<unsigned int(unsigned int)>>::Mycons>(l.v());
@@ -170,8 +170,8 @@ MemSafetyProbe5::collect_left_vals(
       } else {
         auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe5::tree::Node>(t.v_mut());
-        MemSafetyProbe5::tree a0_value = *a0;
-        MemSafetyProbe5::tree a2_value = *a2;
+        const MemSafetyProbe5::tree &a0_value = *a0;
+        const MemSafetyProbe5::tree &a2_value = *a2;
         _stack.emplace_back(_Resume_Node{a0_value});
         _stack.emplace_back(
             _Enter{mylist<std::function<unsigned int(unsigned int)>>::mycons(

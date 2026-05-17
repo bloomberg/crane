@@ -104,7 +104,7 @@ struct FreeMonad {
       return std::any_cast<T1>(f(std::any_cast<T2>(a0)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
-      IO a_value = *a;
+      const IO &a_value = *a;
       return std::any_cast<T1>(f0(a_value,
                                   IO_rect<T1, T2>(f, f0, f1, f2, a_value), b,
                                   [=](const auto &a) mutable {
@@ -126,7 +126,7 @@ struct FreeMonad {
       return std::any_cast<T1>(f(std::any_cast<T2>(a0)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
-      IO a_value = *a;
+      const IO &a_value = *a;
       return std::any_cast<T1>(f0(a_value,
                                   IO_rec<T1, T2>(f, f0, f1, f2, a_value), b,
                                   [=](const auto &a) mutable {

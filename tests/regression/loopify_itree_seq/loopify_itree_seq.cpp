@@ -84,7 +84,7 @@ unsigned int LoopifyItreeSeq::delay_ret(unsigned int n, unsigned int v) {
   unsigned int _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = v;
+      _result = std::move(v);
       break;
     } else {
       unsigned int n_ = _loop_n - 1;

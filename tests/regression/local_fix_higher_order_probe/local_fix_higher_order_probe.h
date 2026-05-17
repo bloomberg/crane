@@ -113,7 +113,7 @@ T1 _sample_go(const std::function<T1(Nat)> k, const Nat n0) {
     return k(Nat::o());
   } else {
     const auto &[a0] = std::get<typename Nat::S>(n0.v());
-    Nat a0_value = *a0;
+    const Nat &a0_value = *a0;
     return _sample_go<T1>([=](Nat x) mutable { return k(Nat::s(x)); },
                           a0_value);
   }

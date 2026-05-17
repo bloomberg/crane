@@ -535,9 +535,9 @@ unsigned int LoopifyAlgorithms::max_prefix_sum(
         _result = 0u;
       } else {
         if (rest < sum) {
-          _result = sum;
+          _result = std::move(sum);
         } else {
-          _result = rest;
+          _result = std::move(rest);
         }
       }
     }

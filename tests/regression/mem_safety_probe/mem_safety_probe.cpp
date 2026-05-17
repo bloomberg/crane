@@ -25,7 +25,7 @@ MemSafetyProbe::build_adders(
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mycons>(
           _loop_trees.v());
-      MemSafetyProbe::mylist<MemSafetyProbe::tree> a1_value = *a1;
+      const MemSafetyProbe::mylist<MemSafetyProbe::tree> &a1_value = *a1;
       auto _cell = std::make_unique<
           MemSafetyProbe::mylist<std::function<unsigned int(unsigned int)>>>(
           typename mylist<std::function<unsigned int(unsigned int)>>::Mycons(
@@ -134,7 +134,7 @@ MemSafetyProbe::box_from_match(const MemSafetyProbe::tree &t) {
   } else {
     const auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe::tree::Node>(t.v());
-    MemSafetyProbe::tree a0_value = *a0;
+    const MemSafetyProbe::tree &a0_value = *a0;
     return fn_box::box([=](unsigned int _x0) mutable -> unsigned int {
       return a0_value.sum_values(_x0);
     });

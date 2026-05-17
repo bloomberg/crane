@@ -268,7 +268,7 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
     const auto &[a0, a1] = std::get<
         typename List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::Cons>(
         l.v());
-    List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> a1_value = *a1;
+    const List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &a1_value = *a1;
     if (a1_value.existsb(
             [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) mutable
                 -> bool { return epitope_eqb(a0, _x0); })) {

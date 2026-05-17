@@ -391,7 +391,7 @@ LoopifyPatterns::guard_accum(unsigned int acc,
   while (true) {
     if (std::holds_alternative<
             typename LoopifyPatterns::list<unsigned int>::Nil>(_loop_l->v())) {
-      _result = _loop_acc;
+      _result = std::move(_loop_acc);
       break;
     } else {
       const auto &[a0, a1] =
@@ -895,7 +895,7 @@ unsigned int LoopifyPatterns::quad_sum_pattern(
         auto &&_sv0 = *a1;
         if (std::holds_alternative<
                 typename LoopifyPatterns::list<unsigned int>::Nil>(_sv0.v())) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
           const auto &[a00, a10] =
               std::get<typename LoopifyPatterns::list<unsigned int>::Cons>(
@@ -975,7 +975,7 @@ unsigned int LoopifyPatterns::multi_guard(
         _result = (a0 + rest);
       } else {
         if (0u < a0) {
-          _result = rest;
+          _result = std::move(rest);
         } else {
           _result = (1u + rest);
         }

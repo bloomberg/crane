@@ -34,7 +34,7 @@ FixEscapeMatch::make_fn_from_pair(const List<unsigned int> &l) {
     return std::optional<std::function<unsigned int(unsigned int)>>();
   } else {
     const auto &[a0, a1] = std::get<typename List<unsigned int>::Cons>(l.v());
-    List<unsigned int> a1_value = *a1;
+    const List<unsigned int> &a1_value = *a1;
     if (std::holds_alternative<typename List<unsigned int>::Nil>(
             a1_value.v())) {
       return std::optional<std::function<unsigned int(unsigned int)>>();

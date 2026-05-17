@@ -194,7 +194,7 @@ struct LoopifyHofs {
     T1 _loop_acc = std::move(acc);
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
-        _result = _loop_acc;
+        _result = std::move(_loop_acc);
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
@@ -610,7 +610,7 @@ struct LoopifyHofs {
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = a0;
+            _result = std::move(a0);
           } else {
             _stack.emplace_back(_Resume_Cons{f, a0});
             _stack.emplace_back(_Enter{a1.get()});
@@ -981,9 +981,9 @@ struct LoopifyHofs {
         unsigned int rest_max = _result;
         unsigned int fx = f(a0);
         if (rest_max <= fx) {
-          _result = fx;
+          _result = std::move(fx);
         } else {
-          _result = rest_max;
+          _result = std::move(rest_max);
         }
       }
     }
@@ -1058,7 +1058,7 @@ struct LoopifyHofs {
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<unsigned int>::Nil>(
                   _sv.v())) {
-            _result = a0;
+            _result = std::move(a0);
           } else {
             _stack.emplace_back(_Cont_Cons{a0, cmp});
             _stack.emplace_back(_Enter{a1.get()});
@@ -1070,9 +1070,9 @@ struct LoopifyHofs {
         F0 cmp = _f.cmp;
         unsigned int m = _result;
         if (0u <= cmp(a0, m)) {
-          _result = a0;
+          _result = std::move(a0);
         } else {
-          _result = m;
+          _result = std::move(m);
         }
       }
     }
@@ -1111,7 +1111,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<unsigned int> &l = *_f.l;
         if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = acc;
+          _result = std::move(acc);
         } else {
           const auto &[a0, a1] =
               std::get<typename List<unsigned int>::Cons>(l.v());

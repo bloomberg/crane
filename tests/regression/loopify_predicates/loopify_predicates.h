@@ -172,7 +172,7 @@ struct LoopifyPredicates {
         if (p(std::move(a0))) {
           _loop_l = std::move(*a1);
         } else {
-          _result = _loop_l;
+          _result = std::move(_loop_l);
           break;
         }
       }
