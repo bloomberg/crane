@@ -1,5 +1,3 @@
 #include "keyword_class_global.h"
 
-unsigned int KeywordClassGlobal::class_(const unsigned int n) {
-  return (n + n);
-}
+uint64_t KeywordClassGlobal::class_(uint64_t n) { return (n + n); }

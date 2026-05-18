@@ -1,13 +1,9 @@
 #ifndef INCLUDED_SETB
 #define INCLUDED_SETB
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 namespace SetB {
 
-unsigned int make(const unsigned int n);
+uint64_t make(uint64_t n);
 
 } // namespace SetB
 

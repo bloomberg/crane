@@ -228,6 +228,10 @@ and smatch_branch = {
     (** When [true], the scrutinee is owned (last use or explicit move).
         Affects binding: owned value types use [auto [...] = std::move(std::get<T>(scrut.v_mut()))],
         borrowed value types use [const auto& [...] = std::get<T>(scrut.v())]. *)
+  smb_is_flat : bool;
+    (** When [true], the type is a flat single-constructor inductive (no variant
+        wrapper). The binding uses [const auto& [...] = scrut] directly instead
+        of [std::get<Ctor>(scrut.v())]. No [holds_alternative] check is emitted. *)
   smb_body : cpp_stmt list;
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
@@ -340,7 +344,8 @@ and cpp_field =
   | Fconstructor of
       (Id.t * cpp_type) list
       * (Id.t * cpp_expr) list
-      * bool (* bool = explicit *)
+      * bool (* explicit *)
+      * bool (* noexcept *)
   | Fdestructor of cpp_stmt list
     (* Destructor body for the enclosing struct. *)
   (* Nested struct with its own visibility-annotated fields *)
@@ -371,6 +376,7 @@ and method_field = {
   mf_is_inline : bool;
   mf_this_pos : int;
   mf_no_pure : bool;
+  mf_is_noexcept : bool;
 }
 
 (** C++ type schema. The integer is the number of variables in the schema. *)
@@ -548,6 +554,7 @@ let map_stmt
                   (fe cond, rf, List.map fs stmts)) br.smb_reuse;
               smb_is_value_type = br.smb_is_value_type;
               smb_is_owned = br.smb_is_owned;
+              smb_is_flat = br.smb_is_flat;
               smb_body = List.map fs br.smb_body })
           branches,
         Option.map (List.map fs) default )

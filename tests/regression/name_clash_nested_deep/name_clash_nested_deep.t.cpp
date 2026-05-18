@@ -6,7 +6,7 @@ int main() {
   using NS = NameClashNestedDeep;
 
   auto nil = NS::mylist::mynil();
-  auto mk = [](unsigned int h, auto t) { return NS::mylist::mycons(h, t); };
+  auto mk = [](uint64_t h, auto t) { return NS::mylist::mycons(h, t); };
 
   auto l1 = mk(10, nil);
   auto l2 = mk(20, nil);

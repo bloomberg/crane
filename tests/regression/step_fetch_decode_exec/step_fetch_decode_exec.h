@@ -2,56 +2,55 @@
 #define INCLUDED_STEP_FETCH_DECODE_EXEC
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +59,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +78,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,15 +113,15 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct ListDef {
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct StepFetchDecodeExec {
@@ -134,127 +130,124 @@ struct StepFetchDecodeExec {
     struct NOP {};
 
     struct ADD_ACC {
-      unsigned int d_a0;
+      uint64_t a0;
     };
 
     using variant_t = std::variant<NOP, ADD_ACC>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     instruction() {}
 
-    explicit instruction(NOP _v) : d_v_(_v) {}
+    explicit instruction(NOP _v) : v_(_v) {}
 
-    explicit instruction(ADD_ACC _v) : d_v_(std::move(_v)) {}
+    explicit instruction(ADD_ACC _v) : v_(std::move(_v)) {}
 
-    instruction(const instruction &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    instruction(const instruction &_other) : v_(std::move(_other.clone().v_)) {}
 
-    instruction(instruction &&_other) : d_v_(std::move(_other.d_v_)) {}
+    instruction(instruction &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     instruction &operator=(const instruction &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    instruction &operator=(instruction &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    instruction &operator=(instruction &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     instruction clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<NOP>(_sv.v())) {
+      if (std::holds_alternative<NOP>(this->v())) {
         return instruction(NOP{});
       } else {
-        const auto &[d_a0] = std::get<ADD_ACC>(_sv.v());
-        return instruction(ADD_ACC{d_a0});
+        const auto &[a0] = std::get<ADD_ACC>(this->v());
+        return instruction(ADD_ACC{a0});
       }
     }
 
     // CREATORS
     static instruction nop() { return instruction(NOP{}); }
 
-    static instruction add_acc(unsigned int a0) {
-      return instruction(ADD_ACC{std::move(a0)});
-    }
+    static instruction add_acc(uint64_t a0) { return instruction(ADD_ACC{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rect(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename instruction::ADD_ACC>(i.v());
+      return f0(a0);
     }
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 instruction_rec(T1 f, F1 &&f0, const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename instruction::ADD_ACC>(i.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename instruction::ADD_ACC>(i.v());
+      return f0(a0);
     }
   }
 
   struct state {
-    unsigned int acc;
-    unsigned int pc;
-    List<unsigned int> rom;
+    uint64_t acc;
+    uint64_t pc;
+    List<uint64_t> rom;
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).acc, (*(this)).pc, (*(this)).rom.clone()};
+      return state{(*this).acc, (*this).pc, (*this).rom.clone()};
     }
   };
 
-  static unsigned int fetch_byte(const state &s, const unsigned int addr);
-  static instruction decode(const unsigned int b1, const unsigned int b2);
+  static uint64_t fetch_byte(const state &s, uint64_t addr);
+  static instruction decode(uint64_t b1, uint64_t b2);
   static state execute(const state &s, const instruction &i);
   static state step(const state &s);
-  static inline const unsigned int t = []() {
+  static inline const uint64_t t = []() {
     state s1 = step(state{
-        3u, 0u,
-        List<unsigned int>::cons(
-            1u,
-            List<unsigned int>::cons(
-                6u, List<unsigned int>::cons(0u, List<unsigned int>::nil())))});
+        UINT64_C(3), UINT64_C(0),
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(6),
+                List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil())))});
     return (s1.acc + s1.pc);
   }();
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      return ListDef::template nth<T1>(m, *a10, default0);
     }
   }
 }

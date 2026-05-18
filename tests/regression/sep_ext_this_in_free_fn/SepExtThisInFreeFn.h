@@ -1,10 +1,6 @@
 #ifndef INCLUDED_SEPEXTTHISINFREEFN
 #define INCLUDED_SEPEXTTHISINFREEFN
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 #include "Datatypes.h"
 #include "ListDef.h"
 

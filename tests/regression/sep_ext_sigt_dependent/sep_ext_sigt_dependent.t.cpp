@@ -25,15 +25,15 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   // pack_a wraps TagA with unit (monostate)
   auto pa = Packer::pack_a;
-  ASSERT(Packer::get_tag(pa) == Tag::e_TAGA);
+  ASSERT(Packer::get_tag(pa) == Tag::TAGA);
 
   // pack_b wraps TagB with a nat
   auto pb = Packer::pack_b(42u);
-  ASSERT(Packer::get_tag(pb) == Tag::e_TAGB);
+  ASSERT(Packer::get_tag(pb) == Tag::TAGB);
 
   // pack_c wraps TagC with a bool
   auto pc = Packer::pack_c(true);
-  ASSERT(Packer::get_tag(pc) == Tag::e_TAGC);
+  ASSERT(Packer::get_tag(pc) == Tag::TAGC);
 
   return testStatus;
 }

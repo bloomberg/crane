@@ -20,7 +20,7 @@ int main() {
   // identity_or_double
   auto d = NS::identity_or_double(NS::shape::circle(3));
   assert(std::holds_alternative<NS::shape::Circle>(d.v()));
-  assert(std::get<NS::shape::Circle>(d.v()).d_a0 == 6u);
+  assert(std::get<NS::shape::Circle>(d.v()).a0 == 6u);
 
   // pick_shape
   auto p = NS::pick_shape(c5, s34);

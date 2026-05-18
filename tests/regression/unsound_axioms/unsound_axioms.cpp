@@ -1,26 +1,26 @@
 #include "unsound_axioms.h"
 
-unsigned int UnsoundAxioms::cast_confusion(const UnsoundAxioms::Rec &r) {
-  unsigned int a = r.f1;
-  unsigned int b = r.f2;
-  return (unsafe_cast<unsigned int, unsigned int>(a) + b);
+uint64_t UnsoundAxioms::cast_confusion(const UnsoundAxioms::Rec &r) {
+  uint64_t a = r.f1;
+  uint64_t b = r.f2;
+  return (unsafe_cast<uint64_t, uint64_t>(a) + b);
 }
 
-unsigned int UnsoundAxioms::choose_in_match(const UnsoundAxioms::Rec &r) {
-  unsigned int a = r.f1;
-  unsigned int b = r.f2;
-  unsigned int witness = choose<unsigned int>();
+uint64_t UnsoundAxioms::choose_in_match(const UnsoundAxioms::Rec &r) {
+  uint64_t a = r.f1;
+  uint64_t b = r.f2;
+  uint64_t witness = choose<uint64_t>();
   return ((a + b) + witness);
 }
 
-unsigned int
+uint64_t
 UnsoundAxioms::extract_proof_computation(const UnsoundAxioms::ProofRec &pr) {
-  unsigned int v = pr.pf_val;
-  unsigned int v2 = pr.pf_val2;
+  uint64_t v = pr.pf_val;
+  uint64_t v2 = pr.pf_val2;
   return (v + v2);
 }
 
-bool UnsoundAxioms::use_type_eq(const unsigned int n) { return n; }
+bool UnsoundAxioms::use_type_eq(uint64_t n) { return n; }
 
 UnsoundAxioms::Rec UnsoundAxioms::impossible_rec() {
   throw std::logic_error("unrealized axiom: "
@@ -28,24 +28,24 @@ UnsoundAxioms::Rec UnsoundAxioms::impossible_rec() {
                          "UnsoundAxioms.impossible_rec");
 }
 
-unsigned int UnsoundAxioms::use_impossible(const std::monostate) {
-  unsigned int a = impossible_rec().f1;
-  unsigned int b = impossible_rec().f2;
+uint64_t UnsoundAxioms::use_impossible(std::monostate) {
+  uint64_t a = impossible_rec().f1;
+  uint64_t b = impossible_rec().f2;
   return (a + b);
 }
 
-unsigned int UnsoundAxioms::from_false(const UnsoundAxioms::Rec &) {
+uint64_t UnsoundAxioms::from_false(const UnsoundAxioms::Rec &) {
   throw std::logic_error("absurd case");
 }
 
-unsigned int UnsoundAxioms::prop_as_type() {
+uint64_t UnsoundAxioms::prop_as_type() {
   throw std::logic_error("unrealized axiom: "
                          "CraneTestsRegression.unsound_axioms.UnsoundAxioms."
                          "UnsoundAxioms.prop_as_type");
 }
 
-unsigned int UnsoundAxioms::use_prop_as_type(const UnsoundAxioms::Rec &r) {
-  unsigned int a = r.f1;
-  unsigned int b = r.f2;
+uint64_t UnsoundAxioms::use_prop_as_type(const UnsoundAxioms::Rec &r) {
+  uint64_t a = r.f1;
+  uint64_t b = r.f2;
   return ((prop_as_type() + a) + b);
 }

@@ -1,79 +1,65 @@
 #include "loopify_tail.h"
 
 /// Tail-recursive: membership test
-bool LoopifyTail::member(const unsigned int x,
-                         const LoopifyTail::list<unsigned int> &l) {
-  bool _result;
-  const LoopifyTail::list<unsigned int> *_loop_l = &l;
+bool LoopifyTail::member(uint64_t x, const LoopifyTail::list<uint64_t> &l) {
+  const LoopifyTail::list<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
+    if (std::holds_alternative<typename LoopifyTail::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = false;
-      break;
+      return false;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename LoopifyTail::list<unsigned int>::Cons>(
-              _loop_l->v());
-      if (x == d_a0) {
-        _result = true;
-        break;
+      const auto &[a0, a1] =
+          std::get<typename LoopifyTail::list<uint64_t>::Cons>(_loop_l->v());
+      if (x == a0) {
+        return true;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }
-  return _result;
-}
+} /// Tail-recursive: nth element
 
-/// Tail-recursive: nth element
-unsigned int LoopifyTail::nth(const unsigned int n,
-                              const LoopifyTail::list<unsigned int> &l,
-                              const unsigned int default0) {
-  unsigned int _result;
-  const LoopifyTail::list<unsigned int> *_loop_l = &l;
-  unsigned int _loop_n = n;
+uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
+                          uint64_t default0) {
+  const LoopifyTail::list<uint64_t> *_loop_l = &l;
+  uint64_t _loop_n = std::move(n);
   while (true) {
-    if (std::holds_alternative<typename LoopifyTail::list<unsigned int>::Nil>(
+    if (std::holds_alternative<typename LoopifyTail::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      _result = default0;
-      break;
+      return default0;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename LoopifyTail::list<unsigned int>::Cons>(
-              _loop_l->v());
-      if (_loop_n == 0u) {
-        _result = d_a0;
-        break;
+      const auto &[a0, a1] =
+          std::get<typename LoopifyTail::list<uint64_t>::Cons>(_loop_l->v());
+      if (_loop_n == UINT64_C(0)) {
+        return a0;
       } else {
-        _loop_l = d_a1.get();
-        _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+        _loop_l = a1.get();
+        _loop_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
       }
     }
   }
-  return _result;
 }
 
 /// Tail-recursive: lookup in association list
-unsigned int LoopifyTail::lookup(
-    const unsigned int key,
-    const LoopifyTail::list<std::pair<unsigned int, unsigned int>> &l) {
-  unsigned int _result;
-  const LoopifyTail::list<std::pair<unsigned int, unsigned int>> *_loop_l = &l;
+uint64_t
+LoopifyTail::lookup(uint64_t key,
+                    const LoopifyTail::list<std::pair<uint64_t, uint64_t>> &l) {
+  const LoopifyTail::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename LoopifyTail::list<
-            std::pair<unsigned int, unsigned int>>::Nil>(_loop_l->v())) {
-      _result = 0u;
-      break;
+    if (std::holds_alternative<
+            typename LoopifyTail::list<std::pair<uint64_t, uint64_t>>::Nil>(
+            _loop_l->v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename LoopifyTail::list<
-          std::pair<unsigned int, unsigned int>>::Cons>(_loop_l->v());
-      if (d_a0.first == key) {
-        _result = d_a0.second;
-        break;
+      const auto &[a0, a1] = std::get<
+          typename LoopifyTail::list<std::pair<uint64_t, uint64_t>>::Cons>(
+          _loop_l->v());
+      if (a0.first == key) {
+        return a0.second;
       } else {
-        _loop_l = d_a1.get();
+        _loop_l = a1.get();
       }
     }
   }
-  return _result;
 }

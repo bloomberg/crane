@@ -49,7 +49,7 @@ int main() {
               item3, Datatypes::List<W::item>::nil())));
   auto labels = W::all_labels(items);
   const auto &[h1, t1] =
-      std::get<typename Datatypes::List<unsigned int>::Cons>(labels.v());
+      std::get<typename Datatypes::List<uint64_t>::Cons>(labels.v());
   ASSERT(h1 == 10u);
 
   // Test find_label (projection used in function body)

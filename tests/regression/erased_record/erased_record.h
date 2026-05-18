@@ -1,46 +1,42 @@
 #ifndef INCLUDED_ERASED_RECORD
 #define INCLUDED_ERASED_RECORD
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct ErasedRecord {
   struct ManyProps {
-    unsigned int field0;
-    unsigned int field1;
-    unsigned int field2;
-    unsigned int field3;
-    unsigned int field4;
+    uint64_t field0;
+    uint64_t field1;
+    uint64_t field2;
+    uint64_t field3;
+    uint64_t field4;
 
     // ACCESSORS
     ManyProps clone() const {
-      return ManyProps{(*(this)).field0, (*(this)).field1, (*(this)).field2,
-                       (*(this)).field3, (*(this)).field4};
+      return ManyProps{(*this).field0, (*this).field1, (*this).field2,
+                       (*this).field3, (*this).field4};
     }
   };
 
-  static unsigned int complex_match(const ManyProps &r);
-  static unsigned int unusual_body(const ManyProps &r);
+  static uint64_t complex_match(const ManyProps &r);
+  static uint64_t unusual_body(const ManyProps &r);
 
   struct MostlyProps {
-    unsigned int real1;
-    unsigned int real2;
-    unsigned int real3;
+    uint64_t real1;
+    uint64_t real2;
+    uint64_t real3;
 
     // ACCESSORS
     MostlyProps clone() const {
-      return MostlyProps{(*(this)).real1, (*(this)).real2, (*(this)).real3};
+      return MostlyProps{(*this).real1, (*this).real2, (*this).real3};
     }
   };
 
-  static unsigned int access_mostly_props(const MostlyProps &r);
-  static inline const unsigned int test1 =
-      complex_match(ManyProps{1u, 2u, 3u, 4u, 5u});
-  static inline const unsigned int test2 =
-      unusual_body(ManyProps{1u, 2u, 3u, 4u, 5u});
-  static inline const unsigned int test3 =
-      access_mostly_props(MostlyProps{5u, 10u, 15u});
+  static uint64_t access_mostly_props(const MostlyProps &r);
+  static inline const uint64_t test1 = complex_match(ManyProps{
+      UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4), UINT64_C(5)});
+  static inline const uint64_t test2 = unusual_body(ManyProps{
+      UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4), UINT64_C(5)});
+  static inline const uint64_t test3 =
+      access_mostly_props(MostlyProps{UINT64_C(5), UINT64_C(10), UINT64_C(15)});
 };
 
 #endif // INCLUDED_ERASED_RECORD

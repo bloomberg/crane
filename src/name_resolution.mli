@@ -46,7 +46,15 @@ type resolved_term_name = {
 
 (** Create a name resolution cache from analysis results. Should be called once
     per extraction pass, after Structure_analysis.analyze and after
-    wrapper_module_table / collision_wrapper_table are populated. *)
+    wrapper_module_table / collision_wrapper_table are populated.
+    @param structure_analysis the result of {!Structure_analysis.analyze}
+    @param wrapper_modules table mapping module paths to their wrapper struct names
+    @param collision_wrappers set of module paths whose wrapper names collide
+      with an inductive from another module
+    @param global_scope_enums set of enum inductives that appear at global scope
+    @param eponymous_records set of inductive references that are eponymous records
+    @param unmerged set of capitalized names that must not be merged into a parent struct
+    @return a freshly built name resolution cache *)
 val create :
   structure_analysis:Structure_analysis.t ->
   wrapper_modules:(ModPath.t, string) Hashtbl.t ->
@@ -57,27 +65,51 @@ val create :
   Miniml.ml_structure ->
   t
 
-(** Look up a pre-resolved type name. Returns None if not cached. *)
+(** Look up a pre-resolved type name. Returns None if not cached.
+    @param t the name resolution cache
+    @param r the global reference to look up
+    @return [Some info] if the type has been pre-classified, [None] otherwise *)
 val resolve_type : t -> GlobRef.t -> resolved_type_name option
 
-(** Look up a pre-resolved term name. Returns None if not cached. *)
+(** Look up a pre-resolved term name. Returns None if not cached.
+    @param t the name resolution cache
+    @param r the global reference to look up
+    @return always [None] currently — term names are not pre-computed *)
 val resolve_term : t -> GlobRef.t -> resolved_term_name option
 
 (** Register a type name resolution. Used for late entries (e.g., local
-    inductives). *)
+    inductives).
+    @param t the cache to update
+    @param r the global reference to register
+    @param name the resolved name information to store *)
 val register_type : t -> GlobRef.t -> resolved_type_name -> unit
 
-(** Register a term name resolution. *)
+(** Register a term name resolution.
+    @param t the cache to update
+    @param r the global reference to register
+    @param name the resolved name information to store *)
 val register_term : t -> GlobRef.t -> resolved_term_name -> unit
 
-(** Check if a type is an eponymous record (pre-computed). *)
+(** Check if a type is an eponymous record (pre-computed).
+    @param t the name resolution cache
+    @param r the inductive reference to test
+    @return [true] if [r] is an eponymous record flattened into its parent namespace *)
 val is_eponymous : t -> GlobRef.t -> bool
 
-(** Check if a type is an enum at global scope (pre-computed). *)
+(** Check if a type is an enum at global scope (pre-computed).
+    @param t the name resolution cache
+    @param r the inductive reference to test
+    @return [true] if [r] is an enum class emitted at global scope *)
 val is_global_scope_enum : t -> GlobRef.t -> bool
 
-(** Get the inductive classification for a type. *)
+(** Get the inductive classification for a type.
+    @param t the name resolution cache
+    @param r the inductive reference to look up
+    @return [Some kind] if the classification has been registered, [None] otherwise *)
 val get_ind_kind : t -> GlobRef.t -> cpp_ind_kind option
 
-(** Register an inductive classification. *)
+(** Register an inductive classification.
+    @param t the cache to update
+    @param r the inductive reference to classify
+    @param kind the C++ rendering kind to associate with [r] *)
 val register_ind_kind : t -> GlobRef.t -> cpp_ind_kind -> unit

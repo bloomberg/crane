@@ -11,44 +11,41 @@
 ///
 /// The inner closure fun x => acc(h+x) captures acc (std::function)
 /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
-unsigned int FoldClosureBuild::compose_adders(
-    const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int _x0) {
-  return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
-      [](const std::function<unsigned int(unsigned int)> acc,
-         const unsigned int h) -> std::function<unsigned int(unsigned int)> {
-        return [=](const unsigned int x) mutable { return acc((h + x)); };
+uint64_t
+FoldClosureBuild::compose_adders(const FoldClosureBuild::mylist<uint64_t> &l,
+                                 uint64_t _x0) {
+  return fold_left<std::function<uint64_t(uint64_t)>, uint64_t>(
+      [](std::function<uint64_t(uint64_t)> acc,
+         uint64_t h) -> std::function<uint64_t(uint64_t)> {
+        return [=](uint64_t x) mutable { return acc((h + x)); };
       },
-      [](const unsigned int x) { return x; }, l)(_x0);
+      [](uint64_t x) { return x; }, l)(_x0);
 }
 
 /// Pattern 3: Fold producing a list of closures (not composing them).
 /// Each closure captures the list element from the fold iteration.
-FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
-FoldClosureBuild::collect_adders(
-    const FoldClosureBuild::mylist<unsigned int> &l) {
-  return fold_left<
-      FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>,
-      unsigned int>(
-      [](FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
-             acc,
-         const unsigned int h) {
-        return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int x) mutable { return (h + x); }, acc);
+FoldClosureBuild::mylist<std::function<uint64_t(uint64_t)>>
+FoldClosureBuild::collect_adders(const FoldClosureBuild::mylist<uint64_t> &l) {
+  return fold_left<FoldClosureBuild::mylist<std::function<uint64_t(uint64_t)>>,
+                   uint64_t>(
+      [](FoldClosureBuild::mylist<std::function<uint64_t(uint64_t)>> acc,
+         uint64_t h) {
+        return mylist<std::function<uint64_t(uint64_t)>>::mycons(
+            [=](uint64_t x) mutable { return (h + x); }, acc);
       },
-      mylist<std::function<unsigned int(unsigned int)>>::mynil(), l);
+      mylist<std::function<uint64_t(uint64_t)>>::mynil(), l);
 }
 
-unsigned int FoldClosureBuild::apply_all(
-    const FoldClosureBuild::mylist<std::function<unsigned int(unsigned int)>>
-        &fns,
-    const unsigned int x) {
+uint64_t FoldClosureBuild::apply_all(
+    const FoldClosureBuild::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    uint64_t x) {
   if (std::holds_alternative<typename FoldClosureBuild::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
-    return 0u;
+          std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename FoldClosureBuild::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return (d_a0(x) + apply_all(*(d_a1), x));
+    const auto &[a0, a1] = std::get<typename FoldClosureBuild::mylist<
+        std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());
+    return (a0(x) + apply_all(*a1, x));
   }
 }
 
@@ -61,24 +58,23 @@ unsigned int FoldClosureBuild::apply_all(
 /// Both are locals in the fold callback's scope.
 /// When fold returns, these scopes are destroyed, but the
 /// final fixpoint (stored in the accumulator) still references them.
-unsigned int FoldClosureBuild::compose_with_fix(
-    const FoldClosureBuild::mylist<unsigned int> &l, const unsigned int _x0) {
-  return fold_left<std::function<unsigned int(unsigned int)>, unsigned int>(
-      [](const std::function<unsigned int(unsigned int)> acc,
-         const unsigned int h) {
-        auto go_impl = [=](auto &_self_go,
-                           unsigned int x) mutable -> unsigned int {
+uint64_t
+FoldClosureBuild::compose_with_fix(const FoldClosureBuild::mylist<uint64_t> &l,
+                                   uint64_t _x0) {
+  return fold_left<std::function<uint64_t(uint64_t)>, uint64_t>(
+      [](std::function<uint64_t(uint64_t)> acc, uint64_t h) {
+        auto go_impl = [=](auto &_self_go, uint64_t x) mutable -> uint64_t {
           if (x <= 0) {
             return acc(h);
           } else {
-            unsigned int x_ = x - 1;
+            uint64_t x_ = x - 1;
             return (_self_go(_self_go, x_) + 1);
           }
         };
-        auto go = [=](unsigned int x) mutable -> unsigned int {
+        auto go = [=](uint64_t x) mutable -> uint64_t {
           return go_impl(go_impl, x);
         };
         return go;
       },
-      [](const unsigned int x) { return x; }, l)(_x0);
+      [](uint64_t x) { return x; }, l)(_x0);
 }

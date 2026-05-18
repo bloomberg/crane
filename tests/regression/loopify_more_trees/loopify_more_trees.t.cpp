@@ -17,7 +17,7 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 using Tree = LoopifyMoreTrees::tree;
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto leaf = Tree::leaf();

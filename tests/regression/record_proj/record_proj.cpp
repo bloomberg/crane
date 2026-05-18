@@ -1,24 +1,24 @@
 #include "record_proj.h"
 
-unsigned int RecordProj::weird_access(const RecordProj::Point &p) {
-  unsigned int a = p.x;
-  unsigned int b = p.y;
-  unsigned int sum = (a + b);
+uint64_t RecordProj::weird_access(const RecordProj::Point &p) {
+  uint64_t a = p.x;
+  uint64_t b = p.y;
+  uint64_t sum = (a + b);
   return (sum + a);
 }
 
-unsigned int RecordProj::complex_access(const RecordProj::ComplexRecord &c) {
-  unsigned int f1 = c.field1;
-  unsigned int f2 = c.field2;
-  unsigned int f3 = c.field3;
+uint64_t RecordProj::complex_access(const RecordProj::ComplexRecord &c) {
+  uint64_t f1 = c.field1;
+  uint64_t f2 = c.field2;
+  uint64_t f3 = c.field3;
   return ((f1 + f2) + f3);
 }
 
-unsigned int RecordProj::nested_record_match(const RecordProj::Point &p1,
-                                             const RecordProj::Point &p2) {
-  unsigned int x1 = p1.x;
-  unsigned int y1 = p1.y;
-  unsigned int x2 = p2.x;
-  unsigned int y2 = p2.y;
+uint64_t RecordProj::nested_record_match(const RecordProj::Point &p1,
+                                         const RecordProj::Point &p2) {
+  uint64_t x1 = p1.x;
+  uint64_t y1 = p1.y;
+  uint64_t x2 = p2.x;
+  uint64_t y2 = p2.y;
   return (((x1 + y1) + x2) + y2);
 }

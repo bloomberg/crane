@@ -8,50 +8,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +60,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +79,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,32 +114,32 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  List<t_A> app(List<t_A> m) const {
-    std::unique_ptr<List<t_A>> _head{};
-    std::unique_ptr<List<t_A>> *_write = &_head;
+  List<A> app(List<A> m) const {
+    std::unique_ptr<List<A>> _head{};
+    std::unique_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
-    List<t_A> _loop_m = std::move(m);
+    List<A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_unique<List<A>>(std::move(_loop_m));
         break;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = std::make_unique<List<t_A>>(
-            typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
-        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -150,7 +147,7 @@ public:
 struct LoopifySearch {
   /// Internal helper: list length.
   template <typename T1>
-  static unsigned int
+  static uint64_t
   len_impl(const List<T1> &l) { /// _Enter: captures varying parameters for each
                                 /// recursive call.
 
@@ -162,7 +159,7 @@ struct LoopifySearch {
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -172,13 +169,13 @@ struct LoopifySearch {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<T1> &l = *(_f.l);
+        const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
+          const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -190,44 +187,40 @@ struct LoopifySearch {
 
   /// knapsack capacity items solves 0/1 knapsack problem.
   /// Items are (weight, value) pairs.
-  static unsigned int
-  knapsack_fuel(const unsigned int fuel, const unsigned int capacity,
-                const List<std::pair<unsigned int, unsigned int>> &items);
-  static unsigned int
-  knapsack(const unsigned int capacity,
-           const List<std::pair<unsigned int, unsigned int>> &items);
+  static uint64_t
+  knapsack_fuel(uint64_t fuel, uint64_t capacity,
+                const List<std::pair<uint64_t, uint64_t>> &items);
+  static uint64_t knapsack(uint64_t capacity,
+                           const List<std::pair<uint64_t, uint64_t>> &items);
   /// majority l finds majority element using Boyer-Moore algorithm.
   /// Returns (candidate, count).
-  static std::pair<unsigned int, unsigned int>
-  majority(const List<unsigned int> &l);
+  static std::pair<uint64_t, uint64_t> majority(const List<uint64_t> &l);
   /// longest_increasing_subseq l finds a longest increasing subsequence
   /// (greedy).
-  static List<unsigned int>
-  longest_increasing_subseq(const List<unsigned int> &l);
+  static List<uint64_t> longest_increasing_subseq(const List<uint64_t> &l);
 
   /// maximum_by cmp l finds maximum element by custom comparator.
   /// cmp x y returns: 0 if x=y, 1 if x>y, 2 if x<y
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
-                                   unsigned int &>
-  static unsigned int maximum_by(
-      F0 &&cmp,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+  static uint64_t
+  maximum_by(F0 &&cmp,
+             const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [cmp, d_a0], resumes after recursive call, then
+    /// _Cont_Cons: saves [a0, cmp], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
+      uint64_t a0;
       F0 cmp;
-      unsigned int d_a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -237,30 +230,28 @@ struct LoopifySearch {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = 0u;
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
-          auto &&_sv = *(d_a1);
-          if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                  _sv.v())) {
-            _result = d_a0;
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          auto &&_sv = *a1;
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+            _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{cmp, d_a0});
-            _stack.emplace_back(_Enter{d_a1.get()});
+            _stack.emplace_back(_Cont_Cons{a0, cmp});
+            _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
         F0 cmp = _f.cmp;
-        unsigned int d_a0 = _f.d_a0;
-        unsigned int m = _result;
-        if (cmp(d_a0, m) == 1u) {
-          _result = d_a0;
+        uint64_t m = _result;
+        if (cmp(a0, m) == UINT64_C(1)) {
+          _result = std::move(a0);
         } else {
-          _result = m;
+          _result = std::move(m);
         }
       }
     }
@@ -268,111 +259,94 @@ struct LoopifySearch {
   }
 
   /// Helper for binary search: get nth element.
-  static unsigned int nth_impl(const unsigned int n,
-                               const List<unsigned int> &l);
+  static uint64_t nth_impl(uint64_t n, const List<uint64_t> &l);
   /// Helper for binary search: take first k elements.
-  static List<unsigned int> take_impl(const unsigned int k,
-                                      const List<unsigned int> &l);
+  static List<uint64_t> take_impl(uint64_t k, const List<uint64_t> &l);
   /// Helper for binary search: drop first k elements.
-  static List<unsigned int> drop_impl(const unsigned int k,
-                                      List<unsigned int> l);
+  static List<uint64_t> drop_impl(uint64_t k, List<uint64_t> l);
   /// binary_search_fuel target sorted_list searches for target in sorted list.
   /// Returns true if found.
-  static bool binary_search_fuel(const unsigned int fuel,
-                                 const unsigned int target,
-                                 const List<unsigned int> &l);
-  static bool binary_search(const unsigned int target,
-                            const List<unsigned int> &l);
+  static bool binary_search_fuel(uint64_t fuel, uint64_t target,
+                                 const List<uint64_t> &l);
+  static bool binary_search(uint64_t target, const List<uint64_t> &l);
   /// longest_run l finds the longest run of consecutive equal elements.
-  static List<unsigned int> longest_run_aux(List<unsigned int> current_run,
-                                            List<unsigned int> best_run,
-                                            const List<unsigned int> &l);
-  static List<unsigned int> longest_run(const List<unsigned int> &l);
+  static List<uint64_t> longest_run_aux(List<uint64_t> current_run,
+                                        List<uint64_t> best_run,
+                                        const List<uint64_t> &l);
+  static List<uint64_t> longest_run(const List<uint64_t> &l);
   /// collatz n computes Collatz sequence length (not the list).
-  static unsigned int collatz_fuel(const unsigned int fuel,
-                                   const unsigned int n);
-  static unsigned int collatz(const unsigned int n);
+  static uint64_t collatz_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t collatz(uint64_t n);
   /// lis l simple longest increasing subsequence (greedy approach).
-  static List<unsigned int> lis(const List<unsigned int> &l);
+  static List<uint64_t> lis(const List<uint64_t> &l);
   /// subset_sum target l checks if any subset sums to target.
-  static bool subset_sum_fuel(const unsigned int fuel,
-                              const unsigned int target,
-                              const List<unsigned int> &l);
-  static bool
-  subset_sum(const unsigned int target,
-             const List<unsigned int> &l); /// Helper: filter predicate.
+  static bool subset_sum_fuel(uint64_t fuel, uint64_t target,
+                              const List<uint64_t> &l);
+  static bool subset_sum(uint64_t target,
+                         const List<uint64_t> &l); /// Helper: filter predicate.
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> filter_impl(F0 &&p, const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> filter_impl(F0 &&p, const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      if (p(d_a0)) {
-        return List<unsigned int>::cons(d_a0, filter_impl(p, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      if (p(a0)) {
+        return List<uint64_t>::cons(a0, filter_impl(p, *a1));
       } else {
-        return filter_impl(p, *(d_a1));
+        return filter_impl(p, *a1);
       }
     }
   }
 
   /// sieve l removes multiples (simplified sieve of Eratosthenes).
-  static List<unsigned int> sieve_fuel(const unsigned int fuel,
-                                       List<unsigned int> l);
-  static List<unsigned int> sieve(const List<unsigned int> &l);
+  static List<uint64_t> sieve_fuel(uint64_t fuel, List<uint64_t> l);
+  static List<uint64_t> sieve(const List<uint64_t> &l);
   /// Helper: check if element is in list.
-  static bool elem_impl(const unsigned int x, const List<unsigned int> &l);
+  static bool elem_impl(uint64_t x, const List<uint64_t> &l);
   /// nub l removes duplicates from list.
-  static List<unsigned int> nub_fuel(const unsigned int fuel,
-                                     List<unsigned int> l);
-  static List<unsigned int> nub(const List<unsigned int> &l);
+  static List<uint64_t> nub_fuel(uint64_t fuel, List<uint64_t> l);
+  static List<uint64_t> nub(const List<uint64_t> &l);
   /// remove_duplicates l removes all duplicate elements.
-  static List<unsigned int> remove_duplicates_fuel(const unsigned int fuel,
-                                                   List<unsigned int> l);
-  static List<unsigned int> remove_duplicates(const List<unsigned int> &l);
+  static List<uint64_t> remove_duplicates_fuel(uint64_t fuel, List<uint64_t> l);
+  static List<uint64_t> remove_duplicates(const List<uint64_t> &l);
   /// quicksort l sorts list using quicksort with filter-based partitioning.
-  static List<unsigned int> quicksort_fuel(const unsigned int fuel,
-                                           List<unsigned int> l);
-  static List<unsigned int> quicksort(const List<unsigned int> &l);
+  static List<uint64_t> quicksort_fuel(uint64_t fuel, List<uint64_t> l);
+  static List<uint64_t> quicksort(const List<uint64_t> &l);
   /// Helper: split list into two roughly equal parts.
-  static std::pair<List<unsigned int>, List<unsigned int>>
-  split_list(const List<unsigned int> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  split_list(const List<uint64_t> &l);
   /// Helper: merge two sorted lists with fuel.
-  static List<unsigned int> merge_sorted_fuel(const unsigned int fuel,
-                                              List<unsigned int> l1,
-                                              List<unsigned int> l2);
-  static List<unsigned int> merge_sorted(const List<unsigned int> &l1,
-                                         const List<unsigned int> &l2);
+  static List<uint64_t> merge_sorted_fuel(uint64_t fuel, List<uint64_t> l1,
+                                          List<uint64_t> l2);
+  static List<uint64_t> merge_sorted(const List<uint64_t> &l1,
+                                     const List<uint64_t> &l2);
   /// merge_sort l sorts list using merge sort.
-  static List<unsigned int> merge_sort_fuel(const unsigned int fuel,
-                                            List<unsigned int> l);
-  static List<unsigned int> merge_sort(const List<unsigned int> &l);
+  static List<uint64_t> merge_sort_fuel(uint64_t fuel, List<uint64_t> l);
+  static List<uint64_t> merge_sort(const List<uint64_t> &l);
   /// Helper: remove first occurrence of x from list.
-  static List<unsigned int> remove_first(const unsigned int x,
-                                         const List<unsigned int> &l);
+  static List<uint64_t> remove_first(uint64_t x, const List<uint64_t> &l);
 
   /// Helper: map function over list and concatenate results.
   template <typename F0>
-    requires std::is_invocable_r_v<List<List<unsigned int>>, F0 &,
-                                   unsigned int &>
-  static List<List<unsigned int>> concat_map(
-      F0 &&f,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<List<List<uint64_t>>, F0 &, uint64_t &>
+  static List<List<uint64_t>>
+  concat_map(F0 &&f,
+             const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<List<unsigned int>> d_a0;
+      List<List<uint64_t>> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    List<List<unsigned int>> _result{};
+    List<List<uint64_t>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -382,88 +356,84 @@ struct LoopifySearch {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = List<List<unsigned int>>::nil();
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = List<List<uint64_t>>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{f(a0)});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.d_a0.app(_result);
+        _result = _f.a0.app(_result);
       }
     }
     return _result;
   }
 
   /// Helper: map function that prepends element to each list.
-  static List<List<unsigned int>>
-  map_cons(const unsigned int x, const List<List<unsigned int>> &lsts);
+  static List<List<uint64_t>> map_cons(uint64_t x,
+                                       const List<List<uint64_t>> &lsts);
   /// perms_choices_fuel fuel choices orig generates permutations by iterating
   /// over choices.  Single self-recursive function for full loopification.
   /// Match on remaining is hoisted out of let-binding.
-  static List<List<unsigned int>>
-  perms_choices_fuel(const unsigned int fuel, const List<unsigned int> &choices,
-                     const List<unsigned int> &orig);
+  static List<List<uint64_t>> perms_choices_fuel(uint64_t fuel,
+                                                 const List<uint64_t> &choices,
+                                                 const List<uint64_t> &orig);
   /// permutations_fuel fuel l generates all permutations of list.
-  static List<List<unsigned int>>
-  permutations_fuel(const unsigned int fuel, const List<unsigned int> &l);
-  static List<List<unsigned int>> permutations(const List<unsigned int> &l);
+  static List<List<uint64_t>> permutations_fuel(uint64_t fuel,
+                                                const List<uint64_t> &l);
+  static List<List<uint64_t>> permutations(const List<uint64_t> &l);
   /// linear_search x l finds index of first occurrence of x.
-  static std::optional<unsigned int>
-  linear_search_aux(const unsigned int x, const List<unsigned int> &l,
-                    const unsigned int idx);
-  static std::optional<unsigned int> linear_search(const unsigned int x,
-                                                   const List<unsigned int> &l);
+  static std::optional<uint64_t>
+  linear_search_aux(uint64_t x, const List<uint64_t> &l, uint64_t idx);
+  static std::optional<uint64_t> linear_search(uint64_t x,
+                                               const List<uint64_t> &l);
   /// all_indices x l finds all indices where x occurs.
-  static List<unsigned int> all_indices_aux(const unsigned int x,
-                                            const List<unsigned int> &l,
-                                            const unsigned int idx);
-  static List<unsigned int> all_indices(const unsigned int x,
-                                        const List<unsigned int> &l);
+  static List<uint64_t> all_indices_aux(uint64_t x, const List<uint64_t> &l,
+                                        uint64_t idx);
+  static List<uint64_t> all_indices(uint64_t x, const List<uint64_t> &l);
   /// min_element l finds minimum element in list.
-  static unsigned int min_element(const List<unsigned int> &l);
+  static uint64_t min_element(const List<uint64_t> &l);
 
   /// Binary tree for search operations.
   struct btree {
     // TYPES
     struct BLeaf {
-      unsigned int d_a0;
+      uint64_t a0;
     };
 
     struct BNode {
-      std::unique_ptr<btree> d_a0;
-      std::unique_ptr<btree> d_a1;
+      std::unique_ptr<btree> a0;
+      std::unique_ptr<btree> a1;
     };
 
     using variant_t = std::variant<BLeaf, BNode>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     btree() {}
 
-    explicit btree(BLeaf _v) : d_v_(std::move(_v)) {}
+    explicit btree(BLeaf _v) : v_(std::move(_v)) {}
 
-    explicit btree(BNode _v) : d_v_(std::move(_v)) {}
+    explicit btree(BNode _v) : v_(std::move(_v)) {}
 
-    btree(const btree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    btree(const btree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    btree(btree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    btree(btree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     btree &operator=(const btree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    btree &operator=(btree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    btree &operator=(btree &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -486,17 +456,17 @@ struct LoopifySearch {
         btree *_dst = _frame._dst;
         if (std::holds_alternative<BLeaf>(_src->v())) {
           const auto &_alt = std::get<BLeaf>(_src->v());
-          _dst->d_v_ = BLeaf{_alt.d_a0};
+          _dst->v_ = BLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<BNode>(_src->v());
-          _dst->d_v_ = BNode{_alt.d_a0 ? std::make_unique<btree>() : nullptr,
-                             _alt.d_a1 ? std::make_unique<btree>() : nullptr};
-          auto &_dst_alt = std::get<BNode>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = BNode{_alt.a0 ? std::make_unique<btree>() : nullptr,
+                           _alt.a1 ? std::make_unique<btree>() : nullptr};
+          auto &_dst_alt = std::get<BNode>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -504,7 +474,7 @@ struct LoopifySearch {
     }
 
     // CREATORS
-    static btree bleaf(unsigned int a0) { return btree(BLeaf{std::move(a0)}); }
+    static btree bleaf(uint64_t a0) { return btree(BLeaf{a0}); }
 
     static btree bnode(btree a0, btree a1) {
       return btree(BNode{std::make_unique<btree>(std::move(a0)),
@@ -516,13 +486,13 @@ struct LoopifySearch {
       std::vector<std::unique_ptr<btree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](btree &_node) {
-        if (std::holds_alternative<BNode>(_node.d_v_)) {
-          auto &_alt = std::get<BNode>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<BNode>(_node.v_)) {
+          auto &_alt = std::get<BNode>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -536,76 +506,72 @@ struct LoopifySearch {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
   static T1 btree_rect(F0 &&f, F1 &&f0, const btree &b) {
     if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
-      const auto &[d_a0] = std::get<typename btree::BLeaf>(b.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename btree::BLeaf>(b.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename btree::BNode>(b.v());
-      return f0(*(d_a0), btree_rect<T1>(f, f0, *(d_a0)), *(d_a1),
-                btree_rect<T1>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename btree::BNode>(b.v());
+      return f0(*a0, btree_rect<T1>(f, f0, *a0), *a1,
+                btree_rect<T1>(f, f0, *a1));
     }
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, btree &, T1 &, btree &, T1 &>
   static T1 btree_rec(F0 &&f, F1 &&f0, const btree &b) {
     if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
-      const auto &[d_a0] = std::get<typename btree::BLeaf>(b.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename btree::BLeaf>(b.v());
+      return f(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename btree::BNode>(b.v());
-      return f0(*(d_a0), btree_rec<T1>(f, f0, *(d_a0)), *(d_a1),
-                btree_rec<T1>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename btree::BNode>(b.v());
+      return f0(*a0, btree_rec<T1>(f, f0, *a0), *a1, btree_rec<T1>(f, f0, *a1));
     }
   } /// or_search p t searches tree with || recursion.
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static bool or_search(F0 &&p, const btree &t) {
     if (std::holds_alternative<typename btree::BLeaf>(t.v())) {
-      const auto &[d_a0] = std::get<typename btree::BLeaf>(t.v());
-      return p(d_a0);
+      const auto &[a0] = std::get<typename btree::BLeaf>(t.v());
+      return p(a0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename btree::BNode>(t.v());
-      return (or_search(p, *(d_a0)) || or_search(p, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename btree::BNode>(t.v());
+      return (or_search(p, *a0) || or_search(p, *a1));
     }
   }
 
   /// find_indices p l finds all indices where predicate holds.
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> find_indices_aux(F0 &&p,
-                                             const List<unsigned int> &l,
-                                             const unsigned int idx) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return List<unsigned int>::nil();
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> find_indices_aux(F0 &&p, const List<uint64_t> &l,
+                                         uint64_t idx) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return List<uint64_t>::nil();
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      if (p(d_a0)) {
-        return List<unsigned int>::cons(
-            idx, find_indices_aux(p, *(d_a1), (idx + 1)));
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      if (p(a0)) {
+        return List<uint64_t>::cons(idx, find_indices_aux(p, *a1, (idx + 1)));
       } else {
-        return find_indices_aux(p, *(d_a1), (idx + 1));
+        return find_indices_aux(p, *a1, (idx + 1));
       }
     }
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static List<unsigned int> find_indices(F0 &&p, const List<unsigned int> &l) {
-    return find_indices_aux(p, l, 0u);
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static List<uint64_t> find_indices(F0 &&p, const List<uint64_t> &l) {
+    return find_indices_aux(p, l, UINT64_C(0));
   }
 };
 

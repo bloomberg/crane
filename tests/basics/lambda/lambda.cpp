@@ -1,17 +1,11 @@
 #include "lambda.h"
 
-unsigned int Lambda::simple_lambda(const unsigned int x) { return x; }
+uint64_t Lambda::simple_lambda(uint64_t x) { return x; }
 
-unsigned int Lambda::multi_arg(const unsigned int _x0, const unsigned int _x1) {
-  return (_x0 + _x1);
-}
+uint64_t Lambda::multi_arg(uint64_t _x0, uint64_t _x1) { return (_x0 + _x1); }
 
-unsigned int Lambda::nested_lambda(const unsigned int x, const unsigned int y,
-                                   const unsigned int z) {
+uint64_t Lambda::nested_lambda(uint64_t x, uint64_t y, uint64_t z) {
   return (x + (y + z));
 }
 
-unsigned int Lambda::make_adder(const unsigned int _x0,
-                                const unsigned int _x1) {
-  return (_x0 + _x1);
-}
+uint64_t Lambda::make_adder(uint64_t _x0, uint64_t _x1) { return (_x0 + _x1); }

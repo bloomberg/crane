@@ -2,8 +2,6 @@
 #define INCLUDED_STRING_
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -17,35 +15,35 @@ struct String {
   struct EmptyString {};
 
   struct String0 {
-    Ascii::Ascii d_a0;
-    std::unique_ptr<String> d_a1;
+    Ascii::Ascii a0;
+    std::unique_ptr<String> a1;
   };
 
   using variant_t = std::variant<EmptyString, String0>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   String() {}
 
-  explicit String(EmptyString _v) : d_v_(_v) {}
+  explicit String(EmptyString _v) : v_(_v) {}
 
-  explicit String(String0 _v) : d_v_(std::move(_v)) {}
+  explicit String(String0 _v) : v_(std::move(_v)) {}
 
-  String(const String &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  String(const String &_other) : v_(std::move(_other.clone().v_)) {}
 
-  String(String &&_other) : d_v_(std::move(_other.d_v_)) {}
+  String(String &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   String &operator=(const String &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  String &operator=(String &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  String &operator=(String &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -67,14 +65,14 @@ public:
       const String *_src = _frame._src;
       String *_dst = _frame._dst;
       if (std::holds_alternative<EmptyString>(_src->v())) {
-        _dst->d_v_ = EmptyString{};
+        _dst->v_ = EmptyString{};
       } else {
         const auto &_alt = std::get<String0>(_src->v());
-        _dst->d_v_ = String0{_alt.d_a0.clone(),
-                             _alt.d_a1 ? std::make_unique<String>() : nullptr};
-        auto &_dst_alt = std::get<String0>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = String0{_alt.a0.clone(),
+                           _alt.a1 ? std::make_unique<String>() : nullptr};
+        auto &_dst_alt = std::get<String0>(_dst->v_);
+        if (_alt.a1) {
+          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
         }
       }
     }
@@ -94,10 +92,10 @@ public:
     std::vector<std::unique_ptr<String>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](String &_node) {
-      if (std::holds_alternative<String0>(_node.d_v_)) {
-        auto &_alt = std::get<String0>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+      if (std::holds_alternative<String0>(_node.v_)) {
+        auto &_alt = std::get<String0>(_node.v_);
+        if (_alt.a1) {
+          _stack.push_back(std::move(_alt.a1));
         }
       }
     };
@@ -111,18 +109,17 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   String append(String s2) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+    if (std::holds_alternative<typename String::EmptyString>(this->v())) {
       return s2;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename String::String0>(_sv.v());
-      return String::string0(d_a0, (*(d_a1)).append(std::move(s2)));
+      const auto &[a0, a1] = std::get<typename String::String0>(this->v());
+      return String::string0(a0, a1->append(std::move(s2)));
     }
   }
 };

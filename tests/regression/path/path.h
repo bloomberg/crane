@@ -2,17 +2,14 @@
 #define INCLUDED_PATH
 
 #include <filesystem>
-#include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 
 struct Path {
-  static std::string abs_path(const std::string p);
-  static std::string canon_path(const std::string p);
-  static std::string rel_path(const std::string p);
-  static bool check_is_dir(const std::string p);
-  static bool check_is_file(const std::string p);
+  static std::string abs_path(std::string p);
+  static std::string canon_path(std::string p);
+  static std::string rel_path(std::string p);
+  static bool check_is_dir(std::string p);
+  static bool check_is_file(std::string p);
 };
 
 #endif // INCLUDED_PATH

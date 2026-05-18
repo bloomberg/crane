@@ -1,73 +1,80 @@
 #include "anon_fixpoint.h"
 
-unsigned int AnonFixpoint::sum_to(const unsigned int n) {
-  std::function<unsigned int(unsigned int, unsigned int)> go;
-  go = [&](unsigned int m, unsigned int acc) -> unsigned int {
+uint64_t AnonFixpoint::sum_to(uint64_t n) {
+  auto go_impl = [](auto &_self_go, uint64_t m, uint64_t acc) -> uint64_t {
     if (m <= 0) {
       return acc;
     } else {
-      unsigned int p = m - 1;
-      return go(p, (m + acc));
+      uint64_t p = m - 1;
+      return _self_go(_self_go, p, (m + acc));
     }
   };
-  return go(n, 0u);
+  auto go = [&](uint64_t m, uint64_t acc) -> uint64_t {
+    return go_impl(go_impl, m, acc);
+  };
+  return go(n, UINT64_C(0));
 }
 
-unsigned int AnonFixpoint::factorial(const unsigned int m) {
+uint64_t AnonFixpoint::factorial(uint64_t m) {
   if (m <= 0) {
-    return 1u;
+    return UINT64_C(1);
   } else {
-    unsigned int p = m - 1;
+    uint64_t p = m - 1;
     return (m * factorial(p));
   }
 }
 
-unsigned int AnonFixpoint::double_sum(const unsigned int m) {
+uint64_t AnonFixpoint::double_sum(uint64_t m) {
   if (m <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int p = m - 1;
-    std::function<unsigned int(unsigned int)> inner;
-    inner = [&](unsigned int k) -> unsigned int {
+    uint64_t p = m - 1;
+    auto inner_impl = [](auto &_self_inner, uint64_t k) -> uint64_t {
       if (k <= 0) {
-        return 0u;
+        return UINT64_C(0);
       } else {
-        unsigned int q = k - 1;
-        return (1u + inner(q));
+        uint64_t q = k - 1;
+        return (UINT64_C(1) + _self_inner(_self_inner, q));
       }
+    };
+    auto inner = [&](uint64_t k) -> uint64_t {
+      return inner_impl(inner_impl, k);
     };
     return (inner(m) + double_sum(p));
   }
 }
 
-unsigned int AnonFixpoint::gcd(const unsigned int a, const unsigned int b) {
-  std::function<unsigned int(unsigned int, unsigned int, unsigned int)> go;
-  go = [&](unsigned int fuel, unsigned int x, unsigned int y) -> unsigned int {
+uint64_t AnonFixpoint::gcd(uint64_t a, uint64_t b) {
+  auto go_impl = [](auto &_self_go, uint64_t fuel, uint64_t x,
+                    uint64_t y) -> uint64_t {
     if (fuel <= 0) {
       return x;
     } else {
-      unsigned int f = fuel - 1;
+      uint64_t f = fuel - 1;
       if (y <= 0) {
         return x;
       } else {
-        unsigned int _x = y - 1;
-        return go(f, y, (y ? x % y : x));
+        uint64_t _x = y - 1;
+        return _self_go(_self_go, f, y, (y ? x % y : x));
       }
     }
+  };
+  auto go = [&](uint64_t fuel, uint64_t x, uint64_t y) -> uint64_t {
+    return go_impl(go_impl, fuel, x, y);
   };
   return go((a + b), a, b);
 }
 
-unsigned int AnonFixpoint::test_shadow(const unsigned int n) {
-  unsigned int foo = (n + n);
-  std::function<unsigned int(unsigned int)> foo0;
-  foo0 = [&](unsigned int n0) -> unsigned int {
+uint64_t AnonFixpoint::test_shadow(uint64_t n) {
+  uint64_t foo = (n + n);
+  auto foo0_impl = [](auto &_self_foo0, uint64_t n0) -> uint64_t {
     if (n0 <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int n_ = n0 - 1;
-      return (foo0(n_) + 1);
+      uint64_t n_ = n0 - 1;
+      return (_self_foo0(_self_foo0, n_) + 1);
     }
   };
+  auto foo0 = [&](uint64_t n0) -> uint64_t { return foo0_impl(foo0_impl, n0); };
   return foo0(foo);
 }

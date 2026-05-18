@@ -1,19 +1,15 @@
 #ifndef INCLUDED_PROP_ERASURE
 #define INCLUDED_PROP_ERASURE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct PropErasure {
-  static unsigned int with_proof_arg(const unsigned int n);
-  static inline const unsigned int use_proof = with_proof_arg(5u);
-  static inline const unsigned int simple_value = 7u;
-  static unsigned int add_with_proof(const unsigned int _x0,
-                                     const unsigned int _x1);
-  static inline const unsigned int test_add_proof = add_with_proof(3u, 4u);
-  static inline const unsigned int test_use_proof = use_proof;
-  static inline const unsigned int test_simple = simple_value;
+  static uint64_t with_proof_arg(uint64_t n);
+  static inline const uint64_t use_proof = with_proof_arg(UINT64_C(5));
+  static inline const uint64_t simple_value = UINT64_C(7);
+  static uint64_t add_with_proof(uint64_t _x0, uint64_t _x1);
+  static inline const uint64_t test_add_proof =
+      add_with_proof(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_use_proof = use_proof;
+  static inline const uint64_t test_simple = simple_value;
 };
 
 #endif // INCLUDED_PROP_ERASURE

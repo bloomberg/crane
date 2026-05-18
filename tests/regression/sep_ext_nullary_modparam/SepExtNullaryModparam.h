@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTNULLARYMODPARAM
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 namespace SepExtNullaryModparam {
 
@@ -34,20 +31,20 @@ concept IntLike = requires {
 };
 
 struct NatAsIntLike {
-  using t = unsigned int;
+  using t = uint64_t;
 
-  static const unsigned int &zero() {
-    static const unsigned int v = 0u;
+  static const uint64_t &zero() {
+    static const uint64_t v = UINT64_C(0);
     return v;
   }
 
-  static const unsigned int &one() {
-    static const unsigned int v = 1u;
+  static const uint64_t &one() {
+    static const uint64_t v = UINT64_C(1);
     return v;
   }
 
-  static unsigned int add(const unsigned int _x0, const unsigned int _x1);
-  static bool eqb(const unsigned int _x0, const unsigned int _x1);
+  static uint64_t add(uint64_t _x0, uint64_t _x1);
+  static bool eqb(uint64_t _x0, uint64_t _x1);
 };
 
 template <IntLike I> struct Counter {
@@ -56,11 +53,11 @@ template <IntLike I> struct Counter {
     return v;
   }
 
-  constexpr static typename I::t step(const typename I::t x) {
+  constexpr static typename I::t step(typename I::t x) {
     return I::add(x, I::one());
   }
 
-  constexpr static bool is_zero(const typename I::t x) {
+  constexpr static bool is_zero(typename I::t x) {
     return I::eqb(x, I::zero());
   }
 };

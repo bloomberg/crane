@@ -13,58 +13,53 @@
 /// Difference from fix_escape_match: uses a USER-DEFINED list type
 /// (not stdlib option), and the fixpoints are built RECURSIVELY
 /// from list elements (not a single fixpoint).
-ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
-ClosureMapEscape::map_to_adders(
-    const ClosureMapEscape::mylist<unsigned int> &l) {
+ClosureMapEscape::mylist<std::function<uint64_t(uint64_t)>>
+ClosureMapEscape::map_to_adders(const ClosureMapEscape::mylist<uint64_t> &l) {
   if (std::holds_alternative<
-          typename ClosureMapEscape::mylist<unsigned int>::Mynil>(l.v())) {
-    return mylist<std::function<unsigned int(unsigned int)>>::mynil();
+          typename ClosureMapEscape::mylist<uint64_t>::Mynil>(l.v())) {
+    return mylist<std::function<uint64_t(uint64_t)>>::mynil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename ClosureMapEscape::mylist<unsigned int>::Mycons>(
-            l.v());
-    ClosureMapEscape::mylist<unsigned int> d_a1_value = *(d_a1);
-    auto add_impl = [=](auto &_self_add,
-                        unsigned int x) mutable -> unsigned int {
+    const auto &[a0, a1] =
+        std::get<typename ClosureMapEscape::mylist<uint64_t>::Mycons>(l.v());
+    const ClosureMapEscape::mylist<uint64_t> &a1_value = *a1;
+    auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
       if (x <= 0) {
-        return d_a0;
+        return a0;
       } else {
-        unsigned int x_ = x - 1;
+        uint64_t x_ = x - 1;
         return (_self_add(_self_add, x_) + 1);
       }
     };
-    auto add = [=](unsigned int x) mutable -> unsigned int {
+    auto add = [=](uint64_t x) mutable -> uint64_t {
       return add_impl(add_impl, x);
     };
-    return mylist<std::function<unsigned int(unsigned int)>>::mycons(
-        add, map_to_adders(d_a1_value));
+    return mylist<std::function<uint64_t(uint64_t)>>::mycons(
+        add, map_to_adders(a1_value));
   }
 }
 
-unsigned int ClosureMapEscape::apply_first(
-    const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
-        &fns,
-    const unsigned int arg) {
+uint64_t ClosureMapEscape::apply_first(
+    const ClosureMapEscape::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    uint64_t arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
-    return 0u;
+          std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename ClosureMapEscape::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return d_a0(arg);
+    const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
+        std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());
+    return a0(arg);
   }
 }
 
-unsigned int ClosureMapEscape::sum_apply(
-    const ClosureMapEscape::mylist<std::function<unsigned int(unsigned int)>>
-        &fns,
-    const unsigned int arg) {
+uint64_t ClosureMapEscape::sum_apply(
+    const ClosureMapEscape::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    uint64_t arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
-    return 0u;
+          std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename ClosureMapEscape::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return (d_a0(arg) + sum_apply(*(d_a1), arg));
+    const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
+        std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());
+    return (a0(arg) + sum_apply(*a1, arg));
   }
 }

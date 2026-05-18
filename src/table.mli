@@ -30,17 +30,25 @@ val safe_basename_of_global : GlobRef.t -> Id.t
 (** Issue warning about axioms. *)
 val warning_axioms : unit -> unit
 
-(** Issue warning about opaques. *)
+(** Issue warning about opaques.
+    @param accessed [true] if opaque bodies were accessed (bypass-opacity mode),
+                    [false] if they were extracted as axioms (default mode). *)
 val warning_opaques : bool -> unit
 
-(** Issue warning about ambiguous name. *)
+(** Issue warning about ambiguous name.
+    @param loc    optional source location for quickfix attachment
+    @param (q, mp, r) the ambiguous qualid, the module path it may refer to,
+                       and the global reference it may refer to *)
 val warning_ambiguous_name :
   ?loc:Loc.t -> qualid * ModPath.t * GlobRef.t -> unit
 
 (** Issue warning about identifier. *)
 val warning_id : string -> unit
 
-(** Report error for axiom scheme. *)
+(** Report error for axiom scheme.
+    @param loc optional source location
+    @param r   the axiom global reference
+    @param i   the required number of type variables *)
 val error_axiom_scheme : ?loc:Loc.t -> GlobRef.t -> int -> 'a
 
 (** Report error for constant. *)
@@ -70,7 +78,10 @@ val error_scheme : unit -> 'a
 (** Report error for non-visible reference. *)
 val error_not_visible : GlobRef.t -> 'a
 
-(** Report error for MPfile used as module. *)
+(** Report error for MPfile used as module.
+    @param mp the module file path being extracted
+    @param b  [true] if the module was explicitly asked for (extraction
+              directive), [false] if it was pulled in as a dependency *)
 val error_MPfile_as_mod : ModPath.t -> bool -> 'a
 
 (** Check if inside section. *)
@@ -90,7 +101,10 @@ val info_file : string -> unit
 
 (** {2 Utilities about module_path, kernel_names, and GlobRef.t} *)
 
-(** Check if kernel name occurs in reference. *)
+(** Check if kernel name occurs in reference.
+    @param kn the mutual inductive name to search for
+    @param r  the global reference to inspect (only [IndRef]/[ConstructRef] can match)
+    @return [true] iff [r] is an inductive or constructor of [kn] *)
 val occur_kn_in_ref : MutInd.t -> GlobRef.t -> bool
 
 (** Get kernel name representation of reference. *)
@@ -130,10 +144,16 @@ val mp_length : ModPath.t -> int
 (** Get all prefixes of module path. *)
 val prefixes_mp : ModPath.t -> MPset.t
 
-(** Find common prefix from list of module paths. *)
+(** Find common prefix from list of module paths.
+    @param mp0 the reference module path whose prefixes are candidates
+    @param mpl a list of module paths; the first one that is also a prefix of
+               [mp0] is returned
+    @return the first element of [mpl] that is a prefix of [mp0], or [None] *)
 val common_prefix_from_list : ModPath.t -> ModPath.t list -> ModPath.t option
 
-(** Get nth label from module path. *)
+(** Get nth label from module path.
+    @param n  1-based index counting from the innermost [MPdot] label outward
+    @param mp the module path to index into *)
 val get_nth_label_mp : int -> ModPath.t -> Label.t
 
 (** Get labels of reference. *)
@@ -148,24 +168,45 @@ val labels_of_ref : GlobRef.t -> ModPath.t * Label.t list
     retrieving time. Same for inductive: we store [mutual_inductive_body] as
     checksum. In both case, we should ideally also check the env *)
 
-(** Add type definition to cache. *)
+(** Add type definition to cache.
+    @param kn the constant being cached
+    @param cb the constant body used as a checksum to detect stale entries
+    @param t  the extracted ML type to store *)
 val add_typedef : Constant.t -> constant_body -> ml_type -> unit
 
-(** Lookup type definition from cache. *)
+(** Lookup type definition from cache.
+    @param kn the constant to look up
+    @param cb the current constant body; [None] is returned if this doesn't
+              match the body stored when the entry was created
+    @return [Some t] if found and the checksum matches, [None] otherwise *)
 val lookup_typedef : Constant.t -> constant_body -> ml_type option
 
+(** Lookup type definition without checksum validation.
+    @return [Some t] if any entry for [kn] exists, regardless of staleness *)
 val lookup_typedef_unchecked : Constant.t -> ml_type option
 
-(** Add constant type schema to cache. *)
+(** Add constant type schema to cache.
+    @param kn the constant being cached
+    @param cb the constant body used as a checksum to detect stale entries
+    @param s  the extracted ML type schema to store *)
 val add_cst_type : Constant.t -> constant_body -> ml_schema -> unit
 
-(** Lookup constant type schema from cache. *)
+(** Lookup constant type schema from cache.
+    @param kn the constant to look up
+    @param cb the current constant body; [None] is returned on checksum mismatch
+    @return [Some s] if found and the checksum matches, [None] otherwise *)
 val lookup_cst_type : Constant.t -> constant_body -> ml_schema option
 
-(** Add inductive to cache. *)
+(** Add inductive to cache.
+    @param kn    the mutual inductive name being cached
+    @param mib   the inductive body used as a checksum to detect stale entries
+    @param ml_ind the extracted ML inductive to store *)
 val add_ind : MutInd.t -> mutual_inductive_body -> ml_ind -> unit
 
-(** Lookup inductive from cache. *)
+(** Lookup inductive from cache.
+    @param kn  the mutual inductive name to look up
+    @param mib the current inductive body; [None] is returned on checksum mismatch
+    @return [Some ind] if found and the checksum matches, [None] otherwise *)
 val lookup_ind : MutInd.t -> mutual_inductive_body -> ml_ind option
 
 (** Get number of parameters for inductive if available. *)
@@ -255,6 +296,12 @@ val is_typeclass_type : ml_type -> bool
 (** Check if C++ type is a typeclass. *)
 val is_typeclass_type_cpp : Minicpp.cpp_type -> bool
 
+(** Mark inductive as flat (single-ctor, no variant wrapper). *)
+val add_flat_inductive : GlobRef.t -> unit
+
+(** Check if inductive is flat. *)
+val is_flat_inductive : GlobRef.t -> bool
+
 (** Mark inductive as enum. *)
 val add_enum_inductive : GlobRef.t -> unit
 
@@ -272,12 +319,18 @@ val has_dependent_params : GlobRef.t -> bool
 
 (** Check if an inductive packet qualifies as an enum based on its structure.
     Returns true if all constructors are nullary, no type parameters are kept,
-    and at least one constructor exists. *)
+    and at least one constructor exists.
+    @param ind the extracted ML inductive (contains all packets)
+    @param i   0-based index of the packet within [ind] to test *)
 val is_enum_inductive_packet : Miniml.ml_ind -> int -> bool
 
 (** Compute the C++ enum constructor name for constructor [j] of inductive
     [(kn, i)] by looking up the extraction packet. Deterministic regardless
-    of the KerName used (canonical or functor-applied). *)
+    of the KerName used (canonical or functor-applied).
+    @param kn the mutual inductive kernel name
+    @param i  0-based packet index within the mutual inductive
+    @param j  1-based constructor index within the packet
+    @return the C++ enum enumerator name (e.g. [e_ZERO]) *)
 val enum_ctor_name_of_ref : MutInd.t -> int -> int -> string
 
 (** Sigma type assertion. *)
@@ -285,19 +338,27 @@ type sigma_assertion =
   | AssertExpr of string
   | AssertComment of string
 
-(** Add sigma assertion for a field. *)
+(** Add sigma assertion for a field.
+    @param r   the function global reference the assertion belongs to
+    @param idx 0-based parameter index the assertion is attached to
+    @param a   the assertion to record *)
 val add_sigma_assertion : GlobRef.t -> int -> sigma_assertion -> unit
 
 (** Get all sigma assertions for a reference. *)
 val get_sigma_assertions : GlobRef.t -> (int * sigma_assertion) list
 
-(** Add recursors for mutual inductive. *)
+(** Add recursors for mutual inductive.
+    @param env the global environment used to look up the inductive body
+    @param ind the mutual inductive whose [_rec]/[_rect] recursors to register *)
 val add_recursors : Environ.env -> MutInd.t -> unit
 
 (** Check if reference is a recursor. *)
 val is_recursor : GlobRef.t -> bool
 
-(** Add projection to table. *)
+(** Add projection to table.
+    @param n    the arity (number of type parameters) of the projection
+    @param kn   the constant representing the projection function
+    @param ip   the inductive type the projection belongs to *)
 val add_projection : int -> Constant.t -> inductive -> unit
 
 (** Check if reference is a projection. *)
@@ -458,7 +519,10 @@ val loopify : unit -> bool
     first, then global setting). *)
 val should_loopify : GlobRef.t -> bool
 
-(** Mark references for loopify (true) or noloopify (false). *)
+(** Mark references for loopify (true) or noloopify (false).
+    @param b [true] to force loopification of the listed functions,
+             [false] to opt them out (override the global [Crane Loopify] setting)
+    @param l list of qualified identifiers to configure *)
 val extraction_loopify : bool -> qualid list -> unit
 
 (** Reset per-function loopify table. *)
@@ -610,7 +674,10 @@ val find_type : GlobRef.t -> ml_type
 (** Set extraction target language. *)
 val extraction_language : lang -> unit
 
-(** Configure inline/keep for qualified identifiers. *)
+(** Configure inline/keep for qualified identifiers.
+    @param b  [true] to mark the identifiers for inlining, [false] to mark
+              them as NoInline (keep)
+    @param l  the list of qualified identifiers to configure *)
 val extraction_inline : bool -> qualid list -> unit
 
 (** Print current inline extraction table. *)
@@ -631,7 +698,9 @@ val reset_extraction_foreign : unit -> unit
 (** Reset callback extraction table. *)
 val reset_extraction_callback : unit -> unit
 
-(** Extract callback with optional name. *)
+(** Extract callback with optional name.
+    @param optstr optional alias string to use instead of the default name
+    @param x      the qualified identifier of the function to register as a callback *)
 val extract_callback : string option -> qualid -> unit
 
 (** Add custom import. *)
@@ -646,24 +715,50 @@ val mark_custom_used : GlobRef.t -> unit
 (** Reset used custom imports tracking. *)
 val reset_used_custom_imports : unit -> unit
 
-(** Extract constant with inline custom code. *)
+(** Extract constant with inline custom code.
+    @param inline [true] to mark the constant as Inline (inlined at call sites),
+                  [false] for NoInline
+    @param r      the qualified identifier of the constant to extract
+    @param ids    type parameter names for type-scheme axioms (usually [[]])
+    @param s      the C++ replacement expression or type string *)
 val extract_constant_inline : bool -> qualid -> string list -> string -> unit
 
-(** Extract constant with import custom code. *)
+(** Extract constant with import custom code.
+    @param inline  [true] to mark as Inline, [false] for NoInline
+    @param r       the qualified identifier of the constant to extract
+    @param ids     type parameter names for type-scheme axioms (usually [[]])
+    @param s       the C++ replacement expression or type string
+    @param imports list of C++ headers to [#include] when this constant is used *)
 val extract_constant_import :
   bool -> qualid -> string list -> string -> string list -> unit
 
-(** Extract constant with foreign code. *)
+(** Extract constant with foreign code.
+    @param r the qualified identifier of the constant (must be a function)
+    @param s the C++ foreign function name to call at extraction sites *)
 val extract_constant_foreign : qualid -> string -> unit
 
-(** Extract inductive with custom representation. *)
+(** Extract inductive with custom representation.
+    @param r       the qualified identifier of the inductive type
+    @param s       the C++ type name replacing the inductive
+    @param l       list of C++ constructor representation strings, one per
+                   constructor (length must match the number of constructors)
+    @param optstr  optional C++ match template string for custom pattern matching
+    @param imports list of C++ headers to [#include] when this type is used *)
 val extract_inductive :
   qualid -> string -> string list -> string option -> string list -> unit
 
-(** Extract monad with bind and return operations. *)
+(** Extract monad with bind and return operations.
+    @param m       the qualified identifier of the monad type constructor
+    @param b       the qualified identifier of the bind operation
+    @param r       the qualified identifier of the return operation
+    @param s       the C++ template string for the monad type
+    @param imports list of C++ headers to [#include] when this monad is used *)
 val extract_monad : qualid -> qualid -> qualid -> string -> string list -> unit
 
-(** Extract void type. *)
+(** Extract void type.
+    @param v the qualified identifier of the void type (maps to [void] in C++)
+    @param g the qualified identifier of the ghost term (the single constructor,
+             erased to nothing at call sites) *)
 val extract_void : qualid -> qualid -> unit
 
 (** Skip extraction for qualified identifier. *)
@@ -703,10 +798,15 @@ val is_numeral_converter : GlobRef.t -> bool
 (** Return the numeral inductive targeted by a converter function, if any. *)
 val numeral_ind_of_converter : GlobRef.t -> GlobRef.t option
 
-(** Extract numeral inductive. *)
+(** Extract numeral inductive.
+    @param r   the qualified identifier of the inductive type (e.g. [nat])
+    @param fmt the C++ format string for numeral literals (e.g. ["%nu"]) *)
 val extract_numeral : qualid -> string -> unit
 
-(** Register global definition with type. *)
+(** Register global definition with type.
+    @param id the global reference of the definition being registered
+    @param ty the ML type to associate with it, used for type-directed
+              code generation at call sites *)
 val register_glob_def : GlobRef.t -> ml_type -> unit
 
 (** Argument specifier for implicit extraction. *)
@@ -714,7 +814,11 @@ type int_or_id =
   | ArgInt of int
   | ArgId of Id.t
 
-(** Configure implicit arguments for extraction. *)
+(** Configure implicit arguments for extraction.
+    @param r the qualified identifier of the function
+    @param l list of argument specifiers (by position [ArgInt] or name [ArgId])
+             indicating which arguments should be treated as implicit and dropped
+             during extraction *)
 val extraction_implicit : qualid -> int_or_id list -> unit
 
 (** {2 Blacklisted filenames table} *)

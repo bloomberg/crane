@@ -8,7 +8,7 @@ static unsigned int nat_to_uint(const Nat &n) {
   const Nat *cur = &n;
   while (std::holds_alternative<Nat::S>(cur->v())) {
     ++acc;
-    cur = std::get<Nat::S>(cur->v()).d_a0.get();
+    cur = std::get<Nat::S>(cur->v()).a0.get();
   }
   return acc;
 }

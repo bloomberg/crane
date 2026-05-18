@@ -26,7 +26,10 @@ open Mlutil
 (** {2 Generic utility functions} *)
 
 (** [contains_substring haystack needle] checks if [haystack] contains [needle].
-    Note: String.contains checks for a char; this checks for a substring. *)
+    Note: String.contains checks for a char; this checks for a substring.
+    @param haystack The string to search in
+    @param needle   The substring to search for
+    @return [true] iff [needle] appears anywhere in [haystack] *)
 let contains_substring haystack needle =
   try
     ignore (Str.search_forward (Str.regexp_string needle) haystack 0);
@@ -58,7 +61,11 @@ let last_two lst =
 
 (** [extract_at_pos pos lst] extracts the element at position [pos] from [lst].
     Returns (Some element, remaining_list) or (None, original_list) if pos is
-    out of bounds. *)
+    out of bounds.
+    @param pos 0-based index of the element to extract
+    @param lst The input list
+    @return [(Some x, rest)] where [x] is the element and [rest] is the list
+            without it; [(None, lst)] when [pos] is out of range *)
 let extract_at_pos pos lst =
   let rec aux i acc = function
     | [] -> (None, List.rev acc)
@@ -95,17 +102,24 @@ let is_mp_bound = function
 
 (** {2 Pretty-print utility functions} *)
 
-(** Wrap in parentheses if [par] is true. *)
+(** Wrap in parentheses if [par] is true.
+    @param par Whether to add surrounding parentheses
+    @param st  The pretty-print document to wrap *)
 let pp_par par st = if par then str "(" ++ st ++ str ")" else st
 
-(** [pp_apply] : a head part applied to arguments, possibly with parenthesis *)
-
+(** [pp_apply st par args] pretty-prints a head expression applied to a list of
+    argument documents, optionally wrapping the whole application in parentheses.
+    @param st   The head expression to apply
+    @param par  Whether to parenthesize the whole application
+    @param args The argument documents; if empty, [st] is returned unchanged *)
 let pp_apply st par args =
   match args with
   | [] -> st
   | _ -> hov 2 (pp_par par (st ++ spc () ++ prlist_with_sep spc identity args))
 
-(** Apply function to arguments with C++ syntax (commas, parens). *)
+(** Apply function to arguments with C++ syntax (commas, parens).
+    @param st   The head expression (function name)
+    @param args Argument documents separated by [", "] and enclosed in ["()"] *)
 let pp_apply_cpp st args =
   match args with
   | [] -> st
@@ -113,8 +127,10 @@ let pp_apply_cpp st args =
     hov 2 (st ++ str "(" ++ prlist_with_sep (fun _ -> str ", ") identity args)
     ++ str ")"
 
-(** Same as [pp_apply], but with also protection of the head by parenthesis *)
-
+(** Same as [pp_apply], but with also protection of the head by parenthesis.
+    @param st   The head expression, always parenthesized when [args] is non-empty
+    @param par  Whether to parenthesize the whole application
+    @param args The argument documents *)
 let pp_apply2 st par args =
   let par' = (not (List.is_empty args)) || par in
   pp_apply (pp_par par' st) par args
@@ -124,43 +140,51 @@ let pr_binding = function
   | [] -> mt ()
   | l -> str " " ++ prlist_with_sep (fun () -> str " ") Id.print l
 
-(** Print elements as a tuple; single elements are not parenthesized. *)
+(** Print elements as a tuple; single elements are not parenthesized.
+    @param f Printing function; receives a boolean indicating whether the element
+             needs parenthesization (true for single-element case) *)
 let pp_tuple_light f = function
   | [] -> mt ()
   | [x] -> f true x
   | l -> pp_par true (prlist_with_sep (fun () -> str "," ++ spc ()) (f false) l)
 
-(** Print elements as a comma-separated tuple with parens. *)
+(** Print elements as a comma-separated tuple with parens.
+    @param f Printing function applied to each element *)
 let pp_tuple f = function
   | [] -> mt ()
   | [x] -> f x
   | l -> pp_par true (prlist_with_sep (fun () -> str "," ++ spc ()) f l)
 
-(** Print elements as comma-separated list without parens. *)
+(** Print elements as comma-separated list without parens.
+    @param f Printing function applied to each element *)
 let pp_list f = function
   | [] -> mt ()
   | [x] -> f x
   | l -> prlist_with_sep (fun () -> str "," ++ spc ()) f l
 
-(** Print elements as comma-separated list with newlines. *)
+(** Print elements as comma-separated list with newlines.
+    @param f Printing function applied to each element *)
 let pp_list_newline f = function
   | [] -> mt ()
   | [x] -> f x
   | l -> prlist_with_sep (fun () -> str "," ++ fnl ()) f l
 
-(** Print elements as newline-separated statements. *)
+(** Print elements as newline-separated statements.
+    @param f Printing function applied to each element *)
 let pp_list_stmt f = function
   | [] -> mt ()
   | [x] -> f x
   | l -> prlist_with_sep fnl f l
 
-(** Print elements as a boxed tuple with line-break hints. *)
+(** Print elements as a boxed tuple with line-break hints.
+    @param f Printing function applied to each element *)
 let pp_boxed_tuple f = function
   | [] -> mt ()
   | [x] -> f x
   | l -> pp_par true (hov 0 (prlist_with_sep (fun () -> str "," ++ spc ()) f l))
 
-(** Print elements as semicolon-separated array. *)
+(** Print elements as semicolon-separated array.
+    @param f Printing function applied to each element *)
 let pp_array f = function
   | [] -> mt ()
   | [x] -> f x
@@ -185,11 +209,6 @@ let space_if = function
   | true -> str " "
   | false -> mt ()
 
-(** Test if string starts with prefix. *)
-let begins_with s prefix =
-  let len = String.length prefix in
-  String.length s >= len && String.equal (String.sub s 0 len) prefix
-
 (** Test if string matches the pattern "CoqNNN" (legacy naming). *)
 let begins_with_CoqXX s =
   let n = String.length s in
@@ -212,7 +231,9 @@ let begins_with_CoqXX s =
 (** Identity function (historically removed quotes). *)
 let unquote s = s
 
-(** Join non-empty strings with a delimiter. *)
+(** Join non-empty strings with a delimiter.
+    @param delim The separator inserted between consecutive non-empty strings
+    @raise Anomaly if the list is empty *)
 let rec qualify delim = function
   | [] -> CErrors.anomaly (Pp.str "qualify: empty list")
   | [s] -> s
@@ -223,12 +244,6 @@ let rec qualify delim = function
 let dottify = qualify "::"
 
 (** {2 Uppercase/lowercase renamings} *)
-
-(** Test if string starts with uppercase. *)
-let is_upper s =
-  match s.[0] with
-  | 'A' .. 'Z' -> true
-  | _ -> false
 
 (** Test if string starts with lowercase. *)
 let is_lower s =
@@ -295,7 +310,11 @@ type env = Id.t list * Id.Set.t
 
 (** {2 Generic renaming for local variable names} *)
 
-(** Find a fresh name for [id] by incrementing subscript until no collision. *)
+(** Find a fresh name for [id] by incrementing subscript until no collision.
+    Also strips prime characters (converted to underscores) before searching.
+    @param id    The identifier to rename
+    @param avoid Set of identifiers already in use
+    @return A fresh identifier not in [avoid], derived from [id] *)
 let rec rename_id id avoid =
   let id = remove_prime_id id in
   if Id.Set.mem id avoid then rename_id (increment_subscript id) avoid else id
@@ -303,7 +322,12 @@ let rec rename_id id avoid =
 (** Shared helper for renaming variables with optional extra data. Takes a
     projection to extract the identifier, a constructor to rebuild the element,
     and processes the list in reverse order to maintain the same renaming
-    behavior as the original functions. *)
+    behavior as the original functions.
+    @param project Extracts the [Id.t] from an element
+    @param rebuild Constructs a new element given a fresh [Id.t] and the
+                   original element (for carrying along extra data such as types)
+    @param avoid   Set of identifiers already in use; extended as new names are chosen
+    @return The renamed element list paired with the updated avoid set *)
 let rec rename_vars_gen project rebuild avoid = function
   | [] -> ([], avoid)
   | elem :: elems ->
@@ -312,15 +336,24 @@ let rec rename_vars_gen project rebuild avoid = function
     let id' = rename_id (lowercase_id id) avoid in
     (rebuild id' elem :: elems', Id.Set.add id' avoid)
 
-(** Rename a list of variables to fresh lowercase names. *)
+(** Rename a list of variables to fresh lowercase names.
+    @param avoid Set of identifiers already in scope
+    @param ids   Identifiers to rename
+    @return The renamed identifier list and the extended avoid set *)
 let rename_vars avoid ids =
   rename_vars_gen (fun id -> id) (fun id' _ -> id') avoid ids
 
-(** Rename a list of (id, type) pairs to fresh lowercase names. *)
+(** Rename a list of (id, type) pairs to fresh lowercase names.
+    @param avoid Set of identifiers already in scope
+    @param pairs List of [(id, type)] pairs whose identifiers are to be renamed
+    @return The renamed [(id, type)] list and the extended avoid set *)
 let rename_vars' avoid pairs =
   rename_vars_gen (fun (id, _) -> id) (fun id' (_, ty) -> (id', ty)) avoid pairs
 
-(** Rename type variables to fresh lowercase names. *)
+(** Rename type variables to fresh lowercase names.
+    @param avoid Set of identifiers already in scope
+    @param l     List of type-variable identifiers to rename
+    @return The renamed identifier list (avoid set is not returned) *)
 let rename_tvars avoid l =
   let rec rename avoid = function
     | [] -> ([], avoid)
@@ -331,12 +364,18 @@ let rename_tvars avoid l =
   in
   fst (rename avoid l)
 
-(** Push new variable names into the de Bruijn environment. *)
+(** Push new variable names into the de Bruijn environment.
+    @param ids       Identifiers to push (renamed to fresh lowercase names)
+    @param (db,avoid) The current de Bruijn environment
+    @return The list of fresh names chosen and the updated environment *)
 let push_vars ids (db, avoid) =
   let ids', avoid' = rename_vars avoid ids in
   (ids', (ids' @ db, avoid'))
 
-(** Push new (id, type) pairs into the de Bruijn environment. *)
+(** Push new (id, type) pairs into the de Bruijn environment.
+    @param ids       [(id, type)] pairs to push (identifiers renamed to fresh names)
+    @param (db,avoid) The current de Bruijn environment
+    @return The renamed [(id, type)] list and the updated environment *)
 let push_vars' ids (db, avoid) =
   let ids', avoid' = rename_vars' avoid ids in
   (ids', (List.map fst ids' @ db, avoid'))
@@ -430,21 +469,30 @@ let empty_env () = ([], get_global_ids ())
     We must hence compare only the user part, hence using a Hashtbl might be
     incorrect *)
 
-(** Create a mutable Id.Map with optional auto-cleanup. *)
+(** Create a mutable [Id.Map]-backed table with optional auto-cleanup.
+    @param autoclean Whether to register a cleanup hook that empties the table
+                     when {!reset_renaming_tables} is called
+    @return [(add, get, clear)] where [add k v] inserts a binding, [get k]
+            retrieves one (raising [Not_found] if absent), and [clear ()] resets
+            the table *)
 let mktable_id autoclean =
   let m = ref Id.Map.empty in
   let clear () = m := Id.Map.empty in
   if autoclean then register_cleanup clear;
   ((fun r v -> m := Id.Map.add r v !m), (fun r -> Id.Map.find r !m), clear)
 
-(** Create a mutable Refmap' with optional auto-cleanup. *)
+(** Create a mutable [Refmap']-backed table with optional auto-cleanup.
+    @param autoclean Whether to register a cleanup hook
+    @return [(add, get, clear)] triple — same contract as {!mktable_id} *)
 let mktable_ref autoclean =
   let m = ref Refmap'.empty in
   let clear () = m := Refmap'.empty in
   if autoclean then register_cleanup clear;
   ((fun r v -> m := Refmap'.add r v !m), (fun r -> Refmap'.find r !m), clear)
 
-(** Create a mutable MPmap with optional auto-cleanup. *)
+(** Create a mutable [MPmap]-backed table with optional auto-cleanup.
+    @param autoclean Whether to register a cleanup hook
+    @return [(add, get, clear)] triple — same contract as {!mktable_id} *)
 let mktable_modpath autoclean =
   let m = ref MPmap.empty in
   let clear () = m := MPmap.empty in
@@ -494,7 +542,9 @@ let valid_output_module_set : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 16
 
 (** Record which module paths belong to the current extraction output.
     [valid_mps] are the modules being written; references to any other module
-    path will be treated as external by {!is_non_output_module}. *)
+    path will be treated as external by {!is_non_output_module}.
+    @param valid_mps List of module paths that are part of the current output;
+                     replaces any previously recorded set *)
 let set_non_output_modules valid_mps =
   Hashtbl.clear valid_output_module_set;
   List.iter (fun mp -> Hashtbl.replace valid_output_module_set mp ()) valid_mps
@@ -638,6 +688,10 @@ let modular_rename_ex _k id =
     replacement). *)
 let modular_rename k id = fst (modular_rename_ex k id)
 
+(** Scan [s] for cases where a module and an inductive type at the same scope
+    level share the same C++ name, and pre-populate {!sibling_collision_renames}
+    so that {!mp_renaming_fun} can append a ["_Mod"] suffix to the module.
+    @param s The full [ml_structure] to scan (typically the whole extraction result) *)
 let detect_sibling_module_inductive_collisions (s : ml_structure) =
   Hashtbl.clear sibling_collision_renames;
   let rec scan_sel parent_mp sel =
@@ -853,7 +907,10 @@ let rec clash mem mp0 ks = function
   | mp :: _ when mem mp ks -> true
   | _ :: mpl -> clash mem mp0 ks mpl
 
-(** Check if a name clashes with content from opened files. *)
+(** Check if a name clashes with content from opened files.
+    @param mp0 The defining module path (search stops when this is reached)
+    @param ks  The [(kind, name)] pair to look up in each opened file's content
+    @return [true] iff some opened file other than [mp0] exports [ks] *)
 let mpfiles_clash mp0 ks =
   clash
     (fun mp k -> KMap.mem k (get_mpfiles_content mp))
@@ -861,7 +918,12 @@ let mpfiles_clash mp0 ks =
     ks
     (List.rev (mpfiles_list ()))
 
-(** Check if a module path matches a functor parameter. *)
+(** Check if a module path matches a functor parameter, registering alpha-rename
+    candidates as a side effect.
+    @param mp0    The module path of the reference being printed
+    @param ks     The [(kind, name)] pair being looked up
+    @param params The functor parameter list of the current visible layer
+    @return [true] iff [mp0] is one of the functor parameters *)
 let rec params_lookup mp0 ks = function
   | [] -> false
   | param :: _ when ModPath.equal mp0 param -> true
@@ -874,7 +936,10 @@ let rec params_lookup mp0 ks = function
     in
     params_lookup mp0 ks params
 
-(** Check if a name clashes with a visible module's content. *)
+(** Check if a name clashes with a visible module's content.
+    @param mp0 The defining module path (search stops when this is reached)
+    @param ks  The [(kind, name)] pair to look for in the visible scope stack
+    @return [true] iff some visible module other than [mp0] already exports [ks] *)
 let visible_clash mp0 ks =
   let rec clash = function
     | [] -> false
@@ -892,8 +957,12 @@ let visible_clash mp0 ks =
   in
   clash (get_visible ())
 
-(** Like visible_clash but returns the conflicting module path (and mp0
-    shouldn't be a MPbound). *)
+(** Like {!visible_clash} but returns the conflicting module path (and mp0
+    shouldn't be a MPbound).
+    @param mp0 The defining module path
+    @param ks  The [(kind, name)] pair to look up
+    @return [Some (mp, lbl)] identifying the clashing visible module and label,
+            or [None] if no clash is detected *)
 let visible_clash_dbg mp0 ks =
   let rec clash = function
     | [] -> None
@@ -944,7 +1013,16 @@ let opened_libraries () =
     duplicate the _definition_ of t in a Coq__XXX module, and similarly for a
     sub-module [M.N] *)
 
-(** Print a reference using a duplicate wrapper module. *)
+(** Print a reference using a duplicate wrapper module.
+    Looks up (or registers during the Pre phase) a ["Coq__N"] alias for the
+    part of [mp] below [prefix], then returns the dotted qualified name via
+    that alias.
+    @param k'     The kind of the reference ([Mod] or a term/type/cons kind)
+    @param prefix The largest visible common prefix of [mp]
+    @param mp     The full module path of the reference
+    @param rls    The renaming string list for the reference (head = short name)
+    @param olab   The label of the reference within its module, or [None] for
+                  module references *)
 let pp_duplicate k' prefix mp rls olab =
   let rls', lbl =
     if k' != Mod then
@@ -968,7 +1046,13 @@ let fstlev_ks k = function
   | s :: _ -> (Mod, s)
 
 (** Print a locally-visible reference. [pp_ocaml_local] : [mp] has something in
-    common with [top_visible ()] but isn't equal to it *)
+    common with [top_visible ()] but isn't equal to it.
+    @param k      Kind of the reference
+    @param prefix Largest visible module-path prefix shared with [mp]
+    @param mp     Full module path of the reference
+    @param rls    Full renaming list (outermost component first)
+    @param olab   Label of the reference within its module ([None] for modules)
+    @return The shortest unambiguous dotted name for the reference *)
 let pp_ocaml_local k prefix mp rls olab =
   (* what is the largest prefix of [mp] that belongs to [visible]? *)
   assert (k != Mod || not (ModPath.equal mp prefix));
@@ -983,14 +1067,22 @@ let pp_ocaml_local k prefix mp rls olab =
 
 (** Print a reference from a bound module parameter. [pp_ocaml_bound] : [mp]
     starts with a [MPbound], and we are not inside (i.e. we are not printing the
-    type of the module parameter) *)
+    type of the module parameter).
+    @param base The [MPbound] base of the module path
+    @param rls  Full renaming list (outermost component first)
+    @return The dotted qualified name; clash detection is deferred to renaming *)
 let pp_ocaml_bound base rls =
   (* clash with a MPbound will be detected and fixed by renaming this MPbound *)
   if get_phase () == Pre then ignore (visible_clash base (Mod, List.hd rls));
   dottify rls
 
 (** Print an externally-defined reference. [pp_ocaml_extern] : [mp] isn't local,
-    it is defined in another [MPfile]. *)
+    it is defined in another [MPfile].
+    @param k    Kind of the reference
+    @param base The [MPfile] base of the module path
+    @param rls  Full renaming list (outermost component first)
+    @return The shortest unambiguous dotted name, fully qualified when the
+            module is not opened or when a clash is detected *)
 let pp_ocaml_extern k base rls =
   match rls with
   | [] -> CErrors.anomaly (Pp.str "pp_ocaml_extern: empty renaming list")
@@ -1013,7 +1105,12 @@ let pp_ocaml_extern k base rls =
       dottify rls'
 
 (** Main name printer: dispatch between local, bound, and external.
-    [pp_ocaml_gen] : choosing between [pp_ocaml_local] or [pp_ocaml_extern] *)
+    [pp_ocaml_gen] : choosing between [pp_ocaml_local] or [pp_ocaml_extern].
+    @param k    Kind of the reference
+    @param mp   Full module path of the reference
+    @param rls  Full renaming list (outermost component first)
+    @param olab Label of the reference ([None] for module paths)
+    @return The shortest unambiguous printed name in the current visible context *)
 let pp_ocaml_gen k mp rls olab =
   match common_prefix_from_list mp (get_visible_mps ()) with
   | Some prefix -> pp_ocaml_local k prefix mp rls olab
@@ -1024,7 +1121,13 @@ let pp_ocaml_gen k mp rls olab =
     else
       pp_ocaml_extern k base rls
 
-(** C++ variant of pp_ocaml_gen. *)
+(** C++ variant of {!pp_ocaml_gen}: same dispatch logic but treats non-output
+    module references as external (unqualified short name only).
+    @param k    Kind of the reference
+    @param mp   Full module path of the reference
+    @param rls  Full renaming list (outermost component first)
+    @param olab Label of the reference ([None] for module paths)
+    @return The shortest unambiguous printed name for C++ output *)
 let pp_cpp_gen k mp rls olab =
   match common_prefix_from_list mp (get_visible_mps ()) with
   | Some prefix -> pp_ocaml_local k prefix mp rls olab
@@ -1037,7 +1140,13 @@ let pp_cpp_gen k mp rls olab =
     else
       pp_ocaml_extern k base rls
 
-(** Main name printing function for a reference, using a kernel name key. *)
+(** Main name printing function for a reference, using a kernel name key.
+    Registers the reference's short name in the current visible scope and
+    delegates to {!pp_cpp_gen} for cross-module qualification.
+    @param k   Kind of the global reference
+    @param key Kernel name used to determine the defining module path
+    @param r   The global reference to print
+    @return The printed name string *)
 let pp_global_with_key k key r =
   let ls = ref_renaming (k, r) in
   assert (List.length ls > 1);
@@ -1054,11 +1163,16 @@ let pp_global_with_key k key r =
     match lang () with
     | Cpp -> pp_cpp_gen k mp rls (Some l)
 
-(** Print a reference using its canonical kernel name. *)
+(** Print a reference using its canonical kernel name.
+    @param k The kind of the global reference
+    @param r The global reference to print *)
 let pp_global k r = pp_global_with_key k (repr_of_r r) r
 
 (** Print just the short name of a reference (for declarations). Main name
-    printing function for declaring a reference *)
+    printing function for declaring a reference.
+    @param k The kind of the global reference
+    @param r The global reference whose short name to retrieve
+    @return The unqualified (short) name string *)
 let pp_global_name k r =
   let ls = ref_renaming (k, r) in
   assert (List.length ls > 1);
@@ -1189,7 +1303,10 @@ let check_extract_string () =
 
 (** The argument is known to be of type Strings.String.string. Check that it is
     built from constructors EmptyString and String with constant ascii
-    arguments. *)
+    arguments.
+    @param empty_string_ref      Library key for the [EmptyString] constructor
+    @param string_constructor_ref Library key for the [String] constructor
+    @return [true] iff the ML expression is a statically-known string literal *)
 let rec is_native_string_rec empty_string_ref string_constructor_ref = function
   (* "EmptyString" constructor *)
   | MLcons (_, gr, []) -> Rocqlib.check_ref empty_string_ref gr
@@ -1254,7 +1371,9 @@ let fun_tparam_name i = "F" ^ string_of_int i
 
 let fun_tparam_id i = Id.of_string (fun_tparam_name i)
 
-let field_param_name i = "d_a" ^ string_of_int i
+let field_param_name i =
+  if Table.std_lib () = "BDE" then "d_a" ^ string_of_int i
+  else "a" ^ string_of_int i
 
 let field_param_id i = Id.of_string (field_param_name i)
 
@@ -1293,9 +1412,29 @@ let lookup_ctor_field_name ctor_name field_idx =
   | Some id -> id
   | None -> field_param_id field_idx
 
+(** Separate registry for structured-binding variable names.  Unlike
+    [ctor_field_names] (which stores the struct field names used in
+    declarations and member access), this registry stores the base names used
+    when generating [const auto& [name0, name1] = ...] bindings in pattern
+    matches.  For fields whose kernel binder was anonymous (defined with [->])
+    the binding name falls back to the indexed form [a0], [a1], ... to prevent
+    variable-shadowing collisions in nested matches.  Fields whose kernel
+    binder is explicitly named reuse the field name for readability. *)
+let ctor_bind_names : (string * int, Id.t) Hashtbl.t = Hashtbl.create 64
+
+let register_ctor_bind_name ctor_name field_idx field_id =
+  Hashtbl.replace ctor_bind_names (ctor_name, field_idx) field_id
+
+let lookup_ctor_bind_name ctor_name field_idx =
+  match Hashtbl.find_opt ctor_bind_names (ctor_name, field_idx) with
+  | Some id -> id
+  | None -> field_param_id field_idx
+
 (** Clear the field name registry.  Must be called between extraction
     passes to avoid stale names from one module leaking into another. *)
-let reset_ctor_field_names () = Hashtbl.clear ctor_field_names
+let reset_ctor_field_names () =
+  Hashtbl.clear ctor_field_names;
+  Hashtbl.clear ctor_bind_names
 
 (** {3 More synthetic name generators} *)
 
@@ -1315,9 +1454,19 @@ let db_fallback_name i = "_db" ^ string_of_int i
 
 let db_fallback_id i = Id.of_string (db_fallback_name i)
 
-let tparam_name id = Id.of_string ("t_" ^ Id.to_string id)
+let tparam_name id =
+  if Table.std_lib () = "BDE" then Id.of_string ("t_" ^ Id.to_string id)
+  else id
 
-let enum_ctor_name s = "e_" ^ String.uppercase_ascii s
+let dangerous_macros =
+  [ "TRUE"; "FALSE"; "NULL"; "EOF"; "DOMAIN"; "OVERFLOW"; "UNDERFLOW";
+    "HUGE_VAL"; "ERANGE"; "STDIN"; "STDOUT"; "STDERR" ]
+
+let enum_ctor_name s =
+  let upper = String.uppercase_ascii s in
+  if Table.std_lib () = "BDE" then "e_" ^ upper
+  else if List.mem upper dangerous_macros then upper ^ "_"
+  else upper
 
 (** Compute the C++ enum constructor name for a single constructor [Id.t],
     applying prime-to-underscore escaping.  Does not perform collision
@@ -1328,6 +1477,12 @@ let enum_ctor_name_of_id id =
   let s = String.map (fun c -> if c = '\'' then '_' else c) s in
   enum_ctor_name s
 
+(** Compute collision-free C++ enum constructor names for all constructors of an
+    inductive packet.  Each name is derived via {!enum_ctor_name_of_id}; when
+    two constructors would produce the same string, the later one gets a numeric
+    suffix appended to make it unique.
+    @param consnames Array of Rocq constructor identifiers in declaration order
+    @return Array of unique ["e_UPPER_CASED"] strings, one per constructor *)
 let enum_ctor_names_of_packet (consnames : Id.t array) : string array =
   let escaped =
     Array.map
@@ -1363,4 +1518,16 @@ let capitalize_last_component s =
     let suffix = String.sub s (i + 1) (String.length s - i - 1) in
     prefix ^ String.capitalize_ascii suffix
   | _ -> String.capitalize_ascii s
+
+(* ---- Needed C++ headers (demand-driven) ---- *)
+
+module SSet = Set.Make (String)
+
+let needed_headers : SSet.t ref = ref SSet.empty
+
+let require_header h = needed_headers := SSet.add h !needed_headers
+
+let get_needed_headers () = SSet.elements !needed_headers
+
+let reset_needed_headers () = needed_headers := SSet.empty
 

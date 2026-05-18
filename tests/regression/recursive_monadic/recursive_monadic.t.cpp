@@ -15,10 +15,10 @@ int main() {
   // even_action(4) -> e;o;e;o;Ret "even"
 
   // Test 8: find_first
-  auto pred = [](unsigned int n) { return n > 2u; };
+  auto pred = [](uint64_t n) { return n > 2u; };
   auto r8 = RecursiveMonadic::find_first(
     pred,
-    List<unsigned int>::cons(1, List<unsigned int>::cons(3, List<unsigned int>::nil()))
+    List<uint64_t>::cons(1, List<uint64_t>::cons(3, List<uint64_t>::nil()))
   );
 
   return 0;

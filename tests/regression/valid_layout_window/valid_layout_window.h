@@ -1,25 +1,23 @@
 #ifndef INCLUDED_VALID_LAYOUT_WINDOW
 #define INCLUDED_VALID_LAYOUT_WINDOW
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct ValidLayoutWindow {
   struct layout {
-    unsigned int base_addr;
-    unsigned int code_size;
+    uint64_t base_addr;
+    uint64_t code_size;
 
     // ACCESSORS
     layout clone() const {
-      return layout{(*(this)).base_addr, (*(this)).code_size};
+      return layout{(*this).base_addr, (*this).code_size};
     }
   };
 
   static bool valid_layoutb(const layout &l);
-  static inline const unsigned int t =
-      ((valid_layoutb(layout{128u, 256u}) ? 1u : 0u) +
-       (valid_layoutb(layout{4090u, 20u}) ? 1u : 0u));
+  static inline const uint64_t t =
+      ((valid_layoutb(layout{UINT64_C(128), UINT64_C(256)}) ? UINT64_C(1)
+                                                            : UINT64_C(0)) +
+       (valid_layoutb(layout{UINT64_C(4090), UINT64_C(20)}) ? UINT64_C(1)
+                                                            : UINT64_C(0)));
 };
 
 #endif // INCLUDED_VALID_LAYOUT_WINDOW

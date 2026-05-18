@@ -1,9 +1,9 @@
 #include "monadic_void_edge.h"
 
 /// 1. Bind where LHS is void and RHS returns a value
-unsigned int MonadicVoidEdge::bind_void_then_value() {
+uint64_t MonadicVoidEdge::bind_void_then_value() {
   std::cout << "hello"s << '\n';
-  return 42u;
+  return UINT64_C(42);
 }
 
 /// 2. Bind where both sides are void
@@ -14,12 +14,12 @@ void MonadicVoidEdge::bind_void_void() {
 }
 
 /// 3. Let-binding the result of a monadic void call
-unsigned int MonadicVoidEdge::let_bind_monadic_void() {
+uint64_t MonadicVoidEdge::let_bind_monadic_void() {
   []() {
     std::cout << "side effect"s << '\n';
     return std::monostate{};
   }();
-  return 99u;
+  return UINT64_C(99);
 }
 
 /// 4. Passing unit through a chain of binds
@@ -30,9 +30,9 @@ void MonadicVoidEdge::unit_chain() {
 }
 
 /// 5. Match on a value obtained from a bind
-unsigned int MonadicVoidEdge::match_after_bind() {
+uint64_t MonadicVoidEdge::match_after_bind() {
   bool b = true;
-  return (b ? 1u : 0u);
+  return (b ? UINT64_C(1) : UINT64_C(0));
 }
 
 /// 6. Void function called in a non-tail bind position
@@ -55,16 +55,16 @@ void MonadicVoidEdge::deeply_nested_void() {
 
 void MonadicVoidEdge::test_apply_effect() {
   apply_effect(
-      [](const unsigned int) {
+      [](uint64_t) {
         std::cout << "applied"s << '\n';
         return std::monostate{};
       },
-      5u);
+      UINT64_C(5));
   return;
 }
 
 /// 9. Monadic function returning option unit
-std::optional<std::monostate> MonadicVoidEdge::maybe_print(const bool b) {
+std::optional<std::monostate> MonadicVoidEdge::maybe_print(bool b) {
   if (b) {
     std::cout << "yes"s << '\n';
     return std::make_optional<std::monostate>(std::monostate{});
@@ -74,9 +74,9 @@ std::optional<std::monostate> MonadicVoidEdge::maybe_print(const bool b) {
 }
 
 /// 10. Bind result used in a pair
-std::pair<unsigned int, unsigned int> MonadicVoidEdge::bind_into_pair() {
-  unsigned int a = 1u;
-  unsigned int b = 2u;
+std::pair<uint64_t, uint64_t> MonadicVoidEdge::bind_into_pair() {
+  uint64_t a = UINT64_C(1);
+  uint64_t b = UINT64_C(2);
   return std::make_pair(a, b);
 }
 
@@ -89,11 +89,11 @@ List<std::monostate> MonadicVoidEdge::unit_in_list() {
 }
 
 /// 12. Mixed: some binds void, some value, interleaved
-unsigned int MonadicVoidEdge::mixed_binds() {
+uint64_t MonadicVoidEdge::mixed_binds() {
   std::cout << "start"s << '\n';
-  unsigned int a = 10u;
+  uint64_t a = UINT64_C(10);
   std::cout << "middle"s << '\n';
-  unsigned int b = 20u;
+  uint64_t b = UINT64_C(20);
   std::cout << "end"s << '\n';
   return (a + b);
 }

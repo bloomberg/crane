@@ -2,8 +2,6 @@
 #define INCLUDED_DATATYPES
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -15,34 +13,34 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> d_a0;
+    std::unique_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Nat() {}
 
-  explicit Nat(O _v) : d_v_(_v) {}
+  explicit Nat(O _v) : v_(_v) {}
 
-  explicit Nat(S _v) : d_v_(std::move(_v)) {}
+  explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Nat &operator=(Nat &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -64,13 +62,13 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -87,10 +85,10 @@ public:
     std::vector<std::unique_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.d_v_)) {
-        auto &_alt = std::get<S>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<S>(_node.v_)) {
+        auto &_alt = std::get<S>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -104,10 +102,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 } // namespace Datatypes

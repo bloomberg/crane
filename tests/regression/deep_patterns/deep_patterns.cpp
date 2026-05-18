@@ -1,121 +1,117 @@
 #include "deep_patterns.h"
 
-unsigned int DeepPatterns::deep_option(
-    const std::optional<std::optional<std::optional<unsigned int>>> &x) {
+uint64_t DeepPatterns::deep_option(
+    const std::optional<std::optional<std::optional<uint64_t>>> &x) {
   if (x.has_value()) {
-    const std::optional<std::optional<unsigned int>> &o = *x;
+    const std::optional<std::optional<uint64_t>> &o = *x;
     if (o.has_value()) {
-      const std::optional<unsigned int> &o0 = *o;
+      const std::optional<uint64_t> &o0 = *o;
       if (o0.has_value()) {
-        const unsigned int &n = *o0;
+        const uint64_t &n = *o0;
         return n;
       } else {
-        return 1u;
+        return UINT64_C(1);
       }
     } else {
-      return 2u;
+      return UINT64_C(2);
     }
   } else {
-    return 3u;
+    return UINT64_C(3);
   }
 }
 
-unsigned int DeepPatterns::deep_pair(
-    const std::pair<std::pair<unsigned int, unsigned int>,
-                    std::pair<unsigned int, unsigned int>> &p) {
-  const std::pair<unsigned int, unsigned int> &p0 = p.first;
-  const std::pair<unsigned int, unsigned int> &p1 = p.second;
-  const unsigned int &a = p0.first;
-  const unsigned int &b = p0.second;
-  const unsigned int &c = p1.first;
-  const unsigned int &d = p1.second;
+uint64_t
+DeepPatterns::deep_pair(const std::pair<std::pair<uint64_t, uint64_t>,
+                                        std::pair<uint64_t, uint64_t>> &p) {
+  const std::pair<uint64_t, uint64_t> &p0 = p.first;
+  const std::pair<uint64_t, uint64_t> &p1 = p.second;
+  const uint64_t &a = p0.first;
+  const uint64_t &b = p0.second;
+  const uint64_t &c = p1.first;
+  const uint64_t &d = p1.second;
   return (((a + b) + c) + d);
 }
 
-unsigned int DeepPatterns::list_shape(const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return 0u;
+uint64_t DeepPatterns::list_shape(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = *(d_a1);
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-      return d_a0;
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    auto &&_sv0 = *a1;
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+      return a0;
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      auto &&_sv1 = *(d_a10);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv1.v())) {
-        return (d_a0 + d_a00);
+      const auto &[a00, a10] =
+          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      auto &&_sv1 = *a10;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv1.v())) {
+        return (a0 + a00);
       } else {
-        const auto &[d_a01, d_a11] =
-            std::get<typename List<unsigned int>::Cons>(_sv1.v());
-        auto &&_sv2 = *(d_a11);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                _sv2.v())) {
-          return ((d_a0 + d_a00) + d_a01);
+        const auto &[a01, a11] =
+            std::get<typename List<uint64_t>::Cons>(_sv1.v());
+        auto &&_sv2 = *a11;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv2.v())) {
+          return ((a0 + a00) + a01);
         } else {
-          const auto &[d_a02, d_a12] =
-              std::get<typename List<unsigned int>::Cons>(_sv2.v());
-          return (((d_a0 + d_a00) + d_a01) + (*(d_a12)).length());
+          const auto &[a02, a12] =
+              std::get<typename List<uint64_t>::Cons>(_sv2.v());
+          return (((a0 + a00) + a01) + a12->length());
         }
       }
     }
   }
 }
 
-unsigned int DeepPatterns::deep_sum(const DeepPatterns::outer &o) {
+uint64_t DeepPatterns::deep_sum(const DeepPatterns::outer &o) {
   if (std::holds_alternative<typename DeepPatterns::outer::OLeft>(o.v())) {
-    const auto &[d_a0] = std::get<typename DeepPatterns::outer::OLeft>(o.v());
-    auto &&_sv0 = *(d_a0);
+    const auto &[a0] = std::get<typename DeepPatterns::outer::OLeft>(o.v());
+    auto &&_sv0 = *a0;
     if (std::holds_alternative<typename DeepPatterns::inner::ILeft>(_sv0.v())) {
-      const auto &[d_a00] =
+      const auto &[a00] =
           std::get<typename DeepPatterns::inner::ILeft>(_sv0.v());
-      return d_a00;
+      return a00;
     } else {
-      const auto &[d_a00] =
+      const auto &[a00] =
           std::get<typename DeepPatterns::inner::IRight>(_sv0.v());
-      if (d_a00) {
-        return 1u;
+      if (a00) {
+        return UINT64_C(1);
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   } else {
-    const auto &[d_a0] = std::get<typename DeepPatterns::outer::ORight>(o.v());
-    return (d_a0 + 100u);
+    const auto &[a0] = std::get<typename DeepPatterns::outer::ORight>(o.v());
+    return (a0 + UINT64_C(100));
   }
 }
 
-unsigned int DeepPatterns::complex_match(
-    const std::optional<std::pair<unsigned int, List<unsigned int>>> &x) {
+uint64_t DeepPatterns::complex_match(
+    const std::optional<std::pair<uint64_t, List<uint64_t>>> &x) {
   if (x.has_value()) {
-    const std::pair<unsigned int, List<unsigned int>> &p = *x;
-    const unsigned int &n = p.first;
-    const List<unsigned int> &l = p.second;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+    const std::pair<uint64_t, List<uint64_t>> &p = *x;
+    const uint64_t &n = p.first;
+    const List<uint64_t> &l = p.second;
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return n;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      auto &&_sv0 = *(d_a1);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-        return (n + d_a0);
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      auto &&_sv0 = *a1;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+        return (n + a0);
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_sv0.v());
-        return ((n + d_a0) + (*(d_a10)).length());
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(_sv0.v());
+        return ((n + a0) + a10->length());
       }
     }
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-unsigned int
-DeepPatterns::guarded_match(const std::pair<unsigned int, unsigned int> &p) {
-  const unsigned int &a = p.first;
-  const unsigned int &b = p.second;
+uint64_t DeepPatterns::guarded_match(const std::pair<uint64_t, uint64_t> &p) {
+  const uint64_t &a = p.first;
+  const uint64_t &b = p.second;
   if (a <= b) {
     return (((b - a) > b ? 0 : (b - a)));
   } else {
@@ -123,72 +119,63 @@ DeepPatterns::guarded_match(const std::pair<unsigned int, unsigned int> &p) {
   }
 }
 
-unsigned int DeepPatterns::match_pair_list(
-    const DeepPatterns::mylist<DeepPatterns::pair<unsigned int, unsigned int>>
-        &l) {
+uint64_t DeepPatterns::match_pair_list(
+    const DeepPatterns::mylist<DeepPatterns::pair<uint64_t, uint64_t>> &l) {
   if (std::holds_alternative<typename DeepPatterns::mylist<
-          DeepPatterns::pair<unsigned int, unsigned int>>::Nil>(l.v())) {
-    return 0u;
+          DeepPatterns::pair<uint64_t, uint64_t>>::Nil>(l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename DeepPatterns::mylist<
-        DeepPatterns::pair<unsigned int, unsigned int>>::Cons>(l.v());
-    const auto &[d_a00, d_a10] = std::get<
-        typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(
-        d_a0.v());
-    return d_a00;
+    const auto &[a0, a1] = std::get<typename DeepPatterns::mylist<
+        DeepPatterns::pair<uint64_t, uint64_t>>::Cons>(l.v());
+    const auto &[a00, a10] = a0;
+    return a00;
   }
 }
 
-unsigned int
-DeepPatterns::match_two(const DeepPatterns::mylist<unsigned int> &l) {
-  if (std::holds_alternative<typename DeepPatterns::mylist<unsigned int>::Nil>(
+uint64_t DeepPatterns::match_two(const DeepPatterns::mylist<uint64_t> &l) {
+  if (std::holds_alternative<typename DeepPatterns::mylist<uint64_t>::Nil>(
           l.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename DeepPatterns::mylist<unsigned int>::Cons>(l.v());
-    return d_a0;
+    const auto &[a0, a1] =
+        std::get<typename DeepPatterns::mylist<uint64_t>::Cons>(l.v());
+    return a0;
   }
 }
 
-unsigned int DeepPatterns::match_triple(
+uint64_t DeepPatterns::match_triple(
     const DeepPatterns::mylist<
-        DeepPatterns::mylist<DeepPatterns::mylist<unsigned int>>> &l) {
+        DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>> &l) {
   if (std::holds_alternative<typename DeepPatterns::mylist<
-          DeepPatterns::mylist<DeepPatterns::mylist<unsigned int>>>::Nil>(
-          l.v())) {
-    return 0u;
+          DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>>::Nil>(l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename DeepPatterns::mylist<
-        DeepPatterns::mylist<DeepPatterns::mylist<unsigned int>>>::Cons>(l.v());
-    if (std::holds_alternative<typename DeepPatterns::mylist<
-            DeepPatterns::mylist<unsigned int>>::Nil>(d_a0.v())) {
-      return 1u;
+    const auto &[a0, a1] = std::get<typename DeepPatterns::mylist<
+        DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>>::Cons>(l.v());
+    if (std::holds_alternative<
+            typename DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>::Nil>(
+            a0.v())) {
+      return UINT64_C(1);
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename DeepPatterns::mylist<
-          DeepPatterns::mylist<unsigned int>>::Cons>(d_a0.v());
-      if (std::holds_alternative<
-              typename DeepPatterns::mylist<unsigned int>::Nil>(d_a00.v())) {
-        return 2u;
+      const auto &[a00, a10] = std::get<
+          typename DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>::Cons>(
+          a0.v());
+      if (std::holds_alternative<typename DeepPatterns::mylist<uint64_t>::Nil>(
+              a00.v())) {
+        return UINT64_C(2);
       } else {
-        const auto &[d_a01, d_a11] =
-            std::get<typename DeepPatterns::mylist<unsigned int>::Cons>(
-                d_a00.v());
-        return d_a01;
+        const auto &[a01, a11] =
+            std::get<typename DeepPatterns::mylist<uint64_t>::Cons>(a00.v());
+        return a01;
       }
     }
   }
 }
 
-unsigned int DeepPatterns::deep_wildcard(
-    const DeepPatterns::pair<DeepPatterns::pair<unsigned int, unsigned int>,
-                             DeepPatterns::pair<unsigned int, unsigned int>>
-        &p) {
-  const auto &[d_a0, d_a1] = std::get<typename DeepPatterns::pair<
-      DeepPatterns::pair<unsigned int, unsigned int>,
-      DeepPatterns::pair<unsigned int, unsigned int>>::Pair0>(p.v());
-  const auto &[d_a00, d_a10] =
-      std::get<typename DeepPatterns::pair<unsigned int, unsigned int>::Pair0>(
-          d_a0.v());
-  return d_a00;
+uint64_t DeepPatterns::deep_wildcard(
+    const DeepPatterns::pair<DeepPatterns::pair<uint64_t, uint64_t>,
+                             DeepPatterns::pair<uint64_t, uint64_t>> &p) {
+  const auto &[a0, a1] = p;
+  const auto &[a00, a10] = a0;
+  return a00;
 }

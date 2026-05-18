@@ -3,9 +3,8 @@
 
 #include <memory>
 #include <optional>
-#include <type_traits>
 
-enum class Player { e_BLACK, e_WHITE };
+enum class Player { BLACK, WHITE };
 using cell = std::optional<Player>;
 
 struct AliasSource {

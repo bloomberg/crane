@@ -1,85 +1,62 @@
 #include "bench_let_in.h"
 
-unsigned int BenchLetIn::swap_snd(const unsigned int a, const unsigned int b) {
-  BenchLetIn::pair<unsigned int, unsigned int> p =
-      pair<unsigned int, unsigned int>::pair0(a, b);
-  auto &[d_a0, d_a1] =
-      std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
-          p.v_mut());
-  return d_a1;
+uint64_t BenchLetIn::swap_snd(uint64_t a, uint64_t b) {
+  BenchLetIn::pair<uint64_t, uint64_t> p =
+      pair<uint64_t, uint64_t>::pair0(a, b);
+  auto &[a0, a1] = p;
+  return a1;
 }
 
-unsigned int BenchLetIn::add_via_pair(const unsigned int a,
-                                      const unsigned int b) {
-  BenchLetIn::pair<unsigned int, unsigned int> p =
-      pair<unsigned int, unsigned int>::pair0(a, b);
-  auto &[d_a0, d_a1] =
-      std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
-          p.v_mut());
-  return (d_a0 + d_a1);
+uint64_t BenchLetIn::add_via_pair(uint64_t a, uint64_t b) {
+  BenchLetIn::pair<uint64_t, uint64_t> p =
+      pair<uint64_t, uint64_t>::pair0(a, b);
+  auto &[a0, a1] = p;
+  return (std::move(a0) + std::move(a1));
 }
 
-unsigned int BenchLetIn::nested_swap(const unsigned int a, const unsigned int b,
-                                     const unsigned int c,
-                                     const unsigned int d) {
-  BenchLetIn::pair<unsigned int, unsigned int> p1 =
-      pair<unsigned int, unsigned int>::pair0(a, b);
-  BenchLetIn::pair<unsigned int, unsigned int> p2 =
-      pair<unsigned int, unsigned int>::pair0(c, d);
-  auto &[d_a0, d_a1] =
-      std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
-          p1.v_mut());
-  auto &[d_a00, d_a10] =
-      std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
-          p2.v_mut());
-  return (d_a0 + d_a10);
+uint64_t BenchLetIn::nested_swap(uint64_t a, uint64_t b, uint64_t c,
+                                 uint64_t d) {
+  BenchLetIn::pair<uint64_t, uint64_t> p1 =
+      pair<uint64_t, uint64_t>::pair0(a, b);
+  BenchLetIn::pair<uint64_t, uint64_t> p2 =
+      pair<uint64_t, uint64_t>::pair0(c, d);
+  auto &[a0, a1] = p1;
+  auto &[a00, a10] = p2;
+  return (std::move(a0) + std::move(a10));
 }
 
-unsigned int BenchLetIn::sum_via_pairs(const unsigned int n) {
+uint64_t BenchLetIn::sum_via_pairs(uint64_t n) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int m = n - 1;
-    BenchLetIn::pair<unsigned int, unsigned int> p =
-        pair<unsigned int, unsigned int>::pair0(n, m);
-    auto &[d_a0, d_a1] =
-        std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
-            p.v_mut());
-    return (d_a0 + sum_via_pairs(d_a1));
+    uint64_t m = n - 1;
+    BenchLetIn::pair<uint64_t, uint64_t> p =
+        pair<uint64_t, uint64_t>::pair0(n, m);
+    auto &[a0, a1] = p;
+    return (std::move(a0) + sum_via_pairs(std::move(a1)));
   }
 }
 
-unsigned int BenchLetIn::mid3(const unsigned int a, const unsigned int b,
-                              const unsigned int c) {
-  BenchLetIn::triple<unsigned int, unsigned int, unsigned int> t =
-      triple<unsigned int, unsigned int, unsigned int>::triple0(a, b, c);
-  auto &[d_a0, d_a1, d_a2] =
-      std::get<typename BenchLetIn::triple<unsigned int, unsigned int,
-                                           unsigned int>::Triple0>(t.v_mut());
-  return d_a1;
+uint64_t BenchLetIn::mid3(uint64_t a, uint64_t b, uint64_t c) {
+  BenchLetIn::triple<uint64_t, uint64_t, uint64_t> t =
+      triple<uint64_t, uint64_t, uint64_t>::triple0(a, b, c);
+  auto &[a0, a1, a2] = t;
+  return a1;
 }
 
-unsigned int BenchLetIn::sum3(const unsigned int a, const unsigned int b,
-                              const unsigned int c) {
-  BenchLetIn::triple<unsigned int, unsigned int, unsigned int> t =
-      triple<unsigned int, unsigned int, unsigned int>::triple0(a, b, c);
-  auto &[d_a0, d_a1, d_a2] =
-      std::get<typename BenchLetIn::triple<unsigned int, unsigned int,
-                                           unsigned int>::Triple0>(t.v_mut());
-  return (d_a0 + (d_a1 + d_a2));
+uint64_t BenchLetIn::sum3(uint64_t a, uint64_t b, uint64_t c) {
+  BenchLetIn::triple<uint64_t, uint64_t, uint64_t> t =
+      triple<uint64_t, uint64_t, uint64_t>::triple0(a, b, c);
+  auto &[a0, a1, a2] = t;
+  return (std::move(a0) + (std::move(a1) + std::move(a2)));
 }
 
-unsigned int BenchLetIn::chain_pairs(const unsigned int a, const unsigned int b,
-                                     const unsigned int c) {
-  BenchLetIn::pair<unsigned int, unsigned int> p1 =
-      pair<unsigned int, unsigned int>::pair0(a, b);
-  auto &[d_a0, d_a1] =
-      std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
-          p1.v_mut());
-  BenchLetIn::pair<unsigned int, unsigned int> p2 =
-      pair<unsigned int, unsigned int>::pair0(d_a0, c);
-  auto &[d_a00, d_a10] =
-      std::get<typename BenchLetIn::pair<unsigned int, unsigned int>::Pair0>(
-          p2.v_mut());
-  return (d_a00 + d_a10);
+uint64_t BenchLetIn::chain_pairs(uint64_t a, uint64_t b, uint64_t c) {
+  BenchLetIn::pair<uint64_t, uint64_t> p1 =
+      pair<uint64_t, uint64_t>::pair0(a, b);
+  auto &[a0, a1] = p1;
+  BenchLetIn::pair<uint64_t, uint64_t> p2 =
+      pair<uint64_t, uint64_t>::pair0(std::move(a0), c);
+  auto &[a00, a10] = p2;
+  return (std::move(a00) + std::move(a10));
 }

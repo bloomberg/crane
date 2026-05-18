@@ -4,21 +4,18 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <memory>
-#include <optional>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
 using namespace std::string_literals;
 
-enum class Comparison { e_EQ, e_LT, e_GT };
+enum class Comparison { EQ, LT, GT };
 
 struct PingPong {
   /// Check if two strings are equal using PrimString.compare.
-  static bool string_eq(const std::string s1, const std::string s2);
-  static void run_game(const unsigned int round);
+  static bool string_eq(std::string s1, std::string s2);
+  static void run_game(uint64_t round);
   /// Entry point.
   static void play();
 };

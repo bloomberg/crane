@@ -1,23 +1,17 @@
 #ifndef INCLUDED_RECORD_MATCH
 #define INCLUDED_RECORD_MATCH
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct RecordMatch {
   struct MyRec {
-    unsigned int f1;
-    unsigned int f2;
-    unsigned int f3;
+    uint64_t f1;
+    uint64_t f2;
+    uint64_t f3;
 
     // ACCESSORS
-    MyRec clone() const {
-      return MyRec{(*(this)).f1, (*(this)).f2, (*(this)).f3};
-    }
+    MyRec clone() const { return MyRec{(*this).f1, (*this).f2, (*this).f3}; }
   };
 
-  static unsigned int sum(const MyRec &r);
+  static uint64_t sum(const MyRec &r);
 };
 
 #endif // INCLUDED_RECORD_MATCH

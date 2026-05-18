@@ -1,16 +1,16 @@
 #include "inductive_in_module.h"
 
-unsigned int InductiveInModule::Inner::color_to_nat(
-    const InductiveInModule::Inner::Color c) {
+uint64_t
+InductiveInModule::Inner::color_to_nat(InductiveInModule::Inner::Color c) {
   switch (c) {
-  case Color::e_RED: {
-    return 0u;
+  case Color::RED: {
+    return UINT64_C(0);
   }
-  case Color::e_GREEN: {
-    return 1u;
+  case Color::GREEN: {
+    return UINT64_C(1);
   }
-  case Color::e_BLUE: {
-    return 2u;
+  case Color::BLUE: {
+    return UINT64_C(2);
   }
   default:
     std::unreachable();

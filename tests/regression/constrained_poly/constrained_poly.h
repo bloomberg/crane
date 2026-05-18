@@ -1,8 +1,6 @@
 #ifndef INCLUDED_CONSTRAINED_POLY
 #define INCLUDED_CONSTRAINED_POLY
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -10,13 +8,13 @@
 struct ConstrainedPoly {
   template <typename T1> static T1 poly_id(T1 x) { return x; }
 
-  template <typename t_A, typename t_B> struct UPair {
-    t_A ufst;
-    t_B usnd;
+  template <typename A, typename B> struct UPair {
+    A ufst;
+    B usnd;
 
     // ACCESSORS
-    UPair<t_A, t_B> clone() const {
-      return UPair<t_A, t_B>{(*(this)).ufst, (*(this)).usnd};
+    UPair<A, B> clone() const {
+      return UPair<A, B>{(*this).ufst, (*this).usnd};
     }
   };
 
@@ -30,10 +28,10 @@ struct ConstrainedPoly {
     return UPair<T1, T2>{a, b};
   }
 
-  template <typename t_A> struct UOption {
+  template <typename A> struct UOption {
     // TYPES
     struct USome {
-      t_A d_a0;
+      A a0;
     };
 
     struct UNone {};
@@ -42,69 +40,67 @@ struct ConstrainedPoly {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     UOption() {}
 
-    explicit UOption(USome _v) : d_v_(std::move(_v)) {}
+    explicit UOption(USome _v) : v_(std::move(_v)) {}
 
-    explicit UOption(UNone _v) : d_v_(_v) {}
+    explicit UOption(UNone _v) : v_(_v) {}
 
-    UOption(const UOption<t_A> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    UOption(const UOption<A> &_other) : v_(_other.v_) {}
 
-    UOption(UOption<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    UOption(UOption<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    UOption<t_A> &operator=(const UOption<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    UOption<A> &operator=(const UOption<A> &_other) {
+      v_ = _other.v_;
       return *this;
     }
 
-    UOption<t_A> &operator=(UOption<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    UOption<A> &operator=(UOption<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    UOption<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<USome>(_sv.v())) {
-        const auto &[d_a0] = std::get<USome>(_sv.v());
-        return UOption<t_A>(USome{d_a0});
+    UOption<A> clone() const {
+      if (std::holds_alternative<USome>(this->v())) {
+        const auto &[a0] = std::get<USome>(this->v());
+        return UOption<A>(USome{a0});
       } else {
-        return UOption<t_A>(UNone{});
+        return UOption<A>(UNone{});
       }
     }
 
     // CREATORS
     template <typename _U> explicit UOption(const UOption<_U> &_other) {
       if (std::holds_alternative<typename UOption<_U>::USome>(_other.v())) {
-        const auto &[d_a0] = std::get<typename UOption<_U>::USome>(_other.v());
-        this->d_v_ = USome{t_A(d_a0)};
+        const auto &[a0] = std::get<typename UOption<_U>::USome>(_other.v());
+        this->v_ = USome{A(a0)};
       } else {
-        this->d_v_ = UNone{};
+        this->v_ = UNone{};
       }
     }
 
-    static UOption<t_A> usome(t_A a0) { return UOption(USome{std::move(a0)}); }
+    static UOption<A> usome(A a0) { return UOption(USome{std::move(a0)}); }
 
-    static UOption<t_A> unone() { return UOption(UNone{}); }
+    static UOption<A> unone() { return UOption(UNone{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 UOption_rect(F0 &&f, T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
-      const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename UOption<T1>::USome>(u.v());
+      return f(a0);
     } else {
       return f0;
     }
@@ -114,8 +110,8 @@ struct ConstrainedPoly {
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 UOption_rec(F0 &&f, T2 f0, const UOption<T1> &u) {
     if (std::holds_alternative<typename UOption<T1>::USome>(u.v())) {
-      const auto &[d_a0] = std::get<typename UOption<T1>::USome>(u.v());
-      return f(d_a0);
+      const auto &[a0] = std::get<typename UOption<T1>::USome>(u.v());
+      return f(a0);
     } else {
       return f0;
     }
@@ -125,25 +121,25 @@ struct ConstrainedPoly {
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static UOption<T2> uoption_map(F0 &&f, const UOption<T1> &o) {
     if (std::holds_alternative<typename UOption<T1>::USome>(o.v())) {
-      const auto &[d_a0] = std::get<typename UOption<T1>::USome>(o.v());
-      return UOption<T2>::usome(f(d_a0));
+      const auto &[a0] = std::get<typename UOption<T1>::USome>(o.v());
+      return UOption<T2>::usome(f(a0));
     } else {
       return UOption<T2>::unone();
     }
   }
 
-  static inline const unsigned int test_id_nat = poly_id<unsigned int>(42u);
+  static inline const uint64_t test_id_nat = poly_id<uint64_t>(UINT64_C(42));
   static inline const bool test_id_bool = poly_id<bool>(true);
-  static inline const UPair<unsigned int, bool> test_pair =
-      wrap_pair<unsigned int, bool>(5u, false);
-  static inline const UPair<bool, unsigned int> test_swap =
-      swap<unsigned int, bool>(test_pair);
-  static inline const unsigned int test_fst = test_pair.ufst;
+  static inline const UPair<uint64_t, bool> test_pair =
+      wrap_pair<uint64_t, bool>(UINT64_C(5), false);
+  static inline const UPair<bool, uint64_t> test_swap =
+      swap<uint64_t, bool>(test_pair);
+  static inline const uint64_t test_fst = test_pair.ufst;
   static inline const bool test_snd = test_pair.usnd;
-  static inline const UOption<unsigned int> test_umap =
-      uoption_map<unsigned int, unsigned int>(
-          [](const unsigned int n) { return (n + 1u); },
-          UOption<unsigned int>::usome(9u));
+  static inline const UOption<uint64_t> test_umap =
+      uoption_map<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          UOption<uint64_t>::usome(UINT64_C(9)));
 };
 
 #endif // INCLUDED_CONSTRAINED_POLY

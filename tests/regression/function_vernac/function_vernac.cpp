@@ -1,81 +1,74 @@
 #include "function_vernac.h"
 
-Sig<unsigned int> FunctionVernac::div2_terminate(const unsigned int n) {
+Sig<uint64_t> FunctionVernac::div2_terminate(uint64_t n) {
   if (n <= 0) {
-    return Sig<unsigned int>::exist(0u);
+    return Sig<uint64_t>::exist(UINT64_C(0));
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     if (n0 <= 0) {
-      return Sig<unsigned int>::exist(0u);
+      return Sig<uint64_t>::exist(UINT64_C(0));
     } else {
-      unsigned int n1 = n0 - 1;
-      auto &&_sv = div2_terminate(n1);
-      const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
-      return Sig<unsigned int>::exist((d_x + 1));
+      uint64_t n1 = n0 - 1;
+      const auto &_sv = div2_terminate(n1);
+      const auto &[x0] = _sv;
+      return Sig<uint64_t>::exist((x0 + 1));
     }
   }
 }
 
-unsigned int FunctionVernac::div2(const unsigned int n) {
-  auto &&_sv = div2_terminate(n);
-  const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
-  return d_x;
+uint64_t FunctionVernac::div2(uint64_t n) {
+  const auto &_sv = div2_terminate(n);
+  const auto &[x] = _sv;
+  return x;
 }
 
-FunctionVernac::R_div2 FunctionVernac::R_div2_correct(const unsigned int n,
-                                                      const unsigned int _res) {
-  return div2_rect<std::function<FunctionVernac::R_div2(unsigned int)>>(
-      [](const unsigned int y)
-          -> std::function<FunctionVernac::R_div2(unsigned int)> {
-        return [=](const unsigned int) mutable { return R_div2::r_div2_0(y); };
+FunctionVernac::R_div2 FunctionVernac::R_div2_correct(uint64_t n,
+                                                      uint64_t _res) {
+  return div2_rect<std::function<FunctionVernac::R_div2(uint64_t)>>(
+      [](uint64_t y) -> std::function<FunctionVernac::R_div2(uint64_t)> {
+        return [=](uint64_t) mutable { return R_div2::r_div2_0(y); };
       },
-      [](const unsigned int y)
-          -> std::function<FunctionVernac::R_div2(unsigned int)> {
-        return [=](const unsigned int) mutable { return R_div2::r_div2_1(y); };
+      [](uint64_t y) -> std::function<FunctionVernac::R_div2(uint64_t)> {
+        return [=](uint64_t) mutable { return R_div2::r_div2_1(y); };
       },
-      [](const unsigned int y, const unsigned int y0,
-         const std::function<FunctionVernac::R_div2(unsigned int)> y2)
-          -> std::function<FunctionVernac::R_div2(unsigned int)> {
-        return [=](const unsigned int) mutable {
+      [](uint64_t y, uint64_t y0,
+         std::function<FunctionVernac::R_div2(uint64_t)> y2)
+          -> std::function<FunctionVernac::R_div2(uint64_t)> {
+        return [=](uint64_t) mutable {
           return R_div2::r_div2_2(y, y0, div2(y0), y2(div2(y0)));
         };
       },
       n)(_res);
 }
 
-Sig<unsigned int>
-FunctionVernac::list_sum_terminate(const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return Sig<unsigned int>::exist(0u);
+Sig<uint64_t> FunctionVernac::list_sum_terminate(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return Sig<uint64_t>::exist(UINT64_C(0));
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = list_sum_terminate(*(d_a1));
-    const auto &[d_x0] = std::get<typename Sig<unsigned int>::Exist>(_sv0.v());
-    return Sig<unsigned int>::exist((d_a0 + d_x0));
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &_sv0 = list_sum_terminate(*a1);
+    const auto &[x0] = _sv0;
+    return Sig<uint64_t>::exist((a0 + x0));
   }
 }
 
-unsigned int FunctionVernac::list_sum(const List<unsigned int> &l) {
-  auto &&_sv = list_sum_terminate(l);
-  const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
-  return d_x;
+uint64_t FunctionVernac::list_sum(const List<uint64_t> &l) {
+  const auto &_sv = list_sum_terminate(l);
+  const auto &[x] = _sv;
+  return x;
 }
 
 FunctionVernac::R_list_sum
-FunctionVernac::R_list_sum_correct(const List<unsigned int> &l,
-                                   const unsigned int _res) {
-  return list_sum_rect<std::function<FunctionVernac::R_list_sum(unsigned int)>>(
-      [](List<unsigned int> y)
-          -> std::function<FunctionVernac::R_list_sum(unsigned int)> {
-        return [=](const unsigned int) mutable {
-          return R_list_sum::r_list_sum_0(y);
-        };
+FunctionVernac::R_list_sum_correct(const List<uint64_t> &l, uint64_t _res) {
+  return list_sum_rect<std::function<FunctionVernac::R_list_sum(uint64_t)>>(
+      [](List<uint64_t> y)
+          -> std::function<FunctionVernac::R_list_sum(uint64_t)> {
+        return [=](uint64_t) mutable { return R_list_sum::r_list_sum_0(y); };
       },
-      [](List<unsigned int> y, const unsigned int y0, List<unsigned int> y1,
-         const std::function<FunctionVernac::R_list_sum(unsigned int)> y3)
-          -> std::function<FunctionVernac::R_list_sum(unsigned int)> {
-        return [=](const unsigned int) mutable {
+      [](List<uint64_t> y, uint64_t y0, List<uint64_t> y1,
+         std::function<FunctionVernac::R_list_sum(uint64_t)> y3)
+          -> std::function<FunctionVernac::R_list_sum(uint64_t)> {
+        return [=](uint64_t) mutable {
           return R_list_sum::r_list_sum_1(y, y0, y1, list_sum(y1),
                                           y3(list_sum(y1)));
         };

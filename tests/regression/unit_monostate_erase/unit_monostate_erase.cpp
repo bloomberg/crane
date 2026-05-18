@@ -4,7 +4,7 @@
 ///
 /// The if result has type itree ioE unit, but its value is discarded
 /// by ;;.  Crane should lower this to plain if control flow.
-void UnitMonostateErase::seq_if(const bool b) {
+void UnitMonostateErase::seq_if(bool b) {
   [&]() -> void {
     if (b) {
       std::cout << "yes"s << '\n';
@@ -20,7 +20,7 @@ void UnitMonostateErase::seq_if(const bool b) {
 /// --- Example 2: sequenced if where both branches are effects ---
 ///
 /// Both branches produce itree ioE unit.  Should be a plain if.
-void UnitMonostateErase::seq_if_both(const bool b) {
+void UnitMonostateErase::seq_if_both(bool b) {
   [&]() -> void {
     if (b) {
       std::cout << "A"s << '\n';
@@ -34,18 +34,18 @@ void UnitMonostateErase::seq_if_both(const bool b) {
   return;
 }
 
-void UnitMonostateErase::match_unit_tail(const UnitMonostateErase::Color c) {
+void UnitMonostateErase::match_unit_tail(UnitMonostateErase::Color c) {
   {
     [&]() -> void {
       switch (c) {
-      case Color::e_RED: {
+      case Color::RED: {
         return;
       }
-      case Color::e_GREEN: {
+      case Color::GREEN: {
         std::cout << "green"s << '\n';
         return;
       }
-      case Color::e_BLUE: {
+      case Color::BLUE: {
         std::cout << "blue"s << '\n';
         return;
       }
@@ -58,17 +58,17 @@ void UnitMonostateErase::match_unit_tail(const UnitMonostateErase::Color c) {
 }
 
 /// --- Example 4: match inside bind ---
-void UnitMonostateErase::match_then_next(const UnitMonostateErase::Color c) {
+void UnitMonostateErase::match_then_next(UnitMonostateErase::Color c) {
   [&]() -> void {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       std::cout << "green"s << '\n';
       return;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       std::cout << "blue"s << '\n';
       return;
     }
@@ -81,7 +81,7 @@ void UnitMonostateErase::match_then_next(const UnitMonostateErase::Color c) {
 }
 
 /// --- Example 5: chained sequenced ifs ---
-void UnitMonostateErase::chained_ifs(const bool b1, const bool b2) {
+void UnitMonostateErase::chained_ifs(bool b1, bool b2) {
   [&]() -> void {
     if (b1) {
       std::cout << "b1"s << '\n';
@@ -103,22 +103,22 @@ void UnitMonostateErase::chained_ifs(const bool b1, const bool b2) {
 }
 
 /// --- Example 6: nested match-in-match ---
-void UnitMonostateErase::nested_matches(const UnitMonostateErase::Color c1,
-                                        const UnitMonostateErase::Color c2) {
+void UnitMonostateErase::nested_matches(UnitMonostateErase::Color c1,
+                                        UnitMonostateErase::Color c2) {
   [&]() -> void {
     switch (c1) {
-    case Color::e_RED: {
+    case Color::RED: {
       return [&]() -> void {
         switch (c2) {
-        case Color::e_RED: {
+        case Color::RED: {
           std::cout << "RR"s << '\n';
           return;
         }
-        case Color::e_GREEN: {
+        case Color::GREEN: {
           std::cout << "RG"s << '\n';
           return;
         }
-        case Color::e_BLUE: {
+        case Color::BLUE: {
           return;
         }
         default:
@@ -126,11 +126,11 @@ void UnitMonostateErase::nested_matches(const UnitMonostateErase::Color c1,
         }
       }();
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       std::cout << "G"s << '\n';
       return;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return;
     }
     default:

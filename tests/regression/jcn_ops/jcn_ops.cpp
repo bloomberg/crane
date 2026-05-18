@@ -1,45 +1,47 @@
 #include "jcn_ops.h"
 
-bool JcnOps::jcn_condition(const JcnOps::state &s, const unsigned int cond) {
-  unsigned int c1 = (8u ? cond / 8u : 0);
-  unsigned int c2 = (2u ? (4u ? cond / 4u : 0) % 2u : (4u ? cond / 4u : 0));
-  unsigned int c3 = (2u ? (2u ? cond / 2u : 0) % 2u : (2u ? cond / 2u : 0));
-  unsigned int c4 = (2u ? cond % 2u : cond);
-  bool base = ((s.acc == 0u && c2 == 1u) ||
-               ((s.carry && c3 == 1u) || (!(s.test_pin) && c4 == 1u)));
-  if (c1 == 1u) {
+bool JcnOps::jcn_condition(const JcnOps::state &s, uint64_t cond) {
+  uint64_t c1 = (UINT64_C(8) ? cond / UINT64_C(8) : 0);
+  uint64_t c2 =
+      (UINT64_C(2) ? (UINT64_C(4) ? cond / UINT64_C(4) : 0) % UINT64_C(2)
+                   : (UINT64_C(4) ? cond / UINT64_C(4) : 0));
+  uint64_t c3 =
+      (UINT64_C(2) ? (UINT64_C(2) ? cond / UINT64_C(2) : 0) % UINT64_C(2)
+                   : (UINT64_C(2) ? cond / UINT64_C(2) : 0));
+  uint64_t c4 = (UINT64_C(2) ? cond % UINT64_C(2) : cond);
+  bool base = ((s.acc == UINT64_C(0) && c2 == UINT64_C(1)) ||
+               ((s.carry && c3 == UINT64_C(1)) ||
+                (!(s.test_pin) && c4 == UINT64_C(1))));
+  if (c1 == UINT64_C(1)) {
     return !(base);
   } else {
     return base;
   }
 }
 
-unsigned int JcnOps::addr12_of_nat(const unsigned int n) {
-  return (4096u ? n % 4096u : n);
+uint64_t JcnOps::addr12_of_nat(uint64_t n) {
+  return (UINT64_C(4096) ? n % UINT64_C(4096) : n);
 }
 
-unsigned int JcnOps::pc_inc2(const JcnOps::state &s) {
-  return addr12_of_nat((s.pc + 2u));
+uint64_t JcnOps::pc_inc2(const JcnOps::state &s) {
+  return addr12_of_nat((s.pc + UINT64_C(2)));
 }
 
-unsigned int JcnOps::page_of(const unsigned int p) {
-  return (256u ? p / 256u : 0);
+uint64_t JcnOps::page_of(uint64_t p) {
+  return (UINT64_C(256) ? p / UINT64_C(256) : 0);
 }
 
-unsigned int JcnOps::page_base(const unsigned int p) {
-  return (page_of(p) * 256u);
-}
+uint64_t JcnOps::page_base(uint64_t p) { return (page_of(p) * UINT64_C(256)); }
 
-unsigned int JcnOps::base_for_next2(const JcnOps::state &s) {
+uint64_t JcnOps::base_for_next2(const JcnOps::state &s) {
   return page_base(pc_inc2(s));
 }
 
-unsigned int JcnOps::branch_target(const JcnOps::state &s,
-                                   const unsigned int cond,
-                                   const unsigned int off) {
+uint64_t JcnOps::branch_target(const JcnOps::state &s, uint64_t cond,
+                               uint64_t off) {
   if (jcn_condition(s, cond)) {
     return addr12_of_nat((base_for_next2(s) + off));
   } else {
-    return addr12_of_nat((s.pc + 2u));
+    return addr12_of_nat((s.pc + UINT64_C(2)));
   }
 }

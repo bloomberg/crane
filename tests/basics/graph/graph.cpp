@@ -11,12 +11,12 @@ bool nat_eqb(const Nat &n, const Nat &m) {
       return false;
     }
   } else {
-    const auto &[d_a0] = std::get<typename Nat::S>(n.v());
+    const auto &[a0] = std::get<typename Nat::S>(n.v());
     if (std::holds_alternative<typename Nat::O>(m.v())) {
       return false;
     } else {
-      const auto &[d_a00] = std::get<typename Nat::S>(m.v());
-      return nat_eqb(*(d_a0), *(d_a00));
+      const auto &[a00] = std::get<typename Nat::S>(m.v());
+      return nat_eqb(*a0, *a00);
     }
   }
 }

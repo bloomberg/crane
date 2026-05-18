@@ -1,27 +1,27 @@
 #include "option_closure_escape.h"
 
-unsigned int OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
-                                             const unsigned int x) {
+uint64_t OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
+                                         uint64_t x) {
   if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename OptionClosureEscape::tree::Node>(t.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *a0;
     if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
             _sv0.v())) {
-      return (d_a1 + x);
+      return (a1 + x);
     } else {
-      const auto &[d_a00, d_a10, d_a20] =
+      const auto &[a00, a10, a20] =
           std::get<typename OptionClosureEscape::tree::Node>(_sv0.v());
-      auto &&_sv1 = *(d_a2);
+      auto &&_sv1 = *a2;
       if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(
               _sv1.v())) {
-        return (d_a10 + x);
+        return (a10 + x);
       } else {
-        const auto &[d_a01, d_a11, d_a21] =
+        const auto &[a01, a11, a21] =
             std::get<typename OptionClosureEscape::tree::Node>(_sv1.v());
-        return (((d_a10 + d_a11) + d_a1) + x);
+        return (((a10 + a11) + a1) + x);
       }
     }
   }
@@ -30,28 +30,26 @@ unsigned int OptionClosureEscape::sum_values(const OptionClosureEscape::tree &t,
 /// BUG: pair_escape stores a & lambda in a pair.
 /// The lambda captures parameter t by reference.
 /// When pair_escape returns, t is destroyed → dangling.
-std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
+std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
 OptionClosureEscape::pair_escape(OptionClosureEscape::tree t) {
   return std::make_pair(
-      [=](unsigned int _x0) mutable -> unsigned int {
-        return sum_values(t, _x0);
-      },
-      42u);
+      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); },
+      UINT64_C(42));
 }
 
 /// BUG: match_pair — & captures _args from visit scope.
-std::pair<std::function<unsigned int(unsigned int)>, unsigned int>
+std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
 OptionClosureEscape::match_pair(const OptionClosureEscape::tree &t) {
   if (std::holds_alternative<typename OptionClosureEscape::tree::Leaf>(t.v())) {
-    return std::make_pair([](const unsigned int x) { return x; }, 0u);
+    return std::make_pair([](uint64_t x) { return x; }, UINT64_C(0));
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename OptionClosureEscape::tree::Node>(t.v());
-    OptionClosureEscape::tree d_a0_value = *(d_a0);
+    const OptionClosureEscape::tree &a0_value = *a0;
     return std::make_pair(
-        [=](unsigned int _x0) mutable -> unsigned int {
-          return sum_values(d_a0_value, _x0);
+        [=](uint64_t _x0) mutable -> uint64_t {
+          return sum_values(a0_value, _x0);
         },
-        d_a1);
+        a1);
   }
 }

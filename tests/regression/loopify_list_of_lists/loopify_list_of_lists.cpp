@@ -1,23 +1,22 @@
 #include "loopify_list_of_lists.h"
 
-List<unsigned int> LoopifyListOfLists::intercalate(
-    const List<unsigned int> &sep,
-    const List<List<unsigned int>>
+List<uint64_t> LoopifyListOfLists::intercalate(
+    const List<uint64_t> &sep,
+    const List<List<uint64_t>>
         &ll) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<List<unsigned int>> *ll;
+    const List<List<uint64_t>> *ll;
   };
 
-  /// _Resume_Cons: saves [d_a0, sep], resumes after recursive call with
-  /// _result.
+  /// _Resume_Cons: saves [a0, sep], resumes after recursive call with _result.
   struct _Resume_Cons {
-    List<unsigned int> d_a0;
-    List<unsigned int> sep;
+    List<uint64_t> a0;
+    List<uint64_t> sep;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  List<unsigned int> _result{};
+  List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
@@ -27,162 +26,151 @@ List<unsigned int> LoopifyListOfLists::intercalate(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-              ll.v())) {
-        _result = List<unsigned int>::nil();
+      const List<List<uint64_t>> &ll = *_f.ll;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        auto &&_sv = *(d_a1);
-        if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(ll.v());
+        auto &&_sv = *a1;
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
                 _sv.v())) {
-          _result = d_a0;
+          _result = std::move(a0);
         } else {
-          _stack.emplace_back(_Resume_Cons{d_a0, sep});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Resume_Cons{a0, sep});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f.d_a0.app(_f.sep.app(_result));
+      _result = _f.a0.app(_f.sep.app(_result));
     }
   }
   return _result;
 }
 
-List<unsigned int>
-LoopifyListOfLists::map_hd(const List<List<unsigned int>> &ll) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  const List<List<unsigned int>> *_loop_ll = &ll;
+List<uint64_t> LoopifyListOfLists::map_hd(const List<List<uint64_t>> &ll) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  const List<List<uint64_t>> *_loop_ll = &ll;
   while (true) {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = d_a1.get();
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+        _loop_ll = a1.get();
         continue;
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(d_a0.v());
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a00, nullptr));
-        *(_write) = std::move(_cell);
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(a0.v());
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(a00, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        _loop_ll = a1.get();
+        continue;
+      }
+    }
+  }
+  return std::move(*_head);
+}
+
+List<List<uint64_t>>
+LoopifyListOfLists::map_tl(const List<List<uint64_t>> &ll) {
+  std::unique_ptr<List<List<uint64_t>>> _head{};
+  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  const List<List<uint64_t>> *_loop_ll = &ll;
+  while (true) {
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
+            _loop_ll->v())) {
+      *_write =
+          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+      break;
+    } else {
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+        _loop_ll = a1.get();
+        continue;
+      } else {
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(a0.v());
+        auto _cell = std::make_unique<List<List<uint64_t>>>(
+            typename List<List<uint64_t>>::Cons(*a10, nullptr));
+        *_write = std::move(_cell);
         _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_ll = d_a1.get();
+            &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
+                 .l;
+        _loop_ll = a1.get();
         continue;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-List<List<unsigned int>>
-LoopifyListOfLists::map_tl(const List<List<unsigned int>> &ll) {
-  std::unique_ptr<List<List<unsigned int>>> _head{};
-  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  const List<List<unsigned int>> *_loop_ll = &ll;
+bool LoopifyListOfLists::all_empty(const List<List<uint64_t>> &ll) {
+  const List<List<uint64_t>> *_loop_ll = &ll;
   while (true) {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll->v())) {
-      *(_write) = std::make_unique<List<List<unsigned int>>>(
-          List<List<unsigned int>>::nil());
-      break;
+      return true;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = d_a1.get();
-        continue;
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+        _loop_ll = a1.get();
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(d_a0.v());
-        auto _cell = std::make_unique<List<List<unsigned int>>>(
-            typename List<List<unsigned int>>::Cons(*(d_a10), nullptr));
-        *(_write) = std::move(_cell);
-        _write = &std::get<typename List<List<unsigned int>>::Cons>(
-                      (*_write)->v_mut())
-                      .d_a1;
-        _loop_ll = d_a1.get();
-        continue;
+        return false;
       }
     }
   }
-  return std::move(*(_head));
 }
 
-bool LoopifyListOfLists::all_empty(const List<List<unsigned int>> &ll) {
-  bool _result;
-  const List<List<unsigned int>> *_loop_ll = &ll;
-  while (true) {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-            _loop_ll->v())) {
-      _result = true;
-      break;
-    } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = d_a1.get();
-      } else {
-        _result = false;
-        break;
-      }
-    }
-  }
-  return _result;
-}
-
-List<List<unsigned int>>
-LoopifyListOfLists::transpose_fuel(const unsigned int fuel,
-                                   const List<List<unsigned int>> &ll) {
-  std::unique_ptr<List<List<unsigned int>>> _head{};
-  std::unique_ptr<List<List<unsigned int>>> *_write = &_head;
-  List<List<unsigned int>> _loop_ll = ll;
-  unsigned int _loop_fuel = fuel;
+List<List<uint64_t>>
+LoopifyListOfLists::transpose_fuel(uint64_t fuel,
+                                   const List<List<uint64_t>> &ll) {
+  std::unique_ptr<List<List<uint64_t>>> _head{};
+  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  List<List<uint64_t>> _loop_ll = ll;
+  uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) = std::make_unique<List<List<unsigned int>>>(
-          List<List<unsigned int>>::nil());
+      *_write =
+          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
-      unsigned int fuel_ = _loop_fuel - 1;
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+      uint64_t fuel_ = _loop_fuel - 1;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
               _loop_ll.v())) {
-        *(_write) = std::make_unique<List<List<unsigned int>>>(
-            List<List<unsigned int>>::nil());
+        *_write =
+            std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<List<unsigned int>>::Cons>(_loop_ll.v());
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
-                d_a0.v())) {
-          *(_write) = std::make_unique<List<List<unsigned int>>>(
-              List<List<unsigned int>>::nil());
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(_loop_ll.v());
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+          *_write = std::make_unique<List<List<uint64_t>>>(
+              List<List<uint64_t>>::nil());
           break;
         } else {
           if (all_empty(_loop_ll)) {
-            *(_write) = std::make_unique<List<List<unsigned int>>>(
-                List<List<unsigned int>>::nil());
+            *_write = std::make_unique<List<List<uint64_t>>>(
+                List<List<uint64_t>>::nil());
             break;
           } else {
-            List<unsigned int> heads = map_hd(_loop_ll);
-            List<List<unsigned int>> tails = map_tl(_loop_ll);
-            auto _cell = std::make_unique<List<List<unsigned int>>>(
-                typename List<List<unsigned int>>::Cons(std::move(heads),
-                                                        nullptr));
-            *(_write) = std::move(_cell);
-            _write = &std::get<typename List<List<unsigned int>>::Cons>(
+            List<uint64_t> heads = map_hd(_loop_ll);
+            List<List<uint64_t>> tails = map_tl(_loop_ll);
+            auto _cell = std::make_unique<List<List<uint64_t>>>(
+                typename List<List<uint64_t>>::Cons(std::move(heads), nullptr));
+            *_write = std::move(_cell);
+            _write = &std::get<typename List<List<uint64_t>>::Cons>(
                           (*_write)->v_mut())
-                          .d_a1;
+                          .l;
             _loop_ll = std::move(tails);
             _loop_fuel = fuel_;
             continue;
@@ -191,24 +179,24 @@ LoopifyListOfLists::transpose_fuel(const unsigned int fuel,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-unsigned int LoopifyListOfLists::list_len(
-    const List<unsigned int>
+uint64_t LoopifyListOfLists::list_len(
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
+    const List<uint64_t> *l;
   };
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(1u) _s0;
+    decltype(UINT64_C(1)) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -218,14 +206,13 @@ unsigned int LoopifyListOfLists::list_len(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-        _result = 0u;
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(l.v());
-        _stack.emplace_back(_Resume_Cons{1u});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -235,21 +222,21 @@ unsigned int LoopifyListOfLists::list_len(
   return _result;
 }
 
-unsigned int LoopifyListOfLists::total_length(
-    const List<List<unsigned int>>
+uint64_t LoopifyListOfLists::total_length(
+    const List<List<uint64_t>>
         &ll) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<List<unsigned int>> *ll;
+    const List<List<uint64_t>> *ll;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(list_len(std::declval<List<unsigned int> &>())) d_a0;
+    decltype(list_len(std::declval<List<uint64_t> &>())) a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
@@ -259,44 +246,43 @@ unsigned int LoopifyListOfLists::total_length(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-              ll.v())) {
-        _result = 0u;
+      const List<List<uint64_t>> &ll = *_f.ll;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons{list_len(d_a0)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(ll.v());
+        _stack.emplace_back(_Resume_Cons{list_len(a0)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.d_a0 + _result);
+      _result = (_f.a0 + _result);
     }
   }
   return _result;
 }
 
-List<List<unsigned int>>
-LoopifyListOfLists::transpose(const List<List<unsigned int>> &ll) {
+List<List<uint64_t>>
+LoopifyListOfLists::transpose(const List<List<uint64_t>> &ll) {
   return transpose_fuel(total_length(ll), ll);
 }
 
-List<unsigned int> LoopifyListOfLists::flatten(
-    const List<List<unsigned int>>
+List<uint64_t> LoopifyListOfLists::flatten(
+    const List<List<uint64_t>>
         &ll) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<List<unsigned int>> *ll;
+    const List<List<uint64_t>> *ll;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    List<unsigned int> d_a0;
+    List<uint64_t> a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  List<unsigned int> _result{};
+  List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
@@ -306,39 +292,38 @@ List<unsigned int> LoopifyListOfLists::flatten(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-              ll.v())) {
-        _result = List<unsigned int>::nil();
+      const List<List<uint64_t>> &ll = *_f.ll;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(ll.v());
+        _stack.emplace_back(_Resume_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f.d_a0.app(_result);
+      _result = _f.a0.app(_result);
     }
   }
   return _result;
 }
 
-unsigned int LoopifyListOfLists::count_total(
-    const List<List<unsigned int>>
+uint64_t LoopifyListOfLists::count_total(
+    const List<List<uint64_t>>
         &ll) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<List<unsigned int>> *ll;
+    const List<List<uint64_t>> *ll;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(list_len(std::declval<List<unsigned int> &>())) d_a0;
+    decltype(list_len(std::declval<List<uint64_t> &>())) a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
@@ -348,141 +333,131 @@ unsigned int LoopifyListOfLists::count_total(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-              ll.v())) {
-        _result = 0u;
+      const List<List<uint64_t>> &ll = *_f.ll;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons{list_len(d_a0)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(ll.v());
+        _stack.emplace_back(_Resume_Cons{list_len(a0)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.d_a0 + _result);
+      _result = (_f.a0 + _result);
     }
   }
   return _result;
 }
 
-List<unsigned int>
-LoopifyListOfLists::firsts(const List<List<unsigned int>> &ll) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  const List<List<unsigned int>> *_loop_ll = &ll;
+List<uint64_t> LoopifyListOfLists::firsts(const List<List<uint64_t>> &ll) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  const List<List<uint64_t>> *_loop_ll = &ll;
   while (true) {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = d_a1.get();
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+        _loop_ll = a1.get();
         continue;
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(d_a0.v());
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a00, nullptr));
-        *(_write) = std::move(_cell);
-        _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_ll = d_a1.get();
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(a0.v());
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(a00, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        _loop_ll = a1.get();
         continue;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-bool LoopifyListOfLists::all_nil(const List<List<unsigned int>> &ll) {
-  bool _result;
-  const List<List<unsigned int>> *_loop_ll = &ll;
+bool LoopifyListOfLists::all_nil(const List<List<uint64_t>> &ll) {
+  const List<List<uint64_t>> *_loop_ll = &ll;
   while (true) {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll->v())) {
-      _result = true;
-      break;
+      return true;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll->v());
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(d_a0.v())) {
-        _loop_ll = d_a1.get();
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(_loop_ll->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+        _loop_ll = a1.get();
       } else {
-        _result = false;
-        break;
+        return false;
       }
     }
   }
-  return _result;
 }
 
-List<std::pair<List<unsigned int>, List<unsigned int>>>
-LoopifyListOfLists::zip_lists(const List<List<unsigned int>> &ll1,
-                              const List<List<unsigned int>> &ll2) {
-  std::unique_ptr<List<std::pair<List<unsigned int>, List<unsigned int>>>>
-      _head{};
-  std::unique_ptr<List<std::pair<List<unsigned int>, List<unsigned int>>>>
-      *_write = &_head;
-  const List<List<unsigned int>> *_loop_ll2 = &ll2;
-  const List<List<unsigned int>> *_loop_ll1 = &ll1;
+List<std::pair<List<uint64_t>, List<uint64_t>>>
+LoopifyListOfLists::zip_lists(const List<List<uint64_t>> &ll1,
+                              const List<List<uint64_t>> &ll2) {
+  std::unique_ptr<List<std::pair<List<uint64_t>, List<uint64_t>>>> _head{};
+  std::unique_ptr<List<std::pair<List<uint64_t>, List<uint64_t>>>> *_write =
+      &_head;
+  const List<List<uint64_t>> *_loop_ll2 = &ll2;
+  const List<List<uint64_t>> *_loop_ll1 = &ll1;
   while (true) {
-    if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_ll1->v())) {
-      *(_write) = std::make_unique<
-          List<std::pair<List<unsigned int>, List<unsigned int>>>>(
-          List<std::pair<List<unsigned int>, List<unsigned int>>>::nil());
+      *_write =
+          std::make_unique<List<std::pair<List<uint64_t>, List<uint64_t>>>>(
+              List<std::pair<List<uint64_t>, List<uint64_t>>>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<List<unsigned int>>::Cons>(_loop_ll1->v());
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
+      const auto &[a0, a1] =
+          std::get<typename List<List<uint64_t>>::Cons>(_loop_ll1->v());
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
               _loop_ll2->v())) {
-        *(_write) = std::make_unique<
-            List<std::pair<List<unsigned int>, List<unsigned int>>>>(
-            List<std::pair<List<unsigned int>, List<unsigned int>>>::nil());
+        *_write =
+            std::make_unique<List<std::pair<List<uint64_t>, List<uint64_t>>>>(
+                List<std::pair<List<uint64_t>, List<uint64_t>>>::nil());
         break;
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<List<unsigned int>>::Cons>(_loop_ll2->v());
-        auto _cell = std::make_unique<
-            List<std::pair<List<unsigned int>, List<unsigned int>>>>(
-            typename List<std::pair<List<unsigned int>, List<unsigned int>>>::
-                Cons(std::make_pair(d_a0, d_a00), nullptr));
-        *(_write) = std::move(_cell);
+        const auto &[a00, a10] =
+            std::get<typename List<List<uint64_t>>::Cons>(_loop_ll2->v());
+        auto _cell =
+            std::make_unique<List<std::pair<List<uint64_t>, List<uint64_t>>>>(
+                typename List<std::pair<List<uint64_t>, List<uint64_t>>>::Cons(
+                    std::make_pair(a0, a00), nullptr));
+        *_write = std::move(_cell);
         _write = &std::get<typename List<
-            std::pair<List<unsigned int>, List<unsigned int>>>::Cons>(
+            std::pair<List<uint64_t>, List<uint64_t>>>::Cons>(
                       (*_write)->v_mut())
-                      .d_a1;
-        _loop_ll2 = d_a10.get();
-        _loop_ll1 = d_a1.get();
+                      .l;
+        _loop_ll2 = a10.get();
+        _loop_ll1 = a1.get();
         continue;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-unsigned int LoopifyListOfLists::max_length(
-    const List<List<unsigned int>>
+uint64_t LoopifyListOfLists::max_length(
+    const List<List<uint64_t>>
         &ll) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<List<unsigned int>> *ll;
+    const List<List<uint64_t>> *ll;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(list_len(std::declval<List<unsigned int> &>())) d_a0;
+    decltype(list_len(std::declval<List<uint64_t> &>())) a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&ll});
@@ -492,19 +467,18 @@ unsigned int LoopifyListOfLists::max_length(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<List<unsigned int>> &ll = *(_f.ll);
-      if (std::holds_alternative<typename List<List<unsigned int>>::Nil>(
-              ll.v())) {
-        _result = 0u;
+      const List<List<uint64_t>> &ll = *_f.ll;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
+        _result = UINT64_C(0);
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<List<unsigned int>>::Cons>(ll.v());
-        _stack.emplace_back(_Resume_Cons{list_len(d_a0)});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(ll.v());
+        _stack.emplace_back(_Resume_Cons{list_len(a0)});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = std::max(_f.d_a0, _result);
+      _result = std::max(_f.a0, _result);
     }
   }
   return _result;

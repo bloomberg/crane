@@ -1,7 +1,5 @@
 #include "rocq_bug_4710.h"
 
-unsigned int RocqBug4710::bla(const RocqBug4710::Foo2 &x) { return x.foo2p; }
+uint64_t RocqBug4710::bla(const RocqBug4710::Foo2 &x) { return x.foo2p; }
 
-bool RocqBug4710::bla_(const unsigned int, const RocqBug4710::Foo2 &x) {
-  return x.foo2b;
-}
+bool RocqBug4710::bla_(uint64_t, const RocqBug4710::Foo2 &x) { return x.foo2b; }

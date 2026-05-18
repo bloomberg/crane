@@ -4,18 +4,17 @@
 /// argument itself. The function takes shape as input, so it gets
 /// methodified. In the Blue branch, `s` becomes `this`.
 NameClashReturnThis::shape
-NameClashReturnThis::maybe_transform(const bool flag,
-                                     NameClashReturnThis::shape s) {
+NameClashReturnThis::maybe_transform(bool flag, NameClashReturnThis::shape s) {
   if (flag) {
     if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
             s.v_mut())) {
-      auto &[d_a0] =
+      auto &[a0] =
           std::get<typename NameClashReturnThis::shape::Circle>(s.v_mut());
-      return shape::square(d_a0, d_a0);
+      return shape::square(a0, a0);
     } else {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename NameClashReturnThis::shape::Square>(s.v_mut());
-      return shape::circle((d_a0 + d_a1));
+      return shape::circle((std::move(a0) + std::move(a1)));
     }
   } else {
     return s;
@@ -27,13 +26,13 @@ NameClashReturnThis::shape
 NameClashReturnThis::identity_or_double(const NameClashReturnThis::shape &s) {
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
           s.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename NameClashReturnThis::shape::Circle>(s.v());
-    return shape::circle((d_a0 * 2u));
+    return shape::circle((a0 * UINT64_C(2)));
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename NameClashReturnThis::shape::Square>(s.v());
-    return shape::square(d_a0, d_a1);
+    return shape::square(a0, a1);
   }
 }
 
@@ -50,17 +49,16 @@ NameClashReturnThis::pick_shape(NameClashReturnThis::shape s1,
 }
 
 /// Nested: match on result of a function that may return this
-unsigned int
-NameClashReturnThis::nested_this(const NameClashReturnThis::shape &s) {
+uint64_t NameClashReturnThis::nested_this(const NameClashReturnThis::shape &s) {
   auto &&_sv = identity_or_double(s);
   if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
           _sv.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename NameClashReturnThis::shape::Circle>(_sv.v());
-    return d_a0;
+    return a0;
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename NameClashReturnThis::shape::Square>(_sv.v());
-    return (d_a0 + d_a1);
+    return (a0 + a1);
   }
 }

@@ -1,13 +1,9 @@
 #ifndef INCLUDED_RETYPEERROREXTRACT
 #define INCLUDED_RETYPEERROREXTRACT
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 namespace RetypeErrorExtract {
 
-const unsigned int value = 42u;
+const uint64_t value = UINT64_C(42);
 
 } // namespace RetypeErrorExtract
 

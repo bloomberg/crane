@@ -1,75 +1,71 @@
 #include "page_ops.h"
 
-unsigned int PageOps::addr12_of_nat(const unsigned int n) {
-  return (4096u ? n % 4096u : n);
+uint64_t PageOps::addr12_of_nat(uint64_t n) {
+  return (UINT64_C(4096) ? n % UINT64_C(4096) : n);
 }
 
-unsigned int PageOps::page_of(const unsigned int p) {
-  return (256u ? p / 256u : 0);
+uint64_t PageOps::page_of(uint64_t p) {
+  return (UINT64_C(256) ? p / UINT64_C(256) : 0);
 }
 
-unsigned int PageOps::page_base(const unsigned int p) {
-  return (page_of(p) * 256u);
+uint64_t PageOps::page_base(uint64_t p) { return (page_of(p) * UINT64_C(256)); }
+
+uint64_t PageOps::page_offset(uint64_t p) {
+  return (UINT64_C(256) ? p % UINT64_C(256) : p);
 }
 
-unsigned int PageOps::page_offset(const unsigned int p) {
-  return (256u ? p % 256u : p);
+uint64_t PageOps::pc_inc1(const PageOps::state &s) {
+  return addr12_of_nat((s.pc + UINT64_C(1)));
 }
 
-unsigned int PageOps::pc_inc1(const PageOps::state &s) {
-  return addr12_of_nat((s.pc + 1u));
+uint64_t PageOps::pc_inc2(const PageOps::state &s) {
+  return addr12_of_nat((s.pc + UINT64_C(2)));
 }
 
-unsigned int PageOps::pc_inc2(const PageOps::state &s) {
-  return addr12_of_nat((s.pc + 2u));
-}
-
-unsigned int PageOps::base_for_next1(const PageOps::state &s) {
+uint64_t PageOps::base_for_next1(const PageOps::state &s) {
   return page_base(pc_inc1(s));
 }
 
-unsigned int PageOps::base_for_next2(const PageOps::state &s) {
+uint64_t PageOps::base_for_next2(const PageOps::state &s) {
   return page_base(pc_inc2(s));
 }
 
-unsigned int PageOps::recompose(const unsigned int p) {
+uint64_t PageOps::recompose(uint64_t p) {
   return (page_base(p) + page_offset(p));
 }
 
-PageOps::instruction PageOps::decode(const unsigned int b1,
-                                     const unsigned int b2) {
-  if (b1 == 0u) {
+PageOps::instruction PageOps::decode(uint64_t b1, uint64_t b2) {
+  if (b1 == UINT64_C(0)) {
     return instruction::nop();
   } else {
-    return instruction::ldm((16u ? b2 % 16u : b2));
+    return instruction::ldm((UINT64_C(16) ? b2 % UINT64_C(16) : b2));
   }
 }
 
-std::optional<std::pair<PageOps::instruction, unsigned int>>
-PageOps::disassemble(const List<unsigned int> &rom, const unsigned int addr) {
-  auto &&_sv = drop<unsigned int>(addr, rom);
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return std::optional<std::pair<PageOps::instruction, unsigned int>>();
+std::optional<std::pair<PageOps::instruction, uint64_t>>
+PageOps::disassemble(const List<uint64_t> &rom, uint64_t addr) {
+  auto &&_sv = drop<uint64_t>(addr, rom);
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+    return std::optional<std::pair<PageOps::instruction, uint64_t>>();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    auto &&_sv0 = *(d_a1);
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-      return std::optional<std::pair<PageOps::instruction, unsigned int>>();
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+    auto &&_sv0 = *a1;
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+      return std::optional<std::pair<PageOps::instruction, uint64_t>>();
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      return std::make_optional<std::pair<PageOps::instruction, unsigned int>>(
-          std::make_pair(decode(d_a0, d_a00), (addr + 2u)));
+      const auto &[a00, a10] =
+          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      return std::make_optional<std::pair<PageOps::instruction, uint64_t>>(
+          std::make_pair(decode(a0, a00), (addr + UINT64_C(2))));
     }
   }
 }
 
-unsigned int Nat::pow(const unsigned int n, const unsigned int m) {
+uint64_t Nat::pow(uint64_t n, uint64_t m) {
   if (m <= 0) {
-    return 1u;
+    return UINT64_C(1);
   } else {
-    unsigned int m0 = m - 1;
+    uint64_t m0 = m - 1;
     return (n * Nat::pow(n, m0));
   }
 }

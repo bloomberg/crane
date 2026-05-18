@@ -1,104 +1,95 @@
 #include "stack_ops.h"
 
-std::pair<std::optional<unsigned int>, StackOps::state_basic>
+std::pair<std::optional<uint64_t>, StackOps::state_basic>
 StackOps::pop_stack(StackOps::state_basic s) {
   auto &&_sv = s.stack_basic;
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<unsigned int>(), std::move(s));
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+    return std::make_pair(std::optional<uint64_t>(), std::move(s));
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    return std::make_pair(std::make_optional<unsigned int>(d_a0),
-                          state_basic{*(d_a1)});
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+    return std::make_pair(std::make_optional<uint64_t>(a0), state_basic{*a1});
   }
 }
 
-bool StackOps::is_none(const std::optional<unsigned int> &o) {
+bool StackOps::is_none(const std::optional<uint64_t> &o) {
   if (o.has_value()) {
-    const unsigned int &_x = *o;
+    const uint64_t &_x = *o;
     return false;
   } else {
     return true;
   }
 }
 
-unsigned int StackOps::option_or_zero(const std::optional<unsigned int> &o) {
+uint64_t StackOps::option_or_zero(const std::optional<uint64_t> &o) {
   if (o.has_value()) {
-    const unsigned int &n = *o;
+    const uint64_t &n = *o;
     return n;
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-std::pair<std::optional<unsigned int>, StackOps::state_with_acc>
+std::pair<std::optional<uint64_t>, StackOps::state_with_acc>
 StackOps::pop_stack_acc(StackOps::state_with_acc s) {
   auto &&_sv = s.stack_with_acc;
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return std::make_pair(std::optional<unsigned int>(), std::move(s));
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+    return std::make_pair(std::optional<uint64_t>(), std::move(s));
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    return std::make_pair(std::make_optional<unsigned int>(d_a0),
-                          state_with_acc{*(d_a1), s.acc});
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+    return std::make_pair(std::make_optional<uint64_t>(a0),
+                          state_with_acc{*a1, s.acc});
   }
 }
 
 StackOps::state_basic StackOps::push_stack(const StackOps::state_basic &s,
-                                           const unsigned int addr) {
+                                           uint64_t addr) {
   auto &&_sv = s.stack_basic;
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return state_basic{
-        List<unsigned int>::cons(addr, List<unsigned int>::nil())};
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+    return state_basic{List<uint64_t>::cons(addr, List<uint64_t>::nil())};
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    auto &&_sv0 = *(d_a1);
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-      return state_basic{List<unsigned int>::cons(
-          addr, List<unsigned int>::cons(d_a0, List<unsigned int>::nil()))};
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+    auto &&_sv0 = *a1;
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+      return state_basic{List<uint64_t>::cons(
+          addr, List<uint64_t>::cons(a0, List<uint64_t>::nil()))};
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      return state_basic{List<unsigned int>::cons(
-          addr, List<unsigned int>::cons(
-                    d_a0, List<unsigned int>::cons(
-                              d_a00, List<unsigned int>::nil())))};
+      const auto &[a00, a10] =
+          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      return state_basic{List<uint64_t>::cons(
+          addr, List<uint64_t>::cons(
+                    a0, List<uint64_t>::cons(a00, List<uint64_t>::nil())))};
     }
   }
 }
 
-unsigned int StackOps::top_or_zero(const StackOps::state_basic &s) {
+uint64_t StackOps::top_or_zero(const StackOps::state_basic &s) {
   auto &&_sv = s.stack_basic;
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return 0u;
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    return d_a0;
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+    return a0;
   }
 }
 
 StackOps::state_basic StackOps::push_stack_cap(const StackOps::state_basic &s,
-                                               const unsigned int addr) {
-  List<unsigned int> new_stack = [&]() {
+                                               uint64_t addr) {
+  List<uint64_t> new_stack = [&]() {
     auto &&_sv = s.stack_basic;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-      return List<unsigned int>::cons(addr, List<unsigned int>::nil());
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+      return List<uint64_t>::cons(addr, List<uint64_t>::nil());
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_sv.v());
-      auto &&_sv0 = *(d_a1);
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-        return List<unsigned int>::cons(
-            addr, List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+      auto &&_sv0 = *a1;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+        return List<uint64_t>::cons(
+            addr, List<uint64_t>::cons(a0, List<uint64_t>::nil()));
       } else {
-        const auto &[d_a00, d_a10] =
-            std::get<typename List<unsigned int>::Cons>(_sv0.v());
-        return List<unsigned int>::cons(
-            addr, List<unsigned int>::cons(
-                      d_a0, List<unsigned int>::cons(
-                                d_a00, List<unsigned int>::nil())));
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(_sv0.v());
+        return List<uint64_t>::cons(
+            addr, List<uint64_t>::cons(
+                      a0, List<uint64_t>::cons(a00, List<uint64_t>::nil())));
       }
     }
   }();

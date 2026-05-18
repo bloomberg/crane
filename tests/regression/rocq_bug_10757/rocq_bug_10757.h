@@ -3,66 +3,21 @@
 
 #include <cassert>
 #include <functional>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-enum class Bool0 { e_TRUE, e_FALSE };
+enum class Bool0 { TRUE_, FALSE_ };
 
-template <typename t_A> struct Sig {
-  // TYPES
-  struct Exist {
-    t_A d_x;
-  };
-
-  using variant_t = std::variant<Exist>;
-
-private:
+template <typename A> struct Sig {
   // DATA
-  variant_t d_v_;
-
-public:
-  // CREATORS
-  Sig() {}
-
-  explicit Sig(Exist _v) : d_v_(std::move(_v)) {}
-
-  Sig(const Sig<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-  Sig(Sig<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-  Sig<t_A> &operator=(const Sig<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
-    return *this;
-  }
-
-  Sig<t_A> &operator=(Sig<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
-    return *this;
-  }
+  A x;
 
   // ACCESSORS
-  Sig<t_A> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_x] = std::get<Exist>(_sv.v());
-    return Sig<t_A>(Exist{d_x});
-  }
+  Sig<A> clone() const { return {x}; }
 
   // CREATORS
-  template <typename _U> explicit Sig(const Sig<_U> &_other) {
-    const auto &[d_x] = std::get<typename Sig<_U>::Exist>(_other.v());
-    this->d_v_ = Exist{t_A(d_x)};
-  }
-
-  static Sig<t_A> exist(t_A x) { return Sig(Exist{std::move(x)}); }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
 struct RocqBug10757 {
@@ -75,23 +30,23 @@ struct RocqBug10757 {
                               // : A, le (F z) z -> le x z)
     assert(true);
     T1 x0 = [&]() {
-      const auto &[d_x] = std::get<typename Sig<T1>::Exist>(x.v());
-      return d_x;
+      const auto &[x0] = x;
+      return x0;
     }();
     std::function<Sig<T1>(T1)> iterate0 = [=](T1 x1) mutable {
       Sig<T1> y = Sig<Sig<T1>>::exist(Sig<T1>::exist(x1));
       return iterate_func<T1>(beq, f, [=]() mutable {
-        auto &[d_x] = std::get<typename Sig<T1>::Exist>(y.v_mut());
-        return d_x;
+        auto &[x2] = y;
+        return x2;
       }());
     };
     T1 x_ = f(x0);
     Bool0 filtered_var = beq(x0, x_);
     switch (filtered_var) {
-    case Bool0::e_TRUE: {
+    case Bool0::TRUE_: {
       return Sig<T1>::exist(x0);
     }
-    case Bool0::e_FALSE: {
+    case Bool0::FALSE_: {
       return iterate0(x_);
     }
     default:

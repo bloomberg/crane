@@ -2,56 +2,55 @@
 #define INCLUDED_LOOPIFY_NUMBERS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +59,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +78,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,12 +113,12 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -134,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -145,14 +141,13 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
-        if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-          _result = 0u;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<t_A>::Cons>(_sv.v());
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -166,74 +161,61 @@ public:
 /// Consolidated UNIQUE numeric algorithms - no basic arithmetic.
 /// Tests loopification on number theory and recursive sequences.
 struct LoopifyNumbers {
-  static unsigned int factorial(const unsigned int n);
-  static unsigned int fib(const unsigned int n);
-  static unsigned int tribonacci_fuel(const unsigned int fuel,
-                                      const unsigned int n);
-  static unsigned int tribonacci(const unsigned int n);
-  static unsigned int gcd_fuel(const unsigned int fuel, const unsigned int a,
-                               const unsigned int b);
-  static unsigned int gcd(const unsigned int a, const unsigned int b);
-  static unsigned int binomial(const unsigned int n, const unsigned int k);
-  static unsigned int pascal(const unsigned int row, const unsigned int col);
-  static unsigned int ackermann_fuel(const unsigned int fuel,
-                                     const unsigned int m,
-                                     const unsigned int n);
-  static unsigned int ack(const unsigned int m, const unsigned int n);
-  static unsigned int collatz_length_fuel(const unsigned int fuel,
-                                          const unsigned int n);
-  static unsigned int collatz_length(const unsigned int n);
-  static unsigned int digitsum_fuel(const unsigned int fuel,
-                                    const unsigned int n);
-  static unsigned int digitsum(const unsigned int n);
-  static unsigned int dec_to_bin_fuel(const unsigned int fuel,
-                                      const unsigned int n);
-  static unsigned int dec_to_bin(const unsigned int n);
-  static unsigned int sum_to(const unsigned int n);
-  static unsigned int sum_squares(const unsigned int n);
-  static unsigned int alternating_sum(const bool sign, const unsigned int acc,
-                                      const unsigned int n);
-  static unsigned int staircase_fuel(const unsigned int fuel,
-                                     const unsigned int n);
-  static unsigned int staircase(const unsigned int n);
+  static uint64_t factorial(uint64_t n);
+  static uint64_t fib(uint64_t n);
+  static uint64_t tribonacci_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t tribonacci(uint64_t n);
+  static uint64_t gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b);
+  static uint64_t gcd(uint64_t a, uint64_t b);
+  static uint64_t binomial(uint64_t n, uint64_t k);
+  static uint64_t pascal(uint64_t row, uint64_t col);
+  static uint64_t ackermann_fuel(uint64_t fuel, uint64_t m, uint64_t n);
+  static uint64_t ack(uint64_t m, uint64_t n);
+  static uint64_t collatz_length_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t collatz_length(uint64_t n);
+  static uint64_t digitsum_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t digitsum(uint64_t n);
+  static uint64_t dec_to_bin_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t dec_to_bin(uint64_t n);
+  static uint64_t sum_to(uint64_t n);
+  static uint64_t sum_squares(uint64_t n);
+  static uint64_t alternating_sum(bool sign, uint64_t acc, uint64_t n);
+  static uint64_t staircase_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t staircase(uint64_t n);
 
   /// church n f x applies function f to x exactly n times.
   /// Tests recursive higher-order function application.
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int church(const unsigned int n, F1 &&f,
-                             const unsigned int x) {
-    unsigned int _result;
-    unsigned int _loop_x = x;
-    unsigned int _loop_n = n;
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
+    uint64_t _loop_x = std::move(x);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        _result = _loop_x;
-        break;
+        return _loop_x;
       } else {
-        unsigned int m = _loop_n - 1;
+        uint64_t m = _loop_n - 1;
         _loop_x = f(_loop_x);
         _loop_n = m;
       }
     }
-    return _result;
   }
 
   /// iterate_pred n applies predecessor n times, starting from n.
   /// Tests church-style iteration with concrete function.
-  static unsigned int iterate_pred(const unsigned int n);
+  static uint64_t iterate_pred(uint64_t n);
 
   /// nest_apply n f x nests function application: f(f(...f(x))).
   /// Similar to church but emphasizes nested call structure.
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int
-  nest_apply(const unsigned int n, F1 &&f,
-             const unsigned int x) { /// _Enter: captures varying parameters for
-                                     /// each recursive call.
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static uint64_t
+  nest_apply(uint64_t n, F1 &&f,
+             uint64_t x) { /// _Enter: captures varying parameters for each
+                           /// recursive call.
 
     struct _Enter {
-      unsigned int n;
+      uint64_t n;
     };
 
     /// _Resume__x: saves [f], resumes after recursive call with _result.
@@ -242,7 +224,7 @@ struct LoopifyNumbers {
     };
 
     using _Frame = std::variant<_Enter, _Resume__x>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{n});
@@ -252,15 +234,15 @@ struct LoopifyNumbers {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const unsigned int n = _f.n;
+        uint64_t n = _f.n;
         if (n <= 0) {
-          _result = x;
+          _result = std::move(x);
         } else {
-          unsigned int n_ = n - 1;
+          uint64_t n_ = n - 1;
           if (n_ <= 0) {
             _result = f(x);
           } else {
-            unsigned int _x = n_ - 1;
+            uint64_t _x = n_ - 1;
             _stack.emplace_back(_Resume__x{f});
             _stack.emplace_back(_Enter{n_});
           }
@@ -275,51 +257,41 @@ struct LoopifyNumbers {
 
   /// sum_while_positive n sums numbers from n down to 0, but only positive
   /// ones. Tests conditional accumulation in recursion.
-  static unsigned int sum_while_positive(const unsigned int n);
+  static uint64_t sum_while_positive(uint64_t n);
   /// count_down_by k n counts down from n by steps of k.
   /// Tests recursion with non-standard step size.
-  static unsigned int count_down_by_fuel(const unsigned int fuel,
-                                         const unsigned int k,
-                                         const unsigned int n);
-  static unsigned int count_down_by(const unsigned int k, const unsigned int n);
+  static uint64_t count_down_by_fuel(uint64_t fuel, uint64_t k, uint64_t n);
+  static uint64_t count_down_by(uint64_t k, uint64_t n);
   /// mixed_arith n combines multiplication and addition in recursion.
-  static unsigned int mixed_arith_fuel(const unsigned int fuel,
-                                       const unsigned int n);
-  static unsigned int mixed_arith(const unsigned int n);
+  static uint64_t mixed_arith_fuel(uint64_t fuel, uint64_t n);
+  static uint64_t mixed_arith(uint64_t n);
   /// is_even n checks if n is even (mutually recursive with is_odd).
-  static bool is_even_fuel(const unsigned int fuel, const unsigned int n);
-  static bool is_odd_fuel(const unsigned int fuel, const unsigned int n);
-  static bool is_even(const unsigned int n);
-  static bool is_odd(const unsigned int n);
+  static bool is_even_fuel(uint64_t fuel, uint64_t n);
+  static bool is_odd_fuel(uint64_t fuel, uint64_t n);
+  static bool is_even(uint64_t n);
+  static bool is_odd(uint64_t n);
   /// power b e computes b^e.
-  static unsigned int power(const unsigned int b, const unsigned int e);
+  static uint64_t power(uint64_t b, uint64_t e);
   /// power_mod b e m computes (b^e) mod m efficiently.
-  static unsigned int power_mod_fuel(const unsigned int fuel,
-                                     const unsigned int b, const unsigned int e,
-                                     const unsigned int m);
-  static unsigned int power_mod(const unsigned int b, const unsigned int e,
-                                const unsigned int m);
+  static uint64_t power_mod_fuel(uint64_t fuel, uint64_t b, uint64_t e,
+                                 uint64_t m);
+  static uint64_t power_mod(uint64_t b, uint64_t e, uint64_t m);
   /// sum_divisors n sums all divisors of n (excluding n itself).
-  static unsigned int sum_divisors_aux(const unsigned int n,
-                                       const unsigned int k);
-  static unsigned int sum_divisors(const unsigned int n);
+  static uint64_t sum_divisors_aux(uint64_t n, uint64_t k);
+  static uint64_t sum_divisors(uint64_t n);
   /// sum_odd_indices l and sum_even_indices l are mutually recursive.
   /// sum_odd_indices adds elements at odd positions (0, 2, 4...).
   /// sum_even_indices processes even positions (1, 3, 5...) by calling
   /// sum_odd_indices.
-  static unsigned int sum_odd_indices_fuel(const unsigned int fuel,
-                                           const List<unsigned int> &l);
-  static unsigned int sum_even_indices_fuel(const unsigned int fuel,
-                                            const List<unsigned int> &l);
-  static unsigned int sum_odd_indices(const List<unsigned int> &l);
-  static unsigned int sum_even_indices(const List<unsigned int> &l);
+  static uint64_t sum_odd_indices_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static uint64_t sum_even_indices_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static uint64_t sum_odd_indices(const List<uint64_t> &l);
+  static uint64_t sum_even_indices(const List<uint64_t> &l);
   /// collatz_list n generates collatz sequence as a list.
-  static List<unsigned int> collatz_list_fuel(const unsigned int fuel,
-                                              const unsigned int n);
-  static List<unsigned int> collatz_list(const unsigned int n);
+  static List<uint64_t> collatz_list_fuel(uint64_t fuel, uint64_t n);
+  static List<uint64_t> collatz_list(uint64_t n);
   /// sum_divisible_by k n sums all numbers from 1 to n divisible by k.
-  static unsigned int sum_divisible_by(const unsigned int k,
-                                       const unsigned int n);
+  static uint64_t sum_divisible_by(uint64_t k, uint64_t n);
 };
 
 #endif // INCLUDED_LOOPIFY_NUMBERS

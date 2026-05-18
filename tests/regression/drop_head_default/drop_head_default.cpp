@@ -1,13 +1,12 @@
 #include "drop_head_default.h"
 
-unsigned int DropHeadDefault::head_after_drop(const List<unsigned int> &rom,
-                                              const unsigned int addr) {
-  auto &&_sv = drop<unsigned int>(addr, rom);
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv.v())) {
-    return 0u;
+uint64_t DropHeadDefault::head_after_drop(const List<uint64_t> &rom,
+                                          uint64_t addr) {
+  auto &&_sv = drop<uint64_t>(addr, rom);
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(_sv.v());
-    return d_a0;
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
+    return a0;
   }
 }

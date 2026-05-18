@@ -10,7 +10,7 @@ int main() {
   //
   // If this compiles and runs, the bug is fixed.
   auto result = TypeclassMethodFunctionReturnProbe::sample;
-  assert(result == Bool0::e_FALSE);
+  assert(result == Bool0::FALSE_);
 
   return 0;
 }

@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -24,7 +24,7 @@ int main() {
     3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
   // unzip
-  using PairList = List<std::pair<unsigned int, unsigned int>>;
+  using PairList = List<std::pair<uint64_t, uint64_t>>;
   auto pair_nil = PairList::nil();
   auto pairs = PairList::cons(std::make_pair(1u, 10u),
     PairList::cons(std::make_pair(2u, 20u), pair_nil));

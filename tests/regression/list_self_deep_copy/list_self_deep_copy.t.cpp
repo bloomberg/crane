@@ -4,7 +4,7 @@
 
 namespace {
 
-ListSelfDeepCopy::chain make_chain(unsigned int n) {
+ListSelfDeepCopy::chain make_chain(uint64_t n) {
   ListSelfDeepCopy::chain x = ListSelfDeepCopy::chain::stop();
   while (n > 0) {
     x = ListSelfDeepCopy::chain::link(

@@ -2,40 +2,35 @@
 
 /// Build a maximally-unbalanced tree (right spine = linked list).
 /// Tail-recursive via accumulator, should be loopified.
-DeepMap::tree<unsigned int>
-DeepMap::build_right(const unsigned int n, DeepMap::tree<unsigned int> acc) {
-  DeepMap::tree<unsigned int> _result;
-  DeepMap::tree<unsigned int> _loop_acc = std::move(acc);
-  unsigned int _loop_n = n;
+DeepMap::tree<uint64_t> DeepMap::build_right(uint64_t n,
+                                             DeepMap::tree<uint64_t> acc) {
+  DeepMap::tree<uint64_t> _loop_acc = std::move(acc);
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
-      unsigned int n_ = _loop_n - 1;
-      unsigned int _next_n = n_;
-      _loop_acc = tree<unsigned int>::node(tree<unsigned int>::leaf(), _loop_n,
-                                           std::move(_loop_acc));
+      uint64_t n_ = _loop_n - 1;
+      uint64_t _next_n = n_;
+      _loop_acc = tree<uint64_t>::node(tree<uint64_t>::leaf(), _loop_n,
+                                       std::move(_loop_acc));
       _loop_n = _next_n;
     }
   }
-  return _result;
 }
 
-DeepMap::tree<unsigned int>
-DeepMap::map_inc(const DeepMap::tree<unsigned int> &t) {
-  return tmap<unsigned int, unsigned int>(
-      [](const unsigned int x) { return (x + 1u); }, t);
+DeepMap::tree<uint64_t> DeepMap::map_inc(const DeepMap::tree<uint64_t> &t) {
+  return tmap<uint64_t, uint64_t>([](uint64_t x) { return (x + UINT64_C(1)); },
+                                  t);
 }
 
 /// Get root value.
-unsigned int DeepMap::root_or_zero(const DeepMap::tree<unsigned int> &t) {
-  if (std::holds_alternative<typename DeepMap::tree<unsigned int>::Leaf>(
-          t.v())) {
-    return 0u;
+uint64_t DeepMap::root_or_zero(const DeepMap::tree<uint64_t> &t) {
+  if (std::holds_alternative<typename DeepMap::tree<uint64_t>::Leaf>(t.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
-        std::get<typename DeepMap::tree<unsigned int>::Node>(t.v());
-    return d_a1;
+    const auto &[a0, a1, a2] =
+        std::get<typename DeepMap::tree<uint64_t>::Node>(t.v());
+    return a1;
   }
 }

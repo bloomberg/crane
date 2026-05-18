@@ -1,24 +1,24 @@
 #include "ctor_escape_collision.h"
 
-unsigned int CtorEscapeCollision::tag(const CtorEscapeCollision::Item x) {
+uint64_t CtorEscapeCollision::tag(CtorEscapeCollision::Item x) {
   switch (x) {
-  case Item::e_D_: {
-    return 1u;
+  case Item::D_: {
+    return UINT64_C(1);
   }
-  case Item::e_D_0: {
-    return 2u;
+  case Item::D_0: {
+    return UINT64_C(2);
   }
-  case Item::e_D__: {
-    return 3u;
+  case Item::D__: {
+    return UINT64_C(3);
   }
-  case Item::e_D__0: {
-    return 4u;
+  case Item::D__0: {
+    return UINT64_C(4);
   }
-  case Item::e_D__1: {
-    return 5u;
+  case Item::D__1: {
+    return UINT64_C(5);
   }
-  case Item::e_D__2: {
-    return 6u;
+  case Item::D__2: {
+    return UINT64_C(6);
   }
   default:
     std::unreachable();

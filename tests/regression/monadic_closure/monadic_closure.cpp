@@ -4,13 +4,16 @@
 int64_t MonadicClosure::capture_bind() {
   std::string line;
   std::getline(std::cin, line);
-  return ((_capture_bind_f(0u, line) + _capture_bind_f(1u, line)) &
+  return ((_capture_bind_f(UINT64_C(0), line) +
+           _capture_bind_f(UINT64_C(1), line)) &
           0x7FFFFFFFFFFFFFFFLL);
 }
 
 int64_t MonadicClosure::test_apply_after() {
   return apply_after_effect<std::string, int64_t>(
-      [](std::string _x0) -> int64_t { return _x0.length(); },
+      [](std::string _x0) -> int64_t {
+        return static_cast<int64_t>(_x0.length());
+      },
       []() -> std::string {
         std::string _r;
         std::getline(std::cin, _r);
@@ -22,13 +25,12 @@ int64_t MonadicClosure::test_apply_after() {
 std::function<std::string(std::string)> MonadicClosure::make_greeter() {
   std::string prefix;
   std::getline(std::cin, prefix);
-  return [=](const std::string name) mutable { return prefix + name; };
+  return [=](std::string name) mutable { return prefix + name; };
 }
 
 int64_t MonadicClosure::test_with_length() {
-  return with_length([](const int64_t n) {
-    return ((n + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL);
-  });
+  return with_length(
+      [](int64_t n) { return ((n + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL); });
 }
 
 /// 5. Nested closures over bindings
@@ -37,14 +39,16 @@ int64_t MonadicClosure::nested_capture() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  int64_t la = a.length();
-  int64_t lb = b.length();
+  int64_t la = static_cast<int64_t>(a.length());
+  int64_t lb = static_cast<int64_t>(b.length());
   return ((la + lb) & 0x7FFFFFFFFFFFFFFFLL);
 }
 
-unsigned int MonadicClosure::test_count() {
+uint64_t MonadicClosure::test_count() {
   return count_matching(
-      [](const std::string s) { return s.length() == int64_t(0); },
+      [](std::string s) {
+        return static_cast<int64_t>(s.length()) == int64_t(0);
+      },
       List<std::string>::cons(
           "a",
           List<std::string>::cons(
@@ -55,7 +59,7 @@ unsigned int MonadicClosure::test_count() {
 int64_t MonadicClosure::let_effect_capture() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = line.length();
+  int64_t len = static_cast<int64_t>(line.length());
   std::cout << line << '\n';
   return len;
 }
@@ -66,7 +70,7 @@ std::pair<int64_t, int64_t> MonadicClosure::two_closures() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  int64_t la = a.length();
-  int64_t lb = b.length();
+  int64_t la = static_cast<int64_t>(a.length());
+  int64_t lb = static_cast<int64_t>(b.length());
   return std::make_pair(la, lb);
 }

@@ -2,9 +2,6 @@
 #define INCLUDED_N_GMP
 
 #include <gmpxx.h>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct Pos {

@@ -17,14 +17,14 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using List = ::List<unsigned int>;
+  using List = ::List<uint64_t>;
 
   // Test cycle
   auto l = List::cons(1u, List::cons(2u, List::nil()));
   auto cycled = LoopifyGenerators::cycle(3u, l);
 
   // Test iterate
-  auto inc = [](unsigned int x) { return x + 1; };
+  auto inc = [](uint64_t x) { return x + 1; };
   auto iterated = LoopifyGenerators::iterate(inc, 5u, 10u);
 
   // Test zip_with
@@ -32,7 +32,7 @@ int main() {
       1u, List::cons(2u, List::cons(3u, List::nil())));
   auto l2 = List::cons(
       4u, List::cons(5u, List::cons(6u, List::nil())));
-  auto add = [](unsigned int x, unsigned int y) { return x + y; };
+  auto add = [](uint64_t x, uint64_t y) { return x + y; };
   auto zipped = LoopifyGenerators::zip_with(add, l1, l2);
 
   // Test zip_longest

@@ -1,39 +1,34 @@
 #include "deep_destruct.h"
 
 /// Tail-recursive list builder — should compile to a loop.
-DeepDestruct::mylist<unsigned int>
-DeepDestruct::build_aux(const unsigned int n,
-                        DeepDestruct::mylist<unsigned int> acc) {
-  DeepDestruct::mylist<unsigned int> _result;
-  DeepDestruct::mylist<unsigned int> _loop_acc = std::move(acc);
-  unsigned int _loop_n = n;
+DeepDestruct::mylist<uint64_t>
+DeepDestruct::build_aux(uint64_t n, DeepDestruct::mylist<uint64_t> acc) {
+  DeepDestruct::mylist<uint64_t> _loop_acc = std::move(acc);
+  uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      _result = std::move(_loop_acc);
-      break;
+      return _loop_acc;
     } else {
-      unsigned int n_ = _loop_n - 1;
-      unsigned int _next_n = n_;
-      _loop_acc = mylist<unsigned int>::mycons(_loop_n, std::move(_loop_acc));
+      uint64_t n_ = _loop_n - 1;
+      uint64_t _next_n = n_;
+      _loop_acc = mylist<uint64_t>::mycons(_loop_n, std::move(_loop_acc));
       _loop_n = _next_n;
     }
   }
-  return _result;
 }
 
-DeepDestruct::mylist<unsigned int> DeepDestruct::build(const unsigned int n) {
-  return build_aux(n, mylist<unsigned int>::mynil());
+DeepDestruct::mylist<uint64_t> DeepDestruct::build(uint64_t n) {
+  return build_aux(n, mylist<uint64_t>::mynil());
 }
 
 /// Simple accessor to observe the result.
-unsigned int
-DeepDestruct::head_or_zero(const DeepDestruct::mylist<unsigned int> &l) {
-  if (std::holds_alternative<
-          typename DeepDestruct::mylist<unsigned int>::Mynil>(l.v())) {
-    return 0u;
+uint64_t DeepDestruct::head_or_zero(const DeepDestruct::mylist<uint64_t> &l) {
+  if (std::holds_alternative<typename DeepDestruct::mylist<uint64_t>::Mynil>(
+          l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename DeepDestruct::mylist<unsigned int>::Mycons>(l.v());
-    return d_a0;
+    const auto &[a0, a1] =
+        std::get<typename DeepDestruct::mylist<uint64_t>::Mycons>(l.v());
+    return a0;
   }
 }

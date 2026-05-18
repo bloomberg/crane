@@ -36,12 +36,12 @@ public:
   explicit Nat(O _v) : d_v_(_v) {}
   explicit Nat(S _v) : d_v_(bsl::move(_v)) {}
   Nat(const Nat &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
-  Nat(Nat &&_other) : d_v_(bsl::move(_other.d_v_)) {}
+  Nat(Nat &&_other) noexcept : d_v_(bsl::move(_other.d_v_)) {}
   Nat &operator=(const Nat &_other) {
     d_v_ = bsl::move(_other.clone().d_v_);
     return *this;
   }
-  Nat &operator=(Nat &&_other) {
+  Nat &operator=(Nat &&_other) noexcept {
     d_v_ = bsl::move(_other.d_v_);
     return *this;
   }
@@ -103,41 +103,37 @@ public:
   template <typename T1, typename F1>
     requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
   T1 nat_rect(T1 f, F1 &&f0) const {
-    auto &&_sv = *(this);
-    if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
-      const auto &[d_n] = bsl::get<typename Nat::S>(_sv.v());
-      return f0(*(d_n), (*(d_n)).template nat_rect<T1>(f, f0));
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return f0(*d_n, d_n->template nat_rect<T1>(f, f0));
     }
   }
   template <typename T1, typename F1>
     requires bsl::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
   T1 nat_rec(T1 f, F1 &&f0) const {
-    auto &&_sv = *(this);
-    if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
-      const auto &[d_n] = bsl::get<typename Nat::S>(_sv.v());
-      return f0(*(d_n), (*(d_n)).template nat_rec<T1>(f, f0));
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return f0(*d_n, d_n->template nat_rec<T1>(f, f0));
     }
   }
   Nat add(Nat n) const {
-    auto &&_sv = *(this);
-    if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return n;
     } else {
-      const auto &[d_n] = bsl::get<typename Nat::S>(_sv.v());
-      return Nat::s((*(d_n)).add(bsl::move(n)));
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return Nat::s(d_n->add(bsl::move(n)));
     }
   }
   int nat_to_int() const {
-    auto &&_sv = *(this);
-    if (bsl::holds_alternative<typename Nat::O>(_sv.v())) {
+    if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return 0;
     } else {
-      const auto &[d_n] = bsl::get<typename Nat::S>(_sv.v());
-      return 1 + (*(d_n)).nat_to_int();
+      const auto &[d_n] = bsl::get<typename Nat::S>(this->v());
+      return 1 + d_n->nat_to_int();
     }
   }
 };

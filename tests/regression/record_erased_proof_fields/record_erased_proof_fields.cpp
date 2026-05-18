@@ -1,61 +1,61 @@
 #include "record_erased_proof_fields.h"
 
-unsigned int RecordErasedProofFieldsCase::kind_code(
-    const RecordErasedProofFieldsCase::ItemKind k) {
+uint64_t RecordErasedProofFieldsCase::kind_code(
+    RecordErasedProofFieldsCase::ItemKind k) {
   switch (k) {
-  case ItemKind::e_KINDA: {
-    return 0u;
+  case ItemKind::KINDA: {
+    return UINT64_C(0);
   }
-  case ItemKind::e_KINDB: {
-    return 1u;
+  case ItemKind::KINDB: {
+    return UINT64_C(1);
   }
-  case ItemKind::e_KINDC: {
-    return 2u;
+  case ItemKind::KINDC: {
+    return UINT64_C(2);
   }
-  case ItemKind::e_KINDD: {
-    return 3u;
+  case ItemKind::KINDD: {
+    return UINT64_C(3);
   }
-  case ItemKind::e_KINDE: {
-    return 4u;
+  case ItemKind::KINDE: {
+    return UINT64_C(4);
   }
-  case ItemKind::e_KINDF: {
-    return 5u;
+  case ItemKind::KINDF: {
+    return UINT64_C(5);
   }
-  case ItemKind::e_KINDG: {
-    return 6u;
+  case ItemKind::KINDG: {
+    return UINT64_C(6);
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int RecordErasedProofFieldsCase::tag_code(
+uint64_t RecordErasedProofFieldsCase::tag_code(
     const RecordErasedProofFieldsCase::StoredTag &t) {
   if (std::holds_alternative<
           typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(t.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
             t.v());
-    return (10u + kind_code(d_a0));
+    return (UINT64_C(10) + kind_code(a0));
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(
             t.v());
-    return (20u + kind_code(d_a0));
+    return (UINT64_C(20) + kind_code(a0));
   }
 }
 
-unsigned int RecordErasedProofFieldsCase::bucket_code(
-    const RecordErasedProofFieldsCase::TraceBucket b) {
+uint64_t RecordErasedProofFieldsCase::bucket_code(
+    RecordErasedProofFieldsCase::TraceBucket b) {
   switch (b) {
-  case TraceBucket::e_BUCKETA: {
-    return 30u;
+  case TraceBucket::BUCKETA: {
+    return UINT64_C(30);
   }
-  case TraceBucket::e_BUCKETB: {
-    return 31u;
+  case TraceBucket::BUCKETB: {
+    return UINT64_C(31);
   }
-  case TraceBucket::e_BUCKETC: {
-    return 32u;
+  case TraceBucket::BUCKETC: {
+    return UINT64_C(32);
   }
   default:
     std::unreachable();
@@ -64,65 +64,63 @@ unsigned int RecordErasedProofFieldsCase::bucket_code(
 
 RecordErasedProofFieldsCase::StoredTag
 RecordErasedProofFieldsCase::bucket_to_tag(
-    const RecordErasedProofFieldsCase::TraceBucket b) {
+    RecordErasedProofFieldsCase::TraceBucket b) {
   switch (b) {
-  case TraceBucket::e_BUCKETA: {
-    return StoredTag::tagsecondary(ItemKind::e_KINDD);
+  case TraceBucket::BUCKETA: {
+    return StoredTag::tagsecondary(ItemKind::KINDD);
   }
-  case TraceBucket::e_BUCKETB: {
-    return StoredTag::tagsecondary(ItemKind::e_KINDE);
+  case TraceBucket::BUCKETB: {
+    return StoredTag::tagsecondary(ItemKind::KINDE);
   }
-  case TraceBucket::e_BUCKETC: {
-    return StoredTag::tagsecondary(ItemKind::e_KINDB);
+  case TraceBucket::BUCKETC: {
+    return StoredTag::tagsecondary(ItemKind::KINDB);
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int RecordErasedProofFieldsCase::left_kind_code_of(
+uint64_t RecordErasedProofFieldsCase::left_kind_code_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &r) {
   return kind_code(r.primary_left_kind);
 }
 
-unsigned int RecordErasedProofFieldsCase::right_kind_code_of(
+uint64_t RecordErasedProofFieldsCase::right_kind_code_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &r) {
   return kind_code(r.primary_right_kind);
 }
 
-unsigned int RecordErasedProofFieldsCase::tag_code_of(
+uint64_t RecordErasedProofFieldsCase::tag_code_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &r) {
   return tag_code(r.primary_tag);
 }
 
-unsigned int RecordErasedProofFieldsCase::bucket_code_of(
+uint64_t RecordErasedProofFieldsCase::bucket_code_of(
     const RecordErasedProofFieldsCase::ErasedProofRecord &r) {
   return bucket_code(r.erased_bucket);
 }
 
-List<unsigned int> RecordErasedProofFieldsCase::trace_codes_of(
+List<uint64_t> RecordErasedProofFieldsCase::trace_codes_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &primary,
     const RecordErasedProofFieldsCase::ErasedProofRecord &erased) {
-  return List<unsigned int>::cons(
+  return List<uint64_t>::cons(
       left_kind_code_of(primary),
-      List<unsigned int>::cons(
+      List<uint64_t>::cons(
           right_kind_code_of(primary),
-          List<unsigned int>::cons(
+          List<uint64_t>::cons(
               tag_code_of(primary),
-              List<unsigned int>::cons(
+              List<uint64_t>::cons(
                   bucket_code_of(erased),
-                  List<unsigned int>::cons(
+                  List<uint64_t>::cons(
                       tag_code(bucket_to_tag(erased.erased_bucket)),
-                      List<unsigned int>::nil())))));
+                      List<uint64_t>::nil())))));
 }
 
-unsigned int RecordErasedProofFieldsCase::trace_checksum_of(
+uint64_t RecordErasedProofFieldsCase::trace_checksum_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &primary,
     const RecordErasedProofFieldsCase::ErasedProofRecord &erased) {
   return trace_codes_of(primary, erased)
-      .template fold_left<unsigned int>(
-          [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-            return (_x0 + _x1);
-          },
-          0u);
+      .template fold_left<uint64_t>(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          UINT64_C(0));
 }

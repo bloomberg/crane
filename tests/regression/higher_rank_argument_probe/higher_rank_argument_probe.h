@@ -2,15 +2,12 @@
 #define INCLUDED_HIGHER_RANK_ARGUMENT_PROBE
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
-enum class Bool0 { e_TRUE, e_FALSE };
+enum class Bool0 { TRUE_, FALSE_ };
 
 struct HigherRankArgumentProbe {
   template <typename F0> static Bool0 call_poly(F0 &&f) {
-    return std::any_cast<Bool0>(f(Bool0::e_TRUE));
+    return std::any_cast<Bool0>(f(Bool0::TRUE_));
   }
 
   static inline const Bool0 sample = call_poly([](const auto &x) { return x; });

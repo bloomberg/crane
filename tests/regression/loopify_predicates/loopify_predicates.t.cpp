@@ -16,16 +16,16 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
   auto l5 = UIntList::cons(1u, UIntList::cons(2u, UIntList::cons(
     3u, UIntList::cons(4u, UIntList::cons(5u, nil)))));
 
-  auto is_small = [](unsigned int x) { return x < 3; };
-  auto is_even = [](unsigned int x) { return x % 2 == 0; };
-  auto eq = [](unsigned int x, unsigned int y) { return x == y; };
+  auto is_small = [](uint64_t x) { return x < 3; };
+  auto is_even = [](uint64_t x) { return x % 2 == 0; };
+  auto eq = [](uint64_t x, uint64_t y) { return x == y; };
 
   // take_while
   auto taken = LoopifyPredicates::take_while(is_small, l5);

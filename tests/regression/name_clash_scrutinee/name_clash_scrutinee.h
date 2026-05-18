@@ -1,25 +1,22 @@
 #ifndef INCLUDED_NAME_CLASH_SCRUTINEE
 #define INCLUDED_NAME_CLASH_SCRUTINEE
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 struct NameClashScrutinee {
-  enum class Color { e_RED, e_GREEN, e_BLUE };
+  enum class Color { RED, GREEN, BLUE };
 
-  template <typename T1>
-  static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return f;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       return f0;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return f1;
     }
     default:
@@ -27,16 +24,15 @@ struct NameClashScrutinee {
     }
   }
 
-  template <typename T1>
-  static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
+  template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return f;
     }
-    case Color::e_GREEN: {
+    case Color::GREEN: {
       return f0;
     }
-    case Color::e_BLUE: {
+    case Color::BLUE: {
       return f1;
     }
     default:
@@ -47,98 +43,94 @@ struct NameClashScrutinee {
   struct shape {
     // TYPES
     struct Circle {
-      unsigned int d_a0;
+      uint64_t a0;
     };
 
     struct Square {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     using variant_t = std::variant<Circle, Square>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     shape() {}
 
-    explicit shape(Circle _v) : d_v_(std::move(_v)) {}
+    explicit shape(Circle _v) : v_(std::move(_v)) {}
 
-    explicit shape(Square _v) : d_v_(std::move(_v)) {}
+    explicit shape(Square _v) : v_(std::move(_v)) {}
 
-    shape(const shape &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    shape(const shape &_other) : v_(std::move(_other.clone().v_)) {}
 
-    shape(shape &&_other) : d_v_(std::move(_other.d_v_)) {}
+    shape(shape &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     shape &operator=(const shape &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    shape &operator=(shape &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    shape &operator=(shape &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     shape clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<Circle>(_sv.v());
-        return shape(Circle{d_a0});
+      if (std::holds_alternative<Circle>(this->v())) {
+        const auto &[a0] = std::get<Circle>(this->v());
+        return shape(Circle{a0});
       } else {
-        const auto &[d_a0, d_a1] = std::get<Square>(_sv.v());
-        return shape(Square{d_a0, d_a1});
+        const auto &[a0, a1] = std::get<Square>(this->v());
+        return shape(Square{a0, a1});
       }
     }
 
     // CREATORS
-    static shape circle(unsigned int a0) {
-      return shape(Circle{std::move(a0)});
-    }
+    static shape circle(uint64_t a0) { return shape(Circle{a0}); }
 
-    static shape square(unsigned int a0, unsigned int a1) {
-      return shape(Square{std::move(a0), std::move(a1)});
+    static shape square(uint64_t a0, uint64_t a1) {
+      return shape(Square{a0, a1});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// Nested match: match on shape, and within a branch, match on color.
-    unsigned int nested_match(const Color c) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
+    uint64_t nested_match(Color c) const {
+      if (std::holds_alternative<typename shape::Circle>(this->v())) {
+        const auto &[a0] = std::get<typename shape::Circle>(this->v());
         switch (c) {
-        case Color::e_RED: {
-          return (d_a0 + 10u);
+        case Color::RED: {
+          return (a0 + UINT64_C(10));
         }
-        case Color::e_GREEN: {
-          return (d_a0 + 20u);
+        case Color::GREEN: {
+          return (a0 + UINT64_C(20));
         }
-        case Color::e_BLUE: {
-          return (d_a0 + 30u);
+        case Color::BLUE: {
+          return (a0 + UINT64_C(30));
         }
         default:
           std::unreachable();
         }
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
+        const auto &[a0, a1] = std::get<typename shape::Square>(this->v());
         switch (c) {
-        case Color::e_RED: {
-          return (d_a0 * d_a1);
+        case Color::RED: {
+          return (a0 * a1);
         }
-        case Color::e_GREEN: {
-          return (d_a0 + d_a1);
+        case Color::GREEN: {
+          return (a0 + a1);
         }
-        case Color::e_BLUE: {
-          return 0u;
+        case Color::BLUE: {
+          return UINT64_C(0);
         }
         default:
           std::unreachable();
@@ -147,60 +139,57 @@ struct NameClashScrutinee {
     }
 
     /// Sequential matches on different types in the same function.
-    unsigned int describe(const Color c) const {
-      unsigned int color_val = [&]() {
+    uint64_t describe(Color c) const {
+      uint64_t color_val = [&]() {
         switch (c) {
-        case Color::e_RED: {
-          return 1u;
+        case Color::RED: {
+          return UINT64_C(1);
         }
-        case Color::e_GREEN: {
-          return 2u;
+        case Color::GREEN: {
+          return UINT64_C(2);
         }
-        case Color::e_BLUE: {
-          return 3u;
+        case Color::BLUE: {
+          return UINT64_C(3);
         }
         default:
           std::unreachable();
         }
       }();
-      unsigned int shape_val = [&]() {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-          const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
-          return d_a0;
+      uint64_t shape_val = [&]() {
+        if (std::holds_alternative<typename shape::Circle>(this->v())) {
+          const auto &[a0] = std::get<typename shape::Circle>(this->v());
+          return a0;
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
-          return (d_a0 + d_a1);
+          const auto &[a0, a1] = std::get<typename shape::Square>(this->v());
+          return (a0 + a1);
         }
       }();
       return (color_val + shape_val);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
     T1 shape_rec(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
-        return f(d_a0);
+      if (std::holds_alternative<typename shape::Circle>(this->v())) {
+        const auto &[a0] = std::get<typename shape::Circle>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
-        return f0(d_a0, d_a1);
+        const auto &[a0, a1] = std::get<typename shape::Square>(this->v());
+        return f0(a0, a1);
       }
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
     T1 shape_rect(F0 &&f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename shape::Circle>(_sv.v())) {
-        const auto &[d_a0] = std::get<typename shape::Circle>(_sv.v());
-        return f(d_a0);
+      if (std::holds_alternative<typename shape::Circle>(this->v())) {
+        const auto &[a0] = std::get<typename shape::Circle>(this->v());
+        return f(a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename shape::Square>(_sv.v());
-        return f0(d_a0, d_a1);
+        const auto &[a0, a1] = std::get<typename shape::Square>(this->v());
+        return f0(a0, a1);
       }
     }
   };
@@ -209,8 +198,8 @@ struct NameClashScrutinee {
   struct wrapper {
     // TYPES
     struct Wrap {
-      Color d_a0;
-      shape d_a1;
+      Color a0;
+      shape a1;
     };
 
     struct Empty {};
@@ -219,36 +208,35 @@ struct NameClashScrutinee {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     wrapper() {}
 
-    explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
+    explicit wrapper(Wrap _v) : v_(std::move(_v)) {}
 
-    explicit wrapper(Empty _v) : d_v_(_v) {}
+    explicit wrapper(Empty _v) : v_(_v) {}
 
-    wrapper(const wrapper &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
 
-    wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
+    wrapper(wrapper &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     wrapper &operator=(const wrapper &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    wrapper &operator=(wrapper &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    wrapper &operator=(wrapper &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     wrapper clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Wrap>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<Wrap>(_sv.v());
-        return wrapper(Wrap{d_a0, d_a1.clone()});
+      if (std::holds_alternative<Wrap>(this->v())) {
+        const auto &[a0, a1] = std::get<Wrap>(this->v());
+        return wrapper(Wrap{a0, a1.clone()});
       } else {
         return wrapper(Empty{});
       }
@@ -256,55 +244,53 @@ struct NameClashScrutinee {
 
     // CREATORS
     static wrapper wrap(Color a0, shape a1) {
-      return wrapper(Wrap{std::move(a0), std::move(a1)});
+      return wrapper(Wrap{a0, std::move(a1)});
     }
 
     static wrapper empty() { return wrapper(Empty{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
-    unsigned int triple_nest() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename wrapper::Wrap>(_sv.v())) {
-        const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(_sv.v());
-        if (std::holds_alternative<typename shape::Circle>(d_a1.v())) {
-          const auto &[d_a00] = std::get<typename shape::Circle>(d_a1.v());
-          switch (d_a0) {
-          case Color::e_RED: {
-            return d_a00;
+    uint64_t triple_nest() const {
+      if (std::holds_alternative<typename wrapper::Wrap>(this->v())) {
+        const auto &[a0, a1] = std::get<typename wrapper::Wrap>(this->v());
+        if (std::holds_alternative<typename shape::Circle>(a1.v())) {
+          const auto &[a00] = std::get<typename shape::Circle>(a1.v());
+          switch (a0) {
+          case Color::RED: {
+            return a00;
           }
-          case Color::e_GREEN: {
-            return (d_a00 * 2u);
+          case Color::GREEN: {
+            return (a00 * UINT64_C(2));
           }
-          case Color::e_BLUE: {
-            return (d_a00 * 3u);
+          case Color::BLUE: {
+            return (a00 * UINT64_C(3));
           }
           default:
             std::unreachable();
           }
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename shape::Square>(d_a1.v());
-          switch (d_a0) {
-          case Color::e_RED: {
-            return (d_a00 + d_a10);
+          const auto &[a00, a10] = std::get<typename shape::Square>(a1.v());
+          switch (a0) {
+          case Color::RED: {
+            return (a00 + a10);
           }
-          case Color::e_GREEN: {
-            return (d_a00 * d_a10);
+          case Color::GREEN: {
+            return (a00 * a10);
           }
-          case Color::e_BLUE: {
-            return 0u;
+          case Color::BLUE: {
+            return UINT64_C(0);
           }
           default:
             std::unreachable();
           }
         }
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
   };
@@ -313,8 +299,8 @@ struct NameClashScrutinee {
     requires std::is_invocable_r_v<T1, F0 &, Color &, shape &>
   static T1 wrapper_rect(F0 &&f, T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(w.v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename wrapper::Wrap>(w.v());
+      return f(a0, a1);
     } else {
       return f0;
     }
@@ -324,8 +310,8 @@ struct NameClashScrutinee {
     requires std::is_invocable_r_v<T1, F0 &, Color &, shape &>
   static T1 wrapper_rec(F0 &&f, T1 f0, const wrapper &w) {
     if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename wrapper::Wrap>(w.v());
-      return f(d_a0, d_a1);
+      const auto &[a0, a1] = std::get<typename wrapper::Wrap>(w.v());
+      return f(a0, a1);
     } else {
       return f0;
     }

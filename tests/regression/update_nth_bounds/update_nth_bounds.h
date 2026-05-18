@@ -2,56 +2,54 @@
 #define INCLUDED_UPDATE_NTH_BOUNDS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +58,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +77,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,65 +112,61 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  List<t_A> skipn(const unsigned int n) const {
+  List<A> skipn(uint64_t n) const {
     if (n <= 0) {
-      return std::move(*(this));
+      return std::move(*this);
     } else {
-      unsigned int n0 = n - 1;
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        return List<t_A>::nil();
+      uint64_t n0 = n - 1;
+      if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+        return List<A>::nil();
       } else {
-        auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        return (*(d_a1)).skipn(n0);
+        auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+        return a1->skipn(n0);
       }
     }
   }
 
-  List<t_A> firstn(const unsigned int n) const {
+  List<A> firstn(uint64_t n) const {
     if (n <= 0) {
-      return List<t_A>::nil();
+      return List<A>::nil();
     } else {
-      unsigned int n0 = n - 1;
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        return List<t_A>::nil();
+      uint64_t n0 = n - 1;
+      if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+        return List<A>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        return List<t_A>::cons(d_a0, (*(d_a1)).firstn(n0));
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+        return List<A>::cons(a0, a1->firstn(n0));
       }
     }
   }
 
-  unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-      return 0u;
+  uint64_t length() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
     }
   }
 
-  List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+  List<A> app(List<A> m) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };
 
 struct UpdateNthBounds {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, List<T1> l) {
+  static List<T1> update_nth(uint64_t n, T1 x, List<T1> l) {
     if (n < l.length()) {
       return l.firstn(n).app(List<T1>::cons(x, l.skipn((n + 1))));
     } else {
@@ -183,22 +174,25 @@ struct UpdateNthBounds {
     }
   }
 
-  static inline const unsigned int in_bounds_length =
-      update_nth<unsigned int>(
-          2u, 9u,
-          List<unsigned int>::cons(
-              1u, List<unsigned int>::cons(
-                      2u, List<unsigned int>::cons(
-                              3u, List<unsigned int>::cons(
-                                      4u, List<unsigned int>::nil())))))
+  static inline const uint64_t in_bounds_length =
+      update_nth<uint64_t>(
+          UINT64_C(2), UINT64_C(9),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(
+                      UINT64_C(3), List<uint64_t>::cons(
+                                       UINT64_C(4), List<uint64_t>::nil())))))
           .length();
-  static inline const unsigned int out_of_bounds_length =
-      update_nth<unsigned int>(
-          9u, 7u,
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))))
+  static inline const uint64_t out_of_bounds_length =
+      update_nth<uint64_t>(
+          UINT64_C(9), UINT64_C(7),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))
           .length();
 };
 

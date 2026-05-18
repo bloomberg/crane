@@ -1,144 +1,65 @@
 #ifndef INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE
 #define INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE
 
-#include <memory>
-#include <optional>
 #include <type_traits>
-#include <utility>
 #include <variant>
 
-enum class Bool0 { e_TRUE, e_FALSE };
+enum class Bool0 { TRUE_, FALSE_ };
 
 struct ModuleTypeNameClashProbe {
   struct M_Mod {
     struct t {
-      // TYPES
-      struct T0 {
-        Bool0 d_a0;
-      };
-
-      using variant_t = std::variant<T0>;
-
-    private:
       // DATA
-      variant_t d_v_;
-
-    public:
-      // CREATORS
-      t() {}
-
-      explicit t(T0 _v) : d_v_(std::move(_v)) {}
-
-      t(const t &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-      t(t &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-      t &operator=(const t &_other) {
-        d_v_ = std::move(_other.clone().d_v_);
-        return *this;
-      }
-
-      t &operator=(t &&_other) {
-        d_v_ = std::move(_other.d_v_);
-        return *this;
-      }
+      Bool0 a0;
 
       // ACCESSORS
-      t clone() const {
-        auto &&_sv = *(this);
-        const auto &[d_a0] = std::get<T0>(_sv.v());
-        return t(T0{d_a0});
-      }
+      t clone() const { return {a0}; }
 
       // CREATORS
-      static t t0(Bool0 a0) { return t(T0{std::move(a0)}); }
-
-      // MANIPULATORS
-      inline variant_t &v_mut() { return d_v_; }
-
-      // ACCESSORS
-      const variant_t &v() const { return d_v_; }
+      static t t0(Bool0 a0) { return {a0}; }
     };
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
     static T1 t_rect(F0 &&f, const t &t0) {
-      const auto &[d_a0] = std::get<typename t::T0>(t0.v());
-      return f(d_a0);
+      const auto &[a0] = t0;
+      return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
     static T1 t_rec(F0 &&f, const t &t0) {
-      const auto &[d_a0] = std::get<typename t::T0>(t0.v());
-      return f(d_a0);
+      const auto &[a0] = t0;
+      return f(a0);
     }
   };
 
   struct M {
-    // TYPES
-    struct MkM {
-      Bool0 d_a0;
-    };
-
-    using variant_t = std::variant<MkM>;
-
-  private:
     // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    M() {}
-
-    explicit M(MkM _v) : d_v_(std::move(_v)) {}
-
-    M(const M &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-    M(M &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-    M &operator=(const M &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
-      return *this;
-    }
-
-    M &operator=(M &&_other) {
-      d_v_ = std::move(_other.d_v_);
-      return *this;
-    }
+    Bool0 a0;
 
     // ACCESSORS
-    M clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<MkM>(_sv.v());
-      return M(MkM{d_a0});
-    }
+    M clone() const { return {a0}; }
 
     // CREATORS
-    static M mkm(Bool0 a0) { return M(MkM{std::move(a0)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    static M mkm(Bool0 a0) { return {a0}; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
   static T1 M_rect(F0 &&f, const M &m) {
-    const auto &[d_a0] = std::get<typename M::MkM>(m.v());
-    return f(d_a0);
+    const auto &[a0] = m;
+    return f(a0);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
   static T1 M_rec(F0 &&f, const M &m) {
-    const auto &[d_a0] = std::get<typename M::MkM>(m.v());
-    return f(d_a0);
+    const auto &[a0] = m;
+    return f(a0);
   }
 
-  static inline const Bool0 sample = Bool0::e_TRUE;
+  static inline const Bool0 sample = Bool0::TRUE_;
 };
 
 #endif // INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE

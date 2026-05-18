@@ -1,10 +1,7 @@
 #ifndef INCLUDED_UNSOUND_AXIOMS
 #define INCLUDED_UNSOUND_AXIOMS
 
-#include <memory>
-#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <variant>
 
 struct UnsoundAxioms {
@@ -21,33 +18,31 @@ struct UnsoundAxioms {
   }
 
   struct Rec {
-    unsigned int f1;
-    unsigned int f2;
+    uint64_t f1;
+    uint64_t f2;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2}; }
+    Rec clone() const { return Rec{(*this).f1, (*this).f2}; }
   };
 
-  static unsigned int cast_confusion(const Rec &r);
-  static unsigned int choose_in_match(const Rec &r);
+  static uint64_t cast_confusion(const Rec &r);
+  static uint64_t choose_in_match(const Rec &r);
 
   struct ProofRec {
-    unsigned int pf_val;
-    unsigned int pf_val2;
+    uint64_t pf_val;
+    uint64_t pf_val2;
 
     // ACCESSORS
-    ProofRec clone() const {
-      return ProofRec{(*(this)).pf_val, (*(this)).pf_val2};
-    }
+    ProofRec clone() const { return ProofRec{(*this).pf_val, (*this).pf_val2}; }
   };
 
-  static unsigned int extract_proof_computation(const ProofRec &pr);
-  static bool use_type_eq(const unsigned int n);
+  static uint64_t extract_proof_computation(const ProofRec &pr);
+  static bool use_type_eq(uint64_t n);
   static Rec impossible_rec();
-  static unsigned int use_impossible(const std::monostate _x);
-  static unsigned int from_false(const Rec &_x);
-  static unsigned int prop_as_type();
-  static unsigned int use_prop_as_type(const Rec &r);
+  static uint64_t use_impossible(std::monostate _x);
+  static uint64_t from_false(const Rec &_x);
+  static uint64_t prop_as_type();
+  static uint64_t use_prop_as_type(const Rec &r);
 };
 
 #endif // INCLUDED_UNSOUND_AXIOMS

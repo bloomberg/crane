@@ -1,6 +1,6 @@
 #include "embed_effect.h"
 
-void bug_create(const std::string title) {
+void bug_create(std::string title) {
   {
     bug_create_impl(title);
     return;

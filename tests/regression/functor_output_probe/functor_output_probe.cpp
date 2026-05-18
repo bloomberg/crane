@@ -1,3 +1,3 @@
 #include "functor_output_probe.h"
 
-unsigned int N::to_nat(const unsigned int n) { return n; }
+uint64_t N::to_nat(uint64_t n) { return n; }

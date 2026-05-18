@@ -2,49 +2,46 @@
 #define INCLUDED_COERCIONS
 
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct Coercions {
-  static unsigned int bool_to_nat(const bool b);
-  static unsigned int add_bool(const unsigned int n, const bool b);
-  static inline const unsigned int test_add_true = add_bool(5u, true);
-  static inline const unsigned int test_add_false = add_bool(5u, false);
+  static uint64_t bool_to_nat(bool b);
+  static uint64_t add_bool(uint64_t n, bool b);
+  static inline const uint64_t test_add_true = add_bool(UINT64_C(5), true);
+  static inline const uint64_t test_add_false = add_bool(UINT64_C(5), false);
 
   struct Wrapper {
-    unsigned int unwrap;
+    uint64_t unwrap;
 
     // ACCESSORS
-    Wrapper clone() const { return Wrapper{(*(this)).unwrap}; }
+    Wrapper clone() const { return Wrapper{(*this).unwrap}; }
   };
 
-  static unsigned int double_wrapped(const Wrapper &w);
-  static inline const unsigned int test_double_wrapped =
-      double_wrapped(Wrapper{7u});
+  static uint64_t double_wrapped(const Wrapper &w);
+  static inline const uint64_t test_double_wrapped =
+      double_wrapped(Wrapper{UINT64_C(7)});
 
   struct BoolBox {
     bool unbox;
 
     // ACCESSORS
-    BoolBox clone() const { return BoolBox{(*(this)).unbox}; }
+    BoolBox clone() const { return BoolBox{(*this).unbox}; }
   };
 
-  static unsigned int add_boolbox(const unsigned int n, const BoolBox &bb);
-  static inline const unsigned int test_add_boolbox =
-      add_boolbox(10u, BoolBox{true});
+  static uint64_t add_boolbox(uint64_t n, const BoolBox &bb);
+  static inline const uint64_t test_add_boolbox =
+      add_boolbox(UINT64_C(10), BoolBox{true});
 
   struct Transform {
-    std::function<unsigned int(unsigned int)> apply_transform;
+    std::function<uint64_t(uint64_t)> apply_transform;
 
     // ACCESSORS
-    Transform clone() const { return Transform{(*(this)).apply_transform}; }
+    Transform clone() const { return Transform{(*this).apply_transform}; }
   };
 
   static inline const Transform double_transform =
-      Transform{[](const unsigned int n) { return (n + n); }};
-  static inline const unsigned int test_fun_coercion =
-      double_transform.apply_transform(5u);
+      Transform{[](uint64_t n) { return (n + n); }};
+  static inline const uint64_t test_fun_coercion =
+      double_transform.apply_transform(UINT64_C(5));
 };
 
 #endif // INCLUDED_COERCIONS

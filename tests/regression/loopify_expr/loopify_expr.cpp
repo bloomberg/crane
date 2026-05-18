@@ -2,7 +2,7 @@
 
 /// sum_shapes l sums values from shapes using unified pattern.
 /// Tests or-pattern style matching in Coq.
-unsigned int LoopifyExpr::sum_shapes(
+uint64_t LoopifyExpr::sum_shapes(
     const List<LoopifyExpr::shape>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -12,11 +12,11 @@ unsigned int LoopifyExpr::sum_shapes(
 
   /// _Resume_Cons: saves [val], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int val;
+    uint64_t val;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -26,32 +26,32 @@ unsigned int LoopifyExpr::sum_shapes(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyExpr::shape> &l = *(_f.l);
+      const List<LoopifyExpr::shape> &l = *_f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
               l.v())) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
-        unsigned int val = [&]() {
+        uint64_t val = [&]() {
           if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
-                  d_a0.v())) {
-            const auto &[d_a00] =
-                std::get<typename LoopifyExpr::shape::Circle>(d_a0.v());
-            return d_a00;
+                  a0.v())) {
+            const auto &[a00] =
+                std::get<typename LoopifyExpr::shape::Circle>(a0.v());
+            return a00;
           } else if (std::holds_alternative<
-                         typename LoopifyExpr::shape::Square>(d_a0.v())) {
-            const auto &[d_a00] =
-                std::get<typename LoopifyExpr::shape::Square>(d_a0.v());
-            return d_a00;
+                         typename LoopifyExpr::shape::Square>(a0.v())) {
+            const auto &[a00] =
+                std::get<typename LoopifyExpr::shape::Square>(a0.v());
+            return a00;
           } else {
-            const auto &[d_a00] =
-                std::get<typename LoopifyExpr::shape::Triangle>(d_a0.v());
-            return d_a00;
+            const auto &[a00] =
+                std::get<typename LoopifyExpr::shape::Triangle>(a0.v());
+            return a00;
           }
         }();
         _stack.emplace_back(_Resume_Cons{val});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -62,8 +62,7 @@ unsigned int LoopifyExpr::sum_shapes(
 }
 
 /// count_by_shape l counts shapes: (circles, squares, triangles).
-std::pair<std::pair<unsigned int, unsigned int>, unsigned int>
-LoopifyExpr::count_by_shape(
+std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
     const List<LoopifyExpr::shape>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
@@ -71,14 +70,13 @@ LoopifyExpr::count_by_shape(
     const List<LoopifyExpr::shape> *l;
   };
 
-  /// _Cont_Cons: saves [d_a0], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
-    LoopifyExpr::shape d_a0;
+    LoopifyExpr::shape a0;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<std::pair<unsigned int, unsigned int>, unsigned int> _result{};
+  std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l});
@@ -88,28 +86,28 @@ LoopifyExpr::count_by_shape(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyExpr::shape> &l = *(_f.l);
+      const List<LoopifyExpr::shape> &l = *_f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(
               l.v())) {
-        _result = std::make_pair(std::make_pair(0u, 0u), 0u);
+        _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
+                                 UINT64_C(0));
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{d_a0});
-        _stack.emplace_back(_Enter{d_a1.get()});
+        _stack.emplace_back(_Cont_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      LoopifyExpr::shape d_a0 = std::move(_f.d_a0);
-      const std::pair<unsigned int, unsigned int> &p = _result.first;
-      const unsigned int &t = _result.second;
-      const unsigned int &c = p.first;
-      const unsigned int &sq = p.second;
-      if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(
-              d_a0.v())) {
+      LoopifyExpr::shape a0 = std::move(_f.a0);
+      const std::pair<uint64_t, uint64_t> &p = _result.first;
+      const uint64_t &t = _result.second;
+      const uint64_t &c = p.first;
+      const uint64_t &sq = p.second;
+      if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(a0.v())) {
         _result = std::make_pair(std::make_pair((c + 1), sq), t);
       } else if (std::holds_alternative<typename LoopifyExpr::shape::Square>(
-                     d_a0.v())) {
+                     a0.v())) {
         _result = std::make_pair(std::make_pair(c, (sq + 1)), t);
       } else {
         _result = std::make_pair(std::make_pair(c, sq), (t + 1));

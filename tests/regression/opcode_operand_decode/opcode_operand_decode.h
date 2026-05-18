@@ -1,31 +1,27 @@
 #ifndef INCLUDED_OPCODE_OPERAND_DECODE
 #define INCLUDED_OPCODE_OPERAND_DECODE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct OpcodeOperandDecode {
-  enum class Instruction { e_NOP_, e_WRM_, e_WRR_, e_RDM_, e_DCL_ };
+  enum class Instruction { NOP_, WRM_, WRR_, RDM_, DCL_ };
 
   template <typename T1>
-  static T1 instruction_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                             const Instruction i) {
+  static T1 instruction_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instruction i) {
     switch (i) {
-    case Instruction::e_NOP_: {
+    case Instruction::NOP_: {
       return f;
     }
-    case Instruction::e_WRM_: {
+    case Instruction::WRM_: {
       return f0;
     }
-    case Instruction::e_WRR_: {
+    case Instruction::WRR_: {
       return f1;
     }
-    case Instruction::e_RDM_: {
+    case Instruction::RDM_: {
       return f2;
     }
-    case Instruction::e_DCL_: {
+    case Instruction::DCL_: {
       return f3;
     }
     default:
@@ -34,22 +30,21 @@ struct OpcodeOperandDecode {
   }
 
   template <typename T1>
-  static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
-                            const Instruction i) {
+  static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instruction i) {
     switch (i) {
-    case Instruction::e_NOP_: {
+    case Instruction::NOP_: {
       return f;
     }
-    case Instruction::e_WRM_: {
+    case Instruction::WRM_: {
       return f0;
     }
-    case Instruction::e_WRR_: {
+    case Instruction::WRR_: {
       return f1;
     }
-    case Instruction::e_RDM_: {
+    case Instruction::RDM_: {
       return f2;
     }
-    case Instruction::e_DCL_: {
+    case Instruction::DCL_: {
       return f3;
     }
     default:
@@ -57,14 +52,14 @@ struct OpcodeOperandDecode {
     }
   }
 
-  static Instruction decode(const unsigned int b1, const unsigned int _x);
-  static inline const unsigned int t = []() {
-    switch (decode(224u, 0u)) {
-    case Instruction::e_WRM_: {
-      return 1u;
+  static Instruction decode(uint64_t b1, uint64_t _x);
+  static inline const uint64_t t = []() {
+    switch (decode(UINT64_C(224), UINT64_C(0))) {
+    case Instruction::WRM_: {
+      return UINT64_C(1);
     }
     default: {
-      return 0u;
+      return UINT64_C(0);
     }
     }
   }();

@@ -39,7 +39,7 @@ int main() {
   ASSERT(LoopifyNumericSequences::staircase(3u) >= 1u);
 
   // church
-  auto inc = [](unsigned int x) { return x + 1; };
+  auto inc = [](uint64_t x) { return x + 1; };
   ASSERT(LoopifyNumericSequences::church(0u, inc, 5u) == 5u);
   ASSERT(LoopifyNumericSequences::church(3u, inc, 5u) == 8u);
 

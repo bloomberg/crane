@@ -2,50 +2,50 @@
 #define INCLUDED_PATHOLOGICAL_RECORD
 
 #include <any>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct PathologicalRecord {
   struct Rec {
-    unsigned int f1;
-    unsigned int f2;
-    unsigned int f3;
+    uint64_t f1;
+    uint64_t f2;
+    uint64_t f3;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3}; }
+    Rec clone() const { return Rec{(*this).f1, (*this).f2, (*this).f3}; }
   };
 
-  static unsigned int hof_access(const Rec &r);
-  static unsigned int nested_lets(const Rec &r);
-  static unsigned int conditional_access(const Rec &r, const bool flag);
-  static unsigned int countdown(const unsigned int n, const Rec &r);
-  static unsigned int double_match(const Rec &r1, const Rec &r2);
-  static unsigned int closure_over_fields(const Rec &r, const unsigned int x);
-  static inline const unsigned int use_closure =
-      closure_over_fields(Rec{1u, 2u, 3u}, 10u);
-  static unsigned int guarded_pattern(const Rec &r);
+  static uint64_t hof_access(const Rec &r);
+  static uint64_t nested_lets(const Rec &r);
+  static uint64_t conditional_access(const Rec &r, bool flag);
+  static uint64_t countdown(uint64_t n, const Rec &r);
+  static uint64_t double_match(const Rec &r1, const Rec &r2);
+  static uint64_t closure_over_fields(const Rec &r, uint64_t x);
+  static inline const uint64_t use_closure = closure_over_fields(
+      Rec{UINT64_C(1), UINT64_C(2), UINT64_C(3)}, UINT64_C(10));
+  static uint64_t guarded_pattern(const Rec &r);
 
   struct BigRec {
-    unsigned int bf1;
-    unsigned int bf2;
-    unsigned int bf3;
-    unsigned int bf4;
-    unsigned int bf5;
+    uint64_t bf1;
+    uint64_t bf2;
+    uint64_t bf3;
+    uint64_t bf4;
+    uint64_t bf5;
 
     // ACCESSORS
     BigRec clone() const {
-      return BigRec{(*(this)).bf1, (*(this)).bf2, (*(this)).bf3, (*(this)).bf4,
-                    (*(this)).bf5};
+      return BigRec{(*this).bf1, (*this).bf2, (*this).bf3, (*this).bf4,
+                    (*this).bf5};
     }
   };
 
-  static unsigned int scrambled_access(const BigRec &r);
-  static unsigned int repeated_access(const BigRec &r);
-  static inline const unsigned int test1 = hof_access(Rec{1u, 2u, 3u});
-  static inline const unsigned int test2 = nested_lets(Rec{4u, 5u, 6u});
-  static inline const unsigned int test3 =
-      double_match(Rec{1u, 2u, 3u}, Rec{4u, 5u, 6u});
+  static uint64_t scrambled_access(const BigRec &r);
+  static uint64_t repeated_access(const BigRec &r);
+  static inline const uint64_t test1 =
+      hof_access(Rec{UINT64_C(1), UINT64_C(2), UINT64_C(3)});
+  static inline const uint64_t test2 =
+      nested_lets(Rec{UINT64_C(4), UINT64_C(5), UINT64_C(6)});
+  static inline const uint64_t test3 =
+      double_match(Rec{UINT64_C(1), UINT64_C(2), UINT64_C(3)},
+                   Rec{UINT64_C(4), UINT64_C(5), UINT64_C(6)});
 };
 
 #endif // INCLUDED_PATHOLOGICAL_RECORD

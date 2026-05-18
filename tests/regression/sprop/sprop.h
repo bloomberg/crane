@@ -1,10 +1,7 @@
 #ifndef INCLUDED_SPROP
 #define INCLUDED_SPROP
 
-#include <memory>
-#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 
 struct SPropTest {
@@ -18,18 +15,18 @@ struct SPropTest {
     return v;
   }
 
-  template <typename t_A> struct Box {
-    t_A box_value;
+  template <typename A> struct Box {
+    A box_value;
 
     // ACCESSORS
-    Box<t_A> clone() const { return Box<t_A>{(*(this)).box_value}; }
+    Box<A> clone() const { return Box<A>{(*this).box_value}; }
   };
 
-  static unsigned int guarded_pred(const unsigned int n);
-  static unsigned int safe_div(const unsigned int _x0, const unsigned int _x1);
-  static inline const unsigned int test_guarded = guarded_pred(5u);
-  static inline const unsigned int test_box = 42u;
-  static inline const unsigned int test_div = safe_div(10u, 3u);
+  static uint64_t guarded_pred(uint64_t n);
+  static uint64_t safe_div(uint64_t _x0, uint64_t _x1);
+  static inline const uint64_t test_guarded = guarded_pred(UINT64_C(5));
+  static inline const uint64_t test_box = UINT64_C(42);
+  static inline const uint64_t test_div = safe_div(UINT64_C(10), UINT64_C(3));
 };
 
 #endif // INCLUDED_SPROP

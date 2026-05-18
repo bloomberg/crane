@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 using LLG = LoopifyListGenerators;
 
 int main() {
@@ -27,17 +27,17 @@ int main() {
   auto cycled = LLG::cycle(3u, l3);
 
   // iterate
-  auto double_fn = [](unsigned int x) { return x * 2; };
+  auto double_fn = [](uint64_t x) { return x * 2; };
   auto iters = LLG::iterate(double_fn, 5u, 1u);
   // [1, 2, 4, 8, 16]
 
   // build_list
-  auto id = [](unsigned int x) { return x; };
+  auto id = [](uint64_t x) { return x; };
   auto built = LLG::build_list(5u, id);
   // [0, 1, 2, 3, 4]
 
   // init_list
-  auto square = [](unsigned int x) { return x * x; };
+  auto square = [](uint64_t x) { return x * x; };
   auto inited = LLG::init_list(4u, square);
   // [0, 1, 4, 9]
 
@@ -57,7 +57,7 @@ int main() {
   auto tab = LLG::tabulate(5u, id);
 
   // zip_with
-  auto add = [](unsigned int x, unsigned int y) { return x + y; };
+  auto add = [](uint64_t x, uint64_t y) { return x + y; };
   auto zipped = LLG::zip_with(add, l3, l3);
   // [2, 4, 6]
 

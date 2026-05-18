@@ -1,27 +1,26 @@
 #include "enum_switch_qualified.h"
 
 EnumSwitchQualified::Outer::Color
-EnumSwitchQualified::Outer::flip(const EnumSwitchQualified::Outer::Color c) {
+EnumSwitchQualified::Outer::flip(EnumSwitchQualified::Outer::Color c) {
   switch (c) {
-  case Color::e_RED: {
-    return Color::e_BLUE;
+  case Color::RED: {
+    return Color::BLUE;
   }
-  case Color::e_BLUE: {
-    return Color::e_RED;
+  case Color::BLUE: {
+    return Color::RED;
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int
-EnumSwitchQualified::Outer::code(const EnumSwitchQualified::Outer::Color c) {
+uint64_t EnumSwitchQualified::Outer::code(EnumSwitchQualified::Outer::Color c) {
   switch (c) {
-  case Color::e_RED: {
-    return 1u;
+  case Color::RED: {
+    return UINT64_C(1);
   }
-  case Color::e_BLUE: {
-    return 2u;
+  case Color::BLUE: {
+    return UINT64_C(2);
   }
   default:
     std::unreachable();

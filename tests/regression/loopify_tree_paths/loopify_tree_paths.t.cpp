@@ -26,8 +26,8 @@ std::vector<T> to_vec(const List<T> &l) {
     auto &v = cur->v();
     if (std::holds_alternative<typename List<T>::Cons>(v)) {
       auto &cons = std::get<typename List<T>::Cons>(v);
-      result.push_back(cons.d_a0);
-      cur = cons.d_a1.get();
+      result.push_back(cons.a);
+      cur = cons.l.get();
     } else {
       break;
     }
@@ -35,17 +35,17 @@ std::vector<T> to_vec(const List<T> &l) {
   return result;
 }
 
-// Helper: convert List<List<unsigned int>> to vector<vector<unsigned int>>
-std::vector<std::vector<unsigned int>>
-to_vecs(const List<List<unsigned int>> &ll) {
-  std::vector<std::vector<unsigned int>> result;
-  const List<List<unsigned int>> *cur = &ll;
+// Helper: convert List<List<uint64_t>> to vector<vector<uint64_t>>
+std::vector<std::vector<uint64_t>>
+to_vecs(const List<List<uint64_t>> &ll) {
+  std::vector<std::vector<uint64_t>> result;
+  const List<List<uint64_t>> *cur = &ll;
   while (cur) {
     auto &v = cur->v();
-    if (std::holds_alternative<typename List<List<unsigned int>>::Cons>(v)) {
-      auto &cons = std::get<typename List<List<unsigned int>>::Cons>(v);
-      result.push_back(to_vec(cons.d_a0));
-      cur = cons.d_a1.get();
+    if (std::holds_alternative<typename List<List<uint64_t>>::Cons>(v)) {
+      auto &cons = std::get<typename List<List<uint64_t>>::Cons>(v);
+      result.push_back(to_vec(cons.a));
+      cur = cons.l.get();
     } else {
       break;
     }
@@ -72,8 +72,8 @@ int main() {
     auto vv = to_vecs(tree1.paths());
     // Node(Leaf, 1, Leaf) -> [[1], [1]]
     ASSERT(vv.size() == 2u);
-    ASSERT((vv[0] == std::vector<unsigned int>{1u}));
-    ASSERT((vv[1] == std::vector<unsigned int>{1u}));
+    ASSERT((vv[0] == std::vector<uint64_t>{1u}));
+    ASSERT((vv[1] == std::vector<uint64_t>{1u}));
   }
 
   auto left = Tree::node(leaf, 2u, leaf);
@@ -82,14 +82,14 @@ int main() {
   {
     auto vv = to_vecs(tree2.paths());
     ASSERT(vv.size() == 4u);
-    ASSERT((vv[0] == std::vector<unsigned int>{1u, 2u}));
-    ASSERT((vv[1] == std::vector<unsigned int>{1u, 2u}));
-    ASSERT((vv[2] == std::vector<unsigned int>{1u, 3u}));
-    ASSERT((vv[3] == std::vector<unsigned int>{1u, 3u}));
+    ASSERT((vv[0] == std::vector<uint64_t>{1u, 2u}));
+    ASSERT((vv[1] == std::vector<uint64_t>{1u, 2u}));
+    ASSERT((vv[2] == std::vector<uint64_t>{1u, 3u}));
+    ASSERT((vv[3] == std::vector<uint64_t>{1u, 3u}));
   }
 
   // or_search
-  auto is_even = [](unsigned int x) { return x % 2 == 0; };
+  auto is_even = [](uint64_t x) { return x % 2 == 0; };
 
   auto leaf_odd = BTree::bleaf(3u);
   auto leaf_even = BTree::bleaf(4u);
@@ -104,7 +104,7 @@ int main() {
   ASSERT(all_odd.or_search(is_even) == false);
 
   // and_search
-  auto is_positive = [](unsigned int x) { return x > 0u; };
+  auto is_positive = [](uint64_t x) { return x > 0u; };
 
   auto bleaf1 = BTree::bleaf(1u);
   auto bleaf2 = BTree::bleaf(2u);
@@ -152,7 +152,7 @@ int main() {
   auto tree7 = Tree::node(leaf, 5u, leaf);
   {
     auto v = to_vec(tree7.flatten_paths());
-    ASSERT((v == std::vector<unsigned int>{5u}));
+    ASSERT((v == std::vector<uint64_t>{5u}));
   }
 
   auto left3 = Tree::node(leaf, 2u, leaf);
@@ -160,7 +160,7 @@ int main() {
   auto tree8 = Tree::node(left3, 1u, right3);
   {
     auto v = to_vec(tree8.flatten_paths());
-    ASSERT((v == std::vector<unsigned int>{1u, 2u, 3u}));
+    ASSERT((v == std::vector<uint64_t>{1u, 2u, 3u}));
   }
 
   if (testStatus > 0) {

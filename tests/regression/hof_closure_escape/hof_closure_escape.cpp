@@ -1,27 +1,27 @@
 #include "hof_closure_escape.h"
 
-unsigned int HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
-                                          const unsigned int x) {
+uint64_t HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
+                                      uint64_t x) {
   if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(t.v())) {
     return x;
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename HofClosureEscape::tree::Node>(t.v());
-    auto &&_sv0 = *(d_a0);
+    auto &&_sv0 = *a0;
     if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
             _sv0.v())) {
-      return (d_a1 + x);
+      return (a1 + x);
     } else {
-      const auto &[d_a00, d_a10, d_a20] =
+      const auto &[a00, a10, a20] =
           std::get<typename HofClosureEscape::tree::Node>(_sv0.v());
-      auto &&_sv1 = *(d_a2);
+      auto &&_sv1 = *a2;
       if (std::holds_alternative<typename HofClosureEscape::tree::Leaf>(
               _sv1.v())) {
-        return (d_a10 + x);
+        return (a10 + x);
       } else {
-        const auto &[d_a01, d_a11, d_a21] =
+        const auto &[a01, a11, a21] =
             std::get<typename HofClosureEscape::tree::Node>(_sv1.v());
-        return (((d_a10 + d_a11) + d_a1) + x);
+        return (((a10 + a11) + a1) + x);
       }
     }
   }
@@ -31,18 +31,16 @@ unsigned int HofClosureEscape::sum_values(const HofClosureEscape::tree &t,
 /// Even though wrap_some just passes f through to Some,
 /// the & lambda was created in hof_escape's stack frame.
 /// When hof_escape returns, captured t is destroyed.
-std::optional<std::function<unsigned int(unsigned int)>>
+std::optional<std::function<uint64_t(uint64_t)>>
 HofClosureEscape::hof_escape(const HofClosureEscape::tree &t) {
-  return wrap_some([=](unsigned int _x0) mutable -> unsigned int {
-    return sum_values(t, _x0);
-  });
+  return wrap_some(
+      [=](uint64_t _x0) mutable -> uint64_t { return sum_values(t, _x0); });
 }
 
-unsigned int HofClosureEscape::apply_option(
-    const std::optional<std::function<unsigned int(unsigned int)>> &o,
-    const unsigned int x) {
+uint64_t HofClosureEscape::apply_option(
+    const std::optional<std::function<uint64_t(uint64_t)>> &o, uint64_t x) {
   if (o.has_value()) {
-    const std::function<unsigned int(unsigned int)> &f = *o;
+    const std::function<uint64_t(uint64_t)> &f = *o;
     return f(x);
   } else {
     return x;

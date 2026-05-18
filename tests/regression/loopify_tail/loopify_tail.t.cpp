@@ -32,42 +32,42 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using List = LoopifyTail::list<unsigned int>;
+  using List = LoopifyTail::list<uint64_t>;
 
   // Build a small list: [1, 2, 3]
   auto small = List::cons(
-      1u, List::cons(2u, List::cons(3u, List::nil())));
+      UINT64_C(1), List::cons(UINT64_C(2), List::cons(UINT64_C(3), List::nil())));
 
   // Test last
-  ASSERT(LoopifyTail::last(0u, small) == 3u);
+  ASSERT(LoopifyTail::last(UINT64_C(0), small) == UINT64_C(3));
 
   // Test length
-  ASSERT(LoopifyTail::length(small) == 3u);
+  ASSERT(LoopifyTail::length(small) == UINT64_C(3));
 
   // Test member
-  ASSERT(LoopifyTail::member(2u, small) == true);
-  ASSERT(LoopifyTail::member(5u, small) == false);
+  ASSERT(LoopifyTail::member(UINT64_C(2), small) == true);
+  ASSERT(LoopifyTail::member(UINT64_C(5), small) == false);
 
   // Test nth
-  ASSERT(LoopifyTail::nth(0u, small, 99u) == 1u);
-  ASSERT(LoopifyTail::nth(2u, small, 99u) == 3u);
-  ASSERT(LoopifyTail::nth(5u, small, 99u) == 99u);
+  ASSERT(LoopifyTail::nth(UINT64_C(0), small, UINT64_C(99)) == UINT64_C(1));
+  ASSERT(LoopifyTail::nth(UINT64_C(2), small, UINT64_C(99)) == UINT64_C(3));
+  ASSERT(LoopifyTail::nth(UINT64_C(5), small, UINT64_C(99)) == UINT64_C(99));
 
   // Test fold_left (sum)
-  auto sum_fn = [](unsigned int acc, unsigned int x) -> unsigned int {
+  auto sum_fn = [](uint64_t acc, uint64_t x) -> unsigned int {
     return acc + x;
   };
-  ASSERT(LoopifyTail::fold_left(sum_fn, 0u, small) == 6u);
+  ASSERT(LoopifyTail::fold_left(sum_fn, UINT64_C(0), small) == UINT64_C(6));
 
   // Test lookup
-  using PList = LoopifyTail::list<std::pair<unsigned int, unsigned int>>;
+  using PList = LoopifyTail::list<std::pair<uint64_t, uint64_t>>;
   auto assoc = PList::cons(
-      std::make_pair(1u, 10u),
+      std::make_pair(UINT64_C(1), UINT64_C(10)),
       PList::cons(
-          std::make_pair(2u, 20u),
-          PList::cons(std::make_pair(3u, 30u), PList::nil())));
-  ASSERT(LoopifyTail::lookup(2u, assoc) == 20u);
-  ASSERT(LoopifyTail::lookup(5u, assoc) == 0u);
+          std::make_pair(UINT64_C(2), UINT64_C(20)),
+          PList::cons(std::make_pair(UINT64_C(3), UINT64_C(30)), PList::nil())));
+  ASSERT(LoopifyTail::lookup(UINT64_C(2), assoc) == UINT64_C(20));
+  ASSERT(LoopifyTail::lookup(UINT64_C(5), assoc) == UINT64_C(0));
 
   // Build a moderately large list to test no stack overflow
   auto big = List::nil();
@@ -76,15 +76,15 @@ int main() {
   }
 
   // These use the loopified (iterative) versions - should not stack overflow
-  ASSERT(LoopifyTail::last(0u, big) == 0u);
-  ASSERT(LoopifyTail::length(big) == 10000u);
-  ASSERT(LoopifyTail::member(5000u, big) == true);
-  ASSERT(LoopifyTail::fold_left(sum_fn, 0u, big) == 49995000u);
+  ASSERT(LoopifyTail::last(UINT64_C(0), big) == UINT64_C(0));
+  ASSERT(LoopifyTail::length(big) == UINT64_C(10000));
+  ASSERT(LoopifyTail::member(UINT64_C(5000), big) == true);
+  ASSERT(LoopifyTail::fold_left(sum_fn, UINT64_C(0), big) == UINT64_C(49995000));
 
   // Iteratively destroy the big list to avoid destructor
   // stack overflow (a known limitation for deep lists)
   while (std::holds_alternative<List::Cons>(big.v_mut())) {
-    auto next = std::move(std::get<List::Cons>(big.v_mut()).d_a1);
+    auto next = std::move(std::get<List::Cons>(big.v_mut()).l);
     big = std::move(*next);
   }
 

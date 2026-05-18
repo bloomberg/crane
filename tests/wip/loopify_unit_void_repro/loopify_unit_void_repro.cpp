@@ -1,17 +1,17 @@
 #include "loopify_unit_void_repro.h"
 
-void LoopifyUnitVoidRepro::loop(const unsigned int x, const unsigned int y,
+void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
                                 const List<bool> &cells) {
   const List<bool> *_loop_cells = &cells;
-  unsigned int _loop_x = x;
+  uint64_t _loop_x = std::move(x);
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_cells->v())) {
       return;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename List<bool>::Cons>(_loop_cells->v());
       [&]() -> void {
-        if (d_a0) {
+        if (a0) {
           ((void)_loop_x, (void)y);
           return;
         } else {
@@ -19,7 +19,7 @@ void LoopifyUnitVoidRepro::loop(const unsigned int x, const unsigned int y,
           return;
         }
       }();
-      _loop_cells = d_a1.get();
+      _loop_cells = a1.get();
       _loop_x = (_loop_x + cell_size);
     }
   }
@@ -27,7 +27,7 @@ void LoopifyUnitVoidRepro::loop(const unsigned int x, const unsigned int y,
 }
 
 int LoopifyUnitVoidRepro::run() {
-  loop(0u, 0u,
+  loop(UINT64_C(0), UINT64_C(0),
        List<bool>::cons(true, List<bool>::cons(false, List<bool>::nil())));
   return 0;
 }

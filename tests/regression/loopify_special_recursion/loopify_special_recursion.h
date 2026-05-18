@@ -2,56 +2,55 @@
 #define INCLUDED_LOOPIFY_SPECIAL_RECURSION
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +59,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +78,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,12 +113,12 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -134,7 +130,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -145,14 +141,13 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
-        if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-          _result = 0u;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<t_A>::Cons>(_sv.v());
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -162,27 +157,27 @@ public:
     return _result;
   }
 
-  List<t_A> app(List<t_A> m) const {
-    std::unique_ptr<List<t_A>> _head{};
-    std::unique_ptr<List<t_A>> *_write = &_head;
+  List<A> app(List<A> m) const {
+    std::unique_ptr<List<A>> _head{};
+    std::unique_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
-    List<t_A> _loop_m = std::move(m);
+    List<A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_unique<List<A>>(std::move(_loop_m));
         break;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = std::make_unique<List<t_A>>(
-            typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
-        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
@@ -192,36 +187,36 @@ struct LoopifySpecialRecursion {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      uint64_t a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    tree &operator=(tree &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -243,18 +238,17 @@ struct LoopifySpecialRecursion {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -264,8 +258,8 @@ struct LoopifySpecialRecursion {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+    static tree node(tree a0, uint64_t a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -274,13 +268,13 @@ struct LoopifySpecialRecursion {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -294,56 +288,55 @@ struct LoopifySpecialRecursion {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f0(*a0, tree_rect<T1>(f, f0, *a0), a1, *a2,
+                tree_rect<T1>(f, f0, *a2));
     }
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
+                tree_rec<T1>(f, f0, *a2));
     }
   }
 
-  static List<unsigned int> process_twice_fuel(const unsigned int fuel,
-                                               const List<unsigned int> &l);
-  static List<unsigned int> process_twice(const List<unsigned int> &l);
-  static List<unsigned int> double_append(const List<unsigned int> &l1,
-                                          List<unsigned int> l2);
-  static List<unsigned int> remove_if_sum_even(const List<unsigned int> &l);
-  static List<unsigned int> reverse_insert(const unsigned int x,
-                                           List<unsigned int> l);
+  static List<uint64_t> process_twice_fuel(uint64_t fuel,
+                                           const List<uint64_t> &l);
+  static List<uint64_t> process_twice(const List<uint64_t> &l);
+  static List<uint64_t> double_append(const List<uint64_t> &l1,
+                                      List<uint64_t> l2);
+  static List<uint64_t> remove_if_sum_even(const List<uint64_t> &l);
+  static List<uint64_t> reverse_insert(uint64_t x, List<uint64_t> l);
 
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static unsigned int
-  nest_apply(const unsigned int n, F1 &&f,
-             const unsigned int x) { /// _Enter: captures varying parameters for
-                                     /// each recursive call.
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static uint64_t
+  nest_apply(uint64_t n, F1 &&f,
+             uint64_t x) { /// _Enter: captures varying parameters for each
+                           /// recursive call.
 
     struct _Enter {
-      unsigned int n;
+      uint64_t n;
     };
 
     /// _Resume_n_: saves [f], resumes after recursive call with _result.
@@ -352,7 +345,7 @@ struct LoopifySpecialRecursion {
     };
 
     using _Frame = std::variant<_Enter, _Resume_n_>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{n});
@@ -362,11 +355,11 @@ struct LoopifySpecialRecursion {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const unsigned int n = _f.n;
+        uint64_t n = _f.n;
         if (n <= 0) {
-          _result = x;
+          _result = std::move(x);
         } else {
-          unsigned int n_ = n - 1;
+          uint64_t n_ = n - 1;
           _stack.emplace_back(_Resume_n_{f});
           _stack.emplace_back(_Enter{n_});
         }
@@ -378,16 +371,13 @@ struct LoopifySpecialRecursion {
     return _result;
   }
 
-  static List<unsigned int> collect_sorted(const tree &t);
-  static unsigned int sum_odd_indices_aux(const List<unsigned int> &l,
-                                          const unsigned int idx);
-  static unsigned int sum_odd_indices(const List<unsigned int> &l);
-  static unsigned int categorize_by(const unsigned int k,
-                                    const List<unsigned int> &l);
-  static List<unsigned int> between(const unsigned int lo,
-                                    const unsigned int hi,
-                                    const List<unsigned int> &l);
-  static List<unsigned int> merge_levels(const List<List<unsigned int>> &ll);
+  static List<uint64_t> collect_sorted(const tree &t);
+  static uint64_t sum_odd_indices_aux(const List<uint64_t> &l, uint64_t idx);
+  static uint64_t sum_odd_indices(const List<uint64_t> &l);
+  static uint64_t categorize_by(uint64_t k, const List<uint64_t> &l);
+  static List<uint64_t> between(uint64_t lo, uint64_t hi,
+                                const List<uint64_t> &l);
+  static List<uint64_t> merge_levels(const List<List<uint64_t>> &ll);
 };
 
 #endif // INCLUDED_LOOPIFY_SPECIAL_RECURSION

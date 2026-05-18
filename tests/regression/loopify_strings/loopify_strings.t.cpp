@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -42,7 +42,7 @@ int main() {
   auto inter = LoopifyStrings::intersperse(0u, abc);
 
   // intercalate
-  using UIntListList = List<List<unsigned int>>;
+  using UIntListList = List<List<uint64_t>>;
   auto ll_nil = UIntListList::nil();
   auto ll = UIntListList::cons(abc,
     UIntListList::cons(abc, ll_nil));
@@ -56,7 +56,7 @@ int main() {
     2u, UIntList::cons(2u, UIntList::cons(2u, UIntList::cons(3u, nil))))));
   auto encoded = LoopifyStrings::run_length_encode(dups);
   // [(1,2), (2,3), (3,1)]
-  using PairList = List<std::pair<unsigned int, unsigned int>>;
+  using PairList = List<std::pair<uint64_t, uint64_t>>;
 
   if (testStatus > 0) {
     std::cerr << "Error: " << testStatus << " test(s) failed." << std::endl;

@@ -1,12 +1,12 @@
 #include "closure_chain.h"
 
-unsigned int ClosureChain::tree_sum(const ClosureChain::tree &t) {
+uint64_t ClosureChain::tree_sum(const ClosureChain::tree &t) {
   if (std::holds_alternative<typename ClosureChain::tree::Leaf>(t.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1, d_a2] =
+    const auto &[a0, a1, a2] =
         std::get<typename ClosureChain::tree::Node>(t.v());
-    return ((tree_sum(*(d_a0)) + d_a1) + tree_sum(*(d_a2)));
+    return ((tree_sum(*a0) + a1) + tree_sum(*a2));
   }
 }
 
@@ -20,19 +20,18 @@ unsigned int ClosureChain::tree_sum(const ClosureChain::tree &t) {
 /// BUG HYPOTHESIS: make_chain (S n') t creates a local binding
 /// f := make_chain n' t, then returns fun x => f (x + 1).
 /// If f is captured by &, it dies when make_chain returns.
-unsigned int ClosureChain::make_chain(const unsigned int n,
-                                      const ClosureChain::tree &t,
-                                      const unsigned int _x0) {
-  return [=]() mutable -> std::function<unsigned int(unsigned int)> {
+uint64_t ClosureChain::make_chain(uint64_t n, const ClosureChain::tree &t,
+                                  uint64_t _x0) {
+  return [=]() mutable -> std::function<uint64_t(uint64_t)> {
     if (n <= 0) {
-      return [=](const unsigned int x) mutable { return (tree_sum(t) + x); };
+      return [=](uint64_t x) mutable { return (tree_sum(t) + x); };
     } else {
-      unsigned int n_ = n - 1;
-      std::function<unsigned int(unsigned int)> f =
-          [=](unsigned int _x0) mutable -> unsigned int {
+      uint64_t n_ = n - 1;
+      std::function<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) mutable -> uint64_t {
         return make_chain(n_, t, _x0);
       };
-      return [=](const unsigned int x) mutable { return f((x + 1u)); };
+      return [=](uint64_t x) mutable { return f((x + UINT64_C(1))); };
     }
   }()(_x0);
 }

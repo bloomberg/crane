@@ -9,50 +9,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -61,17 +61,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -81,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -118,145 +115,99 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
+      return a2->template fold_left<T1>(f, f(a0, a1));
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+    requires std::is_invocable_r_v<T1, F0 &, A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<T1>::cons(f(a0), a1->template map<T1>(f));
     }
   }
 };
 
 struct PartialApply {
-  static List<unsigned int> inc_all(const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  tag_all(const List<unsigned int> &l);
-  static List<std::optional<unsigned int>>
-  wrap_all(const List<unsigned int> &l);
-  static List<std::function<List<unsigned int>(List<unsigned int>)>>
-  prepend_each(const List<unsigned int> &l);
+  static List<uint64_t> inc_all(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>> tag_all(const List<uint64_t> &l);
+  static List<std::optional<uint64_t>> wrap_all(const List<uint64_t> &l);
+  static List<std::function<List<uint64_t>(List<uint64_t>)>>
+  prepend_each(const List<uint64_t> &l);
 
-  template <typename t_A> struct tagged {
-    // TYPES
-    struct Tag {
-      unsigned int d_a0;
-      t_A d_a1;
-    };
-
-    using variant_t = std::variant<Tag>;
-
-  private:
+  template <typename A> struct tagged {
     // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    tagged() {}
-
-    explicit tagged(Tag _v) : d_v_(std::move(_v)) {}
-
-    tagged(const tagged<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-    tagged(tagged<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-    tagged<t_A> &operator=(const tagged<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
-      return *this;
-    }
-
-    tagged<t_A> &operator=(tagged<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
-      return *this;
-    }
+    uint64_t a0;
+    A a1;
 
     // ACCESSORS
-    tagged<t_A> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Tag>(_sv.v());
-      return tagged<t_A>(Tag{d_a0, d_a1});
-    }
+    tagged<A> clone() const { return {a0, a1}; }
 
     // CREATORS
-    template <typename _U> explicit tagged(const tagged<_U> &_other) {
-      const auto &[d_a0, d_a1] = std::get<typename tagged<_U>::Tag>(_other.v());
-      this->d_v_ = Tag{d_a0, t_A(d_a1)};
-    }
-
-    static tagged<t_A> tag(unsigned int a0, t_A a1) {
-      return tagged(Tag{std::move(a0), std::move(a1)});
-    }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    static tagged<A> tag(uint64_t a0, A a1) { return {a0, std::move(a1)}; }
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, unsigned int &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, uint64_t &, T1 &>
   static T2 tagged_rect(F0 &&f, const tagged<T1> &t) {
-    const auto &[d_a0, d_a1] = std::get<typename tagged<T1>::Tag>(t.v());
-    return f(d_a0, d_a1);
+    const auto &[a0, a1] = t;
+    return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, unsigned int &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, uint64_t &, T1 &>
   static T2 tagged_rec(F0 &&f, const tagged<T1> &t) {
-    const auto &[d_a0, d_a1] = std::get<typename tagged<T1>::Tag>(t.v());
-    return f(d_a0, d_a1);
+    const auto &[a0, a1] = t;
+    return f(a0, a1);
   }
 
-  static List<tagged<bool>> tag_with(const unsigned int n, const List<bool> &l);
-  static List<std::pair<unsigned int, std::pair<unsigned int, unsigned int>>>
-  double_tag(const List<unsigned int> &l);
-  static unsigned int sum_with_init(const unsigned int init,
-                                    const List<unsigned int> &l);
-  static inline const List<unsigned int> test_inc =
-      inc_all(List<unsigned int>::cons(
-          1u,
-          List<unsigned int>::cons(
-              2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))));
-  static inline const List<std::pair<unsigned int, unsigned int>> test_tag =
-      tag_all(List<unsigned int>::cons(
-          10u,
-          List<unsigned int>::cons(
-              20u, List<unsigned int>::cons(30u, List<unsigned int>::nil()))));
-  static inline const List<std::optional<unsigned int>> test_wrap =
-      wrap_all(List<unsigned int>::cons(
-          5u,
-          List<unsigned int>::cons(
-              6u, List<unsigned int>::cons(7u, List<unsigned int>::nil()))));
+  static List<tagged<bool>> tag_with(uint64_t n, const List<bool> &l);
+  static List<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>
+  double_tag(const List<uint64_t> &l);
+  static uint64_t sum_with_init(uint64_t init, const List<uint64_t> &l);
+  static inline const List<uint64_t> test_inc = inc_all(List<uint64_t>::cons(
+      UINT64_C(1), List<uint64_t>::cons(
+                       UINT64_C(2), List<uint64_t>::cons(
+                                        UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const List<std::pair<uint64_t, uint64_t>> test_tag =
+      tag_all(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
+  static inline const List<std::optional<uint64_t>> test_wrap =
+      wrap_all(List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(6),
+              List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))));
   static inline const List<tagged<bool>> test_tag_with = tag_with(
-      99u, List<bool>::cons(
-               true, List<bool>::cons(
-                         false, List<bool>::cons(true, List<bool>::nil()))));
-  static inline const unsigned int test_sum =
-      sum_with_init(100u, List<unsigned int>::cons(
-                              1u, List<unsigned int>::cons(
-                                      2u, List<unsigned int>::cons(
-                                              3u, List<unsigned int>::nil()))));
+      UINT64_C(99),
+      List<bool>::cons(
+          true,
+          List<bool>::cons(false, List<bool>::cons(true, List<bool>::nil()))));
+  static inline const uint64_t test_sum = sum_with_init(
+      UINT64_C(100),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_PARTIAL_APPLY

@@ -1,10 +1,6 @@
 #ifndef INCLUDED_SEPEXTDRIVERNOINCLUDE
 #define INCLUDED_SEPEXTDRIVERNOINCLUDE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 #include "Datatypes.h"
 
 namespace SepExtDriverNoInclude {

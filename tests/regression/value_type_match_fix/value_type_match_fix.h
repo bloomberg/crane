@@ -5,78 +5,37 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
-#include <utility>
 #include <variant>
 
 struct ValueTypeMatchFix {
   /// A non-recursive inductive (will be a value type).
   struct triple {
-    // TYPES
-    struct MkTriple {
-      unsigned int d_a0;
-      unsigned int d_a1;
-      unsigned int d_a2;
-    };
-
-    using variant_t = std::variant<MkTriple>;
-
-  private:
     // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    triple() {}
-
-    explicit triple(MkTriple _v) : d_v_(std::move(_v)) {}
-
-    triple(const triple &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-    triple(triple &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-    triple &operator=(const triple &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
-      return *this;
-    }
-
-    triple &operator=(triple &&_other) {
-      d_v_ = std::move(_other.d_v_);
-      return *this;
-    }
+    uint64_t a0;
+    uint64_t a1;
+    uint64_t a2;
 
     // ACCESSORS
-    triple clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] = std::get<MkTriple>(_sv.v());
-      return triple(MkTriple{d_a0, d_a1, d_a2});
-    }
+    triple clone() const { return {a0, a1, a2}; }
 
     // CREATORS
-    static triple mktriple(unsigned int a0, unsigned int a1, unsigned int a2) {
-      return triple(MkTriple{std::move(a0), std::move(a1), std::move(a2)});
+    static triple mktriple(uint64_t a0, uint64_t a1, uint64_t a2) {
+      return {a0, a1, a2};
     }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return d_v_; }
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
-                                   unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &, uint64_t &>
   static T1 triple_rect(F0 &&f, const triple &t) {
-    const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
-    return f(d_a0, d_a1, d_a2);
+    const auto &[a0, a1, a2] = t;
+    return f(a0, a1, a2);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &,
-                                   unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &, uint64_t &>
   static T1 triple_rec(F0 &&f, const triple &t) {
-    const auto &[d_a0, d_a1, d_a2] = std::get<typename triple::MkTriple>(t.v());
-    return f(d_a0, d_a1, d_a2);
+    const auto &[a0, a1, a2] = t;
+    return f(a0, a1, a2);
   }
 
   /// A fixpoint that captures a field from a value-type match.
@@ -89,41 +48,43 @@ struct ValueTypeMatchFix {
   ///
   /// This is different from pointer-based (shared_ptr) types where the
   /// field data lives on the heap and persists as long as the shared_ptr.
-  static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<uint64_t(uint64_t)>>
   make_adder_from_triple(const triple &t);
   /// test1: MkTriple 10 20 30 -> base=60, go(5) = 60+5 = 65.
-  static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs = make_adder_from_triple(triple::mktriple(10u, 20u, 30u));
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = make_adder_from_triple(
+        triple::mktriple(UINT64_C(10), UINT64_C(20), UINT64_C(30)));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(5u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(5));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// test2: With noise between creation and use.
-  static inline const unsigned int test2 = []() {
-    std::optional<std::function<unsigned int(unsigned int)>> o =
-        make_adder_from_triple(triple::mktriple(100u, 200u, 300u));
-    unsigned int noise = (42u + 13u);
+  static inline const uint64_t test2 = []() {
+    std::optional<std::function<uint64_t(uint64_t)>> o = make_adder_from_triple(
+        triple::mktriple(UINT64_C(100), UINT64_C(200), UINT64_C(300)));
+    uint64_t noise = (UINT64_C(42) + UINT64_C(13));
     if (o.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *o;
-      return (f(0u) + noise);
+      const std::function<uint64_t(uint64_t)> &f = *o;
+      return (f(UINT64_C(0)) + noise);
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// Direct capture of pattern fields (no intermediate let binding).
-  static std::optional<std::function<unsigned int(unsigned int)>>
+  static std::optional<std::function<uint64_t(uint64_t)>>
   make_field_adder(const triple &t);
   /// test3: MkTriple 42 0 0 -> a=42, go(3) = 42+3 = 45.
-  static inline const unsigned int test3 = []() -> unsigned int {
-    auto _cs = make_field_adder(triple::mktriple(42u, 0u, 0u));
+  static inline const uint64_t test3 = []() -> uint64_t {
+    auto _cs = make_field_adder(
+        triple::mktriple(UINT64_C(42), UINT64_C(0), UINT64_C(0)));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(3u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(3));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
 };

@@ -24,8 +24,8 @@ int main() {
   using Cell = LoopifyMatchArg::Cell;
 
   auto empty = from_vec<Cell>({});
-  auto row = from_vec<Cell>({Cell::e_WALL, Cell::e_DOT, Cell::e_EMPTY,
-                             Cell::e_DOT, Cell::e_DOT});
+  auto row = from_vec<Cell>({Cell::WALL, Cell::DOT, Cell::EMPTY,
+                             Cell::DOT, Cell::DOT});
 
   // my_length
   std::cout << "length(empty) = " << LoopifyMatchArg::my_length(empty)

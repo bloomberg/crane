@@ -1,16 +1,13 @@
 #ifndef INCLUDED_SEPARATEEXTRACTION
 #define INCLUDED_SEPARATEEXTRACTION
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 namespace SeparateExtraction {
 
-unsigned int sep_add(const unsigned int _x0, const unsigned int _x1);
-enum class Color { e_RED, e_GREEN, e_BLUE };
-unsigned int color_to_nat(const Color c);
+uint64_t sep_add(uint64_t _x0, uint64_t _x1);
+enum class Color { RED, GREEN, BLUE };
+uint64_t color_to_nat(Color c);
 
 } // namespace SeparateExtraction
 

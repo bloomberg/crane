@@ -38,18 +38,18 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 // Helper to convert list to vector for testing
-std::vector<unsigned int>
-list_to_vector(const List<unsigned int> &l) {
-  std::vector<unsigned int> result;
-  const List<unsigned int> *current = &l;
+std::vector<uint64_t>
+list_to_vector(const List<uint64_t> &l) {
+  std::vector<uint64_t> result;
+  const List<uint64_t> *current = &l;
   while (true) {
     bool done = false;
-    std::visit(Overloaded{[&](const typename List<unsigned int>::Nil &) {
+    std::visit(Overloaded{[&](const typename List<uint64_t>::Nil &) {
                             done = true;
                           },
-                          [&](const typename List<unsigned int>::Cons &c) {
-                            result.push_back(c.d_a0);
-                            current = c.d_a1.get();
+                          [&](const typename List<uint64_t>::Cons &c) {
+                            result.push_back(c.a);
+                            current = c.l.get();
                           }},
                current->v());
     if (done)
@@ -59,11 +59,11 @@ list_to_vector(const List<unsigned int> &l) {
 }
 
 // Helper to create a list from a vector
-List<unsigned int>
-vector_to_list(const std::vector<unsigned int> &vec) {
-  auto result = List<unsigned int>::nil();
+List<uint64_t>
+vector_to_list(const std::vector<uint64_t> &vec) {
+  auto result = List<uint64_t>::nil();
   for (auto it = vec.rbegin(); it != vec.rend(); ++it) {
-    result = List<unsigned int>::cons(*it, result);
+    result = List<uint64_t>::cons(*it, result);
   }
   return result;
 }
@@ -75,9 +75,9 @@ void test_sort(const std::string &name, SortFn sortFn) {
 
   // Empty list
   {
-    auto empty = List<unsigned int>::nil();
+    auto empty = List<uint64_t>::nil();
     auto result = sortFn(empty);
-    auto sorted_list = std::get<0>(result.v()).d_x;
+    auto sorted_list = result.x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 0);
   }
@@ -85,9 +85,9 @@ void test_sort(const std::string &name, SortFn sortFn) {
   // Single element
   {
     auto single =
-        List<unsigned int>::cons(5, List<unsigned int>::nil());
+        List<uint64_t>::cons(5, List<uint64_t>::nil());
     auto result = sortFn(single);
-    auto sorted_list = std::get<0>(result.v()).d_x;
+    auto sorted_list = result.x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 1);
     ASSERT(vec[0] == 5);
@@ -97,7 +97,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({2, 1});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result.v()).d_x;
+    auto sorted_list = result.x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 2);
     ASSERT(vec[0] == 1 && vec[1] == 2);
@@ -107,7 +107,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({1, 2, 3, 4, 5, 6, 7, 8});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result.v()).d_x;
+    auto sorted_list = result.x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 8);
     for (size_t i = 0; i < 8; ++i) {
@@ -119,7 +119,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({8, 7, 6, 5, 4, 3, 2, 1});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result.v()).d_x;
+    auto sorted_list = result.x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 8);
     for (size_t i = 0; i < 8; ++i) {
@@ -131,7 +131,7 @@ void test_sort(const std::string &name, SortFn sortFn) {
   {
     auto input = vector_to_list({5, 2, 8, 1, 9, 3, 7, 4, 6, 5});
     auto result = sortFn(input);
-    auto sorted_list = std::get<0>(result.v()).d_x;
+    auto sorted_list = result.x;
     auto vec = list_to_vector(sorted_list);
     ASSERT(vec.size() == 10);
     for (size_t i = 1; i < vec.size(); ++i) {

@@ -1,33 +1,29 @@
 #include "loopify_predicates.h"
 
-List<unsigned int> LoopifyPredicates::remove_all(const unsigned int x,
-                                                 const List<unsigned int> &l) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  const List<unsigned int> *_loop_l = &l;
+List<uint64_t> LoopifyPredicates::remove_all(uint64_t x,
+                                             const List<uint64_t> &l) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  const List<uint64_t> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(
-            _loop_l->v())) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-      if (x == d_a0) {
-        _loop_l = d_a1.get();
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+      if (x == a0) {
+        _loop_l = a1.get();
         continue;
       } else {
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
-        _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
-        _loop_l = d_a1.get();
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+        _loop_l = a1.get();
         continue;
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }

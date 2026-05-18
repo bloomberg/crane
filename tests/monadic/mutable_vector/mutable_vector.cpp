@@ -1,6 +1,6 @@
 #include "mutable_vector.h"
 
-int64_t MutableVectorTest::test1(const int64_t) {
+int64_t MutableVectorTest::test1(int64_t) {
   std::vector<int64_t> v = {};
   v.push_back(int64_t(3));
   v.push_back(int64_t(2));
@@ -11,7 +11,7 @@ int64_t MutableVectorTest::test1(const int64_t) {
   return ((x - y) & 0x7FFFFFFFFFFFFFFFLL);
 }
 
-std::vector<int64_t> MutableVectorTest::test2(const int64_t) {
+std::vector<int64_t> MutableVectorTest::test2(int64_t) {
   std::vector<int64_t> v = {};
   v.push_back(int64_t(12));
   v.push_back(int64_t(23));

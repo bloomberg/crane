@@ -1,37 +1,36 @@
 #include "comparison.h"
 
-unsigned int Comparison::cmp_to_nat(const Comparison::Cmp c) {
+uint64_t Comparison::cmp_to_nat(Comparison::Cmp c) {
   switch (c) {
-  case Cmp::e_CMPLT: {
-    return 0u;
+  case Cmp::CMPLT: {
+    return UINT64_C(0);
   }
-  case Cmp::e_CMPEQ: {
-    return 1u;
+  case Cmp::CMPEQ: {
+    return UINT64_C(1);
   }
-  case Cmp::e_CMPGT: {
-    return 2u;
+  case Cmp::CMPGT: {
+    return UINT64_C(2);
   }
   default:
     std::unreachable();
   }
 }
 
-Comparison::Cmp Comparison::compare_nats(const unsigned int a,
-                                         const unsigned int b) {
+Comparison::Cmp Comparison::compare_nats(uint64_t a, uint64_t b) {
   if (a < b) {
-    return Cmp::e_CMPLT;
+    return Cmp::CMPLT;
   } else {
     if (a == b) {
-      return Cmp::e_CMPEQ;
+      return Cmp::CMPEQ;
     } else {
-      return Cmp::e_CMPGT;
+      return Cmp::CMPGT;
     }
   }
 }
 
-unsigned int Comparison::max_nat(const unsigned int a, const unsigned int b) {
+uint64_t Comparison::max_nat(uint64_t a, uint64_t b) {
   switch (compare_nats(a, b)) {
-  case Cmp::e_CMPLT: {
+  case Cmp::CMPLT: {
     return b;
   }
   default: {
@@ -40,9 +39,9 @@ unsigned int Comparison::max_nat(const unsigned int a, const unsigned int b) {
   }
 }
 
-unsigned int Comparison::min_nat(const unsigned int a, const unsigned int b) {
+uint64_t Comparison::min_nat(uint64_t a, uint64_t b) {
   switch (compare_nats(a, b)) {
-  case Cmp::e_CMPGT: {
+  case Cmp::CMPGT: {
     return b;
   }
   default: {
@@ -51,15 +50,14 @@ unsigned int Comparison::min_nat(const unsigned int a, const unsigned int b) {
   }
 }
 
-unsigned int Comparison::clamp(const unsigned int val, const unsigned int lo,
-                               const unsigned int hi) {
+uint64_t Comparison::clamp(uint64_t val, uint64_t lo, uint64_t hi) {
   switch (compare_nats(val, lo)) {
-  case Cmp::e_CMPLT: {
+  case Cmp::CMPLT: {
     return lo;
   }
   default: {
     switch (compare_nats(val, hi)) {
-    case Cmp::e_CMPGT: {
+    case Cmp::CMPGT: {
       return hi;
     }
     default: {
@@ -70,16 +68,16 @@ unsigned int Comparison::clamp(const unsigned int val, const unsigned int lo,
   }
 }
 
-Comparison::Cmp Comparison::flip_cmp(const Comparison::Cmp c) {
+Comparison::Cmp Comparison::flip_cmp(Comparison::Cmp c) {
   switch (c) {
-  case Cmp::e_CMPLT: {
-    return Cmp::e_CMPGT;
+  case Cmp::CMPLT: {
+    return Cmp::CMPGT;
   }
-  case Cmp::e_CMPEQ: {
-    return Cmp::e_CMPEQ;
+  case Cmp::CMPEQ: {
+    return Cmp::CMPEQ;
   }
-  case Cmp::e_CMPGT: {
-    return Cmp::e_CMPLT;
+  case Cmp::CMPGT: {
+    return Cmp::CMPLT;
   }
   default:
     std::unreachable();

@@ -2,7 +2,6 @@
 #define INCLUDED_NAME_CLASH_NESTED_DEEP
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -16,35 +15,35 @@ struct NameClashNestedDeep {
     struct MyNil {};
 
     struct MyCons {
-      unsigned int d_a0;
-      std::unique_ptr<mylist> d_a1;
+      uint64_t a0;
+      std::unique_ptr<mylist> a1;
     };
 
     using variant_t = std::variant<MyNil, MyCons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(MyNil _v) : d_v_(_v) {}
+    explicit mylist(MyNil _v) : v_(_v) {}
 
-    explicit mylist(MyCons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(MyCons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist &operator=(mylist &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist &operator=(mylist &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -66,14 +65,14 @@ struct NameClashNestedDeep {
         const mylist *_src = _frame._src;
         mylist *_dst = _frame._dst;
         if (std::holds_alternative<MyNil>(_src->v())) {
-          _dst->d_v_ = MyNil{};
+          _dst->v_ = MyNil{};
         } else {
           const auto &_alt = std::get<MyCons>(_src->v());
-          _dst->d_v_ = MyCons{_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
-          auto &_dst_alt = std::get<MyCons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              MyCons{_alt.a0, _alt.a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<MyCons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -83,9 +82,8 @@ struct NameClashNestedDeep {
     // CREATORS
     static mylist mynil() { return mylist(MyNil{}); }
 
-    static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          MyCons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+    static mylist mycons(uint64_t a0, mylist a1) {
+      return mylist(MyCons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -93,10 +91,10 @@ struct NameClashNestedDeep {
       std::vector<std::unique_ptr<mylist>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
-        if (std::holds_alternative<MyCons>(_node.d_v_)) {
-          auto &_alt = std::get<MyCons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<MyCons>(_node.v_)) {
+          auto &_alt = std::get<MyCons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -110,43 +108,42 @@ struct NameClashNestedDeep {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::MyCons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename mylist::MyCons>(m.v());
+      return f0(a0, *a1, mylist_rect<T1>(f, f0, *a1));
     }
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::MyCons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename mylist::MyCons>(m.v());
+      return f0(a0, *a1, mylist_rec<T1>(f, f0, *a1));
     }
-  }
+  } /// Four levels of nested matching.
 
-  /// Four levels of nested matching.
-  static unsigned int deep4(const mylist &a, const mylist &b, const mylist &c,
-                            const mylist &d);
+  static uint64_t deep4(const mylist &a, const mylist &b, const mylist &c,
+                        const mylist &d);
   /// Match in a let, then match on the let result.
-  static unsigned int let_match_chain(const mylist &xs, const mylist &ys);
+  static uint64_t let_match_chain(const mylist &xs, const mylist &ys);
   /// Matching where the same list is matched multiple times.
-  static unsigned int multi_match_same(const mylist &xs);
+  static uint64_t multi_match_same(const mylist &xs);
   /// Nested match where inner match scrutinee is a field from outer match.
-  static unsigned int nested_field_match(const mylist &xs);
+  static uint64_t nested_field_match(const mylist &xs);
 };
 
 #endif // INCLUDED_NAME_CLASH_NESTED_DEEP

@@ -2,7 +2,6 @@
 #define INCLUDED_SEPEXTQUALIFIEDRAW
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -14,51 +13,51 @@ template <typename M>
 concept OrderedType = requires { typename M::t; };
 
 template <OrderedType X> struct Make {
-  template <typename t_A> struct Fmap {
+  template <typename A> struct Fmap {
     // TYPES
     struct Empty {};
 
     struct Node {
-      typename X::t d_a0;
-      t_A d_a1;
-      std::unique_ptr<Fmap<t_A>> d_a2;
+      typename X::t a0;
+      A a1;
+      std::unique_ptr<Fmap<A>> a2;
     };
 
     using variant_t = std::variant<Empty, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     Fmap() {}
 
-    explicit Fmap(Empty _v) : d_v_(_v) {}
+    explicit Fmap(Empty _v) : v_(_v) {}
 
-    explicit Fmap(Node _v) : d_v_(std::move(_v)) {}
+    explicit Fmap(Node _v) : v_(std::move(_v)) {}
 
-    Fmap(const Fmap<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    Fmap(const Fmap<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    Fmap(Fmap<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    Fmap(Fmap<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    Fmap<t_A> &operator=(const Fmap<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    Fmap<A> &operator=(const Fmap<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    Fmap<t_A> &operator=(Fmap<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    Fmap<A> &operator=(Fmap<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    Fmap<t_A> clone() const {
-      Fmap<t_A> _out{};
+    Fmap<A> clone() const {
+      Fmap<A> _out{};
 
       struct _CloneFrame {
-        const Fmap<t_A> *_src;
-        Fmap<t_A> *_dst;
+        const Fmap<A> *_src;
+        Fmap<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -67,18 +66,17 @@ template <OrderedType X> struct Make {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const Fmap<t_A> *_src = _frame._src;
-        Fmap<t_A> *_dst = _frame._dst;
+        const Fmap<A> *_src = _frame._src;
+        Fmap<A> *_dst = _frame._dst;
         if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->d_v_ = Empty{};
+          _dst->v_ = Empty{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<Fmap<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          _dst->v_ = Node{_alt.a0, _alt.a1,
+                          _alt.a2 ? std::make_unique<Fmap<A>>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -88,31 +86,31 @@ template <OrderedType X> struct Make {
     // CREATORS
     template <typename _U> explicit Fmap(const Fmap<_U> &_other) {
       if (std::holds_alternative<typename Fmap<_U>::Empty>(_other.v())) {
-        this->d_v_ = Empty{};
+        this->v_ = Empty{};
       } else {
-        const auto &[d_a0, d_a1, d_a2] =
+        const auto &[a0, a1, a2] =
             std::get<typename Fmap<_U>::Node>(_other.v());
-        this->d_v_ = Node{d_a0, t_A(d_a1),
-                          d_a2 ? std::make_unique<Fmap<t_A>>(*d_a2) : nullptr};
+        this->v_ =
+            Node{a0, A(a1), a2 ? std::make_unique<Fmap<A>>(*a2) : nullptr};
       }
     }
 
-    static Fmap<t_A> empty() { return Fmap(Empty{}); }
+    static Fmap<A> empty() { return Fmap(Empty{}); }
 
-    static Fmap<t_A> node(typename X::t a0, t_A a1, Fmap<t_A> a2) {
+    static Fmap<A> node(typename X::t a0, A a1, Fmap<A> a2) {
       return Fmap(Node{std::move(a0), std::move(a1),
-                       std::make_unique<Fmap<t_A>>(std::move(a2))});
+                       std::make_unique<Fmap<A>>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~Fmap() {
-      std::vector<std::unique_ptr<Fmap<t_A>>> _stack{};
+      std::vector<std::unique_ptr<Fmap<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](Fmap<t_A> &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+      auto _drain = [&](Fmap<A> &_node) {
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -126,10 +124,10 @@ template <OrderedType X> struct Make {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -139,9 +137,8 @@ template <OrderedType X> struct Make {
     if (std::holds_alternative<typename Fmap<T1>::Empty>(f1.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Fmap<T1>::Node>(f1.v());
-      return f0(d_a0, d_a1, *(d_a2), fmap_rect<T1, T2>(f, f0, *(d_a2)));
+      const auto &[a0, a1, a2] = std::get<typename Fmap<T1>::Node>(f1.v());
+      return f0(a0, a1, *a2, fmap_rect<T1, T2>(f, f0, *a2));
     }
   }
 
@@ -152,9 +149,8 @@ template <OrderedType X> struct Make {
     if (std::holds_alternative<typename Fmap<T1>::Empty>(f1.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename Fmap<T1>::Node>(f1.v());
-      return f0(d_a0, d_a1, *(d_a2), fmap_rec<T1, T2>(f, f0, *(d_a2)));
+      const auto &[a0, a1, a2] = std::get<typename Fmap<T1>::Node>(f1.v());
+      return f0(a0, a1, *a2, fmap_rec<T1, T2>(f, f0, *a2));
     }
   }
 

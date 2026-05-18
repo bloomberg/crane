@@ -3,9 +3,6 @@
 
 #include <concepts>
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 namespace SepExtFunTypeQual {
 
@@ -28,7 +25,7 @@ concept S = requires {
 };
 
 template <S M> struct MyModule {
-  constexpr static typename M::t test(const typename M::t x) { return x; }
+  constexpr static typename M::t test(typename M::t x) { return x; }
 };
 
 } // namespace SepExtFunTypeQual

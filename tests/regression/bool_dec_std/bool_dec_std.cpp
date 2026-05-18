@@ -1,6 +1,6 @@
 #include "bool_dec_std.h"
 
-bool BoolDecStd::eqb_dec(const bool a, const bool b) {
+bool BoolDecStd::eqb_dec(bool a, bool b) {
   if (Bool::bool_dec(a, b)) {
     return true;
   } else {
@@ -8,7 +8,7 @@ bool BoolDecStd::eqb_dec(const bool a, const bool b) {
   }
 }
 
-bool Bool::bool_dec(const bool b1, const bool b2) {
+bool Bool::bool_dec(bool b1, bool b2) {
   if (b1) {
     if (b2) {
       return true;

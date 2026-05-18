@@ -16,7 +16,7 @@ void aSsErT(bool condition, const char *message, int line) {
 } // namespace
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-using UIntList = List<unsigned int>;
+using UIntList = List<uint64_t>;
 
 int main() {
   auto nil = UIntList::nil();
@@ -32,7 +32,7 @@ int main() {
   ASSERT(fg && *fg == 4u);
 
   // lookup
-  using PairList = List<std::pair<unsigned int, unsigned int>>;
+  using PairList = List<std::pair<uint64_t, uint64_t>>;
   auto pair_nil = PairList::nil();
   auto pairs = PairList::cons(std::make_pair(1u, 10u),
     PairList::cons(std::make_pair(2u, 20u), pair_nil));
@@ -53,10 +53,10 @@ int main() {
   ASSERT(st);
 
   // catMaybes
-  using OptList = List<std::optional<unsigned int>>;
+  using OptList = List<std::optional<uint64_t>>;
   auto opt_nil = OptList::nil();
   auto opts = OptList::cons(std::make_optional(1u),
-    OptList::cons(std::optional<unsigned int>(),
+    OptList::cons(std::optional<uint64_t>(),
       OptList::cons(std::make_optional(3u), opt_nil)));
   auto catted = LoopifyOptionMaybe::catMaybes(opts);
 

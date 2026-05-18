@@ -1,22 +1,22 @@
 #include "reuse_fn_in_body.h"
 
-unsigned int ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
+uint64_t ReuseFnInBody::length(const ReuseFnInBody::mylist &l) {
   if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
-    return (1u + length(*(d_a1)));
+    return (UINT64_C(1) + length(*a1));
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-unsigned int ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
+uint64_t ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
   if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
-    return (d_a0 + sum(*(d_a1)));
+    return (a0 + sum(*a1));
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
@@ -37,13 +37,13 @@ unsigned int ReuseFnInBody::sum(const ReuseFnInBody::mylist &l) {
 /// is used through a DIFFERENT function (sum instead of length)
 /// AND combined with a pattern variable in an arithmetic expression.
 ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(ReuseFnInBody::mylist l,
-                                                const bool b) {
+                                                bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(
             l.v_mut())) {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename ReuseFnInBody::mylist::Mycons>(l.v_mut());
-      return mylist::mycons((sum(l) + d_a0), *(d_a1));
+      return mylist::mycons((sum(l) + std::move(a0)), *a1);
     } else {
       return mylist::mynil();
     }

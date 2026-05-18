@@ -1,188 +1,92 @@
 #ifndef INCLUDED_BENCH_LET_IN
 #define INCLUDED_BENCH_LET_IN
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 struct BenchLetIn {
-  template <typename t_A, typename t_B> struct pair {
-    // TYPES
-    struct Pair0 {
-      t_A d_a0;
-      t_B d_a1;
-    };
-
-    using variant_t = std::variant<Pair0>;
-
-  private:
+  template <typename A, typename B> struct pair {
     // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    pair() {}
-
-    explicit pair(Pair0 _v) : d_v_(std::move(_v)) {}
-
-    pair(const pair<t_A, t_B> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-    pair(pair<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-    pair<t_A, t_B> &operator=(const pair<t_A, t_B> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
-      return *this;
-    }
-
-    pair<t_A, t_B> &operator=(pair<t_A, t_B> &&_other) {
-      d_v_ = std::move(_other.d_v_);
-      return *this;
-    }
+    A a0;
+    B a1;
 
     // ACCESSORS
-    pair<t_A, t_B> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Pair0>(_sv.v());
-      return pair<t_A, t_B>(Pair0{d_a0, d_a1});
-    }
+    pair<A, B> clone() const { return {a0, a1}; }
 
     // CREATORS
-    template <typename _U0, typename _U1>
-    explicit pair(const pair<_U0, _U1> &_other) {
-      const auto &[d_a0, d_a1] =
-          std::get<typename pair<_U0, _U1>::Pair0>(_other.v());
-      this->d_v_ = Pair0{t_A(d_a0), t_B(d_a1)};
+    static pair<A, B> pair0(A a0, B a1) {
+      return {std::move(a0), std::move(a1)};
     }
-
-    static pair<t_A, t_B> pair0(t_A a0, t_B a1) {
-      return pair(Pair0{std::move(a0), std::move(a1)});
-    }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return d_v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 pair_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
-      return f(d_a0, d_a1);
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
+      return f(a0, a1);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 pair_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] =
-          std::get<typename pair<t_A, t_B>::Pair0>(_sv.v());
-      return f(d_a0, d_a1);
+      const auto &_sv = *this;
+      const auto &[a0, a1] = _sv;
+      return f(a0, a1);
     }
   };
 
-  static unsigned int swap_snd(const unsigned int a, const unsigned int b);
-  static unsigned int add_via_pair(const unsigned int a, const unsigned int b);
-  static unsigned int nested_swap(const unsigned int a, const unsigned int b,
-                                  const unsigned int c, const unsigned int d);
-  static unsigned int sum_via_pairs(const unsigned int n);
+  static uint64_t swap_snd(uint64_t a, uint64_t b);
+  static uint64_t add_via_pair(uint64_t a, uint64_t b);
+  static uint64_t nested_swap(uint64_t a, uint64_t b, uint64_t c, uint64_t d);
+  static uint64_t sum_via_pairs(uint64_t n);
 
-  template <typename t_A, typename t_B, typename t_C> struct triple {
-    // TYPES
-    struct Triple0 {
-      t_A d_a0;
-      t_B d_a1;
-      t_C d_a2;
-    };
-
-    using variant_t = std::variant<Triple0>;
-
-  private:
+  template <typename A, typename B, typename C> struct triple {
     // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    triple() {}
-
-    explicit triple(Triple0 _v) : d_v_(std::move(_v)) {}
-
-    triple(const triple<t_A, t_B, t_C> &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
-
-    triple(triple<t_A, t_B, t_C> &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-    triple<t_A, t_B, t_C> &operator=(const triple<t_A, t_B, t_C> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
-      return *this;
-    }
-
-    triple<t_A, t_B, t_C> &operator=(triple<t_A, t_B, t_C> &&_other) {
-      d_v_ = std::move(_other.d_v_);
-      return *this;
-    }
+    A a0;
+    B a1;
+    C a2;
 
     // ACCESSORS
-    triple<t_A, t_B, t_C> clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] = std::get<Triple0>(_sv.v());
-      return triple<t_A, t_B, t_C>(Triple0{d_a0, d_a1, d_a2});
-    }
+    triple<A, B, C> clone() const { return {a0, a1, a2}; }
 
     // CREATORS
-    template <typename _U0, typename _U1, typename _U2>
-    explicit triple(const triple<_U0, _U1, _U2> &_other) {
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple<_U0, _U1, _U2>::Triple0>(_other.v());
-      this->d_v_ = Triple0{t_A(d_a0), t_B(d_a1), t_C(d_a2)};
+    static triple<A, B, C> triple0(A a0, B a1, C a2) {
+      return {std::move(a0), std::move(a1), std::move(a2)};
     }
-
-    static triple<t_A, t_B, t_C> triple0(t_A a0, t_B a1, t_C a2) {
-      return triple(Triple0{std::move(a0), std::move(a1), std::move(a2)});
-    }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return d_v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
     T1 triple_rec(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple<t_A, t_B, t_C>::Triple0>(_sv.v());
-      return f(d_a0, d_a1, d_a2);
+      const auto &_sv = *this;
+      const auto &[a0, a1, a2] = _sv;
+      return f(a0, a1, a2);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, t_A &, t_B &, t_C &>
+      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
     T1 triple_rect(F0 &&f) const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1, d_a2] =
-          std::get<typename triple<t_A, t_B, t_C>::Triple0>(_sv.v());
-      return f(d_a0, d_a1, d_a2);
+      const auto &_sv = *this;
+      const auto &[a0, a1, a2] = _sv;
+      return f(a0, a1, a2);
     }
   };
 
-  static unsigned int mid3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
-  static unsigned int sum3(const unsigned int a, const unsigned int b,
-                           const unsigned int c);
-  static unsigned int chain_pairs(const unsigned int a, const unsigned int b,
-                                  const unsigned int c);
-  static inline const unsigned int test_swap = swap_snd(3u, 4u);
-  static inline const unsigned int test_add = add_via_pair(3u, 4u);
-  static inline const unsigned int test_nested = nested_swap(1u, 2u, 3u, 4u);
-  static inline const unsigned int test_sum_pairs = sum_via_pairs(5u);
-  static inline const unsigned int test_mid3 = mid3(1u, 2u, 3u);
-  static inline const unsigned int test_sum3 = sum3(1u, 2u, 3u);
-  static inline const unsigned int test_chain = chain_pairs(1u, 2u, 3u);
+  static uint64_t mid3(uint64_t a, uint64_t b, uint64_t c);
+  static uint64_t sum3(uint64_t a, uint64_t b, uint64_t c);
+  static uint64_t chain_pairs(uint64_t a, uint64_t b, uint64_t c);
+  static inline const uint64_t test_swap = swap_snd(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_add =
+      add_via_pair(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_nested =
+      nested_swap(UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_sum_pairs = sum_via_pairs(UINT64_C(5));
+  static inline const uint64_t test_mid3 =
+      mid3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_sum3 =
+      sum3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_chain =
+      chain_pairs(UINT64_C(1), UINT64_C(2), UINT64_C(3));
 };
 
 #endif // INCLUDED_BENCH_LET_IN

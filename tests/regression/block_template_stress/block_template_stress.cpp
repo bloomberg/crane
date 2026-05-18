@@ -1,11 +1,11 @@
 #include "block_template_stress.h"
 
 /// 1. Block template in a fixpoint body
-List<std::string> BlockTemplateStress::read_n_lines(const unsigned int n) {
+List<std::string> BlockTemplateStress::read_n_lines(uint64_t n) {
   if (n <= 0) {
     return List<std::string>::nil();
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
     List<std::string> rest = read_n_lines(n_);
@@ -14,7 +14,7 @@ List<std::string> BlockTemplateStress::read_n_lines(const unsigned int n) {
 }
 
 /// 2. Block template inside a monadic if-then-else
-std::string BlockTemplateStress::conditional_read(const bool do_read) {
+std::string BlockTemplateStress::conditional_read(bool do_read) {
   if (do_read) {
     std::string s;
     std::getline(std::cin, s);
@@ -25,26 +25,26 @@ std::string BlockTemplateStress::conditional_read(const bool do_read) {
 }
 
 /// 3. Block template of non-string type (nat) in bind
-unsigned int BlockTemplateStress::read_and_add() {
-  unsigned int n;
+uint64_t BlockTemplateStress::read_and_add() {
+  uint64_t n;
   std::cin >> n;
-  return (n + 1u);
+  return (n + UINT64_C(1));
 }
 
 /// 4. Block template used in multiple match arms
-std::string BlockTemplateStress::branch_read(const unsigned int choice) {
+std::string BlockTemplateStress::branch_read(uint64_t choice) {
   if (choice <= 0) {
     std::string a;
     std::getline(std::cin, a);
     return "zero: "s + a;
   } else {
-    unsigned int n = choice - 1;
+    uint64_t n = choice - 1;
     if (n <= 0) {
       std::string b;
       std::getline(std::cin, b);
       return "one: "s + b;
     } else {
-      unsigned int _x = n - 1;
+      uint64_t _x = n - 1;
       std::string c;
       std::getline(std::cin, c);
       return "other: "s + c;
@@ -53,17 +53,17 @@ std::string BlockTemplateStress::branch_read(const unsigned int choice) {
 }
 
 /// 5. Block template in nested bind chain with arithmetic
-unsigned int BlockTemplateStress::read_two_nats() {
-  unsigned int a;
+uint64_t BlockTemplateStress::read_two_nats() {
+  uint64_t a;
   std::cin >> a;
-  unsigned int b;
+  uint64_t b;
   std::cin >> b;
   return (a + b);
 }
 
 /// 6. Block template result fed to another function
 void BlockTemplateStress::block_result_as_arg() {
-  unsigned int _x;
+  uint64_t _x;
   std::cin >> _x;
   std::string s;
   std::getline(std::cin, s);
@@ -77,17 +77,17 @@ BlockTemplateStress::read_files(const List<std::string> &paths) {
   if (std::holds_alternative<typename List<std::string>::Nil>(paths.v())) {
     return List<std::string>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::string>::Cons>(paths.v());
     std::string content;
     {
-      std::ifstream _f(d_a0);
+      std::ifstream _f(a0);
       if (_f.good())
         std::getline(_f, content);
       else
-        content = d_a0;
+        content = a0;
     };
-    List<std::string> rest = read_files(*(d_a1));
+    List<std::string> rest = read_files(*a1);
     return List<std::string>::cons(content, rest);
   }
 }

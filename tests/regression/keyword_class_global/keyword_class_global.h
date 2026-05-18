@@ -1,13 +1,9 @@
 #ifndef INCLUDED_KEYWORD_CLASS_GLOBAL
 #define INCLUDED_KEYWORD_CLASS_GLOBAL
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct KeywordClassGlobal {
-  static unsigned int class_(const unsigned int n);
-  static inline const unsigned int t = class_(4u);
+  static uint64_t class_(uint64_t n);
+  static inline const uint64_t t = class_(UINT64_C(4));
 };
 
 #endif // INCLUDED_KEYWORD_CLASS_GLOBAL

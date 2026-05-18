@@ -1,23 +1,20 @@
 #ifndef INCLUDED_PAGE_ADDRESS
 #define INCLUDED_PAGE_ADDRESS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct PageAddress {
-  static unsigned int addr12_of_nat(const unsigned int n);
-  static unsigned int page_of(const unsigned int p);
-  static unsigned int page_base(const unsigned int p);
-  static unsigned int branch_target(const unsigned int pc,
-                                    const unsigned int off);
-  static inline const unsigned int p_small = 777u;
-  static inline const unsigned int p_same = 600u;
-  static inline const unsigned int p_cross_254 = 254u;
-  static inline const unsigned int p_cross_255 = 255u;
-  static inline const unsigned int page_base_777 = page_base(777u);
-  static inline const unsigned int branch_example = branch_target(100u, 42u);
+  static uint64_t addr12_of_nat(uint64_t n);
+  static uint64_t page_of(uint64_t p);
+  static uint64_t page_base(uint64_t p);
+  static uint64_t branch_target(uint64_t pc, uint64_t off);
+  static inline const uint64_t p_small = UINT64_C(777);
+  static inline const uint64_t p_same = UINT64_C(600);
+  static inline const uint64_t p_cross_254 = UINT64_C(254);
+  static inline const uint64_t p_cross_255 = UINT64_C(255);
+  static inline const uint64_t page_base_777 = page_base(UINT64_C(777));
+  static inline const uint64_t branch_example =
+      branch_target(UINT64_C(100), UINT64_C(42));
 };
 
 #endif // INCLUDED_PAGE_ADDRESS

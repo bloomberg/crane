@@ -2,8 +2,6 @@
 #define INCLUDED_TUPLE
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -13,34 +11,34 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> d_a0;
+    std::unique_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Nat() {}
 
-  explicit Nat(O _v) : d_v_(_v) {}
+  explicit Nat(O _v) : v_(_v) {}
 
-  explicit Nat(S _v) : d_v_(std::move(_v)) {}
+  explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Nat(Nat &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Nat &operator=(const Nat &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Nat &operator=(Nat &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Nat &operator=(Nat &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -62,13 +60,13 @@ public:
       const Nat *_src = _frame._src;
       Nat *_dst = _frame._dst;
       if (std::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
+        _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_a0 ? std::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        auto &_dst_alt = std::get<S>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -85,10 +83,10 @@ public:
     std::vector<std::unique_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.d_v_)) {
-        auto &_alt = std::get<S>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<S>(_node.v_)) {
+        auto &_alt = std::get<S>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -102,69 +100,22 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
-template <typename t_A, typename t_B> struct Prod {
-  // TYPES
-  struct Pair {
-    t_A d_a0;
-    t_B d_a1;
-  };
-
-  using variant_t = std::variant<Pair>;
-
-private:
+template <typename A, typename B> struct Prod {
   // DATA
-  variant_t d_v_;
-
-public:
-  // CREATORS
-  Prod() {}
-
-  explicit Prod(Pair _v) : d_v_(std::move(_v)) {}
-
-  Prod(const Prod<t_A, t_B> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-  Prod(Prod<t_A, t_B> &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-  Prod<t_A, t_B> &operator=(const Prod<t_A, t_B> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
-    return *this;
-  }
-
-  Prod<t_A, t_B> &operator=(Prod<t_A, t_B> &&_other) {
-    d_v_ = std::move(_other.d_v_);
-    return *this;
-  }
+  A a0;
+  B a1;
 
   // ACCESSORS
-  Prod<t_A, t_B> clone() const {
-    auto &&_sv = *(this);
-    const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-    return Prod<t_A, t_B>(Pair{d_a0, d_a1});
-  }
+  Prod<A, B> clone() const { return {a0, a1}; }
 
   // CREATORS
-  template <typename _U0, typename _U1>
-  explicit Prod(const Prod<_U0, _U1> &_other) {
-    const auto &[d_a0, d_a1] =
-        std::get<typename Prod<_U0, _U1>::Pair>(_other.v());
-    this->d_v_ = Pair{t_A(d_a0), t_B(d_a1)};
-  }
-
-  static Prod<t_A, t_B> pair(t_A a0, t_B a1) {
-    return Prod(Pair{std::move(a0), std::move(a1)});
-  }
-
-  // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 };
 
 struct Tuple {
@@ -176,19 +127,19 @@ struct Tuple {
   }
 
   template <typename T1, typename T2> static T1 fst(const Prod<T1, T2> &p) {
-    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
-    return d_a0;
+    const auto &[a0, a1] = p;
+    return a0;
   }
 
   template <typename T1, typename T2> static T2 snd(const Prod<T1, T2> &p) {
-    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
-    return d_a1;
+    const auto &[a0, a1] = p;
+    return a1;
   }
 
   template <typename T1, typename T2>
   static Prod<T2, T1> swap(const Prod<T1, T2> &p) {
-    const auto &[d_a0, d_a1] = std::get<typename Prod<T1, T2>::Pair>(p.v());
-    return Prod<T2, T1>::pair(d_a1, d_a0);
+    const auto &[a0, a1] = p;
+    return Prod<T2, T1>::pair(a1, a0);
   }
 
   static inline const Prod<Nat, Nat> test_pair =

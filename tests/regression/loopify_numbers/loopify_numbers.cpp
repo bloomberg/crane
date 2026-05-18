@@ -2,21 +2,21 @@
 
 /// Consolidated UNIQUE numeric algorithms - no basic arithmetic.
 /// Tests loopification on number theory and recursive sequences.
-unsigned int LoopifyNumbers::factorial(
-    const unsigned int
-        n) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyNumbers::factorial(uint64_t n) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _Resume_m: saves [n], resumes after recursive call with _result.
   struct _Resume_m {
-    unsigned int n;
+    uint64_t n;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
@@ -26,11 +26,11 @@ unsigned int LoopifyNumbers::factorial(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
-        _result = 1u;
+        _result = UINT64_C(1);
       } else {
-        unsigned int m = n - 1;
+        uint64_t m = n - 1;
         _stack.emplace_back(_Resume_m{n});
         _stack.emplace_back(_Enter{m});
       }
@@ -42,27 +42,27 @@ unsigned int LoopifyNumbers::factorial(
   return _result;
 }
 
-unsigned int LoopifyNumbers::fib(
-    const unsigned int
-        n) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyNumbers::fib(uint64_t n) { /// _Enter: captures varying parameters for
+                                  /// each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _After_m: saves [n_], dispatches next recursive call.
   struct _After_m {
-    unsigned int n_;
+    uint64_t n_;
   };
 
   /// _Combine_m: receives partial results, combines with _result from final
   /// call.
   struct _Combine_m {
-    unsigned int _result;
+    uint64_t _result;
   };
 
   using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
@@ -72,15 +72,15 @@ unsigned int LoopifyNumbers::fib(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int n_ = n - 1;
+        uint64_t n_ = n - 1;
         if (n_ <= 0) {
-          _result = 1u;
+          _result = UINT64_C(1);
         } else {
-          unsigned int m = n_ - 1;
+          uint64_t m = n_ - 1;
           _stack.emplace_back(_After_m{n_});
           _stack.emplace_back(_Enter{m});
         }
@@ -97,40 +97,40 @@ unsigned int LoopifyNumbers::fib(
   return _result;
 }
 
-unsigned int LoopifyNumbers::tribonacci_fuel(
-    const unsigned int fuel,
-    const unsigned int
+uint64_t LoopifyNumbers::tribonacci_fuel(
+    uint64_t fuel,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t fuel;
   };
 
   /// _After_m: saves [m, f_0, _s2, f_1], dispatches next recursive call.
   struct _After_m {
-    unsigned int m;
-    unsigned int f_0;
-    unsigned int _s2;
-    unsigned int f_1;
+    uint64_t m;
+    uint64_t f_0;
+    uint64_t _s2;
+    uint64_t f_1;
   };
 
   /// _After_m_1: saves [_result, _s1, f], dispatches next recursive call.
   struct _After_m_1 {
-    unsigned int _result;
-    unsigned int _s1;
-    unsigned int f;
+    uint64_t _result;
+    uint64_t _s1;
+    uint64_t f;
   };
 
   /// _Combine_m: receives partial results, combines with _result from final
   /// call.
   struct _Combine_m {
-    unsigned int _result_0;
-    unsigned int _result_1;
+    uint64_t _result_0;
+    uint64_t _result_1;
   };
 
   using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
@@ -140,24 +140,24 @@ unsigned int LoopifyNumbers::tribonacci_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
+        uint64_t f = fuel - 1;
         if (n <= 0) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
-          unsigned int n0 = n - 1;
+          uint64_t n0 = n - 1;
           if (n0 <= 0) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
-            unsigned int n1 = n0 - 1;
+            uint64_t n1 = n0 - 1;
             if (n1 <= 0) {
-              _result = 1u;
+              _result = UINT64_C(1);
             } else {
-              unsigned int m = n1 - 1;
+              uint64_t m = n1 - 1;
               _stack.emplace_back(_After_m{(m + 1), f, ((m + 1) + 1), f});
               _stack.emplace_back(_Enter{m, f});
             }
@@ -180,67 +180,61 @@ unsigned int LoopifyNumbers::tribonacci_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumbers::tribonacci(const unsigned int n) {
-  return tribonacci_fuel(100u, n);
+uint64_t LoopifyNumbers::tribonacci(uint64_t n) {
+  return tribonacci_fuel(UINT64_C(100), n);
 }
 
-unsigned int LoopifyNumbers::gcd_fuel(const unsigned int fuel,
-                                      const unsigned int a,
-                                      const unsigned int b) {
-  unsigned int _result;
-  unsigned int _loop_b = b;
-  unsigned int _loop_a = a;
-  unsigned int _loop_fuel = fuel;
+uint64_t LoopifyNumbers::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
+  uint64_t _loop_b = std::move(b);
+  uint64_t _loop_a = std::move(a);
+  uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = _loop_a;
-      break;
+      return _loop_a;
     } else {
-      unsigned int f = _loop_fuel - 1;
+      uint64_t f = _loop_fuel - 1;
       if (_loop_b <= 0) {
-        _result = _loop_a;
-        break;
+        return _loop_a;
       } else {
-        unsigned int _x = _loop_b - 1;
-        unsigned int _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
-        unsigned int _next_a = _loop_b;
+        uint64_t _x = _loop_b - 1;
+        uint64_t _next_b = (_loop_b ? _loop_a % _loop_b : _loop_a);
+        uint64_t _next_a = _loop_b;
         _loop_fuel = f;
         _loop_b = _next_b;
         _loop_a = _next_a;
       }
     }
   }
-  return _result;
 }
 
-unsigned int LoopifyNumbers::gcd(const unsigned int a, const unsigned int b) {
+uint64_t LoopifyNumbers::gcd(uint64_t a, uint64_t b) {
   return gcd_fuel((a + b), a, b);
 }
 
-unsigned int LoopifyNumbers::binomial(
-    const unsigned int n,
-    const unsigned int
-        k) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyNumbers::binomial(uint64_t n,
+                         uint64_t k) { /// _Enter: captures varying parameters
+                                       /// for each recursive call.
 
   struct _Enter {
-    unsigned int k;
-    unsigned int n;
+    uint64_t k;
+    uint64_t n;
   };
 
   /// _After_k_: saves [k_, n_], dispatches next recursive call.
   struct _After_k_ {
-    unsigned int k_;
-    unsigned int n_;
+    uint64_t k_;
+    uint64_t n_;
   };
 
   /// _Combine_k_: receives partial results, combines with _result from final
   /// call.
   struct _Combine_k_ {
-    unsigned int _result;
+    uint64_t _result;
   };
 
   using _Frame = std::variant<_Enter, _After_k_, _Combine_k_>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{k, n});
@@ -250,21 +244,21 @@ unsigned int LoopifyNumbers::binomial(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int k = _f.k;
-      const unsigned int n = _f.n;
+      uint64_t k = _f.k;
+      uint64_t n = _f.n;
       if (n <= 0) {
         if (k <= 0) {
-          _result = 1u;
+          _result = UINT64_C(1);
         } else {
-          unsigned int _x = k - 1;
-          _result = 0u;
+          uint64_t _x = k - 1;
+          _result = UINT64_C(0);
         }
       } else {
-        unsigned int n_ = n - 1;
+        uint64_t n_ = n - 1;
         if (k <= 0) {
-          _result = 1u;
+          _result = UINT64_C(1);
         } else {
-          unsigned int k_ = k - 1;
+          uint64_t k_ = k - 1;
           _stack.emplace_back(_After_k_{k_, n_});
           _stack.emplace_back(_Enter{k, n_});
         }
@@ -281,30 +275,30 @@ unsigned int LoopifyNumbers::binomial(
   return _result;
 }
 
-unsigned int LoopifyNumbers::pascal(
-    const unsigned int row,
-    const unsigned int
-        col) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyNumbers::pascal(uint64_t row,
+                       uint64_t col) { /// _Enter: captures varying parameters
+                                       /// for each recursive call.
 
   struct _Enter {
-    unsigned int col;
-    unsigned int row;
+    uint64_t col;
+    uint64_t row;
   };
 
   /// _After_r: saves [c, r], dispatches next recursive call.
   struct _After_r {
-    unsigned int c;
-    unsigned int r;
+    uint64_t c;
+    uint64_t r;
   };
 
   /// _Combine_r: receives partial results, combines with _result from final
   /// call.
   struct _Combine_r {
-    unsigned int _result;
+    uint64_t _result;
   };
 
   using _Frame = std::variant<_Enter, _After_r, _Combine_r>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{col, row});
@@ -314,16 +308,16 @@ unsigned int LoopifyNumbers::pascal(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int col = _f.col;
-      const unsigned int row = _f.row;
+      uint64_t col = _f.col;
+      uint64_t row = _f.row;
       if (col <= 0) {
-        _result = 1u;
+        _result = UINT64_C(1);
       } else {
-        unsigned int c = col - 1;
+        uint64_t c = col - 1;
         if (row <= 0) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
-          unsigned int r = row - 1;
+          uint64_t r = row - 1;
           _stack.emplace_back(_After_r{c, r});
           _stack.emplace_back(_Enter{(c + 1), r});
         }
@@ -340,25 +334,25 @@ unsigned int LoopifyNumbers::pascal(
   return _result;
 }
 
-unsigned int LoopifyNumbers::ackermann_fuel(
-    const unsigned int fuel, const unsigned int m,
-    const unsigned int
+uint64_t LoopifyNumbers::ackermann_fuel(
+    uint64_t fuel, uint64_t m,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int m;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t m;
+    uint64_t fuel;
   };
 
   /// _Resume_n_: saves [m_, f], resumes after recursive call with _result.
   struct _Resume_n_ {
-    unsigned int m_;
-    unsigned int f;
+    uint64_t m_;
+    uint64_t f;
   };
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, m, fuel});
@@ -368,21 +362,21 @@ unsigned int LoopifyNumbers::ackermann_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int m = _f.m;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t m = _f.m;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
+        uint64_t f = fuel - 1;
         if (m <= 0) {
           _result = (n + 1);
         } else {
-          unsigned int m_ = m - 1;
+          uint64_t m_ = m - 1;
           if (n <= 0) {
-            _stack.emplace_back(_Enter{1u, m_, f});
+            _stack.emplace_back(_Enter{UINT64_C(1), m_, f});
           } else {
-            unsigned int n_ = n - 1;
+            uint64_t n_ = n - 1;
             _stack.emplace_back(_Resume_n_{m_, f});
             _stack.emplace_back(_Enter{n_, m, f});
           }
@@ -396,18 +390,18 @@ unsigned int LoopifyNumbers::ackermann_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumbers::ack(const unsigned int m, const unsigned int n) {
-  return ackermann_fuel(1000u, m, n);
+uint64_t LoopifyNumbers::ack(uint64_t m, uint64_t n) {
+  return ackermann_fuel(UINT64_C(1000), m, n);
 }
 
-unsigned int LoopifyNumbers::collatz_length_fuel(
-    const unsigned int fuel,
-    const unsigned int
+uint64_t LoopifyNumbers::collatz_length_fuel(
+    uint64_t fuel,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t fuel;
   };
 
   /// _Resume1: resumes after recursive call with _result.
@@ -417,7 +411,7 @@ unsigned int LoopifyNumbers::collatz_length_fuel(
   struct _Resume2 {};
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
@@ -427,21 +421,21 @@ unsigned int LoopifyNumbers::collatz_length_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
-        if (n == 1u) {
-          _result = 0u;
+        uint64_t f = fuel - 1;
+        if (n == UINT64_C(1)) {
+          _result = UINT64_C(0);
         } else {
-          if ((2u ? n % 2u : n) == 0u) {
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
             _stack.emplace_back(_Resume1{});
-            _stack.emplace_back(_Enter{(2u ? n / 2u : 0), f});
+            _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
           } else {
             _stack.emplace_back(_Resume2{});
-            _stack.emplace_back(_Enter{((3u * n) + 1u), f});
+            _stack.emplace_back(_Enter{((UINT64_C(3) * n) + UINT64_C(1)), f});
           }
         }
       }
@@ -456,28 +450,28 @@ unsigned int LoopifyNumbers::collatz_length_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumbers::collatz_length(const unsigned int n) {
-  return collatz_length_fuel(1000u, n);
+uint64_t LoopifyNumbers::collatz_length(uint64_t n) {
+  return collatz_length_fuel(UINT64_C(1000), n);
 }
 
-unsigned int LoopifyNumbers::digitsum_fuel(
-    const unsigned int fuel,
-    const unsigned int
+uint64_t LoopifyNumbers::digitsum_fuel(
+    uint64_t fuel,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t fuel;
   };
 
   /// _Resume__x: saves [_s0], resumes after recursive call with _result.
   struct _Resume__x {
-    decltype((10u ? std::declval<const unsigned int &>() % 10u
-                  : std::declval<const unsigned int &>())) _s0;
+    decltype((UINT64_C(10) ? std::declval<uint64_t &>() % UINT64_C(10)
+                           : std::declval<uint64_t &>())) _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume__x>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
@@ -487,18 +481,19 @@ unsigned int LoopifyNumbers::digitsum_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
+        uint64_t f = fuel - 1;
         if (n <= 0) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
-          unsigned int _x = n - 1;
-          _stack.emplace_back(_Resume__x{(10u ? n % 10u : n)});
-          _stack.emplace_back(_Enter{(10u ? n / 10u : 0), f});
+          uint64_t _x = n - 1;
+          _stack.emplace_back(
+              _Resume__x{(UINT64_C(10) ? n % UINT64_C(10) : n)});
+          _stack.emplace_back(_Enter{(UINT64_C(10) ? n / UINT64_C(10) : 0), f});
         }
       }
     } else {
@@ -509,28 +504,28 @@ unsigned int LoopifyNumbers::digitsum_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumbers::digitsum(const unsigned int n) {
-  return digitsum_fuel(100u, n);
+uint64_t LoopifyNumbers::digitsum(uint64_t n) {
+  return digitsum_fuel(UINT64_C(100), n);
 }
 
-unsigned int LoopifyNumbers::dec_to_bin_fuel(
-    const unsigned int fuel,
-    const unsigned int
+uint64_t LoopifyNumbers::dec_to_bin_fuel(
+    uint64_t fuel,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t fuel;
   };
 
   /// _Cont__x: saves [digit], resumes after recursive call, then processes
   /// rest.
   struct _Cont__x {
-    unsigned int digit;
+    uint64_t digit;
   };
 
   using _Frame = std::variant<_Enter, _Cont__x>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
@@ -540,50 +535,50 @@ unsigned int LoopifyNumbers::dec_to_bin_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
+        uint64_t f = fuel - 1;
         if (n <= 0) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
-          unsigned int _x = n - 1;
-          unsigned int digit = (2u ? n % 2u : n);
+          uint64_t _x = n - 1;
+          uint64_t digit = (UINT64_C(2) ? n % UINT64_C(2) : n);
           _stack.emplace_back(_Cont__x{digit});
-          _stack.emplace_back(_Enter{(2u ? n / 2u : 0), f});
+          _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
         }
       }
     } else {
       auto _f = std::move(std::get<_Cont__x>(_frame));
-      unsigned int digit = _f.digit;
-      unsigned int rest = _result;
-      _result = (digit + (10u * rest));
+      uint64_t digit = _f.digit;
+      uint64_t rest = _result;
+      _result = (digit + (UINT64_C(10) * rest));
     }
   }
   return _result;
 }
 
-unsigned int LoopifyNumbers::dec_to_bin(const unsigned int n) {
-  return dec_to_bin_fuel(100u, n);
+uint64_t LoopifyNumbers::dec_to_bin(uint64_t n) {
+  return dec_to_bin_fuel(UINT64_C(100), n);
 }
 
-unsigned int LoopifyNumbers::sum_to(
-    const unsigned int
-        n) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyNumbers::sum_to(uint64_t n) { /// _Enter: captures varying parameters for
+                                     /// each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _Resume_m: saves [n], resumes after recursive call with _result.
   struct _Resume_m {
-    unsigned int n;
+    uint64_t n;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
@@ -593,11 +588,11 @@ unsigned int LoopifyNumbers::sum_to(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int m = n - 1;
+        uint64_t m = n - 1;
         _stack.emplace_back(_Resume_m{n});
         _stack.emplace_back(_Enter{m});
       }
@@ -609,21 +604,21 @@ unsigned int LoopifyNumbers::sum_to(
   return _result;
 }
 
-unsigned int LoopifyNumbers::sum_squares(
-    const unsigned int
+uint64_t LoopifyNumbers::sum_squares(
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _Resume_m: saves [_s0], resumes after recursive call with _result.
   struct _Resume_m {
-    unsigned int _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
@@ -633,11 +628,11 @@ unsigned int LoopifyNumbers::sum_squares(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int m = n - 1;
+        uint64_t m = n - 1;
         _stack.emplace_back(_Resume_m{(n * n)});
         _stack.emplace_back(_Enter{m});
       }
@@ -649,20 +644,16 @@ unsigned int LoopifyNumbers::sum_squares(
   return _result;
 }
 
-unsigned int LoopifyNumbers::alternating_sum(const bool sign,
-                                             const unsigned int acc,
-                                             const unsigned int n) {
-  unsigned int _result;
-  unsigned int _loop_n = n;
-  unsigned int _loop_acc = acc;
-  bool _loop_sign = sign;
+uint64_t LoopifyNumbers::alternating_sum(bool sign, uint64_t acc, uint64_t n) {
+  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_acc = std::move(acc);
+  bool _loop_sign = std::move(sign);
   while (true) {
     if (_loop_n <= 0) {
-      _result = _loop_acc;
-      break;
+      return _loop_acc;
     } else {
-      unsigned int m = _loop_n - 1;
-      unsigned int new_acc;
+      uint64_t m = _loop_n - 1;
+      uint64_t new_acc;
       if (_loop_sign) {
         new_acc = (_loop_acc + _loop_n);
       } else {
@@ -674,43 +665,42 @@ unsigned int LoopifyNumbers::alternating_sum(const bool sign,
       _loop_sign = !(_loop_sign);
     }
   }
-  return _result;
 }
 
-unsigned int LoopifyNumbers::staircase_fuel(
-    const unsigned int fuel,
-    const unsigned int
+uint64_t LoopifyNumbers::staircase_fuel(
+    uint64_t fuel,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t fuel;
   };
 
   /// _After_m: saves [m, f_0, _s2, f_1], dispatches next recursive call.
   struct _After_m {
-    unsigned int m;
-    unsigned int f_0;
-    unsigned int _s2;
-    unsigned int f_1;
+    uint64_t m;
+    uint64_t f_0;
+    uint64_t _s2;
+    uint64_t f_1;
   };
 
   /// _After_m_1: saves [_result, _s1, f], dispatches next recursive call.
   struct _After_m_1 {
-    unsigned int _result;
-    unsigned int _s1;
-    unsigned int f;
+    uint64_t _result;
+    uint64_t _s1;
+    uint64_t f;
   };
 
   /// _Combine_m: receives partial results, combines with _result from final
   /// call.
   struct _Combine_m {
-    unsigned int _result_0;
-    unsigned int _result_1;
+    uint64_t _result_0;
+    uint64_t _result_1;
   };
 
   using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
@@ -720,24 +710,24 @@ unsigned int LoopifyNumbers::staircase_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
+        uint64_t f = fuel - 1;
         if (n <= 0) {
-          _result = 1u;
+          _result = UINT64_C(1);
         } else {
-          unsigned int n0 = n - 1;
+          uint64_t n0 = n - 1;
           if (n0 <= 0) {
-            _result = 1u;
+            _result = UINT64_C(1);
           } else {
-            unsigned int n1 = n0 - 1;
+            uint64_t n1 = n0 - 1;
             if (n1 <= 0) {
-              _result = 2u;
+              _result = UINT64_C(2);
             } else {
-              unsigned int m = n1 - 1;
+              uint64_t m = n1 - 1;
               _stack.emplace_back(_After_m{(m + 1), f, ((m + 1) + 1), f});
               _stack.emplace_back(_Enter{m, f});
             }
@@ -760,20 +750,20 @@ unsigned int LoopifyNumbers::staircase_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumbers::staircase(const unsigned int n) {
-  return staircase_fuel(100u, n);
+uint64_t LoopifyNumbers::staircase(uint64_t n) {
+  return staircase_fuel(UINT64_C(100), n);
 }
 
 /// iterate_pred n applies predecessor n times, starting from n.
 /// Tests church-style iteration with concrete function.
-unsigned int LoopifyNumbers::iterate_pred(const unsigned int n) {
+uint64_t LoopifyNumbers::iterate_pred(uint64_t n) {
   return church(
       n,
-      [](const unsigned int x) {
+      [](uint64_t x) {
         if (x <= 0) {
-          return 0u;
+          return UINT64_C(0);
         } else {
-          unsigned int m = x - 1;
+          uint64_t m = x - 1;
           return m;
         }
       },
@@ -782,21 +772,21 @@ unsigned int LoopifyNumbers::iterate_pred(const unsigned int n) {
 
 /// sum_while_positive n sums numbers from n down to 0, but only positive ones.
 /// Tests conditional accumulation in recursion.
-unsigned int LoopifyNumbers::sum_while_positive(
-    const unsigned int
+uint64_t LoopifyNumbers::sum_while_positive(
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _Resume_m: saves [n], resumes after recursive call with _result.
   struct _Resume_m {
-    unsigned int n;
+    uint64_t n;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
@@ -806,11 +796,11 @@ unsigned int LoopifyNumbers::sum_while_positive(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int m = n - 1;
+        uint64_t m = n - 1;
         _stack.emplace_back(_Resume_m{n});
         _stack.emplace_back(_Enter{m});
       }
@@ -824,21 +814,21 @@ unsigned int LoopifyNumbers::sum_while_positive(
 
 /// count_down_by k n counts down from n by steps of k.
 /// Tests recursion with non-standard step size.
-unsigned int LoopifyNumbers::count_down_by_fuel(
-    const unsigned int fuel, const unsigned int k,
-    const unsigned int
+uint64_t LoopifyNumbers::count_down_by_fuel(
+    uint64_t fuel, uint64_t k,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t fuel;
   };
 
   /// _Resume1: resumes after recursive call with _result.
   struct _Resume1 {};
 
   using _Frame = std::variant<_Enter, _Resume1>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
@@ -848,18 +838,18 @@ unsigned int LoopifyNumbers::count_down_by_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
+        uint64_t f = fuel - 1;
         if (n <= 0) {
-          _result = 1u;
+          _result = UINT64_C(1);
         } else {
-          unsigned int _x = n - 1;
+          uint64_t _x = n - 1;
           if (n < k) {
-            _result = 1u;
+            _result = UINT64_C(1);
           } else {
             _stack.emplace_back(_Resume1{});
             _stack.emplace_back(_Enter{(((n - k) > n ? 0 : (n - k))), f});
@@ -874,46 +864,45 @@ unsigned int LoopifyNumbers::count_down_by_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumbers::count_down_by(const unsigned int k,
-                                           const unsigned int n) {
-  return count_down_by_fuel(100u, k, n);
+uint64_t LoopifyNumbers::count_down_by(uint64_t k, uint64_t n) {
+  return count_down_by_fuel(UINT64_C(100), k, n);
 }
 
 /// mixed_arith n combines multiplication and addition in recursion.
-unsigned int LoopifyNumbers::mixed_arith_fuel(
-    const unsigned int fuel,
-    const unsigned int
+uint64_t LoopifyNumbers::mixed_arith_fuel(
+    uint64_t fuel,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
-    unsigned int fuel;
+    uint64_t n;
+    uint64_t fuel;
   };
 
   /// _After_m: saves [m, f_0, n_, f_1], dispatches next recursive call.
   struct _After_m {
-    unsigned int m;
-    unsigned int f_0;
-    unsigned int n_;
-    unsigned int f_1;
+    uint64_t m;
+    uint64_t f_0;
+    uint64_t n_;
+    uint64_t f_1;
   };
 
   /// _After_m_1: saves [_result, n_, f], dispatches next recursive call.
   struct _After_m_1 {
-    unsigned int _result;
-    unsigned int n_;
-    unsigned int f;
+    uint64_t _result;
+    uint64_t n_;
+    uint64_t f;
   };
 
   /// _Combine_m: receives partial results, combines with _result from final
   /// call.
   struct _Combine_m {
-    unsigned int _result_0;
-    unsigned int _result_1;
+    uint64_t _result_0;
+    uint64_t _result_1;
   };
 
   using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
@@ -924,27 +913,30 @@ unsigned int LoopifyNumbers::mixed_arith_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
-      const unsigned int fuel = _f.fuel;
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 1u;
+        _result = UINT64_C(1);
       } else {
-        unsigned int f = fuel - 1;
+        uint64_t f = fuel - 1;
         if (n <= 0) {
-          _result = 1u;
+          _result = UINT64_C(1);
         } else {
-          unsigned int n0 = n - 1;
+          uint64_t n0 = n - 1;
           if (n0 <= 0) {
-            _result = 1u;
+            _result = UINT64_C(1);
           } else {
-            unsigned int n_ = n0 - 1;
+            uint64_t n_ = n0 - 1;
             if (n_ <= 0) {
-              _result = 1u;
+              _result = UINT64_C(1);
             } else {
-              unsigned int m = n_ - 1;
+              uint64_t m = n_ - 1;
               _stack.emplace_back(_After_m{m, f, n_, f});
-              _stack.emplace_back(
-                  _Enter{(m == 0u ? 0u : (((m - 1u) > m ? 0 : (m - 1u)))), f});
+              _stack.emplace_back(_Enter{
+                  (m == UINT64_C(0)
+                       ? UINT64_C(0)
+                       : (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1))))),
+                  f});
             }
           }
         }
@@ -965,110 +957,97 @@ unsigned int LoopifyNumbers::mixed_arith_fuel(
   return _result;
 }
 
-unsigned int LoopifyNumbers::mixed_arith(const unsigned int n) {
-  return mixed_arith_fuel(1000u, n);
+uint64_t LoopifyNumbers::mixed_arith(uint64_t n) {
+  return mixed_arith_fuel(UINT64_C(1000), n);
 }
 
 /// is_even n checks if n is even (mutually recursive with is_odd).
-bool LoopifyNumbers::is_even_fuel(const unsigned int fuel,
-                                  const unsigned int n) {
-  bool _result;
-  unsigned int _loop_n = n;
-  unsigned int _loop_fuel = fuel;
+bool LoopifyNumbers::is_even_fuel(uint64_t fuel, uint64_t n) {
+  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = true;
-      break;
+      return true;
     } else {
-      unsigned int f = _loop_fuel - 1;
-      if (_loop_n == 0u) {
-        _result = true;
-        break;
+      uint64_t f = _loop_fuel - 1;
+      if (_loop_n == UINT64_C(0)) {
+        return true;
       } else {
-        const unsigned int _inl_n =
-            (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        const unsigned int _inl_fuel = f;
+        uint64_t _inl_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        uint64_t _inl_fuel = f;
         if (_inl_fuel <= 0) {
-          _result = false;
-          break;
+          return false;
         } else {
-          unsigned int f = _inl_fuel - 1;
-          if (_inl_n == 0u) {
-            _result = false;
-            break;
+          uint64_t f = _inl_fuel - 1;
+          if (_inl_n == UINT64_C(0)) {
+            return false;
           } else {
-            _loop_n = (((_inl_n - 1u) > _inl_n ? 0 : (_inl_n - 1u)));
+            _loop_n = ((
+                (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
             _loop_fuel = f;
           }
         }
       }
     }
   }
-  return _result;
 }
 
-bool LoopifyNumbers::is_odd_fuel(const unsigned int fuel,
-                                 const unsigned int n) {
-  bool _result;
-  unsigned int _loop_n = n;
-  unsigned int _loop_fuel = fuel;
+bool LoopifyNumbers::is_odd_fuel(uint64_t fuel, uint64_t n) {
+  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      _result = false;
-      break;
+      return false;
     } else {
-      unsigned int f = _loop_fuel - 1;
-      if (_loop_n == 0u) {
-        _result = false;
-        break;
+      uint64_t f = _loop_fuel - 1;
+      if (_loop_n == UINT64_C(0)) {
+        return false;
       } else {
-        const unsigned int _inl_n =
-            (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
-        const unsigned int _inl_fuel = f;
+        uint64_t _inl_n =
+            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+        uint64_t _inl_fuel = f;
         if (_inl_fuel <= 0) {
-          _result = true;
-          break;
+          return true;
         } else {
-          unsigned int f = _inl_fuel - 1;
-          if (_inl_n == 0u) {
-            _result = true;
-            break;
+          uint64_t f = _inl_fuel - 1;
+          if (_inl_n == UINT64_C(0)) {
+            return true;
           } else {
-            _loop_n = (((_inl_n - 1u) > _inl_n ? 0 : (_inl_n - 1u)));
+            _loop_n = ((
+                (_inl_n - UINT64_C(1)) > _inl_n ? 0 : (_inl_n - UINT64_C(1))));
             _loop_fuel = f;
           }
         }
       }
     }
   }
-  return _result;
 }
 
-bool LoopifyNumbers::is_even(const unsigned int n) {
-  return is_even_fuel(1000u, n);
+bool LoopifyNumbers::is_even(uint64_t n) {
+  return is_even_fuel(UINT64_C(1000), n);
 }
 
-bool LoopifyNumbers::is_odd(const unsigned int n) {
-  return is_odd_fuel(1000u, n);
-}
+bool LoopifyNumbers::is_odd(uint64_t n) {
+  return is_odd_fuel(UINT64_C(1000), n);
+} /// power b e computes b^e.
 
-/// power b e computes b^e.
-unsigned int LoopifyNumbers::power(
-    const unsigned int b,
-    const unsigned int
-        e) { /// _Enter: captures varying parameters for each recursive call.
+uint64_t
+LoopifyNumbers::power(uint64_t b,
+                      uint64_t e) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
 
   struct _Enter {
-    unsigned int e;
+    uint64_t e;
   };
 
   /// _Resume_e_: saves [b], resumes after recursive call with _result.
   struct _Resume_e_ {
-    unsigned int b;
+    uint64_t b;
   };
 
   using _Frame = std::variant<_Enter, _Resume_e_>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{e});
@@ -1078,11 +1057,11 @@ unsigned int LoopifyNumbers::power(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int e = _f.e;
+      uint64_t e = _f.e;
       if (e <= 0) {
-        _result = 1u;
+        _result = UINT64_C(1);
       } else {
-        unsigned int e_ = e - 1;
+        uint64_t e_ = e - 1;
         _stack.emplace_back(_Resume_e_{b});
         _stack.emplace_back(_Enter{e_});
       }
@@ -1095,29 +1074,29 @@ unsigned int LoopifyNumbers::power(
 }
 
 /// power_mod b e m computes (b^e) mod m efficiently.
-unsigned int LoopifyNumbers::power_mod_fuel(
-    const unsigned int fuel, const unsigned int b, const unsigned int e,
-    const unsigned int
+uint64_t LoopifyNumbers::power_mod_fuel(
+    uint64_t fuel, uint64_t b, uint64_t e,
+    uint64_t
         m) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int e;
-    unsigned int fuel;
+    uint64_t e;
+    uint64_t fuel;
   };
 
   /// _Cont1: saves [m], resumes after recursive call, then processes rest.
   struct _Cont1 {
-    unsigned int m;
+    uint64_t m;
   };
 
   /// _Cont2: saves [b, m], resumes after recursive call, then processes rest.
   struct _Cont2 {
-    unsigned int b;
-    unsigned int m;
+    uint64_t b;
+    uint64_t m;
   };
 
   using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{e, fuel});
@@ -1127,63 +1106,61 @@ unsigned int LoopifyNumbers::power_mod_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int e = _f.e;
-      const unsigned int fuel = _f.fuel;
+      uint64_t e = _f.e;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
-        if (e == 0u) {
-          _result = 1u;
+        uint64_t f = fuel - 1;
+        if (e == UINT64_C(0)) {
+          _result = UINT64_C(1);
         } else {
-          if ((2u ? e % 2u : e) == 0u) {
+          if ((UINT64_C(2) ? e % UINT64_C(2) : e) == UINT64_C(0)) {
             _stack.emplace_back(_Cont1{m});
-            _stack.emplace_back(_Enter{(2u ? e / 2u : 0), f});
+            _stack.emplace_back(_Enter{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
           } else {
             _stack.emplace_back(_Cont2{b, m});
-            _stack.emplace_back(_Enter{(2u ? e / 2u : 0), f});
+            _stack.emplace_back(_Enter{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
           }
         }
       }
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      const unsigned int m = _f.m;
-      unsigned int half = _result;
+      uint64_t m = _f.m;
+      uint64_t half = _result;
       _result = (m ? (half * half) % m : (half * half));
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      const unsigned int b = _f.b;
-      const unsigned int m = _f.m;
-      unsigned int half = _result;
+      uint64_t b = _f.b;
+      uint64_t m = _f.m;
+      uint64_t half = _result;
       _result = (m ? (b * (half * half)) % m : (b * (half * half)));
     }
   }
   return _result;
 }
 
-unsigned int LoopifyNumbers::power_mod(const unsigned int b,
-                                       const unsigned int e,
-                                       const unsigned int m) {
-  return power_mod_fuel(1000u, b, e, m);
+uint64_t LoopifyNumbers::power_mod(uint64_t b, uint64_t e, uint64_t m) {
+  return power_mod_fuel(UINT64_C(1000), b, e, m);
 }
 
 /// sum_divisors n sums all divisors of n (excluding n itself).
-unsigned int LoopifyNumbers::sum_divisors_aux(
-    const unsigned int n,
-    const unsigned int
+uint64_t LoopifyNumbers::sum_divisors_aux(
+    uint64_t n,
+    uint64_t
         k) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int k;
+    uint64_t k;
   };
 
   /// _Resume1: saves [k], resumes after recursive call with _result.
   struct _Resume1 {
-    unsigned int k;
+    uint64_t k;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{k});
@@ -1193,16 +1170,16 @@ unsigned int LoopifyNumbers::sum_divisors_aux(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int k = _f.k;
+      uint64_t k = _f.k;
       if (k <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int k_ = k - 1;
+        uint64_t k_ = k - 1;
         if (k_ <= 0) {
-          _result = 0u;
+          _result = UINT64_C(0);
         } else {
-          unsigned int _x = k_ - 1;
-          if ((k ? n % k : n) == 0u) {
+          uint64_t _x = k_ - 1;
+          if ((k ? n % k : n) == UINT64_C(0)) {
             _stack.emplace_back(_Resume1{k});
             _stack.emplace_back(_Enter{k_});
           } else {
@@ -1218,16 +1195,17 @@ unsigned int LoopifyNumbers::sum_divisors_aux(
   return _result;
 }
 
-unsigned int LoopifyNumbers::sum_divisors(const unsigned int n) {
+uint64_t LoopifyNumbers::sum_divisors(uint64_t n) {
   if (n <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     if (n_ <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int _x = n_ - 1;
-      return sum_divisors_aux(n_, (((n_ - 1u) > n_ ? 0 : (n_ - 1u))));
+      uint64_t _x = n_ - 1;
+      return sum_divisors_aux(
+          n_, (((n_ - UINT64_C(1)) > n_ ? 0 : (n_ - UINT64_C(1)))));
     }
   }
 }
@@ -1236,39 +1214,38 @@ unsigned int LoopifyNumbers::sum_divisors(const unsigned int n) {
 /// sum_odd_indices adds elements at odd positions (0, 2, 4...).
 /// sum_even_indices processes even positions (1, 3, 5...) by calling
 /// sum_odd_indices.
-unsigned int LoopifyNumbers::sum_odd_indices_fuel(const unsigned int fuel,
-                                                  const List<unsigned int> &l) {
+uint64_t LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
+                                              const List<uint64_t> &l) {
   if (fuel <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int f = fuel - 1;
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return 0u;
+    uint64_t f = fuel - 1;
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      return (d_a0 + sum_even_indices_fuel(f, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      return (a0 + sum_even_indices_fuel(f, *a1));
     }
   }
 }
 
-unsigned int LoopifyNumbers::sum_even_indices_fuel(
-    const unsigned int fuel,
-    const List<unsigned int>
+uint64_t LoopifyNumbers::sum_even_indices_fuel(
+    uint64_t fuel,
+    const List<uint64_t>
         &l) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const List<unsigned int> *l;
-    unsigned int fuel;
+    const List<uint64_t> *l;
+    uint64_t fuel;
   };
 
-  /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    unsigned int d_a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{&l, fuel});
@@ -1278,99 +1255,93 @@ unsigned int LoopifyNumbers::sum_even_indices_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<unsigned int> &l = *(_f.l);
-      const unsigned int fuel = _f.fuel;
+      const List<uint64_t> &l = *_f.l;
+      uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int f = fuel - 1;
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = 0u;
+        uint64_t f = fuel - 1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
-          const List<unsigned int> &_inl_l = *(d_a1);
-          const unsigned int _inl_fuel = f;
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          const List<uint64_t> &_inl_l = *a1;
+          uint64_t _inl_fuel = f;
           if (_inl_fuel <= 0) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
-            unsigned int f = _inl_fuel - 1;
-            if (std::holds_alternative<typename List<unsigned int>::Nil>(
+            uint64_t f = _inl_fuel - 1;
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(
                     _inl_l.v())) {
-              _result = 0u;
+              _result = UINT64_C(0);
             } else {
-              const auto &[d_a0, d_a1] =
-                  std::get<typename List<unsigned int>::Cons>(_inl_l.v());
-              _stack.emplace_back(_Resume_Cons{d_a0});
-              _stack.emplace_back(_Enter{d_a1.get(), f});
+              const auto &[a0, a1] =
+                  std::get<typename List<uint64_t>::Cons>(_inl_l.v());
+              _stack.emplace_back(_Resume_Cons{a0});
+              _stack.emplace_back(_Enter{a1.get(), f});
             }
           }
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.d_a0 + _result);
+      _result = (_f.a0 + _result);
     }
   }
   return _result;
 }
 
-unsigned int LoopifyNumbers::sum_odd_indices(const List<unsigned int> &l) {
+uint64_t LoopifyNumbers::sum_odd_indices(const List<uint64_t> &l) {
   return sum_odd_indices_fuel(l.length(), l);
 }
 
-unsigned int LoopifyNumbers::sum_even_indices(const List<unsigned int> &l) {
+uint64_t LoopifyNumbers::sum_even_indices(const List<uint64_t> &l) {
   return sum_even_indices_fuel(l.length(), l);
 }
 
 /// collatz_list n generates collatz sequence as a list.
-List<unsigned int> LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
-                                                     const unsigned int n) {
-  std::unique_ptr<List<unsigned int>> _head{};
-  std::unique_ptr<List<unsigned int>> *_write = &_head;
-  unsigned int _loop_n = n;
-  unsigned int _loop_fuel = fuel;
+List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
+  std::unique_ptr<List<uint64_t>> _head{};
+  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *(_write) =
-          std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
-      unsigned int f = _loop_fuel - 1;
-      if (_loop_n == 1u) {
-        *(_write) = std::make_unique<List<unsigned int>>(
-            List<unsigned int>::cons(1u, List<unsigned int>::nil()));
+      uint64_t f = _loop_fuel - 1;
+      if (_loop_n == UINT64_C(1)) {
+        *_write = std::make_unique<List<uint64_t>>(
+            List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
         break;
       } else {
-        if ((2u ? _loop_n % 2u : _loop_n) == 0u) {
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(_loop_n, nullptr));
-          *(_write) = std::move(_cell);
+        if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(_loop_n, nullptr));
+          *_write = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_n = (2u ? _loop_n / 2u : 0);
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
           _loop_fuel = f;
           continue;
         } else {
-          if ((3u ? _loop_n % 3u : _loop_n) == 0u) {
-            auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(_loop_n, nullptr));
-            *(_write) = std::move(_cell);
+          if ((UINT64_C(3) ? _loop_n % UINT64_C(3) : _loop_n) == UINT64_C(0)) {
+            auto _cell = std::make_unique<List<uint64_t>>(
+                typename List<uint64_t>::Cons(_loop_n, nullptr));
+            *_write = std::move(_cell);
             _write =
-                &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
-            _loop_n = (3u ? _loop_n / 3u : 0);
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+            _loop_n = (UINT64_C(3) ? _loop_n / UINT64_C(3) : 0);
             _loop_fuel = f;
             continue;
           } else {
-            auto _cell = std::make_unique<List<unsigned int>>(
-                typename List<unsigned int>::Cons(_loop_n, nullptr));
-            *(_write) = std::move(_cell);
+            auto _cell = std::make_unique<List<uint64_t>>(
+                typename List<uint64_t>::Cons(_loop_n, nullptr));
+            *_write = std::move(_cell);
             _write =
-                &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                     .d_a1;
-            _loop_n = ((3u * _loop_n) + 1u);
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+            _loop_n = ((UINT64_C(3) * _loop_n) + UINT64_C(1));
             _loop_fuel = f;
             continue;
           }
@@ -1378,30 +1349,30 @@ List<unsigned int> LoopifyNumbers::collatz_list_fuel(const unsigned int fuel,
       }
     }
   }
-  return std::move(*(_head));
+  return std::move(*_head);
 }
 
-List<unsigned int> LoopifyNumbers::collatz_list(const unsigned int n) {
-  return collatz_list_fuel(1000u, n);
+List<uint64_t> LoopifyNumbers::collatz_list(uint64_t n) {
+  return collatz_list_fuel(UINT64_C(1000), n);
 }
 
 /// sum_divisible_by k n sums all numbers from 1 to n divisible by k.
-unsigned int LoopifyNumbers::sum_divisible_by(
-    const unsigned int k,
-    const unsigned int
+uint64_t LoopifyNumbers::sum_divisible_by(
+    uint64_t k,
+    uint64_t
         n) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    unsigned int n;
+    uint64_t n;
   };
 
   /// _Resume1: saves [n], resumes after recursive call with _result.
   struct _Resume1 {
-    unsigned int n;
+    uint64_t n;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
-  unsigned int _result{};
+  uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
@@ -1411,12 +1382,12 @@ unsigned int LoopifyNumbers::sum_divisible_by(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const unsigned int n = _f.n;
+      uint64_t n = _f.n;
       if (n <= 0) {
-        _result = 0u;
+        _result = UINT64_C(0);
       } else {
-        unsigned int m = n - 1;
-        if ((k ? n % k : n) == 0u) {
+        uint64_t m = n - 1;
+        if ((k ? n % k : n) == UINT64_C(0)) {
           _stack.emplace_back(_Resume1{n});
           _stack.emplace_back(_Enter{m});
         } else {

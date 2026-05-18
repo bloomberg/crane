@@ -1,26 +1,26 @@
 #include "existential_closure_probe.h"
 
 /// Pack a closure into a type-erased wrapper.
-ExistentialClosureProbe::wrap
-ExistentialClosureProbe::pack_fn(const unsigned int base) {
-  return wrap::wrap0(std::function<unsigned int(unsigned int)>(
-      [=](const unsigned int x) mutable { return (x + base); }));
+ExistentialClosureProbe::wrap ExistentialClosureProbe::pack_fn(uint64_t base) {
+  return wrap::wrap0(std::function<uint64_t(uint64_t)>(
+      [=](uint64_t x) mutable { return (x + base); }));
 }
 
 /// Unpack and apply.
-unsigned int
+uint64_t
 ExistentialClosureProbe::apply_packed(const ExistentialClosureProbe::wrap &_x0,
-                                      const unsigned int _x1) {
-  return unwrap<std::function<unsigned int(unsigned int)>>(_x0)(_x1);
+                                      uint64_t _x1) {
+  return unwrap<std::function<uint64_t(uint64_t)>>(_x0)(_x1);
 }
 
 /// Store a closure that captures another closure.
 ExistentialClosureProbe::wrap
-ExistentialClosureProbe::pack_composed(const unsigned int a,
-                                       const unsigned int b) {
-  std::function<unsigned int(unsigned int)> f =
-      [=](const unsigned int x) mutable { return (x + a); };
-  std::function<unsigned int(unsigned int)> g =
-      [=](const unsigned int x) mutable { return (f(x) * b); };
+ExistentialClosureProbe::pack_composed(uint64_t a, uint64_t b) {
+  std::function<uint64_t(uint64_t)> f = [=](uint64_t x) mutable {
+    return (x + a);
+  };
+  std::function<uint64_t(uint64_t)> g = [=](uint64_t x) mutable {
+    return (f(x) * b);
+  };
   return wrap::wrap0(g);
 }

@@ -2,22 +2,21 @@
 #define INCLUDED_BINARY_NUMS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-enum class Comparison { e_EQ, e_LT, e_GT };
+enum class Comparison { EQ, LT, GT };
 
 struct Positive {
   // TYPES
   struct XI {
-    std::unique_ptr<Positive> d_a0;
+    std::unique_ptr<Positive> a0;
   };
 
   struct XO {
-    std::unique_ptr<Positive> d_a0;
+    std::unique_ptr<Positive> a0;
   };
 
   struct XH {};
@@ -26,29 +25,29 @@ struct Positive {
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Positive() {}
 
-  explicit Positive(XI _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XI _v) : v_(std::move(_v)) {}
 
-  explicit Positive(XO _v) : d_v_(std::move(_v)) {}
+  explicit Positive(XO _v) : v_(std::move(_v)) {}
 
-  explicit Positive(XH _v) : d_v_(_v) {}
+  explicit Positive(XH _v) : v_(_v) {}
 
-  Positive(const Positive &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Positive(Positive &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Positive(Positive &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Positive &operator=(const Positive &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Positive &operator=(Positive &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Positive &operator=(Positive &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -71,20 +70,20 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->d_v_ = XI{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XI>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = XI{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XI>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->d_v_ = XO{_alt.d_a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XO>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = XO{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        auto &_dst_alt = std::get<XO>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
-        _dst->d_v_ = XH{};
+        _dst->v_ = XH{};
       }
     }
     return _out;
@@ -106,16 +105,16 @@ public:
     std::vector<std::unique_ptr<Positive>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
-      if (std::holds_alternative<XI>(_node.d_v_)) {
-        auto &_alt = std::get<XI>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<XI>(_node.v_)) {
+        auto &_alt = std::get<XI>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<XO>(_node.d_v_)) {
-        auto &_alt = std::get<XO>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<XO>(_node.v_)) {
+        auto &_alt = std::get<XO>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -129,10 +128,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct N {
@@ -140,45 +139,44 @@ struct N {
   struct N0 {};
 
   struct Npos {
-    Positive d_a0;
+    Positive a0;
   };
 
   using variant_t = std::variant<N0, Npos>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   N() {}
 
-  explicit N(N0 _v) : d_v_(_v) {}
+  explicit N(N0 _v) : v_(_v) {}
 
-  explicit N(Npos _v) : d_v_(std::move(_v)) {}
+  explicit N(Npos _v) : v_(std::move(_v)) {}
 
-  N(const N &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  N(const N &_other) : v_(std::move(_other.clone().v_)) {}
 
-  N(N &&_other) : d_v_(std::move(_other.d_v_)) {}
+  N(N &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   N &operator=(const N &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  N &operator=(N &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  N &operator=(N &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
   N clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<N0>(_sv.v())) {
+    if (std::holds_alternative<N0>(this->v())) {
       return N(N0{});
     } else {
-      const auto &[d_a0] = std::get<Npos>(_sv.v());
-      return N(Npos{d_a0.clone()});
+      const auto &[a0] = std::get<Npos>(this->v());
+      return N(Npos{a0.clone()});
     }
   }
 
@@ -188,10 +186,10 @@ public:
   static N npos(Positive a0) { return N(Npos{std::move(a0)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Z {
@@ -199,54 +197,53 @@ struct Z {
   struct Z0 {};
 
   struct Zpos {
-    Positive d_a0;
+    Positive a0;
   };
 
   struct Zneg {
-    Positive d_a0;
+    Positive a0;
   };
 
   using variant_t = std::variant<Z0, Zpos, Zneg>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Z() {}
 
-  explicit Z(Z0 _v) : d_v_(_v) {}
+  explicit Z(Z0 _v) : v_(_v) {}
 
-  explicit Z(Zpos _v) : d_v_(std::move(_v)) {}
+  explicit Z(Zpos _v) : v_(std::move(_v)) {}
 
-  explicit Z(Zneg _v) : d_v_(std::move(_v)) {}
+  explicit Z(Zneg _v) : v_(std::move(_v)) {}
 
-  Z(const Z &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Z(Z &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Z(Z &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Z &operator=(const Z &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Z &operator=(Z &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Z &operator=(Z &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
   Z clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<Z0>(_sv.v())) {
+    if (std::holds_alternative<Z0>(this->v())) {
       return Z(Z0{});
-    } else if (std::holds_alternative<Zpos>(_sv.v())) {
-      const auto &[d_a0] = std::get<Zpos>(_sv.v());
-      return Z(Zpos{d_a0.clone()});
+    } else if (std::holds_alternative<Zpos>(this->v())) {
+      const auto &[a0] = std::get<Zpos>(this->v());
+      return Z(Zpos{a0.clone()});
     } else {
-      const auto &[d_a0] = std::get<Zneg>(_sv.v());
-      return Z(Zneg{d_a0.clone()});
+      const auto &[a0] = std::get<Zneg>(this->v());
+      return Z(Zneg{a0.clone()});
     }
   }
 
@@ -258,10 +255,10 @@ public:
   static Z zneg(Positive a0) { return Z(Zneg{std::move(a0)}); }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Pos {
@@ -276,7 +273,7 @@ struct Pos {
     struct IsNul {};
 
     struct IsPos {
-      Positive d_a0;
+      Positive a0;
     };
 
     struct IsNeg {};
@@ -285,40 +282,39 @@ struct Pos {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mask() {}
 
-    explicit mask(IsNul _v) : d_v_(_v) {}
+    explicit mask(IsNul _v) : v_(_v) {}
 
-    explicit mask(IsPos _v) : d_v_(std::move(_v)) {}
+    explicit mask(IsPos _v) : v_(std::move(_v)) {}
 
-    explicit mask(IsNeg _v) : d_v_(_v) {}
+    explicit mask(IsNeg _v) : v_(_v) {}
 
-    mask(const mask &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mask(const mask &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mask(mask &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mask(mask &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mask &operator=(const mask &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mask &operator=(mask &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mask &operator=(mask &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     mask clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<IsNul>(_sv.v())) {
+      if (std::holds_alternative<IsNul>(this->v())) {
         return mask(IsNul{});
-      } else if (std::holds_alternative<IsPos>(_sv.v())) {
-        const auto &[d_a0] = std::get<IsPos>(_sv.v());
-        return mask(IsPos{d_a0.clone()});
+      } else if (std::holds_alternative<IsPos>(this->v())) {
+        const auto &[a0] = std::get<IsPos>(this->v());
+        return mask(IsPos{a0.clone()});
       } else {
         return mask(IsNeg{});
       }
@@ -332,10 +328,10 @@ struct Pos {
     static mask isneg() { return mask(IsNeg{}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   static mask succ_double_mask(const mask &x);
@@ -344,7 +340,7 @@ struct Pos {
   static mask sub_mask(const Positive &x, const Positive &y);
   static mask sub_mask_carry(const Positive &x, const Positive &y);
   static Positive mul(const Positive &x, Positive y);
-  static Comparison compare_cont(const Comparison r, const Positive &x,
+  static Comparison compare_cont(Comparison r, const Positive &x,
                                  const Positive &y);
   static Comparison compare(const Positive &_x0, const Positive &_x1);
 
@@ -352,17 +348,17 @@ struct Pos {
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
-      const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
-      return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));
+      const auto &[a0] = std::get<typename Positive::XI>(p.v());
+      return op(a, iter_op<T1>(op, *a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-      const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
-      return iter_op<T1>(op, *(d_a0), op(a, a));
+      const auto &[a0] = std::get<typename Positive::XO>(p.v());
+      return iter_op<T1>(op, *a0, op(a, a));
     } else {
       return a;
     }
   }
 
-  static unsigned int to_nat(const Positive &x);
+  static uint64_t to_nat(const Positive &x);
 };
 
 struct Coq_Pos {
@@ -375,17 +371,17 @@ struct Coq_Pos {
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
-      const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
-      return op(a, iter_op<T1>(op, *(d_a0), op(a, a)));
+      const auto &[a0] = std::get<typename Positive::XI>(p.v());
+      return op(a, iter_op<T1>(op, *a0, op(a, a)));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-      const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
-      return iter_op<T1>(op, *(d_a0), op(a, a));
+      const auto &[a0] = std::get<typename Positive::XO>(p.v());
+      return iter_op<T1>(op, *a0, op(a, a));
     } else {
       return a;
     }
   }
 
-  static unsigned int to_nat(const Positive &x);
+  static uint64_t to_nat(const Positive &x);
 };
 
 struct BinNat {
@@ -394,7 +390,7 @@ struct BinNat {
   static N pred(const N &n);
   static N add(N n, N m);
   static N mul(const N &n, const N &m);
-  static unsigned int to_nat(const N &a);
+  static uint64_t to_nat(const N &a);
 };
 
 struct BinInt {
@@ -407,12 +403,12 @@ struct BinInt {
   static Z sub(const Z &m, const Z &n);
   static Z mul(const Z &x, const Z &y);
   static Comparison compare(const Z &x, const Z &y);
-  static unsigned int to_nat(const Z &z);
+  static uint64_t to_nat(const Z &z);
   static Z abs(const Z &z);
 };
 
 struct Datatypes {
-  static Comparison CompOpp(const Comparison r);
+  static Comparison CompOpp(Comparison r);
 };
 
 struct BinaryNums {
@@ -463,11 +459,11 @@ struct BinaryNums {
   static inline const Comparison z_compare_result =
       BinInt::compare(Z::zneg(Positive::xi(Positive::xh())),
                       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))));
-  static inline const unsigned int pos_to_nat =
+  static inline const uint64_t pos_to_nat =
       Coq_Pos::to_nat(Positive::xi(Positive::xi(Positive::xh())));
-  static inline const unsigned int n_to_nat = BinNat::to_nat(
+  static inline const uint64_t n_to_nat = BinNat::to_nat(
       N::npos(Positive::xi(Positive::xi(Positive::xi(Positive::xh())))));
-  static inline const unsigned int z_to_nat = BinInt::to_nat(
+  static inline const uint64_t z_to_nat = BinInt::to_nat(
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
   static N n_max(N a, N b);
   static Z z_sign(const Z &z);

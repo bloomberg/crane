@@ -8,7 +8,7 @@ int main() {
 
   // test1: l=[10,20,30], h=10, t=[20,30], mylist_sum(t)=50.
   //        compute(5) = (10+50) + 5 = 65.
-  // BUG: fixpoint captures d_a0 (unsigned int) and d_a1 (shared_ptr<mylist>)
+  // BUG: fixpoint captures d_a0 (uint64_t) and d_a1 (shared_ptr<mylist>)
   // by [&]. After make_list_fn returns, both dangle.
   // d_a1->mylist_sum() dereferences freed heap memory.
   auto r1 = FSPF::test1;

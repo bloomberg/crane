@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <string>
 #include <type_traits>
@@ -14,27 +13,26 @@ struct EffectHofVoid {
   /// 1. Apply a void callback
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
-  static void apply_void(F0 &&f, const std::string _x0) {
+  static void apply_void(F0 &&f, std::string _x0) {
     f(_x0);
     return;
   } /// 2. Apply a void callback then return a value
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
-  static std::string apply_then_return(F0 &&f, const std::string x) {
+  static std::string apply_then_return(F0 &&f, std::string x) {
     f(x);
     return x;
   } /// 3. Apply a value callback
 
-  template <typename F0>
-  static std::string apply_value(F0 &&f, const std::string x) {
+  template <typename F0> static std::string apply_value(F0 &&f, std::string x) {
     return f(x);
   }
 
   /// 4. Apply callback conditionally
   template <typename F1>
     requires std::is_invocable_r_v<void, F1 &, std::string &>
-  static void apply_if(const bool flag, F1 &&f, const std::string x) {
+  static void apply_if(bool flag, F1 &&f, std::string x) {
     if (flag) {
       f(x);
       return;
@@ -46,7 +44,7 @@ struct EffectHofVoid {
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<void, F0 &, std::string &> &&
              std::is_invocable_r_v<void, F1 &, std::string &>
-  static void chain_void(F0 &&f, F1 &&g, const std::string x) {
+  static void chain_void(F0 &&f, F1 &&g, std::string x) {
     f(x);
     g(x);
     return;
@@ -54,14 +52,13 @@ struct EffectHofVoid {
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
-  static unsigned int apply_n(F0 &&f, const std::string x,
-                              const unsigned int n) {
+  static uint64_t apply_n(F0 &&f, std::string x, uint64_t n) {
     if (n <= 0) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       f(x);
-      unsigned int rest = apply_n(f, x, n_);
+      uint64_t rest = apply_n(f, x, n_);
       return (rest + 1);
     }
   }
@@ -69,7 +66,7 @@ struct EffectHofVoid {
   /// 7. Use print_endline as a concrete callback
   static std::string concrete_use();
   /// 8. Use set_env as a concrete callback via wrapper
-  static void set_wrapper(const std::string v, const std::string k);
+  static void set_wrapper(std::string v, std::string k);
   static void concrete_set();
 };
 

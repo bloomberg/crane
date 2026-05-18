@@ -54,7 +54,7 @@ int main() {
 
   // Test quad_map
   auto doubled =
-      quad.quad_map([](unsigned int x) { return x * 2; });
+      quad.quad_map([](uint64_t x) { return x * 2; });
   ASSERT(doubled.quad_sum() == 20u); // 2+4+6+8
 
   std::cout << "All structure tests passed!\n";

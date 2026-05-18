@@ -9,50 +9,50 @@
 #include <vector>
 
 struct RecRecord {
-  template <typename t_A> struct rlist {
+  template <typename A> struct rlist {
     // TYPES
     struct Rnil {};
 
     struct Rcons {
-      t_A d_a0;
-      std::unique_ptr<rlist<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<rlist<A>> a1;
     };
 
     using variant_t = std::variant<Rnil, Rcons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     rlist() {}
 
-    explicit rlist(Rnil _v) : d_v_(_v) {}
+    explicit rlist(Rnil _v) : v_(_v) {}
 
-    explicit rlist(Rcons _v) : d_v_(std::move(_v)) {}
+    explicit rlist(Rcons _v) : v_(std::move(_v)) {}
 
-    rlist(const rlist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    rlist(const rlist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    rlist(rlist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    rlist(rlist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    rlist<t_A> &operator=(const rlist<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    rlist<A> &operator=(const rlist<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    rlist<t_A> &operator=(rlist<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    rlist<A> &operator=(rlist<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    rlist<t_A> clone() const {
-      rlist<t_A> _out{};
+    rlist<A> clone() const {
+      rlist<A> _out{};
 
       struct _CloneFrame {
-        const rlist<t_A> *_src;
-        rlist<t_A> *_dst;
+        const rlist<A> *_src;
+        rlist<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -61,17 +61,17 @@ struct RecRecord {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const rlist<t_A> *_src = _frame._src;
-        rlist<t_A> *_dst = _frame._dst;
+        const rlist<A> *_src = _frame._src;
+        rlist<A> *_dst = _frame._dst;
         if (std::holds_alternative<Rnil>(_src->v())) {
-          _dst->d_v_ = Rnil{};
+          _dst->v_ = Rnil{};
         } else {
           const auto &_alt = std::get<Rcons>(_src->v());
-          _dst->d_v_ = Rcons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<rlist<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Rcons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Rcons{_alt.a0, _alt.a1 ? std::make_unique<rlist<A>>() : nullptr};
+          auto &_dst_alt = std::get<Rcons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -81,31 +81,29 @@ struct RecRecord {
     // CREATORS
     template <typename _U> explicit rlist(const rlist<_U> &_other) {
       if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
-        this->d_v_ = Rnil{};
+        this->v_ = Rnil{};
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename rlist<_U>::Rcons>(_other.v());
-        this->d_v_ = Rcons{t_A(d_a0), d_a1 ? std::make_unique<rlist<t_A>>(*d_a1)
-                                           : nullptr};
+        const auto &[a0, a1] = std::get<typename rlist<_U>::Rcons>(_other.v());
+        this->v_ = Rcons{A(a0), a1 ? std::make_unique<rlist<A>>(*a1) : nullptr};
       }
     }
 
-    static rlist<t_A> rnil() { return rlist(Rnil{}); }
+    static rlist<A> rnil() { return rlist(Rnil{}); }
 
-    static rlist<t_A> rcons(t_A a0, rlist<t_A> a1) {
+    static rlist<A> rcons(A a0, rlist<A> a1) {
       return rlist(
-          Rcons{std::move(a0), std::make_unique<rlist<t_A>>(std::move(a1))});
+          Rcons{std::move(a0), std::make_unique<rlist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~rlist() {
-      std::vector<std::unique_ptr<rlist<t_A>>> _stack{};
+      std::vector<std::unique_ptr<rlist<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](rlist<t_A> &_node) {
-        if (std::holds_alternative<Rcons>(_node.d_v_)) {
-          auto &_alt = std::get<Rcons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](rlist<A> &_node) {
+        if (std::holds_alternative<Rcons>(_node.v_)) {
+          auto &_alt = std::get<Rcons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -119,10 +117,10 @@ struct RecRecord {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -131,8 +129,8 @@ struct RecRecord {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r.v());
-      return f0(d_a0, *(d_a1), rlist_rect<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename rlist<T1>::Rcons>(r.v());
+      return f0(a0, *a1, rlist_rect<T1, T2>(f, f0, *a1));
     }
   }
 
@@ -142,18 +140,18 @@ struct RecRecord {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(r.v());
-      return f0(d_a0, *(d_a1), rlist_rec<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename rlist<T1>::Rcons>(r.v());
+      return f0(a0, *a1, rlist_rec<T1, T2>(f, f0, *a1));
     }
   }
 
   struct RNode {
-    unsigned int rn_value;
+    uint64_t rn_value;
     std::optional<std::unique_ptr<RNode>> rn_next;
 
     // ACCESSORS
     RNode clone() const {
-      return RNode{(*(this)).rn_value,
+      return RNode{(*this).rn_value,
                    (*this).rn_next.has_value()
                        ? std::make_optional(std::make_unique<RNode>(
                              (*(*this).rn_next)->clone()))
@@ -162,10 +160,9 @@ struct RecRecord {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
-                                   std::optional<RNode> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rect(F0 &&f, const RNode &r) {
-    unsigned int rn_value0 = r.rn_value;
+    uint64_t rn_value0 = r.rn_value;
     std::optional<RNode> rn_next0 =
         r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
                               : std::nullopt;
@@ -173,10 +170,9 @@ struct RecRecord {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &,
-                                   std::optional<RNode> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rec(F0 &&f, const RNode &r) {
-    unsigned int rn_value0 = r.rn_value;
+    uint64_t rn_value0 = r.rn_value;
     std::optional<RNode> rn_next0 =
         r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
                               : std::nullopt;
@@ -184,55 +180,54 @@ struct RecRecord {
   }
 
   struct Employee {
-    unsigned int emp_name;
-    unsigned int emp_dept;
+    uint64_t emp_name;
+    uint64_t emp_dept;
 
     // ACCESSORS
     Employee clone() const {
-      return Employee{(*(this)).emp_name, (*(this)).emp_dept};
+      return Employee{(*this).emp_name, (*this).emp_dept};
     }
   };
 
   struct Department {
-    unsigned int dept_id;
+    uint64_t dept_id;
     Employee dept_head;
-    unsigned int dept_size;
+    uint64_t dept_size;
 
     // ACCESSORS
     Department clone() const {
-      return Department{(*(this)).dept_id, (*(this)).dept_head.clone(),
-                        (*(this)).dept_size};
+      return Department{(*this).dept_id, (*this).dept_head.clone(),
+                        (*this).dept_size};
     }
   };
 
-  template <typename T1> static unsigned int rlist_length(const rlist<T1> &l) {
+  template <typename T1> static uint64_t rlist_length(const rlist<T1> &l) {
     if (std::holds_alternative<typename rlist<T1>::Rnil>(l.v())) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename rlist<T1>::Rcons>(l.v());
-      return (rlist_length<T1>(*(d_a1)) + 1);
+      const auto &[a0, a1] = std::get<typename rlist<T1>::Rcons>(l.v());
+      return (rlist_length<T1>(*a1) + 1);
     }
   }
 
-  static unsigned int rlist_sum(const rlist<unsigned int> &l);
-  static unsigned int rnode_depth(const RNode &r);
-  static inline const rlist<unsigned int> test_rlist =
-      rlist<unsigned int>::rcons(
-          1u,
-          rlist<unsigned int>::rcons(
-              2u, rlist<unsigned int>::rcons(3u, rlist<unsigned int>::rnil())));
-  static inline const unsigned int test_rlist_len =
-      rlist_length<unsigned int>(test_rlist);
-  static inline const unsigned int test_rlist_sum = rlist_sum(test_rlist);
+  static uint64_t rlist_sum(const rlist<uint64_t> &l);
+  static uint64_t rnode_depth(const RNode &r);
+  static inline const rlist<uint64_t> test_rlist = rlist<uint64_t>::rcons(
+      UINT64_C(1), rlist<uint64_t>::rcons(
+                       UINT64_C(2), rlist<uint64_t>::rcons(
+                                        UINT64_C(3), rlist<uint64_t>::rnil())));
+  static inline const uint64_t test_rlist_len =
+      rlist_length<uint64_t>(test_rlist);
+  static inline const uint64_t test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode{
-      1u,
+      UINT64_C(1),
       [](auto &&__x)
           -> std::optional<std::unique_ptr<RNode>> {
         return __x.has_value()
                    ? std::make_optional(std::make_unique<RNode>((*__x).clone()))
                    : std::nullopt;
       }(std::make_optional<RNode>(RNode{
-              2u,
+              UINT64_C(2),
               [](auto &&__x)
                   -> std::optional<std::unique_ptr<RNode>> {
                 return __x.has_value()
@@ -240,17 +235,18 @@ struct RecRecord {
                                  std::make_unique<RNode>((*__x).clone()))
                            : std::nullopt;
               }(std::make_optional<RNode>(RNode{
-                      3u,
+                      UINT64_C(3),
                       [](auto &&__x) -> std::optional<std::unique_ptr<RNode>> {
                         return __x.has_value()
                                    ? std::make_optional(std::make_unique<RNode>(
                                          (*__x).clone()))
                                    : std::nullopt;
                       }(std::optional<RNode>())}))}))};
-  static inline const unsigned int test_rnode_depth = rnode_depth(test_rnode);
-  static inline const Employee test_emp = Employee{42u, 7u};
-  static inline const Department test_dept = Department{7u, test_emp, 50u};
-  static inline const unsigned int test_dept_head_name =
+  static inline const uint64_t test_rnode_depth = rnode_depth(test_rnode);
+  static inline const Employee test_emp = Employee{UINT64_C(42), UINT64_C(7)};
+  static inline const Department test_dept =
+      Department{UINT64_C(7), test_emp, UINT64_C(50)};
+  static inline const uint64_t test_dept_head_name =
       test_dept.dept_head.emp_name;
 };
 

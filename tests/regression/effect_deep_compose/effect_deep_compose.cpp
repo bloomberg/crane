@@ -1,8 +1,7 @@
 #include "effect_deep_compose.h"
 
 /// 1. Function using all three effects
-int64_t EffectDeepCompose::timed_env_op(const std::string name,
-                                        const std::string value) {
+int64_t EffectDeepCompose::timed_env_op(std::string name, std::string value) {
   int64_t t1 = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now().time_since_epoch())
@@ -23,8 +22,7 @@ void EffectDeepCompose::just_greet() {
 }
 
 /// 3. Function using env + console but not clock
-void EffectDeepCompose::env_with_log(const std::string name,
-                                     const std::string value) {
+void EffectDeepCompose::env_with_log(std::string name, std::string value) {
   std::cout << "setting env..."s << '\n';
   setenv(name.c_str(), value.c_str(), 1);
   std::cout << "done"s << '\n';
@@ -32,7 +30,7 @@ void EffectDeepCompose::env_with_log(const std::string name,
 }
 
 /// 4. Read env, print result
-void EffectDeepCompose::show_env(const std::string name) {
+void EffectDeepCompose::show_env(std::string name) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -48,7 +46,7 @@ void EffectDeepCompose::show_env(const std::string name) {
 }
 
 /// 5. Conditional clock read
-int64_t EffectDeepCompose::maybe_time(const bool measure) {
+int64_t EffectDeepCompose::maybe_time(bool measure) {
   if (measure) {
     return static_cast<int64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -60,11 +58,11 @@ int64_t EffectDeepCompose::maybe_time(const bool measure) {
 }
 
 /// 6. Recursive function over all three effects
-void EffectDeepCompose::repeat_n(const unsigned int n) {
+void EffectDeepCompose::repeat_n(uint64_t n) {
   if (n <= 0) {
     return;
   } else {
-    unsigned int n_ = n - 1;
+    uint64_t n_ = n - 1;
     int64_t _x = static_cast<int64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch())

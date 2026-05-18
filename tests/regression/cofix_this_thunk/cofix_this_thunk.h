@@ -4,56 +4,55 @@
 #include "lazy.h"
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -62,17 +61,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -82,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -119,133 +115,131 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 /// Module name "Sseq" matches coinductive "sseq" -> eponymous
-template <typename t_A> struct Sseq {
+template <typename A> struct Sseq {
   // TYPES
   struct SCons {
-    t_A d_shead;
-    std::shared_ptr<Sseq<t_A>> d_stail;
+    A shead;
+    std::shared_ptr<Sseq<A>> stail;
   };
 
   using variant_t = std::variant<SCons>;
 
 private:
   // DATA
-  crane::lazy<variant_t> d_lazyV_;
+  crane::lazy<variant_t> lazy_v_;
 
 public:
   // CREATORS
   explicit Sseq(SCons _v)
-      : d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
+      : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
   explicit Sseq(std::function<variant_t()> _thunk)
-      : d_lazyV_(crane::lazy<variant_t>(std::move(_thunk))) {}
+      : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static Sseq<t_A> scons(t_A shead, const Sseq<t_A> &stail) {
-    return Sseq(SCons{std::move(shead), std::make_shared<Sseq<t_A>>(stail)});
+  static Sseq<A> scons(A shead, const Sseq<A> &stail) {
+    return Sseq(SCons{std::move(shead), std::make_shared<Sseq<A>>(stail)});
   }
 
-  static Sseq<t_A> lazy_(std::function<Sseq<t_A>()> thunk) {
-    return Sseq<t_A>(std::function<variant_t()>([=]() mutable -> variant_t {
-      Sseq<t_A> _tmp = thunk();
+  static Sseq<A> lazy_(std::function<Sseq<A>()> thunk) {
+    return Sseq<A>(std::function<variant_t()>([=]() mutable -> variant_t {
+      Sseq<A> _tmp = thunk();
       return _tmp.v();
     }));
   }
 
   // ACCESSORS
-  const variant_t &v() const { return d_lazyV_.force(); }
+  const variant_t &v() const { return lazy_v_.force(); }
 
-  t_A shead() const {
-    const auto &[d_shead, d_stail] =
-        std::get<typename Sseq<t_A>::SCons>(this->v());
-    return d_shead;
+  A shead() const {
+    const auto &[shead1, stail0] = std::get<typename Sseq<A>::SCons>(this->v());
+    return shead1;
   }
 
-  Sseq<t_A> stail() const {
-    const auto &[d_shead, d_stail] =
-        std::get<typename Sseq<t_A>::SCons>(this->v());
-    return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> { return *(d_stail); });
+  Sseq<A> stail() const {
+    const auto &[shead0, stail1] = std::get<typename Sseq<A>::SCons>(this->v());
+    return Sseq<A>::lazy_([=]() mutable -> Sseq<A> { return *stail1; });
   }
 
   /// This will be methodified on sseq because first arg is sseq A
   /// and the module is eponymous.
   template <typename F0>
-    requires std::is_invocable_r_v<t_A, F0 &, t_A &>
-  t_A double_head(F0 &&f) const {
+    requires std::is_invocable_r_v<A, F0 &, A &>
+  A double_head(F0 &&f) const {
     return f(this->shead());
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<t_A, F0 &, t_A &>
-  Sseq<t_A> smap(F0 &&f) const {
-    Sseq<t_A> _self_val = *(this);
-    return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
-      return Sseq<t_A>::scons(_self_val.double_head(f),
-                              _self_val.stail().smap(f));
+    requires std::is_invocable_r_v<A, F0 &, A &>
+  Sseq<A> smap(F0 &&f) const {
+    Sseq<A> _self_val = *this;
+    return Sseq<A>::lazy_([=]() mutable -> Sseq<A> {
+      return Sseq<A>::scons(_self_val.double_head(f),
+                            _self_val.stail().smap(f));
     });
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<t_A, F0 &, t_A &>
-  Sseq<t_A> smap_direct(F0 &&f) const {
-    Sseq<t_A> _self_val = *(this);
-    return Sseq<t_A>::lazy_([=]() mutable -> Sseq<t_A> {
-      return Sseq<t_A>::scons(f(_self_val.shead()),
-                              _self_val.stail().smap_direct(f));
+    requires std::is_invocable_r_v<A, F0 &, A &>
+  Sseq<A> smap_direct(F0 &&f) const {
+    Sseq<A> _self_val = *this;
+    return Sseq<A>::lazy_([=]() mutable -> Sseq<A> {
+      return Sseq<A>::scons(f(_self_val.shead()),
+                            _self_val.stail().smap_direct(f));
     });
   }
 
   /// Take n elements
-  List<t_A> take(const unsigned int n) const {
+  List<A> take(uint64_t n) const {
     if (n <= 0) {
-      return List<t_A>::nil();
+      return List<A>::nil();
     } else {
-      unsigned int m = n - 1;
-      return List<t_A>::cons(this->shead(), this->stail().take(m));
+      uint64_t m = n - 1;
+      return List<A>::cons(this->shead(), this->stail().take(m));
     }
   }
 
-  static Sseq<unsigned int> nats_from(const unsigned int n) {
-    return Sseq<unsigned int>::lazy_([=]() mutable -> Sseq<unsigned int> {
-      return Sseq<unsigned int>::scons(n, nats_from((n + 1)));
+  static Sseq<uint64_t> nats_from(uint64_t n) {
+    return Sseq<uint64_t>::lazy_([=]() mutable -> Sseq<uint64_t> {
+      return Sseq<uint64_t>::scons(n, nats_from((n + 1)));
     });
   }
 
   /// Sum of a list
-  static unsigned int sum(const List<unsigned int> &l) {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-      return 0u;
+  static uint64_t sum(const List<uint64_t> &l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l.v());
-      return (d_a0 + sum(*(d_a1)));
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      return (a0 + sum(*a1));
     }
   }
 
   /// test1: smap (nats_from 0) S gives 1, 2, 3, 4, ...
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
-  static const unsigned int &test1() {
-    static const unsigned int v = []() {
-      Sseq<unsigned int> s =
-          nats_from(0u).smap([](const unsigned int x) { return (x + 1); });
-      return sum(s.take(4u));
+  static const uint64_t &test1() {
+    static const uint64_t v = []() {
+      Sseq<uint64_t> s =
+          nats_from(UINT64_C(0)).smap([](uint64_t x) { return (x + 1); });
+      return sum(s.take(UINT64_C(4)));
     }();
     return v;
   }
 
   /// test2: smap_direct (nats_from 0) S gives 1, 2, 3, 4, ...
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
-  static const unsigned int &test2() {
-    static const unsigned int v = []() {
-      Sseq<unsigned int> s = nats_from(0u).smap_direct(
-          [](const unsigned int x) { return (x + 1); });
-      return sum(s.take(4u));
+  static const uint64_t &test2() {
+    static const uint64_t v = []() {
+      Sseq<uint64_t> s = nats_from(UINT64_C(0)).smap_direct([](uint64_t x) {
+        return (x + 1);
+      });
+      return sum(s.take(UINT64_C(4)));
     }();
     return v;
   }

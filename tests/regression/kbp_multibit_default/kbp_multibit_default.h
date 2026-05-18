@@ -1,21 +1,17 @@
 #ifndef INCLUDED_KBP_MULTIBIT_DEFAULT
 #define INCLUDED_KBP_MULTIBIT_DEFAULT
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct KbpMultibitDefault {
   struct state {
-    unsigned int acc;
+    uint64_t acc;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).acc}; }
+    state clone() const { return state{(*this).acc}; }
   };
 
   static state execute_kbp(const state &s);
-  static inline const state sample = state{3u};
-  static inline const bool t = execute_kbp(sample).acc == 15u;
+  static inline const state sample = state{UINT64_C(3)};
+  static inline const bool t = execute_kbp(sample).acc == UINT64_C(15);
 };
 
 #endif // INCLUDED_KBP_MULTIBIT_DEFAULT

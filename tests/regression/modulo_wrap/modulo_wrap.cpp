@@ -1,22 +1,22 @@
 #include "modulo_wrap.h"
 
-unsigned int ModuloWrap::addr12_of_nat(const unsigned int n) {
-  return (4096u ? n % 4096u : n);
+uint64_t ModuloWrap::addr12_of_nat(uint64_t n) {
+  return (UINT64_C(4096) ? n % UINT64_C(4096) : n);
 }
 
-unsigned int ModuloWrap::byte_of_nat(const unsigned int n) {
-  return (256u ? n % 256u : n);
+uint64_t ModuloWrap::byte_of_nat(uint64_t n) {
+  return (UINT64_C(256) ? n % UINT64_C(256) : n);
 }
 
-unsigned int ModuloWrap::nibble_of_nat(const unsigned int n) {
-  return (16u ? n % 16u : n);
+uint64_t ModuloWrap::nibble_of_nat(uint64_t n) {
+  return (UINT64_C(16) ? n % UINT64_C(16) : n);
 }
 
-unsigned int Nat::pow(const unsigned int n, const unsigned int m) {
+uint64_t Nat::pow(uint64_t n, uint64_t m) {
   if (m <= 0) {
-    return 1u;
+    return UINT64_C(1);
   } else {
-    unsigned int m0 = m - 1;
+    uint64_t m0 = m - 1;
     return (n * Nat::pow(n, m0));
   }
 }

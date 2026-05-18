@@ -5,52 +5,48 @@
 /// SIMPLE LAMBDA VERSION: Each closure fun x => h + x captures
 /// h from the pattern match. These are simple lambdas, so they
 /// should capture by =.
-AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
+AccumClosureEscape::mylist<std::function<uint64_t(uint64_t)>>
 AccumClosureEscape::build_adders(
-    const AccumClosureEscape::mylist<unsigned int> &l,
-    AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>> acc) {
+    const AccumClosureEscape::mylist<uint64_t> &l,
+    AccumClosureEscape::mylist<std::function<uint64_t(uint64_t)>> acc) {
   if (std::holds_alternative<
-          typename AccumClosureEscape::mylist<unsigned int>::Mynil>(l.v())) {
+          typename AccumClosureEscape::mylist<uint64_t>::Mynil>(l.v())) {
     return acc;
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename AccumClosureEscape::mylist<unsigned int>::Mycons>(
-            l.v());
-    AccumClosureEscape::mylist<unsigned int> d_a1_value = *(d_a1);
+    const auto &[a0, a1] =
+        std::get<typename AccumClosureEscape::mylist<uint64_t>::Mycons>(l.v());
+    const AccumClosureEscape::mylist<uint64_t> &a1_value = *a1;
     return build_adders(
-        d_a1_value,
-        mylist<std::function<unsigned int(unsigned int)>>::mycons(
-            [=](const unsigned int x) mutable { return (d_a0 + x); },
-            std::move(acc)));
+        a1_value,
+        mylist<std::function<uint64_t(uint64_t)>>::mycons(
+            [=](uint64_t x) mutable { return (a0 + x); }, std::move(acc)));
   }
 }
 
 /// Apply first closure from the list.
-unsigned int AccumClosureEscape::apply_first(
-    const AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
-        &fns,
-    const unsigned int x) {
+uint64_t AccumClosureEscape::apply_first(
+    const AccumClosureEscape::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    uint64_t x) {
   if (std::holds_alternative<typename AccumClosureEscape::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
-    return 0u;
+          std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename AccumClosureEscape::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return d_a0(x);
+    const auto &[a0, a1] = std::get<typename AccumClosureEscape::mylist<
+        std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());
+    return a0(x);
   }
 }
 
 /// Apply all closures and sum.
-unsigned int AccumClosureEscape::apply_all_sum(
-    const AccumClosureEscape::mylist<std::function<unsigned int(unsigned int)>>
-        &fns,
-    const unsigned int x) {
+uint64_t AccumClosureEscape::apply_all_sum(
+    const AccumClosureEscape::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    uint64_t x) {
   if (std::holds_alternative<typename AccumClosureEscape::mylist<
-          std::function<unsigned int(unsigned int)>>::Mynil>(fns.v())) {
-    return 0u;
+          std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<typename AccumClosureEscape::mylist<
-        std::function<unsigned int(unsigned int)>>::Mycons>(fns.v());
-    return (d_a0(x) + apply_all_sum(*(d_a1), x));
+    const auto &[a0, a1] = std::get<typename AccumClosureEscape::mylist<
+        std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());
+    return (a0(x) + apply_all_sum(*a1, x));
   }
 }

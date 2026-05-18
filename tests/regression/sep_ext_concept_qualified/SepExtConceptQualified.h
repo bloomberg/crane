@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTCONCEPTQUALIFIED
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
@@ -20,9 +17,9 @@ concept OrderedType = requires {
 };
 
 template <OrderedType X> struct Make {
-  constexpr static bool is_eq(const typename X::t a, const typename X::t b) {
+  constexpr static bool is_eq(typename X::t a, typename X::t b) {
     switch (X::compare(a, b)) {
-    case Datatypes::Comparison::e_EQ: {
+    case Datatypes::Comparison::EQ: {
       return true;
     }
     default: {

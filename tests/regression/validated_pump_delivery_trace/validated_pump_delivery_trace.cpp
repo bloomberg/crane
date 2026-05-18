@@ -10,52 +10,52 @@ bool ValidatedPumpDeliveryTraceCase::carbs_reasonable(
   return carbs.grams_val <= CARBS_SANITY_MAX;
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::isf_activity_modifier(
-    const ValidatedPumpDeliveryTraceCase::ActivityState state) {
+uint64_t ValidatedPumpDeliveryTraceCase::isf_activity_modifier(
+    ValidatedPumpDeliveryTraceCase::ActivityState state) {
   switch (state) {
-  case ActivityState::e_ACTIVITY_NORMAL: {
-    return 100u;
+  case ActivityState::ACTIVITY_NORMAL: {
+    return UINT64_C(100);
   }
-  case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
-    return 110u;
+  case ActivityState::ACTIVITY_LIGHTEXERCISE: {
+    return UINT64_C(110);
   }
-  case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
-    return 130u;
+  case ActivityState::ACTIVITY_MODERATEEXERCISE: {
+    return UINT64_C(130);
   }
-  case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
-    return 150u;
+  case ActivityState::ACTIVITY_INTENSEEXERCISE: {
+    return UINT64_C(150);
   }
-  case ActivityState::e_ACTIVITY_ILLNESS: {
-    return 80u;
+  case ActivityState::ACTIVITY_ILLNESS: {
+    return UINT64_C(80);
   }
-  case ActivityState::e_ACTIVITY_STRESS: {
-    return 90u;
+  case ActivityState::ACTIVITY_STRESS: {
+    return UINT64_C(90);
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
-    const ValidatedPumpDeliveryTraceCase::ActivityState state) {
+uint64_t ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
+    ValidatedPumpDeliveryTraceCase::ActivityState state) {
   switch (state) {
-  case ActivityState::e_ACTIVITY_NORMAL: {
-    return 100u;
+  case ActivityState::ACTIVITY_NORMAL: {
+    return UINT64_C(100);
   }
-  case ActivityState::e_ACTIVITY_LIGHTEXERCISE: {
-    return 110u;
+  case ActivityState::ACTIVITY_LIGHTEXERCISE: {
+    return UINT64_C(110);
   }
-  case ActivityState::e_ACTIVITY_MODERATEEXERCISE: {
-    return 125u;
+  case ActivityState::ACTIVITY_MODERATEEXERCISE: {
+    return UINT64_C(125);
   }
-  case ActivityState::e_ACTIVITY_INTENSEEXERCISE: {
-    return 140u;
+  case ActivityState::ACTIVITY_INTENSEEXERCISE: {
+    return UINT64_C(140);
   }
-  case ActivityState::e_ACTIVITY_ILLNESS: {
-    return 85u;
+  case ActivityState::ACTIVITY_ILLNESS: {
+    return UINT64_C(85);
   }
-  case ActivityState::e_ACTIVITY_STRESS: {
-    return 95u;
+  case ActivityState::ACTIVITY_STRESS: {
+    return UINT64_C(95);
   }
   default:
     std::unreachable();
@@ -64,61 +64,62 @@ unsigned int ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
 
 ValidatedPumpDeliveryTraceCase::Minutes
 ValidatedPumpDeliveryTraceCase::peak_time(
-    const ValidatedPumpDeliveryTraceCase::InsulinType itype,
-    const unsigned int) {
+    ValidatedPumpDeliveryTraceCase::InsulinType itype, uint64_t) {
   switch (itype) {
-  case InsulinType::e_INSULIN_ASPART: {
-    return 70u;
+  case InsulinType::INSULIN_ASPART: {
+    return UINT64_C(70);
   }
   default: {
-    return 75u;
+    return UINT64_C(75);
   }
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::div_ceil(const unsigned int a,
-                                                      const unsigned int b) {
-  if (b == 0u) {
-    return 0u;
+uint64_t ValidatedPumpDeliveryTraceCase::div_ceil(uint64_t a, uint64_t b) {
+  if (b == UINT64_C(0)) {
+    return UINT64_C(0);
   } else {
-    return (b ? ((((a + b) - 1u) > (a + b) ? 0 : ((a + b) - 1u))) / b : 0);
+    return (
+        b ? ((((a + b) - UINT64_C(1)) > (a + b) ? 0
+                                                : ((a + b) - UINT64_C(1)))) /
+                b
+          : 0);
   }
 }
 
 bool ValidatedPumpDeliveryTraceCase::event_time_valid(
-    const unsigned int now,
-    const ValidatedPumpDeliveryTraceCase::BolusEvent &event) {
+    uint64_t now, const ValidatedPumpDeliveryTraceCase::BolusEvent &event) {
   return event.be_time_minutes <= now;
 }
 
 bool ValidatedPumpDeliveryTraceCase::history_times_valid(
-    const unsigned int now,
+    uint64_t now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
           events.v())) {
     return true;
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         events.v());
-    return (event_time_valid(now, d_a0) && history_times_valid(now, *(d_a1)));
+    return (event_time_valid(now, a0) && history_times_valid(now, *a1));
   }
 }
 
 bool ValidatedPumpDeliveryTraceCase::history_sorted_from(
-    const unsigned int prev,
+    uint64_t prev,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
           events.v())) {
     return true;
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         events.v());
-    return (d_a0.be_time_minutes <= prev &&
-            history_sorted_from(d_a0.be_time_minutes, *(d_a1)));
+    return (a0.be_time_minutes <= prev &&
+            history_sorted_from(a0.be_time_minutes, *a1));
   }
 }
 
@@ -129,45 +130,47 @@ bool ValidatedPumpDeliveryTraceCase::history_sorted_desc(
           events.v())) {
     return true;
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         events.v());
-    return history_sorted_from(d_a0.be_time_minutes, *(d_a1));
+    return history_sorted_from(a0.be_time_minutes, *a1);
   }
 }
 
 bool ValidatedPumpDeliveryTraceCase::history_valid(
-    const unsigned int now,
+    uint64_t now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   return (history_times_valid(now, events) && history_sorted_desc(events));
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
-    const unsigned int elapsed, const unsigned int dia,
-    const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
-  unsigned int pt = peak_time(itype, dia);
-  if (dia == 0u) {
-    return 0u;
+uint64_t ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
+    uint64_t elapsed, uint64_t dia,
+    ValidatedPumpDeliveryTraceCase::InsulinType itype) {
+  uint64_t pt = peak_time(itype, dia);
+  if (dia == UINT64_C(0)) {
+    return UINT64_C(0);
   } else {
     if (dia <= elapsed) {
-      return 0u;
+      return UINT64_C(0);
     } else {
-      if (pt == 0u) {
-        return 0u;
+      if (pt == UINT64_C(0)) {
+        return UINT64_C(0);
       } else {
         if (elapsed <= pt) {
-          return (((100u - (pt ? (elapsed * 25u) / pt : 0)) > 100u
+          return (((UINT64_C(100) - (pt ? (elapsed * UINT64_C(25)) / pt : 0)) >
+                           UINT64_C(100)
                        ? 0
-                       : (100u - (pt ? (elapsed * 25u) / pt : 0))));
+                       : (UINT64_C(100) -
+                          (pt ? (elapsed * UINT64_C(25)) / pt : 0))));
         } else {
           if (dia <= pt) {
-            return 0u;
+            return UINT64_C(0);
           } else {
-            return (
-                (((dia - pt) > dia ? 0 : (dia - pt)))
-                    ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) * 75u) /
-                          (((dia - pt) > dia ? 0 : (dia - pt)))
-                    : 0);
+            return ((((dia - pt) > dia ? 0 : (dia - pt)))
+                        ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
+                           UINT64_C(75)) /
+                              (((dia - pt) > dia ? 0 : (dia - pt)))
+                        : 0);
           }
         }
       }
@@ -177,12 +180,10 @@ unsigned int ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
-    const unsigned int now,
-    const ValidatedPumpDeliveryTraceCase::BolusEvent &event,
-    const unsigned int dia,
-    const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
+    uint64_t now, const ValidatedPumpDeliveryTraceCase::BolusEvent &event,
+    uint64_t dia, ValidatedPumpDeliveryTraceCase::InsulinType itype) {
   if (now < event.be_time_minutes) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     return div_ceil(
         (event.be_dose_twentieths *
@@ -190,26 +191,25 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
                                      ? 0
                                      : (now - event.be_time_minutes))),
                                dia, itype)),
-        100u);
+        UINT64_C(100));
   }
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::total_bilinear_iob(
-    const unsigned int now,
+    uint64_t now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events,
-    const unsigned int dia,
-    const ValidatedPumpDeliveryTraceCase::InsulinType itype) {
+    uint64_t dia, ValidatedPumpDeliveryTraceCase::InsulinType itype) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
           events.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         events.v());
-    return (bilinear_iob_from_bolus(now, d_a0, dia, itype) +
-            total_bilinear_iob(now, *(d_a1), dia, itype));
+    return (bilinear_iob_from_bolus(now, a0, dia, itype) +
+            total_bilinear_iob(now, *a1, dia, itype));
   }
 }
 
@@ -218,47 +218,52 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
     ValidatedPumpDeliveryTraceCase::Mg_dL bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target) {
   if (target.mg_dL_val <= bg.mg_dL_val) {
-    return Mg_dL{((
-        (bg.mg_dL_val - (100u ? (bg.mg_dL_val * 15u) / 100u : 0)) > bg.mg_dL_val
-            ? 0
-            : (bg.mg_dL_val - (100u ? (bg.mg_dL_val * 15u) / 100u : 0))))};
+    return Mg_dL{(
+        ((bg.mg_dL_val -
+          (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100) : 0)) >
+                 bg.mg_dL_val
+             ? 0
+             : (bg.mg_dL_val -
+                (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100)
+                               : 0))))};
   } else {
     return bg;
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
-    const ValidatedPumpDeliveryTraceCase::Mg_dL &bg,
-    const unsigned int base_isf_tenths) {
-  if (bg.mg_dL_val < 250u) {
+uint64_t ValidatedPumpDeliveryTraceCase::adjusted_isf_tenths(
+    const ValidatedPumpDeliveryTraceCase::Mg_dL &bg, uint64_t base_isf_tenths) {
+  if (bg.mg_dL_val < UINT64_C(250)) {
     return base_isf_tenths;
   } else {
-    if (bg.mg_dL_val < 350u) {
-      return (100u ? (base_isf_tenths * 80u) / 100u : 0);
+    if (bg.mg_dL_val < UINT64_C(350)) {
+      return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(80)) / UINT64_C(100)
+                            : 0);
     } else {
-      return (100u ? (base_isf_tenths * 60u) / 100u : 0);
+      return (UINT64_C(100) ? (base_isf_tenths * UINT64_C(60)) / UINT64_C(100)
+                            : 0);
     }
   }
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
-    const unsigned int, const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    uint64_t, const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target_bg,
-    const unsigned int base_isf_tenths) {
-  unsigned int eff_isf = adjusted_isf_tenths(current_bg, base_isf_tenths);
-  if (eff_isf == 0u) {
-    return 0u;
+    uint64_t base_isf_tenths) {
+  uint64_t eff_isf = adjusted_isf_tenths(current_bg, base_isf_tenths);
+  if (eff_isf == UINT64_C(0)) {
+    return UINT64_C(0);
   } else {
     if (current_bg.mg_dL_val <= target_bg.mg_dL_val) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       return (eff_isf
                   ? ((((current_bg.mg_dL_val - target_bg.mg_dL_val) >
                                current_bg.mg_dL_val
                            ? 0
                            : (current_bg.mg_dL_val - target_bg.mg_dL_val))) *
-                     200u) /
+                     UINT64_C(200)) /
                         eff_isf
                   : 0);
     }
@@ -267,23 +272,23 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
-    const unsigned int carb,
-    const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
+    uint64_t carb, const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &target_bg,
-    const unsigned int isf_tenths) {
+    uint64_t isf_tenths) {
   if (current_bg.mg_dL_val < target_bg.mg_dL_val) {
-    unsigned int reverse_drop =
+    uint64_t reverse_drop =
         (((target_bg.mg_dL_val - current_bg.mg_dL_val) > target_bg.mg_dL_val
               ? 0
               : (target_bg.mg_dL_val - current_bg.mg_dL_val)));
-    unsigned int reverse_units;
-    if (isf_tenths == 0u) {
-      reverse_units = 0u;
+    uint64_t reverse_units;
+    if (isf_tenths == UINT64_C(0)) {
+      reverse_units = UINT64_C(0);
     } else {
-      reverse_units = (isf_tenths ? (reverse_drop * 200u) / isf_tenths : 0);
+      reverse_units =
+          (isf_tenths ? (reverse_drop * UINT64_C(200)) / isf_tenths : 0);
     }
     if (carb <= reverse_units) {
-      return 0u;
+      return UINT64_C(0);
     } else {
       return (((carb - reverse_units) > carb ? 0 : (carb - reverse_units)));
     }
@@ -292,34 +297,34 @@ ValidatedPumpDeliveryTraceCase::apply_reverse_correction_twentieths(
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(
-    const unsigned int iob_twentieths, const unsigned int isf_tenths) {
-  if (isf_tenths == 0u) {
-    return 0u;
+uint64_t
+ValidatedPumpDeliveryTraceCase::predict_bg_drop_tenths(uint64_t iob_twentieths,
+                                                       uint64_t isf_tenths) {
+  if (isf_tenths == UINT64_C(0)) {
+    return UINT64_C(0);
   } else {
-    return (200u ? (iob_twentieths * isf_tenths) / 200u : 0);
+    return (UINT64_C(200) ? (iob_twentieths * isf_tenths) / UINT64_C(200) : 0);
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
-    const ValidatedPumpDeliveryTraceCase::Config &cfg,
-    const unsigned int cob_grams) {
-  return (100u ? ((cob_grams * cfg.cfg_conservative_cob_absorption_percent) *
-                  cfg.cfg_bg_rise_per_gram) /
-                     100u
-               : 0);
+uint64_t ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
+    const ValidatedPumpDeliveryTraceCase::Config &cfg, uint64_t cob_grams) {
+  return (UINT64_C(100)
+              ? ((cob_grams * cfg.cfg_conservative_cob_absorption_percent) *
+                 cfg.cfg_bg_rise_per_gram) /
+                    UINT64_C(100)
+              : 0);
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
+uint64_t ValidatedPumpDeliveryTraceCase::predicted_eventual_bg_tenths(
     const ValidatedPumpDeliveryTraceCase::Config &cfg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
-    const unsigned int iob_twentieths, const unsigned int cob_grams,
-    const unsigned int isf_tenths) {
-  unsigned int drop = predict_bg_drop_tenths(iob_twentieths, isf_tenths);
-  unsigned int rise = conservative_cob_rise(cfg, cob_grams);
-  unsigned int bg_after_drop;
+    uint64_t iob_twentieths, uint64_t cob_grams, uint64_t isf_tenths) {
+  uint64_t drop = predict_bg_drop_tenths(iob_twentieths, isf_tenths);
+  uint64_t rise = conservative_cob_rise(cfg, cob_grams);
+  uint64_t bg_after_drop;
   if (current_bg.mg_dL_val <= drop) {
-    bg_after_drop = 0u;
+    bg_after_drop = UINT64_C(0);
   } else {
     bg_after_drop = (((current_bg.mg_dL_val - drop) > current_bg.mg_dL_val
                           ? 0
@@ -332,22 +337,22 @@ ValidatedPumpDeliveryTraceCase::SuspendDecision
 ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
     const ValidatedPumpDeliveryTraceCase::Config &cfg,
     const ValidatedPumpDeliveryTraceCase::Mg_dL &current_bg,
-    const unsigned int iob_twentieths, const unsigned int cob_grams,
-    const unsigned int isf_tenths, const unsigned int proposed) {
-  if (isf_tenths == 0u) {
+    uint64_t iob_twentieths, uint64_t cob_grams, uint64_t isf_tenths,
+    uint64_t proposed) {
+  if (isf_tenths == UINT64_C(0)) {
     return SuspendDecision::suspend_withhold();
   } else {
-    unsigned int total_insulin = (iob_twentieths + proposed);
-    unsigned int pred = predicted_eventual_bg_tenths(
-        cfg, current_bg, total_insulin, cob_grams, isf_tenths);
+    uint64_t total_insulin = (iob_twentieths + proposed);
+    uint64_t pred = predicted_eventual_bg_tenths(cfg, current_bg, total_insulin,
+                                                 cob_grams, isf_tenths);
     if (pred < BG_LEVEL2_HYPO) {
       return SuspendDecision::suspend_withhold();
     } else {
       if (pred < cfg.cfg_suspend_threshold_mg_dl) {
-        unsigned int rise_from_cob = conservative_cob_rise(cfg, cob_grams);
-        unsigned int effective_target;
+        uint64_t rise_from_cob = conservative_cob_rise(cfg, cob_grams);
+        uint64_t effective_target;
         if (cfg.cfg_suspend_threshold_mg_dl <= rise_from_cob) {
-          effective_target = 0u;
+          effective_target = UINT64_C(0);
         } else {
           effective_target =
               (((cfg.cfg_suspend_threshold_mg_dl - rise_from_cob) >
@@ -355,17 +360,17 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
                     ? 0
                     : (cfg.cfg_suspend_threshold_mg_dl - rise_from_cob)));
         }
-        unsigned int safe_drop;
+        uint64_t safe_drop;
         if (current_bg.mg_dL_val <= effective_target) {
-          safe_drop = 0u;
+          safe_drop = UINT64_C(0);
         } else {
           safe_drop =
               (((current_bg.mg_dL_val - effective_target) > current_bg.mg_dL_val
                     ? 0
                     : (current_bg.mg_dL_val - effective_target)));
         }
-        unsigned int safe_insulin =
-            (isf_tenths ? (safe_drop * 200u) / isf_tenths : 0);
+        uint64_t safe_insulin =
+            (isf_tenths ? (safe_drop * UINT64_C(200)) / isf_tenths : 0);
         if (safe_insulin <= iob_twentieths) {
           return SuspendDecision::suspend_withhold();
         } else {
@@ -383,7 +388,7 @@ ValidatedPumpDeliveryTraceCase::suspend_check_tenths_with_cob(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_suspend(
-    const unsigned int proposed,
+    uint64_t proposed,
     const ValidatedPumpDeliveryTraceCase::SuspendDecision &decision) {
   if (std::holds_alternative<typename ValidatedPumpDeliveryTraceCase::
                                  SuspendDecision::Suspend_None>(decision.v())) {
@@ -391,28 +396,27 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
   } else if (std::holds_alternative<typename ValidatedPumpDeliveryTraceCase::
                                         SuspendDecision::Suspend_Reduce>(
                  decision.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename ValidatedPumpDeliveryTraceCase::SuspendDecision::
                      Suspend_Reduce>(decision.v());
-    if (proposed <= d_a0) {
+    if (proposed <= a0) {
       return proposed;
     } else {
-      return d_a0;
+      return a0;
     }
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::pediatric_max_twentieths(
-    const unsigned int weight_kg) {
-  return (weight_kg * 10u);
+ValidatedPumpDeliveryTraceCase::pediatric_max_twentieths(uint64_t weight_kg) {
+  return (weight_kg * UINT64_C(10));
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
-                                              const unsigned int weight_kg) {
+ValidatedPumpDeliveryTraceCase::cap_pediatric(uint64_t bolus,
+                                              uint64_t weight_kg) {
   if (bolus <= pediatric_max_twentieths(weight_kg)) {
     return bolus;
   } else {
@@ -422,22 +426,23 @@ ValidatedPumpDeliveryTraceCase::cap_pediatric(const unsigned int bolus,
 
 bool ValidatedPumpDeliveryTraceCase::prec_params_valid(
     const ValidatedPumpDeliveryTraceCase::PrecisionParams &p) {
-  return (((((((20u <= p.prec_icr_tenths && p.prec_icr_tenths <= 1000u) &&
-               100u <= p.prec_isf_tenths) &&
-              p.prec_isf_tenths <= 4000u) &&
+  return (((((((UINT64_C(20) <= p.prec_icr_tenths &&
+                p.prec_icr_tenths <= UINT64_C(1000)) &&
+               UINT64_C(100) <= p.prec_isf_tenths) &&
+              p.prec_isf_tenths <= UINT64_C(4000)) &&
              BG_HYPO <= p.prec_target_bg.mg_dL_val) &&
             p.prec_target_bg.mg_dL_val <= BG_HYPER) &&
-           120u <= p.prec_dia) &&
-          p.prec_dia <= 360u);
+           UINT64_C(120) <= p.prec_dia) &&
+          p.prec_dia <= UINT64_C(360));
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::carb_bolus_twentieths(
-    const unsigned int carbs_g, const unsigned int icr_tenths) {
-  if (icr_tenths == 0u) {
-    return 0u;
+ValidatedPumpDeliveryTraceCase::carb_bolus_twentieths(uint64_t carbs_g,
+                                                      uint64_t icr_tenths) {
+  if (icr_tenths == UINT64_C(0)) {
+    return UINT64_C(0);
   } else {
-    return (icr_tenths ? (carbs_g * 200u) / icr_tenths : 0);
+    return (icr_tenths ? (carbs_g * UINT64_C(200)) / icr_tenths : 0);
   }
 }
 
@@ -445,89 +450,87 @@ ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
     const ValidatedPumpDeliveryTraceCase::PrecisionInput &input,
     const ValidatedPumpDeliveryTraceCase::PrecisionParams &params) {
-  unsigned int activity_isf =
-      (100u ? (params.prec_isf_tenths *
-               isf_activity_modifier(input.pi_activity)) /
-                  100u
-            : 0);
-  unsigned int activity_icr =
-      (100u ? (params.prec_icr_tenths *
-               icr_activity_modifier(input.pi_activity)) /
-                  100u
-            : 0);
+  uint64_t activity_isf =
+      (UINT64_C(100) ? (params.prec_isf_tenths *
+                        isf_activity_modifier(input.pi_activity)) /
+                           UINT64_C(100)
+                     : 0);
+  uint64_t activity_icr =
+      (UINT64_C(100) ? (params.prec_icr_tenths *
+                        icr_activity_modifier(input.pi_activity)) /
+                           UINT64_C(100)
+                     : 0);
   ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
   if (input.pi_use_sensor_margin) {
     eff_bg = apply_sensor_margin(input.pi_current_bg, params.prec_target_bg);
   } else {
     eff_bg = input.pi_current_bg;
   }
-  unsigned int carb =
+  uint64_t carb =
       carb_bolus_twentieths(input.pi_carbs_g.grams_val, activity_icr);
-  unsigned int carb_adj = apply_reverse_correction_twentieths(
+  uint64_t carb_adj = apply_reverse_correction_twentieths(
       carb, eff_bg, params.prec_target_bg, activity_isf);
-  unsigned int corr = correction_twentieths_full(
+  uint64_t corr = correction_twentieths_full(
       input.pi_now, std::move(eff_bg), params.prec_target_bg, activity_isf);
-  unsigned int iob =
-      total_bilinear_iob(input.pi_now, input.pi_bolus_history, params.prec_dia,
-                         params.prec_insulin_type);
-  unsigned int raw = (carb_adj + corr);
+  uint64_t iob = total_bilinear_iob(input.pi_now, input.pi_bolus_history,
+                                    params.prec_dia, params.prec_insulin_type);
+  uint64_t raw = (carb_adj + corr);
   if (raw <= iob) {
-    return 0u;
+    return UINT64_C(0);
   } else {
     return (((raw - iob) > raw ? 0 : (raw - iob)));
   }
 }
 
-bool ValidatedPumpDeliveryTraceCase::time_reasonable(const unsigned int now) {
-  return now <= 525600u;
+bool ValidatedPumpDeliveryTraceCase::time_reasonable(uint64_t now) {
+  return now <= UINT64_C(525600);
 }
 
 bool ValidatedPumpDeliveryTraceCase::history_extraction_safe(
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
   return (
-      events.length() <= 100u &&
+      events.length() <= UINT64_C(100) &&
       events.forallb([](const ValidatedPumpDeliveryTraceCase::BolusEvent &e) {
-        return e.be_dose_twentieths <= 500u;
+        return e.be_dose_twentieths <= UINT64_C(500);
       }));
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::iob_high_threshold(
+uint64_t ValidatedPumpDeliveryTraceCase::iob_high_threshold(
     const ValidatedPumpDeliveryTraceCase::Config &cfg) {
   return cfg.cfg_iob_high_threshold_twentieths;
 }
 
-bool ValidatedPumpDeliveryTraceCase::iob_dangerously_high(
-    const unsigned int iob) {
+bool ValidatedPumpDeliveryTraceCase::iob_dangerously_high(uint64_t iob) {
   return iob_high_threshold(default_config) <= iob;
 }
 
 bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
-    const unsigned int now,
+    uint64_t now,
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &history) {
   if (std::holds_alternative<
           typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Nil>(
           history.v())) {
     return false;
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<ValidatedPumpDeliveryTraceCase::BolusEvent>::Cons>(
         history.v());
-    if (now < d_a0.be_time_minutes) {
+    if (now < a0.be_time_minutes) {
       return false;
     } else {
-      return (((now - d_a0.be_time_minutes) > now
-                   ? 0
-                   : (now - d_a0.be_time_minutes))) < 15u;
+      return (((now - a0.be_time_minutes) > now ? 0
+                                                : (now - a0.be_time_minutes))) <
+             UINT64_C(15);
     }
   }
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
-ValidatedPumpDeliveryTraceCase::cap_twentieths(const unsigned int t) {
-  if (t <= 500u) {
+ValidatedPumpDeliveryTraceCase::cap_twentieths(uint64_t t) {
+  if (t <= UINT64_C(500)) {
     return t;
   } else {
-    return 500u;
+    return UINT64_C(500);
   }
 }
 
@@ -560,21 +563,22 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                 if (input.pi_current_bg.mg_dL_val < BG_HYPO) {
                   return PrecisionResult::precerror(prec_error_hypo);
                 } else {
-                  unsigned int iob = total_bilinear_iob(
+                  uint64_t iob = total_bilinear_iob(
                       input.pi_now, input.pi_bolus_history, params.prec_dia,
                       params.prec_insulin_type);
                   if ((iob_dangerously_high(iob) &&
-                       input.pi_carbs_g.grams_val == 0u)) {
+                       input.pi_carbs_g.grams_val == UINT64_C(0))) {
                     return PrecisionResult::precerror(prec_error_iob_high);
                   } else {
-                    unsigned int tdd_current =
-                        input.pi_bolus_history.template fold_left<unsigned int>(
-                            [=](const unsigned int acc,
+                    uint64_t tdd_current =
+                        input.pi_bolus_history.template fold_left<uint64_t>(
+                            [=](uint64_t acc,
                                 const ValidatedPumpDeliveryTraceCase::BolusEvent
                                     &e) mutable {
-                              if (((((input.pi_now - 1440u) > input.pi_now
+                              if (((((input.pi_now - UINT64_C(1440)) >
+                                             input.pi_now
                                          ? 0
-                                         : (input.pi_now - 1440u))) <=
+                                         : (input.pi_now - UINT64_C(1440)))) <=
                                        e.be_time_minutes &&
                                    e.be_time_minutes <= input.pi_now)) {
                                 return (acc + e.be_dose_twentieths);
@@ -582,21 +586,20 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                                 return acc;
                               }
                             },
-                            0u);
-                    unsigned int tdd_limit;
+                            UINT64_C(0));
+                    uint64_t tdd_limit;
                     if (input.pi_weight_kg.has_value()) {
-                      const unsigned int &w = *input.pi_weight_kg;
+                      const uint64_t &w = *input.pi_weight_kg;
                       tdd_limit = (w * ONE_UNIT);
                     } else {
-                      tdd_limit = 5000u;
+                      tdd_limit = UINT64_C(5000);
                     }
                     if (tdd_limit <= tdd_current) {
                       return PrecisionResult::precerror(
                           prec_error_tdd_exceeded);
                     } else {
-                      unsigned int raw =
-                          calculate_precision_bolus(input, params);
-                      unsigned int tdd_capped;
+                      uint64_t raw = calculate_precision_bolus(input, params);
+                      uint64_t tdd_capped;
                       if ((raw + tdd_current) <= tdd_limit) {
                         tdd_capped = raw;
                       } else {
@@ -604,11 +607,12 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                                            ? 0
                                            : (tdd_limit - tdd_current)));
                       }
-                      unsigned int activity_isf =
-                          (100u ? (params.prec_isf_tenths *
-                                   isf_activity_modifier(input.pi_activity)) /
-                                      100u
-                                : 0);
+                      uint64_t activity_isf =
+                          (UINT64_C(100)
+                               ? (params.prec_isf_tenths *
+                                  isf_activity_modifier(input.pi_activity)) /
+                                     UINT64_C(100)
+                               : 0);
                       ValidatedPumpDeliveryTraceCase::Mg_dL eff_bg;
                       if (input.pi_use_sensor_margin) {
                         eff_bg = apply_sensor_margin(input.pi_current_bg,
@@ -621,12 +625,12 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                               default_config, std::move(eff_bg), iob,
                               input.pi_carbs_g.grams_val, activity_isf,
                               tdd_capped);
-                      unsigned int suspended = apply_suspend(
+                      uint64_t suspended = apply_suspend(
                           tdd_capped, std::move(suspend_decision));
-                      unsigned int adult_capped = cap_twentieths(suspended);
-                      unsigned int capped;
+                      uint64_t adult_capped = cap_twentieths(suspended);
+                      uint64_t capped;
                       if (input.pi_weight_kg.has_value()) {
-                        const unsigned int &w = *input.pi_weight_kg;
+                        const uint64_t &w = *input.pi_weight_kg;
                         capped = cap_pediatric(adult_capped, w);
                       } else {
                         capped = adult_capped;
@@ -651,18 +655,18 @@ ValidatedPumpDeliveryTraceCase::prec_result_twentieths(
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
           r.v())) {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
         r.v());
-    return std::make_optional<unsigned int>(d_a0);
+    return std::make_optional<uint64_t>(a0);
   } else {
-    return std::optional<unsigned int>();
+    return std::optional<uint64_t>();
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(
-    const unsigned int mmol_tenths) {
-  return (10u ? (mmol_tenths * 18u) / 10u : 0);
+uint64_t
+ValidatedPumpDeliveryTraceCase::mmol_tenths_to_mg_dL(uint64_t mmol_tenths) {
+  return (UINT64_C(10) ? (mmol_tenths * UINT64_C(18)) / UINT64_C(10) : 0);
 }
 
 ValidatedPumpDeliveryTraceCase::PrecisionInput
@@ -686,9 +690,10 @@ ValidatedPumpDeliveryTraceCase::validated_mmol_bolus(
   return validated_precision_bolus(convert_mmol_input(input), params);
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::round_down_to_increment(
-    const unsigned int t, const unsigned int increment) {
-  if (increment == 0u) {
+uint64_t
+ValidatedPumpDeliveryTraceCase::round_down_to_increment(uint64_t t,
+                                                        uint64_t increment) {
+  if (increment == UINT64_C(0)) {
     return t;
   } else {
     return ((increment ? t / increment : 0) * increment);
@@ -697,19 +702,18 @@ unsigned int ValidatedPumpDeliveryTraceCase::round_down_to_increment(
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
 ValidatedPumpDeliveryTraceCase::apply_rounding(
-    const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
-    const unsigned int t) {
+    ValidatedPumpDeliveryTraceCase::RoundingMode mode, uint64_t t) {
   switch (mode) {
-  case RoundingMode::e_ROUNDTWENTIETH: {
+  case RoundingMode::ROUNDTWENTIETH: {
     return t;
   }
-  case RoundingMode::e_ROUNDTENTH: {
-    return round_down_to_increment(t, 2u);
+  case RoundingMode::ROUNDTENTH: {
+    return round_down_to_increment(t, UINT64_C(2));
   }
-  case RoundingMode::e_ROUNDHALF: {
-    return round_down_to_increment(t, 10u);
+  case RoundingMode::ROUNDHALF: {
+    return round_down_to_increment(t, UINT64_C(10));
   }
-  case RoundingMode::e_ROUNDUNIT: {
+  case RoundingMode::ROUNDUNIT: {
     return round_down_to_increment(t, ONE_UNIT);
   }
   default:
@@ -719,46 +723,44 @@ ValidatedPumpDeliveryTraceCase::apply_rounding(
 
 std::optional<ValidatedPumpDeliveryTraceCase::Insulin_twentieth>
 ValidatedPumpDeliveryTraceCase::final_delivery(
-    const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
+    ValidatedPumpDeliveryTraceCase::RoundingMode mode,
     const ValidatedPumpDeliveryTraceCase::PrecisionResult &result) {
   if (std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
           result.v())) {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename ValidatedPumpDeliveryTraceCase::PrecisionResult::PrecOK>(
         result.v());
-    return std::make_optional<unsigned int>(apply_rounding(mode, d_a0));
+    return std::make_optional<uint64_t>(apply_rounding(mode, a0));
   } else {
-    return std::optional<unsigned int>();
+    return std::optional<uint64_t>();
   }
 }
 
 bool ValidatedPumpDeliveryTraceCase::pump_can_deliver(
-    const ValidatedPumpDeliveryTraceCase::PumpState &state,
-    const unsigned int dose) {
+    const ValidatedPumpDeliveryTraceCase::PumpState &state, uint64_t dose) {
   return (((!(state.ps_occlusion_detected) &&
             dose <= state.ps_reservoir_twentieths) &&
-           dose <= 500u) &&
-          5u <= state.ps_battery_percent);
+           dose <= UINT64_C(500)) &&
+          UINT64_C(5) <= state.ps_battery_percent);
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
-    const ValidatedPumpDeliveryTraceCase::PumpState &state,
-    const unsigned int dose) {
+uint64_t ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
+    const ValidatedPumpDeliveryTraceCase::PumpState &state, uint64_t dose) {
   if (dose <= state.ps_reservoir_twentieths) {
     return (
         ((state.ps_reservoir_twentieths - dose) > state.ps_reservoir_twentieths
              ? 0
              : (state.ps_reservoir_twentieths - dose)));
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::option_nat_default(
-    const std::optional<unsigned int> &x, const unsigned int d) {
+uint64_t ValidatedPumpDeliveryTraceCase::option_nat_default(
+    const std::optional<uint64_t> &x, uint64_t d) {
   if (x.has_value()) {
-    const unsigned int &v = *x;
+    const uint64_t &v = *x;
     return v;
   } else {
     return d;
@@ -767,181 +769,201 @@ unsigned int ValidatedPumpDeliveryTraceCase::option_nat_default(
 
 bool ValidatedPumpDeliveryTraceCase::pump_accepts_result(
     const ValidatedPumpDeliveryTraceCase::PumpState &pump,
-    const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
+    ValidatedPumpDeliveryTraceCase::RoundingMode mode,
     const ValidatedPumpDeliveryTraceCase::PrecisionResult &r) {
   auto _cs = final_delivery(mode, r);
   if (_cs.has_value()) {
-    const unsigned int &dose = *_cs;
+    const uint64_t &dose = *_cs;
     return pump_can_deliver(pump, dose);
   } else {
     return false;
   }
 }
 
-unsigned int ValidatedPumpDeliveryTraceCase::pump_reservoir_after_result(
+uint64_t ValidatedPumpDeliveryTraceCase::pump_reservoir_after_result(
     const ValidatedPumpDeliveryTraceCase::PumpState &pump,
-    const ValidatedPumpDeliveryTraceCase::RoundingMode mode,
+    ValidatedPumpDeliveryTraceCase::RoundingMode mode,
     const ValidatedPumpDeliveryTraceCase::PrecisionResult &r) {
   auto _cs = final_delivery(mode, r);
   if (_cs.has_value()) {
-    const unsigned int &dose = *_cs;
+    const uint64_t &dose = *_cs;
     return reservoir_after_bolus(pump, dose);
   } else {
     return pump.ps_reservoir_twentieths;
   }
 }
 
-unsigned int Nat::tail_add(const unsigned int n, const unsigned int m) {
+uint64_t Nat::tail_add(uint64_t n, uint64_t m) {
   if (n <= 0) {
     return m;
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     return Nat::tail_add(n0, (m + 1));
   }
 }
 
-unsigned int Nat::tail_addmul(const unsigned int r, const unsigned int n,
-                              const unsigned int m) {
+uint64_t Nat::tail_addmul(uint64_t r, uint64_t n, uint64_t m) {
   if (n <= 0) {
     return r;
   } else {
-    unsigned int n0 = n - 1;
+    uint64_t n0 = n - 1;
     return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
   }
 }
 
-unsigned int Nat::tail_mul(const unsigned int n, const unsigned int m) {
-  return Nat::tail_addmul(0u, n, m);
+uint64_t Nat::tail_mul(uint64_t n, uint64_t m) {
+  return Nat::tail_addmul(UINT64_C(0), n, m);
 }
 
-unsigned int Nat::of_uint_acc(const Uint &d, const unsigned int acc) {
+uint64_t Nat::of_uint_acc(const Uint &d, uint64_t acc) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D0>(d.v());
-    return Nat::of_uint_acc(*(d_a0), Nat::tail_mul(10u, acc));
+    const auto &[a0] = std::get<typename Uint::D0>(d.v());
+    return Nat::of_uint_acc(*a0, Nat::tail_mul(UINT64_C(10), acc));
   } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D1>(d.v());
-    return Nat::of_uint_acc(*(d_a0), (Nat::tail_mul(10u, acc) + 1));
+    const auto &[a0] = std::get<typename Uint::D1>(d.v());
+    return Nat::of_uint_acc(*a0, (Nat::tail_mul(UINT64_C(10), acc) + 1));
   } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D2>(d.v());
-    return Nat::of_uint_acc(*(d_a0), ((Nat::tail_mul(10u, acc) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint::D2>(d.v());
+    return Nat::of_uint_acc(*a0, ((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D3>(d.v());
-    return Nat::of_uint_acc(*(d_a0), (((Nat::tail_mul(10u, acc) + 1) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint::D3>(d.v());
+    return Nat::of_uint_acc(*a0,
+                            (((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D4>(d.v());
-    return Nat::of_uint_acc(*(d_a0),
-                            ((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint::D4>(d.v());
+    return Nat::of_uint_acc(
+        *a0, ((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D5>(d.v());
+    const auto &[a0] = std::get<typename Uint::D5>(d.v());
     return Nat::of_uint_acc(
-        *(d_a0), (((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D6>(d.v());
+    const auto &[a0] = std::get<typename Uint::D6>(d.v());
     return Nat::of_uint_acc(
-        *(d_a0), ((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        ((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D7>(d.v());
+    const auto &[a0] = std::get<typename Uint::D7>(d.v());
     return Nat::of_uint_acc(
-        *(d_a0),
-        (((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        (((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+         1));
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint::D8>(d.v());
+    const auto &[a0] = std::get<typename Uint::D8>(d.v());
     return Nat::of_uint_acc(
-        *(d_a0),
-        ((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        ((((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+          1) +
          1));
   } else {
-    const auto &[d_a0] = std::get<typename Uint::D9>(d.v());
+    const auto &[a0] = std::get<typename Uint::D9>(d.v());
     return Nat::of_uint_acc(
-        *(d_a0),
-        (((((((((Nat::tail_mul(10u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        (((((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) +
+            1) +
+           1) +
           1) +
          1));
   }
 }
 
-unsigned int Nat::of_uint(const Uint &d) { return Nat::of_uint_acc(d, 0u); }
+uint64_t Nat::of_uint(const Uint &d) {
+  return Nat::of_uint_acc(d, UINT64_C(0));
+}
 
-unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
+uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
   if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D10>(d.v());
-    return Nat::of_hex_uint_acc(*(d_a0), Nat::tail_mul(16u, acc));
+    const auto &[a0] = std::get<typename Uint0::D10>(d.v());
+    return Nat::of_hex_uint_acc(*a0, Nat::tail_mul(UINT64_C(16), acc));
   } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D11>(d.v());
-    return Nat::of_hex_uint_acc(*(d_a0), (Nat::tail_mul(16u, acc) + 1));
+    const auto &[a0] = std::get<typename Uint0::D11>(d.v());
+    return Nat::of_hex_uint_acc(*a0, (Nat::tail_mul(UINT64_C(16), acc) + 1));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D12>(d.v());
-    return Nat::of_hex_uint_acc(*(d_a0), ((Nat::tail_mul(16u, acc) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint0::D12>(d.v());
+    return Nat::of_hex_uint_acc(*a0,
+                                ((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D13>(d.v());
-    return Nat::of_hex_uint_acc(*(d_a0),
-                                (((Nat::tail_mul(16u, acc) + 1) + 1) + 1));
+    const auto &[a0] = std::get<typename Uint0::D13>(d.v());
+    return Nat::of_hex_uint_acc(
+        *a0, (((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D14>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0), ((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1));
+        *a0, ((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D15>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D15>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0), (((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1));
+        *a0, (((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D16>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D16>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0), ((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        ((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D17>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        (((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        (((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+         1));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D18>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        ((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        ((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+          1) +
          1));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::D19>(d.v());
+    const auto &[a0] = std::get<typename Uint0::D19>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        (((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        (((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+            1) +
+           1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Da>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Da>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        ((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        ((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+             1) +
+            1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Db>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Db>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        (((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        (((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+              1) +
+             1) +
             1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Dc>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        ((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        ((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+               1) +
+              1) +
              1) +
             1) +
            1) +
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::Dd>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        (((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        (((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                1) +
                1) +
               1) +
              1) +
@@ -950,10 +972,12 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
           1) +
          1));
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
-    const auto &[d_a0] = std::get<typename Uint0::De>(d.v());
+    const auto &[a0] = std::get<typename Uint0::De>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        ((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        ((((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+                  1) +
+                 1) +
                 1) +
                1) +
               1) +
@@ -963,10 +987,12 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
           1) +
          1));
   } else {
-    const auto &[d_a0] = std::get<typename Uint0::Df>(d.v());
+    const auto &[a0] = std::get<typename Uint0::Df>(d.v());
     return Nat::of_hex_uint_acc(
-        *(d_a0),
-        (((((((((((((((Nat::tail_mul(16u, acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+        *a0,
+        (((((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+                   1) +
+                  1) +
                  1) +
                 1) +
                1) +
@@ -979,16 +1005,16 @@ unsigned int Nat::of_hex_uint_acc(const Uint0 &d, const unsigned int acc) {
   }
 }
 
-unsigned int Nat::of_hex_uint(const Uint0 &d) {
-  return Nat::of_hex_uint_acc(d, 0u);
+uint64_t Nat::of_hex_uint(const Uint0 &d) {
+  return Nat::of_hex_uint_acc(d, UINT64_C(0));
 }
 
-unsigned int Nat::of_num_uint(const Uint1 &d) {
+uint64_t Nat::of_num_uint(const Uint1 &d) {
   if (std::holds_alternative<typename Uint1::UIntDecimal>(d.v())) {
-    const auto &[d_u] = std::get<typename Uint1::UIntDecimal>(d.v());
-    return Nat::of_uint(d_u);
+    const auto &[u] = std::get<typename Uint1::UIntDecimal>(d.v());
+    return Nat::of_uint(u);
   } else {
-    const auto &[d_u] = std::get<typename Uint1::UIntHexadecimal>(d.v());
-    return Nat::of_hex_uint(d_u);
+    const auto &[u] = std::get<typename Uint1::UIntHexadecimal>(d.v());
+    return Nat::of_hex_uint(u);
   }
 }

@@ -1,25 +1,23 @@
 #ifndef INCLUDED_EXTRACT_DIRECTIVES
 #define INCLUDED_EXTRACT_DIRECTIVES
 
-#include <memory>
-#include <optional>
 #include <stdexcept>
-#include <type_traits>
 
 struct ExtractDirectives {
-  static unsigned int offset(const unsigned int base, const unsigned int x);
-  static unsigned int scale(const unsigned int base, const unsigned int x);
-  static unsigned int transform(const unsigned int base, const unsigned int x);
-  static unsigned int safe_pred(const unsigned int n);
-  static inline const unsigned int test_offset = offset(10u, 5u);
-  static inline const unsigned int test_scale = scale(3u, 4u);
-  static inline const unsigned int test_transform = transform(2u, 3u);
-  static inline const unsigned int test_safe_pred = safe_pred(5u);
-  static unsigned int inner_add(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int inner_mul(const unsigned int _x0, const unsigned int _x1);
-  static unsigned int outer_use(const unsigned int a, const unsigned int b);
-  static inline const unsigned int test_inner = inner_add(3u, 7u);
-  static inline const unsigned int test_outer = outer_use(4u, 5u);
+  static uint64_t offset(uint64_t base, uint64_t x);
+  static uint64_t scale(uint64_t base, uint64_t x);
+  static uint64_t transform(uint64_t base, uint64_t x);
+  static uint64_t safe_pred(uint64_t n);
+  static inline const uint64_t test_offset = offset(UINT64_C(10), UINT64_C(5));
+  static inline const uint64_t test_scale = scale(UINT64_C(3), UINT64_C(4));
+  static inline const uint64_t test_transform =
+      transform(UINT64_C(2), UINT64_C(3));
+  static inline const uint64_t test_safe_pred = safe_pred(UINT64_C(5));
+  static uint64_t inner_add(uint64_t _x0, uint64_t _x1);
+  static uint64_t inner_mul(uint64_t _x0, uint64_t _x1);
+  static uint64_t outer_use(uint64_t a, uint64_t b);
+  static inline const uint64_t test_inner = inner_add(UINT64_C(3), UINT64_C(7));
+  static inline const uint64_t test_outer = outer_use(UINT64_C(4), UINT64_C(5));
 };
 
 #endif // INCLUDED_EXTRACT_DIRECTIVES

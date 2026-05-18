@@ -1,25 +1,21 @@
 #ifndef INCLUDED_WRAPPER_DECL_MERGE
 #define INCLUDED_WRAPPER_DECL_MERGE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct WrapperDeclMerge {
   struct A {
     struct Nat {
-      static unsigned int fa(const unsigned int n);
+      static uint64_t fa(uint64_t n);
     };
   };
 
   struct B {
     struct Nat {
-      static unsigned int fb(const unsigned int n);
+      static uint64_t fb(uint64_t n);
     };
   };
 
-  static inline const unsigned int x = A::Nat::fa(4u);
-  static inline const unsigned int y = B::Nat::fb(4u);
+  static inline const uint64_t x = A::Nat::fa(UINT64_C(4));
+  static inline const uint64_t y = B::Nat::fb(UINT64_C(4));
 };
 
 #endif // INCLUDED_WRAPPER_DECL_MERGE

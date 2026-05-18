@@ -1,15 +1,15 @@
 #include "mutual_coind.h"
 
-MutualCoind::streamA<unsigned int> MutualCoind::countA(const unsigned int n) {
-  return streamA<unsigned int>::lazy_(
-      [=]() mutable -> MutualCoind::streamA<unsigned int> {
-        return streamA<unsigned int>::consa(n, countB((n + 1)));
+MutualCoind::streamA<uint64_t> MutualCoind::countA(uint64_t n) {
+  return streamA<uint64_t>::lazy_(
+      [=]() mutable -> MutualCoind::streamA<uint64_t> {
+        return streamA<uint64_t>::consa(n, countB((n + 1)));
       });
 }
 
-MutualCoind::streamB<unsigned int> MutualCoind::countB(const unsigned int n) {
-  return streamB<unsigned int>::lazy_(
-      [=]() mutable -> MutualCoind::streamB<unsigned int> {
-        return streamB<unsigned int>::consb(n, countA((n + 1)));
+MutualCoind::streamB<uint64_t> MutualCoind::countB(uint64_t n) {
+  return streamB<uint64_t>::lazy_(
+      [=]() mutable -> MutualCoind::streamB<uint64_t> {
+        return streamB<uint64_t>::consb(n, countA((n + 1)));
       });
 }

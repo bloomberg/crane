@@ -1,24 +1,24 @@
 #include "reuse_use_after_move.h"
 
-unsigned int ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
+uint64_t ReuseUseAfterMove::length(const ReuseUseAfterMove::mylist &l) {
   if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
           l.v())) {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
-    return (1u + length(*(d_a1)));
+    return (UINT64_C(1) + length(*a1));
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
-unsigned int ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
+uint64_t ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
   if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
           l.v())) {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
-    return (d_a0 + sum(*(d_a1)));
+    return (a0 + sum(*a1));
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
@@ -40,13 +40,13 @@ unsigned int ReuseUseAfterMove::sum(const ReuseUseAfterMove::mylist &l) {
 /// length(l) traverses l, hitting the null d_a1 field.
 /// Dereferencing null shared_ptr -> CRASH.
 ReuseUseAfterMove::mylist
-ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool b) {
+ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
             l.v_mut())) {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v_mut());
-      return mylist::mycons(length(l), *(d_a1));
+      return mylist::mycons(length(l), *a1);
     } else {
       return mylist::mynil();
     }
@@ -57,13 +57,13 @@ ReuseUseAfterMove::rewrite_head(ReuseUseAfterMove::mylist l, const bool b) {
 
 /// test2: Use sum instead of length — same bug pattern.
 ReuseUseAfterMove::mylist
-ReuseUseAfterMove::rewrite_head_sum(ReuseUseAfterMove::mylist l, const bool b) {
+ReuseUseAfterMove::rewrite_head_sum(ReuseUseAfterMove::mylist l, bool b) {
   if (b) {
     if (std::holds_alternative<typename ReuseUseAfterMove::mylist::Mycons>(
             l.v_mut())) {
-      auto &[d_a0, d_a1] =
+      auto &[a0, a1] =
           std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v_mut());
-      return mylist::mycons(sum(l), *(d_a1));
+      return mylist::mycons(sum(l), *a1);
     } else {
       return mylist::mynil();
     }

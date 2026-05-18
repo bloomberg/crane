@@ -367,6 +367,94 @@
   (deps let_fix.t.exe)
   (action (run ./let_fix.t.exe))))
 
+(subdir let_fix_ycomb_byref
+ (rule
+  (targets let_fix_ycomb_byref.t.exe)
+  (deps LetFixYcombByref.vo let_fix_ycomb_byref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_ycomb_byref.t.exe let_fix_ycomb_byref.cpp let_fix_ycomb_byref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_ycomb_byref.t.exe)
+  (action (run ./let_fix_ycomb_byref.t.exe))))
+
+(subdir let_fix_no_stdfun
+ (rule
+  (targets let_fix_no_stdfun.t.exe)
+  (deps LetFixNoStdfun.vo let_fix_no_stdfun.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_no_stdfun.t.exe let_fix_no_stdfun.cpp let_fix_no_stdfun.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_no_stdfun.t.exe)
+  (action (run ./let_fix_no_stdfun.t.exe))))
+
+(subdir let_fix_byref_list_param
+ (rule
+  (targets let_fix_byref_list_param.t.exe)
+  (deps LetFixByrefListParam.vo let_fix_byref_list_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_byref_list_param.t.exe let_fix_byref_list_param.cpp let_fix_byref_list_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_byref_list_param.t.exe)
+  (action (run ./let_fix_byref_list_param.t.exe))))
+
+(subdir let_fix_tail_loop
+ (rule
+  (targets let_fix_tail_loop.t.exe)
+  (deps LetFixTailLoop.vo let_fix_tail_loop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_tail_loop.t.exe let_fix_tail_loop.cpp let_fix_tail_loop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_tail_loop.t.exe)
+  (action (run ./let_fix_tail_loop.t.exe))))
+
+(subdir let_fix_move_acc
+ (rule
+  (targets let_fix_move_acc.t.exe)
+  (deps LetFixMoveAcc.vo let_fix_move_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_move_acc.t.exe let_fix_move_acc.cpp let_fix_move_acc.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_move_acc.t.exe)
+  (action (run ./let_fix_move_acc.t.exe))))
+
+(subdir let_fix_nested_clone
+ (rule
+  (targets let_fix_nested_clone.t.exe)
+  (deps LetFixNestedClone.vo let_fix_nested_clone.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_nested_clone.t.exe let_fix_nested_clone.cpp let_fix_nested_clone.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_nested_clone.t.exe)
+  (action (run ./let_fix_nested_clone.t.exe))))
+
+(subdir let_fix_intermediate_ref
+ (rule
+  (targets let_fix_intermediate_ref.t.exe)
+  (deps LetFixIntermediateRef.vo let_fix_intermediate_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_intermediate_ref.t.exe let_fix_intermediate_ref.cpp let_fix_intermediate_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_intermediate_ref.t.exe)
+  (action (run ./let_fix_intermediate_ref.t.exe))))
+
+(subdir let_fix_hoisted_template
+ (rule
+  (targets let_fix_hoisted_template.t.exe)
+  (deps LetFixHoistedTemplate.vo let_fix_hoisted_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_fix_hoisted_template.t.exe let_fix_hoisted_template.cpp let_fix_hoisted_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_fix_hoisted_template.t.exe)
+  (action (run ./let_fix_hoisted_template.t.exe))))
+
 (subdir rec_record
  (rule
   (targets rec_record.t.exe)
@@ -4362,6 +4450,17 @@
   (alias runtest)
   (deps fix_move_capture.t.exe)
   (action (run ./fix_move_capture.t.exe))))
+
+(subdir fix_state_threading
+ (rule
+  (targets fix_state_threading.t.exe)
+  (deps FixStateThreading.vo fix_state_threading.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fix_state_threading.t.exe fix_state_threading.cpp fix_state_threading.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fix_state_threading.t.exe)
+  (action (run ./fix_state_threading.t.exe))))
 
 (subdir reuse_fn_in_body
  (rule

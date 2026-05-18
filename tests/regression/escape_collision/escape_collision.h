@@ -1,14 +1,11 @@
 #ifndef INCLUDED_ESCAPE_COLLISION
 #define INCLUDED_ESCAPE_COLLISION
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct EscapeCollision {
-  static unsigned int double_(const unsigned int n);
-  static unsigned int double_0(const unsigned int n);
-  static inline const unsigned int t = (double_(1u) + double_0(2u));
+  static uint64_t double_(uint64_t n);
+  static uint64_t double_0(uint64_t n);
+  static inline const uint64_t t =
+      (double_(UINT64_C(1)) + double_0(UINT64_C(2)));
 };
 
 #endif // INCLUDED_ESCAPE_COLLISION

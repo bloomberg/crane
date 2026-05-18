@@ -16,10 +16,10 @@ int main() {
     assert(EffectUnitStress::nested_if_monadic(true, false) == "first");
     assert(EffectUnitStress::nested_if_monadic(false, true) == "second");
     assert(EffectUnitStress::nested_if_monadic(false, false) == "neither");
-    auto result = EffectUnitStress::safe_head(List<unsigned int>::nil());
+    auto result = EffectUnitStress::safe_head(List<uint64_t>::nil());
     assert(!result.has_value());
     auto result2 = EffectUnitStress::safe_head(
-        List<unsigned int>::cons(42u, List<unsigned int>::nil()));
+        List<uint64_t>::cons(42u, List<uint64_t>::nil()));
     assert(result2.has_value());
     assert(*result2 == 42u);
     return 0;

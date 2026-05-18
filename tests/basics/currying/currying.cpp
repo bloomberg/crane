@@ -1,57 +1,43 @@
 #include "currying.h"
 
-unsigned int Currying::add3(const unsigned int a, const unsigned int b,
-                            const unsigned int c) {
+uint64_t Currying::add3(uint64_t a, uint64_t b, uint64_t c) {
   return (a + (b + c));
 }
 
-unsigned int Currying::add3_partial1(const unsigned int _x0,
-                                     const unsigned int _x1) {
-  return add3(1u, _x0, _x1);
+uint64_t Currying::add3_partial1(uint64_t _x0, uint64_t _x1) {
+  return add3(UINT64_C(1), _x0, _x1);
 }
 
-unsigned int Currying::add3_partial2(const unsigned int _x0) {
-  return add3(1u, 2u, _x0);
+uint64_t Currying::add3_partial2(uint64_t _x0) {
+  return add3(UINT64_C(1), UINT64_C(2), _x0);
 }
 
-unsigned int
-Currying::pair_add(const Currying::pair<unsigned int, unsigned int> &p) {
-  const auto &[d_a0, d_a1] =
-      std::get<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
-          p.v());
-  return (d_a0 + d_a1);
+uint64_t Currying::pair_add(const Currying::pair<uint64_t, uint64_t> &p) {
+  const auto &[a0, a1] = p;
+  return (a0 + a1);
 }
 
-unsigned int Currying::curried_add(const unsigned int _x0,
-                                   const unsigned int _x1) {
-  return curry<unsigned int, unsigned int, unsigned int>(pair_add, _x0, _x1);
+uint64_t Currying::curried_add(uint64_t _x0, uint64_t _x1) {
+  return curry<uint64_t, uint64_t, uint64_t>(pair_add, _x0, _x1);
 }
 
-unsigned int Currying::uncurried_add3(
-    const Currying::pair<unsigned int,
-                         Currying::pair<unsigned int, unsigned int>> &p) {
-  const auto &[d_a0, d_a1] = std::get<typename Currying::pair<
-      unsigned int, Currying::pair<unsigned int, unsigned int>>::Pair0>(p.v());
-  const auto &[d_a00, d_a10] =
-      std::get<typename Currying::pair<unsigned int, unsigned int>::Pair0>(
-          d_a1.v());
-  return add3(d_a0, d_a00, d_a10);
+uint64_t Currying::uncurried_add3(
+    const Currying::pair<uint64_t, Currying::pair<uint64_t, uint64_t>> &p) {
+  const auto &[a0, a1] = p;
+  const auto &[a00, a10] = a1;
+  return add3(a0, a00, a10);
 }
 
-unsigned int Currying::sub(const unsigned int _x0, const unsigned int _x1) {
+uint64_t Currying::sub(uint64_t _x0, uint64_t _x1) {
   return (((_x0 - _x1) > _x0 ? 0 : (_x0 - _x1)));
 }
 
-unsigned int Currying::flipped_sub(const unsigned int _x0,
-                                   const unsigned int _x1) {
-  return flip<unsigned int, unsigned int, unsigned int>(sub, _x0, _x1);
+uint64_t Currying::flipped_sub(uint64_t _x0, uint64_t _x1) {
+  return flip<uint64_t, uint64_t, uint64_t>(sub, _x0, _x1);
 }
 
-unsigned int Currying::add_base(const unsigned int _x0,
-                                const unsigned int _x1) {
-  return (_x0 + _x1);
-}
+uint64_t Currying::add_base(uint64_t _x0, uint64_t _x1) { return (_x0 + _x1); }
 
-unsigned int Currying::add_ten(const unsigned int _x0) {
-  return add_base((2u * 5u), _x0);
+uint64_t Currying::add_ten(uint64_t _x0) {
+  return add_base((UINT64_C(2) * UINT64_C(5)), _x0);
 }

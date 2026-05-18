@@ -4,7 +4,6 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <type_traits>
 
 struct FixCurriedEscape {
   /// A local fixpoint that escapes through an option wrapper,
@@ -18,43 +17,43 @@ struct FixCurriedEscape {
   /// BUG: The std::function holds & references to base.
   /// After make_fn returns, base is destroyed, and calling
   /// the extracted function accesses freed memory.
-  static std::optional<std::function<unsigned int(unsigned int)>>
-  make_fn(const unsigned int base);
+  static std::optional<std::function<uint64_t(uint64_t)>>
+  make_fn(uint64_t base);
   /// test1: unwrap and call — go captures base=42.
   /// go 3 = 42 + 3 = 45.
-  static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs = make_fn(42u);
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = make_fn(UINT64_C(42));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(3u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(3));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// test2: Different base to clobber the stack.
   /// make_fn 10 -> go captures base=10.
   /// go 7 = 10 + 7 = 17.
-  static inline const unsigned int test2 = []() -> unsigned int {
-    auto _cs = make_fn(10u);
+  static inline const uint64_t test2 = []() -> uint64_t {
+    auto _cs = make_fn(UINT64_C(10));
     if (_cs.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *_cs;
-      return f(7u);
+      const std::function<uint64_t(uint64_t)> &f = *_cs;
+      return f(UINT64_C(7));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
   /// test3: Call make_fn twice — stack reuse should clobber base.
   /// First call returns go1 with base=100.
   /// Second call reuses the stack frame with base=0.
   /// If go1 reads the clobbered base, it returns 0+5=5 instead of 100+5=105.
-  static inline const unsigned int test3 = []() {
-    std::optional<std::function<unsigned int(unsigned int)>> fn1 =
-        make_fn(100u);
+  static inline const uint64_t test3 = []() {
+    std::optional<std::function<uint64_t(uint64_t)>> fn1 =
+        make_fn(UINT64_C(100));
     if (fn1.has_value()) {
-      const std::function<unsigned int(unsigned int)> &f = *fn1;
-      return f(5u);
+      const std::function<uint64_t(uint64_t)> &f = *fn1;
+      return f(UINT64_C(5));
     } else {
-      return 999u;
+      return UINT64_C(999);
     }
   }();
 };

@@ -2,7 +2,6 @@
 #define INCLUDED_RECORD_CASE_BODY
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -10,83 +9,83 @@
 
 struct RecordCaseBody {
   struct Rec {
-    unsigned int f1;
-    unsigned int f2;
-    unsigned int f3;
+    uint64_t f1;
+    uint64_t f2;
+    uint64_t f3;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*(this)).f1, (*(this)).f2, (*(this)).f3}; }
+    Rec clone() const { return Rec{(*this).f1, (*this).f2, (*this).f3}; }
   };
 
-  static unsigned int case_in_body(const Rec &r);
-  static unsigned int helper(const unsigned int n);
-  static unsigned int fix_in_body(const Rec &r);
-  static unsigned int let_in_body(const Rec &r);
-  static unsigned int apply_nonfld(const Rec &r);
-  static unsigned int conditional_body(const Rec &r, const bool flag);
-  static unsigned int outer_ref(const unsigned int x, const Rec &r);
-  static unsigned int lambda_body(const Rec &r, const unsigned int n);
+  static uint64_t case_in_body(const Rec &r);
+  static uint64_t helper(uint64_t n);
+  static uint64_t fix_in_body(const Rec &r);
+  static uint64_t let_in_body(const Rec &r);
+  static uint64_t apply_nonfld(const Rec &r);
+  static uint64_t conditional_body(const Rec &r, bool flag);
+  static uint64_t outer_ref(uint64_t x, const Rec &r);
+  static uint64_t lambda_body(const Rec &r, uint64_t n);
 
   struct RecRec {
     Rec inner;
-    unsigned int outer_field;
+    uint64_t outer_field;
 
     // ACCESSORS
     RecRec clone() const {
-      return RecRec{(*(this)).inner.clone(), (*(this)).outer_field};
+      return RecRec{(*this).inner.clone(), (*this).outer_field};
     }
   };
 
-  static unsigned int nested_record_match(const RecRec &rr);
-  static inline const unsigned int global_const = 42u;
-  static unsigned int global_in_body(const Rec &r);
-  static unsigned int guarded_body(const Rec &r);
+  static uint64_t nested_record_match(const RecRec &rr);
+  static inline const uint64_t global_const = UINT64_C(42);
+  static uint64_t global_in_body(const Rec &r);
+  static uint64_t guarded_body(const Rec &r);
   static Rec constructor_body(const Rec &r);
 
-  template <typename t_A> struct list {
+  template <typename A> struct list {
     // TYPES
     struct Nil {};
 
     struct Cons {
-      t_A d_a0;
-      std::unique_ptr<list<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<list<A>> a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     list() {}
 
-    explicit list(Nil _v) : d_v_(_v) {}
+    explicit list(Nil _v) : v_(_v) {}
 
-    explicit list(Cons _v) : d_v_(std::move(_v)) {}
+    explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    list(const list<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    list(list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    list(list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    list<t_A> &operator=(const list<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    list<A> &operator=(const list<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    list<t_A> &operator=(list<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    list<A> &operator=(list<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    list<t_A> clone() const {
-      list<t_A> _out{};
+    list<A> clone() const {
+      list<A> _out{};
 
       struct _CloneFrame {
-        const list<t_A> *_src;
-        list<t_A> *_dst;
+        const list<A> *_src;
+        list<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -95,17 +94,17 @@ struct RecordCaseBody {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const list<t_A> *_src = _frame._src;
-        list<t_A> *_dst = _frame._dst;
+        const list<A> *_src = _frame._src;
+        list<A> *_dst = _frame._dst;
         if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->d_v_ = Nil{};
+          _dst->v_ = Nil{};
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
-          _dst->d_v_ = Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
-                                                 : nullptr};
-          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Cons{_alt.a0, _alt.a1 ? std::make_unique<list<A>>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -115,31 +114,29 @@ struct RecordCaseBody {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->d_v_ = Nil{};
+        this->v_ = Nil{};
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<_U>::Cons>(_other.v());
-        this->d_v_ = Cons{t_A(d_a0),
-                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
+        this->v_ = Cons{A(a0), a1 ? std::make_unique<list<A>>(*a1) : nullptr};
       }
     }
 
-    static list<t_A> nil() { return list(Nil{}); }
+    static list<A> nil() { return list(Nil{}); }
 
-    static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<A> cons(A a0, list<A> a1) {
       return list(
-          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
+          Cons{std::move(a0), std::make_unique<list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      std::vector<std::unique_ptr<list<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](list<t_A> &_node) {
-        if (std::holds_alternative<Cons>(_node.d_v_)) {
-          auto &_alt = std::get<Cons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](list<A> &_node) {
+        if (std::holds_alternative<Cons>(_node.v_)) {
+          auto &_alt = std::get<Cons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -153,10 +150,10 @@ struct RecordCaseBody {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -165,8 +162,8 @@ struct RecordCaseBody {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rect<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+      return f0(a0, *a1, list_rect<T1, T2>(f, f0, *a1));
     }
   }
 
@@ -176,16 +173,19 @@ struct RecordCaseBody {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rec<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+      return f0(a0, *a1, list_rec<T1, T2>(f, f0, *a1));
     }
   }
 
-  static unsigned int sum_list(const list<unsigned int> &l);
-  static unsigned int list_in_body(const Rec &r);
-  static inline const unsigned int test1 = case_in_body(Rec{1u, 2u, 3u});
-  static inline const unsigned int test2 = fix_in_body(Rec{4u, 5u, 6u});
-  static inline const unsigned int test3 = let_in_body(Rec{0u, 1u, 2u});
+  static uint64_t sum_list(const list<uint64_t> &l);
+  static uint64_t list_in_body(const Rec &r);
+  static inline const uint64_t test1 =
+      case_in_body(Rec{UINT64_C(1), UINT64_C(2), UINT64_C(3)});
+  static inline const uint64_t test2 =
+      fix_in_body(Rec{UINT64_C(4), UINT64_C(5), UINT64_C(6)});
+  static inline const uint64_t test3 =
+      let_in_body(Rec{UINT64_C(0), UINT64_C(1), UINT64_C(2)});
 };
 
 #endif // INCLUDED_RECORD_CASE_BODY

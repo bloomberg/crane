@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <optional>
-#include <type_traits>
 
 struct OptionLetNoneBug {
   static inline const std::optional<bool> bug = std::optional<bool>();

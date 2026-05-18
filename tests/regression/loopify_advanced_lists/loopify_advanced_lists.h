@@ -8,50 +8,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +60,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +79,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,63 +114,62 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  List<t_A> app(List<t_A> m) const {
-    std::unique_ptr<List<t_A>> _head{};
-    std::unique_ptr<List<t_A>> *_write = &_head;
+  List<A> app(List<A> m) const {
+    std::unique_ptr<List<A>> _head{};
+    std::unique_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
-    List<t_A> _loop_m = std::move(m);
+    List<A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_unique<List<A>>(std::move(_loop_m));
         break;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = std::make_unique<List<t_A>>(
-            typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
-        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
 struct LoopifyAdvancedLists {
-  static unsigned int product(const List<unsigned int> &l);
-  static List<unsigned int> compress(const List<unsigned int> &l);
-  static List<unsigned int> pairwise_sum(const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  group_pairs(const List<unsigned int> &l);
-  static List<unsigned int> interleave(List<unsigned int> l1,
-                                       List<unsigned int> l2);
-  static List<unsigned int> concat_lists(const List<List<unsigned int>> &ll);
+  static uint64_t product(const List<uint64_t> &l);
+  static List<uint64_t> compress(const List<uint64_t> &l);
+  static List<uint64_t> pairwise_sum(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  group_pairs(const List<uint64_t> &l);
+  static List<uint64_t> interleave(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> concat_lists(const List<List<uint64_t>> &ll);
 
   template <typename F0>
-    requires std::is_invocable_r_v<List<unsigned int>, F0 &, unsigned int &>
-  static List<unsigned int> flat_map(
-      F0 &&f,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<List<uint64_t>, F0 &, uint64_t &>
+  static List<uint64_t>
+  flat_map(F0 &&f,
+           const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                      /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<unsigned int> d_a0;
+      List<uint64_t> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    List<unsigned int> _result{};
+    List<uint64_t> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{&l});
@@ -183,37 +179,36 @@ struct LoopifyAdvancedLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-          _result = List<unsigned int>::nil();
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = List<uint64_t>::nil();
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{f(a0)});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.d_a0.app(_result);
+        _result = _f.a0.app(_result);
       }
     }
     return _result;
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool all_satisfy(
-      F0 &&p,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool
+  all_satisfy(F0 &&p,
+              const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      bool d_a0;
+      bool a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -227,37 +222,36 @@ struct LoopifyAdvancedLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = true;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{p(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{p(a0)});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f.d_a0 && _result);
+        _result = (_f.a0 && _result);
       }
     }
     return _result;
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static bool any_satisfy(
-      F0 &&p,
-      const List<unsigned int>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static bool
+  any_satisfy(F0 &&p,
+              const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
 
     struct _Enter {
-      const List<unsigned int> *l;
+      const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      bool d_a0;
+      bool a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -271,46 +265,39 @@ struct LoopifyAdvancedLists {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<unsigned int> &l = *(_f.l);
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = false;
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<unsigned int>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{p(d_a0)});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{p(a0)});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f.d_a0 || _result);
+        _result = (_f.a0 || _result);
       }
     }
     return _result;
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, unsigned int &>
-  static std::optional<unsigned int> find_first(F0 &&p,
-                                                const List<unsigned int> &l) {
-    std::optional<unsigned int> _result;
-    const List<unsigned int> *_loop_l = &l;
+    requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
+  static std::optional<uint64_t> find_first(F0 &&p, const List<uint64_t> &l) {
+    const List<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l->v())) {
-        _result = std::optional<unsigned int>();
-        break;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        return std::optional<uint64_t>();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l->v());
-        if (p(d_a0)) {
-          _result = std::make_optional<unsigned int>(d_a0);
-          break;
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          return std::make_optional<uint64_t>(a0);
         } else {
-          _loop_l = d_a1.get();
+          _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 };
 

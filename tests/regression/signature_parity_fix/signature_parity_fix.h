@@ -1,14 +1,9 @@
 #ifndef INCLUDED_SIGNATURE_PARITY_FIX
 #define INCLUDED_SIGNATURE_PARITY_FIX
 
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct SignatureParityFix {
-  static unsigned int f(const unsigned int seed);
-  static inline const unsigned int t = f(4u);
+  static uint64_t f(uint64_t seed);
+  static inline const uint64_t t = f(UINT64_C(4));
 };
 
 #endif // INCLUDED_SIGNATURE_PARITY_FIX

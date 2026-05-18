@@ -1,47 +1,45 @@
 #include "sigma_types.h"
 
-SigT<unsigned int, std::any> SigmaTypes::nat_with_double(const unsigned int n) {
-  return SigT<unsigned int, std::any>::existt((n + n), std::any{});
+SigT<uint64_t, std::any> SigmaTypes::nat_with_double(uint64_t n) {
+  return SigT<uint64_t, std::any>::existt((n + n), std::any{});
 }
 
-Sig<unsigned int> SigmaTypes::positive_succ(const unsigned int n) {
-  return Sig<unsigned int>::exist((n + 1));
+Sig<uint64_t> SigmaTypes::positive_succ(uint64_t n) {
+  return Sig<uint64_t>::exist((n + 1));
 }
 
-unsigned int SigmaTypes::get_positive(const unsigned int n) {
-  auto &&_sv = positive_succ(n);
-  const auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(_sv.v());
-  return d_x;
+uint64_t SigmaTypes::get_positive(uint64_t n) {
+  const auto &_sv = positive_succ(n);
+  const auto &[x] = _sv;
+  return x;
 }
 
-Sig<unsigned int> SigmaTypes::double_positive(const unsigned int n) {
-  Sig<unsigned int> p = positive_succ(n);
-  return Sig<unsigned int>::exist(
-      ([=]() mutable {
-        auto &[d_x] = std::get<typename Sig<unsigned int>::Exist>(p.v_mut());
-        return d_x;
-      }() +
-       [=]() mutable {
-         auto &[d_x0] = std::get<typename Sig<unsigned int>::Exist>(p.v_mut());
-         return d_x0;
-       }()));
+Sig<uint64_t> SigmaTypes::double_positive(uint64_t n) {
+  Sig<uint64_t> p = positive_succ(n);
+  return Sig<uint64_t>::exist(([=]() mutable {
+    auto &[x] = p;
+    return x;
+  }() +
+                               [=]() mutable {
+                                 auto &[x0] = p;
+                                 return x0;
+                               }()));
 }
 
-unsigned int SigmaTypes::use_nat_double(const unsigned int n) {
+uint64_t SigmaTypes::use_nat_double(uint64_t n) {
   return nat_with_double(n).projT1();
 }
 
-List<unsigned int> SigmaTypes::positives_up_to(const unsigned int k) {
+List<uint64_t> SigmaTypes::positives_up_to(uint64_t k) {
   if (k <= 0) {
-    return List<unsigned int>::nil();
+    return List<uint64_t>::nil();
   } else {
-    unsigned int k_ = k - 1;
-    return List<unsigned int>::cons(
+    uint64_t k_ = k - 1;
+    return List<uint64_t>::cons(
         [&]() {
-          auto &&_sv = positive_succ(k_);
-          const auto &[d_x] =
-              std::get<typename Sig<unsigned int>::Exist>(_sv.v());
-          return d_x;
+          const auto &_sv = positive_succ(k_);
+          const auto &[x] = _sv;
+          return x;
         }(),
         positives_up_to(k_));
   }

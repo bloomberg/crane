@@ -1,17 +1,17 @@
 #include "rec_record.h"
 
-unsigned int RecRecord::rlist_sum(const RecRecord::rlist<unsigned int> &l) {
-  if (std::holds_alternative<typename RecRecord::rlist<unsigned int>::Rnil>(
+uint64_t RecRecord::rlist_sum(const RecRecord::rlist<uint64_t> &l) {
+  if (std::holds_alternative<typename RecRecord::rlist<uint64_t>::Rnil>(
           l.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename RecRecord::rlist<unsigned int>::Rcons>(l.v());
-    return (d_a0 + rlist_sum(*(d_a1)));
+    const auto &[a0, a1] =
+        std::get<typename RecRecord::rlist<uint64_t>::Rcons>(l.v());
+    return (a0 + rlist_sum(*a1));
   }
 }
 
-unsigned int RecRecord::rnode_depth(const RecRecord::RNode &r) {
+uint64_t RecRecord::rnode_depth(const RecRecord::RNode &r) {
   auto _cs = r.rn_next.has_value()
                  ? std::make_optional<RNode>((*r.rn_next)->clone())
                  : std::nullopt;
@@ -19,6 +19,6 @@ unsigned int RecRecord::rnode_depth(const RecRecord::RNode &r) {
     const RecRecord::RNode &next = *_cs;
     return (rnode_depth(next) + 1);
   } else {
-    return 1u;
+    return UINT64_C(1);
   }
 }

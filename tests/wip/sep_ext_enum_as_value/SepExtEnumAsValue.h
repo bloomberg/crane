@@ -2,16 +2,13 @@
 #define INCLUDED_SEPEXTENUMASVALUE
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
 
 namespace SepExtEnumAsValue {
 
-enum class Color { e_RED, e_GREEN, e_BLUE };
+enum class Color { RED, GREEN, BLUE };
 template <typename M>
 concept ColorParam = requires {
   requires(
@@ -32,17 +29,17 @@ template <ColorParam P> struct UseColor {
   static const typename Datatypes::template List<Color> &color_list() {
     static const typename Datatypes::template List<Color> v =
         Datatypes::template List<Color>::cons(
-            Color::e_RED,
+            Color::RED,
             Datatypes::template List<Color>::cons(
-                Color::e_GREEN,
+                Color::GREEN,
                 Datatypes::template List<Color>::cons(
-                    Color::e_BLUE, Datatypes::template List<Color>::nil())));
+                    Color::BLUE, Datatypes::template List<Color>::nil())));
     return v;
   }
 
-  constexpr static bool is_red(const Color c) {
+  constexpr static bool is_red(Color c) {
     switch (c) {
-    case Color::e_RED: {
+    case Color::RED: {
       return true;
     }
     default: {

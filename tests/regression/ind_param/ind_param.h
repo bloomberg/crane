@@ -2,8 +2,6 @@
 #define INCLUDED_IND_PARAM
 
 #include <concepts>
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -12,7 +10,7 @@ template <typename M>
 concept Container = requires {
   typename M::elem;
   typename M::t;
-  { M::size(std::declval<typename M::t>()) } -> std::same_as<unsigned int>;
+  { M::size(std::declval<typename M::t>()) } -> std::same_as<uint64_t>;
 };
 
 struct IndParam {
@@ -22,106 +20,104 @@ struct IndParam {
     struct result {
       // TYPES
       struct Ok {
-        typename C::t d_a0;
+        typename C::t a0;
       };
 
       struct Err {
-        unsigned int d_a0;
+        uint64_t a0;
       };
 
       using variant_t = std::variant<Ok, Err>;
 
     private:
       // DATA
-      variant_t d_v_;
+      variant_t v_;
 
     public:
       // CREATORS
       result() {}
 
-      explicit result(Ok _v) : d_v_(std::move(_v)) {}
+      explicit result(Ok _v) : v_(std::move(_v)) {}
 
-      explicit result(Err _v) : d_v_(std::move(_v)) {}
+      explicit result(Err _v) : v_(std::move(_v)) {}
 
-      result(const result &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+      result(const result &_other) : v_(std::move(_other.clone().v_)) {}
 
-      result(result &&_other) : d_v_(std::move(_other.d_v_)) {}
+      result(result &&_other) noexcept : v_(std::move(_other.v_)) {}
 
       result &operator=(const result &_other) {
-        d_v_ = std::move(_other.clone().d_v_);
+        v_ = std::move(_other.clone().v_);
         return *this;
       }
 
-      result &operator=(result &&_other) {
-        d_v_ = std::move(_other.d_v_);
+      result &operator=(result &&_other) noexcept {
+        v_ = std::move(_other.v_);
         return *this;
       }
 
       // ACCESSORS
       result clone() const {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<Ok>(_sv.v())) {
-          const auto &[d_a0] = std::get<Ok>(_sv.v());
-          return result(Ok{d_a0.clone()});
+        if (std::holds_alternative<Ok>(this->v())) {
+          const auto &[a0] = std::get<Ok>(this->v());
+          return result(Ok{a0.clone()});
         } else {
-          const auto &[d_a0] = std::get<Err>(_sv.v());
-          return result(Err{d_a0});
+          const auto &[a0] = std::get<Err>(this->v());
+          return result(Err{a0});
         }
       }
 
       // CREATORS
       static result ok(typename C::t a0) { return result(Ok{std::move(a0)}); }
 
-      static result err(unsigned int a0) { return result(Err{std::move(a0)}); }
+      static result err(uint64_t a0) { return result(Err{a0}); }
 
       // MANIPULATORS
-      inline variant_t &v_mut() { return d_v_; }
+      inline variant_t &v_mut() { return v_; }
 
       // ACCESSORS
-      const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return v_; }
     };
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     static T1 result_rect(F0 &&f, F1 &&f0, const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
-        const auto &[d_a0] = std::get<typename result::Ok>(r.v());
-        return f(d_a0);
+        const auto &[a0] = std::get<typename result::Ok>(r.v());
+        return f(a0);
       } else {
-        const auto &[d_a0] = std::get<typename result::Err>(r.v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename result::Err>(r.v());
+        return f0(a0);
       }
     }
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
-               std::is_invocable_r_v<T1, F1 &, unsigned int &>
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     static T1 result_rec(F0 &&f, F1 &&f0, const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
-        const auto &[d_a0] = std::get<typename result::Ok>(r.v());
-        return f(d_a0);
+        const auto &[a0] = std::get<typename result::Ok>(r.v());
+        return f(a0);
       } else {
-        const auto &[d_a0] = std::get<typename result::Err>(r.v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename result::Err>(r.v());
+        return f0(a0);
       }
     }
 
-    static result make_single(const typename C::elem e) {
+    static result make_single(typename C::elem e) {
       return result::ok(C::t::single(e));
     }
 
-    static result make_pair(const typename C::elem e1,
-                            const typename C::elem e2) {
+    static result make_pair(typename C::elem e1, typename C::elem e2) {
       return result::ok(C::t::pair(e1, e2));
     }
 
-    static unsigned int get_size(const result &r) {
+    static uint64_t get_size(const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
-        const auto &[d_a0] = std::get<typename result::Ok>(r.v());
-        return C::size(d_a0);
+        const auto &[a0] = std::get<typename result::Ok>(r.v());
+        return C::size(a0);
       } else {
-        return 0u;
+        return UINT64_C(0);
       }
     }
 
@@ -131,68 +127,67 @@ struct IndParam {
     }
 
     static const result &error_result() {
-      static const result v = result::err(404u);
+      static const result v = result::err(UINT64_C(404));
       return v;
     }
   };
 
   struct NatContainer {
-    using elem = unsigned int;
+    using elem = uint64_t;
 
     struct t {
       // TYPES
       struct Empty {};
 
       struct Single {
-        elem d_a0;
+        elem a0;
       };
 
       struct Pair {
-        elem d_a0;
-        elem d_a1;
+        elem a0;
+        elem a1;
       };
 
       using variant_t = std::variant<Empty, Single, Pair>;
 
     private:
       // DATA
-      variant_t d_v_;
+      variant_t v_;
 
     public:
       // CREATORS
       t() {}
 
-      explicit t(Empty _v) : d_v_(_v) {}
+      explicit t(Empty _v) : v_(_v) {}
 
-      explicit t(Single _v) : d_v_(std::move(_v)) {}
+      explicit t(Single _v) : v_(std::move(_v)) {}
 
-      explicit t(Pair _v) : d_v_(std::move(_v)) {}
+      explicit t(Pair _v) : v_(std::move(_v)) {}
 
-      t(const t &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+      t(const t &_other) : v_(std::move(_other.clone().v_)) {}
 
-      t(t &&_other) : d_v_(std::move(_other.d_v_)) {}
+      t(t &&_other) noexcept : v_(std::move(_other.v_)) {}
 
       t &operator=(const t &_other) {
-        d_v_ = std::move(_other.clone().d_v_);
+        v_ = std::move(_other.clone().v_);
         return *this;
       }
 
-      t &operator=(t &&_other) {
-        d_v_ = std::move(_other.d_v_);
+      t &operator=(t &&_other) noexcept {
+        v_ = std::move(_other.v_);
         return *this;
       }
 
       // ACCESSORS
       t clone() const {
-        auto &&_sv = *(this);
-        if (std::holds_alternative<Empty>(_sv.v())) {
+        if (std::holds_alternative<Empty>(this->v())) {
           return t(Empty{});
-        } else if (std::holds_alternative<Single>(_sv.v())) {
-          const auto &[d_a0] = std::get<Single>(_sv.v());
-          return t(Single{d_a0});
+        } else if (std::holds_alternative<Single>(this->v())) {
+          const auto &[a0] = std::get<Single>(this->v());
+          return t(Single{a0});
         } else {
-          const auto &[d_a0, d_a1] = std::get<Pair>(_sv.v());
-          return t(Pair{d_a0, d_a1});
+          const auto &[a0, a1] = std::get<Pair>(this->v());
+          return t(Pair{a0, a1});
         }
       }
 
@@ -206,55 +201,54 @@ struct IndParam {
       }
 
       // MANIPULATORS
-      inline variant_t &v_mut() { return d_v_; }
+      inline variant_t &v_mut() { return v_; }
 
       // ACCESSORS
-      const variant_t &v() const { return d_v_; }
+      const variant_t &v() const { return v_; }
     };
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &>
     static T1 t_rect(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
       } else if (std::holds_alternative<typename t::Single>(t0.v())) {
-        const auto &[d_a0] = std::get<typename t::Single>(t0.v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename t::Single>(t0.v());
+        return f0(a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename t::Pair>(t0.v());
-        return f1(d_a0, d_a1);
+        const auto &[a0, a1] = std::get<typename t::Pair>(t0.v());
+        return f1(a0, a1);
       }
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, unsigned int &> &&
-               std::is_invocable_r_v<T1, F2 &, unsigned int &, unsigned int &>
+      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &>
     static T1 t_rec(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
       } else if (std::holds_alternative<typename t::Single>(t0.v())) {
-        const auto &[d_a0] = std::get<typename t::Single>(t0.v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename t::Single>(t0.v());
+        return f0(a0);
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename t::Pair>(t0.v());
-        return f1(d_a0, d_a1);
+        const auto &[a0, a1] = std::get<typename t::Pair>(t0.v());
+        return f1(a0, a1);
       }
     }
 
-    static unsigned int size(const t &c);
+    static uint64_t size(const t &c);
   };
 
   using NatWrapper = Wrapper<NatContainer>;
   static inline const NatWrapper::result test_single =
-      NatWrapper::make_single(42u);
+      NatWrapper::make_single(UINT64_C(42));
   static inline const NatWrapper::result test_pair =
-      NatWrapper::make_pair(1u, 2u);
-  static inline const unsigned int test_size_single =
+      NatWrapper::make_pair(UINT64_C(1), UINT64_C(2));
+  static inline const uint64_t test_size_single =
       NatWrapper::get_size(test_single);
-  static inline const unsigned int test_size_pair =
-      NatWrapper::get_size(test_pair);
-  static inline const unsigned int test_error =
+  static inline const uint64_t test_size_pair = NatWrapper::get_size(test_pair);
+  static inline const uint64_t test_error =
       NatWrapper::get_size(NatWrapper::error_result());
 };
 

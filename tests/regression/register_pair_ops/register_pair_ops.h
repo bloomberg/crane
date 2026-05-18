@@ -2,56 +2,55 @@
 #define INCLUDED_REGISTER_PAIR_OPS
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +59,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +78,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,188 +113,229 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, t_A &>
+    requires std::is_invocable_r_v<bool, F0 &, A &>
   bool forallb(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return true;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (f(d_a0) && (*(d_a1)).forallb(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (f(a0) && a1->forallb(f));
     }
   }
 };
 
 struct ListDef {
-  static List<unsigned int> seq(const unsigned int start,
-                                const unsigned int len);
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
   template <typename T1>
-  static T1 nth(const unsigned int n, const List<T1> &l, T1 default0);
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct RegisterPairOps {
   template <typename T1>
-  static List<T1> update_nth(const unsigned int n, T1 x, const List<T1> &l) {
+  static List<T1> update_nth(uint64_t n, T1 x, const List<T1> &l) {
     if (n <= 0) {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *(d_a1));
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(x, *a1);
       }
     } else {
-      unsigned int n_ = n - 1;
+      uint64_t n_ = n - 1;
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(d_a00, update_nth<T1>(n_, x, *(d_a10)));
+        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+        return List<T1>::cons(a00, update_nth<T1>(n_, x, *a10));
       }
     }
   }
 
   struct state {
-    List<unsigned int> regs;
+    List<uint64_t> regs;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).regs.clone()}; }
+    state clone() const { return state{(*this).regs.clone()}; }
   };
 
-  static unsigned int get_reg(const state &s, const unsigned int r);
-  static state set_reg(const state &s, const unsigned int r,
-                       const unsigned int v);
-  static unsigned int get_reg_pair(const state &s, const unsigned int r);
-  static state set_reg_pair(const state &s, const unsigned int r,
-                            const unsigned int v);
-  static inline const unsigned int test_get_reg_pair_even_value = get_reg_pair(
-      state{List<unsigned int>::cons(
-          0u, List<unsigned int>::cons(
-                  1u, List<unsigned int>::cons(
-                          10u, List<unsigned int>::cons(
-                                   11u, List<unsigned int>::nil()))))},
-      2u);
-  static inline const state sample_from_regs = state{List<unsigned int>::cons(
-      0u, List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      10u,
-                      List<unsigned int>::cons(
-                          11u, List<unsigned int>::cons(
-                                   0u, List<unsigned int>::cons(
-                                           0u, List<unsigned int>::nil()))))))};
+  static uint64_t get_reg(const state &s, uint64_t r);
+  static state set_reg(const state &s, uint64_t r, uint64_t v);
+  static uint64_t get_reg_pair(const state &s, uint64_t r);
+  static state set_reg_pair(const state &s, uint64_t r, uint64_t v);
+  static inline const uint64_t test_get_reg_pair_even_value = get_reg_pair(
+      state{List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(10),
+                  List<uint64_t>::cons(UINT64_C(11), List<uint64_t>::nil()))))},
+      UINT64_C(2));
+  static inline const state sample_from_regs = state{List<uint64_t>::cons(
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(
+                  UINT64_C(11),
+                  List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(UINT64_C(0),
+                                           List<uint64_t>::nil()))))))};
   static inline const bool test_get_reg_pair_from_regs =
-      get_reg_pair(sample_from_regs, 2u) == 171u;
+      get_reg_pair(sample_from_regs, UINT64_C(2)) == UINT64_C(171);
   static inline const bool test_get_reg_pair_odd_normalizes =
       get_reg_pair(
-          state{List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      1u, List<unsigned int>::cons(
-                              10u, List<unsigned int>::cons(
-                                       11u, List<unsigned int>::nil()))))},
-          2u) ==
+          state{List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(1), List<uint64_t>::cons(
+                                   UINT64_C(10),
+                                   List<uint64_t>::cons(
+                                       UINT64_C(11), List<uint64_t>::nil()))))},
+          UINT64_C(2)) ==
       get_reg_pair(
-          state{List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      1u, List<unsigned int>::cons(
-                              10u, List<unsigned int>::cons(
-                                       11u, List<unsigned int>::nil()))))},
-          3u);
-  static inline const state sample_pair_high = state{List<unsigned int>::cons(
-      2u,
-      List<unsigned int>::cons(
-          9u, List<unsigned int>::cons(
-                  4u, List<unsigned int>::cons(
-                          7u, List<unsigned int>::cons(
-                                  8u, List<unsigned int>::cons(
-                                          1u, List<unsigned int>::nil()))))))};
+          state{List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(1), List<uint64_t>::cons(
+                                   UINT64_C(10),
+                                   List<uint64_t>::cons(
+                                       UINT64_C(11), List<uint64_t>::nil()))))},
+          UINT64_C(3));
+  static inline const state sample_pair_high = state{List<uint64_t>::cons(
+      UINT64_C(2),
+      List<uint64_t>::cons(
+          UINT64_C(9),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(
+                  UINT64_C(7),
+                  List<uint64_t>::cons(
+                      UINT64_C(8),
+                      List<uint64_t>::cons(UINT64_C(1),
+                                           List<uint64_t>::nil()))))))};
   static inline const bool test_set_reg_affects_pair_high =
-      get_reg_pair(set_reg(sample_pair_high, 2u, 13u), 2u) ==
-      ((13u * 16u) + get_reg(sample_pair_high, 3u));
-  static inline const state sample_pair_low = state{List<unsigned int>::cons(
-      2u,
-      List<unsigned int>::cons(
-          9u, List<unsigned int>::cons(
-                  4u, List<unsigned int>::cons(
-                          7u, List<unsigned int>::cons(
-                                  8u, List<unsigned int>::cons(
-                                          1u, List<unsigned int>::nil()))))))};
+      get_reg_pair(set_reg(sample_pair_high, UINT64_C(2), UINT64_C(13)),
+                   UINT64_C(2)) ==
+      ((UINT64_C(13) * UINT64_C(16)) + get_reg(sample_pair_high, UINT64_C(3)));
+  static inline const state sample_pair_low = state{List<uint64_t>::cons(
+      UINT64_C(2),
+      List<uint64_t>::cons(
+          UINT64_C(9),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(
+                  UINT64_C(7),
+                  List<uint64_t>::cons(
+                      UINT64_C(8),
+                      List<uint64_t>::cons(UINT64_C(1),
+                                           List<uint64_t>::nil()))))))};
   static inline const bool test_set_reg_affects_pair_low =
-      get_reg_pair(set_reg(sample_pair_low, 3u, 12u), 3u) ==
-      ((get_reg(sample_pair_low, 2u) * 16u) + 12u);
-  static inline const state sample_idempotent = state{List<unsigned int>::cons(
-      0u,
-      List<unsigned int>::cons(
-          0u, List<unsigned int>::cons(
-                  0u, List<unsigned int>::cons(
-                          0u, List<unsigned int>::cons(
-                                  0u, List<unsigned int>::cons(
-                                          0u, List<unsigned int>::nil()))))))};
+      get_reg_pair(set_reg(sample_pair_low, UINT64_C(3), UINT64_C(12)),
+                   UINT64_C(3)) ==
+      ((get_reg(sample_pair_low, UINT64_C(2)) * UINT64_C(16)) + UINT64_C(12));
+  static inline const state sample_idempotent = state{List<uint64_t>::cons(
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(0),
+                  List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(UINT64_C(0),
+                                           List<uint64_t>::nil()))))))};
   static inline const bool test_set_reg_pair_idempotent =
-      get_reg_pair(
-          set_reg_pair(set_reg_pair(sample_idempotent, 2u, 34u), 2u, 171u),
-          2u) == 171u;
-  static inline const state sample_preserves = state{List<unsigned int>::cons(
-      1u,
-      List<unsigned int>::cons(
-          2u, List<unsigned int>::cons(
-                  3u, List<unsigned int>::cons(
-                          4u, List<unsigned int>::cons(
-                                  5u, List<unsigned int>::cons(
-                                          6u, List<unsigned int>::nil()))))))};
+      get_reg_pair(set_reg_pair(set_reg_pair(sample_idempotent, UINT64_C(2),
+                                             UINT64_C(34)),
+                                UINT64_C(2), UINT64_C(171)),
+                   UINT64_C(2)) == UINT64_C(171);
+  static inline const state sample_preserves = state{List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(
+                      UINT64_C(5),
+                      List<uint64_t>::cons(UINT64_C(6),
+                                           List<uint64_t>::nil()))))))};
   static inline const bool test_set_reg_pair_preserves_other_pairs =
-      get_reg_pair(set_reg_pair(sample_preserves, 0u, 171u), 2u) ==
-      get_reg_pair(sample_preserves, 2u);
-  static unsigned int pair_base(const unsigned int r);
-  static inline const state sample_register_pair =
-      state{List<unsigned int>::cons(
-          0u,
-          List<unsigned int>::cons(
-              0u,
-              List<unsigned int>::cons(
-                  0u, List<unsigned int>::cons(
-                          0u, List<unsigned int>::cons(
-                                  0u, List<unsigned int>::cons(
-                                          0u, List<unsigned int>::nil()))))))};
-  static inline const bool test_even_projection = pair_base(6u) == 6u;
-  static inline const bool test_odd_projection = pair_base(7u) == 6u;
+      get_reg_pair(set_reg_pair(sample_preserves, UINT64_C(0), UINT64_C(171)),
+                   UINT64_C(2)) == get_reg_pair(sample_preserves, UINT64_C(2));
+  static uint64_t pair_base(uint64_t r);
+  static inline const state sample_register_pair = state{List<uint64_t>::cons(
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(0),
+                  List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(UINT64_C(0),
+                                           List<uint64_t>::nil()))))))};
+  static inline const bool test_even_projection =
+      pair_base(UINT64_C(6)) == UINT64_C(6);
+  static inline const bool test_odd_projection =
+      pair_base(UINT64_C(7)) == UINT64_C(6);
   static inline const bool test_set_pair_get_high =
-      get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 2u) == 10u;
+      get_reg(set_reg_pair(sample_register_pair, UINT64_C(2), UINT64_C(171)),
+              UINT64_C(2)) == UINT64_C(10);
   static inline const bool test_set_pair_get_low =
-      get_reg(set_reg_pair(sample_register_pair, 2u, 171u), 3u) == 11u;
-  static unsigned int pair_index(const unsigned int r);
-  static bool pair_property(const unsigned int r);
-  static inline const List<unsigned int> test_regs = ListDef::seq(0u, 16u);
+      get_reg(set_reg_pair(sample_register_pair, UINT64_C(2), UINT64_C(171)),
+              UINT64_C(3)) == UINT64_C(11);
+  static uint64_t pair_index(uint64_t r);
+  static bool pair_property(uint64_t r);
+  static inline const List<uint64_t> test_regs =
+      ListDef::seq(UINT64_C(0), UINT64_C(16));
   static inline const bool test_register_pair_architecture =
       test_regs.forallb(pair_property);
-  static inline const state sample_even_rounding =
-      state{List<unsigned int>::cons(
-          0u,
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(
-                          3u, List<unsigned int>::cons(
-                                  4u, List<unsigned int>::cons(
-                                          5u, List<unsigned int>::nil()))))))};
-  static inline const unsigned int test_register_pair_even_rounding =
-      get_reg_pair(set_reg_pair(sample_even_rounding, 3u, 45u), 3u);
-  static inline const state sample_successor = state{List<unsigned int>::cons(
-      0u, List<unsigned int>::cons(
-              0u, List<unsigned int>::cons(
-                      10u,
-                      List<unsigned int>::cons(
-                          11u, List<unsigned int>::cons(
-                                   0u, List<unsigned int>::cons(
-                                           0u, List<unsigned int>::nil()))))))};
+  static inline const state sample_even_rounding = state{List<uint64_t>::cons(
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(UINT64_C(5),
+                                           List<uint64_t>::nil()))))))};
+  static inline const uint64_t test_register_pair_even_rounding = get_reg_pair(
+      set_reg_pair(sample_even_rounding, UINT64_C(3), UINT64_C(45)),
+      UINT64_C(3));
+  static inline const state sample_successor = state{List<uint64_t>::cons(
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(
+                  UINT64_C(11),
+                  List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(UINT64_C(0),
+                                           List<uint64_t>::nil()))))))};
   static inline const bool test_even_same_as_successor =
-      get_reg_pair(sample_successor, 2u) == get_reg_pair(sample_successor, 3u);
+      get_reg_pair(sample_successor, UINT64_C(2)) ==
+      get_reg_pair(sample_successor, UINT64_C(3));
   static inline const bool test_odd_same_as_predecessor =
-      get_reg_pair(sample_successor, 3u) == get_reg_pair(sample_successor, 2u);
+      get_reg_pair(sample_successor, UINT64_C(3)) ==
+      get_reg_pair(sample_successor, UINT64_C(2));
   static inline const bool test_reg_pair_successor =
       (test_even_same_as_successor && test_odd_same_as_predecessor);
   static inline const std::pair<
@@ -313,7 +350,7 @@ struct RegisterPairOps {
                                       std::pair<
                                           std::pair<
                                               std::pair<
-                                                  std::pair<unsigned int, bool>,
+                                                  std::pair<uint64_t, bool>,
                                                   bool>,
                                               bool>,
                                           bool>,
@@ -324,7 +361,7 @@ struct RegisterPairOps {
                       bool>,
                   bool>,
               bool>,
-          unsigned int>,
+          uint64_t>,
       bool>
       t = std::make_pair(
           std::make_pair(
@@ -356,21 +393,21 @@ struct RegisterPairOps {
 };
 
 template <typename T1>
-T1 ListDef::nth(const unsigned int n, const List<T1> &l, T1 default0) {
+T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
   if (n <= 0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<T1>::Cons>(l.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      return a0;
     }
   } else {
-    unsigned int m = n - 1;
+    uint64_t m = n - 1;
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a00, d_a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *(d_a10), default0);
+      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      return ListDef::template nth<T1>(m, *a10, default0);
     }
   }
 }

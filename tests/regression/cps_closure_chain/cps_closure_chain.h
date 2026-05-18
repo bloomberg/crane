@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,36 +14,36 @@ struct CpsClosureChain {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      uint64_t a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    tree &operator=(tree &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -66,18 +65,17 @@ struct CpsClosureChain {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -87,8 +85,8 @@ struct CpsClosureChain {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+    static tree node(tree a0, uint64_t a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -97,13 +95,13 @@ struct CpsClosureChain {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -117,35 +115,35 @@ struct CpsClosureChain {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rect<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rect<T1>(f, f0, *(d_a2)));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f0(*a0, tree_rect<T1>(f, f0, *a0), a1, *a2,
+                tree_rect<T1>(f, f0, *a2));
     }
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                   tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      return f0(*(d_a0), tree_rec<T1>(f, f0, *(d_a0)), d_a1, *(d_a2),
-                tree_rec<T1>(f, f0, *(d_a2)));
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
+                tree_rec<T1>(f, f0, *a2));
     }
   }
 
@@ -163,87 +161,80 @@ struct CpsClosureChain {
   /// is whether the = capture correctly copies all pattern variables,
   /// especially when the pattern match is on a shared_ptr type and the
   /// structured bindings are references.
-  static unsigned int
-  tree_sum_cps(const tree &t,
-               const std::function<unsigned int(unsigned int)> k) {
+  static uint64_t tree_sum_cps(const tree &t,
+                               std::function<uint64_t(uint64_t)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return k(0u);
+      return k(UINT64_C(0));
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      tree d_a0_value = *(d_a0);
-      tree d_a2_value = *(d_a2);
-      return tree_sum_cps(d_a0_value, [=](const unsigned int left_sum) mutable {
-        return tree_sum_cps(d_a2_value,
-                            [=](const unsigned int right_sum) mutable {
-                              return k(((left_sum + d_a1) + right_sum));
-                            });
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      const tree &a0_value = *a0;
+      const tree &a2_value = *a2;
+      return tree_sum_cps(a0_value, [=](uint64_t left_sum) mutable {
+        return tree_sum_cps(a2_value, [=](uint64_t right_sum) mutable {
+          return k(((left_sum + a1) + right_sum));
+        });
       });
     }
   }
 
-  static unsigned int tree_sum(const tree &t);
+  static uint64_t tree_sum(const tree &t);
   /// Build a deep tree to stress the closure chain.
-  static tree build_left(const unsigned int n);
-  static tree build_right(const unsigned int n);
-  static tree build_balanced(const unsigned int n);
+  static tree build_left(uint64_t n);
+  static tree build_right(uint64_t n);
+  static tree build_balanced(uint64_t n);
   /// Test: left-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
-  static inline const unsigned int test_left = tree_sum(build_left(5u));
+  static inline const uint64_t test_left = tree_sum(build_left(UINT64_C(5)));
   /// Test: right-spine tree with 5 nodes: sum = 1+2+3+4+5 = 15
-  static inline const unsigned int test_right = tree_sum(build_right(5u));
+  static inline const uint64_t test_right = tree_sum(build_right(UINT64_C(5)));
   /// Test: balanced tree depth 3: values 1,2,3 with structure
   /// Node (Node (Node Leaf 1 Leaf) 2 (Node Leaf 1 Leaf))
   /// 3
   /// (Node (Node Leaf 1 Leaf) 2 (Node Leaf 1 Leaf))
   /// sum = 4*1 + 2*2 + 1*3 = 11
-  static inline const unsigned int test_balanced = tree_sum(build_balanced(3u));
+  static inline const uint64_t test_balanced =
+      tree_sum(build_balanced(UINT64_C(3)));
 
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
   /// AND the accumulator function.
   template <typename F2>
-    requires std::is_invocable_r_v<unsigned int, F2 &, unsigned int &,
-                                   unsigned int &, unsigned int &>
-  static unsigned int
-  tree_fold_cps(const tree &t, const unsigned int base, F2 &&combine,
-                const std::function<unsigned int(unsigned int)> k) {
+    requires std::is_invocable_r_v<uint64_t, F2 &, uint64_t &, uint64_t &,
+                                   uint64_t &>
+  static uint64_t tree_fold_cps(const tree &t, uint64_t base, F2 &&combine,
+                                std::function<uint64_t(uint64_t)> k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(base);
     } else {
-      const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(t.v());
-      tree d_a0_value = *(d_a0);
-      tree d_a2_value = *(d_a2);
+      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
+      const tree &a0_value = *a0;
+      const tree &a2_value = *a2;
       return tree_fold_cps(
-          d_a0_value, base, combine,
-          [=](const unsigned int left_result) mutable {
+          a0_value, base, combine, [=](uint64_t left_result) mutable {
             return tree_fold_cps(
-                d_a2_value, base, combine,
-                [=](const unsigned int right_result) mutable {
-                  return k(combine(left_result, d_a1, right_result));
+                a2_value, base, combine, [=](uint64_t right_result) mutable {
+                  return k(combine(left_result, a1, right_result));
                 });
           });
     }
   }
 
   /// Test: fold with multiplication: each node multiplies (left + right + n)
-  static inline const unsigned int test_fold = tree_fold_cps(
-      tree::node(tree::node(tree::leaf(), 2u, tree::leaf()), 3u,
-                 tree::node(tree::leaf(), 4u, tree::leaf())),
-      1u,
-      [](const unsigned int l, const unsigned int n, const unsigned int r) {
-        return ((l + n) + r);
-      },
-      [](const unsigned int x) { return x; });
+  static inline const uint64_t test_fold = tree_fold_cps(
+      tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
+                 UINT64_C(3),
+                 tree::node(tree::leaf(), UINT64_C(4), tree::leaf())),
+      UINT64_C(1),
+      [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
+      [](uint64_t x) { return x; });
   /// Store CPS result in a pair with another computation to test
   /// that the continuation chain doesn't interfere with other data.
-  static inline const std::pair<unsigned int, unsigned int> test_pair = []() {
-    tree t = build_left(4u);
-    unsigned int s = tree_sum(t);
-    unsigned int f = tree_fold_cps(
-        std::move(t), 0u,
-        [](const unsigned int l, const unsigned int n, const unsigned int r) {
-          return ((l + n) + r);
-        },
-        [](const unsigned int x) { return x; });
+  static inline const std::pair<uint64_t, uint64_t> test_pair = []() {
+    tree t = build_left(UINT64_C(4));
+    uint64_t s = tree_sum(t);
+    uint64_t f = tree_fold_cps(
+        std::move(t), UINT64_C(0),
+        [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
+        [](uint64_t x) { return x; });
     return std::make_pair(s, f);
   }();
 };

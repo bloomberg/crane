@@ -1,26 +1,23 @@
 #ifndef INCLUDED_INDUCTIVE_IN_MODULE
 #define INCLUDED_INDUCTIVE_IN_MODULE
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 struct InductiveInModule {
   struct Inner {
-    enum class Color { e_RED, e_GREEN, e_BLUE };
+    enum class Color { RED, GREEN, BLUE };
 
-    template <typename T1>
-    static T1 color_rect(T1 f, T1 f0, T1 f1, const Color c) {
+    template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
       switch (c) {
-      case Color::e_RED: {
+      case Color::RED: {
         return f;
       }
-      case Color::e_GREEN: {
+      case Color::GREEN: {
         return f0;
       }
-      case Color::e_BLUE: {
+      case Color::BLUE: {
         return f1;
       }
       default:
@@ -28,16 +25,15 @@ struct InductiveInModule {
       }
     }
 
-    template <typename T1>
-    static T1 color_rec(T1 f, T1 f0, T1 f1, const Color c) {
+    template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
       switch (c) {
-      case Color::e_RED: {
+      case Color::RED: {
         return f;
       }
-      case Color::e_GREEN: {
+      case Color::GREEN: {
         return f0;
       }
-      case Color::e_BLUE: {
+      case Color::BLUE: {
         return f1;
       }
       default:
@@ -45,83 +41,80 @@ struct InductiveInModule {
       }
     }
 
-    static inline const Color default_color = Color::e_RED;
-    static unsigned int color_to_nat(const Color c);
+    static inline const Color default_color = Color::RED;
+    static uint64_t color_to_nat(Color c);
   };
 
-  static inline const unsigned int test_color =
-      Inner::color_to_nat(Inner::Color::e_RED);
+  static inline const uint64_t test_color =
+      Inner::color_to_nat(Inner::Color::RED);
 
   struct Outer {
     struct Middle {
-      template <typename t_A> struct option {
+      template <typename A> struct option {
         // TYPES
         struct None {};
 
         struct Some {
-          t_A d_a0;
+          A a;
         };
 
         using variant_t = std::variant<None, Some>;
 
       private:
         // DATA
-        variant_t d_v_;
+        variant_t v_;
 
       public:
         // CREATORS
         option() {}
 
-        explicit option(None _v) : d_v_(_v) {}
+        explicit option(None _v) : v_(_v) {}
 
-        explicit option(Some _v) : d_v_(std::move(_v)) {}
+        explicit option(Some _v) : v_(std::move(_v)) {}
 
-        option(const option<t_A> &_other)
-            : d_v_(std::move(_other.clone().d_v_)) {}
+        option(const option<A> &_other) : v_(_other.v_) {}
 
-        option(option<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+        option(option<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-        option<t_A> &operator=(const option<t_A> &_other) {
-          d_v_ = std::move(_other.clone().d_v_);
+        option<A> &operator=(const option<A> &_other) {
+          v_ = _other.v_;
           return *this;
         }
 
-        option<t_A> &operator=(option<t_A> &&_other) {
-          d_v_ = std::move(_other.d_v_);
+        option<A> &operator=(option<A> &&_other) noexcept {
+          v_ = std::move(_other.v_);
           return *this;
         }
 
         // ACCESSORS
-        option<t_A> clone() const {
-          auto &&_sv = *(this);
-          if (std::holds_alternative<None>(_sv.v())) {
-            return option<t_A>(None{});
+        option<A> clone() const {
+          if (std::holds_alternative<None>(this->v())) {
+            return option<A>(None{});
           } else {
-            const auto &[d_a0] = std::get<Some>(_sv.v());
-            return option<t_A>(Some{d_a0});
+            const auto &[a] = std::get<Some>(this->v());
+            return option<A>(Some{a});
           }
         }
 
         // CREATORS
         template <typename _U> explicit option(const option<_U> &_other) {
           if (std::holds_alternative<typename option<_U>::None>(_other.v())) {
-            this->d_v_ = None{};
+            this->v_ = None{};
           } else {
-            const auto &[d_a0] =
-                std::get<typename option<_U>::Some>(_other.v());
-            this->d_v_ = Some{t_A(d_a0)};
+            const auto &[a] = std::get<typename option<_U>::Some>(_other.v());
+            this->v_ = Some{A(a)};
           }
         }
 
-        static option<t_A> none() { return option(None{}); }
+        static option<A> none() { return option(None{}); }
 
-        static option<t_A> some(t_A a0) { return option(Some{std::move(a0)}); }
+        static option<A> some(A a) { return option(Some{std::move(a)}); }
 
         // MANIPULATORS
-        inline variant_t &v_mut() { return d_v_; }
+        inline variant_t &v_mut() { return v_; }
 
         // ACCESSORS
-        const variant_t &v() const { return d_v_; }
+        const variant_t &v() const { return v_; }
       };
 
       template <typename T1, typename T2, typename F1>
@@ -130,8 +123,8 @@ struct InductiveInModule {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;
         } else {
-          const auto &[d_a0] = std::get<typename option<T1>::Some>(o.v());
-          return f0(d_a0);
+          const auto &[a0] = std::get<typename option<T1>::Some>(o.v());
+          return f0(a0);
         }
       }
 
@@ -141,8 +134,8 @@ struct InductiveInModule {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;
         } else {
-          const auto &[d_a0] = std::get<typename option<T1>::Some>(o.v());
-          return f0(d_a0);
+          const auto &[a0] = std::get<typename option<T1>::Some>(o.v());
+          return f0(a0);
         }
       }
 
@@ -151,18 +144,19 @@ struct InductiveInModule {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return default0;
         } else {
-          const auto &[d_a0] = std::get<typename option<T1>::Some>(o.v());
-          return d_a0;
+          const auto &[a0] = std::get<typename option<T1>::Some>(o.v());
+          return a0;
         }
       }
     };
 
-    static inline const unsigned int test_option =
-        Middle::template get_or_default<unsigned int>(
-            42u, Middle::template option<unsigned int>::some(99u));
+    static inline const uint64_t test_option =
+        Middle::template get_or_default<uint64_t>(
+            UINT64_C(42),
+            Middle::template option<uint64_t>::some(UINT64_C(99)));
   };
 
-  static inline const unsigned int final_test = Outer::test_option;
+  static inline const uint64_t final_test = Outer::test_option;
 };
 
 #endif // INCLUDED_INDUCTIVE_IN_MODULE

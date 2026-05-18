@@ -1,17 +1,14 @@
 #ifndef INCLUDED_FIX_PARTIAL_APP_ESCAPE
 #define INCLUDED_FIX_PARTIAL_APP_ESCAPE
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct FixPartialAppEscape {
-  static unsigned int count_bits(const unsigned int _x0);
-  static inline const unsigned int test_0 = count_bits(0u);
-  static inline const unsigned int test_1 = count_bits(1u);
-  static inline const unsigned int test_7 = count_bits(7u);
-  static inline const unsigned int test_255 = count_bits(255u);
+  static uint64_t count_bits(uint64_t _x0);
+  static inline const uint64_t test_0 = count_bits(UINT64_C(0));
+  static inline const uint64_t test_1 = count_bits(UINT64_C(1));
+  static inline const uint64_t test_7 = count_bits(UINT64_C(7));
+  static inline const uint64_t test_255 = count_bits(UINT64_C(255));
 };
 
 #endif // INCLUDED_FIX_PARTIAL_APP_ESCAPE

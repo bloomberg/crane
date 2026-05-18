@@ -2,9 +2,6 @@
 #define INCLUDED_SEPEXTDECIDEEQUALITY
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <variant>
 
 #include "Datatypes.h"
@@ -38,18 +35,18 @@ template <Sigma Ty> struct DefsFn {
           return false;
         }
       } else {
-        const auto &[d_a0, d_a1] = std::get<
+        const auto &[a0, a1] = std::get<
             typename Datatypes::template List<typename Ty::Sigma>::Cons>(l.v());
         if (std::holds_alternative<
                 typename Datatypes::template List<typename Ty::Sigma>::Nil>(
                 x.v())) {
           return false;
         } else {
-          const auto &[d_a00, d_a10] = std::get<
+          const auto &[a00, a10] = std::get<
               typename Datatypes::template List<typename Ty::Sigma>::Cons>(
               x.v());
-          if (Ty::Sigma_dec(d_a0, d_a00)) {
-            if (String_dec(*(d_a1), *(d_a10))) {
+          if (Ty::Sigma_dec(a0, a00)) {
+            if (String_dec(*a1, *a10)) {
               return true;
             } else {
               return false;

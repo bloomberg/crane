@@ -4,7 +4,7 @@
 
 int main() {
   using NS = NameClashScopeLeak;
-  using L = List<unsigned int>;
+  using L = List<uint64_t>;
 
   auto nil = L::nil();
   auto l1 = L::cons(1u, L::cons(2u, L::cons(3u, nil)));
@@ -15,7 +15,7 @@ int main() {
   auto r = NS::rotate(l1);
   // [1,2,3] -> [2,3,1]
   assert(std::holds_alternative<L::Cons>(r.v()));
-  assert(std::get<L::Cons>(r.v()).d_a0 == 2u);
+  assert(std::get<L::Cons>(r.v()).a == 2u);
 
   // heads_sum
   assert(NS::heads_sum(l1, l2) == 11u);

@@ -4,56 +4,55 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -62,17 +61,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -82,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -119,18 +115,17 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-      return 0u;
+  uint64_t length() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
     }
   }
 };
@@ -140,88 +135,88 @@ struct Uint {
   struct Nil {};
 
   struct D0 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D1 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D2 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D3 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D4 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D5 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D6 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D7 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D8 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   struct D9 {
-    std::unique_ptr<Uint> d_a0;
+    std::unique_ptr<Uint> a0;
   };
 
   using variant_t = std::variant<Nil, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Uint() {}
 
-  explicit Uint(Nil _v) : d_v_(_v) {}
+  explicit Uint(Nil _v) : v_(_v) {}
 
-  explicit Uint(D0 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D0 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D1 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D1 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D2 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D2 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D3 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D3 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D4 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D4 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D5 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D5 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D6 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D6 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D7 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D7 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D8 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D8 _v) : v_(std::move(_v)) {}
 
-  explicit Uint(D9 _v) : d_v_(std::move(_v)) {}
+  explicit Uint(D9 _v) : v_(std::move(_v)) {}
 
-  Uint(const Uint &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Uint(const Uint &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint(Uint &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Uint(Uint &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint &operator=(const Uint &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint &operator=(Uint &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Uint &operator=(Uint &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -243,76 +238,76 @@ public:
       const Uint *_src = _frame._src;
       Uint *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else if (std::holds_alternative<D0>(_src->v())) {
         const auto &_alt = std::get<D0>(_src->v());
-        _dst->d_v_ = D0{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D0>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D0{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D0>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D1>(_src->v())) {
         const auto &_alt = std::get<D1>(_src->v());
-        _dst->d_v_ = D1{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D1>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D1{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D1>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D2>(_src->v())) {
         const auto &_alt = std::get<D2>(_src->v());
-        _dst->d_v_ = D2{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D2>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D2{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D2>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D3>(_src->v())) {
         const auto &_alt = std::get<D3>(_src->v());
-        _dst->d_v_ = D3{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D3>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D3{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D3>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D4>(_src->v())) {
         const auto &_alt = std::get<D4>(_src->v());
-        _dst->d_v_ = D4{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D4>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D4{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D4>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D5>(_src->v())) {
         const auto &_alt = std::get<D5>(_src->v());
-        _dst->d_v_ = D5{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D5>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D5{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D5>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D6>(_src->v())) {
         const auto &_alt = std::get<D6>(_src->v());
-        _dst->d_v_ = D6{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D6>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D6{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D6>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D7>(_src->v())) {
         const auto &_alt = std::get<D7>(_src->v());
-        _dst->d_v_ = D7{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D7>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D7{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D7>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D8>(_src->v())) {
         const auto &_alt = std::get<D8>(_src->v());
-        _dst->d_v_ = D8{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D8>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D8{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D8>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
         const auto &_alt = std::get<D9>(_src->v());
-        _dst->d_v_ = D9{_alt.d_a0 ? std::make_unique<Uint>() : nullptr};
-        auto &_dst_alt = std::get<D9>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D9{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        auto &_dst_alt = std::get<D9>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -367,64 +362,64 @@ public:
     std::vector<std::unique_ptr<Uint>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Uint &_node) {
-      if (std::holds_alternative<D0>(_node.d_v_)) {
-        auto &_alt = std::get<D0>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D0>(_node.v_)) {
+        auto &_alt = std::get<D0>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D1>(_node.d_v_)) {
-        auto &_alt = std::get<D1>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D1>(_node.v_)) {
+        auto &_alt = std::get<D1>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D2>(_node.d_v_)) {
-        auto &_alt = std::get<D2>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D2>(_node.v_)) {
+        auto &_alt = std::get<D2>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D3>(_node.d_v_)) {
-        auto &_alt = std::get<D3>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D3>(_node.v_)) {
+        auto &_alt = std::get<D3>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D4>(_node.d_v_)) {
-        auto &_alt = std::get<D4>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D4>(_node.v_)) {
+        auto &_alt = std::get<D4>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D5>(_node.d_v_)) {
-        auto &_alt = std::get<D5>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D5>(_node.v_)) {
+        auto &_alt = std::get<D5>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D6>(_node.d_v_)) {
-        auto &_alt = std::get<D6>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D6>(_node.v_)) {
+        auto &_alt = std::get<D6>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D7>(_node.d_v_)) {
-        auto &_alt = std::get<D7>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D7>(_node.v_)) {
+        auto &_alt = std::get<D7>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D8>(_node.d_v_)) {
-        auto &_alt = std::get<D8>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D8>(_node.v_)) {
+        auto &_alt = std::get<D8>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D9>(_node.d_v_)) {
-        auto &_alt = std::get<D9>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D9>(_node.v_)) {
+        auto &_alt = std::get<D9>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -438,10 +433,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Uint0 {
@@ -449,67 +444,67 @@ struct Uint0 {
   struct Nil0 {};
 
   struct D10 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D11 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D12 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D13 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D14 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D15 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D16 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D17 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D18 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct D19 {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Da {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Db {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Dc {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Dd {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct De {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   struct Df {
-    std::unique_ptr<Uint0> d_a0;
+    std::unique_ptr<Uint0> a0;
   };
 
   using variant_t = std::variant<Nil0, D10, D11, D12, D13, D14, D15, D16, D17,
@@ -517,57 +512,57 @@ struct Uint0 {
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Uint0() {}
 
-  explicit Uint0(Nil0 _v) : d_v_(_v) {}
+  explicit Uint0(Nil0 _v) : v_(_v) {}
 
-  explicit Uint0(D10 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D10 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D11 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D11 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D12 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D12 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D13 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D13 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D14 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D14 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D15 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D15 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D16 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D16 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D17 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D17 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D18 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D18 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(D19 _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(D19 _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Da _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Da _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Db _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Db _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Dc _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Dc _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Dd _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Dd _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(De _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(De _v) : v_(std::move(_v)) {}
 
-  explicit Uint0(Df _v) : d_v_(std::move(_v)) {}
+  explicit Uint0(Df _v) : v_(std::move(_v)) {}
 
-  Uint0(const Uint0 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Uint0(const Uint0 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint0(Uint0 &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Uint0(Uint0 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint0 &operator=(const Uint0 &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint0 &operator=(Uint0 &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Uint0 &operator=(Uint0 &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
@@ -589,118 +584,118 @@ public:
       const Uint0 *_src = _frame._src;
       Uint0 *_dst = _frame._dst;
       if (std::holds_alternative<Nil0>(_src->v())) {
-        _dst->d_v_ = Nil0{};
+        _dst->v_ = Nil0{};
       } else if (std::holds_alternative<D10>(_src->v())) {
         const auto &_alt = std::get<D10>(_src->v());
-        _dst->d_v_ = D10{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D10>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D10{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D10>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D11>(_src->v())) {
         const auto &_alt = std::get<D11>(_src->v());
-        _dst->d_v_ = D11{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D11>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D11{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D11>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D12>(_src->v())) {
         const auto &_alt = std::get<D12>(_src->v());
-        _dst->d_v_ = D12{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D12>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D12{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D12>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D13>(_src->v())) {
         const auto &_alt = std::get<D13>(_src->v());
-        _dst->d_v_ = D13{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D13>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D13{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D13>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D14>(_src->v())) {
         const auto &_alt = std::get<D14>(_src->v());
-        _dst->d_v_ = D14{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D14>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D14{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D14>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D15>(_src->v())) {
         const auto &_alt = std::get<D15>(_src->v());
-        _dst->d_v_ = D15{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D15>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D15{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D15>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D16>(_src->v())) {
         const auto &_alt = std::get<D16>(_src->v());
-        _dst->d_v_ = D16{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D16>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D16{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D16>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D17>(_src->v())) {
         const auto &_alt = std::get<D17>(_src->v());
-        _dst->d_v_ = D17{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D17>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D17{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D17>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D18>(_src->v())) {
         const auto &_alt = std::get<D18>(_src->v());
-        _dst->d_v_ = D18{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D18>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D18{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D18>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D19>(_src->v())) {
         const auto &_alt = std::get<D19>(_src->v());
-        _dst->d_v_ = D19{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<D19>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = D19{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<D19>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Da>(_src->v())) {
         const auto &_alt = std::get<Da>(_src->v());
-        _dst->d_v_ = Da{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Da>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Da{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Da>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Db>(_src->v())) {
         const auto &_alt = std::get<Db>(_src->v());
-        _dst->d_v_ = Db{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Db>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Db{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Db>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Dc>(_src->v())) {
         const auto &_alt = std::get<Dc>(_src->v());
-        _dst->d_v_ = Dc{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Dc>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Dc{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dc>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Dd>(_src->v())) {
         const auto &_alt = std::get<Dd>(_src->v());
-        _dst->d_v_ = Dd{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Dd>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Dd{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Dd>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<De>(_src->v())) {
         const auto &_alt = std::get<De>(_src->v());
-        _dst->d_v_ = De{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<De>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = De{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<De>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
         const auto &_alt = std::get<Df>(_src->v());
-        _dst->d_v_ = Df{_alt.d_a0 ? std::make_unique<Uint0>() : nullptr};
-        auto &_dst_alt = std::get<Df>(_dst->d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+        _dst->v_ = Df{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        auto &_dst_alt = std::get<Df>(_dst->v_);
+        if (_alt.a0) {
+          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       }
     }
@@ -779,100 +774,100 @@ public:
     std::vector<std::unique_ptr<Uint0>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Uint0 &_node) {
-      if (std::holds_alternative<D10>(_node.d_v_)) {
-        auto &_alt = std::get<D10>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D10>(_node.v_)) {
+        auto &_alt = std::get<D10>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D11>(_node.d_v_)) {
-        auto &_alt = std::get<D11>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D11>(_node.v_)) {
+        auto &_alt = std::get<D11>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D12>(_node.d_v_)) {
-        auto &_alt = std::get<D12>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D12>(_node.v_)) {
+        auto &_alt = std::get<D12>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D13>(_node.d_v_)) {
-        auto &_alt = std::get<D13>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D13>(_node.v_)) {
+        auto &_alt = std::get<D13>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D14>(_node.d_v_)) {
-        auto &_alt = std::get<D14>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D14>(_node.v_)) {
+        auto &_alt = std::get<D14>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D15>(_node.d_v_)) {
-        auto &_alt = std::get<D15>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D15>(_node.v_)) {
+        auto &_alt = std::get<D15>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D16>(_node.d_v_)) {
-        auto &_alt = std::get<D16>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D16>(_node.v_)) {
+        auto &_alt = std::get<D16>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D17>(_node.d_v_)) {
-        auto &_alt = std::get<D17>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D17>(_node.v_)) {
+        auto &_alt = std::get<D17>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D18>(_node.d_v_)) {
-        auto &_alt = std::get<D18>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D18>(_node.v_)) {
+        auto &_alt = std::get<D18>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<D19>(_node.d_v_)) {
-        auto &_alt = std::get<D19>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<D19>(_node.v_)) {
+        auto &_alt = std::get<D19>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Da>(_node.d_v_)) {
-        auto &_alt = std::get<Da>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Da>(_node.v_)) {
+        auto &_alt = std::get<Da>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Db>(_node.d_v_)) {
-        auto &_alt = std::get<Db>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Db>(_node.v_)) {
+        auto &_alt = std::get<Db>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Dc>(_node.d_v_)) {
-        auto &_alt = std::get<Dc>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Dc>(_node.v_)) {
+        auto &_alt = std::get<Dc>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Dd>(_node.d_v_)) {
-        auto &_alt = std::get<Dd>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Dd>(_node.v_)) {
+        auto &_alt = std::get<Dd>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<De>(_node.d_v_)) {
-        auto &_alt = std::get<De>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<De>(_node.v_)) {
+        auto &_alt = std::get<De>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
-      if (std::holds_alternative<Df>(_node.d_v_)) {
-        auto &_alt = std::get<Df>(_node.d_v_);
-        if (_alt.d_a0) {
-          _stack.push_back(std::move(_alt.d_a0));
+      if (std::holds_alternative<Df>(_node.v_)) {
+        auto &_alt = std::get<Df>(_node.v_);
+        if (_alt.a0) {
+          _stack.push_back(std::move(_alt.a0));
         }
       }
     };
@@ -886,59 +881,58 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Uint1 {
   // TYPES
   struct UIntDecimal {
-    Uint d_u;
+    Uint u;
   };
 
   struct UIntHexadecimal {
-    Uint0 d_u;
+    Uint0 u;
   };
 
   using variant_t = std::variant<UIntDecimal, UIntHexadecimal>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   Uint1() {}
 
-  explicit Uint1(UIntDecimal _v) : d_v_(std::move(_v)) {}
+  explicit Uint1(UIntDecimal _v) : v_(std::move(_v)) {}
 
-  explicit Uint1(UIntHexadecimal _v) : d_v_(std::move(_v)) {}
+  explicit Uint1(UIntHexadecimal _v) : v_(std::move(_v)) {}
 
-  Uint1(const Uint1 &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  Uint1(const Uint1 &_other) : v_(std::move(_other.clone().v_)) {}
 
-  Uint1(Uint1 &&_other) : d_v_(std::move(_other.d_v_)) {}
+  Uint1(Uint1 &&_other) noexcept : v_(std::move(_other.v_)) {}
 
   Uint1 &operator=(const Uint1 &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  Uint1 &operator=(Uint1 &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  Uint1 &operator=(Uint1 &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
   Uint1 clone() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<UIntDecimal>(_sv.v())) {
-      const auto &[d_u] = std::get<UIntDecimal>(_sv.v());
-      return Uint1(UIntDecimal{d_u.clone()});
+    if (std::holds_alternative<UIntDecimal>(this->v())) {
+      const auto &[u] = std::get<UIntDecimal>(this->v());
+      return Uint1(UIntDecimal{u.clone()});
     } else {
-      const auto &[d_u] = std::get<UIntHexadecimal>(_sv.v());
-      return Uint1(UIntHexadecimal{d_u.clone()});
+      const auto &[u] = std::get<UIntHexadecimal>(this->v());
+      return Uint1(UIntHexadecimal{u.clone()});
     }
   }
 
@@ -950,132 +944,126 @@ public:
   }
 
   // MANIPULATORS
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct Nat {
-  static unsigned int tail_add(const unsigned int n, const unsigned int m);
-  static unsigned int tail_addmul(const unsigned int r, const unsigned int n,
-                                  const unsigned int m);
-  static unsigned int tail_mul(const unsigned int n, const unsigned int m);
-  static unsigned int of_uint_acc(const Uint &d, const unsigned int acc);
-  static unsigned int of_uint(const Uint &d);
-  static unsigned int of_hex_uint_acc(const Uint0 &d, const unsigned int acc);
-  static unsigned int of_hex_uint(const Uint0 &d);
-  static unsigned int of_num_uint(const Uint1 &d);
+  static uint64_t tail_add(uint64_t n, uint64_t m);
+  static uint64_t tail_addmul(uint64_t r, uint64_t n, uint64_t m);
+  static uint64_t tail_mul(uint64_t n, uint64_t m);
+  static uint64_t of_uint_acc(const Uint &d, uint64_t acc);
+  static uint64_t of_uint(const Uint &d);
+  static uint64_t of_hex_uint_acc(const Uint0 &d, uint64_t acc);
+  static uint64_t of_hex_uint(const Uint0 &d);
+  static uint64_t of_num_uint(const Uint1 &d);
 };
 
 struct HistoricalEventSafetyTraceCase {
   struct State {
-    unsigned int reservoir_level_cm;
-    unsigned int downstream_stage_cm;
-    unsigned int gate_open_pct;
+    uint64_t reservoir_level_cm;
+    uint64_t downstream_stage_cm;
+    uint64_t gate_open_pct;
 
     // ACCESSORS
     State clone() const {
-      return State{(*(this)).reservoir_level_cm, (*(this)).downstream_stage_cm,
-                   (*(this)).gate_open_pct};
+      return State{(*this).reservoir_level_cm, (*this).downstream_stage_cm,
+                   (*this).gate_open_pct};
     }
   };
 
   struct PlantConfig {
-    unsigned int max_reservoir_cm;
-    unsigned int max_downstream_cm;
-    unsigned int gate_capacity_cm;
-    unsigned int forecast_error_pct;
-    unsigned int gate_slew_pct;
-    unsigned int max_stage_rise_cm;
-    unsigned int reservoir_area_min_cm2;
-    unsigned int reservoir_area_max_cm2;
-    std::function<unsigned int(unsigned int)> reservoir_area_curve_cm2;
-    unsigned int design_head_cm;
-    unsigned int timestep_s;
+    uint64_t max_reservoir_cm;
+    uint64_t max_downstream_cm;
+    uint64_t gate_capacity_cm;
+    uint64_t forecast_error_pct;
+    uint64_t gate_slew_pct;
+    uint64_t max_stage_rise_cm;
+    uint64_t reservoir_area_min_cm2;
+    uint64_t reservoir_area_max_cm2;
+    std::function<uint64_t(uint64_t)> reservoir_area_curve_cm2;
+    uint64_t design_head_cm;
+    uint64_t timestep_s;
 
     // ACCESSORS
     PlantConfig clone() const {
-      return PlantConfig{(*(this)).max_reservoir_cm,
-                         (*(this)).max_downstream_cm,
-                         (*(this)).gate_capacity_cm,
-                         (*(this)).forecast_error_pct,
-                         (*(this)).gate_slew_pct,
-                         (*(this)).max_stage_rise_cm,
-                         (*(this)).reservoir_area_min_cm2,
-                         (*(this)).reservoir_area_max_cm2,
-                         (*(this)).reservoir_area_curve_cm2,
-                         (*(this)).design_head_cm,
-                         (*(this)).timestep_s};
+      return PlantConfig{(*this).max_reservoir_cm,
+                         (*this).max_downstream_cm,
+                         (*this).gate_capacity_cm,
+                         (*this).forecast_error_pct,
+                         (*this).gate_slew_pct,
+                         (*this).max_stage_rise_cm,
+                         (*this).reservoir_area_min_cm2,
+                         (*this).reservoir_area_max_cm2,
+                         (*this).reservoir_area_curve_cm2,
+                         (*this).design_head_cm,
+                         (*this).timestep_s};
     }
   };
 
   static bool is_safe_bool(const PlantConfig &pconf, const State &s);
 
   struct InflowRecord {
-    unsigned int ir_timestep;
-    unsigned int ir_inflow_cm;
+    uint64_t ir_timestep;
+    uint64_t ir_inflow_cm;
 
     // ACCESSORS
     InflowRecord clone() const {
-      return InflowRecord{(*(this)).ir_timestep, (*(this)).ir_inflow_cm};
+      return InflowRecord{(*this).ir_timestep, (*this).ir_inflow_cm};
     }
   };
 
   using HistoricalEvent = List<InflowRecord>;
-  static unsigned int event_to_inflow(const List<InflowRecord> &event,
-                                      const unsigned int default_inflow,
-                                      const unsigned int t);
+  static uint64_t event_to_inflow(const List<InflowRecord> &event,
+                                  uint64_t default_inflow, uint64_t t);
 
   struct TestResult {
-    unsigned int tr_event_name;
+    uint64_t tr_event_name;
     bool tr_initial_safe;
     bool tr_final_safe;
-    unsigned int tr_max_level;
-    unsigned int tr_max_stage;
+    uint64_t tr_max_level;
+    uint64_t tr_max_stage;
 
     // ACCESSORS
     TestResult clone() const {
-      return TestResult{(*(this)).tr_event_name, (*(this)).tr_initial_safe,
-                        (*(this)).tr_final_safe, (*(this)).tr_max_level,
-                        (*(this)).tr_max_stage};
+      return TestResult{(*this).tr_event_name, (*this).tr_initial_safe,
+                        (*this).tr_final_safe, (*this).tr_max_level,
+                        (*this).tr_max_stage};
     }
   };
 
   template <typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F1 &, State &,
-                                   unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F1 &, State &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
   static State step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
-                         const PlantConfig &pconf, const State &s,
-                         const unsigned int t) {
-    unsigned int out =
-        std::min((100u ? (pconf.gate_capacity_cm * ctrl(s, t)) / 100u : 0),
-                 (s.reservoir_level_cm + inflow(t)));
-    unsigned int new_level =
-        ((((s.reservoir_level_cm + inflow(t)) - out) >
-                  (s.reservoir_level_cm + inflow(t))
-              ? 0
-              : ((s.reservoir_level_cm + inflow(t)) - out)));
-    unsigned int new_stage = stage_fn(out);
+                         const PlantConfig &pconf, const State &s, uint64_t t) {
+    uint64_t out = std::min(
+        (UINT64_C(100) ? (pconf.gate_capacity_cm * ctrl(s, t)) / UINT64_C(100)
+                       : 0),
+        (s.reservoir_level_cm + inflow(t)));
+    uint64_t new_level = ((((s.reservoir_level_cm + inflow(t)) - out) >
+                                   (s.reservoir_level_cm + inflow(t))
+                               ? 0
+                               : ((s.reservoir_level_cm + inflow(t)) - out)));
+    uint64_t new_stage = stage_fn(out);
     return State{new_level, new_stage, ctrl(s, t)};
   }
 
   template <typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F1 &, State &,
-                                   unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F2 &, unsigned int &>
-  static std::pair<std::pair<State, unsigned int>, unsigned int>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F1 &, State &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
+  static std::pair<std::pair<State, uint64_t>, uint64_t>
   simulate_with_max(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
-                    const PlantConfig &pconf, const unsigned int horizon,
-                    State s, const unsigned int max_level,
-                    const unsigned int max_stage) {
+                    const PlantConfig &pconf, uint64_t horizon, State s,
+                    uint64_t max_level, uint64_t max_stage) {
     if (horizon <= 0) {
       return std::make_pair(std::make_pair(std::move(s), max_level), max_stage);
     } else {
-      unsigned int k = horizon - 1;
+      uint64_t k = horizon - 1;
       State s_ = step_hist(inflow, ctrl, stage_fn, pconf, std::move(s), k);
       return simulate_with_max(inflow, ctrl, stage_fn, pconf, k, s_,
                                std::max(max_level, s_.reservoir_level_cm),
@@ -1084,154 +1072,161 @@ struct HistoricalEventSafetyTraceCase {
   }
 
   template <typename F3, typename F4>
-    requires std::is_invocable_r_v<unsigned int, F3 &, State &,
-                                   unsigned int &> &&
-             std::is_invocable_r_v<unsigned int, F4 &, unsigned int &>
+    requires std::is_invocable_r_v<uint64_t, F3 &, State &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F4 &, uint64_t &>
   static TestResult
   run_historical_test(const PlantConfig &pconf, List<InflowRecord> event,
-                      const unsigned int default_inflow, F3 &&ctrl,
-                      F4 &&stage_fn, const State &initial_state,
-                      const unsigned int horizon, const unsigned int event_id) {
-    std::function<unsigned int(unsigned int)> inflow =
-        [=](unsigned int _x0) mutable -> unsigned int {
+                      uint64_t default_inflow, F3 &&ctrl, F4 &&stage_fn,
+                      const State &initial_state, uint64_t horizon,
+                      uint64_t event_id) {
+    std::function<uint64_t(uint64_t)> inflow =
+        [=](uint64_t _x0) mutable -> uint64_t {
       return event_to_inflow(event, default_inflow, _x0);
     };
     bool initial_safe = is_safe_bool(pconf, initial_state);
     auto _cs = simulate_with_max(inflow, ctrl, stage_fn, pconf, horizon,
-                                 initial_state, 0u, 0u);
-    const std::pair<State, unsigned int> &p = _cs.first;
-    const unsigned int &max_stg = _cs.second;
+                                 initial_state, UINT64_C(0), UINT64_C(0));
+    const std::pair<State, uint64_t> &p = _cs.first;
+    const uint64_t &max_stg = _cs.second;
     const State &final_state = p.first;
-    const unsigned int &max_lev = p.second;
+    const uint64_t &max_lev = p.second;
     bool final_safe = is_safe_bool(pconf, final_state);
     return TestResult{event_id, initial_safe, final_safe, max_lev, max_stg};
   }
 
   static bool test_passes(const TestResult &result);
   static bool all_tests_pass(const List<TestResult> &results);
-  using RatingTable = List<std::pair<unsigned int, unsigned int>>;
-  static unsigned int
-  stage_from_table(const List<std::pair<unsigned int, unsigned int>> &tbl,
-                   const unsigned int base_stage, const unsigned int out);
+  using RatingTable = List<std::pair<uint64_t, uint64_t>>;
+  static uint64_t
+  stage_from_table(const List<std::pair<uint64_t, uint64_t>> &tbl,
+                   uint64_t base_stage, uint64_t out);
 
   struct MonotoneRatingTable {
     RatingTable mrt_table;
 
     // ACCESSORS
     MonotoneRatingTable clone() const {
-      return MonotoneRatingTable{(*(this)).mrt_table};
+      return MonotoneRatingTable{(*this).mrt_table};
     }
   };
 
   static inline const HistoricalEvent flood_1983_inflows =
       List<InflowRecord>::cons(
-          InflowRecord{0u, 50u},
+          InflowRecord{UINT64_C(0), UINT64_C(50)},
           List<InflowRecord>::cons(
-              InflowRecord{1u, 75u},
+              InflowRecord{UINT64_C(1), UINT64_C(75)},
               List<InflowRecord>::cons(
-                  InflowRecord{2u, 100u},
+                  InflowRecord{UINT64_C(2), UINT64_C(100)},
                   List<InflowRecord>::cons(
-                      InflowRecord{3u, 150u},
+                      InflowRecord{UINT64_C(3), UINT64_C(150)},
                       List<InflowRecord>::cons(
-                          InflowRecord{4u, 200u},
+                          InflowRecord{UINT64_C(4), UINT64_C(200)},
                           List<InflowRecord>::cons(
-                              InflowRecord{5u, 250u},
+                              InflowRecord{UINT64_C(5), UINT64_C(250)},
                               List<InflowRecord>::cons(
-                                  InflowRecord{6u, 300u},
+                                  InflowRecord{UINT64_C(6), UINT64_C(300)},
                                   List<InflowRecord>::cons(
-                                      InflowRecord{7u, 250u},
+                                      InflowRecord{UINT64_C(7), UINT64_C(250)},
                                       List<InflowRecord>::cons(
-                                          InflowRecord{8u, 200u},
+                                          InflowRecord{UINT64_C(8),
+                                                       UINT64_C(200)},
                                           List<InflowRecord>::cons(
-                                              InflowRecord{9u, 150u},
+                                              InflowRecord{UINT64_C(9),
+                                                           UINT64_C(150)},
                                               List<InflowRecord>::
                                                   nil()))))))))));
   static inline const HistoricalEvent flood_2011_inflows =
       List<InflowRecord>::cons(
-          InflowRecord{0u, 100u},
+          InflowRecord{UINT64_C(0), UINT64_C(100)},
           List<InflowRecord>::cons(
-              InflowRecord{1u, 150u},
+              InflowRecord{UINT64_C(1), UINT64_C(150)},
               List<InflowRecord>::cons(
-                  InflowRecord{2u, 200u},
+                  InflowRecord{UINT64_C(2), UINT64_C(200)},
                   List<InflowRecord>::cons(
-                      InflowRecord{3u, 300u},
+                      InflowRecord{UINT64_C(3), UINT64_C(300)},
                       List<InflowRecord>::cons(
-                          InflowRecord{4u, 400u},
+                          InflowRecord{UINT64_C(4), UINT64_C(400)},
                           List<InflowRecord>::cons(
-                              InflowRecord{5u, 350u},
+                              InflowRecord{UINT64_C(5), UINT64_C(350)},
                               List<InflowRecord>::cons(
-                                  InflowRecord{6u, 300u},
+                                  InflowRecord{UINT64_C(6), UINT64_C(300)},
                                   List<InflowRecord>::cons(
-                                      InflowRecord{7u, 250u},
+                                      InflowRecord{UINT64_C(7), UINT64_C(250)},
                                       List<InflowRecord>::cons(
-                                          InflowRecord{8u, 200u},
+                                          InflowRecord{UINT64_C(8),
+                                                       UINT64_C(200)},
                                           List<InflowRecord>::cons(
-                                              InflowRecord{9u, 150u},
+                                              InflowRecord{UINT64_C(9),
+                                                           UINT64_C(150)},
                                               List<InflowRecord>::
                                                   nil()))))))))));
   static inline const HistoricalEvent dual_peak_scenario =
       List<InflowRecord>::cons(
-          InflowRecord{0u, 30u},
+          InflowRecord{UINT64_C(0), UINT64_C(30)},
           List<InflowRecord>::cons(
-              InflowRecord{1u, 60u},
+              InflowRecord{UINT64_C(1), UINT64_C(60)},
               List<InflowRecord>::cons(
-                  InflowRecord{2u, 120u},
+                  InflowRecord{UINT64_C(2), UINT64_C(120)},
                   List<InflowRecord>::cons(
-                      InflowRecord{3u, 200u},
+                      InflowRecord{UINT64_C(3), UINT64_C(200)},
                       List<InflowRecord>::cons(
-                          InflowRecord{4u, 300u},
+                          InflowRecord{UINT64_C(4), UINT64_C(300)},
                           List<InflowRecord>::cons(
-                              InflowRecord{5u, 380u},
+                              InflowRecord{UINT64_C(5), UINT64_C(380)},
                               List<InflowRecord>::cons(
-                                  InflowRecord{6u, 420u},
+                                  InflowRecord{UINT64_C(6), UINT64_C(420)},
                                   List<InflowRecord>::cons(
-                                      InflowRecord{7u, 400u},
+                                      InflowRecord{UINT64_C(7), UINT64_C(400)},
                                       List<InflowRecord>::cons(
-                                          InflowRecord{8u, 350u},
+                                          InflowRecord{UINT64_C(8),
+                                                       UINT64_C(350)},
                                           List<InflowRecord>::cons(
-                                              InflowRecord{9u, 280u},
+                                              InflowRecord{UINT64_C(9),
+                                                           UINT64_C(280)},
                                               List<InflowRecord>::
                                                   nil()))))))))));
-  static inline const PlantConfig hist_witness_plant =
-      PlantConfig{500u, 500u, 500u,
-                  1u,   5u,   10u,
-                  100u, 100u, [](const unsigned int) {
-return 100u; },
-                  100u, 1u};
-  static unsigned int hist_witness_stage(const unsigned int out);
-  static unsigned int hist_witness_ctrl(const State &s, const unsigned int _x);
-  static inline const State hist_witness_initial = State{50u, 0u, 0u};
+  static inline const PlantConfig hist_witness_plant = PlantConfig{
+      UINT64_C(500), UINT64_C(500), UINT64_C(500),
+      UINT64_C(1),   UINT64_C(5),   UINT64_C(10),
+      UINT64_C(100), UINT64_C(100), [](uint64_t) {
+return UINT64_C(100); },
+      UINT64_C(100), UINT64_C(1)};
+  static uint64_t hist_witness_stage(uint64_t out);
+  static uint64_t hist_witness_ctrl(const State &s, uint64_t _x);
+  static inline const State hist_witness_initial =
+      State{UINT64_C(50), UINT64_C(0), UINT64_C(0)};
   static inline const TestResult hist_test_1983 = run_historical_test(
-      hist_witness_plant, flood_1983_inflows, 0u, hist_witness_ctrl,
-      hist_witness_stage, hist_witness_initial, 10u, 1983u);
+      hist_witness_plant, flood_1983_inflows, UINT64_C(0), hist_witness_ctrl,
+      hist_witness_stage, hist_witness_initial, UINT64_C(10), UINT64_C(1983));
   static inline const TestResult hist_test_2011 = run_historical_test(
-      hist_witness_plant, flood_2011_inflows, 0u, hist_witness_ctrl,
-      hist_witness_stage, hist_witness_initial, 10u, 2011u);
-  static inline const PlantConfig hoover_dam_config =
-      PlantConfig{2200u, 100u,  500u,
-                  15u,   5u,    10u,
-                  1000u, 1000u, [](const unsigned int) {
-return 1000u; },
-                  200u,  60u};
-  static inline const State hoover_initial_state = State{1500u, 20u, 0u};
-  static unsigned int hoover_controller(const State &s, const unsigned int _x);
+      hist_witness_plant, flood_2011_inflows, UINT64_C(0), hist_witness_ctrl,
+      hist_witness_stage, hist_witness_initial, UINT64_C(10), UINT64_C(2011));
+  static inline const PlantConfig hoover_dam_config = PlantConfig{
+      UINT64_C(2200), UINT64_C(100),  UINT64_C(500),
+      UINT64_C(15),   UINT64_C(5),    UINT64_C(10),
+      UINT64_C(1000), UINT64_C(1000), [](uint64_t) {
+return UINT64_C(1000); },
+      UINT64_C(200),  UINT64_C(60)};
+  static inline const State hoover_initial_state =
+      State{UINT64_C(1500), UINT64_C(20), UINT64_C(0)};
+  static uint64_t hoover_controller(const State &s, uint64_t _x);
   static inline const MonotoneRatingTable hoover_rating_table =
-      MonotoneRatingTable{List<std::pair<unsigned int, unsigned int>>::cons(
-          std::make_pair(100u, 30u),
-          List<std::pair<unsigned int, unsigned int>>::cons(
-              std::make_pair(200u, 45u),
-              List<std::pair<unsigned int, unsigned int>>::cons(
-                  std::make_pair(300u, 60u),
-                  List<std::pair<unsigned int, unsigned int>>::cons(
-                      std::make_pair(400u, 75u),
-                      List<std::pair<unsigned int, unsigned int>>::cons(
-                          std::make_pair(500u, 90u),
-                          List<std::pair<unsigned int,
-                                         unsigned int>>::nil())))))};
-  static unsigned int hoover_stage_from_rating(const unsigned int out);
-  static inline const TestResult hoover_test = run_historical_test(
-      hoover_dam_config, dual_peak_scenario, 0u, hoover_controller,
-      hoover_stage_from_rating, hoover_initial_state, 10u, 9001u);
+      MonotoneRatingTable{List<std::pair<uint64_t, uint64_t>>::cons(
+          std::make_pair(UINT64_C(100), UINT64_C(30)),
+          List<std::pair<uint64_t, uint64_t>>::cons(
+              std::make_pair(UINT64_C(200), UINT64_C(45)),
+              List<std::pair<uint64_t, uint64_t>>::cons(
+                  std::make_pair(UINT64_C(300), UINT64_C(60)),
+                  List<std::pair<uint64_t, uint64_t>>::cons(
+                      std::make_pair(UINT64_C(400), UINT64_C(75)),
+                      List<std::pair<uint64_t, uint64_t>>::cons(
+                          std::make_pair(UINT64_C(500), UINT64_C(90)),
+                          List<std::pair<uint64_t, uint64_t>>::nil())))))};
+  static uint64_t hoover_stage_from_rating(uint64_t out);
+  static inline const TestResult hoover_test =
+      run_historical_test(hoover_dam_config, dual_peak_scenario, UINT64_C(0),
+                          hoover_controller, hoover_stage_from_rating,
+                          hoover_initial_state, UINT64_C(10), UINT64_C(9001));
 
   struct HistoricalScenarioBundle {
     PlantConfig hsb_hist_plant;
@@ -1244,13 +1239,11 @@ return 1000u; },
 
     // ACCESSORS
     HistoricalScenarioBundle clone() const {
-      return HistoricalScenarioBundle{(*(this)).hsb_hist_plant.clone(),
-                                      (*(this)).hsb_hist_table.clone(),
-                                      (*(this)).hsb_hist_initial.clone(),
-                                      (*(this)).hsb_test_1983.clone(),
-                                      (*(this)).hsb_test_2011.clone(),
-                                      (*(this)).hsb_hoover_plant.clone(),
-                                      (*(this)).hsb_hoover_test.clone()};
+      return HistoricalScenarioBundle{
+          (*this).hsb_hist_plant.clone(),   (*this).hsb_hist_table.clone(),
+          (*this).hsb_hist_initial.clone(), (*this).hsb_test_1983.clone(),
+          (*this).hsb_test_2011.clone(),    (*this).hsb_hoover_plant.clone(),
+          (*this).hsb_hoover_test.clone()};
     }
   };
 
@@ -1259,13 +1252,13 @@ return 1000u; },
                                hist_witness_initial, hist_test_1983,
                                hist_test_2011,       hoover_dam_config,
                                hoover_test};
-  static unsigned int historical_lookup_1983(const unsigned int t);
-  static unsigned int historical_lookup_2011(const unsigned int t);
-  static bool witness_test_initial_safe_at(const unsigned int h);
-  static unsigned int witness_test_peak_level_at(const unsigned int h);
-  static unsigned int hoover_controller_sample(const unsigned int level);
-  static unsigned int hoover_stage_sample(const unsigned int _x0);
-  static inline const unsigned int sample_bundle_test_count =
+  static uint64_t historical_lookup_1983(uint64_t t);
+  static uint64_t historical_lookup_2011(uint64_t t);
+  static bool witness_test_initial_safe_at(uint64_t h);
+  static uint64_t witness_test_peak_level_at(uint64_t h);
+  static uint64_t hoover_controller_sample(uint64_t level);
+  static uint64_t hoover_stage_sample(uint64_t _x0);
+  static inline const uint64_t sample_bundle_test_count =
       List<TestResult>::cons(
           historical_bundle.hsb_test_1983,
           List<TestResult>::cons(
@@ -1275,7 +1268,7 @@ return 1000u; },
           .length();
   static inline const bool sample_bundle_initial_safe =
       historical_bundle.hsb_test_1983.tr_initial_safe;
-  static inline const unsigned int sample_bundle_hist_2011_id =
+  static inline const uint64_t sample_bundle_hist_2011_id =
       historical_bundle.hsb_test_2011.tr_event_name;
   static inline const bool sample_all_tests_pass =
       all_tests_pass(List<TestResult>::cons(

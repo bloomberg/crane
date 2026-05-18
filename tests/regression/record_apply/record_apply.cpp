@@ -1,7 +1,6 @@
 #include "record_apply.h"
 
-unsigned int RecordApply::apply_record(const RecordApply::R &r0,
-                                       const unsigned int a,
-                                       const unsigned int b) {
+uint64_t RecordApply::apply_record(const RecordApply::R &r0, uint64_t a,
+                                   uint64_t b) {
   return r0.f(a, b);
 }

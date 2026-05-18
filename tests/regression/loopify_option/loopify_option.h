@@ -9,50 +9,50 @@
 #include <vector>
 
 struct LoopifyOption {
-  template <typename t_A> struct list {
+  template <typename A> struct list {
     // TYPES
     struct Nil {};
 
     struct Cons {
-      t_A d_a0;
-      std::unique_ptr<list<t_A>> d_a1;
+      A a;
+      std::unique_ptr<list<A>> l;
     };
 
     using variant_t = std::variant<Nil, Cons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     list() {}
 
-    explicit list(Nil _v) : d_v_(_v) {}
+    explicit list(Nil _v) : v_(_v) {}
 
-    explicit list(Cons _v) : d_v_(std::move(_v)) {}
+    explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    list(const list<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    list(list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    list(list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    list<t_A> &operator=(const list<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    list<A> &operator=(const list<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    list<t_A> &operator=(list<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    list<A> &operator=(list<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    list<t_A> clone() const {
-      list<t_A> _out{};
+    list<A> clone() const {
+      list<A> _out{};
 
       struct _CloneFrame {
-        const list<t_A> *_src;
-        list<t_A> *_dst;
+        const list<A> *_src;
+        list<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -61,17 +61,17 @@ struct LoopifyOption {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const list<t_A> *_src = _frame._src;
-        list<t_A> *_dst = _frame._dst;
+        const list<A> *_src = _frame._src;
+        list<A> *_dst = _frame._dst;
         if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->d_v_ = Nil{};
+          _dst->v_ = Nil{};
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
-          _dst->d_v_ = Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
-                                                 : nullptr};
-          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Cons{_alt.a, _alt.l ? std::make_unique<list<A>>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->v_);
+          if (_alt.l) {
+            _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
           }
         }
       }
@@ -81,31 +81,28 @@ struct LoopifyOption {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->d_v_ = Nil{};
+        this->v_ = Nil{};
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<_U>::Cons>(_other.v());
-        this->d_v_ = Cons{t_A(d_a0),
-                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
+        this->v_ = Cons{A(a), l ? std::make_unique<list<A>>(*l) : nullptr};
       }
     }
 
-    static list<t_A> nil() { return list(Nil{}); }
+    static list<A> nil() { return list(Nil{}); }
 
-    static list<t_A> cons(t_A a0, list<t_A> a1) {
-      return list(
-          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
+    static list<A> cons(A a, list<A> l) {
+      return list(Cons{std::move(a), std::make_unique<list<A>>(std::move(l))});
     }
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      std::vector<std::unique_ptr<list<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](list<t_A> &_node) {
-        if (std::holds_alternative<Cons>(_node.d_v_)) {
-          auto &_alt = std::get<Cons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](list<A> &_node) {
+        if (std::holds_alternative<Cons>(_node.v_)) {
+          auto &_alt = std::get<Cons>(_node.v_);
+          if (_alt.l) {
+            _stack.push_back(std::move(_alt.l));
           }
         }
       };
@@ -119,10 +116,10 @@ struct LoopifyOption {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -136,12 +133,12 @@ struct LoopifyOption {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
     /// _result.
     struct _Resume_Cons {
       F1 f0;
-      list<T1> d_a1;
-      T1 d_a0;
+      list<T1> a1;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -155,17 +152,17 @@ struct LoopifyOption {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = f;
+          _result = std::move(f);
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+        _result = _f.f0(_f.a0, _f.a1, _result);
       }
     }
     return _result;
@@ -182,12 +179,12 @@ struct LoopifyOption {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, d_a1, d_a0], resumes after recursive call with
+    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
     /// _result.
     struct _Resume_Cons {
       F1 f0;
-      list<T1> d_a1;
-      T1 d_a0;
+      list<T1> a1;
+      T1 a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -201,17 +198,17 @@ struct LoopifyOption {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *(_f.l);
+        const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = f;
+          _result = std::move(f);
         } else {
-          const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *(d_a1), d_a0});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.d_a0, _f.d_a1, _result);
+        _result = _f.f0(_f.a0, _f.a1, _result);
       }
     }
     return _result;
@@ -221,78 +218,63 @@ struct LoopifyOption {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<T1> find_opt(F0 &&p, const list<T1> &l) {
-    std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l->v());
-        if (p(d_a0)) {
-          _result = std::make_optional<T1>(d_a0);
-          break;
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          return std::make_optional<T1>(a0);
         } else {
-          _loop_l = d_a1.get();
+          _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   /// last_opt l returns the last element, or None for empty.
   template <typename T1> static std::optional<T1> last_opt(const list<T1> &l) {
-    std::optional<T1> _result;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l->v());
-        auto &&_sv = *(d_a1);
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        auto &&_sv = *a1;
         if (std::holds_alternative<typename list<T1>::Nil>(_sv.v())) {
-          _result = std::make_optional<T1>(d_a0);
-          break;
+          return std::make_optional<T1>(a0);
         } else {
-          _loop_l = d_a1.get();
+          _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   /// nth_opt n l returns the nth element, or None for out of bounds.
   template <typename T1>
-  static std::optional<T1> nth_opt(const unsigned int n, const list<T1> &l) {
-    std::optional<T1> _result;
+  static std::optional<T1> nth_opt(uint64_t n, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
-    unsigned int _loop_n = n;
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<T1>();
-        break;
+        return std::optional<T1>();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l->v());
-        if (_loop_n == 0u) {
-          _result = std::make_optional<T1>(d_a0);
-          break;
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (_loop_n == UINT64_C(0)) {
+          return std::make_optional<T1>(a0);
         } else {
-          _loop_l = d_a1.get();
-          _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+          _loop_l = a1.get();
+          _loop_n = ((
+              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
         }
       }
     }
-    return _result;
   }
 
   /// lookup_opt key l looks up key in an association list.
-  static std::optional<unsigned int>
-  lookup_opt(const unsigned int key,
-             const list<std::pair<unsigned int, unsigned int>> &l);
+  static std::optional<uint64_t>
+  lookup_opt(uint64_t key, const list<std::pair<uint64_t, uint64_t>> &l);
 
   /// map_opt f l applies f and keeps only Some results.
   template <typename T1, typename T2, typename F0>
@@ -301,13 +283,13 @@ struct LoopifyOption {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T2>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      auto _cs = f(d_a0);
+      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+      auto _cs = f(a0);
       if (_cs.has_value()) {
         const T2 &y = *_cs;
-        return list<T2>::cons(y, map_opt<T1, T2>(f, *(d_a1)));
+        return list<T2>::cons(y, map_opt<T1, T2>(f, *a1));
       } else {
-        return map_opt<T1, T2>(f, *(d_a1));
+        return map_opt<T1, T2>(f, *a1);
       }
     }
   }
@@ -315,34 +297,29 @@ struct LoopifyOption {
   /// find_index p l returns the index of the first match, or None.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
-  static std::optional<unsigned int> find_index_aux(F0 &&p, const list<T1> &l,
-                                                    const unsigned int i) {
-    std::optional<unsigned int> _result;
-    unsigned int _loop_i = i;
+  static std::optional<uint64_t> find_index_aux(F0 &&p, const list<T1> &l,
+                                                uint64_t i) {
+    uint64_t _loop_i = std::move(i);
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        _result = std::optional<unsigned int>();
-        break;
+        return std::optional<uint64_t>();
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<T1>::Cons>(_loop_l->v());
-        if (p(d_a0)) {
-          _result = std::make_optional<unsigned int>(_loop_i);
-          break;
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          return std::make_optional<uint64_t>(_loop_i);
         } else {
           _loop_i = (_loop_i + 1);
-          _loop_l = d_a1.get();
+          _loop_l = a1.get();
         }
       }
     }
-    return _result;
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
-  static std::optional<unsigned int> find_index(F0 &&p, const list<T1> &l) {
-    return find_index_aux<T1>(p, l, 0u);
+  static std::optional<uint64_t> find_index(F0 &&p, const list<T1> &l) {
+    return find_index_aux<T1>(p, l, UINT64_C(0));
   }
 };
 

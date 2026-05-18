@@ -11,40 +11,39 @@
 /// Difference from fix_escape_capture: captures a LET-BINDING
 /// (not a function parameter). The let-binding involves a computation
 /// (n * 2), so it can't be optimized away.
-std::optional<std::function<unsigned int(unsigned int)>>
-ClosureLetEscape::make_fn_fix(const unsigned int n) {
-  unsigned int base = (n * 2u);
-  auto add_impl = [=](auto &_self_add, unsigned int x) mutable -> unsigned int {
+std::optional<std::function<uint64_t(uint64_t)>>
+ClosureLetEscape::make_fn_fix(uint64_t n) {
+  uint64_t base = (n * UINT64_C(2));
+  auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
     if (x <= 0) {
       return base;
     } else {
-      unsigned int x_ = x - 1;
+      uint64_t x_ = x - 1;
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=](unsigned int x) mutable -> unsigned int {
+  auto add = [=](uint64_t x) mutable -> uint64_t {
     return add_impl(add_impl, x);
   };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(add);
+  return std::make_optional<std::function<uint64_t(uint64_t)>>(add);
 }
 
 /// test3: Captures from multiple let bindings.
 /// BUG: Both a and b are captured by &, both dangle.
-std::optional<std::function<unsigned int(unsigned int)>>
-ClosureLetEscape::make_fn_multi(const unsigned int n) {
-  unsigned int a = (n + 1u);
-  unsigned int b = (a * 3u);
-  auto helper_impl = [=](auto &_self_helper,
-                         unsigned int x) mutable -> unsigned int {
+std::optional<std::function<uint64_t(uint64_t)>>
+ClosureLetEscape::make_fn_multi(uint64_t n) {
+  uint64_t a = (n + UINT64_C(1));
+  uint64_t b = (a * UINT64_C(3));
+  auto helper_impl = [=](auto &_self_helper, uint64_t x) mutable -> uint64_t {
     if (x <= 0) {
       return (a + b);
     } else {
-      unsigned int x_ = x - 1;
+      uint64_t x_ = x - 1;
       return (_self_helper(_self_helper, x_) + 1);
     }
   };
-  auto helper = [=](unsigned int x) mutable -> unsigned int {
+  auto helper = [=](uint64_t x) mutable -> uint64_t {
     return helper_impl(helper_impl, x);
   };
-  return std::make_optional<std::function<unsigned int(unsigned int)>>(helper);
+  return std::make_optional<std::function<uint64_t(uint64_t)>>(helper);
 }

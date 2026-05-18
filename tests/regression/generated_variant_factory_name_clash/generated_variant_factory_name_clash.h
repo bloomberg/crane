@@ -1,8 +1,6 @@
 #ifndef INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
 #define INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
 
-#include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -18,58 +16,57 @@ struct GeneratedVariantFactoryNameClash {
     struct Variant_t {};
 
     struct Other {
-      bool d_a0;
+      bool a0;
     };
 
     using variant_t = std::variant<Variant_t, Other>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     token() {}
 
-    explicit token(Variant_t _v) : d_v_(_v) {}
+    explicit token(Variant_t _v) : v_(_v) {}
 
-    explicit token(Other _v) : d_v_(std::move(_v)) {}
+    explicit token(Other _v) : v_(std::move(_v)) {}
 
-    token(const token &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    token(const token &_other) : v_(std::move(_other.clone().v_)) {}
 
-    token(token &&_other) : d_v_(std::move(_other.d_v_)) {}
+    token(token &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     token &operator=(const token &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    token &operator=(token &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    token &operator=(token &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     token clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Variant_t>(_sv.v())) {
+      if (std::holds_alternative<Variant_t>(this->v())) {
         return token(Variant_t{});
       } else {
-        const auto &[d_a0] = std::get<Other>(_sv.v());
-        return token(Other{d_a0});
+        const auto &[a0] = std::get<Other>(this->v());
+        return token(Other{a0});
       }
     }
 
     // CREATORS
     static token Variant_t_() { return token(Variant_t{}); }
 
-    static token other(bool a0) { return token(Other{std::move(a0)}); }
+    static token other(bool a0) { return token(Other{a0}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
@@ -78,8 +75,8 @@ struct GeneratedVariantFactoryNameClash {
     if (std::holds_alternative<typename token::Variant_t>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename token::Other>(t.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename token::Other>(t.v());
+      return f0(a0);
     }
   }
 
@@ -89,8 +86,8 @@ struct GeneratedVariantFactoryNameClash {
     if (std::holds_alternative<typename token::Variant_t>(t.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename token::Other>(t.v());
-      return f0(d_a0);
+      const auto &[a0] = std::get<typename token::Other>(t.v());
+      return f0(a0);
     }
   }
 

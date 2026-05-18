@@ -1,5 +1,5 @@
 #include "escape_collision.h"
 
-unsigned int EscapeCollision::double_(const unsigned int n) { return n; }
+uint64_t EscapeCollision::double_(uint64_t n) { return n; }
 
-unsigned int EscapeCollision::double_0(const unsigned int n) { return (n + 1); }
+uint64_t EscapeCollision::double_0(uint64_t n) { return (n + 1); }

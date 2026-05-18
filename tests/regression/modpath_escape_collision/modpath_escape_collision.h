@@ -1,24 +1,21 @@
 #ifndef INCLUDED_MODPATH_ESCAPE_COLLISION
 #define INCLUDED_MODPATH_ESCAPE_COLLISION
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct ModpathEscapeCollision {
   struct A {
     struct Token_ {
-      static unsigned int f(const unsigned int n);
+      static uint64_t f(uint64_t n);
     };
   };
 
   struct B {
     struct Token_ {
-      static unsigned int g(const unsigned int n);
+      static uint64_t g(uint64_t n);
     };
   };
 
-  static inline const unsigned int t = (A::Token_::f(0u) + B::Token_::g(0u));
+  static inline const uint64_t t =
+      (A::Token_::f(UINT64_C(0)) + B::Token_::g(UINT64_C(0)));
 };
 
 #endif // INCLUDED_MODPATH_ESCAPE_COLLISION

@@ -94,19 +94,32 @@ type t
 val create : Miniml.ml_structure -> t
 
 (** Look up full method info for a function reference. Returns [None] if the
-    function is not a registered method. *)
+    function is not a registered method.
+    @param t the registry to query
+    @param func_ref the function whose method info is requested
+    @return [Some info] with full [method_info] record, or [None] if not a method *)
 val lookup : t -> GlobRef.t -> method_info option
 
 (** Convenience: is the function a registered method? Returns
     [Some (epon_ref, this_pos)] if yes, [None] otherwise. Used primarily by the
     topological sort in [Structure_analysis] to add cross-module dependencies
-    when a function calls a method defined in another module. *)
+    when a function calls a method defined in another module.
+    @param t the registry to query
+    @param func_ref the function to test
+    @return [Some (epon_ref, this_pos)] where [epon_ref] is the eponymous
+      inductive and [this_pos] is the 0-based index of the receiver argument,
+      or [None] if not a method *)
 val is_registered_method : t -> GlobRef.t -> (GlobRef.t * int) option
 
 (** Return the inductive type-variable positions for a registered method.
     Returns [[]] if the function is not registered. Used by [cpp.ml] to omit
     redundant template parameters from the method's C++ signature (since they
-    are deducible from [this]). *)
+    are deducible from [this]).
+    @param t the registry to query
+    @param func_ref the registered method function reference
+    @return list of 0-based type-variable indices that are deducible from the
+      receiver type and can be omitted from the C++ template parameter list;
+      [[]] if [func_ref] is not registered *)
 val lookup_ind_tvar_positions : t -> GlobRef.t -> int list
 
 (** Does this method return [std::any] (erased indexed return type)? Returns
@@ -145,7 +158,15 @@ val add_candidate : t -> GlobRef.t -> method_candidate -> unit
     [register_method], and [add_candidate] into a single call.
 
     Returns [Some (func_ref, body, ty, this_pos)] on success, [None] if the
-    function does not qualify. *)
+    function does not qualify.
+    @param t the registry to update
+    @param epon_ref the eponymous inductive type the function might belong to
+    @param func_ref the function being tested for method eligibility
+    @param body the MiniML AST body of the function (used by [body_safe_for_method])
+    @param ty the MiniML type of the function (used by [find_epon_arg_pos])
+    @return [Some (func_ref, body, ty, this_pos)] if the function was
+      successfully registered as a method; [None] if it does not take [epon_ref]
+      as an argument or its body is unsafe *)
 val try_register_method :
   t -> GlobRef.t -> GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type ->
   method_candidate option
@@ -202,14 +223,26 @@ val body_safe_for_method :
     Used at method registration call sites to determine whether
     [replace_return_this_stmt] will convert [return this] to
     [return shared_from_this()] — when the return type references the eponymous
-    inductive, the C++ return type will contain [shared_ptr]. *)
+    inductive, the C++ return type will contain [shared_ptr].
+    @param ref the inductive [GlobRef.t] to search for in the return type
+    @param ty the full curried ML type (arrow chain) of the function
+    @return [true] if the final return type (after stripping all [Tarr] layers)
+      contains [ref] anywhere recursively; [false] otherwise *)
 val ml_return_type_has_ref : GlobRef.t -> Miniml.ml_type -> bool
 
 (** {2 Module-level helpers} *)
 
 (** Collect [Dtype] refs from a declaration list that share [modpath],
     excluding inline-custom types.  [extract_decl] extracts [ml_decl option]
-    from each list item (handles both [ml_specif] and [ml_structure_elem]). *)
+    from each list item (handles both [ml_specif] and [ml_structure_elem]).
+    @param extract_decl function that projects an [ml_decl option] from each
+      list element; allows the same logic to work over both [ml_specif] lists
+      (used during pre-scan) and [ml_structure_elem] lists (used during rendering)
+    @param modpath only [Dtype] entries whose [GlobRef.t] lives in this module
+      path are included; entries from other modules are silently skipped
+    @param decls the declaration list to scan
+    @return list of [GlobRef.t] for [Dtype] entries that belong to [modpath]
+      and are not inline-custom types *)
 val collect_module_type_aliases :
   extract_decl:('a -> Miniml.ml_decl option) ->
   Names.ModPath.t -> 'a list -> GlobRef.t list

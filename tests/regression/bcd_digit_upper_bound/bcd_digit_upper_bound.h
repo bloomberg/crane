@@ -1,14 +1,11 @@
 #ifndef INCLUDED_BCD_DIGIT_UPPER_BOUND
 #define INCLUDED_BCD_DIGIT_UPPER_BOUND
 
-#include <memory>
-#include <optional>
-#include <type_traits>
-
 struct BcdDigitUpperBound {
-  static bool is_bcd_digitb(const unsigned int n);
-  static inline const unsigned int t =
-      ((is_bcd_digitb(7u) ? 1u : 0u) + (is_bcd_digitb(12u) ? 1u : 0u));
+  static bool is_bcd_digitb(uint64_t n);
+  static inline const uint64_t t =
+      ((is_bcd_digitb(UINT64_C(7)) ? UINT64_C(1) : UINT64_C(0)) +
+       (is_bcd_digitb(UINT64_C(12)) ? UINT64_C(1) : UINT64_C(0)));
 };
 
 #endif // INCLUDED_BCD_DIGIT_UPPER_BOUND

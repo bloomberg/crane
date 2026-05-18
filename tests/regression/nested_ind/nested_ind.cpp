@@ -1,6 +1,6 @@
 #include "nested_ind.h"
 
-NestedInd::rose<unsigned int> NestedInd::leaf(const unsigned int n) {
-  return rose<unsigned int>::node(
-      n, custom_list<NestedInd::rose<unsigned int>>::cnil());
+NestedInd::rose<uint64_t> NestedInd::leaf(uint64_t n) {
+  return rose<uint64_t>::node(n,
+                              custom_list<NestedInd::rose<uint64_t>>::cnil());
 }

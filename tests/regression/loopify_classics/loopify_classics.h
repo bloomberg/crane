@@ -1,32 +1,24 @@
 #ifndef INCLUDED_LOOPIFY_CLASSICS
 #define INCLUDED_LOOPIFY_CLASSICS
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
 struct LoopifyClassics {
-  static unsigned int factorial(const unsigned int n);
-  static unsigned int fib(const unsigned int n);
-  static unsigned int ack_fuel(const unsigned int fuel, const unsigned int m,
-                               const unsigned int n);
-  static unsigned int ack(const unsigned int m, const unsigned int n);
-  static unsigned int binomial_fuel(const unsigned int fuel,
-                                    const unsigned int n, const unsigned int k);
-  static unsigned int binomial(const unsigned int n, const unsigned int k);
-  static unsigned int pascal_fuel(const unsigned int fuel,
-                                  const unsigned int row,
-                                  const unsigned int col);
-  static unsigned int pascal(const unsigned int row, const unsigned int col);
-  static unsigned int gcd_fuel(const unsigned int fuel, const unsigned int a,
-                               const unsigned int b);
-  static unsigned int gcd(const unsigned int a, const unsigned int b);
-  static unsigned int power(const unsigned int base, const unsigned int exp);
-  static unsigned int sum_to(const unsigned int n);
-  static unsigned int sum_squares(const unsigned int n);
+  static uint64_t factorial(uint64_t n);
+  static uint64_t fib(uint64_t n);
+  static uint64_t ack_fuel(uint64_t fuel, uint64_t m, uint64_t n);
+  static uint64_t ack(uint64_t m, uint64_t n);
+  static uint64_t binomial_fuel(uint64_t fuel, uint64_t n, uint64_t k);
+  static uint64_t binomial(uint64_t n, uint64_t k);
+  static uint64_t pascal_fuel(uint64_t fuel, uint64_t row, uint64_t col);
+  static uint64_t pascal(uint64_t row, uint64_t col);
+  static uint64_t gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b);
+  static uint64_t gcd(uint64_t a, uint64_t b);
+  static uint64_t power(uint64_t base, uint64_t exp);
+  static uint64_t sum_to(uint64_t n);
+  static uint64_t sum_squares(uint64_t n);
 };
 
 #endif // INCLUDED_LOOPIFY_CLASSICS

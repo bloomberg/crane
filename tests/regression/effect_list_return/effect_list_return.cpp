@@ -1,7 +1,7 @@
 #include "effect_list_return.h"
 
 /// 1. list_directory returns a list
-List<std::string> EffectListReturn::list_files(const std::string path) {
+List<std::string> EffectListReturn::list_files(std::string path) {
   return [&]() -> List<std::string> {
     auto result = List<std::string>::nil();
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
@@ -13,7 +13,7 @@ List<std::string> EffectListReturn::list_files(const std::string path) {
 }
 
 /// 2. create dir and verify
-bool EffectListReturn::make_and_check(const std::string path) {
+bool EffectListReturn::make_and_check(std::string path) {
   return std::filesystem::create_directories(std::filesystem::path(path));
 }
 
@@ -35,7 +35,7 @@ std::string EffectListReturn::get_cwd() {
 
 /// 5. Chain effects with different return types
 std::pair<bool, List<std::string>>
-EffectListReturn::create_and_list(const std::string dir) {
+EffectListReturn::create_and_list(std::string dir) {
   bool ok = std::filesystem::create_directories(std::filesystem::path(dir));
   if (ok) {
     List<std::string> files = [&]() -> List<std::string> {

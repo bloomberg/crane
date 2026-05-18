@@ -2,11 +2,11 @@
 
 Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xo(succ(*(d_a0)));
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    return Positive::xo(succ(*a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*(d_a0));
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xi(*a0);
   } else {
     return Positive::xo(Positive::xh());
   }
@@ -14,34 +14,34 @@ Positive Pos::succ(const Positive &x) {
 
 Positive Pos::add(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*a0, *a00));
     } else {
-      return Positive::xo(succ(*(d_a0)));
+      return Positive::xo(succ(*a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add(*a0, *a00));
     } else {
-      return Positive::xi(*(d_a0));
+      return Positive::xi(*a0);
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(succ(*(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(succ(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(*(d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(*a00);
     } else {
       return Positive::xo(Positive::xh());
     }
@@ -50,34 +50,34 @@ Positive Pos::add(const Positive &x, const Positive &y) {
 
 Positive Pos::add_carry(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add_carry(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add_carry(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
     } else {
-      return Positive::xi(succ(*(d_a0)));
+      return Positive::xi(succ(*a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*a0, *a00));
     } else {
-      return Positive::xo(succ(*(d_a0)));
+      return Positive::xo(succ(*a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(succ(*(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(succ(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(succ(*(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(succ(*a00));
     } else {
       return Positive::xi(Positive::xh());
     }
@@ -86,11 +86,11 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
 
 Positive Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xi(Positive::xo(*(d_a0)));
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    return Positive::xi(Positive::xo(*a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(pred_double(*(d_a0)));
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xi(pred_double(*a0));
   } else {
     return Positive::xh();
   }
@@ -98,67 +98,67 @@ Positive Pos::pred_double(const Positive &x) {
 
 Positive Pos::mul(const Positive &x, Positive y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
-    return add(y, Positive::xo(mul(*(d_a0), y)));
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    return add(y, Positive::xo(mul(*a0, y)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xo(mul(*(d_a0), std::move(y)));
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xo(mul(*a0, std::move(y)));
   } else {
     return y;
   }
 }
 
-Comparison Pos::compare_cont(const Comparison r, const Positive &x,
+Comparison Pos::compare_cont(Comparison r, const Positive &x,
                              const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return compare_cont(r, *(d_a0), *(d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return compare_cont(r, *a0, *a00);
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return compare_cont(Comparison::e_GT, *(d_a0), *(d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return compare_cont(Comparison::GT, *a0, *a00);
     } else {
-      return Comparison::e_GT;
+      return Comparison::GT;
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return compare_cont(Comparison::e_LT, *(d_a0), *(d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return compare_cont(Comparison::LT, *a0, *a00);
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return compare_cont(r, *(d_a0), *(d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return compare_cont(r, *a0, *a00);
     } else {
-      return Comparison::e_GT;
+      return Comparison::GT;
     }
   } else {
     if (std::holds_alternative<typename Positive::XH>(y.v())) {
       return r;
     } else {
-      return Comparison::e_LT;
+      return Comparison::LT;
     }
   }
 }
 
 Comparison Pos::compare(const Positive &_x0, const Positive &_x1) {
-  return compare_cont(Comparison::e_EQ, _x0, _x1);
+  return compare_cont(Comparison::EQ, _x0, _x1);
 }
 
 bool Pos::eqb(const Positive &p, const Positive &q) {
   if (std::holds_alternative<typename Positive::XI>(p.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(p.v());
+    const auto &[a0] = std::get<typename Positive::XI>(p.v());
     if (std::holds_alternative<typename Positive::XI>(q.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(q.v());
-      return eqb(*(d_a0), *(d_a00));
+      const auto &[a00] = std::get<typename Positive::XI>(q.v());
+      return eqb(*a0, *a00);
     } else {
       return false;
     }
   } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(p.v());
+    const auto &[a0] = std::get<typename Positive::XO>(p.v());
     if (std::holds_alternative<typename Positive::XO>(q.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(q.v());
-      return eqb(*(d_a0), *(d_a00));
+      const auto &[a00] = std::get<typename Positive::XO>(q.v());
+      return eqb(*a0, *a00);
     } else {
       return false;
     }
@@ -171,23 +171,21 @@ bool Pos::eqb(const Positive &p, const Positive &q) {
   }
 }
 
-unsigned int Pos::to_nat(const Positive &x) {
-  return iter_op<unsigned int>(
-      [](unsigned int _x0, unsigned int _x1) -> unsigned int {
-        return (_x0 + _x1);
-      },
-      x, 1u);
+uint64_t Pos::to_nat(const Positive &x) {
+  return iter_op<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      UINT64_C(1));
 }
 
 Z BinInt::double_(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    return Z::zpos(Positive::xo(d_a0));
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    return Z::zpos(Positive::xo(a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    return Z::zneg(Positive::xo(d_a0));
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    return Z::zneg(Positive::xo(a0));
   }
 }
 
@@ -195,11 +193,11 @@ Z BinInt::succ_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zpos(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    return Z::zpos(Positive::xi(d_a0));
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    return Z::zpos(Positive::xi(a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    return Z::zneg(Pos::pred_double(d_a0));
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    return Z::zneg(Pos::pred_double(a0));
   }
 }
 
@@ -207,44 +205,44 @@ Z BinInt::pred_double(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::zneg(Positive::xh());
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    return Z::zpos(Pos::pred_double(d_a0));
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    return Z::zpos(Pos::pred_double(a0));
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    return Z::zneg(Positive::xi(d_a0));
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    return Z::zneg(Positive::xi(a0));
   }
 }
 
 Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(x.v());
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return BinInt::double_(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return BinInt::double_(BinInt::pos_sub(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return BinInt::succ_double(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return BinInt::succ_double(BinInt::pos_sub(*a0, *a00));
     } else {
-      return Z::zpos(Positive::xo(*(d_a0)));
+      return Z::zpos(Positive::xo(*a0));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(x.v());
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return BinInt::pred_double(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return BinInt::pred_double(BinInt::pos_sub(*a0, *a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return BinInt::double_(BinInt::pos_sub(*(d_a0), *(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return BinInt::double_(BinInt::pos_sub(*a0, *a00));
     } else {
-      return Z::zpos(Pos::pred_double(*(d_a0)));
+      return Z::zpos(Pos::pred_double(*a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XI>(y.v());
-      return Z::zneg(Positive::xo(*(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Z::zneg(Positive::xo(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[d_a00] = std::get<typename Positive::XO>(y.v());
-      return Z::zneg(Pos::pred_double(*(d_a00)));
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Z::zneg(Pos::pred_double(*a00));
     } else {
       return Z::z0();
     }
@@ -255,26 +253,26 @@ Z BinInt::add(Z x, Z y) {
   if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
     return y;
   } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
-    auto &[d_a0] = std::get<typename Z::Zpos>(x.v_mut());
+    auto &[a0] = std::get<typename Z::Zpos>(x.v_mut());
     if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(d_a0, d_a00));
+      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
+      return Z::zpos(Pos::add(std::move(a0), std::move(a00)));
     } else {
-      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(d_a0, d_a00);
+      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
+      return BinInt::pos_sub(std::move(a0), std::move(a00));
     }
   } else {
-    auto &[d_a0] = std::get<typename Z::Zneg>(x.v_mut());
+    auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
     if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[d_a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(d_a00, d_a0);
+      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
+      return BinInt::pos_sub(std::move(a00), std::move(a0));
     } else {
-      auto &[d_a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(d_a0, d_a00));
+      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
+      return Z::zneg(Pos::add(std::move(a0), std::move(a00)));
     }
   }
 }
@@ -283,11 +281,11 @@ Z BinInt::opp(const Z &x) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
-    return Z::zneg(d_a0);
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    return Z::zneg(a0);
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
-    return Z::zpos(d_a0);
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    return Z::zpos(a0);
   }
 }
 
@@ -297,26 +295,26 @@ Z BinInt::mul(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
     if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return Z::z0();
     } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
-      return Z::zpos(Pos::mul(d_a0, d_a00));
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zpos(Pos::mul(a0, a00));
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
-      return Z::zneg(Pos::mul(d_a0, d_a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zneg(Pos::mul(a0, a00));
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
     if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return Z::z0();
     } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
-      return Z::zneg(Pos::mul(d_a0, d_a00));
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zneg(Pos::mul(a0, a00));
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
-      return Z::zpos(Pos::mul(d_a0, d_a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zpos(Pos::mul(a0, a00));
     }
   }
 }
@@ -324,34 +322,34 @@ Z BinInt::mul(const Z &x, const Z &y) {
 Comparison BinInt::compare(const Z &x, const Z &y) {
   if (std::holds_alternative<typename Z::Z0>(x.v())) {
     if (std::holds_alternative<typename Z::Z0>(y.v())) {
-      return Comparison::e_EQ;
+      return Comparison::EQ;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      return Comparison::e_LT;
+      return Comparison::LT;
     } else {
-      return Comparison::e_GT;
+      return Comparison::GT;
     }
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
     if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
-      return Pos::compare(d_a0, d_a00);
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Pos::compare(a0, a00);
     } else {
-      return Comparison::e_GT;
+      return Comparison::GT;
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
     if (std::holds_alternative<typename Z::Zneg>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
-      return Datatypes::CompOpp(Pos::compare(d_a0, d_a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Datatypes::CompOpp(Pos::compare(a0, a00));
     } else {
-      return Comparison::e_LT;
+      return Comparison::LT;
     }
   }
 }
 
 bool BinInt::leb(const Z &x, const Z &y) {
   switch (BinInt::compare(x, y)) {
-  case Comparison::e_GT: {
+  case Comparison::GT: {
     return false;
   }
   default: {
@@ -362,7 +360,7 @@ bool BinInt::leb(const Z &x, const Z &y) {
 
 bool BinInt::ltb(const Z &x, const Z &y) {
   switch (BinInt::compare(x, y)) {
-  case Comparison::e_LT: {
+  case Comparison::LT: {
     return true;
   }
   default: {
@@ -379,37 +377,37 @@ bool BinInt::eqb(const Z &x, const Z &y) {
       return false;
     }
   } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(x.v());
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
     if (std::holds_alternative<typename Z::Zpos>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zpos>(y.v());
-      return Pos::eqb(d_a0, d_a00);
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Pos::eqb(a0, a00);
     } else {
       return false;
     }
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(x.v());
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
     if (std::holds_alternative<typename Z::Zneg>(y.v())) {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(y.v());
-      return Pos::eqb(d_a0, d_a00);
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Pos::eqb(a0, a00);
     } else {
       return false;
     }
   }
 }
 
-unsigned int BinInt::to_nat(const Z &z) {
+uint64_t BinInt::to_nat(const Z &z) {
   if (std::holds_alternative<typename Z::Zpos>(z.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(z.v());
-    return Pos::to_nat(d_a0);
+    const auto &[a0] = std::get<typename Z::Zpos>(z.v());
+    return Pos::to_nat(a0);
   } else {
-    return 0u;
+    return UINT64_C(0);
   }
 }
 
 std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a, const Z &b) {
   if (std::holds_alternative<typename Positive::XI>(a.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XI>(a.v());
-    auto _cs = BinInt::pos_div_eucl(*(d_a0), b);
+    const auto &[a0] = std::get<typename Positive::XI>(a.v());
+    auto _cs = BinInt::pos_div_eucl(*a0, b);
     const Z &q = _cs.first;
     const Z &r = _cs.second;
     Z r_ = BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r),
@@ -424,8 +422,8 @@ std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a, const Z &b) {
           BinInt::sub(std::move(r_), b));
     }
   } else if (std::holds_alternative<typename Positive::XO>(a.v())) {
-    const auto &[d_a0] = std::get<typename Positive::XO>(a.v());
-    auto _cs = BinInt::pos_div_eucl(*(d_a0), b);
+    const auto &[a0] = std::get<typename Positive::XO>(a.v());
+    auto _cs = BinInt::pos_div_eucl(*a0, b);
     const Z &q = _cs.first;
     const Z &r = _cs.second;
     Z r_ = BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r);
@@ -451,14 +449,14 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
   if (std::holds_alternative<typename Z::Z0>(a.v_mut())) {
     return std::make_pair(Z::z0(), Z::z0());
   } else if (std::holds_alternative<typename Z::Zpos>(a.v_mut())) {
-    auto &[d_a0] = std::get<typename Z::Zpos>(a.v_mut());
+    auto &[a0] = std::get<typename Z::Zpos>(a.v_mut());
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
-      return BinInt::pos_div_eucl(d_a0, b);
+      return BinInt::pos_div_eucl(std::move(a0), b);
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(b.v());
-      auto _cs = BinInt::pos_div_eucl(d_a0, Z::zpos(d_a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(b.v());
+      auto _cs = BinInt::pos_div_eucl(a0, Z::zpos(a00));
       const Z &q = _cs.first;
       const Z &r = _cs.second;
       if (std::holds_alternative<typename Z::Z0>(r.v())) {
@@ -470,11 +468,11 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
       }
     }
   } else {
-    auto &[d_a0] = std::get<typename Z::Zneg>(a.v_mut());
+    auto &[a0] = std::get<typename Z::Zneg>(a.v_mut());
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
-      auto _cs = BinInt::pos_div_eucl(d_a0, b);
+      auto _cs = BinInt::pos_div_eucl(a0, b);
       const Z &q = _cs.first;
       const Z &r = _cs.second;
       if (std::holds_alternative<typename Z::Z0>(r.v())) {
@@ -485,11 +483,11 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
             BinInt::sub(b, r));
       }
     } else {
-      const auto &[d_a00] = std::get<typename Z::Zneg>(b.v());
-      auto _cs = BinInt::pos_div_eucl(d_a0, Z::zpos(d_a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(b.v());
+      auto _cs = BinInt::pos_div_eucl(a0, Z::zpos(a00));
       const Z &q = _cs.first;
       const Z &r = _cs.second;
-      return std::make_pair(q, BinInt::opp(r));
+      return std::make_pair(std::move(_cs.first), BinInt::opp(r));
     }
   }
 }
@@ -512,28 +510,28 @@ Z BinInt::abs(const Z &z) {
   if (std::holds_alternative<typename Z::Z0>(z.v())) {
     return Z::z0();
   } else if (std::holds_alternative<typename Z::Zpos>(z.v())) {
-    const auto &[d_a0] = std::get<typename Z::Zpos>(z.v());
-    return Z::zpos(d_a0);
+    const auto &[a0] = std::get<typename Z::Zpos>(z.v());
+    return Z::zpos(a0);
   } else {
-    const auto &[d_a0] = std::get<typename Z::Zneg>(z.v());
-    return Z::zpos(d_a0);
+    const auto &[a0] = std::get<typename Z::Zneg>(z.v());
+    return Z::zpos(a0);
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::phase_code(
-    const EpochCellGlyphTraceCase::LunarPhase p) {
+uint64_t
+EpochCellGlyphTraceCase::phase_code(EpochCellGlyphTraceCase::LunarPhase p) {
   switch (p) {
-  case LunarPhase::e_NEWMOON: {
-    return 0u;
+  case LunarPhase::NEWMOON: {
+    return UINT64_C(0);
   }
-  case LunarPhase::e_FIRSTQUARTER: {
-    return 1u;
+  case LunarPhase::FIRSTQUARTER: {
+    return UINT64_C(1);
   }
-  case LunarPhase::e_FULLMOON: {
-    return 2u;
+  case LunarPhase::FULLMOON: {
+    return UINT64_C(2);
   }
-  case LunarPhase::e_LASTQUARTER: {
-    return 3u;
+  case LunarPhase::LASTQUARTER: {
+    return UINT64_C(3);
   }
   default:
     std::unreachable();
@@ -549,69 +547,69 @@ EpochCellGlyphTraceCase::phase_from_angle(const Z &angle_deg) {
   if (BinInt::ltb(wrapped,
                   Z::zpos(Positive::xi(Positive::xo(Positive::xi(
                       Positive::xi(Positive::xo(Positive::xh())))))))) {
-    return LunarPhase::e_NEWMOON;
+    return LunarPhase::NEWMOON;
   } else {
     if (BinInt::ltb(wrapped, Z::zpos(Positive::xi(Positive::xi(Positive::xi(
                                  Positive::xo(Positive::xo(Positive::xo(
                                      Positive::xo(Positive::xh())))))))))) {
-      return LunarPhase::e_FIRSTQUARTER;
+      return LunarPhase::FIRSTQUARTER;
     } else {
       if (BinInt::ltb(wrapped, Z::zpos(Positive::xi(Positive::xo(Positive::xo(
                                    Positive::xo(Positive::xo(Positive::xi(
                                        Positive::xi(Positive::xh())))))))))) {
-        return LunarPhase::e_FULLMOON;
+        return LunarPhase::FULLMOON;
       } else {
         if (BinInt::ltb(std::move(wrapped),
                         Z::zpos(Positive::xi(Positive::xi(Positive::xo(
                             Positive::xi(Positive::xi(Positive::xi(Positive::xo(
                                 Positive::xo(Positive::xh()))))))))))) {
-          return LunarPhase::e_LASTQUARTER;
+          return LunarPhase::LASTQUARTER;
         } else {
-          return LunarPhase::e_NEWMOON;
+          return LunarPhase::NEWMOON;
         }
       }
     }
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::zodiac_code(
-    const EpochCellGlyphTraceCase::ZodiacSign z) {
+uint64_t
+EpochCellGlyphTraceCase::zodiac_code(EpochCellGlyphTraceCase::ZodiacSign z) {
   switch (z) {
-  case ZodiacSign::e_ARIES: {
-    return 0u;
+  case ZodiacSign::ARIES: {
+    return UINT64_C(0);
   }
-  case ZodiacSign::e_TAURUS: {
-    return 1u;
+  case ZodiacSign::TAURUS: {
+    return UINT64_C(1);
   }
-  case ZodiacSign::e_GEMINI: {
-    return 2u;
+  case ZodiacSign::GEMINI: {
+    return UINT64_C(2);
   }
-  case ZodiacSign::e_CANCER: {
-    return 3u;
+  case ZodiacSign::CANCER: {
+    return UINT64_C(3);
   }
-  case ZodiacSign::e_LEO: {
-    return 4u;
+  case ZodiacSign::LEO: {
+    return UINT64_C(4);
   }
-  case ZodiacSign::e_VIRGO: {
-    return 5u;
+  case ZodiacSign::VIRGO: {
+    return UINT64_C(5);
   }
-  case ZodiacSign::e_LIBRA: {
-    return 6u;
+  case ZodiacSign::LIBRA: {
+    return UINT64_C(6);
   }
-  case ZodiacSign::e_SCORPIO: {
-    return 7u;
+  case ZodiacSign::SCORPIO: {
+    return UINT64_C(7);
   }
-  case ZodiacSign::e_SAGITTARIUS: {
-    return 8u;
+  case ZodiacSign::SAGITTARIUS: {
+    return UINT64_C(8);
   }
-  case ZodiacSign::e_CAPRICORN: {
-    return 9u;
+  case ZodiacSign::CAPRICORN: {
+    return UINT64_C(9);
   }
-  case ZodiacSign::e_AQUARIUS: {
-    return 10u;
+  case ZodiacSign::AQUARIUS: {
+    return UINT64_C(10);
   }
-  case ZodiacSign::e_PISCES: {
-    return 11u;
+  case ZodiacSign::PISCES: {
+    return UINT64_C(11);
   }
   default:
     std::unreachable();
@@ -691,12 +689,12 @@ EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step_reverse(
 }
 
 EpochCellGlyphTraceCase::MechanismState
-EpochCellGlyphTraceCase::step_n(const unsigned int n,
+EpochCellGlyphTraceCase::step_n(uint64_t n,
                                 EpochCellGlyphTraceCase::MechanismState s) {
   if (n <= 0) {
     return s;
   } else {
-    unsigned int rest = n - 1;
+    uint64_t rest = n - 1;
     return step_n(rest, step(std::move(s)));
   }
 }
@@ -736,58 +734,58 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))))))));
   if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xi(
                            Positive::xi(Positive::xi(Positive::xh()))))))) {
-    return ZodiacSign::e_ARIES;
+    return ZodiacSign::ARIES;
   } else {
     if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xo(Positive::xi(
                              Positive::xi(Positive::xi(Positive::xh())))))))) {
-      return ZodiacSign::e_TAURUS;
+      return ZodiacSign::TAURUS;
     } else {
       if (BinInt::ltb(
               deg, Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xi(
                        Positive::xi(Positive::xo(Positive::xh()))))))))) {
-        return ZodiacSign::e_GEMINI;
+        return ZodiacSign::GEMINI;
       } else {
         if (BinInt::ltb(
                 deg,
                 Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(
                     Positive::xi(Positive::xi(Positive::xh()))))))))) {
-          return ZodiacSign::e_CANCER;
+          return ZodiacSign::CANCER;
         } else {
           if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xi(Positive::xi(
                                    Positive::xo(Positive::xi(Positive::xo(
                                        Positive::xo(Positive::xh())))))))))) {
-            return ZodiacSign::e_LEO;
+            return ZodiacSign::LEO;
           } else {
             if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xo(Positive::xi(
                                      Positive::xo(Positive::xi(Positive::xi(
                                          Positive::xo(Positive::xh())))))))))) {
-              return ZodiacSign::e_VIRGO;
+              return ZodiacSign::VIRGO;
             } else {
               if (BinInt::ltb(deg,
                               Z::zpos(Positive::xo(Positive::xi(Positive::xo(
                                   Positive::xo(Positive::xi(Positive::xo(
                                       Positive::xi(Positive::xh())))))))))) {
-                return ZodiacSign::e_LIBRA;
+                return ZodiacSign::LIBRA;
               } else {
                 if (BinInt::ltb(deg,
                                 Z::zpos(Positive::xo(Positive::xo(Positive::xo(
                                     Positive::xo(Positive::xi(Positive::xi(
                                         Positive::xi(Positive::xh())))))))))) {
-                  return ZodiacSign::e_SCORPIO;
+                  return ZodiacSign::SCORPIO;
                 } else {
                   if (BinInt::ltb(
                           deg, Z::zpos(Positive::xo(Positive::xi(
                                    Positive::xi(Positive::xi(Positive::xo(
                                        Positive::xo(Positive::xo(Positive::xo(
                                            Positive::xh()))))))))))) {
-                    return ZodiacSign::e_SAGITTARIUS;
+                    return ZodiacSign::SAGITTARIUS;
                   } else {
                     if (BinInt::ltb(
                             deg, Z::zpos(Positive::xo(Positive::xo(
                                      Positive::xi(Positive::xi(Positive::xo(
                                          Positive::xi(Positive::xo(Positive::xo(
                                              Positive::xh()))))))))))) {
-                      return ZodiacSign::e_CAPRICORN;
+                      return ZodiacSign::CAPRICORN;
                     } else {
                       if (BinInt::ltb(
                               std::move(deg),
@@ -795,9 +793,9 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
                                   Positive::xo(Positive::xi(Positive::xo(
                                       Positive::xo(Positive::xi(Positive::xo(
                                           Positive::xh()))))))))))) {
-                        return ZodiacSign::e_AQUARIUS;
+                        return ZodiacSign::AQUARIUS;
                       } else {
-                        return ZodiacSign::e_PISCES;
+                        return ZodiacSign::PISCES;
                       }
                     }
                   }
@@ -811,46 +809,46 @@ EpochCellGlyphTraceCase::predict_zodiac_sign(
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::eclipse_category_code(
-    const EpochCellGlyphTraceCase::EclipseCategory c) {
+uint64_t EpochCellGlyphTraceCase::eclipse_category_code(
+    EpochCellGlyphTraceCase::EclipseCategory c) {
   switch (c) {
-  case EclipseCategory::e_EC_TOTALLUNAR: {
-    return 0u;
+  case EclipseCategory::EC_TOTALLUNAR: {
+    return UINT64_C(0);
   }
-  case EclipseCategory::e_EC_PARTIALLUNAR: {
-    return 1u;
+  case EclipseCategory::EC_PARTIALLUNAR: {
+    return UINT64_C(1);
   }
-  case EclipseCategory::e_EC_TOTALSOLAR: {
-    return 2u;
+  case EclipseCategory::EC_TOTALSOLAR: {
+    return UINT64_C(2);
   }
-  case EclipseCategory::e_EC_ANNULARSOLAR: {
-    return 3u;
+  case EclipseCategory::EC_ANNULARSOLAR: {
+    return UINT64_C(3);
   }
-  case EclipseCategory::e_EC_PARTIALSOLAR: {
-    return 4u;
+  case EclipseCategory::EC_PARTIALSOLAR: {
+    return UINT64_C(4);
   }
   default:
     std::unreachable();
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::glyph_code(
-    const EpochCellGlyphTraceCase::DialGlyph g) {
+uint64_t
+EpochCellGlyphTraceCase::glyph_code(EpochCellGlyphTraceCase::DialGlyph g) {
   switch (g) {
-  case DialGlyph::e_GLYPH_SIGMA: {
-    return 0u;
+  case DialGlyph::GLYPH_SIGMA: {
+    return UINT64_C(0);
   }
-  case DialGlyph::e_GLYPH_ETA: {
-    return 1u;
+  case DialGlyph::GLYPH_ETA: {
+    return UINT64_C(1);
   }
-  case DialGlyph::e_GLYPH_SIGMATOTAL: {
-    return 2u;
+  case DialGlyph::GLYPH_SIGMATOTAL: {
+    return UINT64_C(2);
   }
-  case DialGlyph::e_GLYPH_ETAANNULAR: {
-    return 3u;
+  case DialGlyph::GLYPH_ETAANNULAR: {
+    return UINT64_C(3);
   }
-  case DialGlyph::e_GLYPH_EMPTY: {
-    return 4u;
+  case DialGlyph::GLYPH_EMPTY: {
+    return UINT64_C(4);
   }
   default:
     std::unreachable();
@@ -858,15 +856,15 @@ unsigned int EpochCellGlyphTraceCase::glyph_code(
 }
 
 bool EpochCellGlyphTraceCase::category_matches_glyph(
-    const EpochCellGlyphTraceCase::EclipseCategory cat,
-    const EpochCellGlyphTraceCase::DialGlyph g) {
+    EpochCellGlyphTraceCase::EclipseCategory cat,
+    EpochCellGlyphTraceCase::DialGlyph g) {
   switch (cat) {
-  case EclipseCategory::e_EC_TOTALLUNAR: {
+  case EclipseCategory::EC_TOTALLUNAR: {
     switch (g) {
-    case DialGlyph::e_GLYPH_SIGMA: {
+    case DialGlyph::GLYPH_SIGMA: {
       return true;
     }
-    case DialGlyph::e_GLYPH_SIGMATOTAL: {
+    case DialGlyph::GLYPH_SIGMATOTAL: {
       return true;
     }
     default: {
@@ -874,9 +872,9 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
     }
     }
   }
-  case EclipseCategory::e_EC_PARTIALLUNAR: {
+  case EclipseCategory::EC_PARTIALLUNAR: {
     switch (g) {
-    case DialGlyph::e_GLYPH_SIGMA: {
+    case DialGlyph::GLYPH_SIGMA: {
       return true;
     }
     default: {
@@ -884,12 +882,12 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
     }
     }
   }
-  case EclipseCategory::e_EC_ANNULARSOLAR: {
+  case EclipseCategory::EC_ANNULARSOLAR: {
     switch (g) {
-    case DialGlyph::e_GLYPH_ETA: {
+    case DialGlyph::GLYPH_ETA: {
       return true;
     }
-    case DialGlyph::e_GLYPH_ETAANNULAR: {
+    case DialGlyph::GLYPH_ETAANNULAR: {
       return true;
     }
     default: {
@@ -899,7 +897,7 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
   }
   default: {
     switch (g) {
-    case DialGlyph::e_GLYPH_ETA: {
+    case DialGlyph::GLYPH_ETA: {
       return true;
     }
     default: {
@@ -913,96 +911,96 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
 EpochCellGlyphTraceCase::DialGlyph
 EpochCellGlyphTraceCase::glyph_at_cell(const Z &cell) {
   if (BinInt::eqb(cell, Z::z0())) {
-    return DialGlyph::e_GLYPH_SIGMATOTAL;
+    return DialGlyph::GLYPH_SIGMATOTAL;
   } else {
     if (BinInt::eqb(cell,
                     Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
-      return DialGlyph::e_GLYPH_SIGMA;
+      return DialGlyph::GLYPH_SIGMA;
     } else {
       if (BinInt::eqb(cell, Z::zpos(Positive::xo(
                                 Positive::xo(Positive::xi(Positive::xh())))))) {
-        return DialGlyph::e_GLYPH_ETA;
+        return DialGlyph::GLYPH_ETA;
       } else {
         if (BinInt::eqb(cell, Z::zpos(Positive::xi(Positive::xo(Positive::xo(
                                   Positive::xo(Positive::xh()))))))) {
-          return DialGlyph::e_GLYPH_SIGMA;
+          return DialGlyph::GLYPH_SIGMA;
         } else {
-          return DialGlyph::e_GLYPH_EMPTY;
+          return DialGlyph::GLYPH_EMPTY;
         }
       }
     }
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::count_total_lunar(
+uint64_t EpochCellGlyphTraceCase::count_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
           es.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    unsigned int count_here = [&]() {
-      switch (d_a0.he_category) {
-      case EclipseCategory::e_EC_TOTALLUNAR: {
-        return 1u;
+    uint64_t count_here = [&]() {
+      switch (a0.he_category) {
+      case EclipseCategory::EC_TOTALLUNAR: {
+        return UINT64_C(1);
       }
       default: {
-        return 0u;
+        return UINT64_C(0);
       }
       }
     }();
-    return (count_here + count_total_lunar(*(d_a1)));
+    return (count_here + count_total_lunar(*a1));
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::count_visible_total_lunar(
+uint64_t EpochCellGlyphTraceCase::count_visible_total_lunar(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
           es.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    unsigned int count_here = [&]() {
-      switch (d_a0.he_category) {
-      case EclipseCategory::e_EC_TOTALLUNAR: {
-        if (d_a0.he_visible_mediterranean) {
-          return 1u;
+    uint64_t count_here = [&]() {
+      switch (a0.he_category) {
+      case EclipseCategory::EC_TOTALLUNAR: {
+        if (a0.he_visible_mediterranean) {
+          return UINT64_C(1);
         } else {
-          return 0u;
+          return UINT64_C(0);
         }
       }
       default: {
-        return 0u;
+        return UINT64_C(0);
       }
       }
     }();
-    return (count_here + count_visible_total_lunar(*(d_a1)));
+    return (count_here + count_visible_total_lunar(*a1));
   }
 }
 
-unsigned int EpochCellGlyphTraceCase::visible_series_checksum(
+uint64_t EpochCellGlyphTraceCase::visible_series_checksum(
     const List<EpochCellGlyphTraceCase::HistoricalEclipse> &es) {
   if (std::holds_alternative<
           typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Nil>(
           es.v())) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] = std::get<
+    const auto &[a0, a1] = std::get<
         typename List<EpochCellGlyphTraceCase::HistoricalEclipse>::Cons>(
         es.v());
-    unsigned int term;
-    if (d_a0.he_visible_mediterranean) {
-      term = BinInt::to_nat(BinInt::abs(d_a0.he_saros_series));
+    uint64_t term;
+    if (a0.he_visible_mediterranean) {
+      term = BinInt::to_nat(BinInt::abs(a0.he_saros_series));
     } else {
-      term = 0u;
+      term = UINT64_C(0);
     }
-    return (term + visible_series_checksum(*(d_a1)));
+    return (term + visible_series_checksum(*a1));
   }
 }
 
@@ -1050,36 +1048,34 @@ bool EpochCellGlyphTraceCase::reading_matches(
                                 reading.reading_glyph);
 }
 
-unsigned int EpochCellGlyphTraceCase::reading_phase_code(
+uint64_t EpochCellGlyphTraceCase::reading_phase_code(
     const EpochCellGlyphTraceCase::EpochReading &reading) {
   return phase_code(predict_moon_phase_from_state(reading.reading_state));
 }
 
-unsigned int EpochCellGlyphTraceCase::reading_zodiac_code(
+uint64_t EpochCellGlyphTraceCase::reading_zodiac_code(
     const EpochCellGlyphTraceCase::EpochReading &reading) {
   return zodiac_code(predict_zodiac_sign(reading.reading_state));
 }
 
-unsigned int
-EpochCellGlyphTraceCase::phase_code_after_steps(const unsigned int n) {
+uint64_t EpochCellGlyphTraceCase::phase_code_after_steps(uint64_t n) {
   return phase_code(predict_moon_phase_from_state(step_n(n, initial_state)));
 }
 
-unsigned int
-EpochCellGlyphTraceCase::zodiac_code_after_steps(const unsigned int n) {
+uint64_t EpochCellGlyphTraceCase::zodiac_code_after_steps(uint64_t n) {
   return zodiac_code(predict_zodiac_sign(step_n(n, initial_state)));
 }
 
-Comparison Datatypes::CompOpp(const Comparison r) {
+Comparison Datatypes::CompOpp(Comparison r) {
   switch (r) {
-  case Comparison::e_EQ: {
-    return Comparison::e_EQ;
+  case Comparison::EQ: {
+    return Comparison::EQ;
   }
-  case Comparison::e_LT: {
-    return Comparison::e_GT;
+  case Comparison::LT: {
+    return Comparison::GT;
   }
-  case Comparison::e_GT: {
-    return Comparison::e_LT;
+  case Comparison::GT: {
+    return Comparison::LT;
   }
   default:
     std::unreachable();

@@ -17,21 +17,21 @@ int main() {
   UME::seq_if_both(false);
 
   // Example 3: match_unit_tail — generates unnecessary IIFE wrapper
-  UME::match_unit_tail(UME::Color::e_RED);
-  UME::match_unit_tail(UME::Color::e_GREEN);
-  UME::match_unit_tail(UME::Color::e_BLUE);
+  UME::match_unit_tail(UME::Color::RED);
+  UME::match_unit_tail(UME::Color::GREEN);
+  UME::match_unit_tail(UME::Color::BLUE);
 
   // Example 4: match_then_next — unnecessary IIFE wrapper
-  UME::match_then_next(UME::Color::e_RED);
-  UME::match_then_next(UME::Color::e_GREEN);
+  UME::match_then_next(UME::Color::RED);
+  UME::match_then_next(UME::Color::GREEN);
 
   // Example 5: chained_ifs — two monostate IIFEs
   UME::chained_ifs(true, true);
   UME::chained_ifs(false, false);
 
   // Example 6: nested_matches — nested IIFEs
-  UME::nested_matches(UME::Color::e_RED, UME::Color::e_RED);
-  UME::nested_matches(UME::Color::e_GREEN, UME::Color::e_BLUE);
+  UME::nested_matches(UME::Color::RED, UME::Color::RED);
+  UME::nested_matches(UME::Color::GREEN, UME::Color::BLUE);
 
   std::cout << "All unit_monostate_erase tests passed!" << std::endl;
   return 0;

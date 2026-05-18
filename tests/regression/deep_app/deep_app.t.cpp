@@ -5,7 +5,7 @@
 
 int main() {
   // Build a deep list iteratively (loopified)
-  auto l = DeepApp::build(10000u, DeepApp::mylist<unsigned int>::mynil());
+  auto l = DeepApp::build(10000u, DeepApp::mylist<uint64_t>::mynil());
   std::cout << "Built list of 10k elements" << std::endl;
 
   // map is recursive (not loopified by default).

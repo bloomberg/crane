@@ -14,23 +14,48 @@
 open Miniml
 
 (** [nb_occur_match k t] counts occurrences of de Bruijn index [k] in [t], using
-    maximum over branches (safe conservative estimate). *)
+    maximum over branches (safe conservative estimate).
+
+    @param k de Bruijn index to count (1 = innermost binder)
+    @param t the MiniML term to search
+    @return number of occurrences; for [MLcase] branches the maximum over all
+            branches is used (conservative upper bound) *)
 val nb_occur_match : int -> ml_ast -> int
 
 (** [escapes k t] checks if de Bruijn index [k] escapes in [t] (value outlives
     its scope). Escaping positions: constructor args, lambda captures, tail
-    position, fixpoint captures, partial-application captures. *)
+    position, fixpoint captures, partial-application captures.
+
+    @param refined when [true], treats function arguments more precisely: a
+                   lambda passed as an argument does not automatically force
+                   its captures to escape; instead the lambda body is
+                   inspected.  Defaults to [false] (conservative).
+    @param k de Bruijn index to check (1 = innermost binder)
+    @param t the MiniML term to analyse
+    @return [true] if the value bound at index [k] may outlive its scope *)
 val escapes : ?refined:bool -> int -> ml_ast -> bool
 
 (** [partial_app_remaining head args] returns [Some remaining] when
     [MLapp(head, args)] is a partial application with [remaining] args still
     needed.  Returns [None] when fully applied.  Only handles [MLglob]
-    heads. *)
+    heads.
+
+    @param head the function head of the application (only [MLglob] is handled;
+                all other constructors yield [None])
+    @param args the list of arguments already supplied, including [MLdummy]
+                placeholders for type-level arguments (which are not counted)
+    @return [Some n] where [n] is the number of value-level arguments still
+            missing, or [None] if the global's type is unknown or the
+            application is fully saturated *)
 val partial_app_remaining : ml_ast -> ml_ast list -> int option
 
 (** [is_partial_app head args] returns [true] when [MLapp(head, args)] is a
     partial application — i.e., fewer non-dummy arguments than the function's
-    value-level arity. Only handles [MLglob] heads. *)
+    value-level arity. Only handles [MLglob] heads.
+
+    @param head the function head of the application
+    @param args the arguments already supplied (including [MLdummy] placeholders)
+    @return [true] if at least one value-level argument is still missing *)
 val is_partial_app : ml_ast -> ml_ast list -> bool
 
 (** [single_use_nargs k t] finds the single use of [MLrel k] in [t] and
@@ -38,7 +63,11 @@ val is_partial_app : ml_ast -> ml_ast list -> bool
 
     @precondition [k] must occur at most once in [t]. If [k] occurs
     multiple times, returns the arg count of the {i last} occurrence found.
-    Verify with [nb_occur_match k t <= 1] before calling. *)
+    Verify with [nb_occur_match k t <= 1] before calling.
+    @param k de Bruijn index of the variable to locate (1 = innermost binder)
+    @param t the MiniML term to search
+    @return number of non-dummy arguments at the single call site, or [0] if
+            the variable appears bare (not as the head of an application) *)
 val single_use_nargs : int -> ml_ast -> int
 
 (** {2 Phase 1: owned/borrowed parameter inference} *)
@@ -49,7 +78,13 @@ val single_use_nargs : int -> ml_ast -> int
     const shared_ptr<T>&).
 
     De Bruijn indexing: 1 = innermost/last parameter. Output order: element 0 →
-    de Bruijn 1, element 1 → de Bruijn 2, etc. *)
+    de Bruijn 1, element 1 → de Bruijn 2, etc.
+
+    @param n number of parameters to analyse (function arity at the value level)
+    @param body the lambda body with parameters still represented as de Bruijn
+                indices [1..n]
+    @return list of length [n] where element [i] is [true] iff parameter
+            [i+1] (de Bruijn) escapes and must be passed by value *)
 val infer_owned_params : int -> ml_ast -> bool list
 
 (** {2 Phase 2: reset/reuse optimization} *)
@@ -62,7 +97,19 @@ val infer_owned_params : int -> ml_ast -> bool list
     Returns: [(pv_idx, variant_idx, matched_ctor, arity, tail_ctor, tail_args)]
     where [pv_idx] is the position in the pattern vector (for array access) and
     [variant_idx] is the constructor's 0-based index in the C++ variant (for the
-    [use_count()==1 && v().index()==N] runtime check). *)
+    [use_count()==1 && v().index()==N] runtime check).
+
+    @param scrutinee_type the [ml_type] of the case scrutinee; used to check
+                          that each tail constructor rebuilds the same inductive
+    @param branches the pattern-vector branches of the [MLcase] expression
+    @return list of reuse candidates, one per qualifying branch, as tuples
+            [(pv_idx, variant_idx, matched_ctor, arity, tail_ctor, tail_args)]:
+            {ul {li [pv_idx] – 0-based index into the [branches] array}
+                {li [variant_idx] – 0-based C++ variant index of [matched_ctor]}
+                {li [matched_ctor] – the constructor tested in the pattern}
+                {li [arity] – number of fields (= length of [tail_args])}
+                {li [tail_ctor] – constructor built at the tail (equals [matched_ctor])}
+                {li [tail_args] – arguments passed to [tail_ctor]}} *)
 val find_reuse_candidates :
   ml_type ->
   ml_branch array ->
@@ -74,7 +121,13 @@ val find_reuse_candidates :
 module IntSet : Set.S with type elt = int
 
 (** [free_rels depth t] returns free de Bruijn indices in [t], shifted by
-    [depth]. An index [i > depth] contributes [i - depth]. *)
+    [depth]. An index [i > depth] contributes [i - depth].
+
+    @param depth the current binding depth; indices [<= depth] are considered
+                 bound and are not included in the result
+    @param t the MiniML term to scan
+    @return set of free indices, each shifted so that 1 denotes the variable
+            one level above [depth] *)
 val free_rels : int -> ml_ast -> IntSet.t
 
 (** [is_shared_ptr_type ty] returns true if [ty] is a non-enum, non-coinductive

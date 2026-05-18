@@ -15,8 +15,8 @@ int main() {
   // If this compiles and runs, the bug is fixed.
   auto r = HigherRankArgumentProbe::sample;
   // call_poly f = f bool true, with f = identity, so result is true
-  std::cout << "sample = " << (r == Bool0::e_TRUE ? "true" : "false") << std::endl;
-  assert(r == Bool0::e_TRUE);
+  std::cout << "sample = " << (r == Bool0::TRUE_ ? "true" : "false") << std::endl;
+  assert(r == Bool0::TRUE_);
 
   return 0;
 }

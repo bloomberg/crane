@@ -19,34 +19,34 @@ struct OptionalSelfDeepCopy {
     struct Stop {};
 
     struct More {
-      std::unique_ptr<std::optional<std::unique_ptr<chain>>> d_a0;
+      std::unique_ptr<std::optional<std::unique_ptr<chain>>> a0;
     };
 
     using variant_t = std::variant<Stop, More>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     chain() {}
 
-    explicit chain(Stop _v) : d_v_(_v) {}
+    explicit chain(Stop _v) : v_(_v) {}
 
-    explicit chain(More _v) : d_v_(std::move(_v)) {}
+    explicit chain(More _v) : v_(std::move(_v)) {}
 
-    chain(const chain &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    chain(const chain &_other) : v_(std::move(_other.clone().v_)) {}
 
-    chain(chain &&_other) : d_v_(std::move(_other.d_v_)) {}
+    chain(chain &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     chain &operator=(const chain &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    chain &operator=(chain &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    chain &operator=(chain &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -68,20 +68,19 @@ struct OptionalSelfDeepCopy {
         const chain *_src = _frame._src;
         chain *_dst = _frame._dst;
         if (std::holds_alternative<Stop>(_src->v())) {
-          _dst->d_v_ = Stop{};
+          _dst->v_ = Stop{};
         } else {
           const auto &_alt = std::get<More>(_src->v());
-          _dst->d_v_ = More{
-              _alt.d_a0
+          _dst->v_ = More{
+              _alt.a0
                   ? std::make_unique<std::optional<std::unique_ptr<chain>>>(
-                        *(_alt.d_a0)
-                            ? std::make_optional(std::make_unique<chain>())
-                            : std::nullopt)
+                        *_alt.a0 ? std::make_optional(std::make_unique<chain>())
+                                 : std::nullopt)
                   : nullptr};
-          auto &_dst_alt = std::get<More>(_dst->d_v_);
-          if (_alt.d_a0 && *(_alt.d_a0)) {
+          auto &_dst_alt = std::get<More>(_dst->v_);
+          if (_alt.a0 && *(_alt.a0)) {
             _stack.push_back(
-                {(*(*(_alt.d_a0))).get(), (*(*(_dst_alt.d_a0))).get()});
+                {(*(*(_alt.a0))).get(), (*(*(_dst_alt.a0))).get()});
           }
         }
       }
@@ -101,10 +100,10 @@ struct OptionalSelfDeepCopy {
       std::vector<std::unique_ptr<chain>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](chain &_node) {
-        if (std::holds_alternative<More>(_node.d_v_)) {
-          auto &_alt = std::get<More>(_node.d_v_);
-          if (_alt.d_a0 && *(_alt.d_a0)) {
-            _stack.push_back(std::move(*(*(_alt.d_a0))));
+        if (std::holds_alternative<More>(_node.v_)) {
+          auto &_alt = std::get<More>(_node.v_);
+          if (_alt.a0 && *_alt.a0) {
+            _stack.push_back(std::move(*(*_alt.a0)));
           }
         }
       };
@@ -118,10 +117,10 @@ struct OptionalSelfDeepCopy {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F1>
@@ -130,8 +129,8 @@ struct OptionalSelfDeepCopy {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename chain::More>(c.v());
-      return f0(*(d_a0));
+      const auto &[a0] = std::get<typename chain::More>(c.v());
+      return f0(*a0);
     }
   }
 
@@ -141,8 +140,8 @@ struct OptionalSelfDeepCopy {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
     } else {
-      const auto &[d_a0] = std::get<typename chain::More>(c.v());
-      return f0(*(d_a0));
+      const auto &[a0] = std::get<typename chain::More>(c.v());
+      return f0(*a0);
     }
   }
 

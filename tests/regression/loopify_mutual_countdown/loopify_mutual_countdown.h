@@ -1,9 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_MUTUAL_COUNTDOWN
 #define INCLUDED_LOOPIFY_MUTUAL_COUNTDOWN
 
-#include <memory>
-#include <optional>
-#include <type_traits>
+#include <utility>
 
 struct LoopifyMutualCountdown {
   /// Loopification handles many self-recursive functions, but this probes a
@@ -12,8 +10,8 @@ struct LoopifyMutualCountdown {
   /// still emits even_countdown and odd_countdown as ordinary mutually
   /// recursive C++ calls instead of a loop, so a deep countdown overflows the
   /// C++ stack.
-  static bool even_countdown(const unsigned int n);
-  static bool odd_countdown(const unsigned int n);
+  static bool even_countdown(uint64_t n);
+  static bool odd_countdown(uint64_t n);
 };
 
 #endif // INCLUDED_LOOPIFY_MUTUAL_COUNTDOWN

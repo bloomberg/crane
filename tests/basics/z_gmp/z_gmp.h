@@ -2,9 +2,6 @@
 #define INCLUDED_Z_GMP
 
 #include <gmpxx.h>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 struct ZGMPTest {
   static mpz_class add_test(const mpz_class &_x0, const mpz_class &_x1);

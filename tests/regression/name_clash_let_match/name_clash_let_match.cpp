@@ -1,35 +1,33 @@
 #include "name_clash_let_match.h"
 
 /// Variable name 'a' used in both let and match binding.
-unsigned int
+uint64_t
 NameClashLetMatch::let_shadows_match(const NameClashLetMatch::either &e) {
-  unsigned int a = 100u;
+  uint64_t a = UINT64_C(100);
   if (std::holds_alternative<typename NameClashLetMatch::either::Left>(e.v())) {
-    const auto &[d_a0] =
+    const auto &[a1] =
         std::get<typename NameClashLetMatch::either::Left>(e.v());
-    return d_a0;
+    return a1;
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Right>(e.v());
-    return (d_a0 + a);
+    return (a0 + a);
   }
 }
 
 /// Match where the same variable name is used in multiple branches
-unsigned int
+uint64_t
 NameClashLetMatch::same_name_branches(const NameClashLetMatch::either &e,
                                       const NameClashLetMatch::triple &t) {
   if (std::holds_alternative<typename NameClashLetMatch::either::Left>(e.v())) {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Left>(e.v());
-    const auto &[d_a00, d_a10, d_a20] =
-        std::get<typename NameClashLetMatch::triple::MkTriple>(t.v());
-    return (((d_a0 + d_a00) + d_a10) + d_a20);
+    const auto &[a00, a10, a20] = t;
+    return (((a0 + a00) + a10) + a20);
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename NameClashLetMatch::either::Right>(e.v());
-    const auto &[d_a00, d_a10, d_a20] =
-        std::get<typename NameClashLetMatch::triple::MkTriple>(t.v());
-    return (((d_a0 * d_a00) * d_a10) * d_a20);
+    const auto &[a00, a10, a20] = t;
+    return (((a0 * a00) * a10) * a20);
   }
 }

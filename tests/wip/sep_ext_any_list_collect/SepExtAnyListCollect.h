@@ -2,10 +2,6 @@
 #define INCLUDED_SEPEXTANYLISTCOLLECT
 
 #include <any>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -24,47 +20,50 @@ template <SymTypes Ty> struct ListCollect {
   using symbols_semty = tuple;
 
   static typename Datatypes::template List<symbols_semty>
-  collect(const typename Ty::sym,
+  collect(typename Ty::sym,
           const typename Datatypes::template List<typename Ty::sym> &,
-          const typename Datatypes::Nat &n, const symbols_semty default0) {
-    std::function<typename Datatypes::template List<std::any>(
-        typename Datatypes::Nat, typename Datatypes::template List<std::any>)>
-        go;
-    go = [&](typename Datatypes::Nat n0,
-             typename Datatypes::template List<std::any> acc) ->
+          const typename Datatypes::Nat &n, symbols_semty default0) {
+    auto go_impl = [&](auto &_self_go, const typename Datatypes::Nat &n0,
+                       typename Datatypes::template List<std::any> acc) ->
         typename Datatypes::template List<std::any> {
           if (std::holds_alternative<typename Datatypes::Nat::O>(n0.v())) {
             return acc;
           } else {
-            const auto &[d_a0] = std::get<typename Datatypes::Nat::S>(n0.v());
-            return go(*(d_a0), Datatypes::template List<std::any>::cons(
-                                   default0, std::move(acc)));
+            const auto &[a0] = std::get<typename Datatypes::Nat::S>(n0.v());
+            return _self_go(_self_go, *a0,
+                            Datatypes::template List<std::any>::cons(
+                                default0, std::move(acc)));
           }
+        };
+    auto go = [&](const typename Datatypes::Nat &n0,
+                  typename Datatypes::template List<std::any> acc) ->
+        typename Datatypes::template List<std::any> {
+          return go_impl(go_impl, n0, acc);
         };
     return go(n, Datatypes::template List<std::any>::nil());
   }
 
   static typename Ty::sym_semty
-  head_first(const typename Ty::sym,
+  head_first(typename Ty::sym,
              const typename Datatypes::template List<typename Ty::sym> &,
              const typename Datatypes::template List<symbols_semty> &l,
-             const typename Ty::sym_semty default0) {
+             typename Ty::sym_semty default0) {
     if (std::holds_alternative<
             typename Datatypes::template List<symbols_semty>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename Datatypes::template List<symbols_semty>::Cons>(
               l.v());
-      return std::any_cast<std::pair<std::any, std::any>>(d_a0).first;
+      return std::any_cast<std::pair<std::any, std::any>>(a0).first;
     }
   }
 
   static typename Ty::sym_semty collect_and_get_first(
-      const typename Ty::sym x,
+      typename Ty::sym x,
       const typename Datatypes::template List<typename Ty::sym> &xs,
-      const typename Datatypes::Nat &n, const symbols_semty default_tuple,
-      const typename Ty::sym_semty default_val) {
+      const typename Datatypes::Nat &n, symbols_semty default_tuple,
+      typename Ty::sym_semty default_val) {
     return head_first(x, xs, collect(x, xs, n, default_tuple), default_val);
   }
 };

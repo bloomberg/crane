@@ -3,7 +3,6 @@
 
 #include <concepts>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -27,7 +26,7 @@ concept Monoid = requires {
 struct TypeApp {
   template <typename T1> static T1 id(T1 x) { return x; }
 
-  static inline const unsigned int id_int = id<unsigned int>(42u);
+  static inline const uint64_t id_int = id<uint64_t>(UINT64_C(42));
   static inline const bool id_bool = id<bool>(true);
 
   template <typename T1, typename T2 = void, typename T3, typename F0,
@@ -40,50 +39,50 @@ struct TypeApp {
     return id<T1>(id<T1>(id<T1>(x)));
   }
 
-  template <typename t_A> struct list {
+  template <typename A> struct list {
     // TYPES
     struct Nil {};
 
     struct Cons {
-      t_A d_a0;
-      std::unique_ptr<list<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<list<A>> a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     list() {}
 
-    explicit list(Nil _v) : d_v_(_v) {}
+    explicit list(Nil _v) : v_(_v) {}
 
-    explicit list(Cons _v) : d_v_(std::move(_v)) {}
+    explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    list(const list<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    list(list<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    list(list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    list<t_A> &operator=(const list<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    list<A> &operator=(const list<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    list<t_A> &operator=(list<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    list<A> &operator=(list<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    list<t_A> clone() const {
-      list<t_A> _out{};
+    list<A> clone() const {
+      list<A> _out{};
 
       struct _CloneFrame {
-        const list<t_A> *_src;
-        list<t_A> *_dst;
+        const list<A> *_src;
+        list<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -92,17 +91,17 @@ struct TypeApp {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const list<t_A> *_src = _frame._src;
-        list<t_A> *_dst = _frame._dst;
+        const list<A> *_src = _frame._src;
+        list<A> *_dst = _frame._dst;
         if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->d_v_ = Nil{};
+          _dst->v_ = Nil{};
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
-          _dst->d_v_ = Cons{_alt.d_a0, _alt.d_a1 ? std::make_unique<list<t_A>>()
-                                                 : nullptr};
-          auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Cons{_alt.a0, _alt.a1 ? std::make_unique<list<A>>() : nullptr};
+          auto &_dst_alt = std::get<Cons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -112,31 +111,29 @@ struct TypeApp {
     // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
-        this->d_v_ = Nil{};
+        this->v_ = Nil{};
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename list<_U>::Cons>(_other.v());
-        this->d_v_ = Cons{t_A(d_a0),
-                          d_a1 ? std::make_unique<list<t_A>>(*d_a1) : nullptr};
+        const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
+        this->v_ = Cons{A(a0), a1 ? std::make_unique<list<A>>(*a1) : nullptr};
       }
     }
 
-    static list<t_A> nil() { return list(Nil{}); }
+    static list<A> nil() { return list(Nil{}); }
 
-    static list<t_A> cons(t_A a0, list<t_A> a1) {
+    static list<A> cons(A a0, list<A> a1) {
       return list(
-          Cons{std::move(a0), std::make_unique<list<t_A>>(std::move(a1))});
+          Cons{std::move(a0), std::make_unique<list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::unique_ptr<list<t_A>>> _stack{};
+      std::vector<std::unique_ptr<list<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](list<t_A> &_node) {
-        if (std::holds_alternative<Cons>(_node.d_v_)) {
-          auto &_alt = std::get<Cons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](list<A> &_node) {
+        if (std::holds_alternative<Cons>(_node.v_)) {
+          auto &_alt = std::get<Cons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -150,10 +147,10 @@ struct TypeApp {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -162,8 +159,8 @@ struct TypeApp {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rect<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+      return f0(a0, *a1, list_rect<T1, T2>(f, f0, *a1));
     }
   }
 
@@ -173,8 +170,8 @@ struct TypeApp {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(d_a0, *(d_a1), list_rec<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+      return f0(a0, *a1, list_rec<T1, T2>(f, f0, *a1));
     }
   }
 
@@ -184,22 +181,23 @@ struct TypeApp {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T2>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename list<T1>::Cons>(l.v());
-      return list<T2>::cons(f(d_a0), map<T1, T2>(f, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+      return list<T2>::cons(f(a0), map<T1, T2>(f, *a1));
     }
   }
 
-  static inline const list<unsigned int> test_map =
-      map<unsigned int, unsigned int>(
-          [](const unsigned int x) { return (x + 1u); },
-          list<unsigned int>::cons(
-              1u, list<unsigned int>::cons(
-                      2u, list<unsigned int>::cons(
-                              3u, list<unsigned int>::nil()))));
-  static list<unsigned int> map_succ(const list<unsigned int> &_x0);
-  static inline const list<unsigned int> test_map_succ =
-      map_succ(list<unsigned int>::cons(
-          5u, list<unsigned int>::cons(6u, list<unsigned int>::nil())));
+  static inline const list<uint64_t> test_map = map<uint64_t, uint64_t>(
+      [](uint64_t x) { return (x + UINT64_C(1)); },
+      list<uint64_t>::cons(
+          UINT64_C(1),
+          list<uint64_t>::cons(
+              UINT64_C(2),
+              list<uint64_t>::cons(UINT64_C(3), list<uint64_t>::nil()))));
+  static list<uint64_t> map_succ(const list<uint64_t> &_x0);
+  static inline const list<uint64_t> test_map_succ =
+      map_succ(list<uint64_t>::cons(
+          UINT64_C(5),
+          list<uint64_t>::cons(UINT64_C(6), list<uint64_t>::nil())));
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
@@ -207,13 +205,13 @@ struct TypeApp {
     return f(f(x));
   }
 
-  static inline const unsigned int test_twice =
-      twice<unsigned int>([](const unsigned int x) { return (x + 1u); }, 10u);
+  static inline const uint64_t test_twice = twice<uint64_t>(
+      [](uint64_t x) { return (x + UINT64_C(1)); }, UINT64_C(10));
 
   struct NatMonoid {
-    using T = unsigned int;
-    static inline const unsigned int empty = 0u;
-    static unsigned int append(const unsigned int _x0, const unsigned int _x1);
+    using T = uint64_t;
+    static inline const uint64_t empty = UINT64_C(0);
+    static uint64_t append(uint64_t _x0, uint64_t _x1);
   };
 
   template <Monoid M> struct UseMonoid {
@@ -222,7 +220,7 @@ struct TypeApp {
       return v;
     }
 
-    constexpr static typename M::T triple(const typename M::T x) {
+    constexpr static typename M::T triple(typename M::T x) {
       return M::append(x, M::append(x, x));
     }
   };

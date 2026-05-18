@@ -30,16 +30,16 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 // Helper: convert List to std::vector for easier comparison
-std::vector<unsigned int>
-to_vector(const List<unsigned int> &l) {
-  std::vector<unsigned int> result;
-  const List<unsigned int> *cur = &l;
+std::vector<uint64_t>
+to_vector(const List<uint64_t> &l) {
+  std::vector<uint64_t> result;
+  const List<uint64_t> *cur = &l;
   while (true) {
     auto ok = std::visit(
-        Overloaded{[&](const List<unsigned int>::Nil) -> bool { return false; },
-                   [&](const List<unsigned int>::Cons &args) -> bool {
-                     result.push_back(args.d_a0);
-                     cur = args.d_a1.get();
+        Overloaded{[&](const List<uint64_t>::Nil) -> bool { return false; },
+                   [&](const List<uint64_t>::Cons &args) -> bool {
+                     result.push_back(args.a);
+                     cur = args.l.get();
                      return true;
                    }},
         cur->v());

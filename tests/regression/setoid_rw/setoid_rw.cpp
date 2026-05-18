@@ -1,22 +1,22 @@
 #include "setoid_rw.h"
 
-unsigned int SetoidRw::mod3(const unsigned int n) { return (3u ? n % 3u : n); }
+uint64_t SetoidRw::mod3(uint64_t n) {
+  return (UINT64_C(3) ? n % UINT64_C(3) : n);
+}
 
-unsigned int SetoidRw::classify_mod3(const unsigned int n) {
+uint64_t SetoidRw::classify_mod3(uint64_t n) {
   auto _cs = mod3(n);
   if (_cs <= 0) {
-    return 0u;
+    return UINT64_C(0);
   } else {
-    unsigned int n0 = _cs - 1;
+    uint64_t n0 = _cs - 1;
     if (n0 <= 0) {
-      return 1u;
+      return UINT64_C(1);
     } else {
-      unsigned int _x = n0 - 1;
-      return 2u;
+      uint64_t _x = n0 - 1;
+      return UINT64_C(2);
     }
   }
 }
 
-unsigned int SetoidRw::add_mod3(const unsigned int x, const unsigned int y) {
-  return mod3((x + y));
-}
+uint64_t SetoidRw::add_mod3(uint64_t x, uint64_t y) { return mod3((x + y)); }

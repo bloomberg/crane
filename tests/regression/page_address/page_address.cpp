@@ -1,18 +1,18 @@
 #include "page_address.h"
 
-unsigned int PageAddress::addr12_of_nat(const unsigned int n) {
-  return (4096u ? n % 4096u : n);
+uint64_t PageAddress::addr12_of_nat(uint64_t n) {
+  return (UINT64_C(4096) ? n % UINT64_C(4096) : n);
 }
 
-unsigned int PageAddress::page_of(const unsigned int p) {
-  return (256u ? addr12_of_nat(p) / 256u : 0);
+uint64_t PageAddress::page_of(uint64_t p) {
+  return (UINT64_C(256) ? addr12_of_nat(p) / UINT64_C(256) : 0);
 }
 
-unsigned int PageAddress::page_base(const unsigned int p) {
-  return (page_of(p) * 256u);
+uint64_t PageAddress::page_base(uint64_t p) {
+  return (page_of(p) * UINT64_C(256));
 }
 
-unsigned int PageAddress::branch_target(const unsigned int pc,
-                                        const unsigned int off) {
-  return (page_base(addr12_of_nat((pc + 2u))) + (256u ? off % 256u : off));
+uint64_t PageAddress::branch_target(uint64_t pc, uint64_t off) {
+  return (page_base(addr12_of_nat((pc + UINT64_C(2)))) +
+          (UINT64_C(256) ? off % UINT64_C(256) : off));
 }

@@ -2,7 +2,6 @@
 #define INCLUDED_LET_PAIR_SHADOW
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -29,50 +28,50 @@ struct LetPairShadow {
   /// constructor application, etc.).
   ///
   /// This is a codegen/compilation-failure bug.
-  template <typename t_A> struct mylist {
+  template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
 
     struct Mycons {
-      t_A d_a0;
-      std::unique_ptr<mylist<t_A>> d_a1;
+      A a0;
+      std::unique_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    mylist<t_A> &operator=(const mylist<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    mylist<A> &operator=(const mylist<A> &_other) {
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist<t_A> &operator=(mylist<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist<A> &operator=(mylist<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    mylist<t_A> clone() const {
-      mylist<t_A> _out{};
+    mylist<A> clone() const {
+      mylist<A> _out{};
 
       struct _CloneFrame {
-        const mylist<t_A> *_src;
-        mylist<t_A> *_dst;
+        const mylist<A> *_src;
+        mylist<A> *_dst;
       };
 
       std::vector<_CloneFrame> _stack{};
@@ -81,17 +80,17 @@ struct LetPairShadow {
       while (!_stack.empty()) {
         auto _frame = _stack.back();
         _stack.pop_back();
-        const mylist<t_A> *_src = _frame._src;
-        mylist<t_A> *_dst = _frame._dst;
+        const mylist<A> *_src = _frame._src;
+        mylist<A> *_dst = _frame._dst;
         if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{
-              _alt.d_a0, _alt.d_a1 ? std::make_unique<mylist<t_A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ = Mycons{_alt.a0,
+                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         }
       }
@@ -101,31 +100,31 @@ struct LetPairShadow {
     // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
-        this->d_v_ = Mynil{};
+        this->v_ = Mynil{};
       } else {
-        const auto &[d_a0, d_a1] =
+        const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->d_v_ = Mycons{
-            t_A(d_a0), d_a1 ? std::make_unique<mylist<t_A>>(*d_a1) : nullptr};
+        this->v_ =
+            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
       }
     }
 
-    static mylist<t_A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist(Mynil{}); }
 
-    static mylist<t_A> mycons(t_A a0, mylist<t_A> a1) {
+    static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<t_A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<t_A>>> _stack{};
+      std::vector<std::unique_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
-      auto _drain = [&](mylist<t_A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+      auto _drain = [&](mylist<A> &_node) {
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -139,10 +138,10 @@ struct LetPairShadow {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename T2, typename F1>
@@ -151,8 +150,8 @@ struct LetPairShadow {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rect<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(a0, *a1, mylist_rect<T1, T2>(f, f0, *a1));
     }
   }
 
@@ -162,12 +161,12 @@ struct LetPairShadow {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(d_a0, *(d_a1), mylist_rec<T1, T2>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
+      return f0(a0, *a1, mylist_rec<T1, T2>(f, f0, *a1));
     }
   }
 
-  static unsigned int mylist_sum(const mylist<unsigned int> &l);
+  static uint64_t mylist_sum(const mylist<uint64_t> &l);
 
   /// Pattern 1: map_accum — two sequential pair destructurings of
   /// function-call results in the same match branch.
@@ -178,11 +177,11 @@ struct LetPairShadow {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return std::make_pair(mylist<T2>::mynil(), acc);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      auto _cs = f(acc, d_a0);
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+      auto _cs = f(acc, a0);
       const T3 &new_acc = _cs.first;
       const T2 &y = _cs.second;
-      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, *(d_a1));
+      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, *a1);
       const mylist<T2> &rest = _cs1.first;
       const T3 &final_acc = _cs1.second;
       return std::make_pair(mylist<T2>::mycons(y, rest), final_acc);
@@ -193,43 +192,37 @@ struct LetPairShadow {
   /// f(acc, x) = (acc+x, acc).
   /// map_accum f 0 10,20,30 = (0,10,30, 60)
   /// sum(list) + acc = 40 + 60 = 100
-  static inline const unsigned int test1 = []() -> unsigned int {
-    auto _cs = map_accum<unsigned int, unsigned int, unsigned int>(
-        [](const unsigned int s, const unsigned int x) {
-          return std::make_pair((s + x), s);
-        },
-        0u,
-        mylist<unsigned int>::mycons(
-            10u, mylist<unsigned int>::mycons(
-                     20u, mylist<unsigned int>::mycons(
-                              30u, mylist<unsigned int>::mynil()))));
-    const mylist<unsigned int> &l = _cs.first;
-    const unsigned int &acc = _cs.second;
+  static inline const uint64_t test1 = []() -> uint64_t {
+    auto _cs = map_accum<uint64_t, uint64_t, uint64_t>(
+        [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
+        UINT64_C(0),
+        mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))));
+    const mylist<uint64_t> &l = _cs.first;
+    const uint64_t &acc = _cs.second;
     return (mylist_sum(l) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).
-  static std::pair<unsigned int, unsigned int> add_pair(const unsigned int a,
-                                                        const unsigned int b);
-  static std::pair<unsigned int, unsigned int> sub_pair(const unsigned int a,
-                                                        const unsigned int b);
+  static std::pair<uint64_t, uint64_t> add_pair(uint64_t a, uint64_t b);
+  static std::pair<uint64_t, uint64_t> sub_pair(uint64_t a, uint64_t b);
   /// Pattern 2: Two destructs of function-call results in top-level body.
-  static unsigned int double_call_destruct(const unsigned int a,
-                                           const unsigned int b,
-                                           const unsigned int c,
-                                           const unsigned int d);
+  static uint64_t double_call_destruct(uint64_t a, uint64_t b, uint64_t c,
+                                       uint64_t d);
   /// test2: add_pair 3 4 = (7, 12), sub_pair 10 3 = (7, 13)
   /// 7 + 12 + 7 + 13 = 39
-  static inline const unsigned int test2 =
-      double_call_destruct(3u, 4u, 10u, 3u);
+  static inline const uint64_t test2 =
+      double_call_destruct(UINT64_C(3), UINT64_C(4), UINT64_C(10), UINT64_C(3));
   /// Pattern 3: Three destructs of function-call results.
-  static unsigned int
-  triple_call_destruct(const unsigned int a, const unsigned int b,
-                       const unsigned int c, const unsigned int d,
-                       const unsigned int e, const unsigned int f);
+  static uint64_t triple_call_destruct(uint64_t a, uint64_t b, uint64_t c,
+                                       uint64_t d, uint64_t e, uint64_t f);
   /// test3: add_pair 1 2 = (3,2), add_pair 3 4 = (7,12),
   /// add_pair 5 6 = (11,30).  3+2+7+12+11+30 = 65
-  static inline const unsigned int test3 =
-      triple_call_destruct(1u, 2u, 3u, 4u, 5u, 6u);
+  static inline const uint64_t test3 =
+      triple_call_destruct(UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4),
+                           UINT64_C(5), UINT64_C(6));
 };
 
 #endif // INCLUDED_LET_PAIR_SHADOW

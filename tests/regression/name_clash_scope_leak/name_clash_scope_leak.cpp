@@ -1,125 +1,114 @@
 #include "name_clash_scope_leak.h"
 
 /// Match on list, return list. Both branches produce the same type.
-List<unsigned int> NameClashScopeLeak::rotate(const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return List<unsigned int>::nil();
+List<uint64_t> NameClashScopeLeak::rotate(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return List<uint64_t>::nil();
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    return (*(d_a1)).app(
-        List<unsigned int>::cons(d_a0, List<unsigned int>::nil()));
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    return a1->app(List<uint64_t>::cons(a0, List<uint64_t>::nil()));
   }
 }
 
 /// Two consecutive matches on different lists in the same function.
-unsigned int NameClashScopeLeak::heads_sum(const List<unsigned int> &l1,
-                                           const List<unsigned int> &l2) {
-  unsigned int h1 = [&]() {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
-      return 0u;
+uint64_t NameClashScopeLeak::heads_sum(const List<uint64_t> &l1,
+                                       const List<uint64_t> &l2) {
+  uint64_t h1 = [&]() {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l1.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
+      return a0;
     }
   }();
-  unsigned int h2 = [&]() {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
-      return 0u;
+  uint64_t h2 = [&]() {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(l2.v());
-      return d_a00;
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
+      return a00;
     }
   }();
   return (h1 + h2);
 }
 
 /// Match on list, and in the Cons branch, match on the tail.
-unsigned int NameClashScopeLeak::first_two_sum(const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return 0u;
+uint64_t NameClashScopeLeak::first_two_sum(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    auto &&_sv0 = *(d_a1);
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(_sv0.v())) {
-      return d_a0;
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    auto &&_sv0 = *a1;
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+      return a0;
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(_sv0.v());
-      return (d_a0 + d_a00);
+      const auto &[a00, a10] =
+          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      return (a0 + a00);
     }
   }
 }
 
 /// Match where both branches contain let bindings with same name.
-unsigned int NameClashScopeLeak::branch_let_clash(const List<unsigned int> &l) {
-  if (std::holds_alternative<typename List<unsigned int>::Nil>(l.v())) {
-    return 0u;
+uint64_t NameClashScopeLeak::branch_let_clash(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return UINT64_C(0);
   } else {
-    const auto &[d_a0, d_a1] =
-        std::get<typename List<unsigned int>::Cons>(l.v());
-    return (d_a0 * 2u);
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    return (a0 * UINT64_C(2));
   }
 }
 
 /// Three consecutive matches, each with same binding variable name pattern.
-unsigned int NameClashScopeLeak::triple_head(const List<unsigned int> &l1,
-                                             const List<unsigned int> &l2,
-                                             const List<unsigned int> &l3) {
-  unsigned int a = [&]() {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
-      return 0u;
+uint64_t NameClashScopeLeak::triple_head(const List<uint64_t> &l1,
+                                         const List<uint64_t> &l2,
+                                         const List<uint64_t> &l3) {
+  uint64_t a = [&]() {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l1.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
+      return a0;
     }
   }();
-  unsigned int b = [&]() {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
-      return 0u;
+  uint64_t b = [&]() {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(l2.v());
-      return d_a00;
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
+      return a00;
     }
   }();
-  unsigned int c = [&]() {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l3.v())) {
-      return 0u;
+  uint64_t c = [&]() {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l3.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a01, d_a11] =
-          std::get<typename List<unsigned int>::Cons>(l3.v());
-      return d_a01;
+      const auto &[a01, a11] = std::get<typename List<uint64_t>::Cons>(l3.v());
+      return a01;
     }
   }();
   return ((a + b) + c);
 }
 
 /// Matching on a pair where both components are lists.
-unsigned int NameClashScopeLeak::pair_match(
-    const std::pair<List<unsigned int>, List<unsigned int>> &p) {
-  const List<unsigned int> &l1 = p.first;
-  const List<unsigned int> &l2 = p.second;
-  unsigned int h1 = [&]() {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l1.v())) {
-      return 0u;
+uint64_t NameClashScopeLeak::pair_match(
+    const std::pair<List<uint64_t>, List<uint64_t>> &p) {
+  const List<uint64_t> &l1 = p.first;
+  const List<uint64_t> &l2 = p.second;
+  uint64_t h1 = [&]() {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] =
-          std::get<typename List<unsigned int>::Cons>(l1.v());
-      return d_a0;
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
+      return a0;
     }
   }();
-  unsigned int h2 = [&]() {
-    if (std::holds_alternative<typename List<unsigned int>::Nil>(l2.v())) {
-      return 0u;
+  uint64_t h2 = [&]() {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a00, d_a10] =
-          std::get<typename List<unsigned int>::Cons>(l2.v());
-      return d_a00;
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
+      return a00;
     }
   }();
   return (h1 + h2);

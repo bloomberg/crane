@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -15,36 +14,36 @@ struct ClosurePairThis {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      uint64_t a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    tree &operator=(tree &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -66,18 +65,17 @@ struct ClosurePairThis {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -87,8 +85,8 @@ struct ClosurePairThis {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+    static tree node(tree a0, uint64_t a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -97,13 +95,13 @@ struct ClosurePairThis {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -117,10 +115,10 @@ struct ClosurePairThis {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// BUG HYPOTHESIS: get_fn_pair returns two closures in a pair.
     /// When methodified, both closures capture the raw this pointer.
@@ -128,158 +126,114 @@ struct ClosurePairThis {
     /// are evaluated and stored while this is still valid.
     /// But after get_fn_pair returns, the temporary tree may be
     /// destroyed — calling either closure is then use-after-free.
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-    get_fn_pair(const unsigned int flag) const {
-      tree _self_val = *(this);
+    std::pair<std::function<uint64_t(uint64_t)>,
+              std::function<uint64_t(uint64_t)>>
+    get_fn_pair(uint64_t flag) const {
+      tree _self_val = *this;
       if (flag <= 0) {
         return std::make_pair(
-            [=](const unsigned int x) mutable {
-              return (x + _self_val.tree_sum());
-            },
-            [=](const unsigned int x) mutable {
-              return (_self_val.tree_sum() * x);
-            });
+            [=](uint64_t x) mutable { return (x + _self_val.tree_sum()); },
+            [=](uint64_t x) mutable { return (_self_val.tree_sum() * x); });
       } else {
-        unsigned int _x = flag - 1;
+        uint64_t _x = flag - 1;
         return std::make_pair(
-            [=](const unsigned int x) mutable {
-              return (_self_val.tree_sum() + x);
-            },
-            [](const unsigned int x) { return x; });
+            [=](uint64_t x) mutable { return (_self_val.tree_sum() + x); },
+            [](uint64_t x) { return x; });
       }
     }
 
-    unsigned int tree_sum() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-        return 0u;
+    uint64_t tree_sum() const {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return UINT64_C(0);
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return (((*(d_a0)).tree_sum() + d_a1) + (*(d_a2)).tree_sum());
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return ((a0->tree_sum() + a1) + a2->tree_sum());
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rec<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rec<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0, d_a1, d_a2] = std::get<typename tree::Node>(_sv.v());
-        return f0(*(d_a0), (*(d_a0)).template tree_rect<T1>(f, f0), d_a1,
-                  *(d_a2), (*(d_a2)).template tree_rect<T1>(f, f0));
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
       }
     }
   };
 
   struct wrapper {
-    // TYPES
-    struct Wrap {
-      tree d_a0;
-    };
-
-    using variant_t = std::variant<Wrap>;
-
-  private:
     // DATA
-    variant_t d_v_;
-
-  public:
-    // CREATORS
-    wrapper() {}
-
-    explicit wrapper(Wrap _v) : d_v_(std::move(_v)) {}
-
-    wrapper(const wrapper &_other) : d_v_(std::move(_other.clone().d_v_)) {}
-
-    wrapper(wrapper &&_other) : d_v_(std::move(_other.d_v_)) {}
-
-    wrapper &operator=(const wrapper &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
-      return *this;
-    }
-
-    wrapper &operator=(wrapper &&_other) {
-      d_v_ = std::move(_other.d_v_);
-      return *this;
-    }
+    tree a0;
 
     // ACCESSORS
-    wrapper clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0] = std::get<Wrap>(_sv.v());
-      return wrapper(Wrap{d_a0.clone()});
-    }
+    wrapper clone() const { return {a0}; }
 
     // CREATORS
-    static wrapper wrap(tree a0) { return wrapper(Wrap{std::move(a0)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    static wrapper wrap(tree a0) { return {std::move(a0)}; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rect(F0 &&f, const wrapper &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
-    return f(d_a0);
+    const auto &[a0] = w;
+    return f(a0);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, tree &>
   static T1 wrapper_rec(F0 &&f, const wrapper &w) {
-    const auto &[d_a0] = std::get<typename wrapper::Wrap>(w.v());
-    return f(d_a0);
+    const auto &[a0] = w;
+    return f(a0);
   }
 
   /// test1: flag=0 on tree with sum=7. fst closure adds, snd multiplies.
   /// (3 + 7) + (7 * 2) = 10 + 14 = 24.
-  static inline const unsigned int test1 = []() {
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-        p = tree::node(tree::leaf(), 7u, tree::leaf()).get_fn_pair(0u);
-    return (p.first(3u) + p.second(2u));
+  static inline const uint64_t test1 = []() {
+    std::pair<std::function<uint64_t(uint64_t)>,
+              std::function<uint64_t(uint64_t)>>
+        p = tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
+                .get_fn_pair(UINT64_C(0));
+    return (p.first(UINT64_C(3)) + p.second(UINT64_C(2)));
   }();
   /// test2: flag=1. fst closure adds sum, snd is identity.
   /// (7 + 4) + 5 = 11 + 5 = 16.
-  static inline const unsigned int test2 = []() {
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-        p = tree::node(tree::leaf(), 7u, tree::leaf()).get_fn_pair(1u);
-    return (p.first(4u) + p.second(5u));
+  static inline const uint64_t test2 = []() {
+    std::pair<std::function<uint64_t(uint64_t)>,
+              std::function<uint64_t(uint64_t)>>
+        p = tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
+                .get_fn_pair(UINT64_C(1));
+    return (p.first(UINT64_C(4)) + p.second(UINT64_C(5)));
   }();
   /// test3: Use both closures after allocating another tree to increase
   /// memory pressure on the freed region.
-  static inline const unsigned int test3 = []() {
-    std::pair<std::function<unsigned int(unsigned int)>,
-              std::function<unsigned int(unsigned int)>>
-        p = tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 5u,
-                       tree::node(tree::leaf(), 2u, tree::leaf()))
-                .get_fn_pair(0u);
-    unsigned int noise =
-        tree::node(tree::leaf(), 999u, tree::leaf()).tree_sum();
-    unsigned int a = p.first(noise);
-    unsigned int b = p.second(1u);
+  static inline const uint64_t test3 = []() {
+    std::pair<std::function<uint64_t(uint64_t)>,
+              std::function<uint64_t(uint64_t)>>
+        p = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                       UINT64_C(5),
+                       tree::node(tree::leaf(), UINT64_C(2), tree::leaf()))
+                .get_fn_pair(UINT64_C(0));
+    uint64_t noise =
+        tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
+    uint64_t a = p.first(noise);
+    uint64_t b = p.second(UINT64_C(1));
     return (a + b);
   }();
 };

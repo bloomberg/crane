@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -24,36 +23,36 @@ struct MemSafetyProbe19 {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> d_a0;
-      unsigned int d_a1;
-      std::unique_ptr<tree> d_a2;
+      std::unique_ptr<tree> a0;
+      uint64_t a1;
+      std::unique_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     tree() {}
 
-    explicit tree(Leaf _v) : d_v_(_v) {}
+    explicit tree(Leaf _v) : v_(_v) {}
 
-    explicit tree(Node _v) : d_v_(std::move(_v)) {}
+    explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
 
-    tree(tree &&_other) : d_v_(std::move(_other.d_v_)) {}
+    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     tree &operator=(const tree &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    tree &operator=(tree &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    tree &operator=(tree &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -75,18 +74,17 @@ struct MemSafetyProbe19 {
         const tree *_src = _frame._src;
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->d_v_ = Leaf{};
+          _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->d_v_ =
-              Node{_alt.d_a0 ? std::make_unique<tree>() : nullptr, _alt.d_a1,
-                   _alt.d_a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back({_alt.d_a0.get(), _dst_alt.d_a0.get()});
+          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          auto &_dst_alt = std::get<Node>(_dst->v_);
+          if (_alt.a0) {
+            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
-          if (_alt.d_a2) {
-            _stack.push_back({_alt.d_a2.get(), _dst_alt.d_a2.get()});
+          if (_alt.a2) {
+            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
           }
         }
       }
@@ -96,8 +94,8 @@ struct MemSafetyProbe19 {
     // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, unsigned int a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
+    static tree node(tree a0, uint64_t a1, tree a2) {
+      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
                        std::make_unique<tree>(std::move(a2))});
     }
 
@@ -106,13 +104,13 @@ struct MemSafetyProbe19 {
       std::vector<std::unique_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.d_v_)) {
-          auto &_alt = std::get<Node>(_node.d_v_);
-          if (_alt.d_a0) {
-            _stack.push_back(std::move(_alt.d_a0));
+        if (std::holds_alternative<Node>(_node.v_)) {
+          auto &_alt = std::get<Node>(_node.v_);
+          if (_alt.a0) {
+            _stack.push_back(std::move(_alt.a0));
           }
-          if (_alt.d_a2) {
-            _stack.push_back(std::move(_alt.d_a2));
+          if (_alt.a2) {
+            _stack.push_back(std::move(_alt.a2));
           }
         }
       };
@@ -126,19 +124,18 @@ struct MemSafetyProbe19 {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     /// TEST 7: Nested match returning closures at multiple levels.
-    unsigned int nested_match_fn(const bool b1, const bool b2,
-                                 const unsigned int n) const {
+    uint64_t nested_match_fn(bool b1, bool b2, uint64_t n) const {
       if (b1) {
         if (b2) {
-          return ((*(this)).tree_sum() + n);
+          return (this->tree_sum() + n);
         } else {
-          return (((*(this)).tree_sum() + (*(this)).tree_sum()) + n);
+          return ((this->tree_sum() + this->tree_sum()) + n);
         }
       } else {
         return n;
@@ -148,15 +145,15 @@ struct MemSafetyProbe19 {
     /// TEST 1: Return closure from if-branch.
     /// The if becomes a top-level Sif in the function body.
     /// return_captures_by_value won't recurse into it.
-    unsigned int choose_fn(const bool b, const unsigned int n) const {
+    uint64_t choose_fn(bool b, uint64_t n) const {
       if (b) {
-        return ((*(this)).tree_sum() + n);
+        return (this->tree_sum() + n);
       } else {
         return n;
       }
     }
 
-    unsigned int tree_sum() const {
+    uint64_t tree_sum() const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -164,21 +161,21 @@ struct MemSafetyProbe19 {
         const tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a1], dispatches next recursive call.
+      /// _After_Node: saves [_s0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        unsigned int d_a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
-        unsigned int _result;
-        unsigned int d_a1;
+        uint64_t _result;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      unsigned int _result{};
+      uint64_t _result{};
       std::vector<_Frame> _stack;
       _stack.reserve(8);
       _stack.emplace_back(_Enter{_self});
@@ -189,30 +186,29 @@ struct MemSafetyProbe19 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = 0u;
+            _result = UINT64_C(0);
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{d_a0.get(), d_a1});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), a1});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, _f.d_a1});
+          _stack.emplace_back(_Combine_Node{_result, _f.a1});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = ((_result + _f.d_a1) + _f._result);
+          _result = ((_result + _f.a1) + _f._result);
         }
       }
       return _result;
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -221,22 +217,21 @@ struct MemSafetyProbe19 {
         const tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
-      /// call.
+      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        uint64_t a1;
+        tree a0;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         T1 _result;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        uint64_t a1;
+        tree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -251,32 +246,30 @@ struct MemSafetyProbe19 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+                                            std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
+          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
         }
       }
       return _result;
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, unsigned int &,
-                                     tree &, T1 &>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
@@ -285,22 +278,21 @@ struct MemSafetyProbe19 {
         const tree *_self;
       };
 
-      /// _After_Node: saves [_s0, d_a2, d_a1, d_a0], dispatches next recursive
-      /// call.
+      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
       struct _After_Node {
         tree *_s0;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        uint64_t a1;
+        tree a0;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         T1 _result;
-        tree d_a2;
-        unsigned int d_a1;
-        tree d_a0;
+        tree a2;
+        uint64_t a1;
+        tree a0;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -315,145 +307,140 @@ struct MemSafetyProbe19 {
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
           const tree *_self = _f._self;
-          auto &&_sv = *(_self);
+          auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
+            _result = std::move(f);
           } else {
-            const auto &[d_a0, d_a1, d_a2] =
-                std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(
-                _After_Node{d_a0.get(), *(d_a2), d_a1, *(d_a0)});
-            _stack.emplace_back(_Enter{d_a2.get()});
+            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{a2.get()});
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.d_a2),
-                                            _f.d_a1, std::move(_f.d_a0)});
+          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+                                            std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.d_a0, _result, _f.d_a1, _f.d_a2, _f._result);
+          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
         }
       }
       return _result;
     }
   };
 
-  static inline const unsigned int test_choose =
-      tree::node(tree::leaf(), 42u, tree::leaf()).choose_fn(true, 0u);
+  static inline const uint64_t test_choose =
+      tree::node(tree::leaf(), UINT64_C(42), tree::leaf())
+          .choose_fn(true, UINT64_C(0));
 
   /// TEST 2: Return closure from match on option.
   /// The match becomes a top-level Smatch.
-  template <typename t_A> struct myopt {
+  template <typename A> struct myopt {
     // TYPES
     struct Mynone {};
 
     struct Mysome {
-      t_A d_a0;
+      A a0;
     };
 
     using variant_t = std::variant<Mynone, Mysome>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     myopt() {}
 
-    explicit myopt(Mynone _v) : d_v_(_v) {}
+    explicit myopt(Mynone _v) : v_(_v) {}
 
-    explicit myopt(Mysome _v) : d_v_(std::move(_v)) {}
+    explicit myopt(Mysome _v) : v_(std::move(_v)) {}
 
-    myopt(const myopt<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    myopt(const myopt<A> &_other) : v_(_other.v_) {}
 
-    myopt(myopt<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+    myopt(myopt<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-    myopt<t_A> &operator=(const myopt<t_A> &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+    myopt<A> &operator=(const myopt<A> &_other) {
+      v_ = _other.v_;
       return *this;
     }
 
-    myopt<t_A> &operator=(myopt<t_A> &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    myopt<A> &operator=(myopt<A> &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
-    myopt<t_A> clone() const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<Mynone>(_sv.v())) {
-        return myopt<t_A>(Mynone{});
+    myopt<A> clone() const {
+      if (std::holds_alternative<Mynone>(this->v())) {
+        return myopt<A>(Mynone{});
       } else {
-        const auto &[d_a0] = std::get<Mysome>(_sv.v());
-        return myopt<t_A>(Mysome{d_a0});
+        const auto &[a0] = std::get<Mysome>(this->v());
+        return myopt<A>(Mysome{a0});
       }
     }
 
     // CREATORS
     template <typename _U> explicit myopt(const myopt<_U> &_other) {
       if (std::holds_alternative<typename myopt<_U>::Mynone>(_other.v())) {
-        this->d_v_ = Mynone{};
+        this->v_ = Mynone{};
       } else {
-        const auto &[d_a0] = std::get<typename myopt<_U>::Mysome>(_other.v());
-        this->d_v_ = Mysome{t_A(d_a0)};
+        const auto &[a0] = std::get<typename myopt<_U>::Mysome>(_other.v());
+        this->v_ = Mysome{A(a0)};
       }
     }
 
-    static myopt<t_A> mynone() { return myopt(Mynone{}); }
+    static myopt<A> mynone() { return myopt(Mynone{}); }
 
-    static myopt<t_A> mysome(t_A a0) { return myopt(Mysome{std::move(a0)}); }
+    static myopt<A> mysome(A a0) { return myopt(Mysome{std::move(a0)}); }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &>
+      requires std::is_invocable_r_v<T1, F1 &, A &>
     T1 myopt_rec(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename myopt<t_A>::Mynone>(_sv.v())) {
+      if (std::holds_alternative<typename myopt<A>::Mynone>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename myopt<t_A>::Mysome>(_sv.v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename myopt<A>::Mysome>(this->v());
+        return f0(a0);
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, t_A &>
+      requires std::is_invocable_r_v<T1, F1 &, A &>
     T1 myopt_rect(T1 f, F1 &&f0) const {
-      auto &&_sv = *(this);
-      if (std::holds_alternative<typename myopt<t_A>::Mynone>(_sv.v())) {
+      if (std::holds_alternative<typename myopt<A>::Mynone>(this->v())) {
         return f;
       } else {
-        const auto &[d_a0] = std::get<typename myopt<t_A>::Mysome>(_sv.v());
-        return f0(d_a0);
+        const auto &[a0] = std::get<typename myopt<A>::Mysome>(this->v());
+        return f0(a0);
       }
     }
   };
 
-  static unsigned int option_fn(const tree &t, const myopt<unsigned int> &o,
-                                const unsigned int n);
-  static inline const unsigned int test_option_fn =
-      option_fn(tree::node(tree::leaf(), 10u, tree::leaf()),
-                myopt<unsigned int>::mysome(5u), 3u);
+  static uint64_t option_fn(const tree &t, const myopt<uint64_t> &o,
+                            uint64_t n);
+  static inline const uint64_t test_option_fn =
+      option_fn(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                myopt<uint64_t>::mysome(UINT64_C(5)), UINT64_C(3));
   /// TEST 3: Return closure from match on custom 3-constructor type.
-  enum class Choice { e_CLEFT, e_CRIGHT, e_CBOTH };
+  enum class Choice { CLEFT, CRIGHT, CBOTH };
 
-  template <typename T1>
-  static T1 choice_rect(T1 f, T1 f0, T1 f1, const Choice c) {
+  template <typename T1> static T1 choice_rect(T1 f, T1 f0, T1 f1, Choice c) {
     switch (c) {
-    case Choice::e_CLEFT: {
+    case Choice::CLEFT: {
       return f;
     }
-    case Choice::e_CRIGHT: {
+    case Choice::CRIGHT: {
       return f0;
     }
-    case Choice::e_CBOTH: {
+    case Choice::CBOTH: {
       return f1;
     }
     default:
@@ -461,16 +448,15 @@ struct MemSafetyProbe19 {
     }
   }
 
-  template <typename T1>
-  static T1 choice_rec(T1 f, T1 f0, T1 f1, const Choice c) {
+  template <typename T1> static T1 choice_rec(T1 f, T1 f0, T1 f1, Choice c) {
     switch (c) {
-    case Choice::e_CLEFT: {
+    case Choice::CLEFT: {
       return f;
     }
-    case Choice::e_CRIGHT: {
+    case Choice::CRIGHT: {
       return f0;
     }
-    case Choice::e_CBOTH: {
+    case Choice::CBOTH: {
       return f1;
     }
     default:
@@ -478,64 +464,65 @@ struct MemSafetyProbe19 {
     }
   }
 
-  static unsigned int choice_fn(const tree &t, const Choice c,
-                                const unsigned int n);
-  static inline const unsigned int test_choice_left = choice_fn(
-      tree::node(tree::node(tree::leaf(), 3u, tree::leaf()), 7u, tree::leaf()),
-      Choice::e_CLEFT, 0u);
+  static uint64_t choice_fn(const tree &t, Choice c, uint64_t n);
+  static inline const uint64_t test_choice_left =
+      choice_fn(tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                           UINT64_C(7), tree::leaf()),
+                Choice::CLEFT, UINT64_C(0));
   /// tree_sum = 3 + 7 = 10. f(0) = 10
-  static inline const unsigned int test_choice_both = choice_fn(
-      tree::node(tree::leaf(), 5u, tree::leaf()), Choice::e_CBOTH, 1u);
+  static inline const uint64_t test_choice_both =
+      choice_fn(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                Choice::CBOTH, UINT64_C(1));
   /// TEST 4: Closure returned from if, capturing a locally-built tree.
   /// The let-bound tree is on the stack. If the returned lambda
   /// captures by &, it holds a reference to the dead stack frame.
-  static unsigned int make_adder(const unsigned int n, const bool b,
-                                 const unsigned int _x0);
-  static inline const unsigned int test_make_adder = make_adder(20u, true, 5u);
+  static uint64_t make_adder(uint64_t n, bool b, uint64_t _x0);
+  static inline const uint64_t test_make_adder =
+      make_adder(UINT64_C(20), true, UINT64_C(5));
   /// TEST 5: Double use of returned closure.
   /// Ensures the closure is a real std::function, not inlined.
-  static inline const unsigned int test_double_use = []() {
-    std::function<unsigned int(unsigned int)> f =
-        [](unsigned int _x0) -> unsigned int {
-      return tree::node(tree::leaf(), 7u, tree::leaf()).choose_fn(true, _x0);
+  static inline const uint64_t test_double_use = []() {
+    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+      return tree::node(tree::leaf(), UINT64_C(7), tree::leaf())
+          .choose_fn(true, _x0);
     };
-    return (f(1u) + f(2u));
+    return (f(UINT64_C(1)) + f(UINT64_C(2)));
   }();
 
   /// TEST 6: Pass returned closure to a higher-order function.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static unsigned int apply_to(F0 &&f, const unsigned int _x0) {
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static uint64_t apply_to(F0 &&f, uint64_t _x0) {
     return f(_x0);
   }
 
-  static inline const unsigned int test_pass_closure = []() {
-    std::function<unsigned int(unsigned int)> f =
-        [](unsigned int _x0) -> unsigned int {
-      return tree::node(tree::leaf(), 15u, tree::leaf()).choose_fn(true, _x0);
+  static inline const uint64_t test_pass_closure = []() {
+    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+      return tree::node(tree::leaf(), UINT64_C(15), tree::leaf())
+          .choose_fn(true, _x0);
     };
-    return apply_to(f, 10u);
+    return apply_to(f, UINT64_C(10));
   }();
-  static inline const unsigned int test_nested_match =
-      tree::node(tree::leaf(), 4u, tree::leaf())
-          .nested_match_fn(true, true, 0u);
+  static inline const uint64_t test_nested_match =
+      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
+          .nested_match_fn(true, true, UINT64_C(0));
   /// f(0) = 4
-  static inline const unsigned int test_nested_match2 =
-      tree::node(tree::leaf(), 4u, tree::leaf())
-          .nested_match_fn(true, false, 0u);
+  static inline const uint64_t test_nested_match2 =
+      tree::node(tree::leaf(), UINT64_C(4), tree::leaf())
+          .nested_match_fn(true, false, UINT64_C(0));
   /// TEST 8: Closure from match, used across let-bindings.
   /// Maximum distance between closure creation and use.
-  static inline const unsigned int test_delayed_use = []() {
-    std::function<unsigned int(unsigned int)> f =
-        [](unsigned int _x0) -> unsigned int {
-      return choice_fn(tree::node(tree::node(tree::leaf(), 1u, tree::leaf()),
-                                  2u,
-                                  tree::node(tree::leaf(), 3u, tree::leaf())),
-                       Choice::e_CLEFT, _x0);
+  static inline const uint64_t test_delayed_use = []() {
+    std::function<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
+      return choice_fn(
+          tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                     UINT64_C(2),
+                     tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+          Choice::CLEFT, _x0);
     };
-    unsigned int a = 100u;
-    unsigned int b = (a + 200u);
-    unsigned int c = (b + 300u);
+    uint64_t a = UINT64_C(100);
+    uint64_t b = (a + UINT64_C(200));
+    uint64_t c = (b + UINT64_C(300));
     return f(c);
   }();
 };

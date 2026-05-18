@@ -2,7 +2,6 @@
 #define INCLUDED_REUSE_FN_IN_BODY
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -13,8 +12,8 @@ struct ReuseFnInBody {
   struct mylist {
     // TYPES
     struct Mycons {
-      unsigned int d_a0;
-      std::unique_ptr<mylist> d_a1;
+      uint64_t a0;
+      std::unique_ptr<mylist> a1;
     };
 
     struct Mynil {};
@@ -23,27 +22,27 @@ struct ReuseFnInBody {
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     mylist() {}
 
-    explicit mylist(Mycons _v) : d_v_(std::move(_v)) {}
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    explicit mylist(Mynil _v) : d_v_(_v) {}
+    explicit mylist(Mynil _v) : v_(_v) {}
 
-    mylist(const mylist &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
 
-    mylist(mylist &&_other) : d_v_(std::move(_other.d_v_)) {}
+    mylist(mylist &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     mylist &operator=(const mylist &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    mylist &operator=(mylist &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    mylist &operator=(mylist &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
@@ -66,23 +65,22 @@ struct ReuseFnInBody {
         mylist *_dst = _frame._dst;
         if (std::holds_alternative<Mycons>(_src->v())) {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->d_v_ = Mycons{_alt.d_a0,
-                              _alt.d_a1 ? std::make_unique<mylist>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+          _dst->v_ =
+              Mycons{_alt.a0, _alt.a1 ? std::make_unique<mylist>() : nullptr};
+          auto &_dst_alt = std::get<Mycons>(_dst->v_);
+          if (_alt.a1) {
+            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
           }
         } else {
-          _dst->d_v_ = Mynil{};
+          _dst->v_ = Mynil{};
         }
       }
       return _out;
     }
 
     // CREATORS
-    static mylist mycons(unsigned int a0, mylist a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist>(std::move(a1))});
+    static mylist mycons(uint64_t a0, mylist a1) {
+      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
     }
 
     static mylist mynil() { return mylist(Mynil{}); }
@@ -92,10 +90,10 @@ struct ReuseFnInBody {
       std::vector<std::unique_ptr<mylist>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
-        if (std::holds_alternative<Mycons>(_node.d_v_)) {
-          auto &_alt = std::get<Mycons>(_node.d_v_);
-          if (_alt.d_a1) {
-            _stack.push_back(std::move(_alt.d_a1));
+        if (std::holds_alternative<Mycons>(_node.v_)) {
+          auto &_alt = std::get<Mycons>(_node.v_);
+          if (_alt.a1) {
+            _stack.push_back(std::move(_alt.a1));
           }
         }
       };
@@ -109,36 +107,36 @@ struct ReuseFnInBody {
       }
     }
 
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rect<T1>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
+      return f(a0, *a1, mylist_rect<T1>(f, f0, *a1));
     } else {
       return f0;
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, mylist &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
-      const auto &[d_a0, d_a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(d_a0, *(d_a1), mylist_rec<T1>(f, f0, *(d_a1)));
+      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
+      return f(a0, *a1, mylist_rec<T1>(f, f0, *a1));
     } else {
       return f0;
     }
   }
 
-  static unsigned int length(const mylist &l);
-  static unsigned int sum(const mylist &l);
+  static uint64_t length(const mylist &l);
+  static uint64_t sum(const mylist &l);
   /// BUG: reuse fires on the mycons branch. The body constructs
   /// mycons (sum l + h) t where l is the scrutinee.
   ///
@@ -155,17 +153,19 @@ struct ReuseFnInBody {
   /// This is similar to reuse_use_after_move but the scrutinee
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
-  static mylist prefix_sum(mylist l, const bool b);
-  static inline const unsigned int test1 = sum(prefix_sum(
-      mylist::mycons(1u,
-                     mylist::mycons(2u, mylist::mycons(3u, mylist::mynil()))),
+  static mylist prefix_sum(mylist l, bool b);
+  static inline const uint64_t test1 = sum(prefix_sum(
+      mylist::mycons(
+          UINT64_C(1),
+          mylist::mycons(UINT64_C(2),
+                         mylist::mycons(UINT64_C(3), mylist::mynil()))),
       true));
   /// Original list: 1, 2, 3. sum = 6.
   /// prefix_sum: head becomes sum(1,2,3) + 1 = 6 + 1 = 7, tail = 2, 3.
   /// Result: 7, 2, 3. sum = 12.
   /// BUG: sum(l) crashes because l's fields are moved.
-  static inline const unsigned int test2 =
-      sum(prefix_sum(mylist::mycons(10u, mylist::mynil()), true));
+  static inline const uint64_t test2 =
+      sum(prefix_sum(mylist::mycons(UINT64_C(10), mylist::mynil()), true));
 };
 
 #endif // INCLUDED_REUSE_FN_IN_BODY

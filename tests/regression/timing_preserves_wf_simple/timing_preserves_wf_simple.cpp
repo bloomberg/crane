@@ -1,30 +1,30 @@
 #include "timing_preserves_wf_simple.h"
 
 bool TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
-  return (s.regs_len == 4u &&
-          (s.rom_len == 4u && (s.pc < 4096u && s.stack_len <= 3u)));
+  return (s.regs_len == UINT64_C(4) &&
+          (s.rom_len == UINT64_C(4) &&
+           (s.pc < UINT64_C(4096) && s.stack_len <= UINT64_C(3))));
 }
 
-unsigned int
-TimingPreservesWfSimple::cycles(const TimingPreservesWfSimple::Instr i) {
+uint64_t TimingPreservesWfSimple::cycles(TimingPreservesWfSimple::Instr i) {
   switch (i) {
-  case Instr::e_FIM: {
-    return 16u;
+  case Instr::FIM: {
+    return UINT64_C(16);
   }
-  case Instr::e_JMS: {
-    return 24u;
+  case Instr::JMS: {
+    return UINT64_C(24);
   }
   default: {
-    return 8u;
+    return UINT64_C(8);
   }
   }
 }
 
 TimingPreservesWfSimple::state
 TimingPreservesWfSimple::execute(const TimingPreservesWfSimple::state &s,
-                                 const TimingPreservesWfSimple::Instr i) {
+                                 TimingPreservesWfSimple::Instr i) {
   switch (i) {
-  case Instr::e_JMS: {
+  case Instr::JMS: {
     return state{s.regs_len, s.rom_len, s.pc, (s.stack_len + 1)};
   }
   default: {

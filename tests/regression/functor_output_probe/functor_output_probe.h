@@ -2,9 +2,6 @@
 #define INCLUDED_FUNCTOR_OUTPUT_PROBE
 
 #include <concepts>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename M>
 concept S = requires {
@@ -16,26 +13,26 @@ concept S = requires {
       requires {
         { M::zero() } -> std::convertible_to<typename M::t>;
       });
-  { M::to_nat(std::declval<typename M::t>()) } -> std::same_as<unsigned int>;
+  { M::to_nat(std::declval<typename M::t>()) } -> std::same_as<uint64_t>;
 };
 
 template <S X> struct F {
-  static const unsigned int &value() {
-    static const unsigned int v = X::to_nat(X::zero);
+  static const uint64_t &value() {
+    static const uint64_t v = X::to_nat(X::zero);
     return v;
   }
 };
 
 struct N {
-  using t = unsigned int;
-  static inline const unsigned int zero = 0u;
-  static unsigned int to_nat(const unsigned int n);
+  using t = uint64_t;
+  static inline const uint64_t zero = UINT64_C(0);
+  static uint64_t to_nat(uint64_t n);
 };
 
 using FN = F<N>;
 
 struct FunctorOutputProbe {
-  static inline const unsigned int sample = FN::value();
+  static inline const uint64_t sample = FN::value();
 };
 
 #endif // INCLUDED_FUNCTOR_OUTPUT_PROBE

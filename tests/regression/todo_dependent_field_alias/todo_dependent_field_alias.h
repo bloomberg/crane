@@ -4,9 +4,6 @@
 #include <any>
 #include <concepts>
 #include <functional>
-#include <memory>
-#include <optional>
-#include <type_traits>
 
 template <typename I>
 concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
@@ -18,11 +15,9 @@ struct TodoDependentFieldAlias {
   using carrier = std::any;
 
   struct nat_magma {
-    using carrier = unsigned int;
+    using carrier = uint64_t;
 
-    static unsigned int op(unsigned int a0, unsigned int a1) {
-      return (a0 + a1);
-    }
+    static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Magma<nat_magma>);
@@ -33,12 +28,12 @@ struct TodoDependentFieldAlias {
     return _tcI0::op(_x0, _x1);
   }
 
-  static inline const unsigned int test_value = []() {
-    std::function<unsigned int(unsigned int, unsigned int)> alias =
-        [](unsigned int _x0, unsigned int _x1) -> unsigned int {
+  static inline const uint64_t test_value = []() {
+    std::function<uint64_t(uint64_t, uint64_t)> alias =
+        [](uint64_t _x0, uint64_t _x1) -> uint64_t {
       return pick_op<nat_magma>(_x0, _x1);
     };
-    return alias(2u, 3u);
+    return alias(UINT64_C(2), UINT64_C(3));
   }();
 };
 

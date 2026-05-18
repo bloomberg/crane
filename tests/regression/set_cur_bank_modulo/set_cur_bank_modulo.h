@@ -1,24 +1,22 @@
 #ifndef INCLUDED_SET_CUR_BANK_MODULO
 #define INCLUDED_SET_CUR_BANK_MODULO
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct SetCurBankModulo {
-  static inline const unsigned int NBANKS = 4u;
+  static inline const uint64_t NBANKS = UINT64_C(4);
 
   struct state {
-    unsigned int cur_bank;
-    unsigned int acc;
+    uint64_t cur_bank;
+    uint64_t acc;
 
     // ACCESSORS
-    state clone() const { return state{(*(this)).cur_bank, (*(this)).acc}; }
+    state clone() const { return state{(*this).cur_bank, (*this).acc}; }
   };
 
-  static state set_cur_bank(const state &s, const unsigned int b);
-  static inline const unsigned int t = set_cur_bank(state{0u, 9u}, 7u).cur_bank;
+  static state set_cur_bank(const state &s, uint64_t b);
+  static inline const uint64_t t =
+      set_cur_bank(state{UINT64_C(0), UINT64_C(9)}, UINT64_C(7)).cur_bank;
 };
 
 #endif // INCLUDED_SET_CUR_BANK_MODULO

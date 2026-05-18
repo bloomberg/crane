@@ -2,56 +2,54 @@
 #define INCLUDED_RAM_EMPTY_WF
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +58,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +77,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,34 +112,34 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct ListDef {
-  template <typename T1> static List<T1> repeat(T1 x, const unsigned int n);
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
 struct RamEmptyWf {
   struct ram_reg {
-    List<unsigned int> reg_main;
-    List<unsigned int> reg_status;
+    List<uint64_t> reg_main;
+    List<uint64_t> reg_status;
 
     // ACCESSORS
     ram_reg clone() const {
-      return ram_reg{(*(this)).reg_main.clone(), (*(this)).reg_status.clone()};
+      return ram_reg{(*this).reg_main.clone(), (*this).reg_status.clone()};
     }
   };
 
   struct ram_chip {
     List<ram_reg> chip_regs;
-    unsigned int chip_port;
+    uint64_t chip_port;
 
     // ACCESSORS
     ram_chip clone() const {
-      return ram_chip{(*(this)).chip_regs.clone(), (*(this)).chip_port};
+      return ram_chip{(*this).chip_regs.clone(), (*this).chip_port};
     }
   };
 
@@ -152,40 +147,41 @@ struct RamEmptyWf {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*(this)).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
   };
 
   struct ram_sel {
-    unsigned int sel_bank;
-    unsigned int sel_chip;
-    unsigned int sel_reg;
-    unsigned int sel_char;
+    uint64_t sel_bank;
+    uint64_t sel_chip;
+    uint64_t sel_reg;
+    uint64_t sel_char;
 
     // ACCESSORS
     ram_sel clone() const {
-      return ram_sel{(*(this)).sel_bank, (*(this)).sel_chip, (*(this)).sel_reg,
-                     (*(this)).sel_char};
+      return ram_sel{(*this).sel_bank, (*this).sel_chip, (*this).sel_reg,
+                     (*this).sel_char};
     }
   };
 
   static inline const ram_reg empty_reg =
-      ram_reg{ListDef::template repeat<unsigned int>(0u, 16u),
-              ListDef::template repeat<unsigned int>(0u, 4u)};
-  static inline const ram_chip empty_chip =
-      ram_chip{ListDef::template repeat<ram_reg>(empty_reg, 4u), 0u};
+      ram_reg{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
+              ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4))};
+  static inline const ram_chip empty_chip = ram_chip{
+      ListDef::template repeat<ram_reg>(empty_reg, UINT64_C(4)), UINT64_C(0)};
   static inline const ram_bank empty_bank =
-      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, 4u)};
+      ram_bank{ListDef::template repeat<ram_chip>(empty_chip, UINT64_C(4))};
   static inline const List<ram_bank> empty_ram =
-      ListDef::template repeat<ram_bank>(empty_bank, 4u);
-  static inline const ram_sel default_sel = ram_sel{0u, 0u, 0u, 0u};
-  static inline const unsigned int default_bank_idx = default_sel.sel_bank;
+      ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));
+  static inline const ram_sel default_sel =
+      ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
+  static inline const uint64_t default_bank_idx = default_sel.sel_bank;
 };
 
-template <typename T1> List<T1> ListDef::repeat(T1 x, const unsigned int n) {
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
   if (n <= 0) {
     return List<T1>::nil();
   } else {
-    unsigned int k = n - 1;
+    uint64_t k = n - 1;
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }

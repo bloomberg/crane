@@ -2,56 +2,55 @@
 #define INCLUDED_MUTUAL_RECORD
 
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +59,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +78,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,10 +113,10 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 };
 
 struct MutualRecord {
@@ -130,162 +126,158 @@ struct MutualRecord {
   struct department {
     // TYPES
     struct Mk_department {
-      unsigned int d_a0;
-      std::unique_ptr<List<employee>> d_a1;
+      uint64_t a0;
+      std::unique_ptr<List<employee>> a1;
     };
 
     using variant_t = std::variant<Mk_department>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     department() {}
 
-    explicit department(Mk_department _v) : d_v_(std::move(_v)) {}
+    explicit department(Mk_department _v) : v_(std::move(_v)) {}
 
-    department(const department &_other)
-        : d_v_(std::move(_other.clone().d_v_)) {}
+    department(const department &_other) : v_(std::move(_other.clone().v_)) {}
 
-    department(department &&_other) : d_v_(std::move(_other.d_v_)) {}
+    department(department &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     department &operator=(const department &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    department &operator=(department &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    department &operator=(department &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     department clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Mk_department>(_sv.v());
+      const auto &[a0, a1] = std::get<Mk_department>(this->v());
       return department(Mk_department{
-          d_a0,
-          d_a1 ? std::make_unique<List<MutualRecord::employee>>(d_a1->clone())
-               : nullptr});
+          a0, a1 ? std::make_unique<List<MutualRecord::employee>>(a1->clone())
+                 : nullptr});
     }
 
     // CREATORS
-    static department mk_department(unsigned int a0, List<employee> a1) {
-      return department(Mk_department{
-          std::move(a0), std::make_unique<List<employee>>(std::move(a1))});
+    static department mk_department(uint64_t a0, List<employee> a1) {
+      return department(
+          Mk_department{a0, std::make_unique<List<employee>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   struct employee {
     // TYPES
     struct Mk_employee {
-      unsigned int d_a0;
-      unsigned int d_a1;
+      uint64_t a0;
+      uint64_t a1;
     };
 
     using variant_t = std::variant<Mk_employee>;
 
   private:
     // DATA
-    variant_t d_v_;
+    variant_t v_;
 
   public:
     // CREATORS
     employee() {}
 
-    explicit employee(Mk_employee _v) : d_v_(std::move(_v)) {}
+    explicit employee(Mk_employee _v) : v_(std::move(_v)) {}
 
-    employee(const employee &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+    employee(const employee &_other) : v_(std::move(_other.clone().v_)) {}
 
-    employee(employee &&_other) : d_v_(std::move(_other.d_v_)) {}
+    employee(employee &&_other) noexcept : v_(std::move(_other.v_)) {}
 
     employee &operator=(const employee &_other) {
-      d_v_ = std::move(_other.clone().d_v_);
+      v_ = std::move(_other.clone().v_);
       return *this;
     }
 
-    employee &operator=(employee &&_other) {
-      d_v_ = std::move(_other.d_v_);
+    employee &operator=(employee &&_other) noexcept {
+      v_ = std::move(_other.v_);
       return *this;
     }
 
     // ACCESSORS
     employee clone() const {
-      auto &&_sv = *(this);
-      const auto &[d_a0, d_a1] = std::get<Mk_employee>(_sv.v());
-      return employee(Mk_employee{d_a0, d_a1});
+      const auto &[a0, a1] = std::get<Mk_employee>(this->v());
+      return employee(Mk_employee{a0, a1});
     }
 
     // CREATORS
-    static employee mk_employee(unsigned int a0, unsigned int a1) {
-      return employee(Mk_employee{std::move(a0), std::move(a1)});
+    static employee mk_employee(uint64_t a0, uint64_t a1) {
+      return employee(Mk_employee{a0, a1});
     }
 
     // MANIPULATORS
-    inline variant_t &v_mut() { return d_v_; }
+    inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
-    const variant_t &v() const { return d_v_; }
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<employee> &>
   static T1 department_rect(F0 &&f, const department &d) {
-    const auto &[d_a0, d_a1] =
-        std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, *(d_a1));
+    const auto &[a0, a1] = std::get<typename department::Mk_department>(d.v());
+    return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, List<employee> &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<employee> &>
   static T1 department_rec(F0 &&f, const department &d) {
-    const auto &[d_a0, d_a1] =
-        std::get<typename department::Mk_department>(d.v());
-    return f(d_a0, *(d_a1));
+    const auto &[a0, a1] = std::get<typename department::Mk_department>(d.v());
+    return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
   static T1 employee_rect(F0 &&f, const employee &e) {
-    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e.v());
-    return f(d_a0, d_a1);
+    const auto &[a0, a1] = std::get<typename employee::Mk_employee>(e.v());
+    return f(a0, a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, unsigned int &, unsigned int &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
   static T1 employee_rec(F0 &&f, const employee &e) {
-    const auto &[d_a0, d_a1] = std::get<typename employee::Mk_employee>(e.v());
-    return f(d_a0, d_a1);
+    const auto &[a0, a1] = std::get<typename employee::Mk_employee>(e.v());
+    return f(a0, a1);
   }
 
-  static unsigned int dept_id(const department &d);
+  static uint64_t dept_id(const department &d);
   static List<employee> dept_employees(const department &d);
-  static unsigned int emp_id(const employee &e);
-  static unsigned int emp_salary(const employee &e);
-  static unsigned int dept_total_salary(const department &d);
-  static unsigned int emp_list_salary(const List<employee> &l);
-  static unsigned int dept_count(const department &d);
-  static unsigned int emp_list_count(const List<employee> &l);
-  static inline const employee emp1 = employee::mk_employee(1u, 50u);
-  static inline const employee emp2 = employee::mk_employee(2u, 60u);
-  static inline const employee emp3 = employee::mk_employee(3u, 70u);
+  static uint64_t emp_id(const employee &e);
+  static uint64_t emp_salary(const employee &e);
+  static uint64_t dept_total_salary(const department &d);
+  static uint64_t emp_list_salary(const List<employee> &l);
+  static uint64_t dept_count(const department &d);
+  static uint64_t emp_list_count(const List<employee> &l);
+  static inline const employee emp1 =
+      employee::mk_employee(UINT64_C(1), UINT64_C(50));
+  static inline const employee emp2 =
+      employee::mk_employee(UINT64_C(2), UINT64_C(60));
+  static inline const employee emp3 =
+      employee::mk_employee(UINT64_C(3), UINT64_C(70));
   static inline const department test_dept = department::mk_department(
-      100u,
+      UINT64_C(100),
       List<employee>::cons(
           emp1, List<employee>::cons(
                     emp2, List<employee>::cons(emp3, List<employee>::nil()))));
-  static inline const unsigned int test_total_salary =
-      dept_total_salary(test_dept);
-  static inline const unsigned int test_dept_count = dept_count(test_dept);
-  static inline const unsigned int test_dept_id = dept_id(test_dept);
+  static inline const uint64_t test_total_salary = dept_total_salary(test_dept);
+  static inline const uint64_t test_dept_count = dept_count(test_dept);
+  static inline const uint64_t test_dept_id = dept_id(test_dept);
 };
 
 #endif // INCLUDED_MUTUAL_RECORD

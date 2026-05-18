@@ -1,8 +1,8 @@
 #include "effect_option_match.h"
 
 /// 1. get_env returns option, match immediately
-std::string EffectOptionMatch::show_or_default(const std::string name,
-                                               const std::string default0) {
+std::string EffectOptionMatch::show_or_default(std::string name,
+                                               std::string default0) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -16,7 +16,7 @@ std::string EffectOptionMatch::show_or_default(const std::string name,
 }
 
 /// 2. get_env with effect in one branch
-std::string EffectOptionMatch::show_or_ask(const std::string name) {
+std::string EffectOptionMatch::show_or_ask(std::string name) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -39,24 +39,24 @@ std::string EffectOptionMatch::get_first_set(const List<std::string> &names) {
   if (std::holds_alternative<typename List<std::string>::Nil>(names.v())) {
     return "none";
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::string>::Cons>(names.v());
     std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-      auto *v = std::getenv(d_a0.c_str());
+      auto *v = std::getenv(a0.c_str());
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
     if (mv.has_value()) {
       const std::string &v = *mv;
       return v;
     } else {
-      auto &&_sv0 = *(d_a1);
+      auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<std::string>::Nil>(_sv0.v())) {
         return "none";
       } else {
-        const auto &[d_a00, d_a10] =
+        const auto &[a00, a10] =
             std::get<typename List<std::string>::Cons>(_sv0.v());
         std::optional<std::string> mv2 = [&]() -> std::optional<std::string> {
-          auto *v = std::getenv(d_a00.c_str());
+          auto *v = std::getenv(a00.c_str());
           return v ? std::optional<std::string>(v)
                    : std::optional<std::string>();
         }();
@@ -72,8 +72,7 @@ std::string EffectOptionMatch::get_first_set(const List<std::string> &names) {
 }
 
 /// 4. set then get, match on result
-bool EffectOptionMatch::set_and_verify(const std::string name,
-                                       const std::string value) {
+bool EffectOptionMatch::set_and_verify(std::string name, std::string value) {
   setenv(name.c_str(), value.c_str(), 1);
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
@@ -93,17 +92,17 @@ EffectOptionMatch::find_env_value(const List<std::string> &names) {
   if (std::holds_alternative<typename List<std::string>::Nil>(names.v())) {
     return std::optional<std::string>();
   } else {
-    const auto &[d_a0, d_a1] =
+    const auto &[a0, a1] =
         std::get<typename List<std::string>::Cons>(names.v());
     std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-      auto *v = std::getenv(d_a0.c_str());
+      auto *v = std::getenv(a0.c_str());
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
     if (mv.has_value()) {
       const std::string &v = *mv;
       return std::make_optional<std::string>(v);
     } else {
-      return find_env_value(*(d_a1));
+      return find_env_value(*a1);
     }
   }
 }

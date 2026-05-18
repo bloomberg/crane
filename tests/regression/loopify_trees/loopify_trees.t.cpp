@@ -17,7 +17,7 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  using Tree = LoopifyTrees::tree<unsigned int>;
+  using Tree = LoopifyTrees::tree<uint64_t>;
 
   auto leaf = Tree::leaf();
   auto t1 = Tree::node(leaf, 5u, leaf);
@@ -56,7 +56,7 @@ int main() {
   ASSERT(rose_tree.rose_sum() == 18u); // 10 + 5 + 3
 
   auto rose_doubled =
-      rose_tree.rose_map([](unsigned int x) { return x * 2; });
+      rose_tree.rose_map([](uint64_t x) { return x * 2; });
 
   auto rose_flat = rose_tree.rose_flatten();
 

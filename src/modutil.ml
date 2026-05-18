@@ -362,7 +362,8 @@ let rec optim_se top to_appear s = function
       match dump_unused_vars (optimize_fix a) with
       | MLfix (0, _, [|c|], _) ->
         Dfix ([|r|], [|ast_subst (MLglob (r, [])) c|], [|t|])
-        (* TODO: The empty list is maybe a problem? *)
+        (* The [] ML type args are safe: gen_expr reads template args from the
+           C++ environment, not from MLglob's arg list. *)
       | a -> Dterm (r, a, t)
     in
     (l, SEdecl d) :: optim_se top to_appear s lse

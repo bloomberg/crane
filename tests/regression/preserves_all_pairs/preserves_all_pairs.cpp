@@ -1,38 +1,37 @@
 #include "preserves_all_pairs.h"
 
-unsigned int PreservesAllPairs::get_reg(const PreservesAllPairs::state &s,
-                                        const unsigned int r) {
-  return ListDef::template nth<unsigned int>(r, s.regs, 0u);
+uint64_t PreservesAllPairs::get_reg(const PreservesAllPairs::state &s,
+                                    uint64_t r) {
+  return ListDef::template nth<uint64_t>(r, s.regs, UINT64_C(0));
 }
 
-unsigned int PreservesAllPairs::nibble_of_nat(const unsigned int n) {
-  return (16u ? n % 16u : n);
+uint64_t PreservesAllPairs::nibble_of_nat(uint64_t n) {
+  return (UINT64_C(16) ? n % UINT64_C(16) : n);
 }
 
-unsigned int PreservesAllPairs::get_reg_pair(const PreservesAllPairs::state &s,
-                                             const unsigned int r) {
-  unsigned int base =
-      (((r - (2u ? r % 2u : r)) > r ? 0 : (r - (2u ? r % 2u : r))));
-  return ((get_reg(s, base) * 16u) + get_reg(s, (base + 1u)));
+uint64_t PreservesAllPairs::get_reg_pair(const PreservesAllPairs::state &s,
+                                         uint64_t r) {
+  uint64_t base = (((r - (UINT64_C(2) ? r % UINT64_C(2) : r)) > r
+                        ? 0
+                        : (r - (UINT64_C(2) ? r % UINT64_C(2) : r))));
+  return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }
 
 PreservesAllPairs::state
-PreservesAllPairs::execute_add(const PreservesAllPairs::state &s,
-                               const unsigned int r) {
+PreservesAllPairs::execute_add(const PreservesAllPairs::state &s, uint64_t r) {
   return state{s.regs, nibble_of_nat((s.acc + get_reg(s, r)))};
 }
 
 PreservesAllPairs::state
-PreservesAllPairs::execute_ld(const PreservesAllPairs::state &s,
-                              const unsigned int r) {
+PreservesAllPairs::execute_ld(const PreservesAllPairs::state &s, uint64_t r) {
   return state{s.regs, get_reg(s, r)};
 }
 
 PreservesAllPairs::state
-PreservesAllPairs::execute_sub(const PreservesAllPairs::state &s,
-                               const unsigned int r) {
-  return state{s.regs,
-               nibble_of_nat(((((s.acc + 16u) - get_reg(s, r)) > (s.acc + 16u)
-                                   ? 0
-                                   : ((s.acc + 16u) - get_reg(s, r)))))};
+PreservesAllPairs::execute_sub(const PreservesAllPairs::state &s, uint64_t r) {
+  return state{s.regs, nibble_of_nat(
+                           ((((s.acc + UINT64_C(16)) - get_reg(s, r)) >
+                                     (s.acc + UINT64_C(16))
+                                 ? 0
+                                 : ((s.acc + UINT64_C(16)) - get_reg(s, r)))))};
 }

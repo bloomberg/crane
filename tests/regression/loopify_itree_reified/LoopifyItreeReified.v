@@ -53,7 +53,7 @@ Definition pass {R} : itree ioE R -> itree ioE R :=
 
 (** Simple tree for testing: Ret 42 (no effects, no Tau). *)
 Definition test_tree : itree ioE nat := Ret 42.
-Crane Extract Inlined Constant test_tree => "ITree<unsigned int>::ret(42u)".
+Crane Extract Inlined Constant test_tree => "ITree<uint64_t>::ret(UINT64_C(42))".
 
 Definition test_count := count_taus 100 test_tree.
 

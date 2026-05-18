@@ -125,6 +125,6 @@ Crane Extract Inlined Constant CountDown.nat_to_string =>
   "std::to_string(%a0)".
 
 Crane Extract Inlined Constant PrimString.compare =>
-  "(%a0 == %a1 ? Comparison::e_EQ : (%a0 < %a1 ? Comparison::e_LT : Comparison::e_GT))".
+  "(%a0 == %a1 ? Comparison::EQ : (%a0 < %a1 ? Comparison::LT : Comparison::GT))".
 
 Crane Extraction "count_down" CountDown.

@@ -2,7 +2,6 @@
 #define INCLUDED_FUNCTOR_COMP
 
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -10,50 +9,50 @@
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -62,17 +61,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -82,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -119,50 +115,46 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
+      return a2->template fold_left<T1>(f, f(a0, a1));
     }
   }
 
-  List<t_A> rev() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-      return List<t_A>::nil();
+  List<A> rev() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return List<A>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).rev().app(List<t_A>::cons(d_a0, List<t_A>::nil()));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return a1->rev().app(List<A>::cons(a0, List<A>::nil()));
     }
   }
 
-  unsigned int length() const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-      return 0u;
+  uint64_t length() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return UINT64_C(0);
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return ((*(d_a1)).length() + 1);
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
     }
   }
 
-  List<t_A> app(List<t_A> m) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+  List<A> app(List<A> m) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return m;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<t_A>::cons(d_a0, (*(d_a1)).app(std::move(m)));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };
@@ -178,100 +170,100 @@ concept CONTAINER = requires {
         { M::empty() } -> std::convertible_to<typename M::t>;
       });
   {
-    M::push(std::declval<unsigned int>(), std::declval<typename M::t>())
+    M::push(std::declval<uint64_t>(), std::declval<typename M::t>())
   } -> std::same_as<typename M::t>;
   {
     M::pop(std::declval<typename M::t>())
-  } -> std::same_as<std::optional<std::pair<unsigned int, typename M::t>>>;
-  { M::size(std::declval<typename M::t>()) } -> std::same_as<unsigned int>;
+  } -> std::same_as<std::optional<std::pair<uint64_t, typename M::t>>>;
+  { M::size(std::declval<typename M::t>()) } -> std::same_as<uint64_t>;
 };
 
 struct FunctorComp {
   struct Stack {
-    using t = List<unsigned int>;
-    static inline const t empty = List<unsigned int>::nil();
-    static t push(const unsigned int x, List<unsigned int> s);
-    static std::optional<std::pair<unsigned int, t>>
-    pop(const List<unsigned int> &s);
-    static unsigned int size(const t _x0);
+    using t = List<uint64_t>;
+    static inline const t empty = List<uint64_t>::nil();
+    static t push(uint64_t x, List<uint64_t> s);
+    static std::optional<std::pair<uint64_t, t>> pop(const List<uint64_t> &s);
+    static uint64_t size(t _x0);
   };
 
   struct Queue {
-    using t = std::pair<List<unsigned int>, List<unsigned int>>;
+    using t = std::pair<List<uint64_t>, List<uint64_t>>;
     static inline const t empty =
-        std::make_pair(List<unsigned int>::nil(), List<unsigned int>::nil());
-    static t push(const unsigned int x,
-                  const std::pair<List<unsigned int>, List<unsigned int>> &q);
-    static std::optional<std::pair<unsigned int, t>>
-    pop(const std::pair<List<unsigned int>, List<unsigned int>> &q);
-    static unsigned int
-    size(const std::pair<List<unsigned int>, List<unsigned int>> &q);
+        std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+    static t push(uint64_t x,
+                  const std::pair<List<uint64_t>, List<uint64_t>> &q);
+    static std::optional<std::pair<uint64_t, t>>
+    pop(const std::pair<List<uint64_t>, List<uint64_t>> &q);
+    static uint64_t size(const std::pair<List<uint64_t>, List<uint64_t>> &q);
   };
 
   template <CONTAINER C> struct ContainerOps {
-    static typename C::t push_list(const List<unsigned int> &l,
-                                   const typename C::t c) {
+    static typename C::t push_list(const List<uint64_t> &l, typename C::t c) {
       return l.template fold_left<typename C::t>(
-          [](const typename C::t acc, const unsigned int x) {
-            return C::push(x, acc);
-          },
-          c);
+          [](typename C::t acc, uint64_t x) { return C::push(x, acc); }, c);
     }
 
-    static List<unsigned int> to_list(const typename C::t c) {
-      std::function<List<unsigned int>(unsigned int, List<unsigned int>,
-                                       typename C::t)>
-          go;
-      go = [&](unsigned int fuel, List<unsigned int> acc,
-               typename C::t c0) -> List<unsigned int> {
+    static List<uint64_t> to_list(typename C::t c) {
+      auto go_impl = [](auto &_self_go, uint64_t fuel, List<uint64_t> acc,
+                        typename C::t c0) -> List<uint64_t> {
         if (fuel <= 0) {
           return std::move(acc).rev();
         } else {
-          unsigned int f = fuel - 1;
+          uint64_t f = fuel - 1;
           auto _cs = C::pop(c0);
           if (_cs.has_value()) {
-            const std::pair<unsigned int, typename C::t> &p = *_cs;
-            const unsigned int &x = p.first;
+            const std::pair<uint64_t, typename C::t> &p = *_cs;
+            const uint64_t &x = p.first;
             const typename C::t &c_ = p.second;
-            return go(f, List<unsigned int>::cons(x, std::move(acc)), c_);
+            return _self_go(_self_go, f,
+                            List<uint64_t>::cons(x, std::move(acc)), c_);
           } else {
             return std::move(acc).rev();
           }
         }
       };
-      return go(C::size(c), List<unsigned int>::nil(), c);
+      auto go = [&](uint64_t fuel, List<uint64_t> acc,
+                    typename C::t c0) -> List<uint64_t> {
+        return go_impl(go_impl, fuel, acc, c0);
+      };
+      return go(C::size(c), List<uint64_t>::nil(), c);
     }
   };
 
   using StackOps = ContainerOps<Stack>;
   using QueueOps = ContainerOps<Queue>;
-  static inline const List<unsigned int> test_stack =
+  static inline const List<uint64_t> test_stack =
       StackOps::to_list(StackOps::push_list(
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
           Stack::empty));
-  static inline const List<unsigned int> test_queue =
+  static inline const List<uint64_t> test_queue =
       QueueOps::to_list(QueueOps::push_list(
-          List<unsigned int>::cons(
-              1u,
-              List<unsigned int>::cons(
-                  2u, List<unsigned int>::cons(3u, List<unsigned int>::nil()))),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
           Queue::empty));
-  static inline const unsigned int test_stack_size =
+  static inline const uint64_t test_stack_size =
       Stack::size(StackOps::push_list(
-          List<unsigned int>::cons(
-              10u, List<unsigned int>::cons(
-                       20u, List<unsigned int>::cons(
-                                30u, List<unsigned int>::nil()))),
+          List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(
+                  UINT64_C(20),
+                  List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
           Stack::empty));
-  static inline const unsigned int test_queue_size =
+  static inline const uint64_t test_queue_size =
       Queue::size(QueueOps::push_list(
-          List<unsigned int>::cons(
-              10u, List<unsigned int>::cons(
-                       20u, List<unsigned int>::cons(
-                                30u, List<unsigned int>::nil()))),
+          List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(
+                  UINT64_C(20),
+                  List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
           Queue::empty));
 };
 

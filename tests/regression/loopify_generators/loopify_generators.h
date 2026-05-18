@@ -1,58 +1,56 @@
 #ifndef INCLUDED_LOOPIFY_GENERATORS
 #define INCLUDED_LOOPIFY_GENERATORS
 
-#include <functional>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -61,17 +59,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -81,30 +78,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -118,235 +113,189 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  List<t_A> app(List<t_A> m) const {
-    std::unique_ptr<List<t_A>> _head{};
-    std::unique_ptr<List<t_A>> *_write = &_head;
+  List<A> app(List<A> m) const {
+    std::unique_ptr<List<A>> _head{};
+    std::unique_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
-    List<t_A> _loop_m = std::move(m);
+    List<A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_unique<List<A>>(std::move(_loop_m));
         break;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = std::make_unique<List<t_A>>(
-            typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
-        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
 /// Consolidated list generator functions.
 struct LoopifyGenerators {
   /// cycle n l repeats the list n times: cycle 2 1,2 -> 1,2,1,2.
-  static List<unsigned int> cycle(const unsigned int n,
-                                  const List<unsigned int> &l);
+  static List<uint64_t> cycle(uint64_t n, const List<uint64_t> &l);
 
   /// iterate f n x applies f repeatedly n times: iterate (+1) 3 5 -> 5,6,7.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &>
-  static List<unsigned int> iterate(F0 &&f, const unsigned int n,
-                                    const unsigned int x) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_x = x;
-    unsigned int _loop_n = n;
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    uint64_t _loop_x = std::move(x);
+    uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
-        unsigned int m = _loop_n - 1;
-        auto _cell = std::make_unique<List<unsigned int>>(
-            typename List<unsigned int>::Cons(_loop_x, nullptr));
-        *(_write) = std::move(_cell);
-        _write =
-            &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                 .d_a1;
+        uint64_t m = _loop_n - 1;
+        auto _cell = std::make_unique<List<uint64_t>>(
+            typename List<uint64_t>::Cons(_loop_x, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_x = f(_loop_x);
         _loop_n = m;
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// zip_with f l1 l2 zips with a combining function.
   template <typename F0>
-    requires std::is_invocable_r_v<unsigned int, F0 &, unsigned int &,
-                                   unsigned int &>
-  static List<unsigned int> zip_with(F0 &&f, const List<unsigned int> &l1,
-                                     const List<unsigned int> &l2) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    const List<unsigned int> *_loop_l2 = &l2;
-    const List<unsigned int> *_loop_l1 = &l1;
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
+  static List<uint64_t> zip_with(F0 &&f, const List<uint64_t> &l1,
+                                 const List<uint64_t> &l2) {
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l2 = &l2;
+    const List<uint64_t> *_loop_l1 = &l1;
     while (true) {
-      if (std::holds_alternative<typename List<unsigned int>::Nil>(
-              _loop_l1->v())) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
-        const auto &[d_a0, d_a1] =
-            std::get<typename List<unsigned int>::Cons>(_loop_l1->v());
-        if (std::holds_alternative<typename List<unsigned int>::Nil>(
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l2->v())) {
-          *(_write) =
-              std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+          *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
           break;
         } else {
-          const auto &[d_a00, d_a10] =
-              std::get<typename List<unsigned int>::Cons>(_loop_l2->v());
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(f(d_a0, d_a00), nullptr));
-          *(_write) = std::move(_cell);
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(f(a0, a00), nullptr));
+          *_write = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
-          _loop_l2 = d_a10.get();
-          _loop_l1 = d_a1.get();
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_l2 = a10.get();
+          _loop_l1 = a1.get();
           continue;
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   /// zip_longest l1 l2 default zips, using default for missing elements.
-  static List<std::pair<unsigned int, unsigned int>>
-  zip_longest_aux(const List<unsigned int> &l1, const List<unsigned int> &l2,
-                  const unsigned int default0, const unsigned int fuel);
-  static unsigned int len_impl(const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  zip_longest(const List<unsigned int> &l1, const List<unsigned int> &l2,
-              const unsigned int default0);
+  static List<std::pair<uint64_t, uint64_t>>
+  zip_longest_aux(const List<uint64_t> &l1, const List<uint64_t> &l2,
+                  uint64_t default0, uint64_t fuel);
+  static uint64_t len_impl(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  zip_longest(const List<uint64_t> &l1, const List<uint64_t> &l2,
+              uint64_t default0);
   /// build_list n builds tree-like list structure: build_list(4) -> 2,4,2.
-  static List<unsigned int> build_list_fuel(const unsigned int fuel,
-                                            const unsigned int n);
-  static List<unsigned int> build_list(const unsigned int n);
+  static List<uint64_t> build_list_fuel(uint64_t fuel, uint64_t n);
+  static List<uint64_t> build_list(uint64_t n);
   /// take n l returns first n elements.
-  static List<unsigned int> take(const unsigned int n,
-                                 const List<unsigned int> &l);
+  static List<uint64_t> take(uint64_t n, const List<uint64_t> &l);
   /// repeat x n creates list with n copies of x.
-  static List<unsigned int> repeat(const unsigned int x, const unsigned int n);
+  static List<uint64_t> repeat(uint64_t x, uint64_t n);
 
   /// unfold f n init unfolds a list from seed value.
   template <typename F1>
-    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F1 &,
-                                   unsigned int &>
-  static List<unsigned int> unfold_fuel(const unsigned int fuel, F1 &&f,
-                                        const unsigned int n,
-                                        const unsigned int seed) {
-    std::unique_ptr<List<unsigned int>> _head{};
-    std::unique_ptr<List<unsigned int>> *_write = &_head;
-    unsigned int _loop_seed = seed;
-    unsigned int _loop_n = n;
-    unsigned int _loop_fuel = fuel;
+    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F1 &,
+                                   uint64_t &>
+  static List<uint64_t> unfold_fuel(uint64_t fuel, F1 &&f, uint64_t n,
+                                    uint64_t seed) {
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    uint64_t _loop_seed = std::move(seed);
+    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        *(_write) =
-            std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
-        unsigned int g = _loop_fuel - 1;
-        if (_loop_n == 0u) {
-          *(_write) =
-              std::make_unique<List<unsigned int>>(List<unsigned int>::nil());
+        uint64_t g = _loop_fuel - 1;
+        if (_loop_n == UINT64_C(0)) {
+          *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
           break;
         } else {
           auto _cs = f(_loop_seed);
-          const unsigned int &val = _cs.first;
-          const unsigned int &next_seed = _cs.second;
-          auto _cell = std::make_unique<List<unsigned int>>(
-              typename List<unsigned int>::Cons(val, nullptr));
-          *(_write) = std::move(_cell);
+          const uint64_t &val = _cs.first;
+          const uint64_t &next_seed = _cs.second;
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(val, nullptr));
+          *_write = std::move(_cell);
           _write =
-              &std::get<typename List<unsigned int>::Cons>((*_write)->v_mut())
-                   .d_a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_seed = next_seed;
-          _loop_n = (((_loop_n - 1u) > _loop_n ? 0 : (_loop_n - 1u)));
+          _loop_n = ((
+              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
           _loop_fuel = g;
           continue;
         }
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<std::pair<unsigned int, unsigned int>, F0 &,
-                                   unsigned int &>
-  static List<unsigned int> unfold(F0 &&f, const unsigned int n,
-                                   const unsigned int seed) {
-    return unfold_fuel(100u, f, n, seed);
+    requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F0 &,
+                                   uint64_t &>
+  static List<uint64_t> unfold(F0 &&f, uint64_t n, uint64_t seed) {
+    return unfold_fuel(UINT64_C(100), f, n, seed);
   }
 
   /// tabulate n f generates f 0, f 1, ..., f (n-1) (same as init_list but
   /// different naming).
   template <typename F1>
-    requires std::is_invocable_r_v<unsigned int, F1 &, unsigned int &>
-  static List<unsigned int> tabulate(const unsigned int n, F1 &&f) {
-    std::function<List<unsigned int>(unsigned int)> go;
-    go = [&](unsigned int i) -> List<unsigned int> {
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        unsigned int i;
-      };
-      /// _Resume_j: saves [_s0], resumes after recursive call with _result.
-      struct _Resume_j {
-        decltype(f((((n - std::declval<unsigned int &>()) > n
-                         ? 0
-                         : (n - std::declval<unsigned int &>()))))) _s0;
-      };
-      using _Frame = std::variant<_Enter, _Resume_j>;
-      List<unsigned int> _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{i});
-      /// Loopified go: _Enter -> _Resume_j.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          unsigned int i = _f.i;
-          if (i <= 0) {
-            _result = List<unsigned int>::nil();
-          } else {
-            unsigned int j = i - 1;
-            _stack.emplace_back(_Resume_j{f((((n - i) > n ? 0 : (n - i))))});
-            _stack.emplace_back(_Enter{j});
-          }
-        } else {
-          auto _f = std::move(std::get<_Resume_j>(_frame));
-          _result = List<unsigned int>::cons(_f._s0, _result);
-        }
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+  static List<uint64_t> tabulate(uint64_t n, F1 &&f) {
+    auto go_impl = [&](auto &_self_go, uint64_t i) -> List<uint64_t> {
+      if (i <= 0) {
+        return List<uint64_t>::nil();
+      } else {
+        uint64_t j = i - 1;
+        return List<uint64_t>::cons(f((((n - i) > n ? 0 : (n - i)))),
+                                    _self_go(_self_go, j));
       }
-      return _result;
     };
+    auto go = [&](uint64_t i) -> List<uint64_t> { return go_impl(go_impl, i); };
     return go(n);
   }
 
   /// Helper: replicate single element n times.
-  static List<unsigned int> replicate_single(const unsigned int x,
-                                             const unsigned int n);
+  static List<uint64_t> replicate_single(uint64_t x, uint64_t n);
   /// replicate_each n l replicates each element n times: replicate_each 2 1,2
   /// -> 1,1,2,2.
-  static List<unsigned int> replicate_each(const unsigned int n,
-                                           const List<unsigned int> &l);
+  static List<uint64_t> replicate_each(uint64_t n, const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_GENERATORS

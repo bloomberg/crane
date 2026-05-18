@@ -6,9 +6,9 @@ bool GeneratedVariantAliasNameClash::is_flag(
           typename GeneratedVariantAliasNameClash::variant_t::Empty>(x.v())) {
     return false;
   } else {
-    const auto &[d_a0] =
+    const auto &[a0] =
         std::get<typename GeneratedVariantAliasNameClash::variant_t::Flag>(
             x.v());
-    return d_a0;
+    return a0;
   }
 }

@@ -2,56 +2,54 @@
 #define INCLUDED_LOOPIFY_LIST_TRANSFORMS
 
 #include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -60,17 +58,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -80,30 +77,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -117,12 +112,12 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
-  unsigned int length() const {
+  uint64_t length() const {
     const List *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
@@ -134,7 +129,7 @@ public:
     struct _Resume_Cons {};
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
-    unsigned int _result{};
+    uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
     _stack.emplace_back(_Enter{_self});
@@ -145,14 +140,13 @@ public:
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List *_self = _f._self;
-        auto &&_sv = *(_self);
-        if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-          _result = 0u;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
         } else {
-          const auto &[d_a0, d_a1] =
-              std::get<typename List<t_A>::Cons>(_sv.v());
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(_Resume_Cons{});
-          _stack.emplace_back(_Enter{d_a1.get()});
+          _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -162,60 +156,54 @@ public:
     return _result;
   }
 
-  List<t_A> app(List<t_A> m) const {
-    std::unique_ptr<List<t_A>> _head{};
-    std::unique_ptr<List<t_A>> *_write = &_head;
+  List<A> app(List<A> m) const {
+    std::unique_ptr<List<A>> _head{};
+    std::unique_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
-    List<t_A> _loop_m = std::move(m);
+    List<A> _loop_m = std::move(m);
     while (true) {
-      auto &&_sv = *(_loop_self);
-      if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
-        *(_write) = std::make_unique<List<t_A>>(std::move(_loop_m));
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_unique<List<A>>(std::move(_loop_m));
         break;
       } else {
-        const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = std::make_unique<List<t_A>>(
-            typename List<t_A>::Cons(d_a0, nullptr));
-        *(_write) = std::move(_cell);
-        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_a1;
-        _loop_self = d_a1.get();
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = a1.get();
         continue;
       }
     }
-    return std::move(*(_head));
+    return std::move(*_head);
   }
 };
 
 struct LoopifyListTransforms {
-  static List<std::pair<unsigned int, unsigned int>>
-  run_length_encode(const List<unsigned int> &l);
-  static List<unsigned int> prefix_sums(const unsigned int acc,
-                                        const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  sliding_pairs_fuel(const unsigned int fuel, const List<unsigned int> &l);
-  static List<std::pair<unsigned int, unsigned int>>
-  sliding_pairs(const List<unsigned int> &l);
-  static unsigned int abs_diff(const unsigned int x, const unsigned int y);
-  static List<unsigned int> differences_fuel(const unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<unsigned int> differences(const List<unsigned int> &l);
-  static List<unsigned int> take(const unsigned int n,
-                                 const List<unsigned int> &l);
-  static List<unsigned int> drop(const unsigned int n, List<unsigned int> l);
-  static List<List<unsigned int>> chunks_of_fuel(const unsigned int fuel,
-                                                 const unsigned int n,
-                                                 const List<unsigned int> &l);
-  static List<List<unsigned int>> chunks_of(const unsigned int n,
-                                            const List<unsigned int> &l);
-  static List<unsigned int> rotate_left_fuel(const unsigned int fuel,
-                                             const unsigned int n,
-                                             List<unsigned int> l);
-  static List<unsigned int> rotate_left(const unsigned int n,
-                                        const List<unsigned int> &l);
-  static List<unsigned int> uniq_sorted_fuel(const unsigned int fuel,
-                                             const List<unsigned int> &l);
-  static List<unsigned int> uniq_sorted(const List<unsigned int> &l);
-  static unsigned int step_sum(const List<unsigned int> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_encode(const List<uint64_t> &l);
+  static List<uint64_t> prefix_sums(uint64_t acc, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs(const List<uint64_t> &l);
+  static uint64_t abs_diff(uint64_t x, uint64_t y);
+  static List<uint64_t> differences_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> differences(const List<uint64_t> &l);
+  static List<uint64_t> take(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> drop(uint64_t n, List<uint64_t> l);
+  static List<List<uint64_t>> chunks_of_fuel(uint64_t fuel, uint64_t n,
+                                             const List<uint64_t> &l);
+  static List<List<uint64_t>> chunks_of(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
+                                         List<uint64_t> l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> uniq_sorted_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
+  static uint64_t step_sum(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_TRANSFORMS

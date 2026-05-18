@@ -2,10 +2,7 @@
 #define INCLUDED_PRIM_ARRAY_OPS
 
 #include <cstdint>
-#include <memory>
-#include <optional>
 #include <persistent_array.h>
-#include <type_traits>
 
 struct PrimArrayOps {
   static inline const persistent_array<int64_t> test1 =

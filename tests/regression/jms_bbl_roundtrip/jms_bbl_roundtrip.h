@@ -1,29 +1,26 @@
 #ifndef INCLUDED_JMS_BBL_ROUNDTRIP
 #define INCLUDED_JMS_BBL_ROUNDTRIP
 
-#include <memory>
-#include <optional>
-#include <type_traits>
 #include <utility>
 
 struct JmsBblRoundtrip {
   struct state {
-    unsigned int pc;
-    unsigned int ret;
+    uint64_t pc;
+    uint64_t ret;
     bool has_ret;
 
     // ACCESSORS
     state clone() const {
-      return state{(*(this)).pc, (*(this)).ret, (*(this)).has_ret};
+      return state{(*this).pc, (*this).ret, (*this).has_ret};
     }
   };
 
-  static unsigned int addr12_of_nat(const unsigned int n);
-  static state execute_jms(const state &s, const unsigned int addr);
+  static uint64_t addr12_of_nat(uint64_t n);
+  static state execute_jms(const state &s, uint64_t addr);
   static state execute_bbl(state s);
-  static inline const state sample = state{100u, 0u, false};
+  static inline const state sample = state{UINT64_C(100), UINT64_C(0), false};
   static inline const bool t =
-      execute_bbl(execute_jms(sample, 200u)).pc == 102u;
+      execute_bbl(execute_jms(sample, UINT64_C(200))).pc == UINT64_C(102);
 };
 
 #endif // INCLUDED_JMS_BBL_ROUNDTRIP

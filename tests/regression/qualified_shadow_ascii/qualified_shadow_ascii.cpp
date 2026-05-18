@@ -1,6 +1,6 @@
 #include "qualified_shadow_ascii.h"
 
 QualifiedShadowAscii::Shadow::shadow
-QualifiedShadowAscii::id_shadow(const QualifiedShadowAscii::Shadow::shadow x) {
+QualifiedShadowAscii::id_shadow(QualifiedShadowAscii::Shadow::shadow x) {
   return x;
 }

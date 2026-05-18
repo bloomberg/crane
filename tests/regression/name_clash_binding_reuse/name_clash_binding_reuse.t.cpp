@@ -20,16 +20,16 @@ int main() {
 
   // cascade
   auto c = t123.cascade();
-  assert(std::get<NS::pair_nat::MkPairNat>(c.v()).d_a0 == 3u);
-  assert(std::get<NS::pair_nat::MkPairNat>(c.v()).d_a1 == 3u);
+  assert(c.a0 == 3u);
+  assert(c.a1 == 3u);
 
   // cascade_and_match
   assert(t123.cascade_and_match() == 6u);
 
   // flat_combine: single-constructor nested match
   auto fc = p12.flat_combine(p34);
-  assert(std::get<NS::pair_nat::MkPairNat>(fc.v()).d_a0 == 4u);
-  assert(std::get<NS::pair_nat::MkPairNat>(fc.v()).d_a1 == 6u);
+  assert(fc.a0 == 4u);
+  assert(fc.a1 == 6u);
 
   return 0;
 }

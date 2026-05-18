@@ -4,56 +4,55 @@
 #include <any>
 #include <concepts>
 #include <memory>
-#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
 
-template <typename t_A> struct List {
+template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    t_A d_a0;
-    std::unique_ptr<List<t_A>> d_a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
-  variant_t d_v_;
+  variant_t v_;
 
 public:
   // CREATORS
   List() {}
 
-  explicit List(Nil _v) : d_v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons _v) : d_v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<t_A> &_other) : d_v_(std::move(_other.clone().d_v_)) {}
+  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
 
-  List(List<t_A> &&_other) : d_v_(std::move(_other.d_v_)) {}
+  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
 
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = std::move(_other.clone().d_v_);
+  List<A> &operator=(const List<A> &_other) {
+    v_ = std::move(_other.clone().v_);
     return *this;
   }
 
-  List<t_A> &operator=(List<t_A> &&_other) {
-    d_v_ = std::move(_other.d_v_);
+  List<A> &operator=(List<A> &&_other) noexcept {
+    v_ = std::move(_other.v_);
     return *this;
   }
 
   // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
+  List<A> clone() const {
+    List<A> _out{};
 
     struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
+      const List<A> *_src;
+      List<A> *_dst;
     };
 
     std::vector<_CloneFrame> _stack{};
@@ -62,17 +61,16 @@ public:
     while (!_stack.empty()) {
       auto _frame = _stack.back();
       _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
+      const List<A> *_src = _frame._src;
+      List<A> *_dst = _frame._dst;
       if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
+        _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? std::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        auto &_dst_alt = std::get<Cons>(_dst->v_);
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -82,30 +80,28 @@ public:
   // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
-      this->d_v_ = Nil{};
+      this->v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List(Nil{}); }
 
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{std::move(a0), std::make_unique<List<t_A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<t_A>>> _stack{};
+    std::vector<std::unique_ptr<List<A>>> _stack{};
     _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (std::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = std::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(std::move(_alt.d_a1));
+    auto _drain = [&](List<A> &_node) {
+      if (std::holds_alternative<Cons>(_node.v_)) {
+        auto &_alt = std::get<Cons>(_node.v_);
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -119,32 +115,30 @@ public:
     }
   }
 
-  inline variant_t &v_mut() { return d_v_; }
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  const variant_t &v() const { return d_v_; }
+  const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, t_A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return a0;
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return (*(d_a1)).template fold_left<T1>(f, f(a0, d_a0));
+      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
+      return a2->template fold_left<T1>(f, f(a0, a1));
     }
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, t_A &>
+    requires std::is_invocable_r_v<T1, F0 &, A &>
   List<T1> map(F0 &&f) const {
-    auto &&_sv = *(this);
-    if (std::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<T1>::nil();
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<t_A>::Cons>(_sv.v());
-      return List<T1>::cons(f(d_a0), (*(d_a1)).template map<T1>(f));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<T1>::cons(f(a0), a1->template map<T1>(f));
     }
   }
 };
@@ -153,23 +147,23 @@ template <typename M>
 concept HasRecord = requires {
   typename M::R;
   {
-    M::mk(std::declval<unsigned int>(), std::declval<unsigned int>())
+    M::mk(std::declval<uint64_t>(), std::declval<uint64_t>())
   } -> std::same_as<typename M::R>;
-  { M::get_x(std::declval<typename M::R>()) } -> std::same_as<unsigned int>;
-  { M::get_y(std::declval<typename M::R>()) } -> std::same_as<unsigned int>;
+  { M::get_x(std::declval<typename M::R>()) } -> std::same_as<uint64_t>;
+  { M::get_y(std::declval<typename M::R>()) } -> std::same_as<uint64_t>;
 };
 
 struct RecordFieldPatterns {
   struct Point {
-    unsigned int px;
-    unsigned int py;
+    uint64_t px;
+    uint64_t py;
 
     // ACCESSORS
-    Point clone() const { return Point{(*(this)).px, (*(this)).py}; }
+    Point clone() const { return Point{(*this).px, (*this).py}; }
   };
 
-  static unsigned int classify_point(const Point &p);
-  static unsigned int zero_x(const Point &p);
+  static uint64_t classify_point(const Point &p);
+  static uint64_t zero_x(const Point &p);
 
   template <typename T1> static T1 identity(T1 x) { return x; }
 
@@ -184,44 +178,43 @@ struct RecordFieldPatterns {
     return _x0.first;
   }
 
-  static std::pair<unsigned int, unsigned int> point_pair(const Point &p);
-  static unsigned int first_coord(const Point &p);
+  static std::pair<uint64_t, uint64_t> point_pair(const Point &p);
+  static uint64_t first_coord(const Point &p);
 
   /// Record whose field default depends on the section variable.
   struct ScaledPoint {
-    unsigned int sp_x;
-    unsigned int sp_y;
+    uint64_t sp_x;
+    uint64_t sp_y;
 
     // ACCESSORS
     ScaledPoint clone() const {
-      return ScaledPoint{(*(this)).sp_x, (*(this)).sp_y};
+      return ScaledPoint{(*this).sp_x, (*this).sp_y};
     }
   };
 
-  static unsigned int scaled_sum(const unsigned int scale,
-                                 const ScaledPoint &sp);
+  static uint64_t scaled_sum(uint64_t scale, const ScaledPoint &sp);
   /// After section closing, scaled_sum is parameterized by scale : nat.
   /// The record type itself is NOT parameterized (scale is only used in
   /// the function body), but the function signature changes.
-  static inline const unsigned int test_labeled =
-      scaled_sum(3u, ScaledPoint{10u, 20u});
+  static inline const uint64_t test_labeled =
+      scaled_sum(UINT64_C(3), ScaledPoint{UINT64_C(10), UINT64_C(20)});
 
   struct PointImpl {
     using R = Point;
-    static Point mk(const unsigned int x, const unsigned int x0);
-    static unsigned int get_x(const Point &p);
-    static unsigned int get_y(const Point &p);
+    static Point mk(uint64_t x, uint64_t x0);
+    static uint64_t get_x(const Point &p);
+    static uint64_t get_y(const Point &p);
   };
 
   template <HasRecord M> struct UseRecord {
-    static unsigned int sum_fields(const typename M::R r) {
+    static uint64_t sum_fields(typename M::R r) {
       return (M::get_x(r) + M::get_y(r));
     }
   };
 
   using UR = UseRecord<PointImpl>;
-  static inline const unsigned int test_functor =
-      UR::sum_fields(Point{100u, 200u});
+  static inline const uint64_t test_functor =
+      UR::sum_fields(Point{UINT64_C(100), UINT64_C(200)});
 
   struct Segment {
     Point seg_start;
@@ -229,62 +222,68 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     Segment clone() const {
-      return Segment{(*(this)).seg_start.clone(), (*(this)).seg_end.clone()};
+      return Segment{(*this).seg_start.clone(), (*this).seg_end.clone()};
     }
   };
 
-  static unsigned int segment_length_sq(const Segment &s);
+  static uint64_t segment_length_sq(const Segment &s);
 
   struct Bounded {
-    unsigned int lo;
-    unsigned int hi;
-    unsigned int mid;
+    uint64_t lo;
+    uint64_t hi;
+    uint64_t mid;
 
     // ACCESSORS
     Bounded clone() const {
-      return Bounded{(*(this)).lo, (*(this)).hi, (*(this)).mid};
+      return Bounded{(*this).lo, (*this).hi, (*this).mid};
     }
   };
 
-  static unsigned int bounded_range(const Bounded &b);
-  static unsigned int sum_px(const List<Point> &points);
-  static List<unsigned int> map_py(const List<Point> &points);
+  static uint64_t bounded_range(const Bounded &b);
+  static uint64_t sum_px(const List<Point> &points);
+  static List<uint64_t> map_py(const List<Point> &points);
   static Point swap(const Point &p);
   static Point double_swap(const Point &p);
 
   struct Container {
     std::any elem;
-    unsigned int count;
+    uint64_t count;
 
     // ACCESSORS
-    Container clone() const {
-      return Container{(*(this)).elem, (*(this)).count};
-    }
+    Container clone() const { return Container{(*this).elem, (*this).count}; }
   };
 
   using elem_type = std::any;
-  static unsigned int get_count(const Container &c);
-  static inline const unsigned int test_container =
-      get_count(Container{42u, 5u});
-  static inline const unsigned int test_origin = classify_point(Point{0u, 0u});
-  static inline const unsigned int test_y_axis = classify_point(Point{0u, 5u});
-  static inline const unsigned int test_x_axis = classify_point(Point{3u, 0u});
-  static inline const unsigned int test_general = classify_point(Point{3u, 4u});
-  static inline const unsigned int test_zero_x = zero_x(Point{0u, 42u});
-  static inline const unsigned int test_nonzero = zero_x(Point{5u, 10u});
-  static inline const Point test_id = id_point(Point{99u, 1u});
-  static inline const unsigned int test_seg =
-      segment_length_sq(Segment{Point{1u, 2u}, Point{4u, 6u}});
-  static inline const unsigned int test_sum = sum_px(List<Point>::cons(
-      Point{10u, 0u},
-      List<Point>::cons(
-          Point{20u, 0u},
-          List<Point>::cons(Point{30u, 0u}, List<Point>::nil()))));
-  static inline const List<unsigned int> test_map = map_py(List<Point>::cons(
-      Point{0u, 1u},
-      List<Point>::cons(Point{0u, 2u},
-                        List<Point>::cons(Point{0u, 3u}, List<Point>::nil()))));
-  static inline const Point test_swap = swap(Point{3u, 7u});
+  static uint64_t get_count(const Container &c);
+  static inline const uint64_t test_container =
+      get_count(Container{UINT64_C(42), UINT64_C(5)});
+  static inline const uint64_t test_origin =
+      classify_point(Point{UINT64_C(0), UINT64_C(0)});
+  static inline const uint64_t test_y_axis =
+      classify_point(Point{UINT64_C(0), UINT64_C(5)});
+  static inline const uint64_t test_x_axis =
+      classify_point(Point{UINT64_C(3), UINT64_C(0)});
+  static inline const uint64_t test_general =
+      classify_point(Point{UINT64_C(3), UINT64_C(4)});
+  static inline const uint64_t test_zero_x =
+      zero_x(Point{UINT64_C(0), UINT64_C(42)});
+  static inline const uint64_t test_nonzero =
+      zero_x(Point{UINT64_C(5), UINT64_C(10)});
+  static inline const Point test_id =
+      id_point(Point{UINT64_C(99), UINT64_C(1)});
+  static inline const uint64_t test_seg = segment_length_sq(Segment{
+      Point{UINT64_C(1), UINT64_C(2)}, Point{UINT64_C(4), UINT64_C(6)}});
+  static inline const uint64_t test_sum = sum_px(List<Point>::cons(
+      Point{UINT64_C(10), UINT64_C(0)},
+      List<Point>::cons(Point{UINT64_C(20), UINT64_C(0)},
+                        List<Point>::cons(Point{UINT64_C(30), UINT64_C(0)},
+                                          List<Point>::nil()))));
+  static inline const List<uint64_t> test_map = map_py(List<Point>::cons(
+      Point{UINT64_C(0), UINT64_C(1)},
+      List<Point>::cons(Point{UINT64_C(0), UINT64_C(2)},
+                        List<Point>::cons(Point{UINT64_C(0), UINT64_C(3)},
+                                          List<Point>::nil()))));
+  static inline const Point test_swap = swap(Point{UINT64_C(3), UINT64_C(7)});
 };
 
 #endif // INCLUDED_RECORD_FIELD_PATTERNS

@@ -2,16 +2,16 @@
 
 /// add computes the sum of two natural numbers n and m.
 /// It works by structural recursion on n.
-unsigned int DocComments::add(const unsigned int n, const unsigned int m) {
+uint64_t DocComments::add(uint64_t n, uint64_t m) {
   if (n <= 0) {
     return m;
   } else {
-    unsigned int p = n - 1;
+    uint64_t p = n - 1;
     return (add(p, m) + 1);
   }
 }
 
-unsigned int DocComments::no_doc_comment(const unsigned int x) { return x; }
+uint64_t DocComments::no_doc_comment(uint64_t x) { return x; }
 
 /// double n returns 2 * n.
-unsigned int DocComments::double_(const unsigned int n) { return add(n, n); }
+uint64_t DocComments::double_(uint64_t n) { return add(n, n); }

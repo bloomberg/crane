@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <variant>
 
 #include "Datatypes.h"
@@ -16,33 +15,33 @@ concept Sig = requires { typename M::A; };
 
 template <Sig S> struct Worker {
   struct item {
-    unsigned int label;
+    uint64_t label;
     typename S::A payload;
 
     // ACCESSORS
-    item clone() const { return item{(*(this)).label, (*(this)).payload}; }
+    item clone() const { return item{(*this).label, (*this).payload}; }
   };
 
-  static unsigned int get_label(const item &x) { return x.label; }
+  static uint64_t get_label(const item &x) { return x.label; }
 
-  static typename Datatypes::template List<unsigned int>
+  static typename Datatypes::template List<uint64_t>
   all_labels(const typename Datatypes::template List<item> &xs) {
-    return xs.template map<unsigned int>([](const item &i) { return i.label; });
+    return xs.template map<uint64_t>([](const item &i) { return i.label; });
   }
 
   static std::optional<typename S::A>
-  find_label(const unsigned int target,
+  find_label(uint64_t target,
              const typename Datatypes::template List<item> &xs) {
     if (std::holds_alternative<typename Datatypes::template List<item>::Nil>(
             xs.v())) {
       return std::optional<typename S::A>();
     } else {
-      const auto &[d_a0, d_a1] =
+      const auto &[a0, a1] =
           std::get<typename Datatypes::template List<item>::Cons>(xs.v());
-      if (d_a0.label == target) {
-        return std::make_optional<typename S::A>(d_a0.payload);
+      if (a0.label == target) {
+        return std::make_optional<typename S::A>(a0.payload);
       } else {
-        return find_label(target, *(d_a1));
+        return find_label(target, *a1);
       }
     }
   }

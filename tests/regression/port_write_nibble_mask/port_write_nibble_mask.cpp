@@ -1,11 +1,11 @@
 #include "port_write_nibble_mask.h"
 
-unsigned int PortWriteNibbleMask::nibble_of_nat(const unsigned int n) {
-  return (16u ? n % 16u : n);
+uint64_t PortWriteNibbleMask::nibble_of_nat(uint64_t n) {
+  return (UINT64_C(16) ? n % UINT64_C(16) : n);
 }
 
 PortWriteNibbleMask::ram_chip
 PortWriteNibbleMask::upd_port_in_chip(const PortWriteNibbleMask::ram_chip &,
-                                      const unsigned int v) {
+                                      uint64_t v) {
   return ram_chip{nibble_of_nat(v)};
 }
