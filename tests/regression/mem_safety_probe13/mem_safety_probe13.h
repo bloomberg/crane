@@ -203,7 +203,7 @@ struct MemSafetyProbe13 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = ((_result + _f.a1) + _f._result);
+          _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
         }
       }
       return _result;
@@ -264,7 +264,8 @@ struct MemSafetyProbe13 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -325,7 +326,8 @@ struct MemSafetyProbe13 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -837,7 +839,7 @@ struct MemSafetyProbe13 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_FNode>(_frame));
-          _result = ((_result + _f.base) + _f._result);
+          _result = ((std::move(_result) + _f.base) + std::move(_f._result));
         }
       }
       return _result;
@@ -900,7 +902,8 @@ struct MemSafetyProbe13 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_FNode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -963,7 +966,8 @@ struct MemSafetyProbe13 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_FNode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;

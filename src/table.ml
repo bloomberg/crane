@@ -29,6 +29,10 @@ open Miniml
 
 module Refmap' = GlobRef.Map_env
 module Refset' = GlobRef.Set_env
+(* Canonical-comparison set: use GlobRef.Set (CanOrd) so that references
+   from different functor instantiation paths compare equal if they share
+   the same canonical kernel name. *)
+module RefsetCan = GlobRef.Set
 module StringMap = HMap.Make (String)
 module StringSet = StringMap.Set
 
@@ -38,6 +42,14 @@ let make_refset () =
   let init () = tbl := Refset'.empty in
   let add r = tbl := Refset'.add r !tbl in
   let mem r = Refset'.mem r !tbl in
+  (init, add, mem)
+
+(* Create a canonical-key ref-based set (for cross-functor identity). *)
+let make_refset_can () =
+  let tbl = ref RefsetCan.empty in
+  let init () = tbl := RefsetCan.empty in
+  let add r = tbl := RefsetCan.add r !tbl in
+  let mem r = RefsetCan.mem r !tbl in
   (init, add, mem)
 
 (** {1 Utilities about [module_path] and [kernel_names] and [global_reference]}
@@ -408,8 +420,59 @@ let rec is_typeclass_type_cpp = function
 
 (** {2 Flat inductives table} *)
 
-let (init_flat_inductives, add_flat_inductive, is_flat_inductive) =
-  make_refset ()
+let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
+  make_refset_can ()
+
+(** Check if an inductive packet qualifies as flat: single constructor, no kept
+    type parameters, not coinductive, not mutual, no self-referencing fields.
+    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
+let is_flat_inductive_packet kn ind i =
+  try
+    let p = ind.ind_packets.(i) in
+    let n_ctors = Array.length p.ip_types in
+    if n_ctors <> 1 then false
+    else
+      let is_mutual = Array.length ind.ind_packets > 1 in
+      let sign_len = List.length p.ip_sign in
+      let nparams = min ind.ind_nparams sign_len in
+      let param_sign = List.firstn nparams p.ip_sign in
+      let num_param_vars =
+        List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+      in
+      let is_coinductive_ind =
+        match Mindmap_env.find_opt kn !inductive_kinds with
+        | Some Coinductive -> true
+        | _ -> false
+      in
+      let has_self_ref =
+        let rec check = function
+          | Miniml.Tglob (GlobRef.IndRef (kn2, j), args, _) ->
+            (MutInd.CanOrd.equal kn kn2 && j = i)
+            || List.exists check args
+          | Miniml.Tglob (_, args, _) -> List.exists check args
+          | Miniml.Tmeta { contents = Some t } -> check t
+          | _ -> false
+        in
+        Array.exists (List.exists check) p.ip_types
+      in
+      num_param_vars = 0 && not is_mutual && not is_coinductive_ind && not has_self_ref
+  with _ -> false
+
+(** Check if [r] is a flat inductive.  First checks the flat-inductives
+    registry (populated during Pre phase / global pre-pass).  If not found
+    there — which can happen for functor-parameterized inductives whose
+    module-path kn differs across instantiation sites — falls back to
+    looking up the ML inductive in the inductives cache and running the same
+    structural check used in [gen_ind_header_v2]. *)
+let is_flat_inductive r =
+  if is_flat_inductive_registered r then true
+  else
+    match r with
+    | GlobRef.IndRef (kn, i) ->
+      ( match Mindmap_env.find_opt kn !inductives with
+      | Some (_, ind) -> is_flat_inductive_packet kn ind i
+      | None -> false )
+    | _ -> false
 
 (** {2 Enum inductives table} *)
 

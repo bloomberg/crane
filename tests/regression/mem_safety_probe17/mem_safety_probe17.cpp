@@ -186,7 +186,8 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
-      _result = qtree::qnode(_result, _f._s3, _f.n, _f._result, _f._s1);
+      _result = qtree::qnode(std::move(_result), _f._s3, _f.n,
+                             std::move(_f._result), _f._s1);
     }
   }
   return _result;

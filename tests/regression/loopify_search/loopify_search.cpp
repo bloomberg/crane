@@ -417,29 +417,72 @@ List<uint64_t> LoopifySearch::lis(const List<uint64_t> &l) {
 }
 
 /// subset_sum target l checks if any subset sums to target.
-bool LoopifySearch::subset_sum_fuel(uint64_t fuel, uint64_t target,
-                                    const List<uint64_t> &l) {
-  if (fuel <= 0) {
-    return false;
-  } else {
-    uint64_t f = fuel - 1;
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return target == UINT64_C(0);
+bool LoopifySearch::subset_sum_fuel(
+    uint64_t fuel, uint64_t target,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+    uint64_t target;
+    uint64_t fuel;
+  };
+
+  /// _Cont_Cons: saves [a0, a1, f, target], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
+    const List<uint64_t> *a1;
+    uint64_t f;
+    uint64_t target;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  bool _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l, target, fuel});
+  /// Loopified subset_sum_fuel: _Enter -> _Cont_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      uint64_t target = _f.target;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = false;
+      } else {
+        uint64_t f = fuel - 1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = target == UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Cont_Cons{a0, a1.get(), f, target});
+          _stack.emplace_back(_Enter{a1.get(), target, f});
+        }
+      }
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      bool without = subset_sum_fuel(f, target, *a1);
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      const List<uint64_t> &a1 = *_f.a1;
+      uint64_t f = _f.f;
+      uint64_t target = _f.target;
+      bool without = _result;
       if (without) {
-        return true;
+        _result = true;
       } else {
         if (a0 <= target) {
-          return subset_sum_fuel(
-              f, (((target - a0) > target ? 0 : (target - a0))), *a1);
+          _stack.emplace_back(
+              _Enter{&a1, (((target - a0) > target ? 0 : (target - a0))), f});
         } else {
-          return false;
+          _result = false;
         }
       }
     }
   }
+  return _result;
 }
 
 bool LoopifySearch::subset_sum(uint64_t target, const List<uint64_t> &l) {
@@ -656,7 +699,8 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
       _stack.emplace_back(_Enter{std::move(_f.smaller), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_Cons>(_frame));
-      _result = _result.app(List<uint64_t>::cons(_f.a0, _f._result));
+      _result = std::move(_result).app(
+          List<uint64_t>::cons(_f.a0, std::move(_f._result)));
     }
   }
   return _result;
@@ -847,7 +891,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
       _stack.emplace_back(_Enter{std::move(_f.a), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_a>(_frame));
-      _result = merge_sorted(_result, _f._result);
+      _result = merge_sorted(std::move(_result), std::move(_f._result));
     }
   }
   return _result;
@@ -996,7 +1040,7 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
           _Enter{std::move(_f.remaining_0), std::move(_f.remaining_1), _f.f});
     } else if (std::holds_alternative<_Combine_Cons>(_frame)) {
       auto _f = std::move(std::get<_Combine_Cons>(_frame));
-      _result = map_cons(_f.a0, _result).app(_f._result);
+      _result = map_cons(_f.a0, std::move(_result)).app(std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Nil>(_frame));
       _result = _f._s0.app(_result);

@@ -48,7 +48,7 @@ uint64_t MemSafetyProbe27::tree_sum(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_result + _f.a1) + _f._result);
+      _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
     }
   }
   return _result;
@@ -102,7 +102,7 @@ uint64_t MemSafetyProbe27::tree_depth(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = (_f._s1 + std::max(_result, _f._result));
+      _result = (_f._s1 + std::max(std::move(_result), std::move(_f._result)));
     }
   }
   return _result;

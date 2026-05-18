@@ -170,7 +170,8 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
       _stack.emplace_back(_Enter{_f.a1, _f.capacity, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = std::max(_result, (_f.value + _f._result));
+      _result =
+          std::max(std::move(_result), (_f.value + std::move(_f._result)));
     }
   }
   return _result;
@@ -244,7 +245,7 @@ bool LoopifySearchOpt::subset_sum_fuel(
       _stack.emplace_back(_Enter{_f.a1, _f.target, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = (_result || _f._result);
+      _result = (std::move(_result) || std::move(_f._result));
     }
   }
   return _result;

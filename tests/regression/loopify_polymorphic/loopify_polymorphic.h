@@ -340,16 +340,29 @@ struct LoopifyPolymorphic {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> poly_filter(F0 &&p, const List<T1> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return List<T1>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      if (p(a0)) {
-        return List<T1>::cons(a0, poly_filter<T1>(p, *a1));
+    std::unique_ptr<List<T1>> _head{};
+    std::unique_ptr<List<T1>> *_write = &_head;
+    const List<T1> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<T1>>(List<T1>::nil());
+        break;
       } else {
-        return poly_filter<T1>(p, *a1);
+        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          auto _cell =
+              std::make_unique<List<T1>>(typename List<T1>::Cons(a0, nullptr));
+          *_write = std::move(_cell);
+          _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename T1, typename T2, typename F0>

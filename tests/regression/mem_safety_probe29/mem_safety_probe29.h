@@ -169,7 +169,8 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_INode>(_frame));
-          _result = inner::inode(_result, _f._s1, _f._result);
+          _result =
+              inner::inode(std::move(_result), _f._s1, std::move(_f._result));
         }
       }
       return _result;
@@ -222,7 +223,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_INode>(_frame));
-          _result = ((_result + _f.a1) + _f._result);
+          _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
         }
       }
       return _result;
@@ -283,7 +284,8 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_INode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -344,7 +346,8 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_INode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -516,7 +519,8 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_ONode>(_frame));
-          _result = outer::onode(_result, _f.a1, _f._result);
+          _result =
+              outer::onode(std::move(_result), _f.a1, std::move(_f._result));
         }
       }
       return _result;
@@ -569,7 +573,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_ONode>(_frame));
-          _result = ((_result + _f.a1) + _f._result);
+          _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
         }
       }
       return _result;
@@ -630,7 +634,8 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_ONode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -691,7 +696,8 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_ONode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -943,10 +949,12 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_Add>(_frame)) {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = inner::inode(_result, _f._s1, _f._result);
+          _result =
+              inner::inode(std::move(_result), _f._s1, std::move(_f._result));
         } else {
           auto _f = std::move(std::get<_Combine_Mul>(_frame));
-          _result = inner::inode(_result, _f._s1, _f._result);
+          _result =
+              inner::inode(std::move(_result), _f._s1, std::move(_f._result));
         }
       }
       return _result;
@@ -1027,10 +1035,10 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_Add>(_frame)) {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = expr::add(_result, _f._result);
+          _result = expr::add(std::move(_result), std::move(_f._result));
         } else if (std::holds_alternative<_Combine_Mul>(_frame)) {
           auto _f = std::move(std::get<_Combine_Mul>(_frame));
-          _result = expr::mul(_result, _f._result);
+          _result = expr::mul(std::move(_result), std::move(_f._result));
         } else {
           auto _f = std::move(std::get<_Resume_Neg>(_frame));
           _result = expr::neg(_result);
@@ -1109,10 +1117,10 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_Add>(_frame)) {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = (_result + _f._result);
+          _result = (std::move(_result) + std::move(_f._result));
         } else {
           auto _f = std::move(std::get<_Combine_Mul>(_frame));
-          _result = (_result * _f._result);
+          _result = (std::move(_result) * std::move(_f._result));
         }
       }
       return _result;
@@ -1211,10 +1219,10 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_Add>(_frame)) {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = f1(_f.a0, _result, _f.a1, _f._result);
+          _result = f1(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
         } else if (std::holds_alternative<_Combine_Mul>(_frame)) {
           auto _f = std::move(std::get<_Combine_Mul>(_frame));
-          _result = f2(_f.a0, _result, _f.a1, _f._result);
+          _result = f2(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
         } else {
           auto _f = std::move(std::get<_Resume_Neg>(_frame));
           _result = _f.f0(_f.a0, _result);
@@ -1316,10 +1324,10 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_Add>(_frame)) {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = f1(_f.a0, _result, _f.a1, _f._result);
+          _result = f1(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
         } else if (std::holds_alternative<_Combine_Mul>(_frame)) {
           auto _f = std::move(std::get<_Combine_Mul>(_frame));
-          _result = f2(_f.a0, _result, _f.a1, _f._result);
+          _result = f2(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
         } else {
           auto _f = std::move(std::get<_Resume_Neg>(_frame));
           _result = _f.f0(_f.a0, _result);

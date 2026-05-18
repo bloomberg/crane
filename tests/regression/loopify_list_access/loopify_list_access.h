@@ -154,17 +154,49 @@ struct LoopifyListAccess {
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static uint64_t count_matching(F0 &&p, const List<uint64_t> &l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return (UINT64_C(1) + count_matching(p, *a1));
+  static uint64_t count_matching(
+      F0 &&p,
+      const List<uint64_t>
+          &l) { /// _Enter: captures varying parameters for each recursive call.
+
+    struct _Enter {
+      const List<uint64_t> *l;
+    };
+
+    /// _Resume1: saves [_s0], resumes after recursive call with _result.
+    struct _Resume1 {
+      decltype(UINT64_C(1)) _s0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume1>;
+    uint64_t _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified count_matching: _Enter -> _Resume1.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          if (p(a0)) {
+            _stack.emplace_back(_Resume1{UINT64_C(1)});
+            _stack.emplace_back(_Enter{a1.get()});
+          } else {
+            _stack.emplace_back(_Enter{a1.get()});
+          }
+        }
       } else {
-        return count_matching(p, *a1);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        _result = (_f._s0 + _result);
       }
     }
+    return _result;
   }
 
   static bool elem_at_eq(uint64_t idx, uint64_t val, const List<uint64_t> &l);

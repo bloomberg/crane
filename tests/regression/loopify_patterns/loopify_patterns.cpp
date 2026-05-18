@@ -195,7 +195,7 @@ bool LoopifyPatterns::bool_chain_fuel(
       _stack.emplace_back(_Enter{_f._s0, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = (_result || _f._result);
+      _result = (std::move(_result) || std::move(_f._result));
     }
   }
   return _result;
@@ -255,7 +255,7 @@ bool LoopifyPatterns::chained_comp(
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (_result && _f._result);
+      _result = (std::move(_result) && std::move(_f._result));
     }
   }
   return _result;

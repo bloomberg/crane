@@ -773,7 +773,7 @@ struct ComprehensivePatterns {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = ((_f._s1 + _result) + _f._result);
+          _result = ((_f._s1 + std::move(_result)) + std::move(_f._result));
         }
       }
       return _result;
@@ -827,7 +827,7 @@ struct ComprehensivePatterns {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = ((_f.a1 + _result) + _f._result);
+          _result = ((_f.a1 + std::move(_result)) + std::move(_f._result));
         }
       }
       return _result;
@@ -890,7 +890,8 @@ struct ComprehensivePatterns {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -953,7 +954,8 @@ struct ComprehensivePatterns {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;

@@ -280,18 +280,31 @@ struct LoopifyOption {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<std::optional<T2>, F0 &, T1 &>
   static list<T2> map_opt(F0 &&f, const list<T1> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-      return list<T2>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      auto _cs = f(a0);
-      if (_cs.has_value()) {
-        const T2 &y = *_cs;
-        return list<T2>::cons(y, map_opt<T1, T2>(f, *a1));
+    std::unique_ptr<list<T2>> _head{};
+    std::unique_ptr<list<T2>> *_write = &_head;
+    const list<T1> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<list<T2>>(list<T2>::nil());
+        break;
       } else {
-        return map_opt<T1, T2>(f, *a1);
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        auto _cs = f(a0);
+        if (_cs.has_value()) {
+          const T2 &y = *_cs;
+          auto _cell =
+              std::make_unique<list<T2>>(typename list<T2>::Cons(y, nullptr));
+          *_write = std::move(_cell);
+          _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   /// find_index p l returns the index of the first match, or None.

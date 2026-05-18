@@ -393,29 +393,57 @@ struct LoopifyPatterns {
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static list<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
                                       list<uint64_t> l1, list<uint64_t> l2) {
-    if (fuel <= 0) {
-      return l1;
-    } else {
-      uint64_t f = fuel - 1;
-      if (std::holds_alternative<typename list<uint64_t>::Nil>(l1.v_mut())) {
-        return l2;
+    std::unique_ptr<list<uint64_t>> _head{};
+    std::unique_ptr<list<uint64_t>> *_write = &_head;
+    list<uint64_t> _loop_l2 = std::move(l2);
+    list<uint64_t> _loop_l1 = std::move(l1);
+    uint64_t _loop_fuel = std::move(fuel);
+    while (true) {
+      if (_loop_fuel <= 0) {
+        *_write = std::make_unique<list<uint64_t>>(std::move(_loop_l1));
+        break;
       } else {
-        auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l1.v_mut());
-        if (std::holds_alternative<typename list<uint64_t>::Nil>(l2.v_mut())) {
-          return l1;
+        uint64_t f = _loop_fuel - 1;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(
+                _loop_l1.v_mut())) {
+          *_write = std::make_unique<list<uint64_t>>(std::move(_loop_l2));
+          break;
         } else {
-          auto &[a00, a10] =
-              std::get<typename list<uint64_t>::Cons>(l2.v_mut());
-          if (cmp(a0, a00) <= UINT64_C(0)) {
-            return list<uint64_t>::cons(std::move(a0),
-                                        merge_by_fuel(f, cmp, *a1, l2));
+          auto &[a0, a1] =
+              std::get<typename list<uint64_t>::Cons>(_loop_l1.v_mut());
+          if (std::holds_alternative<typename list<uint64_t>::Nil>(
+                  _loop_l2.v_mut())) {
+            *_write = std::make_unique<list<uint64_t>>(_loop_l1);
+            break;
           } else {
-            return list<uint64_t>::cons(std::move(a00),
-                                        merge_by_fuel(f, cmp, l1, *a10));
+            auto &[a00, a10] =
+                std::get<typename list<uint64_t>::Cons>(_loop_l2.v_mut());
+            if (cmp(a0, a00) <= UINT64_C(0)) {
+              auto _cell = std::make_unique<list<uint64_t>>(
+                  typename list<uint64_t>::Cons(std::move(a0), nullptr));
+              *_write = std::move(_cell);
+              _write =
+                  &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut())
+                       .l;
+              _loop_l1 = std::move(*a1);
+              _loop_fuel = f;
+              continue;
+            } else {
+              auto _cell = std::make_unique<list<uint64_t>>(
+                  typename list<uint64_t>::Cons(std::move(a00), nullptr));
+              *_write = std::move(_cell);
+              _write =
+                  &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut())
+                       .l;
+              _loop_l2 = std::move(*a10);
+              _loop_fuel = f;
+              continue;
+            }
           }
         }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename F0>
@@ -558,17 +586,34 @@ struct LoopifyPatterns {
   static list<uint64_t> filter_map_indexed_aux(F0 &&p, F1 &&f,
                                                const list<uint64_t> &l,
                                                uint64_t idx) {
-    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-      return list<uint64_t>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
-      if (p(idx, a0)) {
-        return list<uint64_t>::cons(
-            f(a0), filter_map_indexed_aux(p, f, *a1, (idx + 1)));
+    std::unique_ptr<list<uint64_t>> _head{};
+    std::unique_ptr<list<uint64_t>> *_write = &_head;
+    uint64_t _loop_idx = std::move(idx);
+    const list<uint64_t> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<list<uint64_t>>(list<uint64_t>::nil());
+        break;
       } else {
-        return filter_map_indexed_aux(p, f, *a1, (idx + 1));
+        const auto &[a0, a1] =
+            std::get<typename list<uint64_t>::Cons>(_loop_l->v());
+        if (p(_loop_idx, a0)) {
+          auto _cell = std::make_unique<list<uint64_t>>(
+              typename list<uint64_t>::Cons(f(a0), nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_idx = (_loop_idx + 1);
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_idx = (_loop_idx + 1);
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename F0, typename F1>

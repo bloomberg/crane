@@ -89,7 +89,7 @@ LoopifyClassics::fib(uint64_t n) { /// _Enter: captures varying parameters for
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n__>(_frame));
-      _result = (_result + _f._result);
+      _result = (std::move(_result) + std::move(_f._result));
     }
   }
   return _result;
@@ -226,7 +226,7 @@ uint64_t LoopifyClassics::binomial_fuel(
       _stack.emplace_back(_Enter{_f._s0, _f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = (_result + _f._result);
+      _result = (std::move(_result) + std::move(_f._result));
     }
   }
   return _result;
@@ -301,7 +301,7 @@ uint64_t LoopifyClassics::pascal_fuel(
       _stack.emplace_back(_Enter{_f._s0, _f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = (_result + _f._result);
+      _result = (std::move(_result) + std::move(_f._result));
     }
   }
   return _result;

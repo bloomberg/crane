@@ -267,16 +267,29 @@ struct LoopifyTmc {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static list<T1> filter(F0 &&f, const list<T1> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-      return list<T1>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      if (f(a0)) {
-        return list<T1>::cons(a0, filter<T1>(f, *a1));
+    std::unique_ptr<list<T1>> _head{};
+    std::unique_ptr<list<T1>> *_write = &_head;
+    const list<T1> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<list<T1>>(list<T1>::nil());
+        break;
       } else {
-        return filter<T1>(f, *a1);
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (f(a0)) {
+          auto _cell =
+              std::make_unique<list<T1>>(typename list<T1>::Cons(a0, nullptr));
+          *_write = std::move(_cell);
+          _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   /// snoc l x appends x at the end. TMC, base case allocates a cell.
