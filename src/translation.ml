@@ -6882,15 +6882,18 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let t, fix_a_fired =
     if scrut_is_magic && not (is_erased_type concrete_match_type) then
       (CPPany_cast (concrete_match_type, t), false)
-    else if is_erased_type typ || has_tany_in_type typ then
+    else if is_erased_type typ then
       match pair_g_opt with
       | Some g ->
-        (* Scrutinee is erased (std::any) or its pair type contains erased
-           positions.  In either case the scrutinee will be std::any at
-           runtime (symbols_semty / tuple are all erased to std::any).
-           Add any_cast<pair<any,any>> so .first/.second accesses compile.
-           Always use pair<any,any>: the runtime encoding of tuples is always
-           std::pair<std::any, std::any> regardless of field types. *)
+        (* Scrutinee is erased (std::any) and the pair is encoded at runtime
+           as std::pair<std::any, std::any> (because the whole tuple/symbols_semty
+           type erased to std::any).  Cast it back so .first/.second compile.
+           Note: [has_tany_in_type] is intentionally NOT checked here.  A pair
+           whose OUTER type is concrete (e.g. std::pair<optional<SigT<…>>, bool>)
+           but contains std::any in nested positions is a concrete std::pair at
+           runtime and must NOT be cast via any_cast<pair<any,any>>; doing so
+           would convert the value to std::any and then fail the cast because the
+           stored type is the concrete pair, not std::pair<std::any,std::any>. *)
         (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
       | None -> (t, false)
     else (t, false)
