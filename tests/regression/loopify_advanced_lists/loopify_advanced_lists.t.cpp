@@ -42,8 +42,8 @@ std::vector<uint64_t> to_vec(const UIntList &l) {
     auto &v = cur->v();
     if (std::holds_alternative<UIntList::Nil>(v)) break;
     auto &cons = std::get<UIntList::Cons>(v);
-    result.push_back(cons.a0);
-    cur = cons.a1.get();
+    result.push_back(cons.a);
+    cur = cons.l.get();
   }
   return result;
 }
@@ -57,8 +57,8 @@ to_pair_vec(const PairList &l) {
     auto &v = cur->v();
     if (std::holds_alternative<PairList::Nil>(v)) break;
     auto &cons = std::get<PairList::Cons>(v);
-    result.push_back(cons.a0);
-    cur = cons.a1.get();
+    result.push_back(cons.a);
+    cur = cons.l.get();
   }
   return result;
 }

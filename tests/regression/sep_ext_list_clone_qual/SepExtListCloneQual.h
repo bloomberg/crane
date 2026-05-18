@@ -85,15 +85,15 @@ public:
                       _lsrc->v());
               _ldst->v_mut() = typename Datatypes::List<Forest<A>>::Cons{
                   Forest<A>{},
-                  _lsrc_c.a1 ? std::make_unique<Datatypes::List<Forest<A>>>()
-                             : nullptr};
+                  _lsrc_c.l ? std::make_unique<Datatypes::List<Forest<A>>>()
+                            : nullptr};
               auto &_ldst_c =
                   std::get<typename Datatypes::List<Forest<A>>::Cons>(
                       _ldst->v_mut());
-              _stack.push_back({&_lsrc_c.a0, &_ldst_c.a0});
-              if (_lsrc_c.a1) {
-                _lsrc = _lsrc_c.a1.get();
-                _ldst = _ldst_c.a1.get();
+              _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
+              if (_lsrc_c.l) {
+                _lsrc = _lsrc_c.l.get();
+                _ldst = _ldst_c.l.get();
               } else {
                 break;
               }
@@ -145,9 +145,9 @@ public:
                   _lp->v())) {
             auto &_lc = std::get<typename Datatypes::List<Forest<A>>::Cons>(
                 _lp->v_mut());
-            _stack.push_back(std::make_unique<Forest<A>>(std::move(_lc.a0)));
-            if (_lc.a1) {
-              _lp = _lc.a1.get();
+            _stack.push_back(std::make_unique<Forest<A>>(std::move(_lc.a)));
+            if (_lc.l) {
+              _lp = _lc.l.get();
             } else {
               break;
             }

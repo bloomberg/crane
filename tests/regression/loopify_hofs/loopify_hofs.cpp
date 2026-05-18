@@ -49,8 +49,7 @@ LoopifyHofs::lookup_all(uint64_t key,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(v, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       } else {
@@ -154,7 +153,7 @@ LoopifyHofs::pair_with_all(uint64_t x, const List<uint64_t> &l) {
       *_write = std::move(_cell);
       _write = &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                     (*_write)->v_mut())
-                    .a1;
+                    .l;
       _loop_l = a1.get();
       continue;
     }
@@ -238,7 +237,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(uint64_t fuel, List<uint64_t> l) {
                 typename List<uint64_t>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l = List<uint64_t>::cons(a00, *a10);
             _loop_fuel = f;
             continue;

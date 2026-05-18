@@ -14,8 +14,8 @@ struct LoopifyPairs {
     struct Nil {};
 
     struct Cons {
-      A a0;
-      std::unique_ptr<list<A>> a1;
+      A a;
+      std::unique_ptr<list<A>> l;
     };
 
     using variant_t = std::variant<Nil, Cons>;
@@ -68,10 +68,10 @@ struct LoopifyPairs {
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
           _dst->v_ =
-              Cons{_alt.a0, _alt.a1 ? std::make_unique<list<A>>() : nullptr};
+              Cons{_alt.a, _alt.l ? std::make_unique<list<A>>() : nullptr};
           auto &_dst_alt = std::get<Cons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+          if (_alt.l) {
+            _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
           }
         }
       }
@@ -83,16 +83,15 @@ struct LoopifyPairs {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
         this->v_ = Nil{};
       } else {
-        const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a0), a1 ? std::make_unique<list<A>>(*a1) : nullptr};
+        const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
+        this->v_ = Cons{A(a), l ? std::make_unique<list<A>>(*l) : nullptr};
       }
     }
 
     static list<A> nil() { return list(Nil{}); }
 
-    static list<A> cons(A a0, list<A> a1) {
-      return list(
-          Cons{std::move(a0), std::make_unique<list<A>>(std::move(a1))});
+    static list<A> cons(A a, list<A> l) {
+      return list(Cons{std::move(a), std::make_unique<list<A>>(std::move(l))});
     }
 
     // MANIPULATORS
@@ -102,8 +101,8 @@ struct LoopifyPairs {
       auto _drain = [&](list<A> &_node) {
         if (std::holds_alternative<Cons>(_node.v_)) {
           auto &_alt = std::get<Cons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt.l) {
+            _stack.push_back(std::move(_alt.l));
           }
         }
       };
@@ -300,7 +299,7 @@ struct LoopifyPairs {
           *_write = std::move(_cell);
           _write = &std::get<typename list<std::pair<T1, T2>>::Cons>(
                         (*_write)->v_mut())
-                        .a1;
+                        .l;
           _loop_l2 = a10.get();
           _loop_l1 = a1.get();
           continue;
@@ -348,7 +347,7 @@ struct LoopifyPairs {
                 &std::get<
                      typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
                      (*_write)->v_mut())
-                     .a1;
+                     .l;
             _loop_l3 = a11.get();
             _loop_l2 = a10.get();
             _loop_l1 = a1.get();

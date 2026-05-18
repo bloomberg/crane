@@ -55,8 +55,7 @@ List<uint64_t> LoopifyAdvancedPatterns::as_guard(const List<uint64_t> &l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       } else {
@@ -287,7 +286,7 @@ List<uint64_t> LoopifyAdvancedPatterns::cons_computed(uint64_t n,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_n = next_n;
       continue;
@@ -441,8 +440,7 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
                           ? 0

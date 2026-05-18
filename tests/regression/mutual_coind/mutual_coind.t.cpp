@@ -44,8 +44,8 @@ int main() {
       auto &vr = l->v();
       ASSERT(std::holds_alternative<List<uint64_t>::Cons>(vr));
       auto &c = std::get<List<uint64_t>::Cons>(vr);
-      ASSERT(c.a0 == expected[i]);
-      l = c.a1.get();
+      ASSERT(c.a == expected[i]);
+      l = c.l.get();
     }
     ASSERT(std::holds_alternative<List<uint64_t>::Nil>(l->v()));
     std::cout << "Test 3 (takeA 5): PASSED" << std::endl;

@@ -14,8 +14,8 @@ template <typename A> struct List {
   struct Nil {};
 
   struct Cons {
-    A a0;
-    std::unique_ptr<List<A>> a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -67,11 +67,10 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ =
-            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -83,15 +82,15 @@ public:
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
-      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
-  static List<A> cons(A a0, List<A> a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -101,8 +100,8 @@ public:
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
         auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -139,8 +138,8 @@ struct Cotree {
     struct Conil {};
 
     struct Cocons {
-      A a0;
-      std::shared_ptr<colist<A>> a1;
+      A x;
+      std::shared_ptr<colist<A>> xs;
     };
 
     using variant_t = std::variant<Conil, Cocons>;
@@ -162,8 +161,8 @@ struct Cotree {
 
     static colist<A> conil() { return colist(Conil{}); }
 
-    static colist<A> cocons(A a0, const colist<A> &a1) {
-      return colist(Cocons{std::move(a0), std::make_shared<colist<A>>(a1)});
+    static colist<A> cocons(A x, const colist<A> &xs) {
+      return colist(Cocons{std::move(x), std::make_shared<colist<A>>(xs)});
     }
 
     static colist<A> lazy_(std::function<colist<A>()> thunk) {
@@ -180,8 +179,8 @@ struct Cotree {
   template <typename A> struct cotree {
     // TYPES
     struct Conode {
-      A a0;
-      std::shared_ptr<colist<cotree<A>>> a1;
+      A a;
+      std::shared_ptr<colist<cotree<A>>> f;
     };
 
     using variant_t = std::variant<Conode>;
@@ -198,9 +197,9 @@ struct Cotree {
     explicit cotree(std::function<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static cotree<A> conode(A a0, const colist<cotree<A>> &a1) {
+    static cotree<A> conode(A a, const colist<cotree<A>> &f) {
       return cotree(
-          Conode{std::move(a0), std::make_shared<colist<cotree<A>>>(a1)});
+          Conode{std::move(a), std::make_shared<colist<cotree<A>>>(f)});
     }
 
     static cotree<A> lazy_(std::function<cotree<A>()> thunk) {
@@ -242,8 +241,8 @@ struct Cotree {
   template <typename A> struct tree {
     // TYPES
     struct Node {
-      A a0;
-      std::unique_ptr<List<tree<A>>> a1;
+      A a;
+      std::unique_ptr<List<tree<A>>> children;
     };
 
     using variant_t = std::variant<Node>;
@@ -290,26 +289,27 @@ struct Cotree {
         const tree<A> *_src = _frame._src;
         tree<A> *_dst = _frame._dst;
         const auto &_alt = std::get<Node>(_src->v());
-        _dst->v_ = Node{_alt.a0,
-                        _alt.a1 ? std::make_unique<List<tree<A>>>() : nullptr};
+        _dst->v_ =
+            Node{_alt.a,
+                 _alt.children ? std::make_unique<List<tree<A>>>() : nullptr};
         auto &_dst_alt = std::get<Node>(_dst->v_);
         [&] {
-          if (_alt.a1) {
-            const List<tree<A>> *_lsrc = _alt.a1.get();
-            List<tree<A>> *_ldst = _dst_alt.a1.get();
+          if (_alt.children) {
+            const List<tree<A>> *_lsrc = _alt.children.get();
+            List<tree<A>> *_ldst = _dst_alt.children.get();
             while (std::holds_alternative<typename List<tree<A>>::Cons>(
                 _lsrc->v())) {
               const auto &_lsrc_c =
                   std::get<typename List<tree<A>>::Cons>(_lsrc->v());
               _ldst->v_mut() = typename List<tree<A>>::Cons{
                   tree<A>{},
-                  _lsrc_c.a1 ? std::make_unique<List<tree<A>>>() : nullptr};
+                  _lsrc_c.l ? std::make_unique<List<tree<A>>>() : nullptr};
               auto &_ldst_c =
                   std::get<typename List<tree<A>>::Cons>(_ldst->v_mut());
-              _stack.push_back({&_lsrc_c.a0, &_ldst_c.a0});
-              if (_lsrc_c.a1) {
-                _lsrc = _lsrc_c.a1.get();
-                _ldst = _ldst_c.a1.get();
+              _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
+              if (_lsrc_c.l) {
+                _lsrc = _lsrc_c.l.get();
+                _ldst = _ldst_c.l.get();
               } else {
                 break;
               }
@@ -326,14 +326,15 @@ struct Cotree {
 
     // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
-      const auto &[a0, a1] = std::get<typename tree<_U>::Node>(_other.v());
+      const auto &[a, children] = std::get<typename tree<_U>::Node>(_other.v());
       this->v_ =
-          Node{A(a0), a1 ? std::make_unique<List<tree<A>>>(*a1) : nullptr};
+          Node{A(a),
+               children ? std::make_unique<List<tree<A>>>(*children) : nullptr};
     }
 
-    static tree<A> node(A a0, List<tree<A>> a1) {
-      return tree(
-          Node{std::move(a0), std::make_unique<List<tree<A>>>(std::move(a1))});
+    static tree<A> node(A a, List<tree<A>> children) {
+      return tree(Node{std::move(a),
+                       std::make_unique<List<tree<A>>>(std::move(children))});
     }
 
     // MANIPULATORS
@@ -343,14 +344,14 @@ struct Cotree {
       auto _drain = [&](tree<A> &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {
           auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a1) {
-            auto *_lp = _alt.a1.get();
+          if (_alt.children) {
+            auto *_lp = _alt.children.get();
             while (std::holds_alternative<typename List<tree<A>>::Cons>(
                 _lp->v())) {
               auto &_lc = std::get<typename List<tree<A>>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_unique<tree<A>>(std::move(_lc.a0)));
-              if (_lc.a1) {
-                _lp = _lc.a1.get();
+              _stack.push_back(std::make_unique<tree<A>>(std::move(_lc.a)));
+              if (_lc.l) {
+                _lp = _lc.l.get();
               } else {
                 break;
               }

@@ -17,7 +17,7 @@ HofTreeLoopify::tree<uint64_t> HofTreeLoopify::depth_tree(uint64_t n) {
               std::make_unique<HofTreeLoopify::tree<uint64_t>>(
                   tree<uint64_t>::leaf())));
       *_write = std::move(_cell);
-      _write = &std::get<typename tree<uint64_t>::Node>((*_write)->v_mut()).a0;
+      _write = &std::get<typename tree<uint64_t>::Node>((*_write)->v_mut()).l;
       _loop_n = m;
       continue;
     }

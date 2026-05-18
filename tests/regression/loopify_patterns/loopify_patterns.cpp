@@ -432,7 +432,7 @@ LoopifyPatterns::cons_computed(uint64_t n,
       auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
           typename list<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_n = next_n;
       continue;
@@ -568,8 +568,7 @@ LoopifyPatterns::replace_at(uint64_t idx, uint64_t value,
         auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
             typename list<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_idx = i;
         continue;
@@ -819,7 +818,7 @@ LoopifyPatterns::as_guard_fuel(uint64_t fuel,
               typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           _loop_fuel = f;
           continue;
@@ -984,7 +983,7 @@ LoopifyPatterns::append_lists(const LoopifyPatterns::list<uint64_t> &l1,
       auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
           typename list<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l1 = a1.get();
       continue;
     }
@@ -1192,14 +1191,14 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<uint64_t> l1,
             typename list<uint64_t>::Cons(std::move(a0), nullptr));
         auto _cell1 = std::make_unique<LoopifyPatterns::list<uint64_t>>(
             typename list<uint64_t>::Cons(std::move(a00), nullptr));
-        std::get<typename list<uint64_t>::Cons>(_cell->v_mut()).a1 =
+        std::get<typename list<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename list<uint64_t>::Cons>(
                  std::get<typename list<uint64_t>::Cons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_l2 = std::move(*a10);
         _loop_l1 = std::move(*a1);
         continue;

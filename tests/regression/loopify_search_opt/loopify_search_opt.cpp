@@ -24,7 +24,7 @@ List<uint64_t> LoopifySearchOpt::lis(const List<uint64_t> &l) {
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         } else {

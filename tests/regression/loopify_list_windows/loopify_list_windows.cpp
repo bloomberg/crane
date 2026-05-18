@@ -60,7 +60,7 @@ LoopifyListWindows::map_cons_helper(uint64_t x,
                                               nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_ll = a1.get();
       continue;
     }
@@ -165,7 +165,7 @@ List<uint64_t> LoopifyListWindows::differences(const List<uint64_t> &l) {
                   (((a01 - a0) > a01 ? 0 : (a01 - a0))), nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         }
@@ -209,7 +209,7 @@ LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l = a1.get();
           continue;
         }
@@ -278,7 +278,7 @@ List<List<uint64_t>> LoopifyListWindows::tails(List<uint64_t> l) {
           typename List<List<uint64_t>>::Cons(_loop_l, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_l = std::move(*a1);
       continue;
     }
@@ -306,8 +306,7 @@ List<uint64_t> LoopifyListWindows::take(uint64_t n, const List<uint64_t> &l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_n = n_;
         continue;
@@ -347,7 +346,7 @@ List<List<uint64_t>> LoopifyListWindows::windows_fuel(uint64_t fuel, uint64_t n,
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l = a1.get();
           _loop_fuel = fuel_;
           continue;
@@ -388,7 +387,7 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(uint64_t fuel, uint64_t n,
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .a1;
+                 .l;
         _loop_l = std::move(rest);
         _loop_fuel = fuel_;
         continue;
@@ -432,7 +431,7 @@ List<List<uint64_t>> LoopifyListWindows::group_fuel(uint64_t fuel,
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .a1;
+                 .l;
         _loop_l = rest;
         _loop_fuel = fuel_;
         continue;

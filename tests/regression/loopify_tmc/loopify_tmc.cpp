@@ -19,8 +19,7 @@ LoopifyTmc::list<uint64_t> LoopifyTmc::range(uint64_t lo, uint64_t hi) {
         auto _cell = std::make_unique<LoopifyTmc::list<uint64_t>>(
             typename list<uint64_t>::Cons(hi_, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_hi = hi_;
         continue;
       } else {
@@ -53,7 +52,7 @@ LoopifyTmc::prefix_sums(uint64_t acc, const LoopifyTmc::list<uint64_t> &l) {
       auto _cell = std::make_unique<LoopifyTmc::list<uint64_t>>(
           typename list<uint64_t>::Cons(s, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_acc = s;
       continue;

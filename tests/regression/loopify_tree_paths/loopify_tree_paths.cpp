@@ -19,7 +19,7 @@ LoopifyTreePaths::map_cons(uint64_t x, const List<List<uint64_t>> &ll) {
                                               nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_ll = a1.get();
       continue;
     }

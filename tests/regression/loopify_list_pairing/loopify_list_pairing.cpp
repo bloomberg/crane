@@ -172,7 +172,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l2 = std::move(*a10);
           _loop_l1 = List<uint64_t>::nil();
           _loop_fuel = fuel_;
@@ -190,7 +190,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l2 = List<uint64_t>::nil();
           _loop_l1 = std::move(*a1);
           _loop_fuel = fuel_;
@@ -205,7 +205,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l2 = std::move(*a10);
           _loop_l1 = std::move(*a1);
           _loop_fuel = fuel_;
@@ -253,8 +253,7 @@ List<uint64_t> LoopifyListPairing::zipWith(const List<uint64_t> &l1,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons((a0 + a00), nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l2 = a10.get();
         _loop_l1 = a1.get();
         continue;

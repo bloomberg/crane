@@ -18,9 +18,9 @@ template <typename A>
 A list_nth(const List<A> &l, uint64_t n) {
   const List<A> *cur = &l;
   for (unsigned int i = 0; i < n; ++i) {
-    cur = std::get<typename List<A>::Cons>(cur->v()).a1.get();
+    cur = std::get<typename List<A>::Cons>(cur->v()).l.get();
   }
-  return std::get<typename List<A>::Cons>(cur->v()).a0;
+  return std::get<typename List<A>::Cons>(cur->v()).a;
 }
 } // namespace
 

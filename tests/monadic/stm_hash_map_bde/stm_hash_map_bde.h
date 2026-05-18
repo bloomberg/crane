@@ -30,8 +30,8 @@ template <typename t_A> struct List {
   // TYPES
   struct Nil {};
   struct Cons {
-    t_A d_a0;
-    bsl::unique_ptr<List<t_A>> d_a1;
+    t_A d_a;
+    bsl::unique_ptr<List<t_A>> d_l;
   };
   using variant_t = bsl::variant<Nil, Cons>;
 
@@ -73,11 +73,11 @@ public:
         _dst->d_v_ = Nil{};
       } else {
         const auto &_alt = bsl::get<Cons>(_src->v());
-        _dst->d_v_ = Cons{_alt.d_a0,
-                          _alt.d_a1 ? bsl::make_unique<List<t_A>>() : nullptr};
+        _dst->d_v_ =
+            Cons{_alt.d_a, _alt.d_l ? bsl::make_unique<List<t_A>>() : nullptr};
         auto &_dst_alt = bsl::get<Cons>(_dst->d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back({_alt.d_a1.get(), _dst_alt.d_a1.get()});
+        if (_alt.d_l) {
+          _stack.push_back({_alt.d_l.get(), _dst_alt.d_l.get()});
         }
       }
     }
@@ -88,15 +88,14 @@ public:
     if (bsl::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->d_v_ = Nil{};
     } else {
-      const auto &[d_a0, d_a1] = std::get<typename List<_U>::Cons>(_other.v());
+      const auto &[d_a, d_l] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a0), d_a1 ? std::make_unique<List<t_A>>(*d_a1) : nullptr};
+          Cons{t_A(d_a), d_l ? std::make_unique<List<t_A>>(*d_l) : nullptr};
     }
   }
   static List<t_A> nil() { return List(Nil{}); }
-  static List<t_A> cons(t_A a0, List<t_A> a1) {
-    return List(
-        Cons{bsl::move(a0), bsl::make_unique<List<t_A>>(bsl::move(a1))});
+  static List<t_A> cons(t_A a, List<t_A> l) {
+    return List(Cons{bsl::move(a), bsl::make_unique<List<t_A>>(bsl::move(l))});
   }
   // MANIPULATORS
   ~List() {
@@ -105,8 +104,8 @@ public:
     auto _drain = [&](List<t_A> &_node) {
       if (bsl::holds_alternative<Cons>(_node.d_v_)) {
         auto &_alt = bsl::get<Cons>(_node.d_v_);
-        if (_alt.d_a1) {
-          _stack.push_back(bsl::move(_alt.d_a1));
+        if (_alt.d_l) {
+          _stack.push_back(bsl::move(_alt.d_l));
         }
       }
     };

@@ -861,14 +861,12 @@ and extract_really_ind env kn mib =
         let db = db_from_ind dbmap ndecls in
         p.ip_types.(j) <-
           extract_type_cons epar sg db dbmap (EConstr.of_constr t) (ndecls + 1);
-        (* Populate constructor argument names from the kernel binder names.
-           [mind_user_lc] contains the full constructor type including
-           parameters; we skip the first [mind_nparams] binders to get only
-           the argument-level names.  This mirrors the pattern used for
-           record field name extraction at line ~859.  The names feed into
-           {!Miniml.ml_ind_packet.ip_consarg_names} and are consumed by
-           {!Translation.compute_and_register_field_names} to produce
-           readable C++ struct field names like [d_left] instead of [d_a0]. *)
+        (* Populate constructor argument names from kernel binder names only.
+           [mind_user_lc] has anonymous binders when constructors use [->]
+           syntax.  [Arguments_renaming] names are applied later in
+           [Translation.compute_and_register_field_names] for struct field
+           declarations, but NOT for structured-binding variable names (to
+           avoid variable-shadowing in nested matches). *)
         let mip_i = mib.mind_packets.(i) in
         let all_names = names_prod mip_i.mind_user_lc.(j) in
         let arg_names = List.skipn mib.mind_nparams all_names in

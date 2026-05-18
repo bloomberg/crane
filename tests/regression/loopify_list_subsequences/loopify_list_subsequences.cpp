@@ -20,7 +20,7 @@ LoopifyListSubsequences::map_cons_helper(uint64_t x,
                                               nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_ll = a1.get();
       continue;
     }
@@ -44,7 +44,7 @@ List<List<uint64_t>> LoopifyListSubsequences::tails(List<uint64_t> l) {
           typename List<List<uint64_t>>::Cons(_loop_l, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_l = std::move(*a1);
       continue;
     }
@@ -128,8 +128,7 @@ List<uint64_t> LoopifyListSubsequences::init_list(const List<uint64_t> &l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }
@@ -154,7 +153,7 @@ List<uint64_t> LoopifyListSubsequences::snoc(const List<uint64_t> &l,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       continue;
     }

@@ -55,7 +55,7 @@ struct InductiveInModule {
         struct None {};
 
         struct Some {
-          A a0;
+          A a;
         };
 
         using variant_t = std::variant<None, Some>;
@@ -91,8 +91,8 @@ struct InductiveInModule {
           if (std::holds_alternative<None>(this->v())) {
             return option<A>(None{});
           } else {
-            const auto &[a0] = std::get<Some>(this->v());
-            return option<A>(Some{a0});
+            const auto &[a] = std::get<Some>(this->v());
+            return option<A>(Some{a});
           }
         }
 
@@ -101,14 +101,14 @@ struct InductiveInModule {
           if (std::holds_alternative<typename option<_U>::None>(_other.v())) {
             this->v_ = None{};
           } else {
-            const auto &[a0] = std::get<typename option<_U>::Some>(_other.v());
-            this->v_ = Some{A(a0)};
+            const auto &[a] = std::get<typename option<_U>::Some>(_other.v());
+            this->v_ = Some{A(a)};
           }
         }
 
         static option<A> none() { return option(None{}); }
 
-        static option<A> some(A a0) { return option(Some{std::move(a0)}); }
+        static option<A> some(A a) { return option(Some{std::move(a)}); }
 
         // MANIPULATORS
         inline variant_t &v_mut() { return v_; }

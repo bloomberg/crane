@@ -137,8 +137,8 @@ template <typename A> struct List {
   struct Nil {};
 
   struct Cons {
-    A a0;
-    std::unique_ptr<List<A>> a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -190,11 +190,10 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ =
-            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -206,15 +205,15 @@ public:
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
-      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
-  static List<A> cons(A a0, List<A> a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -224,8 +223,8 @@ public:
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
         auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -261,9 +260,9 @@ template <typename A> struct Tree {
   struct Leaf {};
 
   struct Node {
-    std::unique_ptr<Tree<A>> a0;
-    A a1;
-    std::unique_ptr<Tree<A>> a2;
+    std::unique_ptr<Tree<A>> t1;
+    A x;
+    std::unique_ptr<Tree<A>> t2;
   };
 
   using variant_t = std::variant<Leaf, Node>;
@@ -315,15 +314,14 @@ public:
         _dst->v_ = Leaf{};
       } else {
         const auto &_alt = std::get<Node>(_src->v());
-        _dst->v_ =
-            Node{_alt.a0 ? std::make_unique<Tree<A>>() : nullptr, _alt.a1,
-                 _alt.a2 ? std::make_unique<Tree<A>>() : nullptr};
+        _dst->v_ = Node{_alt.t1 ? std::make_unique<Tree<A>>() : nullptr, _alt.x,
+                        _alt.t2 ? std::make_unique<Tree<A>>() : nullptr};
         auto &_dst_alt = std::get<Node>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
+        if (_alt.t1) {
+          _stack.push_back({_alt.t1.get(), _dst_alt.t1.get()});
         }
-        if (_alt.a2) {
-          _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
+        if (_alt.t2) {
+          _stack.push_back({_alt.t2.get(), _dst_alt.t2.get()});
         }
       }
     }
@@ -335,17 +333,17 @@ public:
     if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
       this->v_ = Leaf{};
     } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree<_U>::Node>(_other.v());
-      this->v_ = Node{a0 ? std::make_unique<Tree<A>>(*a0) : nullptr, A(a1),
-                      a2 ? std::make_unique<Tree<A>>(*a2) : nullptr};
+      const auto &[t1, x, t2] = std::get<typename Tree<_U>::Node>(_other.v());
+      this->v_ = Node{t1 ? std::make_unique<Tree<A>>(*t1) : nullptr, A(x),
+                      t2 ? std::make_unique<Tree<A>>(*t2) : nullptr};
     }
   }
 
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
-  static Tree<A> node(Tree<A> a0, A a1, Tree<A> a2) {
-    return Tree(Node{std::make_unique<Tree<A>>(std::move(a0)), std::move(a1),
-                     std::make_unique<Tree<A>>(std::move(a2))});
+  static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
+    return Tree(Node{std::make_unique<Tree<A>>(std::move(t1)), std::move(x),
+                     std::make_unique<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS
@@ -355,11 +353,11 @@ public:
     auto _drain = [&](Tree<A> &_node) {
       if (std::holds_alternative<Node>(_node.v_)) {
         auto &_alt = std::get<Node>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
+        if (_alt.t1) {
+          _stack.push_back(std::move(_alt.t1));
         }
-        if (_alt.a2) {
-          _stack.push_back(std::move(_alt.a2));
+        if (_alt.t2) {
+          _stack.push_back(std::move(_alt.t2));
         }
       }
     };

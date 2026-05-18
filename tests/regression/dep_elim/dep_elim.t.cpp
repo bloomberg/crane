@@ -39,8 +39,8 @@ int main() {
       auto &v = l->v();
       ASSERT(std::holds_alternative<List<uint64_t>::Cons>(v));
       auto &c = std::get<List<uint64_t>::Cons>(v);
-      ASSERT(c.a0 == expected[i]);
-      l = c.a1.get();
+      ASSERT(c.a == expected[i]);
+      l = c.l.get();
     }
     ASSERT(std::holds_alternative<List<uint64_t>::Nil>(l->v()));
     std::cout << "Test 2 (vec_to_list): PASSED" << std::endl;

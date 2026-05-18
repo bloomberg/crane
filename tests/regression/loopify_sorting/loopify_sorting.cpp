@@ -20,8 +20,7 @@ List<uint64_t> LoopifySorting::insert(uint64_t x, List<uint64_t> l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a0), nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = std::move(*a1);
         continue;
       }
@@ -102,7 +101,7 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
                 typename List<uint64_t>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l1 = std::move(*a1);
             _loop_fuel = f;
             continue;
@@ -111,7 +110,7 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
                 typename List<uint64_t>::Cons(std::move(a00), nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l2 = std::move(*a10);
             _loop_fuel = f;
             continue;
@@ -374,7 +373,7 @@ List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         }
@@ -410,7 +409,7 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           _loop_seen = true;
           _loop_prev = a0;
@@ -420,8 +419,7 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_seen = true;
         _loop_prev = a0;

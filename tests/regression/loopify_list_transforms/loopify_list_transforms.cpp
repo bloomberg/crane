@@ -55,7 +55,7 @@ List<uint64_t> LoopifyListTransforms::prefix_sums(uint64_t acc,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_acc, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_acc = (_loop_acc + a0);
       continue;
@@ -100,7 +100,7 @@ LoopifyListTransforms::sliding_pairs_fuel(uint64_t fuel,
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l = a1.get();
           _loop_fuel = fuel_;
           continue;
@@ -155,7 +155,7 @@ LoopifyListTransforms::differences_fuel(uint64_t fuel,
               typename List<uint64_t>::Cons(abs_diff(a0, a00), nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           _loop_fuel = fuel_;
           continue;
@@ -192,8 +192,7 @@ List<uint64_t> LoopifyListTransforms::take(uint64_t n,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_n = n_;
         continue;
@@ -253,7 +252,7 @@ LoopifyListTransforms::chunks_of_fuel(uint64_t fuel, uint64_t n,
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l = drop(n, _loop_l);
           _loop_fuel = fuel_;
           continue;
@@ -343,7 +342,7 @@ LoopifyListTransforms::uniq_sorted_fuel(uint64_t fuel,
                 typename List<uint64_t>::Cons(a0, nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l = a1.get();
             _loop_fuel = fuel_;
             continue;

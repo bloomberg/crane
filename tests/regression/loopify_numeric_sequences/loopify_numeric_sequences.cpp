@@ -88,7 +88,7 @@ List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
               typename List<uint64_t>::Cons(_loop_n, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
           _loop_fuel = fuel_;
           continue;
@@ -97,7 +97,7 @@ List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
               typename List<uint64_t>::Cons(_loop_n, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_n = ((UINT64_C(3) * _loop_n) + UINT64_C(1));
           _loop_fuel = fuel_;
           continue;

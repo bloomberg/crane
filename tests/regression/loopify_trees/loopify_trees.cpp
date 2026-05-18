@@ -570,8 +570,7 @@ List<uint64_t> LoopifyTrees::extract_tree_values(
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a10, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_ts = a1.get();
         continue;
       }
@@ -609,14 +608,14 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
             typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a20, nullptr));
         std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
             _cell->v_mut())
-            .a1 = std::move(_cell1);
+            .l = std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
                  std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
                      (*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_ts = a1.get();
         continue;
       }
@@ -653,7 +652,7 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .a1;
+                 .l;
         _loop_trees = std::move(children);
         _loop_fuel = f;
         continue;
@@ -709,7 +708,7 @@ LoopifyTrees::append_list_lists(const List<List<uint64_t>> &l1,
           typename List<List<uint64_t>>::Cons(a0, nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_l1 = a1.get();
       continue;
     }
@@ -737,7 +736,7 @@ LoopifyTrees::map_cons_to_all(uint64_t x, const List<List<uint64_t>> &lsts) {
                                               nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_lsts = a1.get();
       continue;
     }
@@ -881,8 +880,7 @@ List<uint64_t> LoopifyTrees::insert_sorted(uint64_t x,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }

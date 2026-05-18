@@ -26,9 +26,9 @@ bool list_eq(const List<uint64_t> &l,
   while (it != expected.end()) {
     auto &v = cur->v();
     if (auto *cons = std::get_if<List<uint64_t>::Cons>(&v)) {
-      if (cons->a0 != *it)
+      if (cons->a != *it)
         return false;
-      cur = cons->a1.get();
+      cur = cons->l.get();
       ++it;
     } else {
       return false; // list too short

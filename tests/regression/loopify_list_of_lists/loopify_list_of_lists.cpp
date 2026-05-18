@@ -70,8 +70,7 @@ List<uint64_t> LoopifyListOfLists::map_hd(const List<List<uint64_t>> &ll) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a00, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_ll = a1.get();
         continue;
       }
@@ -105,7 +104,7 @@ LoopifyListOfLists::map_tl(const List<List<uint64_t>> &ll) {
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .a1;
+                 .l;
         _loop_ll = a1.get();
         continue;
       }
@@ -171,7 +170,7 @@ LoopifyListOfLists::transpose_fuel(uint64_t fuel,
             *_write = std::move(_cell);
             _write = &std::get<typename List<List<uint64_t>>::Cons>(
                           (*_write)->v_mut())
-                          .a1;
+                          .l;
             _loop_ll = std::move(tails);
             _loop_fuel = fuel_;
             continue;
@@ -372,8 +371,7 @@ List<uint64_t> LoopifyListOfLists::firsts(const List<List<uint64_t>> &ll) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a00, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_ll = a1.get();
         continue;
       }
@@ -435,7 +433,7 @@ LoopifyListOfLists::zip_lists(const List<List<uint64_t>> &ll1,
         _write = &std::get<typename List<
             std::pair<List<uint64_t>, List<uint64_t>>>::Cons>(
                       (*_write)->v_mut())
-                      .a1;
+                      .l;
         _loop_ll2 = a10.get();
         _loop_ll1 = a1.get();
         continue;

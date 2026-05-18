@@ -30,8 +30,8 @@ struct DocComments {
 
     /// Cons cell: an element followed by the rest of the list.
     struct Mycons {
-      A a0;
-      std::unique_ptr<mylist<A>> a1;
+      A a;
+      std::unique_ptr<mylist<A>> l;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -83,11 +83,11 @@ struct DocComments {
           _dst->v_ = Mynil{};
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+          _dst->v_ =
+              Mycons{_alt.a, _alt.l ? std::make_unique<mylist<A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+          if (_alt.l) {
+            _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
           }
         }
       }
@@ -99,18 +99,16 @@ struct DocComments {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
         this->v_ = Mynil{};
       } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ =
-            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+        const auto &[a, l] = std::get<typename mylist<_U>::Mycons>(_other.v());
+        this->v_ = Mycons{A(a), l ? std::make_unique<mylist<A>>(*l) : nullptr};
       }
     }
 
     static mylist<A> mynil() { return mylist(Mynil{}); }
 
-    static mylist<A> mycons(A a0, mylist<A> a1) {
+    static mylist<A> mycons(A a, mylist<A> l) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Mycons{std::move(a), std::make_unique<mylist<A>>(std::move(l))});
     }
 
     // MANIPULATORS
@@ -120,8 +118,8 @@ struct DocComments {
       auto _drain = [&](mylist<A> &_node) {
         if (std::holds_alternative<Mycons>(_node.v_)) {
           auto &_alt = std::get<Mycons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt.l) {
+            _stack.push_back(std::move(_alt.l));
           }
         }
       };

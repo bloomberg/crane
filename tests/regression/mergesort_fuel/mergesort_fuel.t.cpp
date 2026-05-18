@@ -31,8 +31,8 @@ list_to_vector(const List<uint64_t> &l) {
   const List<uint64_t> *cur = &l;
   while (std::holds_alternative<typename List<uint64_t>::Cons>(cur->v())) {
     auto &c = std::get<typename List<uint64_t>::Cons>(cur->v());
-    result.push_back(c.a0);
-    cur = c.a1.get();
+    result.push_back(c.a);
+    cur = c.l.get();
   }
   return result;
 }

@@ -81,8 +81,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = filter_multiples(a0, *a1);
         _loop_fuel = f;
         continue;
@@ -147,7 +146,7 @@ List<uint64_t> LoopifyAlgorithms::prefix_sums(uint64_t acc,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_acc, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_acc = (_loop_acc + a0);
       continue;
@@ -179,8 +178,7 @@ List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
             std::make_unique<List<uint64_t>>(typename List<uint64_t>::Cons(
                 (((a00 - a0) > a00 ? 0 : (a00 - a0))), nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }
@@ -267,8 +265,7 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_fuel = f;
         _loop_l = filter_out(a0, *a1);
         continue;
@@ -357,8 +354,7 @@ List<uint64_t> LoopifyAlgorithms::take_impl(uint64_t k,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_k = m;
         continue;
@@ -400,7 +396,7 @@ List<List<uint64_t>> LoopifyAlgorithms::windows_aux(uint64_t n,
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_fuel = f;
           _loop_l = a1.get();
           continue;
@@ -444,7 +440,7 @@ LoopifyAlgorithms::sliding_pairs(const List<uint64_t> &l) {
         *_write = std::move(_cell);
         _write = &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                       (*_write)->v_mut())
-                      .a1;
+                      .l;
         _loop_l = a1.get();
         continue;
       }

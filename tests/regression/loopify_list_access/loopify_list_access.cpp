@@ -123,8 +123,7 @@ LoopifyListAccess::lookup_all(uint64_t key,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(v, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       } else {

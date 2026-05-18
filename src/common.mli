@@ -277,6 +277,18 @@ val lookup_ctor_field_name : string -> int -> Id.t
 (** Clear the registry between extraction passes. *)
 val reset_ctor_field_names : unit -> unit
 
+(** {2 Constructor Binding Name Registry}
+
+    Stores the base names used for structured-binding variables in pattern
+    matches.  For fields whose kernel binder was anonymous the name falls back
+    to the indexed form (e.g. [a0]) to prevent shadowing in nested matches. *)
+
+(** Register a binding variable name for a constructor field. *)
+val register_ctor_bind_name : string -> int -> Id.t -> unit
+
+(** Look up the binding variable name; falls back to [a{idx}] if unregistered. *)
+val lookup_ctor_bind_name : string -> int -> Id.t
+
 val eta_param_name : int -> string
 
 val eta_param_id : int -> Id.t

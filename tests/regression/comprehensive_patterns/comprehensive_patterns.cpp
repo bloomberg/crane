@@ -115,7 +115,7 @@ ComprehensivePatterns::make_list(uint64_t n, ComprehensivePatterns::S s) {
       _write = &std::get<typename List<
           std::pair<ComprehensivePatterns::S, uint64_t>>::Cons>(
                     (*_write)->v_mut())
-                    .a1;
+                    .l;
       _loop_n = m;
       continue;
     }
@@ -324,7 +324,7 @@ ComprehensivePatterns::repeat_r2(uint64_t n, ComprehensivePatterns::R2 r2) {
           &std::get<typename List<std::pair<ComprehensivePatterns::R2,
                                             ComprehensivePatterns::R1>>::Cons>(
                (*_write)->v_mut())
-               .a1;
+               .l;
       _loop_n = m;
       continue;
     }
@@ -484,7 +484,7 @@ ComprehensivePatterns::repeat_pair(uint64_t n, ComprehensivePatterns::R r) {
       _write = &std::get<typename List<
           std::pair<ComprehensivePatterns::R, uint64_t>>::Cons>(
                     (*_write)->v_mut())
-                    .a1;
+                    .l;
       _loop_n = m;
       continue;
     }

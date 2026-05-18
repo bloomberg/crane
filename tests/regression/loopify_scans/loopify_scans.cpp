@@ -16,7 +16,7 @@ List<uint64_t> LoopifyScans::scanl(uint64_t acc, const List<uint64_t> &l) {
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_acc, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_acc = (_loop_acc + a0);
       continue;
@@ -41,7 +41,7 @@ List<uint64_t> LoopifyScans::scanl_mult(uint64_t acc, const List<uint64_t> &l) {
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_acc, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_acc = (_loop_acc * a0);
       continue;
@@ -73,7 +73,7 @@ List<uint64_t> LoopifyScans::running_max(uint64_t current,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_current, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_current = new_max;
       continue;
@@ -105,7 +105,7 @@ List<uint64_t> LoopifyScans::running_min(uint64_t current,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_current, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_current = new_min;
       continue;
@@ -147,7 +147,7 @@ List<uint64_t> LoopifyScans::pairwise_diff(uint64_t prev,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(diff, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l = a1.get();
       _loop_prev = a0;
       continue;
@@ -174,8 +174,7 @@ List<uint64_t> LoopifyScans::accumulate_if_even(uint64_t acc,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(_loop_acc, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_acc = (_loop_acc + a0);
         continue;
@@ -183,8 +182,7 @@ List<uint64_t> LoopifyScans::accumulate_if_even(uint64_t acc,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(_loop_acc, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }

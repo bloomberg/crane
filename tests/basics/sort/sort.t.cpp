@@ -48,8 +48,8 @@ list_to_vector(const List<uint64_t> &l) {
                             done = true;
                           },
                           [&](const typename List<uint64_t>::Cons &c) {
-                            result.push_back(c.a0);
-                            current = c.a1.get();
+                            result.push_back(c.a);
+                            current = c.l.get();
                           }},
                current->v());
     if (done)

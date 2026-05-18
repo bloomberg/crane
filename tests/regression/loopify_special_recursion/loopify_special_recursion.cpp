@@ -144,8 +144,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<uint64_t> &l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }
@@ -170,8 +169,7 @@ List<uint64_t> LoopifySpecialRecursion::reverse_insert(uint64_t x,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a0), nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = std::move(*a1);
         continue;
       } else {
@@ -374,7 +372,7 @@ List<uint64_t> LoopifySpecialRecursion::between(uint64_t lo, uint64_t hi,
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         } else {

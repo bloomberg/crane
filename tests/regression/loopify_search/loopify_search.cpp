@@ -129,7 +129,7 @@ LoopifySearch::longest_increasing_subseq(const List<uint64_t> &l) {
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         } else {
@@ -190,8 +190,7 @@ List<uint64_t> LoopifySearch::take_impl(uint64_t k, const List<uint64_t> &l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_k = m;
         continue;
@@ -404,7 +403,7 @@ List<uint64_t> LoopifySearch::lis(const List<uint64_t> &l) {
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         } else {
@@ -470,8 +469,7 @@ List<uint64_t> LoopifySearch::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = filter_impl(
             [=](uint64_t y) mutable {
               return !((a0 ? y % a0 : y) == UINT64_C(0));
@@ -535,7 +533,7 @@ List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, List<uint64_t> l) {
               typename List<uint64_t>::Cons(std::move(a0), nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = std::move(*a1);
           _loop_fuel = f;
           continue;
@@ -580,7 +578,7 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = filter_impl([=](uint64_t y) mutable { return !(a0 == y); },
                                 a1_value);
           _loop_fuel = f;
@@ -760,7 +758,7 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
                 typename List<uint64_t>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l1 = std::move(*a1);
             _loop_fuel = f;
             continue;
@@ -769,7 +767,7 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
                 typename List<uint64_t>::Cons(std::move(a00), nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l2 = std::move(*a10);
             _loop_fuel = f;
             continue;
@@ -879,8 +877,7 @@ List<uint64_t> LoopifySearch::remove_first(uint64_t x,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }
@@ -909,7 +906,7 @@ List<List<uint64_t>> LoopifySearch::map_cons(uint64_t x,
                                               nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_lsts = a1.get();
       continue;
     }
@@ -1069,8 +1066,7 @@ List<uint64_t> LoopifySearch::all_indices_aux(uint64_t x,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(_loop_idx, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_idx = (_loop_idx + 1);
         _loop_l = a1.get();
         continue;

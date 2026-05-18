@@ -297,8 +297,7 @@ LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
         auto _cell = std::make_unique<LoopifyPairs::list<uint64_t>>(
             typename list<uint64_t>::Cons(v, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       } else {
@@ -338,7 +337,7 @@ LoopifyPairs::list<std::pair<uint64_t, uint64_t>> LoopifyPairs::swap_pairs(
       *_write = std::move(_cell);
       _write = &std::get<typename list<std::pair<uint64_t, uint64_t>>::Cons>(
                     (*_write)->v_mut())
-                    .a1;
+                    .l;
       _loop_l = a1.get();
       continue;
     }

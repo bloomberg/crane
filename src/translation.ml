@@ -109,20 +109,27 @@ let field_name_str_of_idx consarg_names k =
   | _ -> field_param_name k
 
 (** Compute and register the C++ field name for constructor field [j].
-    Deduplicates by appending [_<j>] when an earlier field has the same name.
+    Registers two entries:
+    - [ctor_field_names]: the pretty field name (used for struct declarations
+      and member access), derived from [field_consarg_names] which may include
+      names supplied by [Arguments_renaming].
+    - [ctor_bind_names]: the base name for structured-binding variables in
+      pattern matches, derived from [bind_consarg_names] (kernel-only).  When
+      the kernel binder is anonymous ([None]) the indexed fallback [a0]/[a1]/...
+      is used unconditionally to prevent variable-shadowing in nested matches.
 
-    @param ctor_struct_name  PascalCase name of the constructor struct
-    @param consarg_names     binder names from {!Miniml.ml_ind_packet.ip_consarg_names}
-    @param _n_fields         total field count (unused but kept for symmetry)
-    @param j                 0-based field index *)
-let compute_field_name ctor_struct_name consarg_names _n_fields j =
-  let base_str = field_name_str_of_idx consarg_names j in
-  (* Deduplicate: if an earlier field already has the same name, append the
-     index as a suffix to disambiguate (e.g. [d_x] and [d_x_3]). *)
+    @param ctor_struct_name   PascalCase name of the constructor struct
+    @param field_consarg_names  field declaration names (kernel + Arguments override)
+    @param bind_consarg_names   binding variable names (kernel only)
+    @param _n_fields            total field count (unused but kept for symmetry)
+    @param j                    0-based field index *)
+let compute_field_name ctor_struct_name field_consarg_names bind_consarg_names
+    _n_fields j =
+  let base_str = field_name_str_of_idx field_consarg_names j in
   let has_dup =
     let rec check k =
       if k >= j then false
-      else if String.equal (field_name_str_of_idx consarg_names k) base_str
+      else if String.equal (field_name_str_of_idx field_consarg_names k) base_str
       then true
       else check (k + 1)
     in
@@ -133,14 +140,56 @@ let compute_field_name ctor_struct_name consarg_names _n_fields j =
   in
   let field_id = Id.of_string field_str in
   register_ctor_field_name ctor_struct_name j field_id;
+  (* Binding variable name: use indexed fallback for anonymous kernel binders
+     to prevent shadowing when nested matches on the same type reuse [a0]/[l0]. *)
+  let bind_id =
+    match List.nth_opt bind_consarg_names j with
+    | Some (Some _) -> field_id  (* kernel-named: same as field for readability *)
+    | _ -> field_param_id j      (* anonymous kernel binder: safe indexed fallback *)
+  in
+  register_ctor_bind_name ctor_struct_name j bind_id;
   field_id
 
 (** Compute and register field names for all [n_fields] fields of a
-    constructor struct. Entry point called from {!gen_ind_header_v2},
-    {!gen_ind_header}, and {!gen_ind_cpp} at definition sites. *)
-let compute_and_register_field_names ctor_struct_name consarg_names n_fields =
+    constructor struct.  [field_consarg_names] supplies the pretty names used
+    for struct field declarations (may include [Arguments_renaming] overrides);
+    [bind_consarg_names] supplies the kernel-only names used for structured-
+    binding variable generation. *)
+let compute_and_register_field_names ctor_struct_name field_consarg_names
+    bind_consarg_names n_fields =
   List.init n_fields (fun j ->
-    compute_field_name ctor_struct_name consarg_names n_fields j)
+    compute_field_name ctor_struct_name field_consarg_names bind_consarg_names
+      n_fields j)
+
+(** Augment [kernel_arg_names] with names from an [Arguments] declaration.
+    Where [kernel_arg_names] has [None] (anonymous binder), the corresponding
+    entry from [Arguments_renaming.arguments_names] is used if present and
+    non-anonymous.  Kernel-named entries ([Some _]) are never overridden.
+    Returns [kernel_arg_names] unchanged if [Arguments_renaming] has no entry
+    for [cref] or if all kernel binders are already named. *)
+let augment_with_args_renaming cref kernel_arg_names =
+  if List.for_all (fun n -> n <> None) kernel_arg_names then
+    kernel_arg_names
+  else
+    try
+      let n_params =
+        match cref with
+        | GlobRef.ConstructRef ((kn, _), _) ->
+          (Global.lookup_mind kn).mind_nparams
+        | _ -> 0
+      in
+      let all_override = Arguments_renaming.arguments_names cref in
+      let override = List.skipn n_params all_override in
+      List.map2
+        (fun kern over ->
+          match kern with
+          | Some _ -> kern
+          | None ->
+            (match over with
+             | Names.Name id -> Some id
+             | Names.Anonymous -> None))
+        kernel_arg_names override
+    with Not_found | Invalid_argument _ -> kernel_arg_names
 
 (** Derive the PascalCase C++ constructor struct name from a [GlobRef.t].
     Constructor references (e.g. [ConstructRef ((kn,0), 1)] for [Cons]) are
@@ -6033,7 +6082,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let binding_names_arr =
     let avoid = ref outer_avoid in
     Array.init (List.length rev_ids) (fun i ->
-      let field_id = lookup_ctor_field_name ctor_struct_name i in
+      let field_id = lookup_ctor_bind_name ctor_struct_name i in
       let base = Id.of_string (Id.to_string field_id ^ suffix) in
       let name =
         if Id.Set.mem base !avoid then rename_id base !avoid else base
@@ -9151,8 +9200,9 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
            in
            let n_fields = List.length tys in
            let field_ids =
-             compute_and_register_field_names
-               ctor_struct_name ctor_consarg_names n_fields
+             compute_and_register_field_names ctor_struct_name
+               (augment_with_args_renaming c ctor_consarg_names)
+               ctor_consarg_names n_fields
            in
            let constr =
              List.mapi
@@ -12170,8 +12220,9 @@ let gen_ind_header ?(consarg_names = [||]) vars name cnames tys =
            in
            let n_fields = List.length tys in
            let field_ids =
-             compute_and_register_field_names
-               ctor_struct_name ctor_consarg_names n_fields
+             compute_and_register_field_names ctor_struct_name
+               (augment_with_args_renaming c ctor_consarg_names)
+               ctor_consarg_names n_fields
            in
            let constr =
              List.mapi
@@ -13125,7 +13176,9 @@ let gen_ind_header_v2
           if 0 < Array.length consarg_names then consarg_names.(0) else [] in
         let n_fields = List.length tys_list in
         let field_ids =
-          compute_and_register_field_names cname_str ctor_consarg_names n_fields in
+          compute_and_register_field_names cname_str
+            (augment_with_args_renaming c ctor_consarg_names)
+            ctor_consarg_names n_fields in
         let erase_if_needed cpp_ty =
           if vars = [] then
             match cpp_ty with
@@ -13211,8 +13264,9 @@ let gen_ind_header_v2
                in
                let n_fields = List.length tys_list in
                let field_ids =
-                 compute_and_register_field_names
-                   ctor_struct_name ctor_consarg_names n_fields
+                 compute_and_register_field_names ctor_struct_name
+                   (augment_with_args_renaming c ctor_consarg_names)
+                   ctor_consarg_names n_fields
                in
                let fields =
                  List.mapi
@@ -13570,10 +13624,10 @@ let gen_ind_header_v2
                                          push_rval
                                            (CPPraw (
                                               "std::make_unique<" ^ ss
-                                              ^ ">(std::move(_lc." ^ field_param_name 0 ^ "))"));
+                                              ^ ">(std::move(_lc." ^ Id.to_string (lookup_ctor_field_name cons_s 0) ^ "))"));
                                          Sraw (
-                                           "if (_lc." ^ field_param_name 1 ^ ") {"
-                                           ^ " _lp = _lc." ^ field_param_name 1 ^ ".get();"
+                                           "if (_lc." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ ") {"
+                                           ^ " _lp = _lc." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ ".get();"
                                            ^ " } else { break; }") ]) ])]
                               | `None -> [])
                             fields
@@ -14526,16 +14580,16 @@ let gen_ind_header_v2
                                       ^ " _ldst->v_mut() = typename "
                                         ^ ls ^ "::" ^ cons_s ^ "{"
                                         ^ self_s ^ "{},"
-                                        ^ " _lsrc_c." ^ field_param_name 1 ^ " ? std::make_unique<"
+                                        ^ " _lsrc_c." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ " ? std::make_unique<"
                                         ^ ls ^ ">() : nullptr};"
                                       ^ " auto& _ldst_c = std::get<typename "
                                         ^ ls ^ "::" ^ cons_s
                                         ^ ">(_ldst->v_mut());"
-                                      ^ " _stack.push_back({&_lsrc_c." ^ field_param_name 0 ^ ","
-                                        ^ " &_ldst_c." ^ field_param_name 0 ^ "});"
-                                      ^ " if (_lsrc_c." ^ field_param_name 1 ^ ") {"
-                                        ^ " _lsrc = _lsrc_c." ^ field_param_name 1 ^ ".get();"
-                                        ^ " _ldst = _ldst_c." ^ field_param_name 1 ^ ".get();"
+                                      ^ " _stack.push_back({&_lsrc_c." ^ Id.to_string (lookup_ctor_field_name cons_s 0) ^ ","
+                                        ^ " &_ldst_c." ^ Id.to_string (lookup_ctor_field_name cons_s 0) ^ "});"
+                                      ^ " if (_lsrc_c." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ ") {"
+                                        ^ " _lsrc = _lsrc_c." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ ".get();"
+                                        ^ " _ldst = _ldst_c." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ ".get();"
                                       ^ " } else { break; }"
                                       ^ " }"
                                       ^ " if (std::holds_alternative<typename "

@@ -17,8 +17,8 @@ struct LoopifyLists {
     struct Nil {};
 
     struct Cons {
-      A a0;
-      std::unique_ptr<list<A>> a1;
+      A a;
+      std::unique_ptr<list<A>> l;
     };
 
     using variant_t = std::variant<Nil, Cons>;
@@ -71,10 +71,10 @@ struct LoopifyLists {
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
           _dst->v_ =
-              Cons{_alt.a0, _alt.a1 ? std::make_unique<list<A>>() : nullptr};
+              Cons{_alt.a, _alt.l ? std::make_unique<list<A>>() : nullptr};
           auto &_dst_alt = std::get<Cons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+          if (_alt.l) {
+            _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
           }
         }
       }
@@ -86,16 +86,15 @@ struct LoopifyLists {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
         this->v_ = Nil{};
       } else {
-        const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a0), a1 ? std::make_unique<list<A>>(*a1) : nullptr};
+        const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
+        this->v_ = Cons{A(a), l ? std::make_unique<list<A>>(*l) : nullptr};
       }
     }
 
     static list<A> nil() { return list(Nil{}); }
 
-    static list<A> cons(A a0, list<A> a1) {
-      return list(
-          Cons{std::move(a0), std::make_unique<list<A>>(std::move(a1))});
+    static list<A> cons(A a, list<A> l) {
+      return list(Cons{std::move(a), std::make_unique<list<A>>(std::move(l))});
     }
 
     // MANIPULATORS
@@ -105,8 +104,8 @@ struct LoopifyLists {
       auto _drain = [&](list<A> &_node) {
         if (std::holds_alternative<Cons>(_node.v_)) {
           auto &_alt = std::get<Cons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt.l) {
+            _stack.push_back(std::move(_alt.l));
           }
         }
       };
@@ -233,13 +232,12 @@ struct LoopifyLists {
             std::make_unique<list<T1>>(typename list<T1>::Cons(a0, nullptr));
         auto _cell1 =
             std::make_unique<list<T1>>(typename list<T1>::Cons(a0, nullptr));
-        std::get<typename list<T1>::Cons>(_cell->v_mut()).a1 =
-            std::move(_cell1);
+        std::get<typename list<T1>::Cons>(_cell->v_mut()).l = std::move(_cell1);
         *_write = std::move(_cell);
         _write = &std::get<typename list<T1>::Cons>(
                       std::get<typename list<T1>::Cons>((*_write)->v_mut())
-                          .a1->v_mut())
-                      .a1;
+                          .l->v_mut())
+                      .l;
         _loop_l = a1.get();
         continue;
       }
@@ -262,7 +260,7 @@ struct LoopifyLists {
         auto _cell =
             std::make_unique<list<T1>>(typename list<T1>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }
@@ -292,13 +290,13 @@ struct LoopifyLists {
               std::make_unique<list<T1>>(typename list<T1>::Cons(a0, nullptr));
           auto _cell1 =
               std::make_unique<list<T1>>(typename list<T1>::Cons(sep, nullptr));
-          std::get<typename list<T1>::Cons>(_cell->v_mut()).a1 =
+          std::get<typename list<T1>::Cons>(_cell->v_mut()).l =
               std::move(_cell1);
           *_write = std::move(_cell);
           _write = &std::get<typename list<T1>::Cons>(
                         std::get<typename list<T1>::Cons>((*_write)->v_mut())
-                            .a1->v_mut())
-                        .a1;
+                            .l->v_mut())
+                        .l;
           _loop_l = a1.get();
           continue;
         }
@@ -321,7 +319,7 @@ struct LoopifyLists {
         auto _cell =
             std::make_unique<list<T1>>(typename list<T1>::Cons(x, nullptr));
         *_write = std::move(_cell);
-        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).l;
         _loop_n = m;
         continue;
       }
@@ -420,8 +418,7 @@ struct LoopifyLists {
         auto _cell = std::make_unique<list<list<T1>>>(
             typename list<list<T1>>::Cons(_loop_l, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).l;
         _loop_l = std::move(*a1);
         continue;
       }
@@ -508,7 +505,7 @@ struct LoopifyLists {
         auto _cell = std::make_unique<list<T2>>(
             typename list<T2>::Cons(_loop_acc, nullptr));
         *_write = std::move(_cell);
-        _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         _loop_acc = new_acc;
         continue;
@@ -609,7 +606,7 @@ struct LoopifyLists {
                 typename list<list<T1>>::Cons(chunk, nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).l;
             _loop_fuel = f;
             _loop_l = std::move(rest);
             continue;
@@ -695,7 +692,7 @@ struct LoopifyLists {
           auto _cell = std::make_unique<list<T3>>(
               typename list<T3>::Cons(f(a0, a00), nullptr));
           *_write = std::move(_cell);
-          _write = &std::get<typename list<T3>::Cons>((*_write)->v_mut()).a1;
+          _write = &std::get<typename list<T3>::Cons>((*_write)->v_mut()).l;
           _loop_l2 = a10.get();
           _loop_l1 = a1.get();
           continue;
@@ -736,7 +733,7 @@ struct LoopifyLists {
             *_write = std::move(_cell);
             _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                           (*_write)->v_mut())
-                          .a1;
+                          .l;
             _loop_l2 = std::move(*a10);
             _loop_l1 = list<T1>::nil();
             _loop_fuel = f;
@@ -752,7 +749,7 @@ struct LoopifyLists {
             *_write = std::move(_cell);
             _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                           (*_write)->v_mut())
-                          .a1;
+                          .l;
             _loop_l2 = list<T1>::nil();
             _loop_l1 = std::move(*a1);
             _loop_fuel = f;
@@ -766,7 +763,7 @@ struct LoopifyLists {
             *_write = std::move(_cell);
             _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                           (*_write)->v_mut())
-                          .a1;
+                          .l;
             _loop_l2 = std::move(*a10);
             _loop_l1 = std::move(*a1);
             _loop_fuel = f;
@@ -822,7 +819,7 @@ struct LoopifyLists {
           *_write = std::move(_cell);
           _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                         (*_write)->v_mut())
-                        .a1;
+                        .l;
           _loop_l = a1.get();
           continue;
         }
@@ -973,7 +970,7 @@ struct LoopifyLists {
               *_write = std::move(_cell);
               _write =
                   &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut())
-                       .a1;
+                       .l;
               _loop_m = std::move(tails0);
               _loop_fuel = f;
               continue;
@@ -1085,7 +1082,7 @@ struct LoopifyLists {
               typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         }

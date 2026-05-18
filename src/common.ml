@@ -1412,9 +1412,29 @@ let lookup_ctor_field_name ctor_name field_idx =
   | Some id -> id
   | None -> field_param_id field_idx
 
+(** Separate registry for structured-binding variable names.  Unlike
+    [ctor_field_names] (which stores the struct field names used in
+    declarations and member access), this registry stores the base names used
+    when generating [const auto& [name0, name1] = ...] bindings in pattern
+    matches.  For fields whose kernel binder was anonymous (defined with [->])
+    the binding name falls back to the indexed form [a0], [a1], ... to prevent
+    variable-shadowing collisions in nested matches.  Fields whose kernel
+    binder is explicitly named reuse the field name for readability. *)
+let ctor_bind_names : (string * int, Id.t) Hashtbl.t = Hashtbl.create 64
+
+let register_ctor_bind_name ctor_name field_idx field_id =
+  Hashtbl.replace ctor_bind_names (ctor_name, field_idx) field_id
+
+let lookup_ctor_bind_name ctor_name field_idx =
+  match Hashtbl.find_opt ctor_bind_names (ctor_name, field_idx) with
+  | Some id -> id
+  | None -> field_param_id field_idx
+
 (** Clear the field name registry.  Must be called between extraction
     passes to avoid stale names from one module leaking into another. *)
-let reset_ctor_field_names () = Hashtbl.clear ctor_field_names
+let reset_ctor_field_names () =
+  Hashtbl.clear ctor_field_names;
+  Hashtbl.clear ctor_bind_names
 
 (** {3 More synthetic name generators} *)
 

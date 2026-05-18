@@ -473,7 +473,7 @@ List<uint64_t> LoopifyMoreTrees::append_lists(const List<uint64_t> &l1,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l1 = a1.get();
       continue;
     }
@@ -540,7 +540,7 @@ LoopifyMoreTrees::map_tree_to_list(const List<LoopifyMoreTrees::tree> &lt) {
           typename List<List<uint64_t>>::Cons(tree_to_list(a0), nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_lt = a1.get();
       continue;
     }
@@ -582,7 +582,7 @@ LoopifyMoreTrees::append_trees(const List<LoopifyMoreTrees::tree> &l1,
       *_write = std::move(_cell);
       _write = &std::get<typename List<LoopifyMoreTrees::tree>::Cons>(
                     (*_write)->v_mut())
-                    .a1;
+                    .l;
       _loop_l1 = a1.get();
       continue;
     }
@@ -659,7 +659,7 @@ LoopifyMoreTrees::tree_levels_fuel(uint64_t fuel,
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .a1;
+                 .l;
         _loop_level = std::move(next);
         _loop_fuel = fuel_;
         continue;

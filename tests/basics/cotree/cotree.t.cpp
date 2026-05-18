@@ -38,8 +38,8 @@ to_vector(const List<uint64_t> &l) {
     auto ok = std::visit(
         Overloaded{[&](const List<uint64_t>::Nil) -> bool { return false; },
                    [&](const List<uint64_t>::Cons &args) -> bool {
-                     result.push_back(args.a0);
-                     cur = args.a1.get();
+                     result.push_back(args.a);
+                     cur = args.l.get();
                      return true;
                    }},
         cur->v());

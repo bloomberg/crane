@@ -40,7 +40,7 @@ int main() {
   // Test run_sum
   auto running = LoopifySequences::run_sum(lst);
   ASSERT(std::holds_alternative<List::Cons>(running.v()));
-  ASSERT(std::get<List::Cons>(running.v()).a0 == UINT64_C(0));
+  ASSERT(std::get<List::Cons>(running.v()).a == UINT64_C(0));
 
   // Test intercalate
   using ListList = ::List<::List<uint64_t>>;

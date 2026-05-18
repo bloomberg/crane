@@ -21,8 +21,7 @@ List<uint64_t> LoopifyCombinatorics::remove(uint64_t x,
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a1.get();
         continue;
       }
@@ -51,7 +50,7 @@ LoopifyCombinatorics::map_cons(uint64_t x, const List<List<uint64_t>> &lsts) {
                                               nullptr));
       *_write = std::move(_cell);
       _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).a1;
+          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
       _loop_lsts = a1.get();
       continue;
     }
@@ -329,7 +328,7 @@ LoopifyCombinatorics::map_pairs(uint64_t y, const List<uint64_t> &l) {
       *_write = std::move(_cell);
       _write = &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                     (*_write)->v_mut())
-                    .a1;
+                    .l;
       _loop_l = a1.get();
       continue;
     }

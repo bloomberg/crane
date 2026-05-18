@@ -115,7 +115,7 @@ public:
 template <typename A> struct Option {
   // TYPES
   struct Some {
-    A a0;
+    A a;
   };
 
   struct None {};
@@ -151,8 +151,8 @@ public:
   // ACCESSORS
   Option<A> clone() const {
     if (std::holds_alternative<Some>(this->v())) {
-      const auto &[a0] = std::get<Some>(this->v());
-      return Option<A>(Some{a0});
+      const auto &[a] = std::get<Some>(this->v());
+      return Option<A>(Some{a});
     } else {
       return Option<A>(None{});
     }
@@ -161,14 +161,14 @@ public:
   // CREATORS
   template <typename _U> explicit Option(const Option<_U> &_other) {
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-      const auto &[a0] = std::get<typename Option<_U>::Some>(_other.v());
-      this->v_ = Some{A(a0)};
+      const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+      this->v_ = Some{A(a)};
     } else {
       this->v_ = None{};
     }
   }
 
-  static Option<A> some(A a0) { return Option(Some{std::move(a0)}); }
+  static Option<A> some(A a) { return Option(Some{std::move(a)}); }
 
   static Option<A> none() { return Option(None{}); }
 

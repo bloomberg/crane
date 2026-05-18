@@ -13,8 +13,8 @@ template <typename A> struct List {
   struct Nil {};
 
   struct Cons {
-    A a0;
-    std::unique_ptr<List<A>> a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -66,11 +66,10 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ =
-            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -82,15 +81,15 @@ public:
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
-      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
-  static List<A> cons(A a0, List<A> a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -100,8 +99,8 @@ public:
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
         auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -135,7 +134,7 @@ public:
         auto _cell =
             std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
         _loop_self = a1.get();
         continue;
       }
@@ -220,13 +219,13 @@ struct LoopifyStructures {
                     std::get<typename List<nested>::Cons>(_lsrc->v());
                 _ldst->v_mut() = typename List<nested>::Cons{
                     nested{},
-                    _lsrc_c.a1 ? std::make_unique<List<nested>>() : nullptr};
+                    _lsrc_c.l ? std::make_unique<List<nested>>() : nullptr};
                 auto &_ldst_c =
                     std::get<typename List<nested>::Cons>(_ldst->v_mut());
-                _stack.push_back({&_lsrc_c.a0, &_ldst_c.a0});
-                if (_lsrc_c.a1) {
-                  _lsrc = _lsrc_c.a1.get();
-                  _ldst = _ldst_c.a1.get();
+                _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
+                if (_lsrc_c.l) {
+                  _lsrc = _lsrc_c.l.get();
+                  _ldst = _ldst_c.l.get();
                 } else {
                   break;
                 }
@@ -261,9 +260,9 @@ struct LoopifyStructures {
             while (
                 std::holds_alternative<typename List<nested>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<nested>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_unique<nested>(std::move(_lc.a0)));
-              if (_lc.a1) {
-                _lp = _lc.a1.get();
+              _stack.push_back(std::make_unique<nested>(std::move(_lc.a)));
+              if (_lc.l) {
+                _lp = _lc.l.get();
               } else {
                 break;
               }

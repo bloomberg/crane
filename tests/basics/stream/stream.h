@@ -113,8 +113,8 @@ template <typename A> struct List {
   struct Nil {};
 
   struct Cons {
-    A a0;
-    std::unique_ptr<List<A>> a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -166,11 +166,10 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ =
-            Cons{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -182,15 +181,15 @@ public:
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
-      const auto &[a0, a1] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
-  static List<A> cons(A a0, List<A> a1) {
-    return List(Cons{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -200,8 +199,8 @@ public:
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
         auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -224,8 +223,8 @@ public:
 template <typename A> struct Stream {
   // TYPES
   struct Scons {
-    A a0;
-    std::shared_ptr<Stream<A>> a1;
+    A x;
+    std::shared_ptr<Stream<A>> xs;
   };
 
   using variant_t = std::variant<Scons>;
@@ -242,8 +241,8 @@ public:
   explicit Stream(std::function<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static Stream<A> scons(A a0, const Stream<A> &a1) {
-    return Stream(Scons{std::move(a0), std::make_shared<Stream<A>>(a1)});
+  static Stream<A> scons(A x, const Stream<A> &xs) {
+    return Stream(Scons{std::move(x), std::make_shared<Stream<A>>(xs)});
   }
 
   static Stream<A> lazy_(std::function<Stream<A>()> thunk) {

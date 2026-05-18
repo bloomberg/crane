@@ -135,7 +135,7 @@ List<uint64_t> LoopifyComparators::merge_by_fuel(uint64_t fuel,
                 typename List<uint64_t>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l1 = std::move(*a1);
             _loop_fuel = fuel_;
             continue;
@@ -144,7 +144,7 @@ List<uint64_t> LoopifyComparators::merge_by_fuel(uint64_t fuel,
                 typename List<uint64_t>::Cons(std::move(a00), nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_l2 = std::move(*a10);
             _loop_fuel = fuel_;
             continue;
@@ -182,8 +182,7 @@ List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x, List<uint64_t> l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a0), nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = std::move(*a1);
         continue;
       }

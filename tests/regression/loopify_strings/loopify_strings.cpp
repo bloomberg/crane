@@ -16,7 +16,7 @@ List<uint64_t> LoopifyStrings::append(const List<uint64_t> &l1,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_l1 = a1.get();
       continue;
     }
@@ -46,14 +46,14 @@ List<uint64_t> LoopifyStrings::join_with(uint64_t sep,
             typename List<uint64_t>::Cons(a0, nullptr));
         auto _cell1 = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(sep, nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).a1 =
+        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<uint64_t>::Cons>(
                  std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_l = a1.get();
         continue;
       }
@@ -329,14 +329,14 @@ List<uint64_t> LoopifyStrings::intersperse(uint64_t sep,
             typename List<uint64_t>::Cons(a0, nullptr));
         auto _cell1 = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(sep, nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).a1 =
+        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<uint64_t>::Cons>(
                  std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_l = a1.get();
         continue;
       }
@@ -407,7 +407,7 @@ List<uint64_t> LoopifyStrings::replicate(uint64_t n, uint64_t x) {
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(x, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_n = n_;
       continue;
     }
@@ -457,7 +457,7 @@ LoopifyStrings::run_length_aux(uint64_t current, uint64_t count,
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
-                   .a1;
+                   .l;
           _loop_l = a1.get();
           _loop_count = UINT64_C(1);
           _loop_current = a0;

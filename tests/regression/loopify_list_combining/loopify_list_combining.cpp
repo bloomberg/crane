@@ -16,7 +16,7 @@ List<uint64_t> LoopifyListCombining::append(const List<uint64_t> &a,
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_a = a1.get();
       continue;
     }
@@ -46,14 +46,14 @@ List<uint64_t> LoopifyListCombining::intersperse(uint64_t sep,
             typename List<uint64_t>::Cons(a0, nullptr));
         auto _cell1 = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(sep, nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).a1 =
+        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<uint64_t>::Cons>(
                  std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_l = a1.get();
         continue;
       }
@@ -221,14 +221,14 @@ List<uint64_t> LoopifyListCombining::interleave_two(List<uint64_t> l1,
             typename List<uint64_t>::Cons(std::move(a0), nullptr));
         auto _cell1 = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a00), nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).a1 =
+        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<uint64_t>::Cons>(
                  std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_l2 = std::move(*a10);
         _loop_l1 = std::move(*a1);
         continue;

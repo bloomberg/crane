@@ -84,7 +84,7 @@ int main() {
   // Iteratively destroy the big list to avoid destructor
   // stack overflow (a known limitation for deep lists)
   while (std::holds_alternative<List::Cons>(big.v_mut())) {
-    auto next = std::move(std::get<List::Cons>(big.v_mut()).a1);
+    auto next = std::move(std::get<List::Cons>(big.v_mut()).l);
     big = std::move(*next);
   }
 

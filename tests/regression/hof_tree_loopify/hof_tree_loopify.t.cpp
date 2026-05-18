@@ -33,7 +33,7 @@ using Tree = HofTreeLoopify::tree<uint64_t>;
 unsigned int root_value(const Tree &t) {
   return std::visit(
       Overloaded{[](const Tree::Leaf &) -> unsigned int { return 0u; },
-                 [](const Tree::Node &n) -> unsigned int { return n.a1; }},
+                 [](const Tree::Node &n) -> unsigned int { return n.x; }},
       t.v());
 }
 

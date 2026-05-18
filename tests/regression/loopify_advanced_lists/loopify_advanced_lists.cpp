@@ -67,7 +67,7 @@ List<uint64_t> LoopifyAdvancedLists::compress(const List<uint64_t> &l) {
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();
           continue;
         }
@@ -98,8 +98,7 @@ List<uint64_t> LoopifyAdvancedLists::pairwise_sum(const List<uint64_t> &l) {
         auto _cell = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons((a0 + a00), nullptr));
         *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
         _loop_l = a10.get();
         continue;
       }
@@ -135,7 +134,7 @@ LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
         *_write = std::move(_cell);
         _write = &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                       (*_write)->v_mut())
-                      .a1;
+                      .l;
         _loop_l = a10.get();
         continue;
       }
@@ -169,14 +168,14 @@ List<uint64_t> LoopifyAdvancedLists::interleave(List<uint64_t> l1,
             typename List<uint64_t>::Cons(std::move(a0), nullptr));
         auto _cell1 = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a00), nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).a1 =
+        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<uint64_t>::Cons>(
                  std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_l2 = std::move(*a10);
         _loop_l1 = std::move(*a1);
         continue;

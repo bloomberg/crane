@@ -13,7 +13,7 @@ List<uint64_t> LoopifyListGeneration::replicate(uint64_t n, uint64_t x) {
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(x, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_n = n_;
       continue;
     }
@@ -36,13 +36,13 @@ List<uint64_t> LoopifyListGeneration::stutter(const List<uint64_t> &l) {
           typename List<uint64_t>::Cons(a0, nullptr));
       auto _cell1 = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
-      std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).a1 =
+      std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
           std::move(_cell1);
       *_write = std::move(_cell);
       _write = &std::get<typename List<uint64_t>::Cons>(
                     std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                        .a1->v_mut())
-                    .a1;
+                        .l->v_mut())
+                    .l;
       _loop_l = a1.get();
       continue;
     }
@@ -105,7 +105,7 @@ List<uint64_t> LoopifyListGeneration::iterate(uint64_t n, uint64_t x) {
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_x, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_x = (_loop_x + UINT64_C(1));
       _loop_n = n_;
       continue;
@@ -180,14 +180,14 @@ List<uint64_t> LoopifyListGeneration::repeat_with_sep(uint64_t sep, uint64_t n,
             typename List<uint64_t>::Cons(x, nullptr));
         auto _cell1 = std::make_unique<List<uint64_t>>(
             typename List<uint64_t>::Cons(sep, nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).a1 =
+        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
         *_write = std::move(_cell);
         _write =
             &std::get<typename List<uint64_t>::Cons>(
                  std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .a1->v_mut())
-                 .a1;
+                     .l->v_mut())
+                 .l;
         _loop_n = n_;
         continue;
       }
@@ -210,7 +210,7 @@ List<uint64_t> LoopifyListGeneration::range(uint64_t start, uint64_t len) {
       auto _cell = std::make_unique<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_start, nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
       _loop_len = len_;
       _loop_start = (_loop_start + UINT64_C(1));
       continue;

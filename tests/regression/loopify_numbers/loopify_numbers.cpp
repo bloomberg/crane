@@ -1321,7 +1321,7 @@ List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
               typename List<uint64_t>::Cons(_loop_n, nullptr));
           *_write = std::move(_cell);
           _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
           _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
           _loop_fuel = f;
           continue;
@@ -1331,7 +1331,7 @@ List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
                 typename List<uint64_t>::Cons(_loop_n, nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_n = (UINT64_C(3) ? _loop_n / UINT64_C(3) : 0);
             _loop_fuel = f;
             continue;
@@ -1340,7 +1340,7 @@ List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
                 typename List<uint64_t>::Cons(_loop_n, nullptr));
             *_write = std::move(_cell);
             _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).a1;
+                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
             _loop_n = ((UINT64_C(3) * _loop_n) + UINT64_C(1));
             _loop_fuel = f;
             continue;

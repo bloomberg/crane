@@ -15,8 +15,8 @@ template <typename A> struct List {
   struct Nil0 {};
 
   struct Cons0 {
-    A a0;
-    std::unique_ptr<List<A>> a1;
+    A a;
+    std::unique_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil0, Cons0>;
@@ -69,10 +69,10 @@ public:
       } else {
         const auto &_alt = std::get<Cons0>(_src->v());
         _dst->v_ =
-            Cons0{_alt.a0, _alt.a1 ? std::make_unique<List<A>>() : nullptr};
+            Cons0{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons0>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
+        if (_alt.l) {
+          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
         }
       }
     }
@@ -84,15 +84,15 @@ public:
     if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
       this->v_ = Nil0{};
     } else {
-      const auto &[a0, a1] = std::get<typename List<_U>::Cons0>(_other.v());
-      this->v_ = Cons0{A(a0), a1 ? std::make_unique<List<A>>(*a1) : nullptr};
+      const auto &[a, l] = std::get<typename List<_U>::Cons0>(_other.v());
+      this->v_ = Cons0{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil0() { return List(Nil0{}); }
 
-  static List<A> cons0(A a0, List<A> a1) {
-    return List(Cons0{std::move(a0), std::make_unique<List<A>>(std::move(a1))});
+  static List<A> cons0(A a, List<A> l) {
+    return List(Cons0{std::move(a), std::make_unique<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -102,8 +102,8 @@ public:
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons0>(_node.v_)) {
         auto &_alt = std::get<Cons0>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
+        if (_alt.l) {
+          _stack.push_back(std::move(_alt.l));
         }
       }
     };
@@ -644,13 +644,13 @@ struct PendantSumtreeRoundtripCase {
                     std::get<typename List<SumTree>::Cons0>(_lsrc->v());
                 _ldst->v_mut() = typename List<SumTree>::Cons0{
                     SumTree{},
-                    _lsrc_c.a1 ? std::make_unique<List<SumTree>>() : nullptr};
+                    _lsrc_c.l ? std::make_unique<List<SumTree>>() : nullptr};
                 auto &_ldst_c =
                     std::get<typename List<SumTree>::Cons0>(_ldst->v_mut());
-                _stack.push_back({&_lsrc_c.a0, &_ldst_c.a0});
-                if (_lsrc_c.a1) {
-                  _lsrc = _lsrc_c.a1.get();
-                  _ldst = _ldst_c.a1.get();
+                _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
+                if (_lsrc_c.l) {
+                  _lsrc = _lsrc_c.l.get();
+                  _ldst = _ldst_c.l.get();
                 } else {
                   break;
                 }
@@ -688,9 +688,9 @@ struct PendantSumtreeRoundtripCase {
             while (std::holds_alternative<typename List<SumTree>::Cons0>(
                 _lp->v())) {
               auto &_lc = std::get<typename List<SumTree>::Cons0>(_lp->v_mut());
-              _stack.push_back(std::make_unique<SumTree>(std::move(_lc.a0)));
-              if (_lc.a1) {
-                _lp = _lc.a1.get();
+              _stack.push_back(std::make_unique<SumTree>(std::move(_lc.a)));
+              if (_lc.l) {
+                _lp = _lc.l.get();
               } else {
                 break;
               }
