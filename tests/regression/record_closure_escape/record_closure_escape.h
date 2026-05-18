@@ -157,7 +157,7 @@ struct RecordClosureEscape {
 
     // ACCESSORS
     fn_record clone() const {
-      return fn_record{(*this).fn_field, (*this).val_field};
+      return fn_record{this->fn_field, this->val_field};
     }
   };
 

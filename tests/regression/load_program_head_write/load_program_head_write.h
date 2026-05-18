@@ -132,8 +132,8 @@ struct LoadProgramHeadWrite {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).rom.clone(), (*this).prom_addr, (*this).prom_data,
-                   (*this).prom_enable};
+      return state{this->rom.clone(), this->prom_addr, this->prom_data,
+                   this->prom_enable};
     }
   };
 

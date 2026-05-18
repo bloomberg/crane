@@ -144,10 +144,10 @@ struct ResetState {
 
     // ACCESSORS
     state_full clone() const {
-      return state_full{(*this).acc,           (*this).regs_full.clone(),
-                        (*this).carry,         (*this).pc_full,
-                        (*this).stack.clone(), (*this).ram_sys.clone(),
-                        (*this).rom.clone()};
+      return state_full{this->acc,           this->regs_full.clone(),
+                        this->carry,         this->pc_full,
+                        this->stack.clone(), this->ram_sys.clone(),
+                        this->rom.clone()};
     }
   };
 
@@ -160,9 +160,9 @@ struct ResetState {
 
     // ACCESSORS
     state_minimal clone() const {
-      return state_minimal{(*this).regs_minimal.clone(), (*this).carry_minimal,
-                           (*this).pc_minimal, (*this).ram_sys_minimal.clone(),
-                           (*this).rom_minimal.clone()};
+      return state_minimal{this->regs_minimal.clone(), this->carry_minimal,
+                           this->pc_minimal, this->ram_sys_minimal.clone(),
+                           this->rom_minimal.clone()};
     }
   };
 

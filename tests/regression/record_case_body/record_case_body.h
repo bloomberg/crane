@@ -14,7 +14,7 @@ struct RecordCaseBody {
     uint64_t f3;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*this).f1, (*this).f2, (*this).f3}; }
+    Rec clone() const { return Rec{this->f1, this->f2, this->f3}; }
   };
 
   static uint64_t case_in_body(const Rec &r);
@@ -32,7 +32,7 @@ struct RecordCaseBody {
 
     // ACCESSORS
     RecRec clone() const {
-      return RecRec{(*this).inner.clone(), (*this).outer_field};
+      return RecRec{this->inner.clone(), this->outer_field};
     }
   };
 

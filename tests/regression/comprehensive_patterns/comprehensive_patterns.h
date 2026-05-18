@@ -140,7 +140,7 @@ struct ComprehensivePatterns {
     uint64_t s_c;
 
     // ACCESSORS
-    S clone() const { return S{(*this).s_a, (*this).s_b, (*this).s_c}; }
+    S clone() const { return S{this->s_a, this->s_b, this->s_c}; }
   };
 
   static std::pair<std::pair<S, uint64_t>, uint64_t> syntactic_variation(S s);
@@ -150,35 +150,35 @@ struct ComprehensivePatterns {
     S l1_s;
 
     // ACCESSORS
-    L1 clone() const { return L1{(*this).l1_s.clone()}; }
+    L1 clone() const { return L1{this->l1_s.clone()}; }
   };
 
   struct L2 {
     L1 l2_l1;
 
     // ACCESSORS
-    L2 clone() const { return L2{(*this).l2_l1.clone()}; }
+    L2 clone() const { return L2{this->l2_l1.clone()}; }
   };
 
   struct L3 {
     L2 l3_l2;
 
     // ACCESSORS
-    L3 clone() const { return L3{(*this).l3_l2.clone()}; }
+    L3 clone() const { return L3{this->l3_l2.clone()}; }
   };
 
   struct L4 {
     L3 l4_l3;
 
     // ACCESSORS
-    L4 clone() const { return L4{(*this).l4_l3.clone()}; }
+    L4 clone() const { return L4{this->l4_l3.clone()}; }
   };
 
   struct L5 {
     L4 l5_l4;
 
     // ACCESSORS
-    L5 clone() const { return L5{(*this).l5_l4.clone()}; }
+    L5 clone() const { return L5{this->l5_l4.clone()}; }
   };
 
   static std::pair<
@@ -341,7 +341,7 @@ struct ComprehensivePatterns {
     uint64_t r1_val;
 
     // ACCESSORS
-    R1 clone() const { return R1{(*this).r1_val}; }
+    R1 clone() const { return R1{this->r1_val}; }
   };
 
   struct R2 {
@@ -349,7 +349,7 @@ struct ComprehensivePatterns {
     uint64_t r2_data;
 
     // ACCESSORS
-    R2 clone() const { return R2{(*this).r2_inner.clone(), (*this).r2_data}; }
+    R2 clone() const { return R2{this->r2_inner.clone(), this->r2_data}; }
   };
 
   struct R3 {
@@ -359,7 +359,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     R3 clone() const {
-      return R3{(*this).r3_r2.clone(), (*this).r3_r1.clone(), (*this).r3_num};
+      return R3{this->r3_r2.clone(), this->r3_r1.clone(), this->r3_num};
     }
   };
 
@@ -397,7 +397,7 @@ struct ComprehensivePatterns {
     uint64_t dat;
 
     // ACCESSORS
-    R clone() const { return R{(*this).val, (*this).dat}; }
+    R clone() const { return R{this->val, this->dat}; }
   };
 
   static std::pair<R, uint64_t> pair_inline_proj(R r);
@@ -425,7 +425,7 @@ struct ComprehensivePatterns {
     uint64_t nc_c;
 
     // ACCESSORS
-    NC clone() const { return NC{(*this).nc_a, (*this).nc_b, (*this).nc_c}; }
+    NC clone() const { return NC{this->nc_a, this->nc_b, this->nc_c}; }
   };
 
   static uint64_t use_proj(uint64_t n);
@@ -453,7 +453,7 @@ struct ComprehensivePatterns {
     NC outer_nc;
 
     // ACCESSORS
-    OuterNC clone() const { return OuterNC{(*this).outer_nc.clone()}; }
+    OuterNC clone() const { return OuterNC{this->outer_nc.clone()}; }
   };
 
   static uint64_t double_proj_nc(const OuterNC &o);
@@ -473,9 +473,7 @@ struct ComprehensivePatterns {
     uint64_t state_data;
 
     // ACCESSORS
-    State clone() const {
-      return State{(*this).state_value, (*this).state_data};
-    }
+    State clone() const { return State{this->state_value, this->state_data}; }
   };
 
   static uint64_t use_two_fc(uint64_t _x0, uint64_t _x1);
@@ -504,7 +502,7 @@ struct ComprehensivePatterns {
     uint64_t seq_val;
 
     // ACCESSORS
-    RSeq clone() const { return RSeq{(*this).seq_val}; }
+    RSeq clone() const { return RSeq{this->seq_val}; }
   };
 
   static RSeq side_effect(RSeq r);
@@ -518,7 +516,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     StateStmt clone() const {
-      return StateStmt{(*this).stmt_value, (*this).stmt_data};
+      return StateStmt{this->stmt_value, this->stmt_data};
     }
   };
 
@@ -530,7 +528,7 @@ struct ComprehensivePatterns {
     uint64_t inner_stmt_val;
 
     // ACCESSORS
-    InnerStmt clone() const { return InnerStmt{(*this).inner_stmt_val}; }
+    InnerStmt clone() const { return InnerStmt{this->inner_stmt_val}; }
   };
 
   struct OuterStmt {
@@ -539,8 +537,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     OuterStmt clone() const {
-      return OuterStmt{(*this).outer_stmt_inner.clone(),
-                       (*this).outer_stmt_data};
+      return OuterStmt{this->outer_stmt_inner.clone(), this->outer_stmt_data};
     }
   };
 
@@ -550,9 +547,7 @@ struct ComprehensivePatterns {
     OuterStmt l3_outer_stmt;
 
     // ACCESSORS
-    Level3Stmt clone() const {
-      return Level3Stmt{(*this).l3_outer_stmt.clone()};
-    }
+    Level3Stmt clone() const { return Level3Stmt{this->l3_outer_stmt.clone()}; }
   };
 
   static uint64_t triple_chain(const Level3Stmt &l3);
@@ -572,7 +567,7 @@ struct ComprehensivePatterns {
     uint64_t cf_val;
 
     // ACCESSORS
-    RCF clone() const { return RCF{(*this).cf_val}; }
+    RCF clone() const { return RCF{this->cf_val}; }
   };
 
   static uint64_t branch_use(bool b, const RCF &r);
@@ -587,7 +582,7 @@ struct ComprehensivePatterns {
     uint64_t lb_data;
 
     // ACCESSORS
-    StateLB clone() const { return StateLB{(*this).lb_value, (*this).lb_data}; }
+    StateLB clone() const { return StateLB{this->lb_value, this->lb_data}; }
   };
 
   struct Tree {
@@ -972,7 +967,7 @@ struct ComprehensivePatterns {
     uint64_t ro_data;
 
     // ACCESSORS
-    StateRO clone() const { return StateRO{(*this).ro_value, (*this).ro_data}; }
+    StateRO clone() const { return StateRO{this->ro_value, this->ro_data}; }
   };
 
   struct Container {
@@ -1069,7 +1064,7 @@ struct ComprehensivePatterns {
     uint64_t op_data;
 
     // ACCESSORS
-    StateOP clone() const { return StateOP{(*this).op_value, (*this).op_data}; }
+    StateOP clone() const { return StateOP{this->op_value, this->op_data}; }
   };
 
   static StateOP identity(StateOP s);

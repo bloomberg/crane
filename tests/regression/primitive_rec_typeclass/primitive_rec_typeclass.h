@@ -14,7 +14,7 @@ struct PrimitiveRecTypeclass {
     uint64_t py;
 
     // ACCESSORS
-    point clone() const { return point{(*this).px, (*this).py}; }
+    point clone() const { return point{this->px, this->py}; }
   };
 
   struct pointNorm {
@@ -29,7 +29,7 @@ struct PrimitiveRecTypeclass {
     uint64_t vz;
 
     // ACCESSORS
-    vec3 clone() const { return vec3{(*this).vx, (*this).vy, (*this).vz}; }
+    vec3 clone() const { return vec3{this->vx, this->vy, this->vz}; }
   };
 
   struct vec3Norm {
@@ -49,7 +49,7 @@ struct PrimitiveRecTypeclass {
 
     // ACCESSORS
     rect clone() const {
-      return rect{(*this).top_left.clone(), (*this).bot_right.clone()};
+      return rect{this->top_left.clone(), this->bot_right.clone()};
     }
   };
 

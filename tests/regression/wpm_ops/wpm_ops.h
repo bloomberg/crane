@@ -154,8 +154,8 @@ struct WpmOps {
 
     // ACCESSORS
     state1 clone() const {
-      return state1{(*this).rom1.clone(), (*this).prom_addr1,
-                    (*this).prom_data1, (*this).prom_enable1};
+      return state1{this->rom1.clone(), this->prom_addr1, this->prom_data1,
+                    this->prom_enable1};
     }
   };
 
@@ -189,9 +189,8 @@ struct WpmOps {
 
     // ACCESSORS
     state2 clone() const {
-      return state2{(*this).ram_sys2.clone(), (*this).rom2.clone(),
-                    (*this).prom_addr2, (*this).prom_data2,
-                    (*this).prom_enable2};
+      return state2{this->ram_sys2.clone(), this->rom2.clone(),
+                    this->prom_addr2, this->prom_data2, this->prom_enable2};
     }
   };
 
@@ -220,9 +219,8 @@ struct WpmOps {
 
     // ACCESSORS
     state3 clone() const {
-      return state3{(*this).regs3.clone(), (*this).rom3.clone(),
-                    (*this).prom_addr3, (*this).prom_data3,
-                    (*this).prom_enable3};
+      return state3{this->regs3.clone(), this->rom3.clone(), this->prom_addr3,
+                    this->prom_data3, this->prom_enable3};
     }
   };
 
@@ -250,8 +248,8 @@ struct WpmOps {
 
     // ACCESSORS
     state4 clone() const {
-      return state4{(*this).rom4.clone(), (*this).prom_addr4,
-                    (*this).prom_data4, (*this).prom_enable4};
+      return state4{this->rom4.clone(), this->prom_addr4, this->prom_data4,
+                    this->prom_enable4};
     }
   };
 
@@ -277,8 +275,8 @@ struct WpmOps {
 
     // ACCESSORS
     state5 clone() const {
-      return state5{(*this).rom5.clone(), (*this).prom_addr5,
-                    (*this).prom_data5, (*this).prom_enable5};
+      return state5{this->rom5.clone(), this->prom_addr5, this->prom_data5,
+                    this->prom_enable5};
     }
   };
 
@@ -304,8 +302,8 @@ struct WpmOps {
 
     // ACCESSORS
     state6 clone() const {
-      return state6{(*this).rom6.clone(), (*this).prom_addr6,
-                    (*this).prom_data6, (*this).prom_enable6};
+      return state6{this->rom6.clone(), this->prom_addr6, this->prom_data6,
+                    this->prom_enable6};
     }
   };
 

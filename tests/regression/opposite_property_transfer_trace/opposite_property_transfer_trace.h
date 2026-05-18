@@ -15,9 +15,8 @@ struct OppositePropertyTransferTraceCase {
 
     // ACCESSORS
     PreStableCategory clone() const {
-      return PreStableCategory{(*this).ps_tag,  (*this).ps_shift,
-                               (*this).ps_Susp, (*this).ps_Loop,
-                               (*this).ps_eta,  (*this).ps_epsilon};
+      return PreStableCategory{this->ps_tag,  this->ps_shift, this->ps_Susp,
+                               this->ps_Loop, this->ps_eta,   this->ps_epsilon};
     }
   };
 
@@ -30,7 +29,7 @@ struct OppositePropertyTransferTraceCase {
 
     // ACCESSORS
     LeftStableWitness clone() const {
-      return LeftStableWitness{(*this).lsw_seed, (*this).lsw_value};
+      return LeftStableWitness{this->lsw_seed, this->lsw_value};
     }
   };
 
@@ -40,7 +39,7 @@ struct OppositePropertyTransferTraceCase {
 
     // ACCESSORS
     RightStableWitness clone() const {
-      return RightStableWitness{(*this).rsw_seed, (*this).rsw_value};
+      return RightStableWitness{this->rsw_seed, this->rsw_value};
     }
   };
 
@@ -50,7 +49,7 @@ struct OppositePropertyTransferTraceCase {
 
     // ACCESSORS
     Triangle1Witness clone() const {
-      return Triangle1Witness{(*this).t1_seed, (*this).t1_value};
+      return Triangle1Witness{this->t1_seed, this->t1_value};
     }
   };
 
@@ -60,7 +59,7 @@ struct OppositePropertyTransferTraceCase {
 
     // ACCESSORS
     Triangle2Witness clone() const {
-      return Triangle2Witness{(*this).t2_seed, (*this).t2_value};
+      return Triangle2Witness{this->t2_seed, this->t2_value};
     }
   };
 
@@ -78,7 +77,7 @@ struct OppositePropertyTransferTraceCase {
 
     // ACCESSORS
     LeftProperty clone() const {
-      return LeftProperty{(*this).lp_seed, (*this).lp_value, (*this).lp_tag};
+      return LeftProperty{this->lp_seed, this->lp_value, this->lp_tag};
     }
   };
 
@@ -89,7 +88,7 @@ struct OppositePropertyTransferTraceCase {
 
     // ACCESSORS
     RightProperty clone() const {
-      return RightProperty{(*this).rp_seed, (*this).rp_value, (*this).rp_tag};
+      return RightProperty{this->rp_seed, this->rp_value, this->rp_tag};
     }
   };
 

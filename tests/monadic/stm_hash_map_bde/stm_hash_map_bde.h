@@ -129,20 +129,20 @@ template <typename K, typename V> struct CHT {
   int64_t cht_nbuckets;
   stm::TVar<List<bsl::pair<K, V>>> cht_fallback;
   stm::TVar<List<bsl::pair<K, V>>> bucket_of(const K &k) const {
-    int64_t i = (*this).cht_hash(k) % (*this).cht_nbuckets;
-    return (*this).cht_buckets.at(i);
+    int64_t i = this->cht_hash(k) % this->cht_nbuckets;
+    return this->cht_buckets.at(i);
   }
   bsl::optional<V> stm_get(const K &k) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
-    return CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
+    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
   }
   std::monostate stm_put(const K &k, const V &v) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     List<bsl::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*this).cht_eqb, k, v, bsl::move(xs));
+        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
+                                                              v, bsl::move(xs));
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
@@ -150,7 +150,7 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::pair<bsl::optional<V>, List<bsl::pair<K, V>>> p =
-        CHT<int, int>::template assoc_remove<K, V>((*this).cht_eqb, k,
+        CHT<int, int>::template assoc_remove<K, V>(this->cht_eqb, k,
                                                    bsl::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
@@ -167,11 +167,11 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::optional<V> ov =
-        CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
+        CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
     V v = f(ov);
     List<bsl::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*this).cht_eqb, k, v, bsl::move(xs));
+        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
+                                                              v, bsl::move(xs));
     stm::writeTVar(b, xs_);
     return v;
   }

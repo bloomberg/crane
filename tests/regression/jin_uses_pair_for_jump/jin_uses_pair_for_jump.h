@@ -129,7 +129,7 @@ struct JinUsesPairForJump {
     uint64_t pc;
 
     // ACCESSORS
-    state clone() const { return state{(*this).regs.clone(), (*this).pc}; }
+    state clone() const { return state{this->regs.clone(), this->pc}; }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

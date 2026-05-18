@@ -137,14 +137,14 @@ struct ConstructorBugs {
     uint64_t a_value;
 
     // ACCESSORS
-    field_a clone() const { return field_a{(*this).a_value}; }
+    field_a clone() const { return field_a{this->a_value}; }
   };
 
   struct field_b {
     uint64_t b_value;
 
     // ACCESSORS
-    field_b clone() const { return field_b{(*this).b_value}; }
+    field_b clone() const { return field_b{this->b_value}; }
   };
 
   struct source_state {
@@ -154,8 +154,8 @@ struct ConstructorBugs {
 
     // ACCESSORS
     source_state clone() const {
-      return source_state{(*this).source_a.clone(), (*this).source_b.clone(),
-                          (*this).source_flag};
+      return source_state{this->source_a.clone(), this->source_b.clone(),
+                          this->source_flag};
     }
   };
 
@@ -166,8 +166,8 @@ struct ConstructorBugs {
 
     // ACCESSORS
     packed_state clone() const {
-      return packed_state{(*this).packed_source.clone(),
-                          (*this).packed_a.clone(), (*this).packed_b.clone()};
+      return packed_state{this->packed_source.clone(), this->packed_a.clone(),
+                          this->packed_b.clone()};
     }
   };
 
@@ -185,9 +185,9 @@ struct ConstructorBugs {
 
     // ACCESSORS
     source_state_list clone() const {
-      return source_state_list{(*this).source_a_list.clone(),
-                               (*this).source_b_list.clone(),
-                               (*this).source_flag_list};
+      return source_state_list{this->source_a_list.clone(),
+                               this->source_b_list.clone(),
+                               this->source_flag_list};
     }
   };
 
@@ -198,9 +198,9 @@ struct ConstructorBugs {
 
     // ACCESSORS
     packed_state_list clone() const {
-      return packed_state_list{(*this).packed_source_list.clone(),
-                               (*this).packed_a_list.clone(),
-                               (*this).packed_b_list.clone()};
+      return packed_state_list{this->packed_source_list.clone(),
+                               this->packed_a_list.clone(),
+                               this->packed_b_list.clone()};
     }
   };
 
@@ -213,7 +213,7 @@ struct ConstructorBugs {
     List<uint64_t> data;
 
     // ACCESSORS
-    state clone() const { return state{(*this).value, (*this).data.clone()}; }
+    state clone() const { return state{this->value, this->data.clone()}; }
   };
 
   static state get_state(uint64_t n);
@@ -247,7 +247,7 @@ struct ConstructorBugs {
     uint64_t inner_val;
 
     // ACCESSORS
-    Inner clone() const { return Inner{(*this).inner_val}; }
+    Inner clone() const { return Inner{this->inner_val}; }
   };
 
   struct Outer {
@@ -256,7 +256,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     Outer clone() const {
-      return Outer{(*this).outer_inner.clone(), (*this).outer_data};
+      return Outer{this->outer_inner.clone(), this->outer_data};
     }
   };
 
@@ -367,7 +367,7 @@ struct ConstructorBugs {
     Outer cont_outer;
 
     // ACCESSORS
-    Container clone() const { return Container{(*this).cont_outer.clone()}; }
+    Container clone() const { return Container{this->cont_outer.clone()}; }
   };
 
   static std::pair<std::pair<Outer, Inner>, uint64_t>
@@ -390,7 +390,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     State clone() const {
-      return State{(*this).value_inline, (*this).data_inline, (*this).flag};
+      return State{this->value_inline, this->data_inline, this->flag};
     }
   };
 
@@ -411,7 +411,7 @@ struct ConstructorBugs {
 
     // ACCESSORS
     OuterInline clone() const {
-      return OuterInline{(*this).outer_state.clone(), (*this).outer_num};
+      return OuterInline{this->outer_state.clone(), this->outer_num};
     }
   };
 

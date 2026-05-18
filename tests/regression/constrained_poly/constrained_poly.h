@@ -13,9 +13,7 @@ struct ConstrainedPoly {
     B usnd;
 
     // ACCESSORS
-    UPair<A, B> clone() const {
-      return UPair<A, B>{(*this).ufst, (*this).usnd};
-    }
+    UPair<A, B> clone() const { return UPair<A, B>{this->ufst, this->usnd}; }
   };
 
   template <typename T1, typename T2>

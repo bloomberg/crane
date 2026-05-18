@@ -165,7 +165,7 @@ struct PromOps {
 
     // ACCESSORS
     state1 clone() const {
-      return state1{(*this).prom_data1, (*this).prom_enable1};
+      return state1{this->prom_data1, this->prom_enable1};
     }
   };
 
@@ -181,8 +181,8 @@ struct PromOps {
 
     // ACCESSORS
     state2 clone() const {
-      return state2{(*this).acc2, (*this).prom_addr2, (*this).prom_data2,
-                    (*this).prom_enable2};
+      return state2{this->acc2, this->prom_addr2, this->prom_data2,
+                    this->prom_enable2};
     }
   };
 
@@ -209,21 +209,12 @@ struct PromOps {
 
     // ACCESSORS
     state3 clone() const {
-      return state3{(*this).acc3,
-                    (*this).regs3.clone(),
-                    (*this).carry3,
-                    (*this).pc3,
-                    (*this).stack3.clone(),
-                    (*this).ram_sys3.clone(),
-                    (*this).cur_bank3,
-                    (*this).sel_ram3,
-                    (*this).rom_ports3.clone(),
-                    (*this).sel_rom3,
-                    (*this).rom3.clone(),
-                    (*this).test_pin3,
-                    (*this).prom_addr3,
-                    (*this).prom_data3,
-                    (*this).prom_enable3};
+      return state3{
+          this->acc3,       this->regs3.clone(),  this->carry3,
+          this->pc3,        this->stack3.clone(), this->ram_sys3.clone(),
+          this->cur_bank3,  this->sel_ram3,       this->rom_ports3.clone(),
+          this->sel_rom3,   this->rom3.clone(),   this->test_pin3,
+          this->prom_addr3, this->prom_data3,     this->prom_enable3};
     }
   };
 
@@ -298,9 +289,8 @@ struct PromOps {
 
     // ACCESSORS
     state5 clone() const {
-      return state5{(*this).acc5,         (*this).regs5.clone(),
-                    (*this).rom5.clone(), (*this).prom_addr5,
-                    (*this).prom_data5,   (*this).prom_enable5};
+      return state5{this->acc5,       this->regs5.clone(), this->rom5.clone(),
+                    this->prom_addr5, this->prom_data5,    this->prom_enable5};
     }
   };
 
@@ -336,8 +326,8 @@ struct PromOps {
 
     // ACCESSORS
     state6 clone() const {
-      return state6{(*this).rom6.clone(), (*this).prom_addr6,
-                    (*this).prom_data6, (*this).prom_enable6};
+      return state6{this->rom6.clone(), this->prom_addr6, this->prom_data6,
+                    this->prom_enable6};
     }
   };
 
@@ -365,9 +355,8 @@ struct PromOps {
 
     // ACCESSORS
     state7 clone() const {
-      return state7{(*this).regs7.clone(), (*this).ram_sys7.clone(),
-                    (*this).prom_addr7, (*this).prom_data7,
-                    (*this).prom_enable7};
+      return state7{this->regs7.clone(), this->ram_sys7.clone(),
+                    this->prom_addr7, this->prom_data7, this->prom_enable7};
     }
   };
 
@@ -398,9 +387,8 @@ struct PromOps {
 
     // ACCESSORS
     state8 clone() const {
-      return state8{(*this).regs8.clone(), (*this).ram_sys8.clone(),
-                    (*this).prom_addr8, (*this).prom_data8,
-                    (*this).prom_enable8};
+      return state8{this->regs8.clone(), this->ram_sys8.clone(),
+                    this->prom_addr8, this->prom_data8, this->prom_enable8};
     }
   };
 
@@ -428,8 +416,8 @@ struct PromOps {
 
     // ACCESSORS
     state9 clone() const {
-      return state9{(*this).rom9.clone(), (*this).prom_addr9,
-                    (*this).prom_data9, (*this).prom_enable9};
+      return state9{this->rom9.clone(), this->prom_addr9, this->prom_data9,
+                    this->prom_enable9};
     }
   };
 
@@ -463,17 +451,17 @@ struct PromOps {
 
     // ACCESSORS
     state10 clone() const {
-      return state10{(*this).regs10.clone(),
-                     (*this).rom10.clone(),
-                     (*this).acc10,
-                     (*this).pc10,
-                     (*this).stack10.clone(),
-                     (*this).cur_bank10,
-                     (*this).rom_ports10.clone(),
-                     (*this).sel_rom10,
-                     (*this).prom_addr10,
-                     (*this).prom_data10,
-                     (*this).prom_enable10};
+      return state10{this->regs10.clone(),
+                     this->rom10.clone(),
+                     this->acc10,
+                     this->pc10,
+                     this->stack10.clone(),
+                     this->cur_bank10,
+                     this->rom_ports10.clone(),
+                     this->sel_rom10,
+                     this->prom_addr10,
+                     this->prom_data10,
+                     this->prom_enable10};
     }
   };
 
@@ -590,8 +578,8 @@ struct PromOps {
 
     // ACCESSORS
     state11 clone() const {
-      return state11{(*this).rom11.clone(), (*this).prom_addr11,
-                     (*this).prom_data11, (*this).prom_enable11};
+      return state11{this->rom11.clone(), this->prom_addr11, this->prom_data11,
+                     this->prom_enable11};
     }
   };
 

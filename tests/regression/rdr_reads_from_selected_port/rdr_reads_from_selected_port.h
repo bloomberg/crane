@@ -131,7 +131,7 @@ struct RdrReadsFromSelectedPort {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).acc, (*this).rom_ports.clone(), (*this).sel_rom};
+      return state{this->acc, this->rom_ports.clone(), this->sel_rom};
     }
   };
 

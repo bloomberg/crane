@@ -175,7 +175,8 @@ let augment_with_args_renaming cref kernel_arg_names =
       let n_params =
         match cref with
         | GlobRef.ConstructRef ((kn, _), _) ->
-          (Global.lookup_mind kn).mind_nparams
+          (try (Global.lookup_mind kn).mind_nparams
+           with _ -> 0)
         | _ -> 0
       in
       let all_override = Arguments_renaming.arguments_names cref in

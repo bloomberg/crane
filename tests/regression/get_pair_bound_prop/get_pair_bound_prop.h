@@ -184,10 +184,10 @@ struct GetPairBoundProp {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).ex_acc,           (*this).ex_regs.clone(),
-                   (*this).ex_carry,         (*this).ex_pc,
-                   (*this).ex_stack.clone(), (*this).ex_pair_bus,
-                   (*this).ex_ports.clone()};
+      return state{this->ex_acc,           this->ex_regs.clone(),
+                   this->ex_carry,         this->ex_pc,
+                   this->ex_stack.clone(), this->ex_pair_bus,
+                   this->ex_ports.clone()};
     }
   };
 

@@ -309,8 +309,7 @@ struct ClosureCaptureMatch {
     }
 
     uint64_t unbox(uint64_t x) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return a0(x);
     }
 
@@ -318,8 +317,7 @@ struct ClosureCaptureMatch {
       requires std::is_invocable_r_v<T1, F0 &,
                                      std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return f(a0);
     }
 
@@ -327,8 +325,7 @@ struct ClosureCaptureMatch {
       requires std::is_invocable_r_v<T1, F0 &,
                                      std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return f(a0);
     }
   };

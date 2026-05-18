@@ -19,7 +19,7 @@ struct SPropTest {
     A box_value;
 
     // ACCESSORS
-    Box<A> clone() const { return Box<A>{(*this).box_value}; }
+    Box<A> clone() const { return Box<A>{this->box_value}; }
   };
 
   static uint64_t guarded_pred(uint64_t n);

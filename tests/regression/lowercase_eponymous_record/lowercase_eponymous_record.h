@@ -6,7 +6,7 @@ struct LowercaseEponymousRecord {
     uint64_t x;
     uint64_t y;
 
-    state set_x(uint64_t n) const { return state{n, (*this).y}; }
+    state set_x(uint64_t n) const { return state{n, this->y}; }
   };
 
   static inline const state example =

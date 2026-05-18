@@ -7,9 +7,7 @@ struct RegionMembershipBounds {
     uint64_t code_size;
 
     // ACCESSORS
-    layout clone() const {
-      return layout{(*this).base_addr, (*this).code_size};
-    }
+    layout clone() const { return layout{this->base_addr, this->code_size}; }
   };
 
   static bool addr_in_regionb(uint64_t addr, const layout &l);

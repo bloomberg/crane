@@ -125,7 +125,7 @@ struct RocqBug13581 {
     std::function<T0(T0)> mixin_f;
 
     // ACCESSORS
-    mixin_of<T0> clone() const { return mixin_of<T0>{(*this).mixin_f}; }
+    mixin_of<T0> clone() const { return mixin_of<T0>{this->mixin_f}; }
   };
 
   static inline const mixin_of<Nat> d =
@@ -136,7 +136,7 @@ struct RocqBug13581 {
     Nat x;
 
     // ACCESSORS
-    R<T0> clone() const { return R<T0>{(*this).g, (*this).x.clone()}; }
+    R<T0> clone() const { return R<T0>{this->g, this->x.clone()}; }
   };
 
   template <typename T1>

@@ -124,7 +124,7 @@ struct SuperfluousMoves {
     uint64_t px;
 
     // ACCESSORS
-    position clone() const { return position{(*this).px}; }
+    position clone() const { return position{this->px}; }
   };
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { CHASE, FRIGHTENED };
@@ -163,8 +163,8 @@ struct SuperfluousMoves {
 
     // ACCESSORS
     game_state clone() const {
-      return game_state{(*this).pacpos.clone(), (*this).ghosts.clone(),
-                        (*this).lives};
+      return game_state{this->pacpos.clone(), this->ghosts.clone(),
+                        this->lives};
     }
   };
 
@@ -176,8 +176,8 @@ struct SuperfluousMoves {
 
     // ACCESSORS
     loop_state clone() const {
-      return loop_state{(*this).ls_game.clone(), (*this).ls_prev_pac.clone(),
-                        (*this).ls_prev_ghosts.clone()};
+      return loop_state{this->ls_game.clone(), this->ls_prev_pac.clone(),
+                        this->ls_prev_ghosts.clone()};
     }
   };
 

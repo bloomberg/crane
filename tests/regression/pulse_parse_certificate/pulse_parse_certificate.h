@@ -191,10 +191,10 @@ struct PulseParseCertificateCase {
 
     // ACCESSORS
     PulseCertificate clone() const {
-      return PulseCertificate{
-          (*this).certificate_first_active, (*this).certificate_last_active,
-          (*this).certificate_runs, (*this).certificate_base,
-          (*this).certificate_classes.clone()};
+      return PulseCertificate{this->certificate_first_active,
+                              this->certificate_last_active,
+                              this->certificate_runs, this->certificate_base,
+                              this->certificate_classes.clone()};
     }
   };
 

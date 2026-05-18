@@ -8,7 +8,7 @@ struct SingletonRecord {
     uint64_t value;
 
     // ACCESSORS
-    wrapper clone() const { return wrapper{(*this).value}; }
+    wrapper clone() const { return wrapper{this->value}; }
   };
 
   static inline const wrapper wrapped_five = wrapper{UINT64_C(5)};
@@ -21,7 +21,7 @@ struct SingletonRecord {
     A contents;
 
     // ACCESSORS
-    box<A> clone() const { return box<A>{(*this).contents}; }
+    box<A> clone() const { return box<A>{this->contents}; }
   };
 
   static inline const box<uint64_t> boxed_three = box<uint64_t>{UINT64_C(3)};
@@ -38,7 +38,7 @@ struct SingletonRecord {
     std::function<uint64_t(uint64_t)> fn;
 
     // ACCESSORS
-    fn_wrapper clone() const { return fn_wrapper{(*this).fn}; }
+    fn_wrapper clone() const { return fn_wrapper{this->fn}; }
   };
 
   static inline const fn_wrapper my_fn_wrapper =

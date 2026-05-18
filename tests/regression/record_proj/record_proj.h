@@ -9,7 +9,7 @@ struct RecordProj {
     uint64_t y;
 
     // ACCESSORS
-    Point clone() const { return Point{(*this).x, (*this).y}; }
+    Point clone() const { return Point{this->x, this->y}; }
   };
 
   struct ComplexRecord {
@@ -19,7 +19,7 @@ struct RecordProj {
 
     // ACCESSORS
     ComplexRecord clone() const {
-      return ComplexRecord{(*this).field1, (*this).field2, (*this).field3};
+      return ComplexRecord{this->field1, this->field2, this->field3};
     }
   };
 

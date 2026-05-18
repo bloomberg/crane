@@ -130,9 +130,7 @@ struct UniversePoly {
     B psnd;
 
     // ACCESSORS
-    ppair<A, B> clone() const {
-      return ppair<A, B>{(*this).pfst, (*this).psnd};
-    }
+    ppair<A, B> clone() const { return ppair<A, B>{this->pfst, this->psnd}; }
   };
 
   static inline const ppair<uint64_t, bool> test_pair =

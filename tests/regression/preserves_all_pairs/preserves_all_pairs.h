@@ -129,7 +129,7 @@ struct PreservesAllPairs {
     uint64_t acc;
 
     // ACCESSORS
-    state clone() const { return state{(*this).regs.clone(), (*this).acc}; }
+    state clone() const { return state{this->regs.clone(), this->acc}; }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

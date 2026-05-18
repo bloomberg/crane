@@ -152,8 +152,8 @@ struct WrmThenRdmReadsBack {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).regs.clone(), (*this).acc, (*this).ram.clone(),
-                   (*this).sel_char};
+      return state{this->regs.clone(), this->acc, this->ram.clone(),
+                   this->sel_char};
     }
   };
 

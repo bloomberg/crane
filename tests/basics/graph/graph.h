@@ -267,7 +267,7 @@ template <typename A> struct DirectedEdge {
 
   // ACCESSORS
   DirectedEdge<A> clone() const {
-    return DirectedEdge<A>{(*this).edge_from, (*this).edge_to};
+    return DirectedEdge<A>{this->edge_from, this->edge_to};
   }
 };
 
@@ -283,8 +283,8 @@ template <typename A> struct Directed {
 
   // ACCESSORS
   Directed<A> clone() const {
-    return Directed<A>{(*this).directed_nodes.clone(),
-                       (*this).directed_edges.clone()};
+    return Directed<A>{this->directed_nodes.clone(),
+                       this->directed_edges.clone()};
   }
 };
 
@@ -323,7 +323,7 @@ template <typename A> struct UndirectedEdge {
 
   // ACCESSORS
   UndirectedEdge<A> clone() const {
-    return UndirectedEdge<A>{(*this).edge_first, (*this).edge_second};
+    return UndirectedEdge<A>{this->edge_first, this->edge_second};
   }
 };
 
@@ -338,8 +338,8 @@ template <typename A> struct Undirected {
 
   // ACCESSORS
   Undirected<A> clone() const {
-    return Undirected<A>{(*this).undirected_nodes.clone(),
-                         (*this).undirected_edges.clone()};
+    return Undirected<A>{this->undirected_nodes.clone(),
+                         this->undirected_edges.clone()};
   }
 };
 

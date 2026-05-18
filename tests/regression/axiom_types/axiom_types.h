@@ -21,7 +21,7 @@ struct AxiomTypes {
 
     // ACCESSORS
     AxiomRecord clone() const {
-      return AxiomRecord{(*this).normal_field, (*this).axiom_field};
+      return AxiomRecord{this->normal_field, this->axiom_field};
     }
   };
 

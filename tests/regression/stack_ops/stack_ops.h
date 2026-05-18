@@ -133,9 +133,7 @@ struct StackOps {
     List<uint64_t> stack_basic;
 
     // ACCESSORS
-    state_basic clone() const {
-      return state_basic{(*this).stack_basic.clone()};
-    }
+    state_basic clone() const { return state_basic{this->stack_basic.clone()}; }
   };
 
   struct state_with_acc {
@@ -144,7 +142,7 @@ struct StackOps {
 
     // ACCESSORS
     state_with_acc clone() const {
-      return state_with_acc{(*this).stack_with_acc.clone(), (*this).acc};
+      return state_with_acc{this->stack_with_acc.clone(), this->acc};
     }
   };
 

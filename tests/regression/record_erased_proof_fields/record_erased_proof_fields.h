@@ -326,9 +326,8 @@ struct RecordErasedProofFieldsCase {
 
     // ACCESSORS
     PrimaryRecord clone() const {
-      return PrimaryRecord{(*this).primary_left_kind,
-                           (*this).primary_right_kind,
-                           (*this).primary_tag.clone()};
+      return PrimaryRecord{this->primary_left_kind, this->primary_right_kind,
+                           this->primary_tag.clone()};
     }
   };
 
@@ -337,7 +336,7 @@ struct RecordErasedProofFieldsCase {
 
     // ACCESSORS
     ErasedProofRecord clone() const {
-      return ErasedProofRecord{(*this).erased_bucket};
+      return ErasedProofRecord{this->erased_bucket};
     }
   };
 

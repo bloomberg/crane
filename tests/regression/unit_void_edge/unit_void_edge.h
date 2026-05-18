@@ -196,7 +196,7 @@ struct UnitVoidEdge {
 
     // ACCESSORS
     tagged_nat clone() const {
-      return tagged_nat{(*this).tn_value, (*this).tn_tag};
+      return tagged_nat{this->tn_value, this->tn_tag};
     }
   };
 
