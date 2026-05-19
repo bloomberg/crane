@@ -398,7 +398,7 @@ struct LoopifyPairs {
             _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
           } else {
             auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v_mut());
-            _stack.emplace_back(_Cont_Cons{a0});
+            _stack.emplace_back(_Cont_Cons{std::move(a0)});
             _stack.emplace_back(_Enter{std::move(*a1), m});
           }
         }

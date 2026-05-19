@@ -5597,7 +5597,11 @@ let make_owned_param_matches owned_names stmts =
     by [CPPderef] (e.g. [*(d_a1)]) are also moved.  These arise from
     [unique_ptr] fields of a value-type variant that has been matched with
     [v_mut()] (after [make_owned_param_matches]), so the pointed-to value is
-    mutable and the current iteration is the only owner — moving is safe. *)
+    mutable and the current iteration is the only owner — moving is safe.
+
+    Value fields bound from owned [v_mut()] matches (e.g. [auto &[a0, a1] =
+    std::get<...>(l.v_mut())]) are also moveable: the scrutinee is owned and
+    dead after the frame push, so moving the field avoids a deep copy. *)
 let optimize_frame_push_args frame_field_types stmts =
   if frame_field_types = [] then stmts
   else
@@ -5613,10 +5617,10 @@ let optimize_frame_push_args frame_field_types stmts =
         List.exists worthwhile_move_type ts
       | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
         worthwhile_move_type t
-      | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _
-       |Tvar _ -> false
+      | Tvar _ -> true
+      | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
     in
-    let should_move ~is_enter ty arg =
+    let should_move ~is_enter ~owned_vars ty arg =
       let stripped = strip_ref_and_const_type ty in
       worthwhile_move_type stripped
       &&
@@ -5624,22 +5628,31 @@ let optimize_frame_push_args frame_field_types stmts =
       | CPPmove _ -> false
       | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
       | CPPvar id when Id.to_string id = "_result" -> true
-      | CPPderef _ when is_enter ->
-        (* Dereferenced child pointer (e.g. *(d_a1)) in an _Enter push: safe to
-           move because the iteration that matched v_mut() is the sole owner. *)
-        true
+      | CPPderef _ when is_enter -> true
+      | CPPvar id when List.exists (Id.equal id) owned_vars -> true
       | _ -> false
     in
-    let adjust_args ~is_enter types args =
+    let adjust_args ~is_enter ~owned_vars types args =
       if List.length types = List.length args then
         List.map2
           (fun ty arg ->
-            if should_move ~is_enter ty arg then CPPmove arg else arg)
+            if should_move ~is_enter ~owned_vars ty arg then CPPmove arg else arg)
           types args
       else
         args
     in
-    let rec on_stmt = function
+    let owned_bindings_of_branch br =
+      if br.smb_is_owned then
+        List.filter_map
+          (fun (id, ty, _used) ->
+            match ty with
+            | Tunique_ptr _ | Tshared_ptr _ -> None
+            | _ -> Some id)
+          br.smb_field_bindings
+      else []
+    in
+    let rec on_stmts owned_vars ss = List.map (on_stmt owned_vars) ss
+    and on_stmt owned_vars = function
       | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) as s -> (
         match lookup (Id.to_string name) with
         | Some types ->
@@ -5647,11 +5660,25 @@ let optimize_frame_push_args frame_field_types stmts =
           Sexpr
             (CPPfun_call
                (callee,
-                [CPPstruct_id (name, targs, adjust_args ~is_enter types args)]))
-        | None -> map_stmt Fun.id on_stmt Fun.id s )
-      | s -> map_stmt Fun.id on_stmt Fun.id s
+                [CPPstruct_id (name, targs,
+                  adjust_args ~is_enter ~owned_vars types args)]))
+        | None -> map_stmt Fun.id (on_stmt owned_vars) Fun.id s )
+      | Smatch (branches, default) ->
+        let branches' =
+          List.map
+            (fun br ->
+              let new_owned = owned_bindings_of_branch br in
+              { br with smb_body = on_stmts (new_owned @ owned_vars) br.smb_body })
+            branches
+        in
+        let default' = Option.map (on_stmts owned_vars) default in
+        Smatch (branches', default')
+      | Sif (cond, then_body, else_body) ->
+        Sif (cond, on_stmts owned_vars then_body, on_stmts owned_vars else_body)
+      | Sblock body -> Sblock (on_stmts owned_vars body)
+      | s -> map_stmt Fun.id (on_stmt owned_vars) Fun.id s
     in
-    List.map on_stmt stmts
+    on_stmts [] stmts
 
 (** Build one branch of the frame-dispatch [Smatch].
 

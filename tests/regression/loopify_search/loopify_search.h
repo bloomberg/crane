@@ -575,8 +575,8 @@ struct LoopifySearch {
         }
       } else if (std::holds_alternative<_After_BNode>(_frame)) {
         auto _f = std::move(std::get<_After_BNode>(_frame));
-        _stack.emplace_back(
-            _Combine_BNode{_result, std::move(_f.a1), std::move(_f.a0_1)});
+        _stack.emplace_back(_Combine_BNode{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0_1)});
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_BNode>(_frame));
@@ -634,8 +634,8 @@ struct LoopifySearch {
         }
       } else if (std::holds_alternative<_After_BNode>(_frame)) {
         auto _f = std::move(std::get<_After_BNode>(_frame));
-        _stack.emplace_back(
-            _Combine_BNode{_result, std::move(_f.a1), std::move(_f.a0_1)});
+        _stack.emplace_back(_Combine_BNode{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0_1)});
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_BNode>(_frame));

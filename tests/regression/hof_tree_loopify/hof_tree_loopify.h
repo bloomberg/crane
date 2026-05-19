@@ -1012,7 +1012,8 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_After_Node>(_frame)) {
         auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+        _stack.emplace_back(_Combine_Node{std::move(_result), std::move(_f.a2),
+                                          std::move(_f.a1),
                                           std::move(_f.a0_1)});
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
@@ -1074,7 +1075,8 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_After_Node>(_frame)) {
         auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
+        _stack.emplace_back(_Combine_Node{std::move(_result), std::move(_f.a2),
+                                          std::move(_f.a1),
                                           std::move(_f.a0_1)});
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
@@ -1133,7 +1135,8 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_After_Node>(_frame)) {
         auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
+        _stack.emplace_back(
+            _Combine_Node{std::move(_result), std::move(_f.a1)});
         _stack.emplace_back(_Enter{_f.a0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -1189,7 +1192,8 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_After_Node>(_frame)) {
         auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{_result, _f.a1});
+        _stack.emplace_back(
+            _Combine_Node{std::move(_result), std::move(_f.a1)});
         _stack.emplace_back(_Enter{_f.a0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -1253,7 +1257,8 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_After_Node>(_frame)) {
         auto _f = std::move(std::get<_After_Node>(_frame));
-        _stack.emplace_back(_Combine_Node{std::move(_result), _f._s2});
+        _stack.emplace_back(
+            _Combine_Node{std::move(_result), std::move(_f._s2)});
         _stack.emplace_back(_Enter{_f.a00, _f.a0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));

@@ -503,20 +503,20 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_Add>(_frame)) {
           auto _f = std::move(std::get<_After_Add>(_frame));
-          _stack.emplace_back(
-              _Combine_Add{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Add{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Cond>(_frame)) {
           auto _f = std::move(std::get<_After_Cond>(_frame));
-          _stack.emplace_back(_After_Cond_1{_result, _f._s1, std::move(_f.a2),
-                                            std::move(_f.a1),
+          _stack.emplace_back(_After_Cond_1{std::move(_result), _f._s1,
+                                            std::move(_f.a2), std::move(_f.a1),
                                             std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Cond_1>(_frame)) {
           auto _f = std::move(std::get<_After_Cond_1>(_frame));
-          _stack.emplace_back(_Combine_Cond{_f._result, _result,
-                                            std::move(_f.a2), std::move(_f.a1),
-                                            std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Cond{
+              std::move(_f._result), std::move(_result), std::move(_f.a2),
+              std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_Combine_Add>(_frame)) {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
@@ -619,20 +619,20 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_Add>(_frame)) {
           auto _f = std::move(std::get<_After_Add>(_frame));
-          _stack.emplace_back(
-              _Combine_Add{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Add{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Cond>(_frame)) {
           auto _f = std::move(std::get<_After_Cond>(_frame));
-          _stack.emplace_back(_After_Cond_1{_result, _f._s1, std::move(_f.a2),
-                                            std::move(_f.a1),
+          _stack.emplace_back(_After_Cond_1{std::move(_result), _f._s1,
+                                            std::move(_f.a2), std::move(_f.a1),
                                             std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Cond_1>(_frame)) {
           auto _f = std::move(std::get<_After_Cond_1>(_frame));
-          _stack.emplace_back(_Combine_Cond{_f._result, _result,
-                                            std::move(_f.a2), std::move(_f.a1),
-                                            std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Cond{
+              std::move(_f._result), std::move(_result), std::move(_f.a2),
+              std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_Combine_Add>(_frame)) {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
@@ -1049,18 +1049,18 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_AAdd>(_frame)) {
           auto _f = std::move(std::get<_After_AAdd>(_frame));
-          _stack.emplace_back(
-              _Combine_AAdd{_result, std::move(_f.a3), std::move(_f.a2)});
+          _stack.emplace_back(_Combine_AAdd{
+              std::move(_result), std::move(_f.a3), std::move(_f.a2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_ADiv>(_frame)) {
           auto _f = std::move(std::get<_After_ADiv>(_frame));
-          _stack.emplace_back(
-              _Combine_ADiv{_result, std::move(_f.a3), std::move(_f.a2)});
+          _stack.emplace_back(_Combine_ADiv{
+              std::move(_result), std::move(_f.a3), std::move(_f.a2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_AMul>(_frame)) {
           auto _f = std::move(std::get<_After_AMul>(_frame));
-          _stack.emplace_back(
-              _Combine_AMul{_result, std::move(_f.a3), std::move(_f.a2)});
+          _stack.emplace_back(_Combine_AMul{
+              std::move(_result), std::move(_f.a3), std::move(_f.a2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_AAdd>(_frame)) {
           auto _f = std::move(std::get<_Combine_AAdd>(_frame));
@@ -1172,18 +1172,18 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_AAdd>(_frame)) {
           auto _f = std::move(std::get<_After_AAdd>(_frame));
-          _stack.emplace_back(
-              _Combine_AAdd{_result, std::move(_f.a3), std::move(_f.a2)});
+          _stack.emplace_back(_Combine_AAdd{
+              std::move(_result), std::move(_f.a3), std::move(_f.a2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_ADiv>(_frame)) {
           auto _f = std::move(std::get<_After_ADiv>(_frame));
-          _stack.emplace_back(
-              _Combine_ADiv{_result, std::move(_f.a3), std::move(_f.a2)});
+          _stack.emplace_back(_Combine_ADiv{
+              std::move(_result), std::move(_f.a3), std::move(_f.a2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_AMul>(_frame)) {
           auto _f = std::move(std::get<_After_AMul>(_frame));
-          _stack.emplace_back(
-              _Combine_AMul{_result, std::move(_f.a3), std::move(_f.a2)});
+          _stack.emplace_back(_Combine_AMul{
+              std::move(_result), std::move(_f.a3), std::move(_f.a2)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_AAdd>(_frame)) {
           auto _f = std::move(std::get<_Combine_AAdd>(_frame));
@@ -1771,13 +1771,13 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_BAnd>(_frame)) {
           auto _f = std::move(std::get<_After_BAnd>(_frame));
-          _stack.emplace_back(
-              _Combine_BAnd{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_BAnd{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_BOr>(_frame)) {
           auto _f = std::move(std::get<_After_BOr>(_frame));
-          _stack.emplace_back(
-              _Combine_BOr{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_BOr{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_BAnd>(_frame)) {
           auto _f = std::move(std::get<_Combine_BAnd>(_frame));
@@ -1880,13 +1880,13 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_BAnd>(_frame)) {
           auto _f = std::move(std::get<_After_BAnd>(_frame));
-          _stack.emplace_back(
-              _Combine_BAnd{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_BAnd{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_BOr>(_frame)) {
           auto _f = std::move(std::get<_After_BOr>(_frame));
-          _stack.emplace_back(
-              _Combine_BOr{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_BOr{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_BAnd>(_frame)) {
           auto _f = std::move(std::get<_Combine_BAnd>(_frame));
@@ -2264,8 +2264,8 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_LAppend>(_frame)) {
           auto _f = std::move(std::get<_After_LAppend>(_frame));
-          _stack.emplace_back(
-              _Combine_LAppend{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_LAppend{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_LAppend>(_frame)) {
           auto _f = std::move(std::get<_Combine_LAppend>(_frame));
@@ -2349,8 +2349,8 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_After_LAppend>(_frame)) {
           auto _f = std::move(std::get<_After_LAppend>(_frame));
-          _stack.emplace_back(
-              _Combine_LAppend{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_LAppend{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_Combine_LAppend>(_frame)) {
           auto _f = std::move(std::get<_Combine_LAppend>(_frame));
