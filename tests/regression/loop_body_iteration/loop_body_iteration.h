@@ -128,7 +128,7 @@ struct LoopBodyIteration {
     List<uint64_t> regs_;
 
     // ACCESSORS
-    state clone() const { return state{(*this).regs_.clone()}; }
+    state clone() const { return state{this->regs_.clone()}; }
   };
 
   template <typename T1>

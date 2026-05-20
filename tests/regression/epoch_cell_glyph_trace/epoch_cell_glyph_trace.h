@@ -368,7 +368,7 @@ struct Q {
   Positive Qden;
 
   // ACCESSORS
-  Q clone() const { return Q{(*this).Qnum.clone(), (*this).Qden.clone()}; }
+  Q clone() const { return Q{this->Qnum.clone(), this->Qden.clone()}; }
 };
 
 struct QArith_base {
@@ -544,10 +544,10 @@ struct EpochCellGlyphTraceCase {
     // ACCESSORS
     MechanismState clone() const {
       return MechanismState{
-          (*this).crank_position.clone(), (*this).metonic_dial.clone(),
-          (*this).saros_dial.clone(),     (*this).callippic_dial.clone(),
-          (*this).exeligmos_dial.clone(), (*this).games_dial.clone(),
-          (*this).zodiac_position.clone()};
+          this->crank_position.clone(), this->metonic_dial.clone(),
+          this->saros_dial.clone(),     this->callippic_dial.clone(),
+          this->exeligmos_dial.clone(), this->games_dial.clone(),
+          this->zodiac_position.clone()};
     }
   };
 
@@ -646,10 +646,10 @@ struct EpochCellGlyphTraceCase {
     // ACCESSORS
     HistoricalEclipse clone() const {
       return HistoricalEclipse{
-          (*this).he_year.clone(),         (*this).he_month.clone(),
-          (*this).he_day.clone(),          (*this).he_category,
-          (*this).he_saros_series.clone(), (*this).he_saros_member.clone(),
-          (*this).he_magnitude.clone(),    (*this).he_visible_mediterranean};
+          this->he_year.clone(),         this->he_month.clone(),
+          this->he_day.clone(),          this->he_category,
+          this->he_saros_series.clone(), this->he_saros_member.clone(),
+          this->he_magnitude.clone(),    this->he_visible_mediterranean};
     }
   };
   enum class DialGlyph {
@@ -833,9 +833,9 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     EpochReading clone() const {
-      return EpochReading{(*this).reading_state.clone(),
-                          (*this).reading_eclipse.clone(),
-                          (*this).reading_cell.clone(), (*this).reading_glyph};
+      return EpochReading{this->reading_state.clone(),
+                          this->reading_eclipse.clone(),
+                          this->reading_cell.clone(), this->reading_glyph};
     }
   };
 
@@ -853,8 +853,8 @@ struct EpochCellGlyphTraceCase {
 
     // ACCESSORS
     ValidEpoch clone() const {
-      return ValidEpoch{(*this).ve_year.clone(), (*this).ve_month.clone(),
-                        (*this).ve_eclipse.clone()};
+      return ValidEpoch{this->ve_year.clone(), this->ve_month.clone(),
+                        this->ve_eclipse.clone()};
     }
   };
 

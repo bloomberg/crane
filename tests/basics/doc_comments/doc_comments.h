@@ -20,7 +20,7 @@ struct DocComments {
     B snd;
 
     // ACCESSORS
-    pair<A, B> clone() const { return pair<A, B>{(*this).fst, (*this).snd}; }
+    pair<A, B> clone() const { return pair<A, B>{this->fst, this->snd}; }
   }; /// mylist is a polymorphic list type.
 
   template <typename A> struct mylist {

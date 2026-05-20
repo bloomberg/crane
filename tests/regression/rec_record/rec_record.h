@@ -151,7 +151,7 @@ struct RecRecord {
 
     // ACCESSORS
     RNode clone() const {
-      return RNode{(*this).rn_value,
+      return RNode{this->rn_value,
                    (*this).rn_next.has_value()
                        ? std::make_optional(std::make_unique<RNode>(
                              (*(*this).rn_next)->clone()))
@@ -184,9 +184,7 @@ struct RecRecord {
     uint64_t emp_dept;
 
     // ACCESSORS
-    Employee clone() const {
-      return Employee{(*this).emp_name, (*this).emp_dept};
-    }
+    Employee clone() const { return Employee{this->emp_name, this->emp_dept}; }
   };
 
   struct Department {
@@ -196,8 +194,8 @@ struct RecRecord {
 
     // ACCESSORS
     Department clone() const {
-      return Department{(*this).dept_id, (*this).dept_head.clone(),
-                        (*this).dept_size};
+      return Department{this->dept_id, this->dept_head.clone(),
+                        this->dept_size};
     }
   };
 

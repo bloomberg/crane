@@ -324,6 +324,11 @@ val has_dependent_params : GlobRef.t -> bool
     @param i   0-based index of the packet within [ind] to test *)
 val is_enum_inductive_packet : Miniml.ml_ind -> int -> bool
 
+(** Check if an inductive packet qualifies as flat (single constructor, no kept
+    type parameters, not coinductive, not mutual, no self-referencing fields).
+    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
+val is_flat_inductive_packet : Names.MutInd.t -> Miniml.ml_ind -> int -> bool
+
 (** Compute the C++ enum constructor name for constructor [j] of inductive
     [(kn, i)] by looking up the extraction packet. Deterministic regardless
     of the KerName used (canonical or functor-applied).

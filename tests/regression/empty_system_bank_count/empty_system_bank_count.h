@@ -138,7 +138,7 @@ struct EmptySystemBankCount {
 
     // ACCESSORS
     ram_reg clone() const {
-      return ram_reg{(*this).reg_main.clone(), (*this).reg_status.clone()};
+      return ram_reg{this->reg_main.clone(), this->reg_status.clone()};
     }
   };
 
@@ -148,7 +148,7 @@ struct EmptySystemBankCount {
 
     // ACCESSORS
     ram_chip clone() const {
-      return ram_chip{(*this).chip_regs.clone(), (*this).chip_port};
+      return ram_chip{this->chip_regs.clone(), this->chip_port};
     }
   };
 
@@ -156,7 +156,7 @@ struct EmptySystemBankCount {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{this->bank_chips.clone()}; }
   };
 
   static inline const uint64_t NBANKS = UINT64_C(4);

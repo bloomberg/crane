@@ -127,8 +127,9 @@ MemSafetyProbe14::tree_level_fns(
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
-          _f._s2, mylist<std::function<uint64_t(uint64_t)>>::mycons(
-                      _f._s1, _result.mylist_append(_f._result)));
+          _f._s2,
+          mylist<std::function<uint64_t(uint64_t)>>::mycons(
+              _f._s1, std::move(_result).mylist_append(std::move(_f._result))));
     }
   }
   return _result;
@@ -210,7 +211,7 @@ MemSafetyProbe14::collect_closures(
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
-          _f._s1, _result.mylist_append(_f._result));
+          _f._s1, std::move(_result).mylist_append(std::move(_f._result)));
     }
   }
   return _result;

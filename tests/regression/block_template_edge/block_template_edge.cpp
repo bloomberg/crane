@@ -17,7 +17,7 @@ std::string BlockTemplateEdge::block_in_if() {
 int64_t BlockTemplateEdge::block_in_arith() {
   std::string n;
   std::getline(std::cin, n);
-  return ((static_cast<int64_t>(n.length()) + int64_t(1)) &
+  return ((static_cast<int64_t>(n.length()) + INT64_C(1)) &
           0x7FFFFFFFFFFFFFFFLL);
 }
 

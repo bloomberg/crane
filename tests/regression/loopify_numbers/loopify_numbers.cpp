@@ -91,7 +91,7 @@ LoopifyNumbers::fib(uint64_t n) { /// _Enter: captures varying parameters for
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (_result + _f._result);
+      _result = (std::move(_result) + std::move(_f._result));
     }
   }
   return _result;
@@ -269,7 +269,7 @@ LoopifyNumbers::binomial(uint64_t n,
       _stack.emplace_back(_Enter{_f.k_, _f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_k_>(_frame));
-      _result = (_result + _f._result);
+      _result = (std::move(_result) + std::move(_f._result));
     }
   }
   return _result;
@@ -328,7 +328,7 @@ LoopifyNumbers::pascal(uint64_t row,
       _stack.emplace_back(_Enter{_f.c, _f.r});
     } else {
       auto _f = std::move(std::get<_Combine_r>(_frame));
-      _result = (_result + _f._result);
+      _result = (std::move(_result) + std::move(_f._result));
     }
   }
   return _result;

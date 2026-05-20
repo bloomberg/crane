@@ -191,14 +191,12 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    const auto &_sv = *this;
-    const auto &[a0, a1] = _sv;
+    const auto &[a0, a1] = *this;
     return a0;
   }
 
   B snd() const {
-    const auto &_sv = *this;
-    const auto &[a0, a1] = _sv;
+    const auto &[a0, a1] = *this;
     return a1;
   }
 };
@@ -362,24 +360,21 @@ struct RocqBug14174 {
       }
 
       A proj1_sig() const {
-        const auto &_sv = *this;
-        const auto &[x] = _sv;
+        const auto &[x] = *this;
         return x;
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig_rec(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0] = _sv;
+        const auto &[x0] = *this;
         return f(x0);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig_rect(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0] = _sv;
+        const auto &[x0] = *this;
         return f(x0);
       }
     };
@@ -433,16 +428,14 @@ struct RocqBug14174 {
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig2_rec(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0] = _sv;
+        const auto &[x0] = *this;
         return f(x0);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sig2_rect(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0] = _sv;
+        const auto &[x0] = *this;
         return f(x0);
       }
     };
@@ -495,30 +488,26 @@ struct RocqBug14174 {
       }
 
       P projT2() const {
-        const auto &_sv = *this;
-        const auto &[x0, a1] = _sv;
+        const auto &[x0, a1] = *this;
         return a1;
       }
 
       A projT1() const {
-        const auto &_sv = *this;
-        const auto &[x0, a1] = _sv;
+        const auto &[x0, a1] = *this;
         return x0;
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &>
       T1 sigT_rec(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0, a1] = _sv;
+        const auto &[x0, a1] = *this;
         return f(x0, a1);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &>
       T1 sigT_rect(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0, a1] = _sv;
+        const auto &[x0, a1] = *this;
         return f(x0, a1);
       }
     };
@@ -569,8 +558,7 @@ struct RocqBug14174 {
       }
 
       Q projT3() const {
-        const auto &_sv = *this;
-        const auto &[x, a1, a2] = _sv;
+        const auto &[x, a1, a2] = *this;
         return a2;
       }
 
@@ -590,16 +578,14 @@ struct RocqBug14174 {
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
       T1 sigT2_rec(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0, a1, a2] = _sv;
+        const auto &[x0, a1, a2] = *this;
         return f(x0, a1, a2);
       }
 
       template <typename T1, typename F0>
         requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
       T1 sigT2_rect(F0 &&f) const {
-        const auto &_sv = *this;
-        const auto &[x0, a1, a2] = _sv;
+        const auto &[x0, a1, a2] = *this;
         return f(x0, a1, a2);
       }
     };

@@ -8,7 +8,7 @@ struct PortWriteNibbleMask {
     uint64_t chip_port;
 
     // ACCESSORS
-    ram_chip clone() const { return ram_chip{(*this).chip_port}; }
+    ram_chip clone() const { return ram_chip{this->chip_port}; }
   };
 
   static uint64_t nibble_of_nat(uint64_t n);

@@ -225,9 +225,7 @@ struct ProgramWfProp {
     uint64_t code_size;
 
     // ACCESSORS
-    layout clone() const {
-      return layout{(*this).base_addr, (*this).code_size};
-    }
+    layout clone() const { return layout{this->base_addr, this->code_size}; }
   };
 
   static std::optional<uint64_t> jump_target(const instruction &i);

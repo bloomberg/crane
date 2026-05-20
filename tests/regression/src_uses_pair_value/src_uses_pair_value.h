@@ -133,8 +133,8 @@ struct SrcUsesPairValue {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).regs.clone(), (*this).sel_rom, (*this).sel_chip,
-                   (*this).sel_reg, (*this).sel_char};
+      return state{this->regs.clone(), this->sel_rom, this->sel_chip,
+                   this->sel_reg, this->sel_char};
     }
   };
 

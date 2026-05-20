@@ -152,33 +152,78 @@ struct LoopifyMultiRecursion {
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
                                    quadtree &, T1 &, quadtree &, T1 &>
-  static T1 quadtree_rect(F0 &&f, F1 &&f0, const quadtree &q) {
-    if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
-      const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1, a2, a3] = std::get<typename quadtree::QQuad>(q.v());
-      return f0(*a0, quadtree_rect<T1>(f, f0, *a0), *a1,
-                quadtree_rect<T1>(f, f0, *a1), *a2,
-                quadtree_rect<T1>(f, f0, *a2), *a3,
-                quadtree_rect<T1>(f, f0, *a3));
+  static T1
+  quadtree_rect(F0 &&f, F1 &&f0,
+                const quadtree &q) { /// _Enter: captures varying parameters for
+                                     /// each recursive call.
+
+    struct _Enter {
+      const quadtree *q;
+    };
+
+    using _Frame = std::variant<_Enter>;
+    T1 _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&q});
+    /// Loopified quadtree_rect: _Enter.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const quadtree &q = *_f.q;
+      if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
+        const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
+        _result = f(a0);
+      } else {
+        const auto &[a0, a1, a2, a3] =
+            std::get<typename quadtree::QQuad>(q.v());
+        _result = f0(*a0, quadtree_rect<T1>(f, f0, *a0), *a1,
+                     quadtree_rect<T1>(f, f0, *a1), *a2,
+                     quadtree_rect<T1>(f, f0, *a2), *a3,
+                     quadtree_rect<T1>(f, f0, *a3));
+      }
     }
+    return _result;
   }
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
                                    quadtree &, T1 &, quadtree &, T1 &>
-  static T1 quadtree_rec(F0 &&f, F1 &&f0, const quadtree &q) {
-    if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
-      const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1, a2, a3] = std::get<typename quadtree::QQuad>(q.v());
-      return f0(*a0, quadtree_rec<T1>(f, f0, *a0), *a1,
-                quadtree_rec<T1>(f, f0, *a1), *a2, quadtree_rec<T1>(f, f0, *a2),
-                *a3, quadtree_rec<T1>(f, f0, *a3));
+  static T1
+  quadtree_rec(F0 &&f, F1 &&f0,
+               const quadtree &q) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
+
+    struct _Enter {
+      const quadtree *q;
+    };
+
+    using _Frame = std::variant<_Enter>;
+    T1 _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&q});
+    /// Loopified quadtree_rec: _Enter.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const quadtree &q = *_f.q;
+      if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
+        const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
+        _result = f(a0);
+      } else {
+        const auto &[a0, a1, a2, a3] =
+            std::get<typename quadtree::QQuad>(q.v());
+        _result =
+            f0(*a0, quadtree_rec<T1>(f, f0, *a0), *a1,
+               quadtree_rec<T1>(f, f0, *a1), *a2, quadtree_rec<T1>(f, f0, *a2),
+               *a3, quadtree_rec<T1>(f, f0, *a3));
+      }
     }
+    return _result;
   }
 
   static uint64_t quad_count_leaves(const quadtree &t);

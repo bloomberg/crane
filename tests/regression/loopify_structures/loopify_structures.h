@@ -780,20 +780,22 @@ struct LoopifyStructures {
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
           auto _f = std::move(std::get<_After_Quad>(_frame));
           _stack.emplace_back(_After_Quad_1{
-              _result, _f._s1, _f._s2, std::move(_f.a3), std::move(_f.a2),
-              std::move(_f.a1), std::move(_f.a0)});
+              std::move(_result), _f._s1, _f._s2, std::move(_f.a3),
+              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_1>(_frame));
-          _stack.emplace_back(_After_Quad_2{
-              _f._result, _result, _f._s2, std::move(_f.a3), std::move(_f.a2),
-              std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(
+              _After_Quad_2{std::move(_f._result), std::move(_result), _f._s2,
+                            std::move(_f.a3), std::move(_f.a2),
+                            std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_2>(_frame));
           _stack.emplace_back(_Combine_Quad{
-              _f._result_0, _f._result_1, _result, std::move(_f.a3),
-              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0)});
+              std::move(_f._result_0), std::move(_f._result_1),
+              std::move(_result), std::move(_f.a3), std::move(_f.a2),
+              std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_Quad>(_frame));
@@ -892,20 +894,22 @@ struct LoopifyStructures {
         } else if (std::holds_alternative<_After_Quad>(_frame)) {
           auto _f = std::move(std::get<_After_Quad>(_frame));
           _stack.emplace_back(_After_Quad_1{
-              _result, _f._s1, _f._s2, std::move(_f.a3), std::move(_f.a2),
-              std::move(_f.a1), std::move(_f.a0)});
+              std::move(_result), _f._s1, _f._s2, std::move(_f.a3),
+              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_1>(_frame));
-          _stack.emplace_back(_After_Quad_2{
-              _f._result, _result, _f._s2, std::move(_f.a3), std::move(_f.a2),
-              std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(
+              _After_Quad_2{std::move(_f._result), std::move(_result), _f._s2,
+                            std::move(_f.a3), std::move(_f.a2),
+                            std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s1});
         } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
           auto _f = std::move(std::get<_After_Quad_2>(_frame));
           _stack.emplace_back(_Combine_Quad{
-              _f._result_0, _f._result_1, _result, std::move(_f.a3),
-              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0)});
+              std::move(_f._result_0), std::move(_f._result_1),
+              std::move(_result), std::move(_f.a3), std::move(_f.a2),
+              std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s2});
         } else {
           auto _f = std::move(std::get<_Combine_Quad>(_frame));
@@ -941,34 +945,65 @@ struct LoopifyStructures {
   template <typename F0>
     requires std::is_invocable_r_v<std::optional<uint64_t>, F0 &, uint64_t &>
   static List<uint64_t> map_opt(F0 &&f, const List<uint64_t> &l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return List<uint64_t>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      auto _cs = f(a0);
-      if (_cs.has_value()) {
-        const uint64_t &y = *_cs;
-        return List<uint64_t>::cons(y, map_opt(f, *a1));
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        break;
       } else {
-        return map_opt(f, *a1);
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        auto _cs = f(a0);
+        if (_cs.has_value()) {
+          const uint64_t &y = *_cs;
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(y, nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
-  } /// filter_map p f l filters and maps in one pass.
+    return std::move(*_head);
+  }
 
+  /// filter_map p f l filters and maps in one pass.
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
              std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static List<uint64_t> filter_map(F0 &&p, F1 &&f, const List<uint64_t> &l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return List<uint64_t>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return List<uint64_t>::cons(f(a0), filter_map(p, f, *a1));
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        break;
       } else {
-        return filter_map(p, f, *a1);
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(f(a0), nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   /// find_first_some l finds first Some value in list of options.
@@ -1162,7 +1197,8 @@ struct LoopifyStructures {
           _stack.emplace_back(_Enter{_f._s0, std::move(_f.a10)});
         } else {
           auto _f = std::move(std::get<_Combine_LNode>(_frame));
-          _result = ltree::lnode(_f.max_val, _result, _f._result);
+          _result = ltree::lnode(_f.max_val, std::move(_result),
+                                 std::move(_f._result));
         }
       }
       return _result;
@@ -1220,12 +1256,13 @@ struct LoopifyStructures {
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {
           auto _f = std::move(std::get<_After_LNode>(_frame));
-          _stack.emplace_back(_Combine_LNode{_result, std::move(_f.a2),
-                                             std::move(_f.a1), _f.a0});
+          _stack.emplace_back(_Combine_LNode{
+              std::move(_result), std::move(_f.a2), std::move(_f.a1), _f.a0});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_LNode>(_frame));
-          _result = f0(_f.a0, _f.a1, _result, _f.a2, _f._result);
+          _result = f0(_f.a0, _f.a1, std::move(_result), _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -1283,12 +1320,13 @@ struct LoopifyStructures {
           }
         } else if (std::holds_alternative<_After_LNode>(_frame)) {
           auto _f = std::move(std::get<_After_LNode>(_frame));
-          _stack.emplace_back(_Combine_LNode{_result, std::move(_f.a2),
-                                             std::move(_f.a1), _f.a0});
+          _stack.emplace_back(_Combine_LNode{
+              std::move(_result), std::move(_f.a2), std::move(_f.a1), _f.a0});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_LNode>(_frame));
-          _result = f0(_f.a0, _f.a1, _result, _f.a2, _f._result);
+          _result = f0(_f.a0, _f.a1, std::move(_result), _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;

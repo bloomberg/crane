@@ -157,8 +157,8 @@ struct DoubleTypename {
       if (std::holds_alternative<typename List<entry<T1>>::Nil>(l.v())) {
         return List<typename X::t>::nil();
       } else {
-        const auto &[a, l0] = std::get<typename List<entry<T1>>::Cons>(l.v());
-        const auto &[a00, a10] = a;
+        const auto &[a0, a1] = std::get<typename List<entry<T1>>::Cons>(l.v());
+        const auto &[a00, a10] = a0;
         return List<typename X::t>::cons(a00, List<typename X::t>::nil());
       }
     }

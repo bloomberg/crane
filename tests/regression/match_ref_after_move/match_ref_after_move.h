@@ -177,16 +177,14 @@ struct MatchRefAfterMove {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 mypair_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1] = _sv;
+      const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &, B &>
     T1 mypair_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1] = _sv;
+      const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
   };

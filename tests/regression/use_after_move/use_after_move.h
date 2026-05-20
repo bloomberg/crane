@@ -10,9 +10,7 @@ struct UseAfterMove {
     uint64_t flag;
 
     // ACCESSORS
-    State clone() const {
-      return State{(*this).value, (*this).data, (*this).flag};
-    }
+    State clone() const { return State{this->value, this->data, this->flag}; }
   };
 
   static std::pair<State, uint64_t> pattern1(State s);

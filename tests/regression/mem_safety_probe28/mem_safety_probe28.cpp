@@ -48,7 +48,7 @@ uint64_t MemSafetyProbe28::tree_sum(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_result + _f.a1) + _f._result);
+      _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
     }
   }
   return _result;
@@ -102,7 +102,7 @@ uint64_t MemSafetyProbe28::tree_depth(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = (_f._s1 + std::max(_result, _f._result));
+      _result = (_f._s1 + std::max(std::move(_result), std::move(_f._result)));
     }
   }
   return _result;
@@ -198,10 +198,12 @@ uint64_t MemSafetyProbe28::zip_trees(
       _stack.emplace_back(_Enter{std::move(_f.a00), _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
-      _result = ((_f.a1 + _result) + _f._result);
+      _result = ((_f.a1 + std::move(_result)) + std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((((_result + _f.a1) + _f.a10) + _f._result) + _f.t2);
+      _result =
+          ((((std::move(_result) + _f.a1) + _f.a10) + std::move(_f._result)) +
+           _f.t2);
     }
   }
   return _result;
@@ -289,10 +291,10 @@ uint64_t MemSafetyProbe28::zip_depth(
       _stack.emplace_back(_Enter{std::move(_f.a00), _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
-      _result = ((_f.a1 + _result) + _f._result);
+      _result = ((_f.a1 + std::move(_result)) + std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_result + _f.t2) + _f._result);
+      _result = ((std::move(_result) + _f.t2) + std::move(_f._result));
     }
   }
   return _result;
@@ -390,10 +392,12 @@ uint64_t MemSafetyProbe28::zip_and_sum(
       _stack.emplace_back(_Enter{std::move(_f.a00), _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
-      _result = ((_result + _f.a1) + _f._result);
+      _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((((_result + _f.a10) + _f._result) + _f._s2) + _f._s3);
+      _result =
+          ((((std::move(_result) + _f.a10) + std::move(_f._result)) + _f._s2) +
+           _f._s3);
     }
   }
   return _result;
@@ -484,10 +488,11 @@ uint64_t MemSafetyProbe28::double_zip(
       _stack.emplace_back(_Enter{_f.a00, _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
-      _result = ((_result + _f.a1) + _f._result);
+      _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = (((_result + _f._result) + _f.a10) + _f.t2);
+      _result =
+          (((std::move(_result) + std::move(_f._result)) + _f.a10) + _f.t2);
     }
   }
   return _result;
@@ -706,10 +711,10 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
       _stack.emplace_back(_Enter{std::move(_f.a00), _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
-      _result = tree::node(_result, _f.a1, _f._result);
+      _result = tree::node(std::move(_result), _f.a1, std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = tree::node(_result, _f._s1, _f._result);
+      _result = tree::node(std::move(_result), _f._s1, std::move(_f._result));
     }
   }
   return _result;
@@ -762,7 +767,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::build_balanced(
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
-      _result = tree::node(_result, _f.n, _f._result);
+      _result = tree::node(std::move(_result), _f.n, std::move(_f._result));
     }
   }
   return _result;

@@ -401,17 +401,17 @@ struct Matcher {
   static bool parse(const regexp &r, const List<int64_t> &cs);
   static bool parse_bool(const regexp &r, const List<int64_t> &cs);
   static inline const regexp r1 = regexp::cat(
-      regexp::star(regexp::Char_(int64_t(0))), regexp::Char_(int64_t(1)));
+      regexp::star(regexp::Char_(INT64_C(0))), regexp::Char_(INT64_C(1)));
   static inline const List<int64_t> s1 = List<int64_t>::cons(
-      int64_t(0), List<int64_t>::cons(int64_t(1), List<int64_t>::nil()));
+      INT64_C(0), List<int64_t>::cons(INT64_C(1), List<int64_t>::nil()));
   static inline const List<int64_t> s2 =
-      List<int64_t>::cons(int64_t(1), List<int64_t>::nil());
+      List<int64_t>::cons(INT64_C(1), List<int64_t>::nil());
   static inline const List<int64_t> s3 = List<int64_t>::cons(
-      int64_t(0),
+      INT64_C(0),
       List<int64_t>::cons(
-          int64_t(0), List<int64_t>::cons(int64_t(1), List<int64_t>::nil())));
+          INT64_C(0), List<int64_t>::cons(INT64_C(1), List<int64_t>::nil())));
   static inline const List<int64_t> s4 =
-      List<int64_t>::cons(int64_t(0), List<int64_t>::nil());
+      List<int64_t>::cons(INT64_C(0), List<int64_t>::nil());
 };
 
 #endif // INCLUDED_REGEXP

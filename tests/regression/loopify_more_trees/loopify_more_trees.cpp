@@ -48,7 +48,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::mirror(
       _stack.emplace_back(_Enter{_f.a2});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = tree::node(_result, _f.a1, _f._result);
+      _result = tree::node(std::move(_result), _f.a1, std::move(_f._result));
     }
   }
   return _result;
@@ -116,7 +116,7 @@ bool LoopifyMoreTrees::same_shape(
       _stack.emplace_back(_Enter{_f.a00, _f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = (_result && _f._result);
+      _result = (std::move(_result) && std::move(_f._result));
     }
   }
   return _result;
@@ -173,7 +173,7 @@ List<uint64_t> LoopifyMoreTrees::tree_to_list(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = _result.app(_f._s1.app(_f._result));
+      _result = std::move(_result).app(_f._s1.app(std::move(_f._result)));
     }
   }
   return _result;
@@ -231,7 +231,7 @@ uint64_t LoopifyMoreTrees::count_nodes(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_f._s1 + _result) + _f._result);
+      _result = ((_f._s1 + std::move(_result)) + std::move(_f._result));
     }
   }
   return _result;
@@ -299,7 +299,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
       _stack.emplace_back(_Enter{std::move(_f.a00), std::move(_f.a0)});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = tree::node(_result, _f._s1, _f._result);
+      _result = tree::node(std::move(_result), _f._s1, std::move(_f._result));
     }
   }
   return _result;
@@ -353,7 +353,7 @@ uint64_t LoopifyMoreTrees::sum_of_max_branches(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = (_f.a1 + std::max(_result, _f._result));
+      _result = (_f.a1 + std::max(std::move(_result), std::move(_f._result)));
     }
   }
   return _result;

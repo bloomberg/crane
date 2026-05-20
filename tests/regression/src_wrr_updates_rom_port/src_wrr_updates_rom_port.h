@@ -152,8 +152,8 @@ struct SrcWrrUpdatesRomPort {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).regs.clone(), (*this).acc, (*this).rom_ports.clone(),
-                   (*this).sel_rom};
+      return state{this->regs.clone(), this->acc, this->rom_ports.clone(),
+                   this->sel_rom};
     }
   };
 

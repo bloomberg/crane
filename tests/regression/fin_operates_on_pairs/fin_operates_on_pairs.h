@@ -149,9 +149,7 @@ struct FinOperatesOnPairs {
     List<uint64_t> rom;
 
     // ACCESSORS
-    state clone() const {
-      return state{(*this).regs.clone(), (*this).rom.clone()};
-    }
+    state clone() const { return state{this->regs.clone(), this->rom.clone()}; }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

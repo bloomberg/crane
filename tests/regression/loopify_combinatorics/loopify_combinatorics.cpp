@@ -142,7 +142,7 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
           _Enter{std::move(_f.remaining_0), std::move(_f.remaining_1), _f.f});
     } else if (std::holds_alternative<_Combine_Cons>(_frame)) {
       auto _f = std::move(std::get<_Combine_Cons>(_frame));
-      _result = map_cons(_f.a0, _result).app(_f._result);
+      _result = map_cons(_f.a0, std::move(_result)).app(std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Nil>(_frame));
       _result = _f._s0.app(_result);

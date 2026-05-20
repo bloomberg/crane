@@ -134,24 +134,23 @@ template <typename K, typename V> struct CHT {
   stm::TVar<List<std::pair<K, V>>> cht_fallback;
 
   stm::TVar<List<std::pair<K, V>>> bucket_of(const K &k) const {
-    int64_t i = ((*this).cht_nbuckets == 0
-                     ? 0
-                     : (*this).cht_hash(k) % (*this).cht_nbuckets);
-    return (*this).cht_buckets.at(i);
+    int64_t i =
+        (this->cht_nbuckets == 0 ? 0 : this->cht_hash(k) % this->cht_nbuckets);
+    return this->cht_buckets.at(i);
   }
 
   std::optional<V> stm_get(const K &k) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
-    return CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
+    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
   }
 
   std::monostate stm_put(const K &k, const V &v) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     List<std::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*this).cht_eqb, k, v, std::move(xs));
+        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
+                                                              v, std::move(xs));
     stm::writeTVar(b, xs_);
     return std::monostate{};
   }
@@ -160,7 +159,7 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     std::pair<std::optional<V>, List<std::pair<K, V>>> p =
-        CHT<int, int>::template assoc_remove<K, V>((*this).cht_eqb, k,
+        CHT<int, int>::template assoc_remove<K, V>(this->cht_eqb, k,
                                                    std::move(xs));
     auto _cs = p.first;
     if (_cs.has_value()) {
@@ -178,11 +177,11 @@ template <typename K, typename V> struct CHT {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     std::optional<V> ov =
-        CHT<int, int>::template assoc_lookup<K, V>((*this).cht_eqb, k, xs);
+        CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
     V v = f(ov);
     List<std::pair<K, V>> xs_ =
-        CHT<int, int>::template assoc_insert_or_replace<K, V>(
-            (*this).cht_eqb, k, v, std::move(xs));
+        CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
+                                                              v, std::move(xs));
     stm::writeTVar(b, xs_);
     return v;
   }

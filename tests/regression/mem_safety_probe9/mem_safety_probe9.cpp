@@ -232,7 +232,7 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
-      _result = tree::node(_result, _f.n, _f._result);
+      _result = tree::node(std::move(_result), _f.n, std::move(_f._result));
     }
   }
   return _result;

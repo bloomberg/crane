@@ -91,7 +91,8 @@ MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = _result.app(mylist<uint64_t>::mycons(_f.a1, _f._result));
+      _result = std::move(_result).app(
+          mylist<uint64_t>::mycons(_f.a1, std::move(_f._result)));
     }
   }
   return _result;
@@ -183,8 +184,9 @@ MemSafetyProbe24::zip_trees(
       _stack.emplace_back(_Enter{_f.a00, _f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = _result.app(
-          mylist<std::pair<uint64_t, uint64_t>>::mycons(_f._s1, _f._result));
+      _result =
+          std::move(_result).app(mylist<std::pair<uint64_t, uint64_t>>::mycons(
+              _f._s1, std::move(_f._result)));
     }
   }
   return _result;

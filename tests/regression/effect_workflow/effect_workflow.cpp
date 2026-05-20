@@ -93,4 +93,4 @@ std::pair<std::string, std::string> EffectWorkflow::double_read() {
 }
 
 /// 8. Return int literal in monadic context
-int64_t EffectWorkflow::return_literal() { return int64_t(42); }
+int64_t EffectWorkflow::return_literal() { return INT64_C(42); }

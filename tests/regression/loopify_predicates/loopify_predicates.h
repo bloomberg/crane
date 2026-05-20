@@ -277,31 +277,61 @@ struct LoopifyPredicates {
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> filter(F0 &&p, const List<uint64_t> &l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return List<uint64_t>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return List<uint64_t>::cons(a0, filter(p, *a1));
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        break;
       } else {
-        return filter(p, *a1);
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(a0, nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> reject(F0 &&p, const List<uint64_t> &l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return List<uint64_t>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return reject(p, *a1);
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    const List<uint64_t> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        break;
       } else {
-        return List<uint64_t>::cons(a0, reject(p, *a1));
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          _loop_l = a1.get();
+          continue;
+        } else {
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(a0, nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename F0>
@@ -422,17 +452,34 @@ struct LoopifyPredicates {
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t> find_indices_aux(F0 &&p, const List<uint64_t> &l,
                                          uint64_t idx) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return List<uint64_t>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return List<uint64_t>::cons(
-            idx, find_indices_aux(p, *a1, (idx + UINT64_C(1))));
+    std::unique_ptr<List<uint64_t>> _head{};
+    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    uint64_t _loop_idx = std::move(idx);
+    const List<uint64_t> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        break;
       } else {
-        return find_indices_aux(p, *a1, (idx + UINT64_C(1)));
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          auto _cell = std::make_unique<List<uint64_t>>(
+              typename List<uint64_t>::Cons(_loop_idx, nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_idx = (_loop_idx + UINT64_C(1));
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_idx = (_loop_idx + UINT64_C(1));
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename F0>

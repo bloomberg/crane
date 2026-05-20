@@ -137,21 +137,21 @@ struct BankLookupDefault {
     uint64_t chip_port;
 
     // ACCESSORS
-    ram_chip clone() const { return ram_chip{(*this).chip_port}; }
+    ram_chip clone() const { return ram_chip{this->chip_port}; }
   };
 
   struct ram_bank {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{this->bank_chips.clone()}; }
   };
 
   struct state {
     List<ram_bank> ram_sys;
 
     // ACCESSORS
-    state clone() const { return state{(*this).ram_sys.clone()}; }
+    state clone() const { return state{this->ram_sys.clone()}; }
   };
 
   static inline const ram_chip empty_chip = ram_chip{UINT64_C(0)};

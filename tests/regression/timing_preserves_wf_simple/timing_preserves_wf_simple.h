@@ -60,8 +60,7 @@ struct TimingPreservesWfSimple {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).regs_len, (*this).rom_len, (*this).pc,
-                   (*this).stack_len};
+      return state{this->regs_len, this->rom_len, this->pc, this->stack_len};
     }
   };
 

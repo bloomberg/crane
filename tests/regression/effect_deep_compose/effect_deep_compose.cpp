@@ -53,7 +53,7 @@ int64_t EffectDeepCompose::maybe_time(bool measure) {
             std::chrono::steady_clock::now().time_since_epoch())
             .count());
   } else {
-    return int64_t(0);
+    return INT64_C(0);
   }
 }
 

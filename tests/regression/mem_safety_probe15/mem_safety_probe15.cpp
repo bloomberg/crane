@@ -95,7 +95,8 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = _result.myapp(mylist<uint64_t>::mycons(_f.a1, _f._result));
+      _result = std::move(_result).myapp(
+          mylist<uint64_t>::mycons(_f.a1, std::move(_f._result)));
     }
   }
   return _result;
@@ -152,7 +153,8 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = mylist<uint64_t>::mycons(_f._s1, _result.myapp(_f._result));
+      _result = mylist<uint64_t>::mycons(
+          _f._s1, std::move(_result).myapp(std::move(_f._result)));
     }
   }
   return _result;
@@ -229,7 +231,7 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
-      _result = tree::node(_result, _f.n, _f._result);
+      _result = tree::node(std::move(_result), _f.n, std::move(_f._result));
     }
   }
   return _result;

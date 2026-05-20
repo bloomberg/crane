@@ -6,7 +6,7 @@ struct RocqBug4710 {
     uint64_t foo;
 
     // ACCESSORS
-    Foo_ clone() const { return Foo_{(*this).foo}; }
+    Foo_ clone() const { return Foo_{this->foo}; }
   };
 
   struct Foo2 {
@@ -14,7 +14,7 @@ struct RocqBug4710 {
     bool foo2b;
 
     // ACCESSORS
-    Foo2 clone() const { return Foo2{(*this).foo2p, (*this).foo2b}; }
+    Foo2 clone() const { return Foo2{this->foo2p, this->foo2b}; }
   };
 
   static uint64_t bla(const Foo2 &x);

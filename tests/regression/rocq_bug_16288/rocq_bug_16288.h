@@ -130,7 +130,7 @@ struct RocqBug16288 {
 
       // ACCESSORS
       M_t_NonEmpty<elt> clone() const {
-        return M_t_NonEmpty<elt>{(*this).M_m.clone()};
+        return M_t_NonEmpty<elt>{this->M_m.clone()};
       }
     };
 
@@ -140,7 +140,7 @@ struct RocqBug16288 {
 
       // ACCESSORS
       M_t_NonEmpty_<X, Y> clone() const {
-        return M_t_NonEmpty_<X, Y>{(*this).a, (*this).b};
+        return M_t_NonEmpty_<X, Y>{this->a, this->b};
       }
     };
   };

@@ -7,7 +7,7 @@ struct PrimProj {
     uint64_t py;
 
     // ACCESSORS
-    point clone() const { return point{(*this).px, (*this).py}; }
+    point clone() const { return point{this->px, this->py}; }
   };
 
   static point add_points(const point &p1, const point &p2);

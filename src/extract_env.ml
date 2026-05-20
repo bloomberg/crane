@@ -1578,16 +1578,22 @@ let separate_extraction ~opaque_access lr =
       List.iter (fun (_, se) -> walk_elem ~in_struct:false se) sel
     ) struc
   in
-  (* Pre-register enum inductives and struct-member value accessors. *)
+  (* Pre-register enum and flat inductives, and struct-member value accessors.
+     This global pass runs before any per-module output is generated, so that
+     both the struct definition (Defs.h) and any cross-module match code
+     (LLPrediction.h) agree on whether an inductive is flat or not. *)
   iter_structure (fun ~in_struct se ->
     match se with
     | SEdecl (Dind (kn, ind)) ->
       let is_mutual = Array.length ind.ind_packets > 1 in
       Array.iteri (fun i _p ->
         let ind_ref = GlobRef.IndRef (kn, i) in
-        if not (Table.is_custom ind_ref) && not is_mutual then
+        if not (Table.is_custom ind_ref) && not is_mutual then begin
           if Table.is_enum_inductive_packet ind i then
-            Table.add_enum_inductive ind_ref
+            Table.add_enum_inductive ind_ref;
+          if Table.is_flat_inductive_packet kn ind i then
+            Table.add_flat_inductive ind_ref
+        end
       ) ind.ind_packets
     | SEdecl (Dterm (r, _, ty)) when in_struct ->
       if (match ty with Tarr _ -> false | _ -> true) then

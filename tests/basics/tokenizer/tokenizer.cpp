@@ -9,7 +9,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                       std::basic_string_view<char> s)
       -> std::pair<std::optional<std::basic_string_view<char>>,
                    std::basic_string_view<char>> {
-    if (s.length() == int64_t(0)) {
+    if (s.length() == INT64_C(0)) {
       return std::make_pair(std::optional<std::basic_string_view<char>>(),
                             std::string_view(nullptr, 0));
     } else {
@@ -23,30 +23,30 @@ Tokenizer::next_token(std::basic_string_view<char> input,
         if (hard.contains(c)) {
           return std::make_pair(
               std::make_optional<std::basic_string_view<char>>(
-                  s.substr(int64_t(0), index)),
-              s.substr(((index + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL),
+                  s.substr(INT64_C(0), index)),
+              s.substr(((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL),
                        ((input.length() -
-                         ((index + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL)) &
+                         ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL)) &
                         0x7FFFFFFFFFFFFFFFLL)));
         } else {
           if (soft.contains(c)) {
-            if (index == int64_t(0)) {
+            if (index == INT64_C(0)) {
               return _self_aux(
-                  _self_aux, fuel_, int64_t(0),
-                  s.substr(int64_t(1), ((input.length() - int64_t(1)) &
+                  _self_aux, fuel_, INT64_C(0),
+                  s.substr(INT64_C(1), ((input.length() - INT64_C(1)) &
                                         0x7FFFFFFFFFFFFFFFLL)));
             } else {
               return std::make_pair(
                   std::make_optional<std::basic_string_view<char>>(
-                      s.substr(int64_t(0), index)),
-                  s.substr(((index + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL),
+                      s.substr(INT64_C(0), index)),
+                  s.substr(((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL),
                            ((input.length() -
-                             ((index + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL)) &
+                             ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL)) &
                             0x7FFFFFFFFFFFFFFFLL)));
             }
           } else {
             return _self_aux(_self_aux, fuel_,
-                             ((index + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL), s);
+                             ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL), s);
           }
         }
       }
@@ -57,7 +57,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                    std::basic_string_view<char>> {
     return aux_impl(aux_impl, fuel, index, s);
   };
-  return aux(static_cast<uint64_t>(input.length()), int64_t(0), input);
+  return aux(static_cast<uint64_t>(input.length()), INT64_C(0), input);
 }
 
 List<std::basic_string_view<char>>

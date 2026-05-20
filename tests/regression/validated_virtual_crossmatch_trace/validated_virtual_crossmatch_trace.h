@@ -1056,7 +1056,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     HLAAllele clone() const {
-      return HLAAllele{(*this).hla_locus, (*this).hla_group};
+      return HLAAllele{this->hla_locus, this->hla_group};
     }
   };
 
@@ -1068,7 +1068,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     HLATyping clone() const {
-      return HLATyping{(*this).hla_typed_alleles.clone()};
+      return HLATyping{this->hla_typed_alleles.clone()};
     }
   };
 
@@ -1079,8 +1079,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     HLAEpitope clone() const {
-      return HLAEpitope{(*this).epitope_id, (*this).epitope_locus,
-                        (*this).epitope_immunogenic};
+      return HLAEpitope{this->epitope_id, this->epitope_locus,
+                        this->epitope_immunogenic};
     }
   };
 
@@ -1105,8 +1105,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     EpitopeAntibody clone() const {
-      return EpitopeAntibody{(*this).ab_epitope.clone(), (*this).ab_mfi,
-                             (*this).ab_complement_fixing};
+      return EpitopeAntibody{this->ab_epitope.clone(), this->ab_mfi,
+                             this->ab_complement_fixing};
     }
   };
 
@@ -1118,9 +1118,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     VirtualXMProfile clone() const {
-      return VirtualXMProfile{(*this).vxm_epitope_abs.clone(),
-                              (*this).vxm_current_pra, (*this).vxm_peak_pra,
-                              (*this).vxm_sensitization_events};
+      return VirtualXMProfile{this->vxm_epitope_abs.clone(),
+                              this->vxm_current_pra, this->vxm_peak_pra,
+                              this->vxm_sensitization_events};
     }
   };
 
@@ -1135,9 +1135,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
     // ACCESSORS
     MFIThresholdConfig clone() const {
       return MFIThresholdConfig{
-          (*this).mfi_cfg_negative, (*this).mfi_cfg_weak_positive,
-          (*this).mfi_cfg_moderate, (*this).mfi_cfg_strong,
-          (*this).mfi_cfg_lab_id,   (*this).mfi_cfg_validated};
+          this->mfi_cfg_negative, this->mfi_cfg_weak_positive,
+          this->mfi_cfg_moderate, this->mfi_cfg_strong,
+          this->mfi_cfg_lab_id,   this->mfi_cfg_validated};
     }
   };
 
@@ -1151,7 +1151,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     ValidatedMFIConfig clone() const {
-      return ValidatedMFIConfig{(*this).vmc_config.clone()};
+      return ValidatedMFIConfig{this->vmc_config.clone()};
     }
   };
 
@@ -1421,8 +1421,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
     // ACCESSORS
     CrossmatchWithUncertainty clone() const {
-      return CrossmatchWithUncertainty{(*this).xmu_result, (*this).xmu_method,
-                                       (*this).xmu_confidence};
+      return CrossmatchWithUncertainty{this->xmu_result, this->xmu_method,
+                                       this->xmu_confidence};
     }
   };
 
@@ -1440,10 +1440,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
     // ACCESSORS
     SafeTransfusionOrder clone() const {
       return SafeTransfusionOrder{
-          (*this).sto_recipient_id,           (*this).sto_product_id,
-          (*this).sto_compatibility_check,    (*this).sto_crossmatch.clone(),
-          (*this).sto_sample_collection_time, (*this).sto_authorized_by,
-          (*this).sto_emergency_release};
+          this->sto_recipient_id,           this->sto_product_id,
+          this->sto_compatibility_check,    this->sto_crossmatch.clone(),
+          this->sto_sample_collection_time, this->sto_authorized_by,
+          this->sto_emergency_release};
     }
   };
 

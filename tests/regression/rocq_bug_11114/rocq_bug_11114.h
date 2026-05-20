@@ -150,7 +150,7 @@ struct RocqBug11114 {
     t _t;
 
     // ACCESSORS
-    pkg clone() const { return pkg{(*this)._sig.clone(), (*this)._t.clone()}; }
+    pkg clone() const { return pkg{this->_sig.clone(), this->_t.clone()}; }
   };
 
   template <typename F0>

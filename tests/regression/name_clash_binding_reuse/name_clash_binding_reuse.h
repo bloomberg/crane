@@ -23,8 +23,7 @@ struct NameClashBindingReuse {
     /// Neither needs an if guard, just structured bindings.
     /// Could be tricky if both are in the same block without scoping.
     pair_nat flat_combine(const pair_nat &p2) const {
-      const auto &_sv = *this;
-      const auto &[a0, a2] = _sv;
+      const auto &[a0, a2] = *this;
       const auto &[a00, a10] = p2;
       return pair_nat::mkpairnat((a0 + a00), (a2 + a10));
     }
@@ -32,8 +31,7 @@ struct NameClashBindingReuse {
     /// Same but as let-bindings (each match is an expression → IIFE).
     uint64_t add_pairs_let(const pair_nat &p2) const {
       uint64_t sum1 = [&]() {
-        const auto &_sv = *this;
-        const auto &[a0, a1] = _sv;
+        const auto &[a0, a1] = *this;
         return (a0 + a1);
       }();
       uint64_t sum2 = [&]() {
@@ -46,8 +44,7 @@ struct NameClashBindingReuse {
     /// Two matches in sequence, both on pair_nat.
     /// Both generate d_a0, d_a1 structured bindings.
     uint64_t add_pairs(const pair_nat &p2) const {
-      const auto &_sv = *this;
-      const auto &[a0, a2] = _sv;
+      const auto &[a0, a2] = *this;
       const auto &[a00, a10] = p2;
       return (((a0 + a2) + a00) + a10);
     }
@@ -55,16 +52,14 @@ struct NameClashBindingReuse {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_nat_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1] = _sv;
+      const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_nat_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1] = _sv;
+      const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
   };
@@ -91,16 +86,14 @@ struct NameClashBindingReuse {
 
     /// Match where the binding variable is used as scrutinee of another match
     pair_nat cascade() const {
-      const auto &_sv = *this;
-      const auto &[a0, a1, a2] = _sv;
+      const auto &[a0, a1, a2] = *this;
       return pair_nat::mkpairnat((a0 + a1), a2);
     }
 
     /// Nested match: outer match on triple, inner match on pair.
     /// Both have d_a0, d_a1; inner should get d_a00, d_a10.
     uint64_t combine(const pair_nat &p) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1, a2] = _sv;
+      const auto &[a0, a1, a2] = *this;
       const auto &[a00, a10] = p;
       return ((((a0 + a1) + a2) + a00) + a10);
     }
@@ -109,8 +102,7 @@ struct NameClashBindingReuse {
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
                                      uint64_t &>
     T1 triple_nat_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1, a2] = _sv;
+      const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);
     }
 
@@ -118,8 +110,7 @@ struct NameClashBindingReuse {
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
                                      uint64_t &>
     T1 triple_nat_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1, a2] = _sv;
+      const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);
     }
   };

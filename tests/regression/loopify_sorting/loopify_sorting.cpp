@@ -188,7 +188,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
       _stack.emplace_back(_Enter{std::move(_f.l1), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_l1>(_frame));
-      _result = merge(_result, _f._result);
+      _result = merge(std::move(_result), std::move(_f._result));
     }
   }
   return _result;
@@ -307,7 +307,8 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
       _stack.emplace_back(_Enter{std::move(_f.lo), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_lo>(_frame));
-      _result = _result.app(List<uint64_t>::cons(_f.a0, _f._result));
+      _result = std::move(_result).app(
+          List<uint64_t>::cons(_f.a0, std::move(_f._result)));
     }
   }
   return _result;

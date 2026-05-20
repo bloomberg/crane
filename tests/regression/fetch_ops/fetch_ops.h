@@ -129,7 +129,7 @@ struct FetchOps {
     List<uint64_t> rom;
 
     // ACCESSORS
-    state clone() const { return state{(*this).rom.clone()}; }
+    state clone() const { return state{this->rom.clone()}; }
   };
 
   static uint64_t fetch_byte(const state &s, uint64_t addr);
