@@ -151,7 +151,7 @@ struct NumeralStress {
     uint64_t py;
 
     // ACCESSORS
-    point clone() const { return point{(*this).px, (*this).py}; }
+    point clone() const { return point{this->px, this->py}; }
   };
 
   static inline const point origin = point{UINT64_C(0), UINT64_C(0)};

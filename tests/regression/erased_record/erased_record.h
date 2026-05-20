@@ -11,8 +11,8 @@ struct ErasedRecord {
 
     // ACCESSORS
     ManyProps clone() const {
-      return ManyProps{(*this).field0, (*this).field1, (*this).field2,
-                       (*this).field3, (*this).field4};
+      return ManyProps{this->field0, this->field1, this->field2, this->field3,
+                       this->field4};
     }
   };
 
@@ -26,7 +26,7 @@ struct ErasedRecord {
 
     // ACCESSORS
     MostlyProps clone() const {
-      return MostlyProps{(*this).real1, (*this).real2, (*this).real3};
+      return MostlyProps{this->real1, this->real2, this->real3};
     }
   };
 

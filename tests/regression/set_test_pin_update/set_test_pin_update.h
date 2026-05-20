@@ -7,7 +7,7 @@ struct SetTestPinUpdate {
     bool test_pin;
 
     // ACCESSORS
-    state clone() const { return state{(*this).acc, (*this).test_pin}; }
+    state clone() const { return state{this->acc, this->test_pin}; }
   };
 
   static state set_test_pin(const state &s, bool v);

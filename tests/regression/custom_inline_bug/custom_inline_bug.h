@@ -125,7 +125,7 @@ struct CustomInlineBug {
     uint64_t data;
 
     // ACCESSORS
-    State clone() const { return State{(*this).value, (*this).data}; }
+    State clone() const { return State{this->value, this->data}; }
   };
 
   static std::optional<uint64_t> bug_some_proj(const State &s);

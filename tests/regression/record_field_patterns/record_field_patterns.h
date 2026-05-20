@@ -159,7 +159,7 @@ struct RecordFieldPatterns {
     uint64_t py;
 
     // ACCESSORS
-    Point clone() const { return Point{(*this).px, (*this).py}; }
+    Point clone() const { return Point{this->px, this->py}; }
   };
 
   static uint64_t classify_point(const Point &p);
@@ -187,9 +187,7 @@ struct RecordFieldPatterns {
     uint64_t sp_y;
 
     // ACCESSORS
-    ScaledPoint clone() const {
-      return ScaledPoint{(*this).sp_x, (*this).sp_y};
-    }
+    ScaledPoint clone() const { return ScaledPoint{this->sp_x, this->sp_y}; }
   };
 
   static uint64_t scaled_sum(uint64_t scale, const ScaledPoint &sp);
@@ -222,7 +220,7 @@ struct RecordFieldPatterns {
 
     // ACCESSORS
     Segment clone() const {
-      return Segment{(*this).seg_start.clone(), (*this).seg_end.clone()};
+      return Segment{this->seg_start.clone(), this->seg_end.clone()};
     }
   };
 
@@ -234,9 +232,7 @@ struct RecordFieldPatterns {
     uint64_t mid;
 
     // ACCESSORS
-    Bounded clone() const {
-      return Bounded{(*this).lo, (*this).hi, (*this).mid};
-    }
+    Bounded clone() const { return Bounded{this->lo, this->hi, this->mid}; }
   };
 
   static uint64_t bounded_range(const Bounded &b);
@@ -250,7 +246,7 @@ struct RecordFieldPatterns {
     uint64_t count;
 
     // ACCESSORS
-    Container clone() const { return Container{(*this).elem, (*this).count}; }
+    Container clone() const { return Container{this->elem, this->count}; }
   };
 
   using elem_type = std::any;

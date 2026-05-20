@@ -29,9 +29,7 @@ struct Dim10TowerProofChainCase {
     uint64_t qpos_denom_pred;
 
     // ACCESSORS
-    QPos clone() const {
-      return QPos{(*this).qpos_num, (*this).qpos_denom_pred};
-    }
+    QPos clone() const { return QPos{this->qpos_num, this->qpos_denom_pred}; }
   };
 
   static uint64_t qpos_denom(const QPos &q);
@@ -43,7 +41,7 @@ struct Dim10TowerProofChainCase {
     uint64_t go_dim;
 
     // ACCESSORS
-    GradedObj clone() const { return GradedObj{(*this).go_dim}; }
+    GradedObj clone() const { return GradedObj{this->go_dim}; }
   };
 
   static inline const GradedObj go_zero = GradedObj{UINT64_C(0)};
@@ -64,7 +62,7 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     GradedGoodwillieTower clone() const {
-      return GradedGoodwillieTower{(*this).ggt_P, (*this).ggt_D};
+      return GradedGoodwillieTower{this->ggt_P, this->ggt_D};
     }
   };
 
@@ -98,9 +96,9 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     GoodwillieProofChain clone() const {
-      return GoodwillieProofChain{(*this).gc_eventually_zero,
-                                  (*this).gc_layers_stabilize.clone(),
-                                  (*this).gc_P_stabilize.clone()};
+      return GoodwillieProofChain{this->gc_eventually_zero,
+                                  this->gc_layers_stabilize.clone(),
+                                  this->gc_P_stabilize.clone()};
     }
   };
 
@@ -119,7 +117,7 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     Dim10Bundle clone() const {
-      return Dim10Bundle{(*this).dt_tower.clone(), (*this).dt_chain.clone()};
+      return Dim10Bundle{this->dt_tower.clone(), this->dt_chain.clone()};
     }
   };
 

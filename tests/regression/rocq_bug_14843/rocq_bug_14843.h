@@ -11,7 +11,7 @@ struct RocqBug14843 {
     std::function<void(Unit)> f2;
 
     // ACCESSORS
-    r clone() const { return r{(*this).f1, (*this).f2}; }
+    r clone() const { return r{this->f1, this->f2}; }
   };
 
   struct r_ {
@@ -19,7 +19,7 @@ struct RocqBug14843 {
     std::function<void(Unit)> f2_;
 
     // ACCESSORS
-    r_ clone() const { return r_{(*this).f1_, (*this).f2_}; }
+    r_ clone() const { return r_{this->f1_, this->f2_}; }
   };
 
   struct M {

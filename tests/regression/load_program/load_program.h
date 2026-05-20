@@ -161,8 +161,8 @@ struct LoadProgram {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).rom.clone(), (*this).prom_addr, (*this).prom_data,
-                   (*this).prom_enable};
+      return state{this->rom.clone(), this->prom_addr, this->prom_data,
+                   this->prom_enable};
     }
   };
 
@@ -177,13 +177,10 @@ struct LoadProgram {
 
     // ACCESSORS
     state_extended clone() const {
-      return state_extended{(*this).regs_len,
-                            (*this).rom_ext.clone(),
-                            (*this).pc,
-                            (*this).stack_len,
-                            (*this).prom_addr_ext,
-                            (*this).prom_data_ext,
-                            (*this).prom_enable_ext};
+      return state_extended{
+          this->regs_len,       this->rom_ext.clone(), this->pc,
+          this->stack_len,      this->prom_addr_ext,   this->prom_data_ext,
+          this->prom_enable_ext};
     }
   };
 
@@ -193,7 +190,7 @@ struct LoadProgram {
 
     // ACCESSORS
     state_simple clone() const {
-      return state_simple{(*this).rom_.clone(), (*this).ptr_};
+      return state_simple{this->rom_.clone(), this->ptr_};
     }
   };
 

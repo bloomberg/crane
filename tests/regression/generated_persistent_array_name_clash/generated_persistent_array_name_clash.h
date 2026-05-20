@@ -11,9 +11,9 @@ struct persistent_array_ {
   /// same name as the runtime class template.  The generated C++ does not
   /// compile because the helper template and extracted module struct collide.
   static inline const persistent_array<bool> arr =
-      persistent_array<bool>(int64_t(1), true);
+      persistent_array<bool>(INT64_C(1), true);
 
-  static inline const bool sample = arr.get(int64_t(0));
+  static inline const bool sample = arr.get(INT64_C(0));
 };
 
 #endif // INCLUDED_GENERATED_PERSISTENT_ARRAY_NAME_CLASH

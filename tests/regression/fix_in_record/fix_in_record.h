@@ -21,7 +21,7 @@ struct FixInRecord {
     std::function<uint64_t(uint64_t)> fn;
 
     // ACCESSORS
-    fn_box clone() const { return fn_box{(*this).label, (*this).fn}; }
+    fn_box clone() const { return fn_box{this->label, this->fn}; }
   };
 
   static fn_box make_box(uint64_t n);

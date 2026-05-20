@@ -303,7 +303,8 @@ struct LoopifyTreePaths {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = List<uint64_t>::cons(_f.a1, _result.app(_f._result));
+          _result = List<uint64_t>::cons(
+              _f.a1, std::move(_result).app(std::move(_f._result)));
         }
       }
       return _result;
@@ -356,7 +357,8 @@ struct LoopifyTreePaths {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = (_f.a1 + std::max(_result, _f._result));
+          _result =
+              (_f.a1 + std::max(std::move(_result), std::move(_f._result)));
         }
       }
       return _result;
@@ -450,7 +452,7 @@ struct LoopifyTreePaths {
           _stack.emplace_back(_Enter{_f._s0, _f.new_acc});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = (_result + _f._result);
+          _result = (std::move(_result) + std::move(_f._result));
         }
       }
       return _result;
@@ -507,8 +509,8 @@ struct LoopifyTreePaths {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result =
-              map_cons(_f.a1_1, _result).app(map_cons(_f.a1_0, _f._result));
+          _result = map_cons(_f.a1_1, std::move(_result))
+                        .app(map_cons(_f.a1_0, std::move(_f._result)));
         }
       }
       return _result;
@@ -564,12 +566,13 @@ struct LoopifyTreePaths {
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
-                                            std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Node{
+              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -625,12 +628,13 @@ struct LoopifyTreePaths {
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
-                                            std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Node{
+              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -801,7 +805,7 @@ struct LoopifyTreePaths {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_BNode>(_frame));
-          _result = (_result && _f._result);
+          _result = (std::move(_result) && std::move(_f._result));
         }
       }
       return _result;
@@ -855,7 +859,7 @@ struct LoopifyTreePaths {
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_BNode>(_frame));
-          _result = (_result || _f._result);
+          _result = (std::move(_result) || std::move(_f._result));
         }
       }
       return _result;
@@ -911,12 +915,12 @@ struct LoopifyTreePaths {
           }
         } else if (std::holds_alternative<_After_BNode>(_frame)) {
           auto _f = std::move(std::get<_After_BNode>(_frame));
-          _stack.emplace_back(
-              _Combine_BNode{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_BNode{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_BNode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
         }
       }
       return _result;
@@ -972,12 +976,12 @@ struct LoopifyTreePaths {
           }
         } else if (std::holds_alternative<_After_BNode>(_frame)) {
           auto _f = std::move(std::get<_After_BNode>(_frame));
-          _stack.emplace_back(
-              _Combine_BNode{_result, std::move(_f.a1), std::move(_f.a0)});
+          _stack.emplace_back(_Combine_BNode{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_BNode>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
         }
       }
       return _result;

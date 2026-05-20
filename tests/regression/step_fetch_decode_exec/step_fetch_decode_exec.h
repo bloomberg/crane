@@ -212,7 +212,7 @@ struct StepFetchDecodeExec {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).acc, (*this).pc, (*this).rom.clone()};
+      return state{this->acc, this->pc, this->rom.clone()};
     }
   };
 

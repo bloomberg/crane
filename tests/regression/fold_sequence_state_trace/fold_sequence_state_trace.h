@@ -139,7 +139,7 @@ struct FoldSequenceStateTraceCase {
     Real C;
 
     // ACCESSORS
-    Line clone() const { return Line{(*this).A, (*this).B, (*this).C}; }
+    Line clone() const { return Line{this->A, this->B, this->C}; }
   };
 
   struct Fold {
@@ -153,24 +153,21 @@ struct FoldSequenceStateTraceCase {
     static Fold fold_line_ctor(Line a0) { return {std::move(a0)}; }
 
     Line fold_line() const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return a0;
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Line &>
     T1 Fold_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Line &>
     T1 Fold_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return f(a0);
     }
   };
@@ -338,8 +335,8 @@ struct FoldSequenceStateTraceCase {
 
     // ACCESSORS
     ConstructionState clone() const {
-      return ConstructionState{(*this).state_points.clone(),
-                               (*this).state_lines.clone()};
+      return ConstructionState{this->state_points.clone(),
+                               this->state_lines.clone()};
     }
   };
 

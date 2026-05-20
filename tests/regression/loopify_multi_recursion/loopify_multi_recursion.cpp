@@ -148,7 +148,7 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = ((_f._s1 || _result) || _f._result);
+      _result = ((_f._s1 || std::move(_result)) || std::move(_f._result));
     }
   }
   return _result;
@@ -219,7 +219,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
-      _result = (_result && _f._result);
+      _result = (std::move(_result) && std::move(_f._result));
     }
   }
   return _result;
@@ -484,7 +484,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else if (std::holds_alternative<_Combine3>(_frame)) {
       auto _f = std::move(std::get<_Combine3>(_frame));
-      _result = (_result + _f._result);
+      _result = (std::move(_result) + std::move(_f._result));
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t fuel_ = _f.fuel_;

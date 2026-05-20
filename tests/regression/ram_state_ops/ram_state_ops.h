@@ -152,7 +152,7 @@ struct RamStateOps {
 
     // ACCESSORS
     ram_reg clone() const {
-      return ram_reg{(*this).reg_main.clone(), (*this).reg_status.clone()};
+      return ram_reg{this->reg_main.clone(), this->reg_status.clone()};
     }
   };
 
@@ -162,7 +162,7 @@ struct RamStateOps {
 
     // ACCESSORS
     ram_chip clone() const {
-      return ram_chip{(*this).chip_regs.clone(), (*this).chip_port};
+      return ram_chip{this->chip_regs.clone(), this->chip_port};
     }
   };
 
@@ -170,7 +170,7 @@ struct RamStateOps {
     List<ram_chip> bank_chips;
 
     // ACCESSORS
-    ram_bank clone() const { return ram_bank{(*this).bank_chips.clone()}; }
+    ram_bank clone() const { return ram_bank{this->bank_chips.clone()}; }
   };
 
   struct ram_sel {
@@ -181,8 +181,8 @@ struct RamStateOps {
 
     // ACCESSORS
     ram_sel clone() const {
-      return ram_sel{(*this).sel_bank, (*this).sel_chip, (*this).sel_reg,
-                     (*this).sel_char};
+      return ram_sel{this->sel_bank, this->sel_chip, this->sel_reg,
+                     this->sel_char};
     }
   };
 
@@ -198,10 +198,10 @@ struct RamStateOps {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).state_regs.clone(),  (*this).state_acc,
-                   (*this).state_carry,         (*this).state_pc,
-                   (*this).state_stack.clone(), (*this).state_ram.clone(),
-                   (*this).state_sel.clone(),   (*this).state_rom.clone()};
+      return state{this->state_regs.clone(),  this->state_acc,
+                   this->state_carry,         this->state_pc,
+                   this->state_stack.clone(), this->state_ram.clone(),
+                   this->state_sel.clone(),   this->state_rom.clone()};
     }
   };
 

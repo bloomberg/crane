@@ -987,14 +987,14 @@ struct ValidatedPumpDeliveryTraceCase {
     uint64_t mg_dL_val;
 
     // ACCESSORS
-    Mg_dL clone() const { return Mg_dL{(*this).mg_dL_val}; }
+    Mg_dL clone() const { return Mg_dL{this->mg_dL_val}; }
   };
 
   struct Grams {
     uint64_t grams_val;
 
     // ACCESSORS
-    Grams clone() const { return Grams{(*this).grams_val}; }
+    Grams clone() const { return Grams{this->grams_val}; }
   };
 
   using Carbs_g = Grams;
@@ -1020,11 +1020,11 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     Config clone() const {
-      return Config{(*this).cfg_bg_rise_per_gram,
-                    (*this).cfg_conservative_cob_absorption_percent,
-                    (*this).cfg_suspend_threshold_mg_dl,
-                    (*this).cfg_stacking_warning_threshold_min,
-                    (*this).cfg_iob_high_threshold_twentieths};
+      return Config{this->cfg_bg_rise_per_gram,
+                    this->cfg_conservative_cob_absorption_percent,
+                    this->cfg_suspend_threshold_mg_dl,
+                    this->cfg_stacking_warning_threshold_min,
+                    this->cfg_iob_high_threshold_twentieths};
     }
   };
 
@@ -1287,7 +1287,7 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     BolusEvent clone() const {
-      return BolusEvent{(*this).be_dose_twentieths, (*this).be_time_minutes};
+      return BolusEvent{this->be_dose_twentieths, this->be_time_minutes};
     }
   };
 
@@ -1452,9 +1452,9 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     PrecisionParams clone() const {
-      return PrecisionParams{(*this).prec_icr_tenths, (*this).prec_isf_tenths,
-                             (*this).prec_target_bg.clone(), (*this).prec_dia,
-                             (*this).prec_insulin_type};
+      return PrecisionParams{this->prec_icr_tenths, this->prec_isf_tenths,
+                             this->prec_target_bg.clone(), this->prec_dia,
+                             this->prec_insulin_type};
     }
   };
 
@@ -1473,10 +1473,10 @@ struct ValidatedPumpDeliveryTraceCase {
     // ACCESSORS
     PrecisionInput clone() const {
       return PrecisionInput{
-          (*this).pi_carbs_g,       (*this).pi_current_bg.clone(),
-          (*this).pi_now,           (*this).pi_bolus_history.clone(),
-          (*this).pi_activity,      (*this).pi_use_sensor_margin,
-          (*this).pi_fault.clone(), (*this).pi_weight_kg};
+          this->pi_carbs_g,       this->pi_current_bg.clone(),
+          this->pi_now,           this->pi_bolus_history.clone(),
+          this->pi_activity,      this->pi_use_sensor_margin,
+          this->pi_fault.clone(), this->pi_weight_kg};
     }
   };
 
@@ -1635,10 +1635,10 @@ struct ValidatedPumpDeliveryTraceCase {
     // ACCESSORS
     MmolPrecisionInput clone() const {
       return MmolPrecisionInput{
-          (*this).mpi_carbs_g,       (*this).mpi_current_bg_mmol_tenths,
-          (*this).mpi_now,           (*this).mpi_bolus_history.clone(),
-          (*this).mpi_activity,      (*this).mpi_use_sensor_margin,
-          (*this).mpi_fault.clone(), (*this).mpi_weight_kg};
+          this->mpi_carbs_g,       this->mpi_current_bg_mmol_tenths,
+          this->mpi_now,           this->mpi_bolus_history.clone(),
+          this->mpi_activity,      this->mpi_use_sensor_margin,
+          this->mpi_fault.clone(), this->mpi_weight_kg};
     }
   };
 
@@ -1702,10 +1702,9 @@ struct ValidatedPumpDeliveryTraceCase {
 
     // ACCESSORS
     PumpState clone() const {
-      return PumpState{
-          (*this).ps_reservoir_twentieths, (*this).ps_basal_rate_hundredths,
-          (*this).ps_last_bolus_time, (*this).ps_occlusion_detected,
-          (*this).ps_battery_percent};
+      return PumpState{this->ps_reservoir_twentieths,
+                       this->ps_basal_rate_hundredths, this->ps_last_bolus_time,
+                       this->ps_occlusion_detected, this->ps_battery_percent};
     }
   };
 

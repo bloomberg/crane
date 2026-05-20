@@ -19,24 +19,21 @@ struct NameClashCtorField {
     static clash1 c1(uint64_t d_a0, uint64_t d_a1) { return {d_a0, d_a1}; }
 
     uint64_t sum_clash1() const {
-      const auto &_sv = *this;
-      const auto &[d_a0, d_a1] = _sv;
+      const auto &[d_a0, d_a1] = *this;
       return (d_a0 + d_a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 clash1_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[d_a2, d_a3] = _sv;
+      const auto &[d_a2, d_a3] = *this;
       return f(d_a2, d_a3);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 clash1_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[d_a2, d_a3] = _sv;
+      const auto &[d_a2, d_a3] = *this;
       return f(d_a2, d_a3);
     }
   };
@@ -152,24 +149,21 @@ struct NameClashCtorField {
     static pair_ind mkpair(uint64_t a0, uint64_t a1) { return {a0, a1}; }
 
     pair_ind swap_pair() const {
-      const auto &_sv = *this;
-      const auto &[a0, a1] = _sv;
+      const auto &[a0, a1] = *this;
       return pair_ind::mkpair(a1, a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_ind_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1] = _sv;
+      const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 pair_ind_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1] = _sv;
+      const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
   };

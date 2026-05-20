@@ -22,7 +22,7 @@ struct UnsoundAxioms {
     uint64_t f2;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*this).f1, (*this).f2}; }
+    Rec clone() const { return Rec{this->f1, this->f2}; }
   };
 
   static uint64_t cast_confusion(const Rec &r);
@@ -33,7 +33,7 @@ struct UnsoundAxioms {
     uint64_t pf_val2;
 
     // ACCESSORS
-    ProofRec clone() const { return ProofRec{(*this).pf_val, (*this).pf_val2}; }
+    ProofRec clone() const { return ProofRec{this->pf_val, this->pf_val2}; }
   };
 
   static uint64_t extract_proof_computation(const ProofRec &pr);

@@ -10,7 +10,7 @@ struct PathologicalRecord {
     uint64_t f3;
 
     // ACCESSORS
-    Rec clone() const { return Rec{(*this).f1, (*this).f2, (*this).f3}; }
+    Rec clone() const { return Rec{this->f1, this->f2, this->f3}; }
   };
 
   static uint64_t hof_access(const Rec &r);
@@ -32,8 +32,7 @@ struct PathologicalRecord {
 
     // ACCESSORS
     BigRec clone() const {
-      return BigRec{(*this).bf1, (*this).bf2, (*this).bf3, (*this).bf4,
-                    (*this).bf5};
+      return BigRec{this->bf1, this->bf2, this->bf3, this->bf4, this->bf5};
     }
   };
 

@@ -10,8 +10,8 @@ struct RecordDefaults {
 
     // ACCESSORS
     Config clone() const {
-      return Config{(*this).cfg_width, (*this).cfg_height, (*this).cfg_depth,
-                    (*this).cfg_debug};
+      return Config{this->cfg_width, this->cfg_height, this->cfg_depth,
+                    this->cfg_debug};
     }
   };
 
@@ -25,7 +25,7 @@ struct RecordDefaults {
     uint64_t py;
 
     // ACCESSORS
-    Point clone() const { return Point{(*this).px, (*this).py}; }
+    Point clone() const { return Point{this->px, this->py}; }
   };
 
   struct Rect {
@@ -34,7 +34,7 @@ struct RecordDefaults {
 
     // ACCESSORS
     Rect clone() const {
-      return Rect{(*this).origin.clone(), (*this).extent.clone()};
+      return Rect{this->origin.clone(), this->extent.clone()};
     }
   };
 

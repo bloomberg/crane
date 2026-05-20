@@ -222,12 +222,13 @@ struct ClosureCaptureMatch {
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
-                                            std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Node{
+              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -283,12 +284,13 @@ struct ClosureCaptureMatch {
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, std::move(_f.a2), _f.a1,
-                                            std::move(_f.a0)});
+          _stack.emplace_back(_Combine_Node{
+              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0)});
           _stack.emplace_back(_Enter{_f._s0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, _result, _f.a1, _f.a2, _f._result);
+          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
+                       std::move(_f._result));
         }
       }
       return _result;
@@ -309,8 +311,7 @@ struct ClosureCaptureMatch {
     }
 
     uint64_t unbox(uint64_t x) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return a0(x);
     }
 
@@ -318,8 +319,7 @@ struct ClosureCaptureMatch {
       requires std::is_invocable_r_v<T1, F0 &,
                                      std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return f(a0);
     }
 
@@ -327,8 +327,7 @@ struct ClosureCaptureMatch {
       requires std::is_invocable_r_v<T1, F0 &,
                                      std::function<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0] = _sv;
+      const auto &[a0] = *this;
       return f(a0);
     }
   };

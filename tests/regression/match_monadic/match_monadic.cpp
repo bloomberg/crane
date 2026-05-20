@@ -97,9 +97,9 @@ int64_t MatchMonadic::bind_then_match() {
   std::string line;
   std::getline(std::cin, line);
   int64_t len = static_cast<int64_t>(line.length());
-  if (len == int64_t(0)) {
+  if (len == INT64_C(0)) {
     std::cout << "empty"s << '\n';
-    return int64_t(0);
+    return INT64_C(0);
   } else {
     return len;
   }

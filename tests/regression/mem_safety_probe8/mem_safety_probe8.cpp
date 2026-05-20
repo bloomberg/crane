@@ -54,7 +54,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
       _stack.emplace_back(_Enter{_f.a0, _f._s1});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_result + _f.a1) + _f._result);
+      _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
     }
   }
   return _result;
@@ -118,7 +118,7 @@ uint64_t MemSafetyProbe8::tree_weighted(
       _stack.emplace_back(_Enter{_f._s0, _f.a0, _f._s2});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_result + _f._s1) + _f._result);
+      _result = ((std::move(_result) + _f._s1) + std::move(_f._result));
     }
   }
   return _result;
@@ -150,17 +150,67 @@ MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(uint64_t n) {
 /// TEST 4: Tree traversal where both recursive calls use
 /// different subtrees — _After frame must hold one while
 /// processing the other.
-uint64_t MemSafetyProbe8::tree_collect(uint64_t,
-                                       const MemSafetyProbe8::tree &t) {
-  if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
-    return UINT64_C(0);
-  } else {
-    const auto &[a0, a1, a2] =
-        std::get<typename MemSafetyProbe8::tree::Node>(t.v());
-    uint64_t left = tree_collect(UINT64_C(0), *a0);
-    uint64_t right = tree_collect(UINT64_C(0), *a2);
-    return ((left + a1) + right);
+uint64_t MemSafetyProbe8::tree_collect(
+    uint64_t _x,
+    const MemSafetyProbe8::tree
+        &t) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe8::tree *t;
+    uint64_t _x;
+  };
+
+  /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
+  /// rest.
+  struct _Cont_Node {
+    uint64_t a1;
+    const MemSafetyProbe8::tree *a2;
+  };
+
+  /// _Cont_Node_1: saves [a1, left], resumes after recursive call, then
+  /// processes rest.
+  struct _Cont_Node_1 {
+    uint64_t a1;
+    uint64_t left;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&t, _x});
+  /// Loopified tree_collect: _Enter -> _Cont_Node -> _Cont_Node_1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe8::tree &t = *_f.t;
+      uint64_t _x = _f._x;
+      if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
+        _result = UINT64_C(0);
+      } else {
+        const auto &[a0, a1, a2] =
+            std::get<typename MemSafetyProbe8::tree::Node>(t.v());
+        _stack.emplace_back(_Cont_Node{a1, a2.get()});
+        _stack.emplace_back(_Enter{a0.get(), UINT64_C(0)});
+      }
+    } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+      auto _f = std::move(std::get<_Cont_Node>(_frame));
+      uint64_t a1 = _f.a1;
+      const MemSafetyProbe8::tree &a2 = *_f.a2;
+      uint64_t left = _result;
+      _stack.emplace_back(_Cont_Node_1{a1, left});
+      _stack.emplace_back(_Enter{&a2, UINT64_C(0)});
+    } else {
+      auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+      uint64_t a1 = _f.a1;
+      uint64_t left = _f.left;
+      uint64_t right = _result;
+      _result = ((left + a1) + right);
+    }
   }
+  return _result;
 }
 
 /// TEST 5: Tree function where the tree is consumed (not
@@ -216,7 +266,7 @@ uint64_t MemSafetyProbe8::tree_flatten(
       _stack.emplace_back(_Enter{_f.a0, _f._s1});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ((_result * _f.a1) * _f._result);
+      _result = ((std::move(_result) * _f.a1) * std::move(_f._result));
     }
   }
   return _result;

@@ -30,7 +30,7 @@ std::function<std::string(std::string)> MonadicClosure::make_greeter() {
 
 int64_t MonadicClosure::test_with_length() {
   return with_length(
-      [](int64_t n) { return ((n + int64_t(1)) & 0x7FFFFFFFFFFFFFFFLL); });
+      [](int64_t n) { return ((n + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL); });
 }
 
 /// 5. Nested closures over bindings
@@ -47,7 +47,7 @@ int64_t MonadicClosure::nested_capture() {
 uint64_t MonadicClosure::test_count() {
   return count_matching(
       [](std::string s) {
-        return static_cast<int64_t>(s.length()) == int64_t(0);
+        return static_cast<int64_t>(s.length()) == INT64_C(0);
       },
       List<std::string>::cons(
           "a",

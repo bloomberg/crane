@@ -969,8 +969,8 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     State clone() const {
-      return State{(*this).reservoir_level_cm, (*this).downstream_stage_cm,
-                   (*this).gate_open_pct};
+      return State{this->reservoir_level_cm, this->downstream_stage_cm,
+                   this->gate_open_pct};
     }
   };
 
@@ -989,17 +989,17 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     PlantConfig clone() const {
-      return PlantConfig{(*this).max_reservoir_cm,
-                         (*this).max_downstream_cm,
-                         (*this).gate_capacity_cm,
-                         (*this).forecast_error_pct,
-                         (*this).gate_slew_pct,
-                         (*this).max_stage_rise_cm,
-                         (*this).reservoir_area_min_cm2,
-                         (*this).reservoir_area_max_cm2,
-                         (*this).reservoir_area_curve_cm2,
-                         (*this).design_head_cm,
-                         (*this).timestep_s};
+      return PlantConfig{this->max_reservoir_cm,
+                         this->max_downstream_cm,
+                         this->gate_capacity_cm,
+                         this->forecast_error_pct,
+                         this->gate_slew_pct,
+                         this->max_stage_rise_cm,
+                         this->reservoir_area_min_cm2,
+                         this->reservoir_area_max_cm2,
+                         this->reservoir_area_curve_cm2,
+                         this->design_head_cm,
+                         this->timestep_s};
     }
   };
 
@@ -1011,7 +1011,7 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     InflowRecord clone() const {
-      return InflowRecord{(*this).ir_timestep, (*this).ir_inflow_cm};
+      return InflowRecord{this->ir_timestep, this->ir_inflow_cm};
     }
   };
 
@@ -1028,9 +1028,9 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     TestResult clone() const {
-      return TestResult{(*this).tr_event_name, (*this).tr_initial_safe,
-                        (*this).tr_final_safe, (*this).tr_max_level,
-                        (*this).tr_max_stage};
+      return TestResult{this->tr_event_name, this->tr_initial_safe,
+                        this->tr_final_safe, this->tr_max_level,
+                        this->tr_max_stage};
     }
   };
 
@@ -1106,7 +1106,7 @@ struct HistoricalEventSafetyTraceCase {
 
     // ACCESSORS
     MonotoneRatingTable clone() const {
-      return MonotoneRatingTable{(*this).mrt_table};
+      return MonotoneRatingTable{this->mrt_table};
     }
   };
 
@@ -1240,10 +1240,10 @@ return UINT64_C(1000); },
     // ACCESSORS
     HistoricalScenarioBundle clone() const {
       return HistoricalScenarioBundle{
-          (*this).hsb_hist_plant.clone(),   (*this).hsb_hist_table.clone(),
-          (*this).hsb_hist_initial.clone(), (*this).hsb_test_1983.clone(),
-          (*this).hsb_test_2011.clone(),    (*this).hsb_hoover_plant.clone(),
-          (*this).hsb_hoover_test.clone()};
+          this->hsb_hist_plant.clone(),   this->hsb_hist_table.clone(),
+          this->hsb_hist_initial.clone(), this->hsb_test_1983.clone(),
+          this->hsb_test_2011.clone(),    this->hsb_hoover_plant.clone(),
+          this->hsb_hoover_test.clone()};
     }
   };
 

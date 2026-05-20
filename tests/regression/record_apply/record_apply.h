@@ -9,7 +9,7 @@ struct RecordApply {
     uint64_t _tag;
 
     // ACCESSORS
-    R clone() const { return R{(*this).f, (*this)._tag}; }
+    R clone() const { return R{this->f, this->_tag}; }
   };
 
   static uint64_t apply_record(const R &r0, uint64_t a, uint64_t b);

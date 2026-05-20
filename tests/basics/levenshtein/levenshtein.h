@@ -135,8 +135,7 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
   A projT1() const {
-    const auto &_sv = *this;
-    const auto &[x0, a1] = _sv;
+    const auto &[x0, a1] = *this;
     return x0;
   }
 };
@@ -167,8 +166,7 @@ struct Ascii {
   }
 
   Sumbool ascii_dec(const Ascii &b) const {
-    const auto &_sv = *this;
-    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = _sv;
+    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = *this;
     const auto &[a00, a10, a20, a30, a40, a50, a60, a70] = b;
     switch (Bool::bool_dec(a0, a00)) {
     case Sumbool::LEFT: {

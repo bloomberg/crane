@@ -176,8 +176,7 @@ struct NameClashLetMatch {
 
     /// Match on a triple, then match on an either, same-ish names
     uint64_t triple_then_either(const either &e) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1, a2] = _sv;
+      const auto &[a0, a1, a2] = *this;
       uint64_t from_either = [&]() {
         if (std::holds_alternative<typename either::Left>(e.v())) {
           const auto &[a00] = std::get<typename either::Left>(e.v());
@@ -194,8 +193,7 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
                                      uint64_t &>
     T1 triple_rec(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1, a2] = _sv;
+      const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);
     }
 
@@ -203,8 +201,7 @@ struct NameClashLetMatch {
       requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
                                      uint64_t &>
     T1 triple_rect(F0 &&f) const {
-      const auto &_sv = *this;
-      const auto &[a0, a1, a2] = _sv;
+      const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);
     }
   };

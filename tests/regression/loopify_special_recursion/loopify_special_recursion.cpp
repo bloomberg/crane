@@ -230,7 +230,8 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = _result.app(List<uint64_t>::cons(_f.a1, _f._result));
+      _result = std::move(_result).app(
+          List<uint64_t>::cons(_f.a1, std::move(_f._result)));
     }
   }
   return _result;

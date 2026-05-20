@@ -5366,6 +5366,17 @@
   (deps retype_error_extract.t.exe)
   (action (run ./retype_error_extract.t.exe))))
 
+(subdir sep_ext_pair_nested_any
+ (rule
+  (targets sep_ext_pair_nested_any.t.exe)
+  (deps SepExtPairNestedAny.vo sep_ext_pair_nested_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_pair_nested_any.t.exe SepExtPairNestedAny.cpp sep_ext_pair_nested_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_pair_nested_any.t.exe)
+  (action (run ./sep_ext_pair_nested_any.t.exe))))
+
 (subdir sep_ext_sigt_any
  (rule
   (targets sep_ext_sigt_any.t.exe)

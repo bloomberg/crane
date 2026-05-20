@@ -125,7 +125,7 @@ struct InstructionSequenceExec {
     uint64_t acc_;
 
     // ACCESSORS
-    state clone() const { return state{(*this).pc_, (*this).acc_}; }
+    state clone() const { return state{this->pc_, this->acc_}; }
   };
 
   struct instruction {

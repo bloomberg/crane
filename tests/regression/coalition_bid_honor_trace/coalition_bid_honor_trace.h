@@ -480,8 +480,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     Commander clone() const {
-      return Commander{(*this).cmd_id, (*this).cmd_clan, (*this).cmd_rank,
-                       (*this).cmd_bloodnamed};
+      return Commander{this->cmd_id, this->cmd_clan, this->cmd_rank,
+                       this->cmd_bloodnamed};
     }
   };
 
@@ -572,10 +572,9 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     Unit clone() const {
-      return Unit{(*this).unit_id,       (*this).unit_class,
-                  (*this).unit_weight,   (*this).unit_tonnage,
-                  (*this).unit_gunnery,  (*this).unit_piloting,
-                  (*this).unit_is_elite, (*this).unit_is_clan};
+      return Unit{this->unit_id,       this->unit_class,   this->unit_weight,
+                  this->unit_tonnage,  this->unit_gunnery, this->unit_piloting,
+                  this->unit_is_elite, this->unit_is_clan};
     }
   };
 
@@ -597,9 +596,9 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     ForceMetrics clone() const {
-      return ForceMetrics{(*this).fm_count,       (*this).fm_tonnage,
-                          (*this).fm_elite_count, (*this).fm_clan_count,
-                          (*this).fm_total_bv,    (*this).fm_total_ecr};
+      return ForceMetrics{this->fm_count,       this->fm_tonnage,
+                          this->fm_elite_count, this->fm_clan_count,
+                          this->fm_total_bv,    this->fm_total_ecr};
     }
   };
 
@@ -646,8 +645,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     CoalitionMember clone() const {
-      return CoalitionMember{(*this).cm_clan, (*this).cm_commander.clone(),
-                             (*this).cm_force};
+      return CoalitionMember{this->cm_clan, this->cm_commander.clone(),
+                             this->cm_force};
     }
   };
 
@@ -665,8 +664,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     CoalitionMemberBid clone() const {
-      return CoalitionMemberBid{(*this).cmb_member_index, (*this).cmb_new_force,
-                                (*this).cmb_side};
+      return CoalitionMemberBid{this->cmb_member_index, this->cmb_new_force,
+                                this->cmb_side};
     }
   };
 
@@ -680,8 +679,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     ForceBid clone() const {
-      return ForceBid{(*this).bid_force, (*this).bid_side,
-                      (*this).bid_commander.clone()};
+      return ForceBid{this->bid_force, this->bid_side,
+                      this->bid_commander.clone()};
     }
   };
 
@@ -911,8 +910,7 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     BattleContext clone() const {
-      return BattleContext{(*this).ctx_hegira_allowed,
-                           (*this).ctx_circle_present};
+      return BattleContext{this->ctx_hegira_allowed, this->ctx_circle_present};
     }
   };
 
@@ -931,10 +929,10 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     BatchallChallenge clone() const {
       return BatchallChallenge{
-          (*this).chal_challenger.clone(), (*this).chal_clan,
-          (*this).chal_prize.clone(),      (*this).chal_initial_force,
-          (*this).chal_location.clone(),   (*this).chal_trial_type,
-          (*this).chal_context.clone()};
+          this->chal_challenger.clone(), this->chal_clan,
+          this->chal_prize.clone(),      this->chal_initial_force,
+          this->chal_location.clone(),   this->chal_trial_type,
+          this->chal_context.clone()};
     }
   };
 
@@ -945,8 +943,8 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     BatchallResponse clone() const {
-      return BatchallResponse{(*this).resp_defender.clone(), (*this).resp_clan,
-                              (*this).resp_force};
+      return BatchallResponse{this->resp_defender.clone(), this->resp_clan,
+                              this->resp_force};
     }
   };
 
@@ -1774,7 +1772,7 @@ struct CoalitionBidHonorTraceCase {
 
     // ACCESSORS
     BatchallState clone() const {
-      return BatchallState{(*this).bs_phase.clone(), (*this).bs_honor};
+      return BatchallState{this->bs_phase.clone(), this->bs_honor};
     }
   };
 

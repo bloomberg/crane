@@ -129,7 +129,7 @@ struct LoopifyDecltype {
     uint64_t item_val;
 
     // ACCESSORS
-    item clone() const { return item{(*this).item_flag, (*this).item_val}; }
+    item clone() const { return item{this->item_flag, this->item_val}; }
   };
 
   static uint64_t sum_flagged(const List<item> &xs);

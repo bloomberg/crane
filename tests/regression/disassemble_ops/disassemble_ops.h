@@ -337,9 +337,7 @@ struct DisassembleOps {
     List<uint64_t> rom;
 
     // ACCESSORS
-    state clone() const {
-      return state{(*this).regs.clone(), (*this).rom.clone()};
-    }
+    state clone() const { return state{this->regs.clone(), this->rom.clone()}; }
   };
 
   static inline const state init_state =

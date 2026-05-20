@@ -519,19 +519,37 @@ struct LoopifyLists {
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static list<list<T1>> group_by_aux(F0 &&eq, const T1 &prev, list<T1> acc,
                                      const list<T1> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-      return list<list<T1>>::cons(std::move(acc), list<list<T1>>::nil());
-    } else {
-      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      if (eq(prev, a0)) {
-        return group_by_aux<T1>(eq, a0, list<T1>::cons(a0, std::move(acc)),
-                                *a1);
+    std::unique_ptr<list<list<T1>>> _head{};
+    std::unique_ptr<list<list<T1>>> *_write = &_head;
+    const list<T1> *_loop_l = &l;
+    list<T1> _loop_acc = std::move(acc);
+    T1 _loop_prev = prev;
+    while (true) {
+      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<list<list<T1>>>(
+            list<list<T1>>::cons(std::move(_loop_acc), list<list<T1>>::nil()));
+        break;
       } else {
-        return list<list<T1>>::cons(
-            std::move(acc),
-            group_by_aux<T1>(eq, a0, list<T1>::cons(a0, list<T1>::nil()), *a1));
+        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        if (eq(_loop_prev, a0)) {
+          _loop_l = a1.get();
+          _loop_acc = list<T1>::cons(a0, std::move(_loop_acc));
+          _loop_prev = a0;
+          continue;
+        } else {
+          auto _cell = std::make_unique<list<list<T1>>>(
+              typename list<list<T1>>::Cons(std::move(_loop_acc), nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).l;
+          _loop_l = a1.get();
+          _loop_acc = list<T1>::cons(a0, list<T1>::nil());
+          _loop_prev = a0;
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename T1, typename F0>
@@ -647,17 +665,47 @@ struct LoopifyLists {
   /// count_matching p l counts elements satisfying predicate.
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static uint64_t count_matching(F0 &&p, const list<uint64_t> &l) {
-    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return (count_matching(p, *a1) + 1);
+  static uint64_t count_matching(
+      F0 &&p,
+      const list<uint64_t>
+          &l) { /// _Enter: captures varying parameters for each recursive call.
+
+    struct _Enter {
+      const list<uint64_t> *l;
+    };
+
+    /// _Resume1: resumes after recursive call with _result.
+    struct _Resume1 {};
+
+    using _Frame = std::variant<_Enter, _Resume1>;
+    uint64_t _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified count_matching: _Enter -> _Resume1.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const list<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
+          if (p(a0)) {
+            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Enter{a1.get()});
+          } else {
+            _stack.emplace_back(_Enter{a1.get()});
+          }
+        }
       } else {
-        return count_matching(p, *a1);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        _result = (_result + 1);
       }
     }
+    return _result;
   }
 
   /// categorize k l categorizes elements: 1 for <k, 2 for =k, 3 for >k.
@@ -1096,16 +1144,34 @@ struct LoopifyLists {
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static list<uint64_t> find_indices_aux(F0 &&p, const list<uint64_t> &l,
                                          uint64_t i) {
-    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-      return list<uint64_t>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return list<uint64_t>::cons(i, find_indices_aux(p, *a1, (i + 1)));
+    std::unique_ptr<list<uint64_t>> _head{};
+    std::unique_ptr<list<uint64_t>> *_write = &_head;
+    uint64_t _loop_i = std::move(i);
+    const list<uint64_t> *_loop_l = &l;
+    while (true) {
+      if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
+        *_write = std::make_unique<list<uint64_t>>(list<uint64_t>::nil());
+        break;
       } else {
-        return find_indices_aux(p, *a1, (i + 1));
+        const auto &[a0, a1] =
+            std::get<typename list<uint64_t>::Cons>(_loop_l->v());
+        if (p(a0)) {
+          auto _cell = std::make_unique<list<uint64_t>>(
+              typename list<uint64_t>::Cons(_loop_i, nullptr));
+          *_write = std::move(_cell);
+          _write =
+              &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
+          _loop_i = (_loop_i + 1);
+          _loop_l = a1.get();
+          continue;
+        } else {
+          _loop_i = (_loop_i + 1);
+          _loop_l = a1.get();
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   template <typename F0>

@@ -12,7 +12,7 @@ struct JcnOps {
 
     // ACCESSORS
     state clone() const {
-      return state{(*this).acc, (*this).carry, (*this).test_pin, (*this).pc};
+      return state{this->acc, this->carry, this->test_pin, this->pc};
     }
   };
 

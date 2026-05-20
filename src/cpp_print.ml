@@ -1514,12 +1514,14 @@ and pp_cpp_expr env args t =
     Id.print id ++ templates ++ str "{" ++ es_s ++ str "}"
   | CPPget (e, id) ->
     ( match e with
+    | CPPderef CPPthis -> str "this->" ++ Id.print id
     | CPPderef _ | CPPraw _ ->
       str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
     | _ -> pp_cpp_expr env args e ++ str "." ++ Id.print id )
   | CPPget' (e, id) ->
     let field_name = str (Common.pp_global_name Type id) in
     ( match e with
+    | CPPderef CPPthis -> str "this->" ++ field_name
     | CPPderef _ | CPPraw _ ->
       str "(" ++ pp_cpp_expr env args e ++ str ")." ++ field_name
     | _ -> pp_cpp_expr env args e ++ str "." ++ field_name )
@@ -1534,6 +1536,7 @@ and pp_cpp_expr env args t =
       with
     | Some gr when is_inline_custom gr ->
       ( match find_custom_opt gr with
+      | Some "int64_t" -> str ("INT64_C(" ^ s ^ ")")
       | Some cpp_type -> str (cpp_type ^ "(" ^ s ^ ")")
       | None -> str s )
     | _ -> str s )
@@ -2121,6 +2124,8 @@ and pp_cpp_stmt env args = function
         | CPPvar id ->
           let name = Id.to_string id in
           (mt (), str name, str name)
+        | CPPderef CPPthis ->
+          (mt (), str "*this", str "(*this)")
         | _ ->
           let raw_pp = pp_scrut first_scrut in
           ( str ("const auto& " ^ sv_name ^ " = ") ++ raw_pp ++ str ";" ++ fnl (),

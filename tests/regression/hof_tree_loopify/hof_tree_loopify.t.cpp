@@ -136,20 +136,13 @@ void deep_tree_fold_impl() {
 }
 
 void test_deep_tree_map() {
-  // tree_map IS loopified (nontail stack-based), but the frame structs
-  // store subtrees by value.  With value-type trees (unique_ptr children),
-  // copying a subtree into a frame triggers recursive clone() which
-  // overflows the stack for deep trees.
-  //
-  // TODO: store const T* in frames to avoid deep copies.
-  assert(!survives(deep_tree_map_impl));
-  std::cout << "PASS: test_deep_tree_map (expected stack overflow)" << std::endl;
+  assert(survives(deep_tree_map_impl));
+  std::cout << "PASS: test_deep_tree_map" << std::endl;
 }
 
 void test_deep_tree_fold() {
-  // Same issue as tree_map: frame storage triggers deep clone.
-  assert(!survives(deep_tree_fold_impl));
-  std::cout << "PASS: test_deep_tree_fold (expected stack overflow)" << std::endl;
+  assert(survives(deep_tree_fold_impl));
+  std::cout << "PASS: test_deep_tree_fold" << std::endl;
 }
 
 int main() {

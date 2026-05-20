@@ -533,8 +533,8 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     CordMeta clone() const {
-      return CordMeta{(*this).cm_fiber, (*this).cm_color, (*this).cm_spin,
-                      (*this).cm_ply};
+      return CordMeta{this->cm_fiber, this->cm_color, this->cm_spin,
+                      this->cm_ply};
     }
   };
 
@@ -544,8 +544,7 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     CertifiedPendant clone() const {
-      return CertifiedPendant{(*this).cp_meta.clone(),
-                              (*this).cp_digits.clone()};
+      return CertifiedPendant{this->cp_meta.clone(), this->cp_digits.clone()};
     }
   };
 
@@ -563,7 +562,7 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     PendantGroup clone() const {
-      return PendantGroup{(*this).pg_top.clone(), (*this).pg_pendants.clone()};
+      return PendantGroup{this->pg_top.clone(), this->pg_pendants.clone()};
     }
   };
 
