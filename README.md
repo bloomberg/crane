@@ -13,7 +13,7 @@
 
 ## Rationale
 
-This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to (optionally [BDE](https://github.com/bloomberg/bde)-flavored) C++ code, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe, modern C++ code. The generated code avoids tracing garbage collection and does not need a separate runtime system, relying instead on `std::shared_ptr` or `bsl::shared_ptr` for reference counting.
+This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to (optionally [BDE](https://github.com/bloomberg/bde)-flavored) C++ code, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe, modern C++ code. The generated code does not need a separate runtime system, relying instead on `unique_ptr` for memory management.
 
 The project is a fork of the Rocq-to-OCaml extraction that comes built-in with Rocq.
 
@@ -37,7 +37,7 @@ Once you clone the repo, if you have [opam](https://opam.ocaml.org/) and [dune](
 opam install . --deps-only
 ```
 
-To install OCaml (at least 4.14.0) and Rocq (at least 9.0.0). You can then build and install the project by running
+To install OCaml (at least 4.14.0) and Rocq (9.0.0). You can then build and install the project by running
 
 ```bash
 make build && make install
