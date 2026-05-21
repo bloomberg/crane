@@ -14,7 +14,7 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> a0;
+    std::shared_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        _dst->v_ = S{_alt.a0 ? std::make_shared<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -79,11 +79,11 @@ public:
   // CREATORS
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::unique_ptr<Nat>> _stack{};
+    std::vector<std::shared_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.v_)) {
@@ -250,7 +250,7 @@ struct String {
 
   struct String0 {
     Ascii a0;
-    std::unique_ptr<String> a1;
+    std::shared_ptr<String> a1;
   };
 
   using variant_t = std::variant<EmptyString, String0>;
@@ -303,7 +303,7 @@ public:
       } else {
         const auto &_alt = std::get<String0>(_src->v());
         _dst->v_ = String0{_alt.a0.clone(),
-                           _alt.a1 ? std::make_unique<String>() : nullptr};
+                           _alt.a1 ? std::make_shared<String>() : nullptr};
         auto &_dst_alt = std::get<String0>(_dst->v_);
         if (_alt.a1) {
           _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -318,12 +318,12 @@ public:
 
   static String string0(Ascii a0, String a1) {
     return String(
-        String0{std::move(a0), std::make_unique<String>(std::move(a1))});
+        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~String() {
-    std::vector<std::unique_ptr<String>> _stack{};
+    std::vector<std::shared_ptr<String>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](String &_node) {
       if (std::holds_alternative<String0>(_node.v_)) {
@@ -495,7 +495,7 @@ struct Levenshtein {
       String s;
       String t;
       Nat n;
-      std::unique_ptr<chain> a4;
+      std::shared_ptr<chain> a4;
     };
 
     struct Change {
@@ -504,7 +504,7 @@ struct Levenshtein {
       String u;
       Nat n;
       edit a4;
-      std::unique_ptr<chain> a5;
+      std::shared_ptr<chain> a5;
     };
 
     using variant_t = std::variant<Empty, Skip, Change>;
@@ -560,7 +560,7 @@ struct Levenshtein {
           const auto &_alt = std::get<Skip>(_src->v());
           _dst->v_ = Skip{_alt.a.clone(), _alt.s.clone(), _alt.t.clone(),
                           _alt.n.clone(),
-                          _alt.a4 ? std::make_unique<chain>() : nullptr};
+                          _alt.a4 ? std::make_shared<chain>() : nullptr};
           auto &_dst_alt = std::get<Skip>(_dst->v_);
           if (_alt.a4) {
             _stack.push_back({_alt.a4.get(), _dst_alt.a4.get()});
@@ -570,7 +570,7 @@ struct Levenshtein {
           _dst->v_ = Change{
               _alt.s.clone(),  _alt.t.clone(),
               _alt.u.clone(),  _alt.n.clone(),
-              _alt.a4.clone(), _alt.a5 ? std::make_unique<chain>() : nullptr};
+              _alt.a4.clone(), _alt.a5 ? std::make_shared<chain>() : nullptr};
           auto &_dst_alt = std::get<Change>(_dst->v_);
           if (_alt.a5) {
             _stack.push_back({_alt.a5.get(), _dst_alt.a5.get()});
@@ -585,19 +585,19 @@ struct Levenshtein {
 
     static chain skip(Ascii a, String s, String t, Nat n, chain a4) {
       return chain(Skip{std::move(a), std::move(s), std::move(t), std::move(n),
-                        std::make_unique<chain>(std::move(a4))});
+                        std::make_shared<chain>(std::move(a4))});
     }
 
     static chain change(String s, String t, String u, Nat n, edit a4,
                         chain a5) {
       return chain(Change{std::move(s), std::move(t), std::move(u),
                           std::move(n), std::move(a4),
-                          std::make_unique<chain>(std::move(a5))});
+                          std::make_shared<chain>(std::move(a5))});
     }
 
     // MANIPULATORS
     ~chain() {
-      std::vector<std::unique_ptr<chain>> _stack{};
+      std::vector<std::shared_ptr<chain>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<Skip>(_node.v_)) {

@@ -192,8 +192,8 @@ struct PolyInductive {
     };
 
     struct PNode {
-      std::unique_ptr<ptree<A>> a0;
-      std::unique_ptr<ptree<A>> a1;
+      std::shared_ptr<ptree<A>> a0;
+      std::shared_ptr<ptree<A>> a1;
     };
 
     using variant_t = std::variant<PLeaf, PNode>;
@@ -246,8 +246,8 @@ struct PolyInductive {
           _dst->v_ = PLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<PNode>(_src->v());
-          _dst->v_ = PNode{_alt.a0 ? std::make_unique<ptree<A>>() : nullptr,
-                           _alt.a1 ? std::make_unique<ptree<A>>() : nullptr};
+          _dst->v_ = PNode{_alt.a0 ? std::make_shared<ptree<A>>() : nullptr,
+                           _alt.a1 ? std::make_shared<ptree<A>>() : nullptr};
           auto &_dst_alt = std::get<PNode>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -267,21 +267,21 @@ struct PolyInductive {
         this->v_ = PLeaf{A(a0)};
       } else {
         const auto &[a0, a1] = std::get<typename ptree<_U>::PNode>(_other.v());
-        this->v_ = PNode{a0 ? std::make_unique<ptree<A>>(*a0) : nullptr,
-                         a1 ? std::make_unique<ptree<A>>(*a1) : nullptr};
+        this->v_ = PNode{a0 ? std::make_shared<ptree<A>>(*a0) : nullptr,
+                         a1 ? std::make_shared<ptree<A>>(*a1) : nullptr};
       }
     }
 
     static ptree<A> pleaf(A a0) { return ptree(PLeaf{std::move(a0)}); }
 
     static ptree<A> pnode(ptree<A> a0, ptree<A> a1) {
-      return ptree(PNode{std::make_unique<ptree<A>>(std::move(a0)),
-                         std::make_unique<ptree<A>>(std::move(a1))});
+      return ptree(PNode{std::make_shared<ptree<A>>(std::move(a0)),
+                         std::make_shared<ptree<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~ptree() {
-      std::vector<std::unique_ptr<ptree<A>>> _stack{};
+      std::vector<std::shared_ptr<ptree<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](ptree<A> &_node) {
         if (std::holds_alternative<PNode>(_node.v_)) {

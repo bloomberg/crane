@@ -14,7 +14,7 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> a0;
+    std::shared_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        _dst->v_ = S{_alt.a0 ? std::make_shared<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -79,11 +79,11 @@ public:
   // CREATORS
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::unique_ptr<Nat>> _stack{};
+    std::vector<std::shared_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.v_)) {

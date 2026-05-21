@@ -47,17 +47,17 @@ uint64_t MemSafetyProbe7::sum_list(
 MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>
 MemSafetyProbe7::build_len_closures(
     const MemSafetyProbe7::mylist<uint64_t> &l) {
-  std::unique_ptr<
+  std::shared_ptr<
       MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
       _head{};
-  std::unique_ptr<
+  std::shared_ptr<
       MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
       *_write = &_head;
   MemSafetyProbe7::mylist<uint64_t> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_unique<
+      *_write = std::make_shared<
           MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
           mylist<std::function<uint64_t(std::monostate)>>::mynil());
       break;
@@ -66,7 +66,7 @@ MemSafetyProbe7::build_len_closures(
           std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
               _loop_l.v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
-      auto _cell = std::make_unique<
+      auto _cell = std::make_shared<
           MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
           typename mylist<std::function<uint64_t(std::monostate)>>::Mycons(
               [=](std::monostate) mutable { return a1_value.length(); },
@@ -130,17 +130,17 @@ uint64_t MemSafetyProbe7::sum_fns(
 MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>
 MemSafetyProbe7::build_sum_closures(
     const MemSafetyProbe7::mylist<uint64_t> &l) {
-  std::unique_ptr<
+  std::shared_ptr<
       MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
       _head{};
-  std::unique_ptr<
+  std::shared_ptr<
       MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
       *_write = &_head;
   MemSafetyProbe7::mylist<uint64_t> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_unique<
+      *_write = std::make_shared<
           MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
           mylist<std::function<uint64_t(std::monostate)>>::mynil());
       break;
@@ -149,7 +149,7 @@ MemSafetyProbe7::build_sum_closures(
           std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
               _loop_l.v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
-      auto _cell = std::make_unique<
+      auto _cell = std::make_shared<
           MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
           typename mylist<std::function<uint64_t(std::monostate)>>::Mycons(
               [=](std::monostate) mutable { return sum_list(a1_value); },
@@ -171,15 +171,15 @@ MemSafetyProbe7::build_sum_closures(
 MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>
 MemSafetyProbe7::build_accum_closures(
     const MemSafetyProbe7::mylist<uint64_t> &l) {
-  std::unique_ptr<MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>
+  std::shared_ptr<MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>
       _head{};
-  std::unique_ptr<MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>
+  std::shared_ptr<MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>
       *_write = &_head;
   MemSafetyProbe7::mylist<uint64_t> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_unique<
+      *_write = std::make_shared<
           MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>(
           mylist<std::function<uint64_t(uint64_t)>>::mynil());
       break;
@@ -188,7 +188,7 @@ MemSafetyProbe7::build_accum_closures(
           std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
               _loop_l.v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
-      auto _cell = std::make_unique<
+      auto _cell = std::make_shared<
           MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>(
           typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
               [=](uint64_t n) mutable {
@@ -254,17 +254,17 @@ uint64_t MemSafetyProbe7::apply_all(
 /// TEST 6: Stress test — large list, each closure captures
 /// the entire remaining tail.
 MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(uint64_t n) {
-  std::unique_ptr<MemSafetyProbe7::mylist<uint64_t>> _head{};
-  std::unique_ptr<MemSafetyProbe7::mylist<uint64_t>> *_write = &_head;
+  std::shared_ptr<MemSafetyProbe7::mylist<uint64_t>> _head{};
+  std::shared_ptr<MemSafetyProbe7::mylist<uint64_t>> *_write = &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_unique<MemSafetyProbe7::mylist<uint64_t>>(
+      *_write = std::make_shared<MemSafetyProbe7::mylist<uint64_t>>(
           mylist<uint64_t>::mynil());
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_unique<MemSafetyProbe7::mylist<uint64_t>>(
+      auto _cell = std::make_shared<MemSafetyProbe7::mylist<uint64_t>>(
           typename mylist<uint64_t>::Mycons(_loop_n, nullptr));
       *_write = std::move(_cell);
       _write =

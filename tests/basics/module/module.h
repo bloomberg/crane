@@ -55,10 +55,10 @@ template <OrderedType K, BaseType V> struct MakeMap {
     struct Empty {};
 
     struct Node {
-      std::unique_ptr<tree> a0;
+      std::shared_ptr<tree> a0;
       key a1;
       value a2;
-      std::unique_ptr<tree> a3;
+      std::shared_ptr<tree> a3;
     };
 
     using variant_t = std::variant<Empty, Node>;
@@ -111,8 +111,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->v_ =
-              Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
-                   _alt.a2, _alt.a3 ? std::make_unique<tree>() : nullptr};
+              Node{_alt.a0 ? std::make_shared<tree>() : nullptr, _alt.a1,
+                   _alt.a2, _alt.a3 ? std::make_shared<tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -129,13 +129,13 @@ template <OrderedType K, BaseType V> struct MakeMap {
     static tree empty() { return tree(Empty{}); }
 
     static tree node(tree a0, key a1, value a2, tree a3) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), std::move(a1),
-                       std::move(a2), std::make_unique<tree>(std::move(a3))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), std::move(a1),
+                       std::move(a2), std::make_shared<tree>(std::move(a3))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
+      std::vector<std::shared_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

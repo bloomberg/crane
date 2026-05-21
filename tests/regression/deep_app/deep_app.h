@@ -14,7 +14,7 @@ struct DeepApp {
 
     struct Mycons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -67,7 +67,7 @@ struct DeepApp {
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
           _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+                            _alt.a1 ? std::make_shared<mylist<A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -85,7 +85,7 @@ struct DeepApp {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
         this->v_ =
-            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+            Mycons{A(a0), a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -93,12 +93,12 @@ struct DeepApp {
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
+      std::vector<std::shared_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist<A> &_node) {
         if (std::holds_alternative<Mycons>(_node.v_)) {
@@ -224,18 +224,18 @@ struct DeepApp {
   /// the result is still deep.
   template <typename T1>
   static mylist<T1> app(const mylist<T1> &l1, mylist<T1> l2) {
-    std::unique_ptr<mylist<T1>> _head{};
-    std::unique_ptr<mylist<T1>> *_write = &_head;
+    std::shared_ptr<mylist<T1>> _head{};
+    std::shared_ptr<mylist<T1>> *_write = &_head;
     mylist<T1> _loop_l2 = std::move(l2);
     const mylist<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1->v())) {
-        *_write = std::make_unique<mylist<T1>>(std::move(_loop_l2));
+        *_write = std::make_shared<mylist<T1>>(std::move(_loop_l2));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l1->v());
-        auto _cell = std::make_unique<mylist<T1>>(
+        auto _cell = std::make_shared<mylist<T1>>(
             typename mylist<T1>::Mycons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).a1;
@@ -249,17 +249,17 @@ struct DeepApp {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static mylist<T2> map(F0 &&f, const mylist<T1> &l) {
-    std::unique_ptr<mylist<T2>> _head{};
-    std::unique_ptr<mylist<T2>> *_write = &_head;
+    std::shared_ptr<mylist<T2>> _head{};
+    std::shared_ptr<mylist<T2>> *_write = &_head;
     const mylist<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
-        *_write = std::make_unique<mylist<T2>>(mylist<T2>::mynil());
+        *_write = std::make_shared<mylist<T2>>(mylist<T2>::mynil());
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<T1>::Mycons>(_loop_l->v());
-        auto _cell = std::make_unique<mylist<T2>>(
+        auto _cell = std::make_shared<mylist<T2>>(
             typename mylist<T2>::Mycons(f(a0), nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename mylist<T2>::Mycons>((*_write)->v_mut()).a1;

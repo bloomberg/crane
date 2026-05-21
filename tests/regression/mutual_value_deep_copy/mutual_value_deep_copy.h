@@ -23,7 +23,7 @@ struct MutualValueDeepCopy {
 
     struct ANode {
       bool a0;
-      std::unique_ptr<b> a1;
+      std::shared_ptr<b> a1;
     };
 
     using variant_t = std::variant<AEnd, ANode>;
@@ -75,7 +75,7 @@ struct MutualValueDeepCopy {
           _dst->v_ = AEnd{};
         } else {
           const auto &_alt = std::get<ANode>(_src->v());
-          _dst->v_ = ANode{_alt.a0, _alt.a1 ? std::make_unique<b>() : nullptr};
+          _dst->v_ = ANode{_alt.a0, _alt.a1 ? std::make_shared<b>() : nullptr};
           auto &_dst_alt = std::get<ANode>(_dst->v_);
           if (_alt.a1) {
             if (std::holds_alternative<typename MutualValueDeepCopy::b::BNode>(
@@ -86,7 +86,7 @@ struct MutualValueDeepCopy {
               auto &_pdst = std::get<typename MutualValueDeepCopy::b::BNode>(
                   _dst_alt.a1->v_mut());
               if (_psrc.a0) {
-                _pdst.a0 = std::make_unique<a>();
+                _pdst.a0 = std::make_shared<a>();
                 _stack.push_back({_psrc.a0.get(), _pdst.a0.get()});
               }
             }
@@ -100,12 +100,12 @@ struct MutualValueDeepCopy {
     static a aend() { return a(AEnd{}); }
 
     static a anode(bool a0, b a1) {
-      return a(ANode{a0, std::make_unique<b>(std::move(a1))});
+      return a(ANode{a0, std::make_shared<b>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~a() {
-      std::vector<std::unique_ptr<a>> _stack{};
+      std::vector<std::shared_ptr<a>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](a &_node) {
         if (std::holds_alternative<ANode>(_node.v_)) {
@@ -141,7 +141,7 @@ struct MutualValueDeepCopy {
   struct b {
     // TYPES
     struct BNode {
-      std::unique_ptr<a> a0;
+      std::shared_ptr<a> a0;
     };
 
     using variant_t = std::variant<BNode>;
@@ -173,18 +173,18 @@ struct MutualValueDeepCopy {
     // ACCESSORS
     b clone() const {
       const auto &[a0] = std::get<BNode>(this->v());
-      return b(BNode{a0 ? std::make_unique<MutualValueDeepCopy::a>(a0->clone())
+      return b(BNode{a0 ? std::make_shared<MutualValueDeepCopy::a>(a0->clone())
                         : nullptr});
     }
 
     // CREATORS
     static b bnode(a a0) {
-      return b(BNode{std::make_unique<a>(std::move(a0))});
+      return b(BNode{std::make_shared<a>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~b() {
-      std::vector<std::unique_ptr<b>> _stack{};
+      std::vector<std::shared_ptr<b>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](b &_node) {
         if (std::holds_alternative<BNode>(_node.v_)) {

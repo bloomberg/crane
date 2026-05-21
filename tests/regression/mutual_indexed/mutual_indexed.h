@@ -18,7 +18,7 @@ struct MutualIndexed {
     struct ENode {
       uint64_t n;
       uint64_t a1;
-      std::unique_ptr<OddTree> a2;
+      std::shared_ptr<OddTree> a2;
     };
 
     using variant_t = std::variant<ELeaf, ENode>;
@@ -71,7 +71,7 @@ struct MutualIndexed {
         } else {
           const auto &_alt = std::get<ENode>(_src->v());
           _dst->v_ = ENode{_alt.n, _alt.a1,
-                           _alt.a2 ? std::make_unique<OddTree>() : nullptr};
+                           _alt.a2 ? std::make_shared<OddTree>() : nullptr};
           auto &_dst_alt = std::get<ENode>(_dst->v_);
           if (_alt.a2) {
             if (std::holds_alternative<typename MutualIndexed::OddTree::ONode>(
@@ -82,7 +82,7 @@ struct MutualIndexed {
               auto &_pdst = std::get<typename MutualIndexed::OddTree::ONode>(
                   _dst_alt.a2->v_mut());
               if (_psrc.a2) {
-                _pdst.a2 = std::make_unique<EvenTree>();
+                _pdst.a2 = std::make_shared<EvenTree>();
                 _stack.push_back({_psrc.a2.get(), _pdst.a2.get()});
               }
             }
@@ -96,12 +96,12 @@ struct MutualIndexed {
     static EvenTree eleaf() { return EvenTree(ELeaf{}); }
 
     static EvenTree enode(uint64_t n, uint64_t a1, OddTree a2) {
-      return EvenTree(ENode{n, a1, std::make_unique<OddTree>(std::move(a2))});
+      return EvenTree(ENode{n, a1, std::make_shared<OddTree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~EvenTree() {
-      std::vector<std::unique_ptr<EvenTree>> _stack{};
+      std::vector<std::shared_ptr<EvenTree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](EvenTree &_node) {
         if (std::holds_alternative<ENode>(_node.v_)) {
@@ -139,7 +139,7 @@ struct MutualIndexed {
     struct ONode {
       uint64_t n;
       uint64_t a1;
-      std::unique_ptr<EvenTree> a2;
+      std::shared_ptr<EvenTree> a2;
     };
 
     using variant_t = std::variant<ONode>;
@@ -173,18 +173,18 @@ struct MutualIndexed {
       const auto &[n, a1, a2] = std::get<ONode>(this->v());
       return OddTree(
           ONode{n, a1,
-                a2 ? std::make_unique<MutualIndexed::EvenTree>(a2->clone())
+                a2 ? std::make_shared<MutualIndexed::EvenTree>(a2->clone())
                    : nullptr});
     }
 
     // CREATORS
     static OddTree onode(uint64_t n, uint64_t a1, EvenTree a2) {
-      return OddTree(ONode{n, a1, std::make_unique<EvenTree>(std::move(a2))});
+      return OddTree(ONode{n, a1, std::make_shared<EvenTree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~OddTree() {
-      std::vector<std::unique_ptr<OddTree>> _stack{};
+      std::vector<std::shared_ptr<OddTree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](OddTree &_node) {
         if (std::holds_alternative<ONode>(_node.v_)) {

@@ -107,7 +107,7 @@ template <Elem E> struct Container {
 
     struct MCons {
       maybe a0;
-      std::unique_ptr<mlist> a1;
+      std::shared_ptr<mlist> a1;
     };
 
     using variant_t = std::variant<MNil, MCons>;
@@ -160,7 +160,7 @@ template <Elem E> struct Container {
         } else {
           const auto &_alt = std::get<MCons>(_src->v());
           _dst->v_ = MCons{_alt.a0.clone(),
-                           _alt.a1 ? std::make_unique<mlist>() : nullptr};
+                           _alt.a1 ? std::make_shared<mlist>() : nullptr};
           auto &_dst_alt = std::get<MCons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -175,12 +175,12 @@ template <Elem E> struct Container {
 
     static mlist mcons(maybe a0, mlist a1) {
       return mlist(
-          MCons{std::move(a0), std::make_unique<mlist>(std::move(a1))});
+          MCons{std::move(a0), std::make_shared<mlist>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mlist() {
-      std::vector<std::unique_ptr<mlist>> _stack{};
+      std::vector<std::shared_ptr<mlist>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mlist &_node) {
         if (std::holds_alternative<MCons>(_node.v_)) {

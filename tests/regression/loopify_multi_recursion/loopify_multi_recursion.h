@@ -23,10 +23,10 @@ struct LoopifyMultiRecursion {
     };
 
     struct QQuad {
-      std::unique_ptr<quadtree> a0;
-      std::unique_ptr<quadtree> a1;
-      std::unique_ptr<quadtree> a2;
-      std::unique_ptr<quadtree> a3;
+      std::shared_ptr<quadtree> a0;
+      std::shared_ptr<quadtree> a1;
+      std::shared_ptr<quadtree> a2;
+      std::shared_ptr<quadtree> a3;
     };
 
     using variant_t = std::variant<QLeaf, QQuad>;
@@ -79,10 +79,10 @@ struct LoopifyMultiRecursion {
           _dst->v_ = QLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<QQuad>(_src->v());
-          _dst->v_ = QQuad{_alt.a0 ? std::make_unique<quadtree>() : nullptr,
-                           _alt.a1 ? std::make_unique<quadtree>() : nullptr,
-                           _alt.a2 ? std::make_unique<quadtree>() : nullptr,
-                           _alt.a3 ? std::make_unique<quadtree>() : nullptr};
+          _dst->v_ = QQuad{_alt.a0 ? std::make_shared<quadtree>() : nullptr,
+                           _alt.a1 ? std::make_shared<quadtree>() : nullptr,
+                           _alt.a2 ? std::make_shared<quadtree>() : nullptr,
+                           _alt.a3 ? std::make_shared<quadtree>() : nullptr};
           auto &_dst_alt = std::get<QQuad>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -105,15 +105,15 @@ struct LoopifyMultiRecursion {
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(QQuad{std::make_unique<quadtree>(std::move(a0)),
-                            std::make_unique<quadtree>(std::move(a1)),
-                            std::make_unique<quadtree>(std::move(a2)),
-                            std::make_unique<quadtree>(std::move(a3))});
+      return quadtree(QQuad{std::make_shared<quadtree>(std::move(a0)),
+                            std::make_shared<quadtree>(std::move(a1)),
+                            std::make_shared<quadtree>(std::move(a2)),
+                            std::make_shared<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::unique_ptr<quadtree>> _stack{};
+      std::vector<std::shared_ptr<quadtree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](quadtree &_node) {
         if (std::holds_alternative<QQuad>(_node.v_)) {

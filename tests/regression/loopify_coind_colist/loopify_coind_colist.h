@@ -15,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -67,7 +67,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -83,19 +83,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -211,24 +211,24 @@ struct LoopifyCoindColist {
   }
 
   template <typename T1> static List<T1> to_list(uint64_t fuel, colist<T1> l) {
-    std::unique_ptr<List<T1>> _head{};
-    std::unique_ptr<List<T1>> *_write = &_head;
+    std::shared_ptr<List<T1>> _head{};
+    std::shared_ptr<List<T1>> *_write = &_head;
     colist<T1> _loop_l = std::move(l);
     uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        *_write = std::make_unique<List<T1>>(List<T1>::nil());
+        *_write = std::make_shared<List<T1>>(List<T1>::nil());
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l.v())) {
-          *_write = std::make_unique<List<T1>>(List<T1>::nil());
+          *_write = std::make_shared<List<T1>>(List<T1>::nil());
           break;
         } else {
           const auto &[a0, a1] =
               std::get<typename colist<T1>::Cocons>(_loop_l.v());
           auto _cell =
-              std::make_unique<List<T1>>(typename List<T1>::Cons(a0, nullptr));
+              std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
           _loop_l = std::move(*a1);

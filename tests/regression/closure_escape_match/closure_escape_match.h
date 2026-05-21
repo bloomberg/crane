@@ -16,7 +16,7 @@ struct ClosureEscapeMatch {
 
     struct Mycons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -69,7 +69,7 @@ struct ClosureEscapeMatch {
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
           _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+                            _alt.a1 ? std::make_shared<mylist<A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -87,7 +87,7 @@ struct ClosureEscapeMatch {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
         this->v_ =
-            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+            Mycons{A(a0), a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -95,12 +95,12 @@ struct ClosureEscapeMatch {
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
+      std::vector<std::shared_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist<A> &_node) {
         if (std::holds_alternative<Mycons>(_node.v_)) {

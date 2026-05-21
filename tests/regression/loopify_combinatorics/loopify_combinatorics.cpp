@@ -4,21 +4,21 @@
 /// remove x l removes first occurrence of x from list.
 List<uint64_t> LoopifyCombinatorics::remove(uint64_t x,
                                             const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        *_write = std::make_unique<List<uint64_t>>(*a1);
+        *_write = std::make_shared<List<uint64_t>>(*a1);
         break;
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -33,19 +33,19 @@ List<uint64_t> LoopifyCombinatorics::remove(uint64_t x,
 /// Helper: prepend x to each list in lsts.
 List<List<uint64_t>>
 LoopifyCombinatorics::map_cons(uint64_t x, const List<List<uint64_t>> &lsts) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<List<uint64_t>>> _head{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
   const List<List<uint64_t>> *_loop_lsts = &lsts;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_lsts->v())) {
       *_write =
-          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(_loop_lsts->v());
-      auto _cell = std::make_unique<List<List<uint64_t>>>(
+      auto _cell = std::make_shared<List<List<uint64_t>>>(
           typename List<List<uint64_t>>::Cons(List<uint64_t>::cons(x, a0),
                                               nullptr));
       *_write = std::move(_cell);
@@ -311,18 +311,18 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
 /// Helper for cartesian product.
 List<std::pair<uint64_t, uint64_t>>
 LoopifyCombinatorics::map_pairs(uint64_t y, const List<uint64_t> &l) {
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+      *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
           List<std::pair<uint64_t, uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+      auto _cell = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
           typename List<std::pair<uint64_t, uint64_t>>::Cons(
               std::make_pair(a0, y), nullptr));
       *_write = std::move(_cell);

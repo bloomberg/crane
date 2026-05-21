@@ -15,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -67,7 +67,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -83,19 +83,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -121,19 +121,19 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::unique_ptr<List<A>> _head{};
-    std::unique_ptr<List<A>> *_write = &_head;
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_unique<List<A>>(std::move(_loop_m));
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
         auto _cell =
-            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
         _loop_self = a1.get();
@@ -150,9 +150,9 @@ struct LoopifyTreePaths {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> a0;
+      std::shared_ptr<tree> a0;
       uint64_t a1;
-      std::unique_ptr<tree> a2;
+      std::shared_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -204,8 +204,8 @@ struct LoopifyTreePaths {
           _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          _dst->v_ = Node{_alt.a0 ? std::make_shared<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_shared<tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -222,13 +222,13 @@ struct LoopifyTreePaths {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
-                       std::make_unique<tree>(std::move(a2))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
+      std::vector<std::shared_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {
@@ -651,8 +651,8 @@ struct LoopifyTreePaths {
     };
 
     struct BNode {
-      std::unique_ptr<bool_tree> a0;
-      std::unique_ptr<bool_tree> a1;
+      std::shared_ptr<bool_tree> a0;
+      std::shared_ptr<bool_tree> a1;
     };
 
     using variant_t = std::variant<BLeaf, BNode>;
@@ -705,8 +705,8 @@ struct LoopifyTreePaths {
           _dst->v_ = BLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<BNode>(_src->v());
-          _dst->v_ = BNode{_alt.a0 ? std::make_unique<bool_tree>() : nullptr,
-                           _alt.a1 ? std::make_unique<bool_tree>() : nullptr};
+          _dst->v_ = BNode{_alt.a0 ? std::make_shared<bool_tree>() : nullptr,
+                           _alt.a1 ? std::make_shared<bool_tree>() : nullptr};
           auto &_dst_alt = std::get<BNode>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -723,13 +723,13 @@ struct LoopifyTreePaths {
     static bool_tree bleaf(uint64_t a0) { return bool_tree(BLeaf{a0}); }
 
     static bool_tree bnode(bool_tree a0, bool_tree a1) {
-      return bool_tree(BNode{std::make_unique<bool_tree>(std::move(a0)),
-                             std::make_unique<bool_tree>(std::move(a1))});
+      return bool_tree(BNode{std::make_shared<bool_tree>(std::move(a0)),
+                             std::make_shared<bool_tree>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~bool_tree() {
-      std::vector<std::unique_ptr<bool_tree>> _stack{};
+      std::vector<std::shared_ptr<bool_tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](bool_tree &_node) {
         if (std::holds_alternative<BNode>(_node.v_)) {

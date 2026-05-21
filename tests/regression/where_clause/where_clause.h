@@ -15,13 +15,13 @@ struct WhereClause {
     };
 
     struct Plus {
-      std::unique_ptr<Expr> a0;
-      std::unique_ptr<Expr> a1;
+      std::shared_ptr<Expr> a0;
+      std::shared_ptr<Expr> a1;
     };
 
     struct Times {
-      std::unique_ptr<Expr> a0;
-      std::unique_ptr<Expr> a1;
+      std::shared_ptr<Expr> a0;
+      std::shared_ptr<Expr> a1;
     };
 
     using variant_t = std::variant<Num, Plus, Times>;
@@ -76,8 +76,8 @@ struct WhereClause {
           _dst->v_ = Num{_alt.a0};
         } else if (std::holds_alternative<Plus>(_src->v())) {
           const auto &_alt = std::get<Plus>(_src->v());
-          _dst->v_ = Plus{_alt.a0 ? std::make_unique<Expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<Expr>() : nullptr};
+          _dst->v_ = Plus{_alt.a0 ? std::make_shared<Expr>() : nullptr,
+                          _alt.a1 ? std::make_shared<Expr>() : nullptr};
           auto &_dst_alt = std::get<Plus>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -87,8 +87,8 @@ struct WhereClause {
           }
         } else {
           const auto &_alt = std::get<Times>(_src->v());
-          _dst->v_ = Times{_alt.a0 ? std::make_unique<Expr>() : nullptr,
-                           _alt.a1 ? std::make_unique<Expr>() : nullptr};
+          _dst->v_ = Times{_alt.a0 ? std::make_shared<Expr>() : nullptr,
+                           _alt.a1 ? std::make_shared<Expr>() : nullptr};
           auto &_dst_alt = std::get<Times>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -105,18 +105,18 @@ struct WhereClause {
     static Expr num(uint64_t a0) { return Expr(Num{a0}); }
 
     static Expr plus(Expr a0, Expr a1) {
-      return Expr(Plus{std::make_unique<Expr>(std::move(a0)),
-                       std::make_unique<Expr>(std::move(a1))});
+      return Expr(Plus{std::make_shared<Expr>(std::move(a0)),
+                       std::make_shared<Expr>(std::move(a1))});
     }
 
     static Expr times(Expr a0, Expr a1) {
-      return Expr(Times{std::make_unique<Expr>(std::move(a0)),
-                        std::make_unique<Expr>(std::move(a1))});
+      return Expr(Times{std::make_shared<Expr>(std::move(a0)),
+                        std::make_shared<Expr>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~Expr() {
-      std::vector<std::unique_ptr<Expr>> _stack{};
+      std::vector<std::shared_ptr<Expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](Expr &_node) {
         if (std::holds_alternative<Plus>(_node.v_)) {
@@ -224,17 +224,17 @@ struct WhereClause {
     struct BFalse {};
 
     struct BAnd {
-      std::unique_ptr<BExpr> a0;
-      std::unique_ptr<BExpr> a1;
+      std::shared_ptr<BExpr> a0;
+      std::shared_ptr<BExpr> a1;
     };
 
     struct BOr {
-      std::unique_ptr<BExpr> a0;
-      std::unique_ptr<BExpr> a1;
+      std::shared_ptr<BExpr> a0;
+      std::shared_ptr<BExpr> a1;
     };
 
     struct BNot {
-      std::unique_ptr<BExpr> a0;
+      std::shared_ptr<BExpr> a0;
     };
 
     using variant_t = std::variant<BTrue, BFalse, BAnd, BOr, BNot>;
@@ -294,8 +294,8 @@ struct WhereClause {
           _dst->v_ = BFalse{};
         } else if (std::holds_alternative<BAnd>(_src->v())) {
           const auto &_alt = std::get<BAnd>(_src->v());
-          _dst->v_ = BAnd{_alt.a0 ? std::make_unique<BExpr>() : nullptr,
-                          _alt.a1 ? std::make_unique<BExpr>() : nullptr};
+          _dst->v_ = BAnd{_alt.a0 ? std::make_shared<BExpr>() : nullptr,
+                          _alt.a1 ? std::make_shared<BExpr>() : nullptr};
           auto &_dst_alt = std::get<BAnd>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -305,8 +305,8 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<BOr>(_src->v())) {
           const auto &_alt = std::get<BOr>(_src->v());
-          _dst->v_ = BOr{_alt.a0 ? std::make_unique<BExpr>() : nullptr,
-                         _alt.a1 ? std::make_unique<BExpr>() : nullptr};
+          _dst->v_ = BOr{_alt.a0 ? std::make_shared<BExpr>() : nullptr,
+                         _alt.a1 ? std::make_shared<BExpr>() : nullptr};
           auto &_dst_alt = std::get<BOr>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -316,7 +316,7 @@ struct WhereClause {
           }
         } else {
           const auto &_alt = std::get<BNot>(_src->v());
-          _dst->v_ = BNot{_alt.a0 ? std::make_unique<BExpr>() : nullptr};
+          _dst->v_ = BNot{_alt.a0 ? std::make_shared<BExpr>() : nullptr};
           auto &_dst_alt = std::get<BNot>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -332,22 +332,22 @@ struct WhereClause {
     static BExpr bfalse() { return BExpr(BFalse{}); }
 
     static BExpr band(BExpr a0, BExpr a1) {
-      return BExpr(BAnd{std::make_unique<BExpr>(std::move(a0)),
-                        std::make_unique<BExpr>(std::move(a1))});
+      return BExpr(BAnd{std::make_shared<BExpr>(std::move(a0)),
+                        std::make_shared<BExpr>(std::move(a1))});
     }
 
     static BExpr bor(BExpr a0, BExpr a1) {
-      return BExpr(BOr{std::make_unique<BExpr>(std::move(a0)),
-                       std::make_unique<BExpr>(std::move(a1))});
+      return BExpr(BOr{std::make_shared<BExpr>(std::move(a0)),
+                       std::make_shared<BExpr>(std::move(a1))});
     }
 
     static BExpr bnot(BExpr a0) {
-      return BExpr(BNot{std::make_unique<BExpr>(std::move(a0))});
+      return BExpr(BNot{std::make_shared<BExpr>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~BExpr() {
-      std::vector<std::unique_ptr<BExpr>> _stack{};
+      std::vector<std::shared_ptr<BExpr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](BExpr &_node) {
         if (std::holds_alternative<BAnd>(_node.v_)) {
@@ -461,14 +461,14 @@ struct WhereClause {
     };
 
     struct APlus {
-      std::unique_ptr<AExpr> a0;
-      std::unique_ptr<AExpr> a1;
+      std::shared_ptr<AExpr> a0;
+      std::shared_ptr<AExpr> a1;
     };
 
     struct AIf {
       BExpr a0;
-      std::unique_ptr<AExpr> a1;
-      std::unique_ptr<AExpr> a2;
+      std::shared_ptr<AExpr> a1;
+      std::shared_ptr<AExpr> a2;
     };
 
     using variant_t = std::variant<ANum, APlus, AIf>;
@@ -523,8 +523,8 @@ struct WhereClause {
           _dst->v_ = ANum{_alt.a0};
         } else if (std::holds_alternative<APlus>(_src->v())) {
           const auto &_alt = std::get<APlus>(_src->v());
-          _dst->v_ = APlus{_alt.a0 ? std::make_unique<AExpr>() : nullptr,
-                           _alt.a1 ? std::make_unique<AExpr>() : nullptr};
+          _dst->v_ = APlus{_alt.a0 ? std::make_shared<AExpr>() : nullptr,
+                           _alt.a1 ? std::make_shared<AExpr>() : nullptr};
           auto &_dst_alt = std::get<APlus>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -535,8 +535,8 @@ struct WhereClause {
         } else {
           const auto &_alt = std::get<AIf>(_src->v());
           _dst->v_ = AIf{_alt.a0.clone(),
-                         _alt.a1 ? std::make_unique<AExpr>() : nullptr,
-                         _alt.a2 ? std::make_unique<AExpr>() : nullptr};
+                         _alt.a1 ? std::make_shared<AExpr>() : nullptr,
+                         _alt.a2 ? std::make_shared<AExpr>() : nullptr};
           auto &_dst_alt = std::get<AIf>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -553,18 +553,18 @@ struct WhereClause {
     static AExpr anum(uint64_t a0) { return AExpr(ANum{a0}); }
 
     static AExpr aplus(AExpr a0, AExpr a1) {
-      return AExpr(APlus{std::make_unique<AExpr>(std::move(a0)),
-                         std::make_unique<AExpr>(std::move(a1))});
+      return AExpr(APlus{std::make_shared<AExpr>(std::move(a0)),
+                         std::make_shared<AExpr>(std::move(a1))});
     }
 
     static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
-      return AExpr(AIf{std::move(a0), std::make_unique<AExpr>(std::move(a1)),
-                       std::make_unique<AExpr>(std::move(a2))});
+      return AExpr(AIf{std::move(a0), std::make_shared<AExpr>(std::move(a1)),
+                       std::make_shared<AExpr>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~AExpr() {
-      std::vector<std::unique_ptr<AExpr>> _stack{};
+      std::vector<std::shared_ptr<AExpr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](AExpr &_node) {
         if (std::holds_alternative<APlus>(_node.v_)) {

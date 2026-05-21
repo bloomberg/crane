@@ -41,19 +41,19 @@ uint64_t LoopifyAdvancedLists::product(
 }
 
 List<uint64_t> LoopifyAdvancedLists::compress(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<uint64_t>>(
+        *_write = std::make_shared<List<uint64_t>>(
             List<uint64_t>::cons(a0, List<uint64_t>::nil()));
         break;
       } else {
@@ -63,7 +63,7 @@ List<uint64_t> LoopifyAdvancedLists::compress(const List<uint64_t> &l) {
           _loop_l = a1.get();
           continue;
         } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -78,24 +78,24 @@ List<uint64_t> LoopifyAdvancedLists::compress(const List<uint64_t> &l) {
 }
 
 List<uint64_t> LoopifyAdvancedLists::pairwise_sum(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons((a0 + a00), nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -109,12 +109,12 @@ List<uint64_t> LoopifyAdvancedLists::pairwise_sum(const List<uint64_t> &l) {
 
 List<std::pair<uint64_t, uint64_t>>
 LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+      *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
           List<std::pair<uint64_t, uint64_t>>::nil());
       break;
     } else {
@@ -122,13 +122,13 @@ LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+        *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
             List<std::pair<uint64_t, uint64_t>>::nil());
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+        auto _cell = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
             typename List<std::pair<uint64_t, uint64_t>>::Cons(
                 std::make_pair(a0, a00), nullptr));
         *_write = std::move(_cell);
@@ -145,28 +145,28 @@ LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
 
 List<uint64_t> LoopifyAdvancedLists::interleave(List<uint64_t> l1,
                                                 List<uint64_t> l2) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l2 = std::move(l2);
   List<uint64_t> _loop_l1 = std::move(l1);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(
             _loop_l1.v_mut())) {
-      *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l2));
+      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l2));
       break;
     } else {
       auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l2.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(_loop_l1);
+        *_write = std::make_shared<List<uint64_t>>(_loop_l1);
         break;
       } else {
         auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a0), nullptr));
-        auto _cell1 = std::make_unique<List<uint64_t>>(
+        auto _cell1 = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a00), nullptr));
         std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);

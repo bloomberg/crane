@@ -644,13 +644,13 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
 /// Helper: extract values from trees.
 List<uint64_t> LoopifyTrees::extract_tree_values(
     const List<LoopifyTrees::tree<uint64_t>> &ts) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<LoopifyTrees::tree<uint64_t>> *_loop_ts = &ts;
   while (true) {
     if (std::holds_alternative<
             typename List<LoopifyTrees::tree<uint64_t>>::Nil>(_loop_ts->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -663,7 +663,7 @@ List<uint64_t> LoopifyTrees::extract_tree_values(
       } else {
         const auto &[a00, a10, a20] =
             std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a10, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -678,13 +678,13 @@ List<uint64_t> LoopifyTrees::extract_tree_values(
 /// Helper: extract children from trees.
 List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
     const List<LoopifyTrees::tree<uint64_t>> &ts) {
-  std::unique_ptr<List<LoopifyTrees::tree<uint64_t>>> _head{};
-  std::unique_ptr<List<LoopifyTrees::tree<uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<LoopifyTrees::tree<uint64_t>>> _head{};
+  std::shared_ptr<List<LoopifyTrees::tree<uint64_t>>> *_write = &_head;
   const List<LoopifyTrees::tree<uint64_t>> *_loop_ts = &ts;
   while (true) {
     if (std::holds_alternative<
             typename List<LoopifyTrees::tree<uint64_t>>::Nil>(_loop_ts->v())) {
-      *_write = std::make_unique<List<LoopifyTrees::tree<uint64_t>>>(
+      *_write = std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
           List<LoopifyTrees::tree<uint64_t>>::nil());
       break;
     } else {
@@ -698,9 +698,9 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
       } else {
         const auto &[a00, a10, a20] =
             std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
-        auto _cell = std::make_unique<List<LoopifyTrees::tree<uint64_t>>>(
+        auto _cell = std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
             typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a00, nullptr));
-        auto _cell1 = std::make_unique<List<LoopifyTrees::tree<uint64_t>>>(
+        auto _cell1 = std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
             typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a20, nullptr));
         std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
             _cell->v_mut())
@@ -723,14 +723,14 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
 /// tree_levels t returns list of lists, one per level (breadth-first).
 List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
     uint64_t fuel, const List<LoopifyTrees::tree<uint64_t>> &trees) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<List<uint64_t>>> _head{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
   List<LoopifyTrees::tree<uint64_t>> _loop_trees = trees;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       *_write =
-          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
@@ -738,12 +738,12 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               values.v_mut())) {
         *_write =
-            std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+            std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
         break;
       } else {
         List<LoopifyTrees::tree<uint64_t>> children =
             extract_tree_children(_loop_trees);
-        auto _cell = std::make_unique<List<List<uint64_t>>>(
+        auto _cell = std::make_shared<List<List<uint64_t>>>(
             typename List<List<uint64_t>>::Cons(values, nullptr));
         *_write = std::move(_cell);
         _write =
@@ -835,19 +835,19 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
 List<List<uint64_t>>
 LoopifyTrees::append_list_lists(const List<List<uint64_t>> &l1,
                                 List<List<uint64_t>> l2) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<List<uint64_t>>> _head{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
   List<List<uint64_t>> _loop_l2 = std::move(l2);
   const List<List<uint64_t>> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_l1->v())) {
-      *_write = std::make_unique<List<List<uint64_t>>>(std::move(_loop_l2));
+      *_write = std::make_shared<List<List<uint64_t>>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(_loop_l1->v());
-      auto _cell = std::make_unique<List<List<uint64_t>>>(
+      auto _cell = std::make_shared<List<List<uint64_t>>>(
           typename List<List<uint64_t>>::Cons(a0, nullptr));
       *_write = std::move(_cell);
       _write =
@@ -862,19 +862,19 @@ LoopifyTrees::append_list_lists(const List<List<uint64_t>> &l1,
 /// Helper: prepend value to all lists in a list of lists.
 List<List<uint64_t>>
 LoopifyTrees::map_cons_to_all(uint64_t x, const List<List<uint64_t>> &lsts) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<List<uint64_t>>> _head{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
   const List<List<uint64_t>> *_loop_lsts = &lsts;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_lsts->v())) {
       *_write =
-          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(_loop_lsts->v());
-      auto _cell = std::make_unique<List<List<uint64_t>>>(
+      auto _cell = std::make_shared<List<List<uint64_t>>>(
           typename List<List<uint64_t>>::Cons(List<uint64_t>::cons(x, a0),
                                               nullptr));
       *_write = std::move(_cell);
@@ -1006,23 +1006,23 @@ List<uint64_t> LoopifyTrees::collect_unsorted(
 /// Simple insertion sort for collect_sorted.
 List<uint64_t> LoopifyTrees::insert_sorted(uint64_t x,
                                            const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(
+      *_write = std::make_shared<List<uint64_t>>(
           List<uint64_t>::cons(x, List<uint64_t>::nil()));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
-        *_write = std::make_unique<List<uint64_t>>(
+        *_write = std::make_shared<List<uint64_t>>(
             List<uint64_t>::cons(x, List<uint64_t>::cons(a0, *a1)));
         break;
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;

@@ -442,9 +442,9 @@ let std_names : std_names ref =
   ref
     {
       shared_ptr = "std::shared_ptr";
-      unique_ptr = "std::unique_ptr";
+      unique_ptr = "std::shared_ptr";
       make_shared = "std::make_shared";
-      make_unique = "std::make_unique";
+      make_unique = "std::make_shared";
       visit = "std::visit";
       move = "std::move";
       forward = "std::forward";
@@ -472,9 +472,9 @@ let mk_std_names prefix =
   | "bsl::" ->
     {
       shared_ptr = prefix ^ "shared_ptr";
-      unique_ptr = prefix ^ "unique_ptr";
+      unique_ptr = prefix ^ "shared_ptr";
       make_shared = prefix ^ "make_shared";
-      make_unique = prefix ^ "make_unique";
+      make_unique = prefix ^ "make_shared";
       visit = prefix ^ "visit";
       move = prefix ^ "move";
       forward = prefix ^ "forward";
@@ -494,9 +494,9 @@ let mk_std_names prefix =
     (* Default to "std::" *)
     {
       shared_ptr = "std::shared_ptr";
-      unique_ptr = "std::unique_ptr";
+      unique_ptr = "std::shared_ptr";
       make_shared = "std::make_shared";
-      make_unique = "std::make_unique";
+      make_unique = "std::make_shared";
       visit = "std::visit";
       move = "std::move";
       forward = "std::forward";

@@ -31,13 +31,13 @@ bool LoopifyHofs::is_prefix_of(const List<uint64_t> &l1,
 List<uint64_t>
 LoopifyHofs::lookup_all(uint64_t key,
                         const List<std::pair<uint64_t, uint64_t>> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -46,7 +46,7 @@ LoopifyHofs::lookup_all(uint64_t key,
       const uint64_t &k = a0.first;
       const uint64_t &v = a0.second;
       if (k == key) {
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(v, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -136,18 +136,18 @@ List<List<uint64_t>> LoopifyHofs::subsequences(
 /// Helper: pair element with all elements in list.
 List<std::pair<uint64_t, uint64_t>>
 LoopifyHofs::pair_with_all(uint64_t x, const List<uint64_t> &l) {
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+      *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
           List<std::pair<uint64_t, uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+      auto _cell = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
           typename List<std::pair<uint64_t, uint64_t>>::Cons(
               std::make_pair(x, a0), nullptr));
       *_write = std::move(_cell);
@@ -207,33 +207,33 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::cartesian(
 /// longest_run l finds the longest consecutive run of equal elements.
 /// Matches on recursive result to decide behavior.
 List<uint64_t> LoopifyHofs::longest_run_fuel(uint64_t fuel, List<uint64_t> l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l));
+      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l));
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
         auto &&_sv0 = *a1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-          *_write = std::make_unique<List<uint64_t>>(
+          *_write = std::make_shared<List<uint64_t>>(
               List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil()));
           break;
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (a0 == a00) {
-            auto _cell = std::make_unique<List<uint64_t>>(
+            auto _cell = std::make_shared<List<uint64_t>>(
                 typename List<uint64_t>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
@@ -246,17 +246,17 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(uint64_t fuel, List<uint64_t> l) {
                 longest_run_fuel(f, List<uint64_t>::cons(a00, *a10));
             if (std::holds_alternative<typename List<uint64_t>::Nil>(
                     rec_result.v_mut())) {
-              *_write = std::make_unique<List<uint64_t>>(
+              *_write = std::make_shared<List<uint64_t>>(
                   List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil()));
               break;
             } else {
               auto &[a01, a11] =
                   std::get<typename List<uint64_t>::Cons>(rec_result.v_mut());
               if (std::move(a0) == std::move(a01)) {
-                *_write = std::make_unique<List<uint64_t>>(rec_result);
+                *_write = std::make_shared<List<uint64_t>>(rec_result);
                 break;
               } else {
-                *_write = std::make_unique<List<uint64_t>>(rec_result);
+                *_write = std::make_shared<List<uint64_t>>(rec_result);
                 break;
               }
             }

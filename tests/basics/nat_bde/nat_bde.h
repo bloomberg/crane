@@ -22,7 +22,7 @@ struct Nat {
   // TYPES
   struct O {};
   struct S {
-    bsl::unique_ptr<Nat> d_n;
+    bsl::shared_ptr<Nat> d_n;
   };
   using variant_t = bsl::variant<O, S>;
 
@@ -64,7 +64,7 @@ public:
         _dst->d_v_ = O{};
       } else {
         const auto &_alt = bsl::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_n ? bsl::make_unique<Nat>() : nullptr};
+        _dst->d_v_ = S{_alt.d_n ? bsl::make_shared<Nat>() : nullptr};
         auto &_dst_alt = bsl::get<S>(_dst->d_v_);
         if (_alt.d_n) {
           _stack.push_back({_alt.d_n.get(), _dst_alt.d_n.get()});
@@ -75,10 +75,10 @@ public:
   }
   // CREATORS
   static Nat o() { return Nat(O{}); }
-  static Nat s(Nat n) { return Nat(S{bsl::make_unique<Nat>(bsl::move(n))}); }
+  static Nat s(Nat n) { return Nat(S{bsl::make_shared<Nat>(bsl::move(n))}); }
   // MANIPULATORS
   ~Nat() {
-    std::vector<bsl::unique_ptr<Nat>> _stack{};
+    std::vector<bsl::shared_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (bsl::holds_alternative<S>(_node.d_v_)) {

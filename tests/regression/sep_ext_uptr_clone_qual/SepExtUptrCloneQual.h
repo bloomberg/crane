@@ -17,7 +17,7 @@ template <typename A> struct MyList {
 
   struct Mycons {
     A a0;
-    std::unique_ptr<MyList<A>> a1;
+    std::shared_ptr<MyList<A>> a1;
   };
 
   using variant_t = std::variant<Mynil, Mycons>;
@@ -70,7 +70,7 @@ public:
       } else {
         const auto &_alt = std::get<Mycons>(_src->v());
         _dst->v_ =
-            Mycons{_alt.a0, _alt.a1 ? std::make_unique<MyList<A>>() : nullptr};
+            Mycons{_alt.a0, _alt.a1 ? std::make_shared<MyList<A>>() : nullptr};
         auto &_dst_alt = std::get<Mycons>(_dst->v_);
         if (_alt.a1) {
           _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -86,7 +86,7 @@ public:
       this->v_ = Mynil{};
     } else {
       const auto &[a0, a1] = std::get<typename MyList<_U>::Mycons>(_other.v());
-      this->v_ = Mycons{A(a0), a1 ? std::make_unique<MyList<A>>(*a1) : nullptr};
+      this->v_ = Mycons{A(a0), a1 ? std::make_shared<MyList<A>>(*a1) : nullptr};
     }
   }
 
@@ -94,12 +94,12 @@ public:
 
   static MyList<A> mycons(A a0, MyList<A> a1) {
     return MyList(
-        Mycons{std::move(a0), std::make_unique<MyList<A>>(std::move(a1))});
+        Mycons{std::move(a0), std::make_shared<MyList<A>>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~MyList() {
-    std::vector<std::unique_ptr<MyList<A>>> _stack{};
+    std::vector<std::shared_ptr<MyList<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](MyList<A> &_node) {
       if (std::holds_alternative<Mycons>(_node.v_)) {

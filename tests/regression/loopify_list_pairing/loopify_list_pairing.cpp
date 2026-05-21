@@ -144,14 +144,14 @@ List<std::pair<uint64_t, uint64_t>>
 LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
                                      const List<uint64_t> &l2,
                                      uint64_t default0) {
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
+  std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
   List<uint64_t> _loop_l2 = l2;
   List<uint64_t> _loop_l1 = l1;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+      *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
           List<std::pair<uint64_t, uint64_t>>::nil());
       break;
     } else {
@@ -159,13 +159,13 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1.v())) {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l2.v())) {
-          *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+          *_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
               List<std::pair<uint64_t, uint64_t>>::nil());
           break;
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_loop_l2.v());
-          auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+          auto _cell = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
               typename List<std::pair<uint64_t, uint64_t>>::Cons(
                   std::make_pair(default0, a00), nullptr));
           *_write = std::move(_cell);
@@ -183,7 +183,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
             std::get<typename List<uint64_t>::Cons>(_loop_l1.v());
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l2.v())) {
-          auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+          auto _cell = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
               typename List<std::pair<uint64_t, uint64_t>>::Cons(
                   std::make_pair(a0, default0), nullptr));
           *_write = std::move(_cell);
@@ -198,7 +198,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_loop_l2.v());
-          auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
+          auto _cell = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
               typename List<std::pair<uint64_t, uint64_t>>::Cons(
                   std::make_pair(a0, a00), nullptr));
           *_write = std::move(_cell);
@@ -233,24 +233,24 @@ LoopifyListPairing::zip_longest(const List<uint64_t> &l1,
 
 List<uint64_t> LoopifyListPairing::zipWith(const List<uint64_t> &l1,
                                            const List<uint64_t> &l2) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons((a0 + a00), nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;

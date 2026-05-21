@@ -14,9 +14,9 @@ struct MemSafetyProbe29 {
     struct ILeaf {};
 
     struct INode {
-      std::unique_ptr<inner> a0;
+      std::shared_ptr<inner> a0;
       uint64_t a1;
-      std::unique_ptr<inner> a2;
+      std::shared_ptr<inner> a2;
     };
 
     using variant_t = std::variant<ILeaf, INode>;
@@ -69,8 +69,8 @@ struct MemSafetyProbe29 {
         } else {
           const auto &_alt = std::get<INode>(_src->v());
           _dst->v_ =
-              INode{_alt.a0 ? std::make_unique<inner>() : nullptr, _alt.a1,
-                    _alt.a2 ? std::make_unique<inner>() : nullptr};
+              INode{_alt.a0 ? std::make_shared<inner>() : nullptr, _alt.a1,
+                    _alt.a2 ? std::make_shared<inner>() : nullptr};
           auto &_dst_alt = std::get<INode>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -87,13 +87,13 @@ struct MemSafetyProbe29 {
     static inner ileaf() { return inner(ILeaf{}); }
 
     static inner inode(inner a0, uint64_t a1, inner a2) {
-      return inner(INode{std::make_unique<inner>(std::move(a0)), a1,
-                         std::make_unique<inner>(std::move(a2))});
+      return inner(INode{std::make_shared<inner>(std::move(a0)), a1,
+                         std::make_shared<inner>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~inner() {
-      std::vector<std::unique_ptr<inner>> _stack{};
+      std::vector<std::shared_ptr<inner>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](inner &_node) {
         if (std::holds_alternative<INode>(_node.v_)) {
@@ -360,9 +360,9 @@ struct MemSafetyProbe29 {
     struct OLeaf {};
 
     struct ONode {
-      std::unique_ptr<outer> a0;
+      std::shared_ptr<outer> a0;
       inner a1;
-      std::unique_ptr<outer> a2;
+      std::shared_ptr<outer> a2;
     };
 
     using variant_t = std::variant<OLeaf, ONode>;
@@ -414,9 +414,9 @@ struct MemSafetyProbe29 {
           _dst->v_ = OLeaf{};
         } else {
           const auto &_alt = std::get<ONode>(_src->v());
-          _dst->v_ = ONode{_alt.a0 ? std::make_unique<outer>() : nullptr,
+          _dst->v_ = ONode{_alt.a0 ? std::make_shared<outer>() : nullptr,
                            _alt.a1.clone(),
-                           _alt.a2 ? std::make_unique<outer>() : nullptr};
+                           _alt.a2 ? std::make_shared<outer>() : nullptr};
           auto &_dst_alt = std::get<ONode>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -433,13 +433,13 @@ struct MemSafetyProbe29 {
     static outer oleaf() { return outer(OLeaf{}); }
 
     static outer onode(outer a0, inner a1, outer a2) {
-      return outer(ONode{std::make_unique<outer>(std::move(a0)), std::move(a1),
-                         std::make_unique<outer>(std::move(a2))});
+      return outer(ONode{std::make_shared<outer>(std::move(a0)), std::move(a1),
+                         std::make_shared<outer>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~outer() {
-      std::vector<std::unique_ptr<outer>> _stack{};
+      std::vector<std::shared_ptr<outer>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](outer &_node) {
         if (std::holds_alternative<ONode>(_node.v_)) {
@@ -714,17 +714,17 @@ struct MemSafetyProbe29 {
     };
 
     struct Neg {
-      std::unique_ptr<expr> a0;
+      std::shared_ptr<expr> a0;
     };
 
     struct Add {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct Mul {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     using variant_t = std::variant<Lit, Neg, Add, Mul>;
@@ -781,15 +781,15 @@ struct MemSafetyProbe29 {
           _dst->v_ = Lit{_alt.a0};
         } else if (std::holds_alternative<Neg>(_src->v())) {
           const auto &_alt = std::get<Neg>(_src->v());
-          _dst->v_ = Neg{_alt.a0 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = Neg{_alt.a0 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<Neg>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
         } else if (std::holds_alternative<Add>(_src->v())) {
           const auto &_alt = std::get<Add>(_src->v());
-          _dst->v_ = Add{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                         _alt.a1 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = Add{_alt.a0 ? std::make_shared<expr>() : nullptr,
+                         _alt.a1 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<Add>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -799,8 +799,8 @@ struct MemSafetyProbe29 {
           }
         } else {
           const auto &_alt = std::get<Mul>(_src->v());
-          _dst->v_ = Mul{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                         _alt.a1 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = Mul{_alt.a0 ? std::make_shared<expr>() : nullptr,
+                         _alt.a1 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<Mul>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -817,22 +817,22 @@ struct MemSafetyProbe29 {
     static expr lit(uint64_t a0) { return expr(Lit{a0}); }
 
     static expr neg(expr a0) {
-      return expr(Neg{std::make_unique<expr>(std::move(a0))});
+      return expr(Neg{std::make_shared<expr>(std::move(a0))});
     }
 
     static expr add(expr a0, expr a1) {
-      return expr(Add{std::make_unique<expr>(std::move(a0)),
-                      std::make_unique<expr>(std::move(a1))});
+      return expr(Add{std::make_shared<expr>(std::move(a0)),
+                      std::make_shared<expr>(std::move(a1))});
     }
 
     static expr mul(expr a0, expr a1) {
-      return expr(Mul{std::make_unique<expr>(std::move(a0)),
-                      std::make_unique<expr>(std::move(a1))});
+      return expr(Mul{std::make_shared<expr>(std::move(a0)),
+                      std::make_shared<expr>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack{};
+      std::vector<std::shared_ptr<expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<Neg>(_node.v_)) {
@@ -1345,9 +1345,9 @@ struct MemSafetyProbe29 {
     struct T3Leaf {};
 
     struct T3Node {
-      std::unique_ptr<tree3> a0;
-      std::unique_ptr<tree3> a1;
-      std::unique_ptr<tree3> a2;
+      std::shared_ptr<tree3> a0;
+      std::shared_ptr<tree3> a1;
+      std::shared_ptr<tree3> a2;
       uint64_t a3;
     };
 
@@ -1401,9 +1401,9 @@ struct MemSafetyProbe29 {
         } else {
           const auto &_alt = std::get<T3Node>(_src->v());
           _dst->v_ =
-              T3Node{_alt.a0 ? std::make_unique<tree3>() : nullptr,
-                     _alt.a1 ? std::make_unique<tree3>() : nullptr,
-                     _alt.a2 ? std::make_unique<tree3>() : nullptr, _alt.a3};
+              T3Node{_alt.a0 ? std::make_shared<tree3>() : nullptr,
+                     _alt.a1 ? std::make_shared<tree3>() : nullptr,
+                     _alt.a2 ? std::make_shared<tree3>() : nullptr, _alt.a3};
           auto &_dst_alt = std::get<T3Node>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -1423,14 +1423,14 @@ struct MemSafetyProbe29 {
     static tree3 t3leaf() { return tree3(T3Leaf{}); }
 
     static tree3 t3node(tree3 a0, tree3 a1, tree3 a2, uint64_t a3) {
-      return tree3(T3Node{std::make_unique<tree3>(std::move(a0)),
-                          std::make_unique<tree3>(std::move(a1)),
-                          std::make_unique<tree3>(std::move(a2)), a3});
+      return tree3(T3Node{std::make_shared<tree3>(std::move(a0)),
+                          std::make_shared<tree3>(std::move(a1)),
+                          std::make_shared<tree3>(std::move(a2)), a3});
     }
 
     // MANIPULATORS
     ~tree3() {
-      std::vector<std::unique_ptr<tree3>> _stack{};
+      std::vector<std::shared_ptr<tree3>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree3 &_node) {
         if (std::holds_alternative<T3Node>(_node.v_)) {

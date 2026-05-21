@@ -15,7 +15,7 @@ struct RecRecord {
 
     struct Rcons {
       A a0;
-      std::unique_ptr<rlist<A>> a1;
+      std::shared_ptr<rlist<A>> a1;
     };
 
     using variant_t = std::variant<Rnil, Rcons>;
@@ -68,7 +68,7 @@ struct RecRecord {
         } else {
           const auto &_alt = std::get<Rcons>(_src->v());
           _dst->v_ =
-              Rcons{_alt.a0, _alt.a1 ? std::make_unique<rlist<A>>() : nullptr};
+              Rcons{_alt.a0, _alt.a1 ? std::make_shared<rlist<A>>() : nullptr};
           auto &_dst_alt = std::get<Rcons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -84,7 +84,7 @@ struct RecRecord {
         this->v_ = Rnil{};
       } else {
         const auto &[a0, a1] = std::get<typename rlist<_U>::Rcons>(_other.v());
-        this->v_ = Rcons{A(a0), a1 ? std::make_unique<rlist<A>>(*a1) : nullptr};
+        this->v_ = Rcons{A(a0), a1 ? std::make_shared<rlist<A>>(*a1) : nullptr};
       }
     }
 
@@ -92,12 +92,12 @@ struct RecRecord {
 
     static rlist<A> rcons(A a0, rlist<A> a1) {
       return rlist(
-          Rcons{std::move(a0), std::make_unique<rlist<A>>(std::move(a1))});
+          Rcons{std::move(a0), std::make_shared<rlist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~rlist() {
-      std::vector<std::unique_ptr<rlist<A>>> _stack{};
+      std::vector<std::shared_ptr<rlist<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](rlist<A> &_node) {
         if (std::holds_alternative<Rcons>(_node.v_)) {
@@ -147,13 +147,13 @@ struct RecRecord {
 
   struct RNode {
     uint64_t rn_value;
-    std::optional<std::unique_ptr<RNode>> rn_next;
+    std::optional<std::shared_ptr<RNode>> rn_next;
 
     // ACCESSORS
     RNode clone() const {
       return RNode{this->rn_value,
                    (*this).rn_next.has_value()
-                       ? std::make_optional(std::make_unique<RNode>(
+                       ? std::make_optional(std::make_shared<RNode>(
                              (*(*this).rn_next)->clone()))
                        : std::nullopt};
     }
@@ -220,23 +220,23 @@ struct RecRecord {
   static inline const RNode test_rnode = RNode{
       UINT64_C(1),
       [](auto &&__x)
-          -> std::optional<std::unique_ptr<RNode>> {
+          -> std::optional<std::shared_ptr<RNode>> {
         return __x.has_value()
-                   ? std::make_optional(std::make_unique<RNode>((*__x).clone()))
+                   ? std::make_optional(std::make_shared<RNode>((*__x).clone()))
                    : std::nullopt;
       }(std::make_optional<RNode>(RNode{
               UINT64_C(2),
               [](auto &&__x)
-                  -> std::optional<std::unique_ptr<RNode>> {
+                  -> std::optional<std::shared_ptr<RNode>> {
                 return __x.has_value()
                            ? std::make_optional(
-                                 std::make_unique<RNode>((*__x).clone()))
+                                 std::make_shared<RNode>((*__x).clone()))
                            : std::nullopt;
               }(std::make_optional<RNode>(RNode{
                       UINT64_C(3),
-                      [](auto &&__x) -> std::optional<std::unique_ptr<RNode>> {
+                      [](auto &&__x) -> std::optional<std::shared_ptr<RNode>> {
                         return __x.has_value()
-                                   ? std::make_optional(std::make_unique<RNode>(
+                                   ? std::make_optional(std::make_shared<RNode>(
                                          (*__x).clone()))
                                    : std::nullopt;
                       }(std::optional<RNode>())}))}))};

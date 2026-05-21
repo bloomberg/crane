@@ -16,7 +16,7 @@ template <typename A> struct Forest {
 
   struct Node {
     A a0;
-    std::unique_ptr<typename Datatypes::template List<Forest<A>>> a1;
+    std::shared_ptr<typename Datatypes::template List<Forest<A>>> a1;
   };
 
   using variant_t = std::variant<Leaf, Node>;
@@ -70,7 +70,7 @@ public:
         const auto &_alt = std::get<Node>(_src->v());
         _dst->v_ =
             Node{_alt.a0,
-                 _alt.a1 ? std::make_unique<
+                 _alt.a1 ? std::make_shared<
                                typename Datatypes::template List<Forest<A>>>()
                          : nullptr};
         auto &_dst_alt = std::get<Node>(_dst->v_);
@@ -85,7 +85,7 @@ public:
                       _lsrc->v());
               _ldst->v_mut() = typename Datatypes::List<Forest<A>>::Cons{
                   Forest<A>{},
-                  _lsrc_c.l ? std::make_unique<Datatypes::List<Forest<A>>>()
+                  _lsrc_c.l ? std::make_shared<Datatypes::List<Forest<A>>>()
                             : nullptr};
               auto &_ldst_c =
                   std::get<typename Datatypes::List<Forest<A>>::Cons>(
@@ -116,7 +116,7 @@ public:
     } else {
       const auto &[a0, a1] = std::get<typename Forest<_U>::Node>(_other.v());
       this->v_ = Node{
-          A(a0), a1 ? std::make_unique<
+          A(a0), a1 ? std::make_shared<
                           Datatypes::List<SepExtListCloneQual::Forest<A>>>(*a1)
                     : nullptr};
     }
@@ -127,13 +127,13 @@ public:
   static Forest<A> node(A a0, typename Datatypes::template List<Forest<A>> a1) {
     return Forest(
         Node{std::move(a0),
-             std::make_unique<typename Datatypes::template List<Forest<A>>>(
+             std::make_shared<typename Datatypes::template List<Forest<A>>>(
                  std::move(a1))});
   }
 
   // MANIPULATORS
   ~Forest() {
-    std::vector<std::unique_ptr<Forest<A>>> _stack{};
+    std::vector<std::shared_ptr<Forest<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Forest<A> &_node) {
       if (std::holds_alternative<Node>(_node.v_)) {
@@ -145,7 +145,7 @@ public:
                   _lp->v())) {
             auto &_lc = std::get<typename Datatypes::List<Forest<A>>::Cons>(
                 _lp->v_mut());
-            _stack.push_back(std::make_unique<Forest<A>>(std::move(_lc.a)));
+            _stack.push_back(std::make_shared<Forest<A>>(std::move(_lc.a)));
             if (_lc.l) {
               _lp = _lc.l.get();
             } else {

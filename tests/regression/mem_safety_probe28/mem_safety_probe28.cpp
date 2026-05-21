@@ -326,9 +326,9 @@ uint64_t MemSafetyProbe28::zip_and_sum(
     const MemSafetyProbe28::tree *a0;
     uint64_t a10;
     decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s3;
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s3;
     decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s4;
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s4;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -344,9 +344,9 @@ uint64_t MemSafetyProbe28::zip_and_sum(
     uint64_t _result;
     uint64_t a10;
     decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s2;
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s2;
     decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s3;
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s3;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,

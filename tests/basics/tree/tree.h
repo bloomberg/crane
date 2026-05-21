@@ -14,7 +14,7 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> a0;
+    std::shared_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        _dst->v_ = S{_alt.a0 ? std::make_shared<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -79,11 +79,11 @@ public:
   // CREATORS
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::unique_ptr<Nat>> _stack{};
+    std::vector<std::shared_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.v_)) {
@@ -138,7 +138,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -190,7 +190,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -206,19 +206,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -260,9 +260,9 @@ template <typename A> struct Tree {
   struct Leaf {};
 
   struct Node {
-    std::unique_ptr<Tree<A>> t1;
+    std::shared_ptr<Tree<A>> t1;
     A x;
-    std::unique_ptr<Tree<A>> t2;
+    std::shared_ptr<Tree<A>> t2;
   };
 
   using variant_t = std::variant<Leaf, Node>;
@@ -314,8 +314,8 @@ public:
         _dst->v_ = Leaf{};
       } else {
         const auto &_alt = std::get<Node>(_src->v());
-        _dst->v_ = Node{_alt.t1 ? std::make_unique<Tree<A>>() : nullptr, _alt.x,
-                        _alt.t2 ? std::make_unique<Tree<A>>() : nullptr};
+        _dst->v_ = Node{_alt.t1 ? std::make_shared<Tree<A>>() : nullptr, _alt.x,
+                        _alt.t2 ? std::make_shared<Tree<A>>() : nullptr};
         auto &_dst_alt = std::get<Node>(_dst->v_);
         if (_alt.t1) {
           _stack.push_back({_alt.t1.get(), _dst_alt.t1.get()});
@@ -334,21 +334,21 @@ public:
       this->v_ = Leaf{};
     } else {
       const auto &[t1, x, t2] = std::get<typename Tree<_U>::Node>(_other.v());
-      this->v_ = Node{t1 ? std::make_unique<Tree<A>>(*t1) : nullptr, A(x),
-                      t2 ? std::make_unique<Tree<A>>(*t2) : nullptr};
+      this->v_ = Node{t1 ? std::make_shared<Tree<A>>(*t1) : nullptr, A(x),
+                      t2 ? std::make_shared<Tree<A>>(*t2) : nullptr};
     }
   }
 
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
   static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree(Node{std::make_unique<Tree<A>>(std::move(t1)), std::move(x),
-                     std::make_unique<Tree<A>>(std::move(t2))});
+    return Tree(Node{std::make_shared<Tree<A>>(std::move(t1)), std::move(x),
+                     std::make_shared<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS
   ~Tree() {
-    std::vector<std::unique_ptr<Tree<A>>> _stack{};
+    std::vector<std::shared_ptr<Tree<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Tree<A> &_node) {
       if (std::holds_alternative<Node>(_node.v_)) {

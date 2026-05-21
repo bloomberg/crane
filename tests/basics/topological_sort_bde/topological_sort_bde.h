@@ -27,7 +27,7 @@ template <typename t_A> struct List {
   struct Nil {};
   struct Cons {
     t_A d_a;
-    bsl::unique_ptr<List<t_A>> d_l;
+    bsl::shared_ptr<List<t_A>> d_l;
   };
   using variant_t = bsl::variant<Nil, Cons>;
 
@@ -70,7 +70,7 @@ public:
       } else {
         const auto &_alt = bsl::get<Cons>(_src->v());
         _dst->d_v_ =
-            Cons{_alt.d_a, _alt.d_l ? bsl::make_unique<List<t_A>>() : nullptr};
+            Cons{_alt.d_a, _alt.d_l ? bsl::make_shared<List<t_A>>() : nullptr};
         auto &_dst_alt = bsl::get<Cons>(_dst->d_v_);
         if (_alt.d_l) {
           _stack.push_back({_alt.d_l.get(), _dst_alt.d_l.get()});
@@ -86,16 +86,16 @@ public:
     } else {
       const auto &[d_a, d_l] = std::get<typename List<_U>::Cons>(_other.v());
       this->d_v_ =
-          Cons{t_A(d_a), d_l ? std::make_unique<List<t_A>>(*d_l) : nullptr};
+          Cons{t_A(d_a), d_l ? std::make_shared<List<t_A>>(*d_l) : nullptr};
     }
   }
   static List<t_A> nil() { return List(Nil{}); }
   static List<t_A> cons(t_A a, List<t_A> l) {
-    return List(Cons{bsl::move(a), bsl::make_unique<List<t_A>>(bsl::move(l))});
+    return List(Cons{bsl::move(a), bsl::make_shared<List<t_A>>(bsl::move(l))});
   }
   // MANIPULATORS
   ~List() {
-    std::vector<bsl::unique_ptr<List<t_A>>> _stack{};
+    std::vector<bsl::shared_ptr<List<t_A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<t_A> &_node) {
       if (bsl::holds_alternative<Cons>(_node.d_v_)) {

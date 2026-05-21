@@ -106,26 +106,26 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(
 /// longest_increasing_subseq l finds a longest increasing subsequence (greedy).
 List<uint64_t>
 LoopifySearch::longest_increasing_subseq(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<uint64_t>>(
+        *_write = std::make_shared<List<uint64_t>>(
             List<uint64_t>::cons(a0, List<uint64_t>::nil()));
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 < a00) {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -171,23 +171,23 @@ uint64_t LoopifySearch::nth_impl(uint64_t n, const List<uint64_t> &l) {
 
 /// Helper for binary search: take first k elements.
 List<uint64_t> LoopifySearch::take_impl(uint64_t k, const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_k = std::move(k);
   while (true) {
     if (_loop_k <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       uint64_t m = _loop_k - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -380,26 +380,26 @@ uint64_t LoopifySearch::collatz(uint64_t n) {
 
 /// lis l simple longest increasing subsequence (greedy approach).
 List<uint64_t> LoopifySearch::lis(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<uint64_t>>(
+        *_write = std::make_shared<List<uint64_t>>(
             List<uint64_t>::cons(a0, List<uint64_t>::nil()));
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 < a00) {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -491,25 +491,25 @@ bool LoopifySearch::subset_sum(uint64_t target, const List<uint64_t> &l) {
 
 /// sieve l removes multiples (simplified sieve of Eratosthenes).
 List<uint64_t> LoopifySearch::sieve_fuel(uint64_t fuel, List<uint64_t> l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l));
+      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l));
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
         const List<uint64_t> &a1_value = *a1;
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -550,19 +550,19 @@ bool LoopifySearch::elem_impl(uint64_t x, const List<uint64_t> &l) {
 
 /// nub l removes duplicates from list.
 List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, List<uint64_t> l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l));
+      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l));
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         auto &[a0, a1] =
@@ -572,7 +572,7 @@ List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, List<uint64_t> l) {
           _loop_fuel = f;
           continue;
         } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(std::move(a0), nullptr));
           *_write = std::move(_cell);
           _write =
@@ -594,19 +594,19 @@ List<uint64_t> LoopifySearch::nub(const List<uint64_t> &l) {
 /// remove_duplicates l removes all duplicate elements.
 List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
                                                      List<uint64_t> l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l = std::move(l);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l));
+      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l));
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         auto &[a0, a1] =
@@ -617,7 +617,7 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
           _loop_fuel = f;
           continue;
         } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -771,34 +771,34 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
 List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
                                                 List<uint64_t> l1,
                                                 List<uint64_t> l2) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l2 = std::move(l2);
   List<uint64_t> _loop_l1 = std::move(l1);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(
+      *_write = std::make_shared<List<uint64_t>>(
           std::move(_loop_l1).app(std::move(_loop_l2)));
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l1.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l2));
+        *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l2));
         break;
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l2.v_mut())) {
-          *_write = std::make_unique<List<uint64_t>>(_loop_l1);
+          *_write = std::make_shared<List<uint64_t>>(_loop_l1);
           break;
         } else {
           auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
           if (a0 <= a00) {
-            auto _cell = std::make_unique<List<uint64_t>>(
+            auto _cell = std::make_shared<List<uint64_t>>(
                 typename List<uint64_t>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
@@ -807,7 +807,7 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
             _loop_fuel = f;
             continue;
           } else {
-            auto _cell = std::make_unique<List<uint64_t>>(
+            auto _cell = std::make_shared<List<uint64_t>>(
                 typename List<uint64_t>::Cons(std::move(a00), nullptr));
             *_write = std::move(_cell);
             _write =
@@ -904,21 +904,21 @@ List<uint64_t> LoopifySearch::merge_sort(const List<uint64_t> &l) {
 /// Helper: remove first occurrence of x from list.
 List<uint64_t> LoopifySearch::remove_first(uint64_t x,
                                            const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        *_write = std::make_unique<List<uint64_t>>(*a1);
+        *_write = std::make_shared<List<uint64_t>>(*a1);
         break;
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -933,19 +933,19 @@ List<uint64_t> LoopifySearch::remove_first(uint64_t x,
 /// Helper: map function that prepends element to each list.
 List<List<uint64_t>> LoopifySearch::map_cons(uint64_t x,
                                              const List<List<uint64_t>> &lsts) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
+  std::shared_ptr<List<List<uint64_t>>> _head{};
+  std::shared_ptr<List<List<uint64_t>>> *_write = &_head;
   const List<List<uint64_t>> *_loop_lsts = &lsts;
   while (true) {
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
             _loop_lsts->v())) {
       *_write =
-          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
+          std::make_shared<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(_loop_lsts->v());
-      auto _cell = std::make_unique<List<List<uint64_t>>>(
+      auto _cell = std::make_shared<List<List<uint64_t>>>(
           typename List<List<uint64_t>>::Cons(List<uint64_t>::cons(x, a0),
                                               nullptr));
       *_write = std::move(_cell);
@@ -1095,19 +1095,19 @@ std::optional<uint64_t> LoopifySearch::linear_search(uint64_t x,
 List<uint64_t> LoopifySearch::all_indices_aux(uint64_t x,
                                               const List<uint64_t> &l,
                                               uint64_t idx) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   uint64_t _loop_idx = std::move(idx);
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(_loop_idx, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;

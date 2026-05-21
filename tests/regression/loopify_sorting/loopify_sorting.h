@@ -13,7 +13,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -65,7 +65,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -81,19 +81,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -119,19 +119,19 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::unique_ptr<List<A>> _head{};
-    std::unique_ptr<List<A>> *_write = &_head;
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
     const List *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_unique<List<A>>(std::move(_loop_m));
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
         auto _cell =
-            std::make_unique<List<A>>(typename List<A>::Cons(a0, nullptr));
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
         _loop_self = a1.get();
@@ -260,33 +260,33 @@ struct LoopifySorting {
     requires std::is_invocable_r_v<bool, F1 &, uint64_t &, uint64_t &>
   static List<uint64_t> merge_by_fuel(uint64_t fuel, F1 &&cmp,
                                       List<uint64_t> l1, List<uint64_t> l2) {
-    std::unique_ptr<List<uint64_t>> _head{};
-    std::unique_ptr<List<uint64_t>> *_write = &_head;
+    std::shared_ptr<List<uint64_t>> _head{};
+    std::shared_ptr<List<uint64_t>> *_write = &_head;
     List<uint64_t> _loop_l2 = std::move(l2);
     List<uint64_t> _loop_l1 = std::move(l1);
     uint64_t _loop_fuel = std::move(fuel);
     while (true) {
       if (_loop_fuel <= 0) {
-        *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+        *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l1.v_mut())) {
-          *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l2));
+          *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l2));
           break;
         } else {
           auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
                   _loop_l2.v_mut())) {
-            *_write = std::make_unique<List<uint64_t>>(_loop_l1);
+            *_write = std::make_shared<List<uint64_t>>(_loop_l1);
             break;
           } else {
             auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
             if (cmp(a0, a00)) {
-              auto _cell = std::make_unique<List<uint64_t>>(
+              auto _cell = std::make_shared<List<uint64_t>>(
                   typename List<uint64_t>::Cons(std::move(a0), nullptr));
               *_write = std::move(_cell);
               _write =
@@ -296,7 +296,7 @@ struct LoopifySorting {
               _loop_fuel = f;
               continue;
             } else {
-              auto _cell = std::make_unique<List<uint64_t>>(
+              auto _cell = std::make_shared<List<uint64_t>>(
                   typename List<uint64_t>::Cons(std::move(a00), nullptr));
               *_write = std::move(_cell);
               _write =

@@ -5,18 +5,18 @@
 /// range start count generates start, start+1, ..., start+count-1.
 LoopifyLists::list<uint64_t> LoopifyLists::range(uint64_t start,
                                                  uint64_t count0) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   uint64_t _loop_count0 = std::move(count0);
   uint64_t _loop_start = std::move(start);
   while (true) {
     if (_loop_count0 <= 0) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       uint64_t c = _loop_count0 - 1;
-      auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+      auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
           typename list<uint64_t>::Cons(_loop_start, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -202,20 +202,20 @@ uint64_t LoopifyLists::four_elem(
 LoopifyLists::list<uint64_t>
 LoopifyLists::between(uint64_t lo, uint64_t hi,
                       const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if ((lo <= a0 && a0 <= hi)) {
-        auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -337,14 +337,14 @@ uint64_t LoopifyLists::max_prefix_sum(
 /// pairwise_sum l sums consecutive pairs: 1,2,3,4 -> 3,7.
 LoopifyLists::list<uint64_t>
 LoopifyLists::pairwise_sum(const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -352,13 +352,13 @@ LoopifyLists::pairwise_sum(const LoopifyLists::list<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv0.v())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
             list<uint64_t>::nil());
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
-        auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons((a0 + a00), nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -419,20 +419,20 @@ uint64_t LoopifyLists::weighted_sum(
 /// prefix_sums acc l returns all prefix sums: 1,2,3 -> 0,1,3,6.
 LoopifyLists::list<uint64_t>
 LoopifyLists::prefix_sums(uint64_t acc, const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_acc = std::move(acc);
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+      *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
           list<uint64_t>::cons(_loop_acc, list<uint64_t>::nil()));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+      auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
           typename list<uint64_t>::Cons(_loop_acc, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -447,14 +447,14 @@ LoopifyLists::prefix_sums(uint64_t acc, const LoopifyLists::list<uint64_t> &l) {
 /// uniq_sorted l removes consecutive duplicates from sorted list.
 LoopifyLists::list<uint64_t>
 LoopifyLists::uniq_sorted(const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -462,7 +462,7 @@ LoopifyLists::uniq_sorted(const LoopifyLists::list<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv0.v())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
             list<uint64_t>::cons(a0, list<uint64_t>::nil()));
         break;
       } else {
@@ -472,7 +472,7 @@ LoopifyLists::uniq_sorted(const LoopifyLists::list<uint64_t> &l) {
           _loop_l = a1.get();
           continue;
         } else {
-          auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+          auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
               typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -489,26 +489,26 @@ LoopifyLists::uniq_sorted(const LoopifyLists::list<uint64_t> &l) {
 /// Helper: take first n elements.
 LoopifyLists::list<uint64_t>
 LoopifyLists::take_n(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       uint64_t m = _loop_n - 1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _loop_l->v())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
             list<uint64_t>::nil());
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-        auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -566,15 +566,15 @@ uint64_t LoopifyLists::len_list(
 LoopifyLists::list<LoopifyLists::list<uint64_t>>
 LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
                           const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> _head{};
-  std::unique_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> *_write =
+  std::shared_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> _head{};
+  std::shared_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> *_write =
       &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       *_write =
-          std::make_unique<LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
+          std::make_shared<LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
               list<LoopifyLists::list<uint64_t>>::nil());
       break;
     } else {
@@ -582,14 +582,14 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _loop_l->v())) {
         *_write =
-            std::make_unique<LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
+            std::make_shared<LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
                 list<LoopifyLists::list<uint64_t>>::nil());
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
         if (len_list(*_loop_l) < n) {
-          *_write = std::make_unique<
+          *_write = std::make_shared<
               LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
               list<LoopifyLists::list<uint64_t>>::nil());
           break;
@@ -597,12 +597,12 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
           LoopifyLists::list<uint64_t> window = take_n(n, *_loop_l);
           if (std::holds_alternative<
                   typename LoopifyLists::list<uint64_t>::Nil>(window.v_mut())) {
-            *_write = std::make_unique<
+            *_write = std::make_shared<
                 LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
                 list<LoopifyLists::list<uint64_t>>::nil());
             break;
           } else {
-            auto _cell = std::make_unique<
+            auto _cell = std::make_shared<
                 LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
                 typename list<LoopifyLists::list<uint64_t>>::Cons(window,
                                                                   nullptr));
@@ -660,15 +660,15 @@ bool LoopifyLists::is_prefix_of(const LoopifyLists::list<uint64_t> &l1,
 /// lookup_all key l finds all values for key in association list.
 LoopifyLists::list<uint64_t> LoopifyLists::lookup_all(
     uint64_t key, const LoopifyLists::list<std::pair<uint64_t, uint64_t>> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] = std::get<
@@ -677,7 +677,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::lookup_all(
       const uint64_t &k = a0.first;
       const uint64_t &v = a0.second;
       if (k == key) {
-        auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons(v, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -802,21 +802,21 @@ uint64_t LoopifyLists::sum_list(
 /// :: flatten (xs :: rest).
 LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
     uint64_t fuel, const LoopifyLists::list<LoopifyLists::list<uint64_t>> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   LoopifyLists::list<LoopifyLists::list<uint64_t>> _loop_l = l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<
               typename LoopifyLists::list<LoopifyLists::list<uint64_t>>::Nil>(
               _loop_l.v())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
             list<uint64_t>::nil());
         break;
       } else {
@@ -831,7 +831,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
         } else {
           const auto &[a00, a10] =
               std::get<typename LoopifyLists::list<uint64_t>::Cons>(a0.v());
-          auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+          auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
               typename list<uint64_t>::Cons(a00, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -898,14 +898,14 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested(
 /// compress l removes consecutive duplicates: 1,1,2,2,2,3 -> 1,2,3.
 LoopifyLists::list<uint64_t>
 LoopifyLists::compress(const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -913,7 +913,7 @@ LoopifyLists::compress(const LoopifyLists::list<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv0.v())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
             list<uint64_t>::cons(a0, list<uint64_t>::nil()));
         break;
       } else {
@@ -923,7 +923,7 @@ LoopifyLists::compress(const LoopifyLists::list<uint64_t> &l) {
           _loop_l = a1.get();
           continue;
         } else {
-          auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+          auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
               typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -941,15 +941,15 @@ LoopifyLists::compress(const LoopifyLists::list<uint64_t> &l) {
 /// (1,2),(3,4).
 LoopifyLists::list<std::pair<uint64_t, uint64_t>>
 LoopifyLists::group_pairs(const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<std::pair<uint64_t, uint64_t>>> _head{};
-  std::unique_ptr<LoopifyLists::list<std::pair<uint64_t, uint64_t>>> *_write =
+  std::shared_ptr<LoopifyLists::list<std::pair<uint64_t, uint64_t>>> _head{};
+  std::shared_ptr<LoopifyLists::list<std::pair<uint64_t, uint64_t>>> *_write =
       &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<std::pair<uint64_t, uint64_t>>>(
+          std::make_shared<LoopifyLists::list<std::pair<uint64_t, uint64_t>>>(
               list<std::pair<uint64_t, uint64_t>>::nil());
       break;
     } else {
@@ -959,14 +959,14 @@ LoopifyLists::group_pairs(const LoopifyLists::list<uint64_t> &l) {
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv0.v())) {
         *_write =
-            std::make_unique<LoopifyLists::list<std::pair<uint64_t, uint64_t>>>(
+            std::make_shared<LoopifyLists::list<std::pair<uint64_t, uint64_t>>>(
                 list<std::pair<uint64_t, uint64_t>>::nil());
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
         auto _cell =
-            std::make_unique<LoopifyLists::list<std::pair<uint64_t, uint64_t>>>(
+            std::make_shared<LoopifyLists::list<std::pair<uint64_t, uint64_t>>>(
                 typename list<std::pair<uint64_t, uint64_t>>::Cons(
                     std::make_pair(a0, a00), nullptr));
         *_write = std::move(_cell);
@@ -1061,30 +1061,30 @@ uint64_t LoopifyLists::index_of(uint64_t x,
 LoopifyLists::list<uint64_t>
 LoopifyLists::interleave(LoopifyLists::list<uint64_t> l1,
                          LoopifyLists::list<uint64_t> l2) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   LoopifyLists::list<uint64_t> _loop_l2 = std::move(l2);
   LoopifyLists::list<uint64_t> _loop_l1 = std::move(l1);
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l1.v_mut())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(std::move(_loop_l2));
+          std::make_shared<LoopifyLists::list<uint64_t>>(std::move(_loop_l2));
       break;
     } else {
       auto &[a0, a1] = std::get<typename LoopifyLists::list<uint64_t>::Cons>(
           _loop_l1.v_mut());
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _loop_l2.v_mut())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(_loop_l1);
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(_loop_l1);
         break;
       } else {
         auto &[a00, a10] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _loop_l2.v_mut());
-        auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons(std::move(a0), nullptr));
-        auto _cell1 = std::make_unique<LoopifyLists::list<uint64_t>>(
+        auto _cell1 = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons(std::move(a00), nullptr));
         std::get<typename list<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
@@ -1245,20 +1245,20 @@ LoopifyLists::list<uint64_t> LoopifyLists::reverse_insert(
 LoopifyLists::list<uint64_t>
 LoopifyLists::app_helper(const LoopifyLists::list<uint64_t> &l1,
                          LoopifyLists::list<uint64_t> l2) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   LoopifyLists::list<uint64_t> _loop_l2 = std::move(l2);
   const LoopifyLists::list<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l1->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(std::move(_loop_l2));
+          std::make_shared<LoopifyLists::list<uint64_t>>(std::move(_loop_l2));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l1->v());
-      auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+      auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
           typename list<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -1320,14 +1320,14 @@ LoopifyLists::list<uint64_t> LoopifyLists::double_append(
 /// remove_if_sum_even l removes element if sum with next is even.
 LoopifyLists::list<uint64_t>
 LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -1335,7 +1335,7 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv0.v())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
             list<uint64_t>::cons(a0, list<uint64_t>::nil()));
         break;
       } else {
@@ -1346,7 +1346,7 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
           _loop_l = a1.get();
           continue;
         } else {
-          auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+          auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
               typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -1543,14 +1543,14 @@ LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
 /// init l returns all but last element.
 LoopifyLists::list<uint64_t>
 LoopifyLists::init(const LoopifyLists::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyLists::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyLists::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyLists::list<uint64_t>> *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l->v())) {
       *_write =
-          std::make_unique<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
+          std::make_shared<LoopifyLists::list<uint64_t>>(list<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -1558,11 +1558,11 @@ LoopifyLists::init(const LoopifyLists::list<uint64_t> &l) {
       auto &&_sv = *a1;
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _sv.v())) {
-        *_write = std::make_unique<LoopifyLists::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyLists::list<uint64_t>>(
             list<uint64_t>::nil());
         break;
       } else {
-        auto _cell = std::make_unique<LoopifyLists::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -1890,10 +1890,10 @@ LoopifyLists::list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>
 LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
                    const LoopifyLists::list<uint64_t> &l2,
                    const LoopifyLists::list<uint64_t> &l3) {
-  std::unique_ptr<
+  std::shared_ptr<
       LoopifyLists::list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>
       _head{};
-  std::unique_ptr<
+  std::shared_ptr<
       LoopifyLists::list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>
       *_write = &_head;
   const LoopifyLists::list<uint64_t> *_loop_l3 = &l3;
@@ -1902,7 +1902,7 @@ LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
   while (true) {
     if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
             _loop_l1->v())) {
-      *_write = std::make_unique<LoopifyLists::list<
+      *_write = std::make_shared<LoopifyLists::list<
           std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>(
           list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::nil());
       break;
@@ -1911,7 +1911,7 @@ LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
               _loop_l2->v())) {
-        *_write = std::make_unique<LoopifyLists::list<
+        *_write = std::make_shared<LoopifyLists::list<
             std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>(
             list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::nil());
         break;
@@ -1921,7 +1921,7 @@ LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
                 _loop_l2->v());
         if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
                 _loop_l3->v())) {
-          *_write = std::make_unique<LoopifyLists::list<
+          *_write = std::make_shared<LoopifyLists::list<
               std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>(
               list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::nil());
           break;
@@ -1929,7 +1929,7 @@ LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
           const auto &[a01, a11] =
               std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                   _loop_l3->v());
-          auto _cell = std::make_unique<LoopifyLists::list<
+          auto _cell = std::make_shared<LoopifyLists::list<
               std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>(
               typename list<
                   std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::

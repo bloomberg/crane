@@ -80,7 +80,7 @@ struct Equations {
     struct Gcd_graph_refinement_3 {
       uint64_t n;
       uint64_t n0;
-      std::unique_ptr<gcd_clause_3_graph> hind;
+      std::shared_ptr<gcd_clause_3_graph> hind;
     };
 
     using variant_t = std::variant<Gcd_graph_equation_1, Gcd_graph_equation_2,
@@ -127,7 +127,7 @@ struct Equations {
         return gcd_graph(Gcd_graph_refinement_3{
             n, n0,
             hind
-                ? std::make_unique<Equations::gcd_clause_3_graph>(hind->clone())
+                ? std::make_shared<Equations::gcd_clause_3_graph>(hind->clone())
                 : nullptr});
       }
     }
@@ -144,12 +144,12 @@ struct Equations {
     static gcd_graph gcd_graph_refinement_3(uint64_t n, uint64_t n0,
                                             gcd_clause_3_graph hind) {
       return gcd_graph(Gcd_graph_refinement_3{
-          n, n0, std::make_unique<gcd_clause_3_graph>(std::move(hind))});
+          n, n0, std::make_shared<gcd_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
     ~gcd_graph() {
-      std::vector<std::unique_ptr<gcd_graph>> _stack{};
+      std::vector<std::shared_ptr<gcd_graph>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](gcd_graph &_node) {
         if (std::holds_alternative<Gcd_graph_refinement_3>(_node.v_)) {
@@ -199,13 +199,13 @@ struct Equations {
     struct Gcd_clause_3_graph_equation_1 {
       uint64_t n;
       uint64_t n0;
-      std::unique_ptr<gcd_graph> hind;
+      std::shared_ptr<gcd_graph> hind;
     };
 
     struct Gcd_clause_3_graph_equation_2 {
       uint64_t n;
       uint64_t n0;
-      std::unique_ptr<gcd_graph> hind;
+      std::shared_ptr<gcd_graph> hind;
     };
 
     using variant_t = std::variant<Gcd_clause_3_graph_equation_1,
@@ -248,14 +248,14 @@ struct Equations {
             std::get<Gcd_clause_3_graph_equation_1>(this->v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
             n, n0,
-            hind ? std::make_unique<Equations::gcd_graph>(hind->clone())
+            hind ? std::make_shared<Equations::gcd_graph>(hind->clone())
                  : nullptr});
       } else {
         const auto &[n, n0, hind] =
             std::get<Gcd_clause_3_graph_equation_2>(this->v());
         return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
             n, n0,
-            hind ? std::make_unique<Equations::gcd_graph>(hind->clone())
+            hind ? std::make_shared<Equations::gcd_graph>(hind->clone())
                  : nullptr});
       }
     }
@@ -264,18 +264,18 @@ struct Equations {
     static gcd_clause_3_graph
     gcd_clause_3_graph_equation_1(uint64_t n, uint64_t n0, gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
-          n, n0, std::make_unique<gcd_graph>(std::move(hind))});
+          n, n0, std::make_shared<gcd_graph>(std::move(hind))});
     }
 
     static gcd_clause_3_graph
     gcd_clause_3_graph_equation_2(uint64_t n, uint64_t n0, gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
-          n, n0, std::make_unique<gcd_graph>(std::move(hind))});
+          n, n0, std::make_shared<gcd_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
     ~gcd_clause_3_graph() {
-      std::vector<std::unique_ptr<gcd_clause_3_graph>> _stack{};
+      std::vector<std::shared_ptr<gcd_clause_3_graph>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](gcd_clause_3_graph &_node) {
         if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_node.v_)) {
@@ -575,7 +575,7 @@ struct Equations {
 
     struct Collatz_steps_graph_refinement_3 {
       uint64_t n;
-      std::unique_ptr<collatz_steps_clause_3_graph> hind;
+      std::shared_ptr<collatz_steps_clause_3_graph> hind;
     };
 
     using variant_t = std::variant<Collatz_steps_graph_equation_1,
@@ -624,7 +624,7 @@ struct Equations {
         const auto &[n, hind] =
             std::get<Collatz_steps_graph_refinement_3>(this->v());
         return collatz_steps_graph(Collatz_steps_graph_refinement_3{
-            n, hind ? std::make_unique<Equations::collatz_steps_clause_3_graph>(
+            n, hind ? std::make_shared<Equations::collatz_steps_clause_3_graph>(
                           hind->clone())
                     : nullptr});
       }
@@ -643,12 +643,12 @@ struct Equations {
     collatz_steps_graph_refinement_3(uint64_t n,
                                      collatz_steps_clause_3_graph hind) {
       return collatz_steps_graph(Collatz_steps_graph_refinement_3{
-          n, std::make_unique<collatz_steps_clause_3_graph>(std::move(hind))});
+          n, std::make_shared<collatz_steps_clause_3_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
     ~collatz_steps_graph() {
-      std::vector<std::unique_ptr<collatz_steps_graph>> _stack{};
+      std::vector<std::shared_ptr<collatz_steps_graph>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](collatz_steps_graph &_node) {
         if (std::holds_alternative<Collatz_steps_graph_refinement_3>(
@@ -702,12 +702,12 @@ struct Equations {
     // TYPES
     struct Collatz_steps_clause_3_graph_equation_1 {
       uint64_t n;
-      std::unique_ptr<collatz_steps_graph> hind;
+      std::shared_ptr<collatz_steps_graph> hind;
     };
 
     struct Collatz_steps_clause_3_graph_equation_2 {
       uint64_t n;
-      std::unique_ptr<collatz_steps_graph> hind;
+      std::shared_ptr<collatz_steps_graph> hind;
     };
 
     using variant_t = std::variant<Collatz_steps_clause_3_graph_equation_1,
@@ -755,7 +755,7 @@ struct Equations {
             std::get<Collatz_steps_clause_3_graph_equation_1>(this->v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_1{
-                n, hind ? std::make_unique<Equations::collatz_steps_graph>(
+                n, hind ? std::make_shared<Equations::collatz_steps_graph>(
                               hind->clone())
                         : nullptr});
       } else {
@@ -763,7 +763,7 @@ struct Equations {
             std::get<Collatz_steps_clause_3_graph_equation_2>(this->v());
         return collatz_steps_clause_3_graph(
             Collatz_steps_clause_3_graph_equation_2{
-                n, hind ? std::make_unique<Equations::collatz_steps_graph>(
+                n, hind ? std::make_shared<Equations::collatz_steps_graph>(
                               hind->clone())
                         : nullptr});
       }
@@ -775,7 +775,7 @@ struct Equations {
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
           Collatz_steps_clause_3_graph_equation_1{
-              n, std::make_unique<collatz_steps_graph>(std::move(hind))});
+              n, std::make_shared<collatz_steps_graph>(std::move(hind))});
     }
 
     static collatz_steps_clause_3_graph
@@ -783,12 +783,12 @@ struct Equations {
                                             collatz_steps_graph hind) {
       return collatz_steps_clause_3_graph(
           Collatz_steps_clause_3_graph_equation_2{
-              n, std::make_unique<collatz_steps_graph>(std::move(hind))});
+              n, std::make_shared<collatz_steps_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
     ~collatz_steps_clause_3_graph() {
-      std::vector<std::unique_ptr<collatz_steps_clause_3_graph>> _stack{};
+      std::vector<std::shared_ptr<collatz_steps_clause_3_graph>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](collatz_steps_clause_3_graph &_node) {
         if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(

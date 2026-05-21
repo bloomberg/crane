@@ -16,7 +16,7 @@ struct ClosureRecursiveBuild {
 
     struct FCons {
       std::function<uint64_t(uint64_t)> a0;
-      std::unique_ptr<fn_list> a1;
+      std::shared_ptr<fn_list> a1;
     };
 
     using variant_t = std::variant<FNil, FCons>;
@@ -69,7 +69,7 @@ struct ClosureRecursiveBuild {
         } else {
           const auto &_alt = std::get<FCons>(_src->v());
           _dst->v_ =
-              FCons{_alt.a0, _alt.a1 ? std::make_unique<fn_list>() : nullptr};
+              FCons{_alt.a0, _alt.a1 ? std::make_shared<fn_list>() : nullptr};
           auto &_dst_alt = std::get<FCons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -84,12 +84,12 @@ struct ClosureRecursiveBuild {
 
     static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
       return fn_list(
-          FCons{std::move(a0), std::make_unique<fn_list>(std::move(a1))});
+          FCons{std::move(a0), std::make_shared<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~fn_list() {
-      std::vector<std::unique_ptr<fn_list>> _stack{};
+      std::vector<std::shared_ptr<fn_list>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](fn_list &_node) {
         if (std::holds_alternative<FCons>(_node.v_)) {

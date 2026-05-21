@@ -408,14 +408,14 @@ LoopifyPatterns::guard_accum(uint64_t acc,
 LoopifyPatterns::list<uint64_t>
 LoopifyPatterns::cons_computed(uint64_t n,
                                const LoopifyPatterns::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
   const LoopifyPatterns::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+      *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
           list<uint64_t>::nil());
       break;
     } else {
@@ -429,7 +429,7 @@ LoopifyPatterns::cons_computed(uint64_t n,
       } else {
         next_n = _loop_n;
       }
-      auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+      auto _cell = std::make_shared<LoopifyPatterns::list<uint64_t>>(
           typename list<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -545,14 +545,14 @@ uint64_t LoopifyPatterns::alternating_ops(
 LoopifyPatterns::list<uint64_t>
 LoopifyPatterns::replace_at(uint64_t idx, uint64_t value,
                             const LoopifyPatterns::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
   const LoopifyPatterns::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_idx = std::move(idx);
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l->v())) {
-      *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+      *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
           list<uint64_t>::nil());
       break;
     } else {
@@ -560,12 +560,12 @@ LoopifyPatterns::replace_at(uint64_t idx, uint64_t value,
           std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
               _loop_l->v());
       if (_loop_idx <= 0) {
-        *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
             list<uint64_t>::cons(value, *a1));
         break;
       } else {
         uint64_t i = _loop_idx - 1;
-        auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyPatterns::list<uint64_t>>(
             typename list<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -792,20 +792,20 @@ LoopifyPatterns::process_twice(const LoopifyPatterns::list<uint64_t> &l) {
 LoopifyPatterns::list<uint64_t>
 LoopifyPatterns::as_guard_fuel(uint64_t fuel,
                                const LoopifyPatterns::list<uint64_t> &l) {
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
   const LoopifyPatterns::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+      *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
           list<uint64_t>::nil());
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               _loop_l->v())) {
-        *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+        *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
             list<uint64_t>::nil());
         break;
       } else {
@@ -814,7 +814,7 @@ LoopifyPatterns::as_guard_fuel(uint64_t fuel,
                 _loop_l->v());
         LoopifyPatterns::list<uint64_t> all = list<uint64_t>::cons(a0, *a1);
         if (UINT64_C(3) < list_len(std::move(all))) {
-          auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+          auto _cell = std::make_shared<LoopifyPatterns::list<uint64_t>>(
               typename list<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -966,21 +966,21 @@ uint64_t LoopifyPatterns::multi_guard(
 LoopifyPatterns::list<uint64_t>
 LoopifyPatterns::append_lists(const LoopifyPatterns::list<uint64_t> &l1,
                               LoopifyPatterns::list<uint64_t> l2) {
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
   LoopifyPatterns::list<uint64_t> _loop_l2 = std::move(l2);
   const LoopifyPatterns::list<uint64_t> *_loop_l1 = &l1;
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l1->v())) {
-      *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+      *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
           std::move(_loop_l2));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
               _loop_l1->v());
-      auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+      auto _cell = std::make_shared<LoopifyPatterns::list<uint64_t>>(
           typename list<uint64_t>::Cons(a0, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -1166,14 +1166,14 @@ uint64_t LoopifyPatterns::sum_if_positive_else_double(
 LoopifyPatterns::list<uint64_t>
 LoopifyPatterns::merge_alternating(LoopifyPatterns::list<uint64_t> l1,
                                    LoopifyPatterns::list<uint64_t> l2) {
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> _head{};
+  std::shared_ptr<LoopifyPatterns::list<uint64_t>> *_write = &_head;
   LoopifyPatterns::list<uint64_t> _loop_l2 = std::move(l2);
   LoopifyPatterns::list<uint64_t> _loop_l1 = std::move(l1);
   while (true) {
     if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
             _loop_l1.v_mut())) {
-      *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+      *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
           std::move(_loop_l2));
       break;
     } else {
@@ -1181,15 +1181,15 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<uint64_t> l1,
           _loop_l1.v_mut());
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               _loop_l2.v_mut())) {
-        *_write = std::make_unique<LoopifyPatterns::list<uint64_t>>(_loop_l1);
+        *_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(_loop_l1);
         break;
       } else {
         auto &[a00, a10] =
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
                 _loop_l2.v_mut());
-        auto _cell = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+        auto _cell = std::make_shared<LoopifyPatterns::list<uint64_t>>(
             typename list<uint64_t>::Cons(std::move(a0), nullptr));
-        auto _cell1 = std::make_unique<LoopifyPatterns::list<uint64_t>>(
+        auto _cell1 = std::make_shared<LoopifyPatterns::list<uint64_t>>(
             typename list<uint64_t>::Cons(std::move(a00), nullptr));
         std::get<typename list<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);

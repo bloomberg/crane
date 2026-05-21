@@ -18,7 +18,7 @@ struct PairSelfDeepCopy {
     struct Stop {};
 
     struct Link {
-      std::unique_ptr<std::pair<std::unique_ptr<chain>, bool>> a0;
+      std::shared_ptr<std::pair<std::shared_ptr<chain>, bool>> a0;
     };
 
     using variant_t = std::variant<Stop, Link>;
@@ -72,9 +72,9 @@ struct PairSelfDeepCopy {
           const auto &_alt = std::get<Link>(_src->v());
           _dst->v_ = Link{
               _alt.a0
-                  ? std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
+                  ? std::make_shared<std::pair<std::shared_ptr<chain>, bool>>(
                         std::make_pair(_alt.a0->first
-                                           ? std::make_unique<chain>()
+                                           ? std::make_shared<chain>()
                                            : nullptr,
                                        _alt.a0->second))
                   : nullptr};
@@ -90,15 +90,15 @@ struct PairSelfDeepCopy {
     // CREATORS
     static chain stop() { return chain(Stop{}); }
 
-    static chain link(std::pair<std::unique_ptr<chain>, bool> a0) {
+    static chain link(std::pair<std::shared_ptr<chain>, bool> a0) {
       return chain(
-          Link{std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
+          Link{std::make_shared<std::pair<std::shared_ptr<chain>, bool>>(
               std::move(a0))});
     }
 
     // MANIPULATORS
     ~chain() {
-      std::vector<std::unique_ptr<chain>> _stack{};
+      std::vector<std::shared_ptr<chain>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<Link>(_node.v_)) {

@@ -12,11 +12,11 @@ enum class Comparison { EQ, LT, GT };
 struct Positive {
   // TYPES
   struct XI {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XO {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XH {};
@@ -70,14 +70,14 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->v_ = XI{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->v_ = XI{_alt.a0 ? std::make_shared<Positive>() : nullptr};
         auto &_dst_alt = std::get<XI>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->v_ = XO{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->v_ = XO{_alt.a0 ? std::make_shared<Positive>() : nullptr};
         auto &_dst_alt = std::get<XO>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -91,18 +91,18 @@ public:
 
   // CREATORS
   static Positive xi(Positive a0) {
-    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
   ~Positive() {
-    std::vector<std::unique_ptr<Positive>> _stack{};
+    std::vector<std::shared_ptr<Positive>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
       if (std::holds_alternative<XI>(_node.v_)) {

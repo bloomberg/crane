@@ -16,7 +16,7 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> a0;
+    std::shared_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -68,7 +68,7 @@ public:
         _dst->v_ = O{};
       } else {
         const auto &_alt = std::get<S>(_src->v());
-        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
+        _dst->v_ = S{_alt.a0 ? std::make_shared<Nat>() : nullptr};
         auto &_dst_alt = std::get<S>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -81,11 +81,11 @@ public:
   // CREATORS
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::unique_ptr<Nat>> _stack{};
+    std::vector<std::shared_ptr<Nat>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Nat &_node) {
       if (std::holds_alternative<S>(_node.v_)) {
@@ -153,7 +153,7 @@ struct RocqBug13581 {
     struct C {};
 
     struct D {
-      std::unique_ptr<J<T>> a0;
+      std::shared_ptr<J<T>> a0;
     };
 
     using variant_t = std::variant<C, D>;
@@ -205,7 +205,7 @@ struct RocqBug13581 {
           _dst->v_ = C{};
         } else {
           const auto &_alt = std::get<D>(_src->v());
-          _dst->v_ = D{_alt.a0 ? std::make_unique<J<T>>() : nullptr};
+          _dst->v_ = D{_alt.a0 ? std::make_shared<J<T>>() : nullptr};
           auto &_dst_alt = std::get<D>(_dst->v_);
           if (_alt.a0) {
             if (std::holds_alternative<typename RocqBug13581::J<T>::E>(
@@ -215,7 +215,7 @@ struct RocqBug13581 {
               auto &_pdst = std::get<typename RocqBug13581::J<T>::E>(
                   _dst_alt.a0->v_mut());
               if (_psrc.a0) {
-                _pdst.a0 = std::make_unique<I<T>>();
+                _pdst.a0 = std::make_shared<I<T>>();
                 _stack.push_back({_psrc.a0.get(), _pdst.a0.get()});
               }
             }
@@ -231,19 +231,19 @@ struct RocqBug13581 {
         this->v_ = C{};
       } else {
         const auto &[a0] = std::get<typename I<_U>::D>(_other.v());
-        this->v_ = D{a0 ? std::make_unique<RocqBug13581::J<T>>(*a0) : nullptr};
+        this->v_ = D{a0 ? std::make_shared<RocqBug13581::J<T>>(*a0) : nullptr};
       }
     }
 
     static I<T> c() { return I(C{}); }
 
     static I<T> d(J<T> a0) {
-      return I(D{std::make_unique<J<T>>(std::move(a0))});
+      return I(D{std::make_shared<J<T>>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~I() {
-      std::vector<std::unique_ptr<I<T>>> _stack{};
+      std::vector<std::shared_ptr<I<T>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](I<T> &_node) {
         if (std::holds_alternative<D>(_node.v_)) {
@@ -279,7 +279,7 @@ struct RocqBug13581 {
   template <typename T> struct J {
     // TYPES
     struct E {
-      std::unique_ptr<I<T>> a0;
+      std::shared_ptr<I<T>> a0;
     };
 
     using variant_t = std::variant<E>;
@@ -312,22 +312,22 @@ struct RocqBug13581 {
     J<T> clone() const {
       const auto &[a0] = std::get<E>(this->v());
       return J<T>(
-          E{a0 ? std::make_unique<RocqBug13581::I<T>>(a0->clone()) : nullptr});
+          E{a0 ? std::make_shared<RocqBug13581::I<T>>(a0->clone()) : nullptr});
     }
 
     // CREATORS
     template <typename _U> explicit J(const J<_U> &_other) {
       const auto &[a0] = std::get<typename J<_U>::E>(_other.v());
-      this->v_ = E{a0 ? std::make_unique<RocqBug13581::I<T>>(*a0) : nullptr};
+      this->v_ = E{a0 ? std::make_shared<RocqBug13581::I<T>>(*a0) : nullptr};
     }
 
     static J<T> e(I<T> a0) {
-      return J(E{std::make_unique<I<T>>(std::move(a0))});
+      return J(E{std::make_shared<I<T>>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~J() {
-      std::vector<std::unique_ptr<J<T>>> _stack{};
+      std::vector<std::shared_ptr<J<T>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](J<T> &_node) {
         if (std::holds_alternative<E>(_node.v_)) {

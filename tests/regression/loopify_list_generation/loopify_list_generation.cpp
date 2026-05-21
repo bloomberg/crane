@@ -1,16 +1,16 @@
 #include "loopify_list_generation.h"
 
 List<uint64_t> LoopifyListGeneration::replicate(uint64_t n, uint64_t x) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_unique<List<uint64_t>>(
+      auto _cell = std::make_shared<List<uint64_t>>(
           typename List<uint64_t>::Cons(x, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -22,19 +22,19 @@ List<uint64_t> LoopifyListGeneration::replicate(uint64_t n, uint64_t x) {
 }
 
 List<uint64_t> LoopifyListGeneration::stutter(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = std::make_unique<List<uint64_t>>(
+      auto _cell = std::make_shared<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
-      auto _cell1 = std::make_unique<List<uint64_t>>(
+      auto _cell1 = std::make_shared<List<uint64_t>>(
           typename List<uint64_t>::Cons(a0, nullptr));
       std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
           std::move(_cell1);
@@ -92,17 +92,17 @@ List<uint64_t> LoopifyListGeneration::cycle(
 }
 
 List<uint64_t> LoopifyListGeneration::iterate(uint64_t n, uint64_t x) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   uint64_t _loop_x = std::move(x);
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_unique<List<uint64_t>>(
+      auto _cell = std::make_shared<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_x, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -161,24 +161,24 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
 
 List<uint64_t> LoopifyListGeneration::repeat_with_sep(uint64_t sep, uint64_t n,
                                                       uint64_t x) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
       if (n_ <= 0) {
-        *_write = std::make_unique<List<uint64_t>>(
+        *_write = std::make_shared<List<uint64_t>>(
             List<uint64_t>::cons(x, List<uint64_t>::nil()));
         break;
       } else {
         uint64_t _x = n_ - 1;
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(x, nullptr));
-        auto _cell1 = std::make_unique<List<uint64_t>>(
+        auto _cell1 = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(sep, nullptr));
         std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
             std::move(_cell1);
@@ -197,17 +197,17 @@ List<uint64_t> LoopifyListGeneration::repeat_with_sep(uint64_t sep, uint64_t n,
 }
 
 List<uint64_t> LoopifyListGeneration::range(uint64_t start, uint64_t len) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   uint64_t _loop_len = std::move(len);
   uint64_t _loop_start = std::move(start);
   while (true) {
     if (_loop_len <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       uint64_t len_ = _loop_len - 1;
-      auto _cell = std::make_unique<List<uint64_t>>(
+      auto _cell = std::make_shared<List<uint64_t>>(
           typename List<uint64_t>::Cons(_loop_start, nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;

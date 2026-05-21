@@ -32,7 +32,7 @@ struct FixSharedPtrField {
 
     struct Mycons {
       uint64_t a0;
-      std::unique_ptr<mylist> a1;
+      std::shared_ptr<mylist> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -85,7 +85,7 @@ struct FixSharedPtrField {
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
           _dst->v_ =
-              Mycons{_alt.a0, _alt.a1 ? std::make_unique<mylist>() : nullptr};
+              Mycons{_alt.a0, _alt.a1 ? std::make_shared<mylist>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -99,12 +99,12 @@ struct FixSharedPtrField {
     static mylist mynil() { return mylist(Mynil{}); }
 
     static mylist mycons(uint64_t a0, mylist a1) {
-      return mylist(Mycons{a0, std::make_unique<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_shared<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist>> _stack{};
+      std::vector<std::shared_ptr<mylist>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist &_node) {
         if (std::holds_alternative<Mycons>(_node.v_)) {

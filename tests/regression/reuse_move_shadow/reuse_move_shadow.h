@@ -14,8 +14,8 @@ struct ReuseMoveShadow {
     // TYPES
     struct Node {
       uint64_t a0;
-      std::unique_ptr<tree> a1;
-      std::unique_ptr<tree> a2;
+      std::shared_ptr<tree> a1;
+      std::shared_ptr<tree> a2;
     };
 
     struct Leaf {};
@@ -67,8 +67,8 @@ struct ReuseMoveShadow {
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Node>(_src->v())) {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0, _alt.a1 ? std::make_unique<tree>() : nullptr,
-                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          _dst->v_ = Node{_alt.a0, _alt.a1 ? std::make_shared<tree>() : nullptr,
+                          _alt.a2 ? std::make_shared<tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -85,15 +85,15 @@ struct ReuseMoveShadow {
 
     // CREATORS
     static tree node(uint64_t a0, tree a1, tree a2) {
-      return tree(Node{a0, std::make_unique<tree>(std::move(a1)),
-                       std::make_unique<tree>(std::move(a2))});
+      return tree(Node{a0, std::make_shared<tree>(std::move(a1)),
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     static tree leaf() { return tree(Leaf{}); }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
+      std::vector<std::shared_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

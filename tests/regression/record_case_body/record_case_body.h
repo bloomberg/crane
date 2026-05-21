@@ -48,7 +48,7 @@ struct RecordCaseBody {
 
     struct Cons {
       A a0;
-      std::unique_ptr<list<A>> a1;
+      std::shared_ptr<list<A>> a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
@@ -101,7 +101,7 @@ struct RecordCaseBody {
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
           _dst->v_ =
-              Cons{_alt.a0, _alt.a1 ? std::make_unique<list<A>>() : nullptr};
+              Cons{_alt.a0, _alt.a1 ? std::make_shared<list<A>>() : nullptr};
           auto &_dst_alt = std::get<Cons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -117,7 +117,7 @@ struct RecordCaseBody {
         this->v_ = Nil{};
       } else {
         const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a0), a1 ? std::make_unique<list<A>>(*a1) : nullptr};
+        this->v_ = Cons{A(a0), a1 ? std::make_shared<list<A>>(*a1) : nullptr};
       }
     }
 
@@ -125,12 +125,12 @@ struct RecordCaseBody {
 
     static list<A> cons(A a0, list<A> a1) {
       return list(
-          Cons{std::move(a0), std::make_unique<list<A>>(std::move(a1))});
+          Cons{std::move(a0), std::make_shared<list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::unique_ptr<list<A>>> _stack{};
+      std::vector<std::shared_ptr<list<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](list<A> &_node) {
         if (std::holds_alternative<Cons>(_node.v_)) {

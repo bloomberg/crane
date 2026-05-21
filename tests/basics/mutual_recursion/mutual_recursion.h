@@ -20,7 +20,7 @@ struct MutualRecursion {
     };
 
     struct Node {
-      std::unique_ptr<forest<A>> a0;
+      std::shared_ptr<forest<A>> a0;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -59,7 +59,7 @@ struct MutualRecursion {
       } else {
         const auto &[a0] = std::get<Node>(this->v());
         return tree<A>(
-            Node{a0 ? std::make_unique<MutualRecursion::forest<A>>(a0->clone())
+            Node{a0 ? std::make_shared<MutualRecursion::forest<A>>(a0->clone())
                     : nullptr});
       }
     }
@@ -71,7 +71,7 @@ struct MutualRecursion {
         this->v_ = Leaf{A(a0)};
       } else {
         const auto &[a0] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{a0 ? std::make_unique<MutualRecursion::forest<A>>(*a0)
+        this->v_ = Node{a0 ? std::make_shared<MutualRecursion::forest<A>>(*a0)
                            : nullptr};
       }
     }
@@ -79,12 +79,12 @@ struct MutualRecursion {
     static tree<A> leaf(A a0) { return tree(Leaf{std::move(a0)}); }
 
     static tree<A> node(forest<A> a0) {
-      return tree(Node{std::make_unique<forest<A>>(std::move(a0))});
+      return tree(Node{std::make_shared<forest<A>>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree<A>>> _stack{};
+      std::vector<std::shared_ptr<tree<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree<A> &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {
@@ -123,8 +123,8 @@ struct MutualRecursion {
     struct Empty {};
 
     struct Trees {
-      std::unique_ptr<tree<A>> a0;
-      std::unique_ptr<forest<A>> a1;
+      std::shared_ptr<tree<A>> a0;
+      std::shared_ptr<forest<A>> a1;
     };
 
     using variant_t = std::variant<Empty, Trees>;
@@ -176,10 +176,10 @@ struct MutualRecursion {
           _dst->v_ = Empty{};
         } else {
           const auto &_alt = std::get<Trees>(_src->v());
-          _dst->v_ = Trees{_alt.a0 ? std::make_unique<MutualRecursion::tree<A>>(
+          _dst->v_ = Trees{_alt.a0 ? std::make_shared<MutualRecursion::tree<A>>(
                                          _alt.a0->clone())
                                    : nullptr,
-                           _alt.a1 ? std::make_unique<forest<A>>() : nullptr};
+                           _alt.a1 ? std::make_shared<forest<A>>() : nullptr};
           auto &_dst_alt = std::get<Trees>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -195,22 +195,22 @@ struct MutualRecursion {
         this->v_ = Empty{};
       } else {
         const auto &[a0, a1] = std::get<typename forest<_U>::Trees>(_other.v());
-        this->v_ = Trees{a0 ? std::make_unique<MutualRecursion::tree<A>>(*a0)
+        this->v_ = Trees{a0 ? std::make_shared<MutualRecursion::tree<A>>(*a0)
                             : nullptr,
-                         a1 ? std::make_unique<forest<A>>(*a1) : nullptr};
+                         a1 ? std::make_shared<forest<A>>(*a1) : nullptr};
       }
     }
 
     static forest<A> empty() { return forest(Empty{}); }
 
     static forest<A> trees(tree<A> a0, forest<A> a1) {
-      return forest(Trees{std::make_unique<tree<A>>(std::move(a0)),
-                          std::make_unique<forest<A>>(std::move(a1))});
+      return forest(Trees{std::make_shared<tree<A>>(std::move(a0)),
+                          std::make_shared<forest<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~forest() {
-      std::vector<std::unique_ptr<forest<A>>> _stack{};
+      std::vector<std::shared_ptr<forest<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](forest<A> &_node) {
         if (std::holds_alternative<Trees>(_node.v_)) {

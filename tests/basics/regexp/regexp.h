@@ -14,7 +14,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -82,19 +82,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -135,19 +135,19 @@ struct Matcher {
     struct Eps {};
 
     struct Cat {
-      std::unique_ptr<regexp> r1;
-      std::unique_ptr<regexp> r2;
+      std::shared_ptr<regexp> r1;
+      std::shared_ptr<regexp> r2;
     };
 
     struct Alt {
-      std::unique_ptr<regexp> r1;
-      std::unique_ptr<regexp> r2;
+      std::shared_ptr<regexp> r1;
+      std::shared_ptr<regexp> r2;
     };
 
     struct Zero {};
 
     struct Star {
-      std::unique_ptr<regexp> r;
+      std::shared_ptr<regexp> r;
     };
 
     using variant_t = std::variant<Any, Char, Eps, Cat, Alt, Zero, Star>;
@@ -214,8 +214,8 @@ struct Matcher {
           _dst->v_ = Eps{};
         } else if (std::holds_alternative<Cat>(_src->v())) {
           const auto &_alt = std::get<Cat>(_src->v());
-          _dst->v_ = Cat{_alt.r1 ? std::make_unique<regexp>() : nullptr,
-                         _alt.r2 ? std::make_unique<regexp>() : nullptr};
+          _dst->v_ = Cat{_alt.r1 ? std::make_shared<regexp>() : nullptr,
+                         _alt.r2 ? std::make_shared<regexp>() : nullptr};
           auto &_dst_alt = std::get<Cat>(_dst->v_);
           if (_alt.r1) {
             _stack.push_back({_alt.r1.get(), _dst_alt.r1.get()});
@@ -225,8 +225,8 @@ struct Matcher {
           }
         } else if (std::holds_alternative<Alt>(_src->v())) {
           const auto &_alt = std::get<Alt>(_src->v());
-          _dst->v_ = Alt{_alt.r1 ? std::make_unique<regexp>() : nullptr,
-                         _alt.r2 ? std::make_unique<regexp>() : nullptr};
+          _dst->v_ = Alt{_alt.r1 ? std::make_shared<regexp>() : nullptr,
+                         _alt.r2 ? std::make_shared<regexp>() : nullptr};
           auto &_dst_alt = std::get<Alt>(_dst->v_);
           if (_alt.r1) {
             _stack.push_back({_alt.r1.get(), _dst_alt.r1.get()});
@@ -238,7 +238,7 @@ struct Matcher {
           _dst->v_ = Zero{};
         } else {
           const auto &_alt = std::get<Star>(_src->v());
-          _dst->v_ = Star{_alt.r ? std::make_unique<regexp>() : nullptr};
+          _dst->v_ = Star{_alt.r ? std::make_shared<regexp>() : nullptr};
           auto &_dst_alt = std::get<Star>(_dst->v_);
           if (_alt.r) {
             _stack.push_back({_alt.r.get(), _dst_alt.r.get()});
@@ -256,24 +256,24 @@ struct Matcher {
     static regexp eps() { return regexp(Eps{}); }
 
     static regexp cat(regexp r1, regexp r2) {
-      return regexp(Cat{std::make_unique<regexp>(std::move(r1)),
-                        std::make_unique<regexp>(std::move(r2))});
+      return regexp(Cat{std::make_shared<regexp>(std::move(r1)),
+                        std::make_shared<regexp>(std::move(r2))});
     }
 
     static regexp alt(regexp r1, regexp r2) {
-      return regexp(Alt{std::make_unique<regexp>(std::move(r1)),
-                        std::make_unique<regexp>(std::move(r2))});
+      return regexp(Alt{std::make_shared<regexp>(std::move(r1)),
+                        std::make_shared<regexp>(std::move(r2))});
     }
 
     static regexp zero() { return regexp(Zero{}); }
 
     static regexp star(regexp r) {
-      return regexp(Star{std::make_unique<regexp>(std::move(r))});
+      return regexp(Star{std::make_shared<regexp>(std::move(r))});
     }
 
     // MANIPULATORS
     ~regexp() {
-      std::vector<std::unique_ptr<regexp>> _stack{};
+      std::vector<std::shared_ptr<regexp>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](regexp &_node) {
         if (std::holds_alternative<Cat>(_node.v_)) {

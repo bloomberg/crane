@@ -16,7 +16,7 @@ struct EvenOdd {
 
     struct ECons {
       uint64_t a0;
-      std::unique_ptr<odd_list> a1;
+      std::shared_ptr<odd_list> a1;
     };
 
     using variant_t = std::variant<ENil, ECons>;
@@ -69,7 +69,7 @@ struct EvenOdd {
         } else {
           const auto &_alt = std::get<ECons>(_src->v());
           _dst->v_ =
-              ECons{_alt.a0, _alt.a1 ? std::make_unique<odd_list>() : nullptr};
+              ECons{_alt.a0, _alt.a1 ? std::make_shared<odd_list>() : nullptr};
           auto &_dst_alt = std::get<ECons>(_dst->v_);
           if (_alt.a1) {
             if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
@@ -79,7 +79,7 @@ struct EvenOdd {
               auto &_pdst = std::get<typename EvenOdd::odd_list::OCons>(
                   _dst_alt.a1->v_mut());
               if (_psrc.a1) {
-                _pdst.a1 = std::make_unique<even_list>();
+                _pdst.a1 = std::make_shared<even_list>();
                 _stack.push_back({_psrc.a1.get(), _pdst.a1.get()});
               }
             }
@@ -93,12 +93,12 @@ struct EvenOdd {
     static even_list enil() { return even_list(ENil{}); }
 
     static even_list econs(uint64_t a0, odd_list a1) {
-      return even_list(ECons{a0, std::make_unique<odd_list>(std::move(a1))});
+      return even_list(ECons{a0, std::make_shared<odd_list>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~even_list() {
-      std::vector<std::unique_ptr<even_list>> _stack{};
+      std::vector<std::shared_ptr<even_list>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](even_list &_node) {
         if (std::holds_alternative<ECons>(_node.v_)) {
@@ -135,7 +135,7 @@ struct EvenOdd {
     // TYPES
     struct OCons {
       uint64_t a0;
-      std::unique_ptr<even_list> a1;
+      std::shared_ptr<even_list> a1;
     };
 
     using variant_t = std::variant<OCons>;
@@ -168,18 +168,18 @@ struct EvenOdd {
     odd_list clone() const {
       const auto &[a0, a1] = std::get<OCons>(this->v());
       return odd_list(
-          OCons{a0, a1 ? std::make_unique<EvenOdd::even_list>(a1->clone())
+          OCons{a0, a1 ? std::make_shared<EvenOdd::even_list>(a1->clone())
                        : nullptr});
     }
 
     // CREATORS
     static odd_list ocons(uint64_t a0, even_list a1) {
-      return odd_list(OCons{a0, std::make_unique<even_list>(std::move(a1))});
+      return odd_list(OCons{a0, std::make_shared<even_list>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~odd_list() {
-      std::vector<std::unique_ptr<odd_list>> _stack{};
+      std::vector<std::shared_ptr<odd_list>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](odd_list &_node) {
         if (std::holds_alternative<OCons>(_node.v_)) {

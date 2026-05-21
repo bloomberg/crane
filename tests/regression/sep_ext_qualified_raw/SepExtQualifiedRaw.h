@@ -20,7 +20,7 @@ template <OrderedType X> struct Make {
     struct Node {
       typename X::t a0;
       A a1;
-      std::unique_ptr<Fmap<A>> a2;
+      std::shared_ptr<Fmap<A>> a2;
     };
 
     using variant_t = std::variant<Empty, Node>;
@@ -73,7 +73,7 @@ template <OrderedType X> struct Make {
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->v_ = Node{_alt.a0, _alt.a1,
-                          _alt.a2 ? std::make_unique<Fmap<A>>() : nullptr};
+                          _alt.a2 ? std::make_shared<Fmap<A>>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a2) {
             _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
@@ -91,7 +91,7 @@ template <OrderedType X> struct Make {
         const auto &[a0, a1, a2] =
             std::get<typename Fmap<_U>::Node>(_other.v());
         this->v_ =
-            Node{a0, A(a1), a2 ? std::make_unique<Fmap<A>>(*a2) : nullptr};
+            Node{a0, A(a1), a2 ? std::make_shared<Fmap<A>>(*a2) : nullptr};
       }
     }
 
@@ -99,12 +99,12 @@ template <OrderedType X> struct Make {
 
     static Fmap<A> node(typename X::t a0, A a1, Fmap<A> a2) {
       return Fmap(Node{std::move(a0), std::move(a1),
-                       std::make_unique<Fmap<A>>(std::move(a2))});
+                       std::make_shared<Fmap<A>>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~Fmap() {
-      std::vector<std::unique_ptr<Fmap<A>>> _stack{};
+      std::vector<std::shared_ptr<Fmap<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](Fmap<A> &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

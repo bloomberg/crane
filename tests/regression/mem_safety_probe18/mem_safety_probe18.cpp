@@ -67,20 +67,20 @@ MemSafetyProbe18::fold_left_tree(const MemSafetyProbe18::mylist<uint64_t> &l,
 /// using the same tree in different positions.
 MemSafetyProbe18::mylist<MemSafetyProbe18::tree>
 MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t, uint64_t n) {
-  std::unique_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _head{};
-  std::unique_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> *_write =
+  std::shared_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _head{};
+  std::shared_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> *_write =
       &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       *_write =
-          std::make_unique<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
+          std::make_shared<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
               mylist<MemSafetyProbe18::tree>::mynil());
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
       auto _cell =
-          std::make_unique<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
+          std::make_shared<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
               typename mylist<MemSafetyProbe18::tree>::Mycons(
                   tree::node(t, _loop_n, tree::leaf()), nullptr));
       *_write = std::move(_cell);

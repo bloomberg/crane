@@ -14,7 +14,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -82,19 +82,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -136,7 +136,7 @@ struct NestedInd {
 
     struct Ccons {
       A a0;
-      std::unique_ptr<custom_list<A>> a1;
+      std::shared_ptr<custom_list<A>> a1;
     };
 
     using variant_t = std::variant<Cnil, Ccons>;
@@ -189,7 +189,7 @@ struct NestedInd {
           _dst->v_ = Cnil{};
         } else {
           const auto &_alt = std::get<Ccons>(_src->v());
-          _dst->v_ = Ccons{_alt.a0, _alt.a1 ? std::make_unique<custom_list<A>>()
+          _dst->v_ = Ccons{_alt.a0, _alt.a1 ? std::make_shared<custom_list<A>>()
                                             : nullptr};
           auto &_dst_alt = std::get<Ccons>(_dst->v_);
           if (_alt.a1) {
@@ -208,7 +208,7 @@ struct NestedInd {
         const auto &[a0, a1] =
             std::get<typename custom_list<_U>::Ccons>(_other.v());
         this->v_ =
-            Ccons{A(a0), a1 ? std::make_unique<custom_list<A>>(*a1) : nullptr};
+            Ccons{A(a0), a1 ? std::make_shared<custom_list<A>>(*a1) : nullptr};
       }
     }
 
@@ -216,12 +216,12 @@ struct NestedInd {
 
     static custom_list<A> ccons(A a0, custom_list<A> a1) {
       return custom_list(Ccons{
-          std::move(a0), std::make_unique<custom_list<A>>(std::move(a1))});
+          std::move(a0), std::make_shared<custom_list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~custom_list() {
-      std::vector<std::unique_ptr<custom_list<A>>> _stack{};
+      std::vector<std::shared_ptr<custom_list<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](custom_list<A> &_node) {
         if (std::holds_alternative<Ccons>(_node.v_)) {
@@ -285,7 +285,7 @@ struct NestedInd {
     // TYPES
     struct Node {
       A a0;
-      std::unique_ptr<custom_list<rose<A>>> a1;
+      std::shared_ptr<custom_list<rose<A>>> a1;
     };
 
     using variant_t = std::variant<Node>;
@@ -318,7 +318,7 @@ struct NestedInd {
     rose<A> clone() const {
       const auto &[a0, a1] = std::get<Node>(this->v());
       return rose<A>(Node{
-          a0, a1 ? std::make_unique<NestedInd::custom_list<NestedInd::rose<A>>>(
+          a0, a1 ? std::make_shared<NestedInd::custom_list<NestedInd::rose<A>>>(
                        a1->clone())
                  : nullptr});
     }
@@ -327,13 +327,13 @@ struct NestedInd {
     template <typename _U> explicit rose(const rose<_U> &_other) {
       const auto &[a0, a1] = std::get<typename rose<_U>::Node>(_other.v());
       this->v_ = Node{
-          A(a0), a1 ? std::make_unique<NestedInd::custom_list<rose<A>>>(*a1)
+          A(a0), a1 ? std::make_shared<NestedInd::custom_list<rose<A>>>(*a1)
                     : nullptr};
     }
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {
       return rose(Node{std::move(a0),
-                       std::make_unique<custom_list<rose<A>>>(std::move(a1))});
+                       std::make_shared<custom_list<rose<A>>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -395,11 +395,11 @@ struct NestedInd {
     };
 
     struct Add {
-      std::unique_ptr<List<expr>> a0;
+      std::shared_ptr<List<expr>> a0;
     };
 
     struct Mul {
-      std::unique_ptr<List<expr>> a0;
+      std::shared_ptr<List<expr>> a0;
     };
 
     using variant_t = std::variant<Lit, Add, Mul>;
@@ -454,7 +454,7 @@ struct NestedInd {
           _dst->v_ = Lit{_alt.a0};
         } else if (std::holds_alternative<Add>(_src->v())) {
           const auto &_alt = std::get<Add>(_src->v());
-          _dst->v_ = Add{_alt.a0 ? std::make_unique<List<expr>>() : nullptr};
+          _dst->v_ = Add{_alt.a0 ? std::make_shared<List<expr>>() : nullptr};
           auto &_dst_alt = std::get<Add>(_dst->v_);
           [&] {
             if (_alt.a0) {
@@ -466,7 +466,7 @@ struct NestedInd {
                     std::get<typename List<expr>::Cons>(_lsrc->v());
                 _ldst->v_mut() = typename List<expr>::Cons{
                     expr{},
-                    _lsrc_c.l ? std::make_unique<List<expr>>() : nullptr};
+                    _lsrc_c.l ? std::make_shared<List<expr>>() : nullptr};
                 auto &_ldst_c =
                     std::get<typename List<expr>::Cons>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
@@ -485,7 +485,7 @@ struct NestedInd {
           }();
         } else {
           const auto &_alt = std::get<Mul>(_src->v());
-          _dst->v_ = Mul{_alt.a0 ? std::make_unique<List<expr>>() : nullptr};
+          _dst->v_ = Mul{_alt.a0 ? std::make_shared<List<expr>>() : nullptr};
           auto &_dst_alt = std::get<Mul>(_dst->v_);
           [&] {
             if (_alt.a0) {
@@ -497,7 +497,7 @@ struct NestedInd {
                     std::get<typename List<expr>::Cons>(_lsrc->v());
                 _ldst->v_mut() = typename List<expr>::Cons{
                     expr{},
-                    _lsrc_c.l ? std::make_unique<List<expr>>() : nullptr};
+                    _lsrc_c.l ? std::make_shared<List<expr>>() : nullptr};
                 auto &_ldst_c =
                     std::get<typename List<expr>::Cons>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
@@ -523,16 +523,16 @@ struct NestedInd {
     static expr lit(uint64_t a0) { return expr(Lit{a0}); }
 
     static expr add(List<expr> a0) {
-      return expr(Add{std::make_unique<List<expr>>(std::move(a0))});
+      return expr(Add{std::make_shared<List<expr>>(std::move(a0))});
     }
 
     static expr mul(List<expr> a0) {
-      return expr(Mul{std::make_unique<List<expr>>(std::move(a0))});
+      return expr(Mul{std::make_shared<List<expr>>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack{};
+      std::vector<std::shared_ptr<expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<Add>(_node.v_)) {
@@ -542,7 +542,7 @@ struct NestedInd {
             while (
                 std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_unique<expr>(std::move(_lc.a)));
+              _stack.push_back(std::make_shared<expr>(std::move(_lc.a)));
               if (_lc.l) {
                 _lp = _lc.l.get();
               } else {
@@ -558,7 +558,7 @@ struct NestedInd {
             while (
                 std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_unique<expr>(std::move(_lc.a)));
+              _stack.push_back(std::make_shared<expr>(std::move(_lc.a)));
               if (_lc.l) {
                 _lp = _lc.l.get();
               } else {

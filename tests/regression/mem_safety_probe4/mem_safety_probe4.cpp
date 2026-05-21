@@ -206,14 +206,14 @@ uint64_t MemSafetyProbe4::weighted_sum(
 /// TEST 5: Map building new trees from partial app results across recursion.
 MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
     const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l) {
-  std::unique_ptr<MemSafetyProbe4::mylist<uint64_t>> _head{};
-  std::unique_ptr<MemSafetyProbe4::mylist<uint64_t>> *_write = &_head;
+  std::shared_ptr<MemSafetyProbe4::mylist<uint64_t>> _head{};
+  std::shared_ptr<MemSafetyProbe4::mylist<uint64_t>> *_write = &_head;
   const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
             _loop_l->v())) {
-      *_write = std::make_unique<MemSafetyProbe4::mylist<uint64_t>>(
+      *_write = std::make_shared<MemSafetyProbe4::mylist<uint64_t>>(
           mylist<uint64_t>::mynil());
       break;
     } else {
@@ -223,7 +223,7 @@ MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
       std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
         return a0.sum_values(_x0);
       };
-      auto _cell = std::make_unique<MemSafetyProbe4::mylist<uint64_t>>(
+      auto _cell = std::make_shared<MemSafetyProbe4::mylist<uint64_t>>(
           typename mylist<uint64_t>::Mycons(f(UINT64_C(0)), nullptr));
       *_write = std::move(_cell);
       _write =

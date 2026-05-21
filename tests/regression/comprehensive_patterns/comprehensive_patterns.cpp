@@ -95,19 +95,19 @@ ComprehensivePatterns::match_pair(
 
 List<std::pair<ComprehensivePatterns::S, uint64_t>>
 ComprehensivePatterns::make_list(uint64_t n, ComprehensivePatterns::S s) {
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> *_write =
+  std::shared_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> _head{};
+  std::shared_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> *_write =
       &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       *_write =
-          std::make_unique<List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
+          std::make_shared<List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
               List<std::pair<ComprehensivePatterns::S, uint64_t>>::nil());
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_unique<
+      auto _cell = std::make_shared<
           List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
           typename List<std::pair<ComprehensivePatterns::S, uint64_t>>::Cons(
               std::make_pair(s, s.s_a), nullptr));
@@ -298,23 +298,23 @@ ComprehensivePatterns::cond_proj(bool b, ComprehensivePatterns::R2 r2) {
 
 List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>
 ComprehensivePatterns::repeat_r2(uint64_t n, ComprehensivePatterns::R2 r2) {
-  std::unique_ptr<
+  std::shared_ptr<
       List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
       _head{};
-  std::unique_ptr<
+  std::shared_ptr<
       List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
       *_write = &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_unique<List<
+      *_write = std::make_shared<List<
           std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
           List<std::pair<ComprehensivePatterns::R2,
                          ComprehensivePatterns::R1>>::nil());
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_unique<List<
+      auto _cell = std::make_shared<List<
           std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
           typename List<
               std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>::
@@ -464,19 +464,19 @@ ComprehensivePatterns::chain_to_pair(ComprehensivePatterns::R r1) {
 
 List<std::pair<ComprehensivePatterns::R, uint64_t>>
 ComprehensivePatterns::repeat_pair(uint64_t n, ComprehensivePatterns::R r) {
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> *_write =
+  std::shared_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> _head{};
+  std::shared_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> *_write =
       &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
       *_write =
-          std::make_unique<List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
+          std::make_shared<List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
               List<std::pair<ComprehensivePatterns::R, uint64_t>>::nil());
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_unique<
+      auto _cell = std::make_shared<
           List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
           typename List<std::pair<ComprehensivePatterns::R, uint64_t>>::Cons(
               std::make_pair(r, r.val), nullptr));

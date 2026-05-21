@@ -14,7 +14,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -82,19 +82,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -141,7 +141,7 @@ struct DeepPatterns {
   struct outer {
     // TYPES
     struct OLeft {
-      std::unique_ptr<inner> a0;
+      std::shared_ptr<inner> a0;
     };
 
     struct ORight {
@@ -181,7 +181,7 @@ struct DeepPatterns {
       if (std::holds_alternative<OLeft>(this->v())) {
         const auto &[a0] = std::get<OLeft>(this->v());
         return outer(OLeft{
-            a0 ? std::make_unique<DeepPatterns::inner>(a0->clone()) : nullptr});
+            a0 ? std::make_shared<DeepPatterns::inner>(a0->clone()) : nullptr});
       } else {
         const auto &[a0] = std::get<ORight>(this->v());
         return outer(ORight{a0});
@@ -190,14 +190,14 @@ struct DeepPatterns {
 
     // CREATORS
     static outer oleft(inner a0) {
-      return outer(OLeft{std::make_unique<inner>(std::move(a0))});
+      return outer(OLeft{std::make_shared<inner>(std::move(a0))});
     }
 
     static outer oright(uint64_t a0) { return outer(ORight{a0}); }
 
     // MANIPULATORS
     ~outer() {
-      std::vector<std::unique_ptr<outer>> _stack{};
+      std::vector<std::shared_ptr<outer>> _stack{};
       _stack.reserve(8);
       auto _drain = [](outer &_node) {
         if (std::holds_alternative<OLeft>(_node.v_)) {
@@ -374,7 +374,7 @@ struct DeepPatterns {
 
     struct Cons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
@@ -427,7 +427,7 @@ struct DeepPatterns {
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
           _dst->v_ =
-              Cons{_alt.a0, _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+              Cons{_alt.a0, _alt.a1 ? std::make_shared<mylist<A>>() : nullptr};
           auto &_dst_alt = std::get<Cons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -443,7 +443,7 @@ struct DeepPatterns {
         this->v_ = Nil{};
       } else {
         const auto &[a0, a1] = std::get<typename mylist<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+        this->v_ = Cons{A(a0), a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -451,12 +451,12 @@ struct DeepPatterns {
 
     static mylist<A> cons(A a0, mylist<A> a1) {
       return mylist(
-          Cons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Cons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
+      std::vector<std::shared_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist<A> &_node) {
         if (std::holds_alternative<Cons>(_node.v_)) {

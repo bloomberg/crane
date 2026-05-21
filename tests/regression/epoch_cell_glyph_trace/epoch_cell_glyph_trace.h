@@ -13,7 +13,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -65,7 +65,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -81,19 +81,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -123,11 +123,11 @@ enum class Comparison { EQ, LT, GT };
 struct Positive {
   // TYPES
   struct XI {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XO {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XH {};
@@ -181,14 +181,14 @@ public:
       Positive *_dst = _frame._dst;
       if (std::holds_alternative<XI>(_src->v())) {
         const auto &_alt = std::get<XI>(_src->v());
-        _dst->v_ = XI{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->v_ = XI{_alt.a0 ? std::make_shared<Positive>() : nullptr};
         auto &_dst_alt = std::get<XI>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<XO>(_src->v())) {
         const auto &_alt = std::get<XO>(_src->v());
-        _dst->v_ = XO{_alt.a0 ? std::make_unique<Positive>() : nullptr};
+        _dst->v_ = XO{_alt.a0 ? std::make_shared<Positive>() : nullptr};
         auto &_dst_alt = std::get<XO>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -202,18 +202,18 @@ public:
 
   // CREATORS
   static Positive xi(Positive a0) {
-    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
   ~Positive() {
-    std::vector<std::unique_ptr<Positive>> _stack{};
+    std::vector<std::shared_ptr<Positive>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Positive &_node) {
       if (std::holds_alternative<XI>(_node.v_)) {

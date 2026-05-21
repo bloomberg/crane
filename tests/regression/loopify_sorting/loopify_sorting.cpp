@@ -2,22 +2,22 @@
 
 /// Consolidated UNIQUE sorting algorithms and related operations.
 List<uint64_t> LoopifySorting::insert(uint64_t x, List<uint64_t> l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l = std::move(l);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v_mut())) {
-      *_write = std::make_unique<List<uint64_t>>(
+      *_write = std::make_shared<List<uint64_t>>(
           List<uint64_t>::cons(x, List<uint64_t>::nil()));
       break;
     } else {
       auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
       if (x <= a0) {
         *_write =
-            std::make_unique<List<uint64_t>>(List<uint64_t>::cons(x, _loop_l));
+            std::make_shared<List<uint64_t>>(List<uint64_t>::cons(x, _loop_l));
         break;
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a0), nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
@@ -71,33 +71,33 @@ List<uint64_t> LoopifySorting::insertion_sort(
 
 List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
                                           List<uint64_t> l2) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   List<uint64_t> _loop_l2 = std::move(l2);
   List<uint64_t> _loop_l1 = std::move(l1);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               _loop_l1.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l2));
+        *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l2));
         break;
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
         if (std::holds_alternative<typename List<uint64_t>::Nil>(
                 _loop_l2.v_mut())) {
-          *_write = std::make_unique<List<uint64_t>>(_loop_l1);
+          *_write = std::make_shared<List<uint64_t>>(_loop_l1);
           break;
         } else {
           auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
           if (a0 <= a00) {
-            auto _cell = std::make_unique<List<uint64_t>>(
+            auto _cell = std::make_shared<List<uint64_t>>(
                 typename List<uint64_t>::Cons(std::move(a0), nullptr));
             *_write = std::move(_cell);
             _write =
@@ -106,7 +106,7 @@ List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
             _loop_fuel = f;
             continue;
           } else {
-            auto _cell = std::make_unique<List<uint64_t>>(
+            auto _cell = std::make_shared<List<uint64_t>>(
                 typename List<uint64_t>::Cons(std::move(a00), nullptr));
             *_write = std::move(_cell);
             _write =
@@ -348,19 +348,19 @@ bool LoopifySorting::is_sorted(const List<uint64_t> &l) {
 
 /// remove_duplicates removes consecutive duplicates from sorted list.
 List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<uint64_t>>(
+        *_write = std::make_shared<List<uint64_t>>(
             List<uint64_t>::cons(a0, List<uint64_t>::nil()));
         break;
       } else {
@@ -370,7 +370,7 @@ List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
           _loop_l = a1.get();
           continue;
         } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -387,14 +387,14 @@ List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
 /// uniq_sorted variant that preserves order.
 List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
                                                const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   const List<uint64_t> *_loop_l = &l;
   bool _loop_seen = std::move(seen);
   uint64_t _loop_prev = std::move(prev);
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       const auto &[a0, a1] =
@@ -406,7 +406,7 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
           _loop_prev = a0;
           continue;
         } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -417,7 +417,7 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
           continue;
         }
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
+        auto _cell = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;

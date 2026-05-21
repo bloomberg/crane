@@ -68,23 +68,23 @@ uint64_t LoopifyNumericSequences::collatz_length(uint64_t n) {
 
 List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
                                                               uint64_t n) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
+  std::shared_ptr<List<uint64_t>> _head{};
+  std::shared_ptr<List<uint64_t>> *_write = &_head;
   uint64_t _loop_n = std::move(n);
   uint64_t _loop_fuel = std::move(fuel);
   while (true) {
     if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
+      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (_loop_n <= UINT64_C(1)) {
-        *_write = std::make_unique<List<uint64_t>>(
+        *_write = std::make_shared<List<uint64_t>>(
             List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
         break;
       } else {
         if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(_loop_n, nullptr));
           *_write = std::move(_cell);
           _write =
@@ -93,7 +93,7 @@ List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
           _loop_fuel = fuel_;
           continue;
         } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
+          auto _cell = std::make_shared<List<uint64_t>>(
               typename List<uint64_t>::Cons(_loop_n, nullptr));
           *_write = std::move(_cell);
           _write =

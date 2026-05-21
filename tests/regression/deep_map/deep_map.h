@@ -13,9 +13,9 @@ struct DeepMap {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree<A>> a0;
+      std::shared_ptr<tree<A>> a0;
       A a1;
-      std::unique_ptr<tree<A>> a2;
+      std::shared_ptr<tree<A>> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -68,8 +68,8 @@ struct DeepMap {
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->v_ =
-              Node{_alt.a0 ? std::make_unique<tree<A>>() : nullptr, _alt.a1,
-                   _alt.a2 ? std::make_unique<tree<A>>() : nullptr};
+              Node{_alt.a0 ? std::make_shared<tree<A>>() : nullptr, _alt.a1,
+                   _alt.a2 ? std::make_shared<tree<A>>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -89,21 +89,21 @@ struct DeepMap {
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{a0 ? std::make_unique<tree<A>>(*a0) : nullptr, A(a1),
-                        a2 ? std::make_unique<tree<A>>(*a2) : nullptr};
+        this->v_ = Node{a0 ? std::make_shared<tree<A>>(*a0) : nullptr, A(a1),
+                        a2 ? std::make_shared<tree<A>>(*a2) : nullptr};
       }
     }
 
     static tree<A> leaf() { return tree(Leaf{}); }
 
     static tree<A> node(tree<A> a0, A a1, tree<A> a2) {
-      return tree(Node{std::make_unique<tree<A>>(std::move(a0)), std::move(a1),
-                       std::make_unique<tree<A>>(std::move(a2))});
+      return tree(Node{std::make_shared<tree<A>>(std::move(a0)), std::move(a1),
+                       std::make_shared<tree<A>>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree<A>>> _stack{};
+      std::vector<std::shared_ptr<tree<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree<A> &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

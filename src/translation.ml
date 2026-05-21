@@ -893,7 +893,7 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
   | Tqualified (base, id) ->
     "typename " ^ render base ^ "::" ^ Id.to_string id
   | Tshared_ptr t -> "std::shared_ptr<" ^ render t ^ ">"
-  | Tunique_ptr t -> "std::unique_ptr<" ^ render t ^ ">"
+  | Tunique_ptr t -> "std::shared_ptr<" ^ render t ^ ">"
   | Tvoid -> "void"
   | _ -> "auto"
 
@@ -1219,13 +1219,13 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
      the pointee's clone() method. *)
   let mk_uptr_clone inner_s expr_s =
     require_header "memory";
-    expr_s ^ " ? std::make_unique<" ^ inner_s ^ ">(" ^ expr_s
+    expr_s ^ " ? std::make_shared<" ^ inner_s ^ ">(" ^ expr_s
     ^ "->clone()) : nullptr"
   in
   let mk_opt_uptr_clone inner_s expr_s =
     require_header "memory";
     require_header "optional";
-    expr_s ^ ".has_value() ? std::make_optional(std::make_unique<" ^ inner_s
+    expr_s ^ ".has_value() ? std::make_optional(std::make_shared<" ^ inner_s
     ^ ">((*" ^ expr_s ^ ")->clone())) : std::nullopt"
   in
   let mk_opt_uptr_to_val dst_inner_s expr_s =
@@ -1258,7 +1258,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let ty_s = render src_ty in
       with_expr_s ~lambda_ty:ty_s
         ~make_body:(fun s ->
-          s ^ " ? std::make_unique<" ^ opt_uptr_s ^ ">(" ^
+          s ^ " ? std::make_shared<" ^ opt_uptr_s ^ ">(" ^
           mk_opt_uptr_clone inner_s ("(*" ^ s ^ ")") ^
           ") : nullptr")
     | Tunique_ptr (Tglob (g, [Tunique_ptr fst_inner; snd_ty], e))
@@ -1269,7 +1269,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let ty_s = render src_ty in
       with_expr_s ~lambda_ty:ty_s
         ~make_body:(fun s ->
-          s ^ " ? std::make_unique<" ^ pair_s ^
+          s ^ " ? std::make_shared<" ^ pair_s ^
           ">(std::make_pair(" ^
           mk_uptr_clone fst_inner_s (s ^ "->first") ^
           ", " ^ s ^ "->second" ^
@@ -1282,7 +1282,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let ty_s = render src_ty in
       with_expr_s ~lambda_ty:ty_s
         ~make_body:(fun s ->
-          s ^ " ? std::make_unique<" ^ pair_s ^
+          s ^ " ? std::make_shared<" ^ pair_s ^
           ">(std::make_pair(" ^
           s ^ "->first, " ^
           mk_uptr_clone snd_inner_s (s ^ "->second") ^
@@ -1295,7 +1295,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let ty_s = render src_ty in
       with_expr_s ~lambda_ty:ty_s
         ~make_body:(fun s ->
-          s ^ " ? std::make_unique<" ^ list_s ^ ">(" ^ s ^
+          s ^ " ? std::make_shared<" ^ list_s ^ ">(" ^ s ^
           "->clone()) : nullptr")
     | Tunique_ptr inner ->
       (* unique_ptr<T>: null-safe via ->clone() *)
@@ -1328,7 +1328,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
         ~make_body:(fun s ->
-          s ^ " ? std::make_unique<" ^ dst_inner_s ^ ">(*" ^ s ^ ") : nullptr")
+          s ^ " ? std::make_shared<" ^ dst_inner_s ^ ">(*" ^ s ^ ") : nullptr")
     | Tunique_ptr inner, _ ->
       (* unique_ptr<T> → T: dereference.  Also strip Tnamespace from inner
          before comparing to dst_ty: strip_ns was applied to dst_ty at the
@@ -1374,7 +1374,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let ty_s = render dst_ty in
       with_expr_s ~lambda_ty:ty_s
         ~make_body:(fun s ->
-          s ^ ".has_value() ? std::make_optional(std::make_unique<" ^ dst_inner_s
+          s ^ ".has_value() ? std::make_optional(std::make_shared<" ^ dst_inner_s
           ^ ">((*" ^ s ^ ").clone())) : std::nullopt")
     | Tglob (g1, [src_inner], _), Tglob (g2, [Tshared_ptr dst_inner], _)
       when GlobRef.CanOrd.equal g1 g2 && is_option_global g1
@@ -3956,7 +3956,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
                     ^ String.concat ", " (List.map render_ty tys)
                     ^ ">"
                   | Tshared_ptr ty -> "std::shared_ptr<" ^ render_ty ty ^ ">"
-                  | Tunique_ptr ty -> "std::unique_ptr<" ^ render_ty ty ^ ">"
+                  | Tunique_ptr ty -> "std::shared_ptr<" ^ render_ty ty ^ ">"
                   | _ -> "auto"
                 in
                 "<" ^ String.concat ", " (List.map render_ty tys_cpp) ^ ">"
@@ -13627,7 +13627,7 @@ let gen_ind_header_v2
                                            ^ ">(_lp->v_mut());");
                                          push_rval
                                            (CPPraw (
-                                              "std::make_unique<" ^ ss
+                                              "std::make_shared<" ^ ss
                                               ^ ">(std::move(_lc." ^ Id.to_string (lookup_ctor_field_name cons_s 0) ^ "))"));
                                          Sraw (
                                            "if (_lc." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ ") {"
@@ -14584,7 +14584,7 @@ let gen_ind_header_v2
                                       ^ " _ldst->v_mut() = typename "
                                         ^ ls ^ "::" ^ cons_s ^ "{"
                                         ^ self_s ^ "{},"
-                                        ^ " _lsrc_c." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ " ? std::make_unique<"
+                                        ^ " _lsrc_c." ^ Id.to_string (lookup_ctor_field_name cons_s 1) ^ " ? std::make_shared<"
                                         ^ ls ^ ">() : nullptr};"
                                       ^ " auto& _ldst_c = std::get<typename "
                                         ^ ls ^ "::" ^ cons_s
@@ -14678,7 +14678,7 @@ let gen_ind_header_v2
                                                      [Sif_then (
                                                         CPPraw pfs,
                                                         [Sraw (pdf
-                                                           ^ " = std::make_unique<"
+                                                           ^ " = std::make_shared<"
                                                            ^ self_s ^ ">();");
                                                          push_frame
                                                            (CPPraw (pfs

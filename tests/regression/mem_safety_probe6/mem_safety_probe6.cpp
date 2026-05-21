@@ -3,15 +3,15 @@
 /// TEST 5: Chain of closures each pre-computing from the tail.
 MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>
 MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
-  std::unique_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
+  std::shared_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
       _head{};
-  std::unique_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
+  std::shared_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
       *_write = &_head;
   MemSafetyProbe6::mylist<uint64_t> _loop_l = l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_unique<
+      *_write = std::make_shared<
           MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>(
           mylist<std::function<uint64_t(uint64_t)>>::mynil());
       break;
@@ -21,7 +21,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
               _loop_l.v());
       const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
       uint64_t rest_len = a1_value.length();
-      auto _cell = std::make_unique<
+      auto _cell = std::make_shared<
           MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>(
           typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
               [=](uint64_t n) mutable { return ((a0 + rest_len) + n); },

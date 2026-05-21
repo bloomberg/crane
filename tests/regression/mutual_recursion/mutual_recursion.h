@@ -23,13 +23,13 @@ struct MutualRecursion {
 
     struct BinOp {
       uint64_t a0;
-      std::unique_ptr<expr> a1;
-      std::unique_ptr<expr> a2;
+      std::shared_ptr<expr> a1;
+      std::shared_ptr<expr> a2;
     };
 
     struct UnOp {
       uint64_t a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a1;
     };
 
     using variant_t = std::variant<Val, BinOp, UnOp>;
@@ -85,8 +85,8 @@ struct MutualRecursion {
         } else if (std::holds_alternative<BinOp>(_src->v())) {
           const auto &_alt = std::get<BinOp>(_src->v());
           _dst->v_ =
-              BinOp{_alt.a0, _alt.a1 ? std::make_unique<expr>() : nullptr,
-                    _alt.a2 ? std::make_unique<expr>() : nullptr};
+              BinOp{_alt.a0, _alt.a1 ? std::make_shared<expr>() : nullptr,
+                    _alt.a2 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<BinOp>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -97,7 +97,7 @@ struct MutualRecursion {
         } else {
           const auto &_alt = std::get<UnOp>(_src->v());
           _dst->v_ =
-              UnOp{_alt.a0, _alt.a1 ? std::make_unique<expr>() : nullptr};
+              UnOp{_alt.a0, _alt.a1 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<UnOp>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -111,17 +111,17 @@ struct MutualRecursion {
     static expr val(uint64_t a0) { return expr(Val{a0}); }
 
     static expr binop(uint64_t a0, expr a1, expr a2) {
-      return expr(BinOp{a0, std::make_unique<expr>(std::move(a1)),
-                        std::make_unique<expr>(std::move(a2))});
+      return expr(BinOp{a0, std::make_shared<expr>(std::move(a1)),
+                        std::make_shared<expr>(std::move(a2))});
     }
 
     static expr unop(uint64_t a0, expr a1) {
-      return expr(UnOp{a0, std::make_unique<expr>(std::move(a1))});
+      return expr(UnOp{a0, std::make_shared<expr>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack{};
+      std::vector<std::shared_ptr<expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<BinOp>(_node.v_)) {

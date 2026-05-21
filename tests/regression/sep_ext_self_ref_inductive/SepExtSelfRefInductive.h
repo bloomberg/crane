@@ -20,8 +20,8 @@ template <S X> struct HashTrie {
     struct Node {
       typename X::t k;
       V v;
-      std::unique_ptr<Trie<V>> left;
-      std::unique_ptr<Trie<V>> right;
+      std::shared_ptr<Trie<V>> left;
+      std::shared_ptr<Trie<V>> right;
     };
 
     using variant_t = std::variant<Empty, Node>;
@@ -74,8 +74,8 @@ template <S X> struct HashTrie {
         } else {
           const auto &_alt = std::get<Node>(_src->v());
           _dst->v_ = Node{_alt.k, _alt.v,
-                          _alt.left ? std::make_unique<Trie<V>>() : nullptr,
-                          _alt.right ? std::make_unique<Trie<V>>() : nullptr};
+                          _alt.left ? std::make_shared<Trie<V>>() : nullptr,
+                          _alt.right ? std::make_shared<Trie<V>>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.left) {
             _stack.push_back({_alt.left.get(), _dst_alt.left.get()});
@@ -96,8 +96,8 @@ template <S X> struct HashTrie {
         const auto &[k, v, left, right] =
             std::get<typename Trie<_U>::Node>(_other.v());
         this->v_ =
-            Node{k, V(v), left ? std::make_unique<Trie<V>>(*left) : nullptr,
-                 right ? std::make_unique<Trie<V>>(*right) : nullptr};
+            Node{k, V(v), left ? std::make_shared<Trie<V>>(*left) : nullptr,
+                 right ? std::make_shared<Trie<V>>(*right) : nullptr};
       }
     }
 
@@ -105,13 +105,13 @@ template <S X> struct HashTrie {
 
     static Trie<V> node(typename X::t k, V v, Trie<V> left, Trie<V> right) {
       return Trie(Node{std::move(k), std::move(v),
-                       std::make_unique<Trie<V>>(std::move(left)),
-                       std::make_unique<Trie<V>>(std::move(right))});
+                       std::make_shared<Trie<V>>(std::move(left)),
+                       std::make_shared<Trie<V>>(std::move(right))});
     }
 
     // MANIPULATORS
     ~Trie() {
-      std::vector<std::unique_ptr<Trie<V>>> _stack{};
+      std::vector<std::shared_ptr<Trie<V>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](Trie<V> &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

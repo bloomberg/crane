@@ -16,7 +16,7 @@ template <typename A> struct List {
 
   struct Cons0 {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil0, Cons0>;
@@ -69,7 +69,7 @@ public:
       } else {
         const auto &_alt = std::get<Cons0>(_src->v());
         _dst->v_ =
-            Cons0{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+            Cons0{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons0>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -85,19 +85,19 @@ public:
       this->v_ = Nil0{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons0>(_other.v());
-      this->v_ = Cons0{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons0{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil0() { return List(Nil0{}); }
 
   static List<A> cons0(A a, List<A> l) {
-    return List(Cons0{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons0{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons0>(_node.v_)) {
@@ -214,7 +214,7 @@ template <typename A> struct T0 {
   struct Cons {
     A h;
     uint64_t n;
-    std::unique_ptr<T0<A>> a2;
+    std::shared_ptr<T0<A>> a2;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -252,7 +252,7 @@ public:
     } else {
       const auto &[h, n, a2] = std::get<Cons>(this->v());
       return T0<A>(
-          Cons{h, n, a2 ? std::make_unique<T0<A>>(a2->clone()) : nullptr});
+          Cons{h, n, a2 ? std::make_shared<T0<A>>(a2->clone()) : nullptr});
     }
   }
 
@@ -262,14 +262,14 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[h, n, a2] = std::get<typename T0<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(h), n, a2 ? std::make_unique<T0<A>>(*a2) : nullptr};
+      this->v_ = Cons{A(h), n, a2 ? std::make_shared<T0<A>>(*a2) : nullptr};
     }
   }
 
   static T0<A> nil() { return T0(Nil{}); }
 
   static T0<A> cons(A h, uint64_t n, T0<A> a2) {
-    return T0(Cons{std::move(h), n, std::make_unique<T0<A>>(std::move(a2))});
+    return T0(Cons{std::move(h), n, std::make_shared<T0<A>>(std::move(a2))});
   }
 
   // MANIPULATORS
@@ -287,7 +287,7 @@ struct T {
 
   struct FS {
     uint64_t n;
-    std::unique_ptr<T> a1;
+    std::shared_ptr<T> a1;
   };
 
   using variant_t = std::variant<F1, FS>;
@@ -340,7 +340,7 @@ public:
         _dst->v_ = F1{_alt.n};
       } else {
         const auto &_alt = std::get<FS>(_src->v());
-        _dst->v_ = FS{_alt.n, _alt.a1 ? std::make_unique<T>() : nullptr};
+        _dst->v_ = FS{_alt.n, _alt.a1 ? std::make_shared<T>() : nullptr};
         auto &_dst_alt = std::get<FS>(_dst->v_);
         if (_alt.a1) {
           _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -354,12 +354,12 @@ public:
   static T f1(uint64_t n) { return T(F1{n}); }
 
   static T fs(uint64_t n, T a1) {
-    return T(FS{n, std::make_unique<T>(std::move(a1))});
+    return T(FS{n, std::make_shared<T>(std::move(a1))});
   }
 
   // MANIPULATORS
   ~T() {
-    std::vector<std::unique_ptr<T>> _stack{};
+    std::vector<std::shared_ptr<T>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](T &_node) {
       if (std::holds_alternative<FS>(_node.v_)) {
@@ -576,7 +576,7 @@ struct PendantSumtreeRoundtripCase {
 
     struct SumNode {
       CertifiedPendant a0;
-      std::unique_ptr<List<SumTree>> a1;
+      std::shared_ptr<List<SumTree>> a1;
     };
 
     using variant_t = std::variant<SumLeaf, SumNode>;
@@ -631,7 +631,7 @@ struct PendantSumtreeRoundtripCase {
           const auto &_alt = std::get<SumNode>(_src->v());
           _dst->v_ =
               SumNode{_alt.a0.clone(),
-                      _alt.a1 ? std::make_unique<List<SumTree>>() : nullptr};
+                      _alt.a1 ? std::make_shared<List<SumTree>>() : nullptr};
           auto &_dst_alt = std::get<SumNode>(_dst->v_);
           [&] {
             if (_alt.a1) {
@@ -643,7 +643,7 @@ struct PendantSumtreeRoundtripCase {
                     std::get<typename List<SumTree>::Cons0>(_lsrc->v());
                 _ldst->v_mut() = typename List<SumTree>::Cons0{
                     SumTree{},
-                    _lsrc_c.l ? std::make_unique<List<SumTree>>() : nullptr};
+                    _lsrc_c.l ? std::make_shared<List<SumTree>>() : nullptr};
                 auto &_ldst_c =
                     std::get<typename List<SumTree>::Cons0>(_ldst->v_mut());
                 _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
@@ -672,12 +672,12 @@ struct PendantSumtreeRoundtripCase {
 
     static SumTree sumnode(CertifiedPendant a0, List<SumTree> a1) {
       return SumTree(SumNode{std::move(a0),
-                             std::make_unique<List<SumTree>>(std::move(a1))});
+                             std::make_shared<List<SumTree>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~SumTree() {
-      std::vector<std::unique_ptr<SumTree>> _stack{};
+      std::vector<std::shared_ptr<SumTree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](SumTree &_node) {
         if (std::holds_alternative<SumNode>(_node.v_)) {
@@ -687,7 +687,7 @@ struct PendantSumtreeRoundtripCase {
             while (std::holds_alternative<typename List<SumTree>::Cons0>(
                 _lp->v())) {
               auto &_lc = std::get<typename List<SumTree>::Cons0>(_lp->v_mut());
-              _stack.push_back(std::make_unique<SumTree>(std::move(_lc.a)));
+              _stack.push_back(std::make_shared<SumTree>(std::move(_lc.a)));
               if (_lc.l) {
                 _lp = _lc.l.get();
               } else {

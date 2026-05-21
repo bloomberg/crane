@@ -248,7 +248,7 @@ uint64_t MemSafetyProbe22::split_sum(
   struct _After_Node {
     uint64_t n_;
     decltype(tree::node(
-        *(std::declval<std::unique_ptr<MemSafetyProbe22::tree> &>()),
+        *(std::declval<std::shared_ptr<MemSafetyProbe22::tree> &>()),
         (std::declval<uint64_t &>() + UINT64_C(1)), tree::leaf())) _s1;
   };
 

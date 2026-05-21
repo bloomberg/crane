@@ -14,7 +14,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -82,19 +82,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -129,23 +129,23 @@ struct LoopifyExpr {
     };
 
     struct Succ {
-      std::unique_ptr<expr> a0;
+      std::shared_ptr<expr> a0;
     };
 
     struct Add {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct Mul {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct Cond {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
-      std::unique_ptr<expr> a2;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
+      std::shared_ptr<expr> a2;
     };
 
     using variant_t = std::variant<Val, Succ, Add, Mul, Cond>;
@@ -204,15 +204,15 @@ struct LoopifyExpr {
           _dst->v_ = Val{_alt.a0};
         } else if (std::holds_alternative<Succ>(_src->v())) {
           const auto &_alt = std::get<Succ>(_src->v());
-          _dst->v_ = Succ{_alt.a0 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = Succ{_alt.a0 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<Succ>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
           }
         } else if (std::holds_alternative<Add>(_src->v())) {
           const auto &_alt = std::get<Add>(_src->v());
-          _dst->v_ = Add{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                         _alt.a1 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = Add{_alt.a0 ? std::make_shared<expr>() : nullptr,
+                         _alt.a1 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<Add>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -222,8 +222,8 @@ struct LoopifyExpr {
           }
         } else if (std::holds_alternative<Mul>(_src->v())) {
           const auto &_alt = std::get<Mul>(_src->v());
-          _dst->v_ = Mul{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                         _alt.a1 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = Mul{_alt.a0 ? std::make_shared<expr>() : nullptr,
+                         _alt.a1 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<Mul>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -233,9 +233,9 @@ struct LoopifyExpr {
           }
         } else {
           const auto &_alt = std::get<Cond>(_src->v());
-          _dst->v_ = Cond{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<expr>() : nullptr,
-                          _alt.a2 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = Cond{_alt.a0 ? std::make_shared<expr>() : nullptr,
+                          _alt.a1 ? std::make_shared<expr>() : nullptr,
+                          _alt.a2 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<Cond>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -255,28 +255,28 @@ struct LoopifyExpr {
     static expr val(uint64_t a0) { return expr(Val{a0}); }
 
     static expr succ(expr a0) {
-      return expr(Succ{std::make_unique<expr>(std::move(a0))});
+      return expr(Succ{std::make_shared<expr>(std::move(a0))});
     }
 
     static expr add(expr a0, expr a1) {
-      return expr(Add{std::make_unique<expr>(std::move(a0)),
-                      std::make_unique<expr>(std::move(a1))});
+      return expr(Add{std::make_shared<expr>(std::move(a0)),
+                      std::make_shared<expr>(std::move(a1))});
     }
 
     static expr mul(expr a0, expr a1) {
-      return expr(Mul{std::make_unique<expr>(std::move(a0)),
-                      std::make_unique<expr>(std::move(a1))});
+      return expr(Mul{std::make_shared<expr>(std::move(a0)),
+                      std::make_shared<expr>(std::move(a1))});
     }
 
     static expr cond(expr a0, expr a1, expr a2) {
-      return expr(Cond{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1)),
-                       std::make_unique<expr>(std::move(a2))});
+      return expr(Cond{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1)),
+                       std::make_shared<expr>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack{};
+      std::vector<std::shared_ptr<expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<Succ>(_node.v_)) {
@@ -1383,14 +1383,14 @@ struct LoopifyExpr {
     };
 
     struct Plus {
-      std::unique_ptr<simple_expr> a0;
-      std::unique_ptr<simple_expr> a1;
+      std::shared_ptr<simple_expr> a0;
+      std::shared_ptr<simple_expr> a1;
     };
 
     struct IfPos {
-      std::unique_ptr<simple_expr> a0;
-      std::unique_ptr<simple_expr> a1;
-      std::unique_ptr<simple_expr> a2;
+      std::shared_ptr<simple_expr> a0;
+      std::shared_ptr<simple_expr> a1;
+      std::shared_ptr<simple_expr> a2;
     };
 
     using variant_t = std::variant<Lit, Plus, IfPos>;
@@ -1445,8 +1445,8 @@ struct LoopifyExpr {
           _dst->v_ = Lit{_alt.a0};
         } else if (std::holds_alternative<Plus>(_src->v())) {
           const auto &_alt = std::get<Plus>(_src->v());
-          _dst->v_ = Plus{_alt.a0 ? std::make_unique<simple_expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<simple_expr>() : nullptr};
+          _dst->v_ = Plus{_alt.a0 ? std::make_shared<simple_expr>() : nullptr,
+                          _alt.a1 ? std::make_shared<simple_expr>() : nullptr};
           auto &_dst_alt = std::get<Plus>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -1456,9 +1456,9 @@ struct LoopifyExpr {
           }
         } else {
           const auto &_alt = std::get<IfPos>(_src->v());
-          _dst->v_ = IfPos{_alt.a0 ? std::make_unique<simple_expr>() : nullptr,
-                           _alt.a1 ? std::make_unique<simple_expr>() : nullptr,
-                           _alt.a2 ? std::make_unique<simple_expr>() : nullptr};
+          _dst->v_ = IfPos{_alt.a0 ? std::make_shared<simple_expr>() : nullptr,
+                           _alt.a1 ? std::make_shared<simple_expr>() : nullptr,
+                           _alt.a2 ? std::make_shared<simple_expr>() : nullptr};
           auto &_dst_alt = std::get<IfPos>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -1478,19 +1478,19 @@ struct LoopifyExpr {
     static simple_expr lit(uint64_t a0) { return simple_expr(Lit{a0}); }
 
     static simple_expr plus(simple_expr a0, simple_expr a1) {
-      return simple_expr(Plus{std::make_unique<simple_expr>(std::move(a0)),
-                              std::make_unique<simple_expr>(std::move(a1))});
+      return simple_expr(Plus{std::make_shared<simple_expr>(std::move(a0)),
+                              std::make_shared<simple_expr>(std::move(a1))});
     }
 
     static simple_expr ifpos(simple_expr a0, simple_expr a1, simple_expr a2) {
-      return simple_expr(IfPos{std::make_unique<simple_expr>(std::move(a0)),
-                               std::make_unique<simple_expr>(std::move(a1)),
-                               std::make_unique<simple_expr>(std::move(a2))});
+      return simple_expr(IfPos{std::make_shared<simple_expr>(std::move(a0)),
+                               std::make_shared<simple_expr>(std::move(a1)),
+                               std::make_shared<simple_expr>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~simple_expr() {
-      std::vector<std::unique_ptr<simple_expr>> _stack{};
+      std::vector<std::shared_ptr<simple_expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](simple_expr &_node) {
         if (std::holds_alternative<Plus>(_node.v_)) {
@@ -2005,14 +2005,14 @@ struct LoopifyExpr {
     };
 
     struct CPlus {
-      std::unique_ptr<cond_expr> a0;
-      std::unique_ptr<cond_expr> a1;
+      std::shared_ptr<cond_expr> a0;
+      std::shared_ptr<cond_expr> a1;
     };
 
     struct CCond {
-      std::unique_ptr<cond_expr> a0;
-      std::unique_ptr<cond_expr> a1;
-      std::unique_ptr<cond_expr> a2;
+      std::shared_ptr<cond_expr> a0;
+      std::shared_ptr<cond_expr> a1;
+      std::shared_ptr<cond_expr> a2;
     };
 
     using variant_t = std::variant<CLit, CPlus, CCond>;
@@ -2067,8 +2067,8 @@ struct LoopifyExpr {
           _dst->v_ = CLit{_alt.a0};
         } else if (std::holds_alternative<CPlus>(_src->v())) {
           const auto &_alt = std::get<CPlus>(_src->v());
-          _dst->v_ = CPlus{_alt.a0 ? std::make_unique<cond_expr>() : nullptr,
-                           _alt.a1 ? std::make_unique<cond_expr>() : nullptr};
+          _dst->v_ = CPlus{_alt.a0 ? std::make_shared<cond_expr>() : nullptr,
+                           _alt.a1 ? std::make_shared<cond_expr>() : nullptr};
           auto &_dst_alt = std::get<CPlus>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -2078,9 +2078,9 @@ struct LoopifyExpr {
           }
         } else {
           const auto &_alt = std::get<CCond>(_src->v());
-          _dst->v_ = CCond{_alt.a0 ? std::make_unique<cond_expr>() : nullptr,
-                           _alt.a1 ? std::make_unique<cond_expr>() : nullptr,
-                           _alt.a2 ? std::make_unique<cond_expr>() : nullptr};
+          _dst->v_ = CCond{_alt.a0 ? std::make_shared<cond_expr>() : nullptr,
+                           _alt.a1 ? std::make_shared<cond_expr>() : nullptr,
+                           _alt.a2 ? std::make_shared<cond_expr>() : nullptr};
           auto &_dst_alt = std::get<CCond>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -2100,19 +2100,19 @@ struct LoopifyExpr {
     static cond_expr clit(uint64_t a0) { return cond_expr(CLit{a0}); }
 
     static cond_expr cplus(cond_expr a0, cond_expr a1) {
-      return cond_expr(CPlus{std::make_unique<cond_expr>(std::move(a0)),
-                             std::make_unique<cond_expr>(std::move(a1))});
+      return cond_expr(CPlus{std::make_shared<cond_expr>(std::move(a0)),
+                             std::make_shared<cond_expr>(std::move(a1))});
     }
 
     static cond_expr ccond(cond_expr a0, cond_expr a1, cond_expr a2) {
-      return cond_expr(CCond{std::make_unique<cond_expr>(std::move(a0)),
-                             std::make_unique<cond_expr>(std::move(a1)),
-                             std::make_unique<cond_expr>(std::move(a2))});
+      return cond_expr(CCond{std::make_shared<cond_expr>(std::move(a0)),
+                             std::make_shared<cond_expr>(std::move(a1)),
+                             std::make_shared<cond_expr>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~cond_expr() {
-      std::vector<std::unique_ptr<cond_expr>> _stack{};
+      std::vector<std::shared_ptr<cond_expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](cond_expr &_node) {
         if (std::holds_alternative<CPlus>(_node.v_)) {

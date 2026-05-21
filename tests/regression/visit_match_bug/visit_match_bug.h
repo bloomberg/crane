@@ -15,9 +15,9 @@ struct VisitMatchBug {
     };
 
     struct Node {
-      std::unique_ptr<Tree> a0;
+      std::shared_ptr<Tree> a0;
       uint64_t a1;
-      std::unique_ptr<Tree> a2;
+      std::shared_ptr<Tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -70,8 +70,8 @@ struct VisitMatchBug {
           _dst->v_ = Leaf{_alt.a0};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_unique<Tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_unique<Tree>() : nullptr};
+          _dst->v_ = Node{_alt.a0 ? std::make_shared<Tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_shared<Tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -88,13 +88,13 @@ struct VisitMatchBug {
     static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
     static Tree node(Tree a0, uint64_t a1, Tree a2) {
-      return Tree(Node{std::make_unique<Tree>(std::move(a0)), a1,
-                       std::make_unique<Tree>(std::move(a2))});
+      return Tree(Node{std::make_shared<Tree>(std::move(a0)), a1,
+                       std::make_shared<Tree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~Tree() {
-      std::vector<std::unique_ptr<Tree>> _stack{};
+      std::vector<std::shared_ptr<Tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](Tree &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

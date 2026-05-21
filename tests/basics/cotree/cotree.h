@@ -15,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -67,7 +67,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -83,19 +83,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -242,7 +242,7 @@ struct Cotree {
     // TYPES
     struct Node {
       A a;
-      std::unique_ptr<List<tree<A>>> children;
+      std::shared_ptr<List<tree<A>>> children;
     };
 
     using variant_t = std::variant<Node>;
@@ -291,7 +291,7 @@ struct Cotree {
         const auto &_alt = std::get<Node>(_src->v());
         _dst->v_ =
             Node{_alt.a,
-                 _alt.children ? std::make_unique<List<tree<A>>>() : nullptr};
+                 _alt.children ? std::make_shared<List<tree<A>>>() : nullptr};
         auto &_dst_alt = std::get<Node>(_dst->v_);
         [&] {
           if (_alt.children) {
@@ -303,7 +303,7 @@ struct Cotree {
                   std::get<typename List<tree<A>>::Cons>(_lsrc->v());
               _ldst->v_mut() = typename List<tree<A>>::Cons{
                   tree<A>{},
-                  _lsrc_c.l ? std::make_unique<List<tree<A>>>() : nullptr};
+                  _lsrc_c.l ? std::make_shared<List<tree<A>>>() : nullptr};
               auto &_ldst_c =
                   std::get<typename List<tree<A>>::Cons>(_ldst->v_mut());
               _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
@@ -329,17 +329,17 @@ struct Cotree {
       const auto &[a, children] = std::get<typename tree<_U>::Node>(_other.v());
       this->v_ =
           Node{A(a),
-               children ? std::make_unique<List<tree<A>>>(*children) : nullptr};
+               children ? std::make_shared<List<tree<A>>>(*children) : nullptr};
     }
 
     static tree<A> node(A a, List<tree<A>> children) {
       return tree(Node{std::move(a),
-                       std::make_unique<List<tree<A>>>(std::move(children))});
+                       std::make_shared<List<tree<A>>>(std::move(children))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree<A>>> _stack{};
+      std::vector<std::shared_ptr<tree<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree<A> &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {
@@ -349,7 +349,7 @@ struct Cotree {
             while (std::holds_alternative<typename List<tree<A>>::Cons>(
                 _lp->v())) {
               auto &_lc = std::get<typename List<tree<A>>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_unique<tree<A>>(std::move(_lc.a)));
+              _stack.push_back(std::make_shared<tree<A>>(std::move(_lc.a)));
               if (_lc.l) {
                 _lp = _lc.l.get();
               } else {

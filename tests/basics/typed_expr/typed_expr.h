@@ -20,20 +20,20 @@ struct Expr {
   };
 
   struct EAdd {
-    std::unique_ptr<Expr> a0;
-    std::unique_ptr<Expr> a1;
+    std::shared_ptr<Expr> a0;
+    std::shared_ptr<Expr> a1;
   };
 
   struct EEq {
-    std::unique_ptr<Expr> a0;
-    std::unique_ptr<Expr> a1;
+    std::shared_ptr<Expr> a0;
+    std::shared_ptr<Expr> a1;
   };
 
   struct EIf {
     Ty t;
-    std::unique_ptr<Expr> a1;
-    std::unique_ptr<Expr> a2;
-    std::unique_ptr<Expr> a3;
+    std::shared_ptr<Expr> a1;
+    std::shared_ptr<Expr> a2;
+    std::shared_ptr<Expr> a3;
   };
 
   using variant_t = std::variant<ENat, EBool, EAdd, EEq, EIf>;
@@ -95,8 +95,8 @@ public:
         _dst->v_ = EBool{_alt.a0};
       } else if (std::holds_alternative<EAdd>(_src->v())) {
         const auto &_alt = std::get<EAdd>(_src->v());
-        _dst->v_ = EAdd{_alt.a0 ? std::make_unique<Expr>() : nullptr,
-                        _alt.a1 ? std::make_unique<Expr>() : nullptr};
+        _dst->v_ = EAdd{_alt.a0 ? std::make_shared<Expr>() : nullptr,
+                        _alt.a1 ? std::make_shared<Expr>() : nullptr};
         auto &_dst_alt = std::get<EAdd>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -106,8 +106,8 @@ public:
         }
       } else if (std::holds_alternative<EEq>(_src->v())) {
         const auto &_alt = std::get<EEq>(_src->v());
-        _dst->v_ = EEq{_alt.a0 ? std::make_unique<Expr>() : nullptr,
-                       _alt.a1 ? std::make_unique<Expr>() : nullptr};
+        _dst->v_ = EEq{_alt.a0 ? std::make_shared<Expr>() : nullptr,
+                       _alt.a1 ? std::make_shared<Expr>() : nullptr};
         auto &_dst_alt = std::get<EEq>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -117,9 +117,9 @@ public:
         }
       } else {
         const auto &_alt = std::get<EIf>(_src->v());
-        _dst->v_ = EIf{_alt.t, _alt.a1 ? std::make_unique<Expr>() : nullptr,
-                       _alt.a2 ? std::make_unique<Expr>() : nullptr,
-                       _alt.a3 ? std::make_unique<Expr>() : nullptr};
+        _dst->v_ = EIf{_alt.t, _alt.a1 ? std::make_shared<Expr>() : nullptr,
+                       _alt.a2 ? std::make_shared<Expr>() : nullptr,
+                       _alt.a3 ? std::make_shared<Expr>() : nullptr};
         auto &_dst_alt = std::get<EIf>(_dst->v_);
         if (_alt.a1) {
           _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -141,24 +141,24 @@ public:
   static Expr ebool(bool a0) { return Expr(EBool{a0}); }
 
   static Expr eadd(Expr a0, Expr a1) {
-    return Expr(EAdd{std::make_unique<Expr>(std::move(a0)),
-                     std::make_unique<Expr>(std::move(a1))});
+    return Expr(EAdd{std::make_shared<Expr>(std::move(a0)),
+                     std::make_shared<Expr>(std::move(a1))});
   }
 
   static Expr eeq(Expr a0, Expr a1) {
-    return Expr(EEq{std::make_unique<Expr>(std::move(a0)),
-                    std::make_unique<Expr>(std::move(a1))});
+    return Expr(EEq{std::make_shared<Expr>(std::move(a0)),
+                    std::make_shared<Expr>(std::move(a1))});
   }
 
   static Expr eif(Ty t, Expr a1, Expr a2, Expr a3) {
-    return Expr(EIf{t, std::make_unique<Expr>(std::move(a1)),
-                    std::make_unique<Expr>(std::move(a2)),
-                    std::make_unique<Expr>(std::move(a3))});
+    return Expr(EIf{t, std::make_shared<Expr>(std::move(a1)),
+                    std::make_shared<Expr>(std::move(a2)),
+                    std::make_shared<Expr>(std::move(a3))});
   }
 
   // MANIPULATORS
   ~Expr() {
-    std::vector<std::unique_ptr<Expr>> _stack{};
+    std::vector<std::shared_ptr<Expr>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Expr &_node) {
       if (std::holds_alternative<EAdd>(_node.v_)) {

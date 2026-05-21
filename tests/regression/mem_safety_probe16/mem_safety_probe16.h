@@ -24,9 +24,9 @@ struct MemSafetyProbe16 {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> a0;
+      std::shared_ptr<tree> a0;
       uint64_t a1;
-      std::unique_ptr<tree> a2;
+      std::shared_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -78,8 +78,8 @@ struct MemSafetyProbe16 {
           _dst->v_ = Leaf{};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          _dst->v_ = Node{_alt.a0 ? std::make_shared<tree>() : nullptr, _alt.a1,
+                          _alt.a2 ? std::make_shared<tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -96,13 +96,13 @@ struct MemSafetyProbe16 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
-                       std::make_unique<tree>(std::move(a2))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
+      std::vector<std::shared_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {
@@ -408,7 +408,7 @@ struct MemSafetyProbe16 {
 
     struct Mycons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -461,7 +461,7 @@ struct MemSafetyProbe16 {
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
           _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
+                            _alt.a1 ? std::make_shared<mylist<A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -479,7 +479,7 @@ struct MemSafetyProbe16 {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
         this->v_ =
-            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+            Mycons{A(a0), a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -487,12 +487,12 @@ struct MemSafetyProbe16 {
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
+      std::vector<std::shared_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist<A> &_node) {
         if (std::holds_alternative<Mycons>(_node.v_)) {
@@ -561,18 +561,18 @@ struct MemSafetyProbe16 {
     }
 
     mylist<A> myapp(mylist<A> l2) const {
-      std::unique_ptr<mylist<A>> _head{};
-      std::unique_ptr<mylist<A>> *_write = &_head;
+      std::shared_ptr<mylist<A>> _head{};
+      std::shared_ptr<mylist<A>> *_write = &_head;
       const mylist *_loop_self = this;
       mylist<A> _loop_l2 = std::move(l2);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          *_write = std::make_unique<mylist<A>>(std::move(_loop_l2));
+          *_write = std::make_shared<mylist<A>>(std::move(_loop_l2));
           break;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
-          auto _cell = std::make_unique<mylist<A>>(
+          auto _cell = std::make_shared<mylist<A>>(
               typename mylist<A>::Mycons(a0, nullptr));
           *_write = std::move(_cell);
           _write = &std::get<typename mylist<A>::Mycons>((*_write)->v_mut()).a1;

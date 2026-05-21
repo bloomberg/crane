@@ -15,7 +15,7 @@ struct LoopifyOption {
 
     struct Cons {
       A a;
-      std::unique_ptr<list<A>> l;
+      std::shared_ptr<list<A>> l;
     };
 
     using variant_t = std::variant<Nil, Cons>;
@@ -68,7 +68,7 @@ struct LoopifyOption {
         } else {
           const auto &_alt = std::get<Cons>(_src->v());
           _dst->v_ =
-              Cons{_alt.a, _alt.l ? std::make_unique<list<A>>() : nullptr};
+              Cons{_alt.a, _alt.l ? std::make_shared<list<A>>() : nullptr};
           auto &_dst_alt = std::get<Cons>(_dst->v_);
           if (_alt.l) {
             _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -84,19 +84,19 @@ struct LoopifyOption {
         this->v_ = Nil{};
       } else {
         const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a), l ? std::make_unique<list<A>>(*l) : nullptr};
+        this->v_ = Cons{A(a), l ? std::make_shared<list<A>>(*l) : nullptr};
       }
     }
 
     static list<A> nil() { return list(Nil{}); }
 
     static list<A> cons(A a, list<A> l) {
-      return list(Cons{std::move(a), std::make_unique<list<A>>(std::move(l))});
+      return list(Cons{std::move(a), std::make_shared<list<A>>(std::move(l))});
     }
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::unique_ptr<list<A>>> _stack{};
+      std::vector<std::shared_ptr<list<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](list<A> &_node) {
         if (std::holds_alternative<Cons>(_node.v_)) {
@@ -280,12 +280,12 @@ struct LoopifyOption {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<std::optional<T2>, F0 &, T1 &>
   static list<T2> map_opt(F0 &&f, const list<T1> &l) {
-    std::unique_ptr<list<T2>> _head{};
-    std::unique_ptr<list<T2>> *_write = &_head;
+    std::shared_ptr<list<T2>> _head{};
+    std::shared_ptr<list<T2>> *_write = &_head;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_unique<list<T2>>(list<T2>::nil());
+        *_write = std::make_shared<list<T2>>(list<T2>::nil());
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -293,7 +293,7 @@ struct LoopifyOption {
         if (_cs.has_value()) {
           const T2 &y = *_cs;
           auto _cell =
-              std::make_unique<list<T2>>(typename list<T2>::Cons(y, nullptr));
+              std::make_shared<list<T2>>(typename list<T2>::Cons(y, nullptr));
           *_write = std::move(_cell);
           _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
           _loop_l = a1.get();

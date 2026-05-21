@@ -22,9 +22,9 @@ template <typename A> struct Tree {
   struct Leaf {};
 
   struct Node {
-    std::unique_ptr<Tree<A>> a0;
+    std::shared_ptr<Tree<A>> a0;
     A a1;
-    std::unique_ptr<Tree<A>> a2;
+    std::shared_ptr<Tree<A>> a2;
   };
 
   using variant_t = std::variant<Leaf, Node>;
@@ -77,8 +77,8 @@ public:
       } else {
         const auto &_alt = std::get<Node>(_src->v());
         _dst->v_ =
-            Node{_alt.a0 ? std::make_unique<Tree<A>>() : nullptr, _alt.a1,
-                 _alt.a2 ? std::make_unique<Tree<A>>() : nullptr};
+            Node{_alt.a0 ? std::make_shared<Tree<A>>() : nullptr, _alt.a1,
+                 _alt.a2 ? std::make_shared<Tree<A>>() : nullptr};
         auto &_dst_alt = std::get<Node>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -97,21 +97,21 @@ public:
       this->v_ = Leaf{};
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<_U>::Node>(_other.v());
-      this->v_ = Node{a0 ? std::make_unique<Tree<A>>(*a0) : nullptr, A(a1),
-                      a2 ? std::make_unique<Tree<A>>(*a2) : nullptr};
+      this->v_ = Node{a0 ? std::make_shared<Tree<A>>(*a0) : nullptr, A(a1),
+                      a2 ? std::make_shared<Tree<A>>(*a2) : nullptr};
     }
   }
 
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
   static Tree<A> node(Tree<A> a0, A a1, Tree<A> a2) {
-    return Tree(Node{std::make_unique<Tree<A>>(std::move(a0)), std::move(a1),
-                     std::make_unique<Tree<A>>(std::move(a2))});
+    return Tree(Node{std::make_shared<Tree<A>>(std::move(a0)), std::move(a1),
+                     std::make_shared<Tree<A>>(std::move(a2))});
   }
 
   // MANIPULATORS
   ~Tree() {
-    std::vector<std::unique_ptr<Tree<A>>> _stack{};
+    std::vector<std::shared_ptr<Tree<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Tree<A> &_node) {
       if (std::holds_alternative<Node>(_node.v_)) {

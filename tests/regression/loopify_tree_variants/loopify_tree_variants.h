@@ -13,10 +13,10 @@ struct LoopifyTreeVariants {
     struct TLeaf {};
 
     struct TNode {
-      std::unique_ptr<ternary> a0;
+      std::shared_ptr<ternary> a0;
       uint64_t a1;
-      std::unique_ptr<ternary> a2;
-      std::unique_ptr<ternary> a3;
+      std::shared_ptr<ternary> a2;
+      std::shared_ptr<ternary> a3;
     };
 
     using variant_t = std::variant<TLeaf, TNode>;
@@ -69,9 +69,9 @@ struct LoopifyTreeVariants {
         } else {
           const auto &_alt = std::get<TNode>(_src->v());
           _dst->v_ =
-              TNode{_alt.a0 ? std::make_unique<ternary>() : nullptr, _alt.a1,
-                    _alt.a2 ? std::make_unique<ternary>() : nullptr,
-                    _alt.a3 ? std::make_unique<ternary>() : nullptr};
+              TNode{_alt.a0 ? std::make_shared<ternary>() : nullptr, _alt.a1,
+                    _alt.a2 ? std::make_shared<ternary>() : nullptr,
+                    _alt.a3 ? std::make_shared<ternary>() : nullptr};
           auto &_dst_alt = std::get<TNode>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -91,14 +91,14 @@ struct LoopifyTreeVariants {
     static ternary tleaf() { return ternary(TLeaf{}); }
 
     static ternary tnode(ternary a0, uint64_t a1, ternary a2, ternary a3) {
-      return ternary(TNode{std::make_unique<ternary>(std::move(a0)), a1,
-                           std::make_unique<ternary>(std::move(a2)),
-                           std::make_unique<ternary>(std::move(a3))});
+      return ternary(TNode{std::make_shared<ternary>(std::move(a0)), a1,
+                           std::make_shared<ternary>(std::move(a2)),
+                           std::make_shared<ternary>(std::move(a3))});
     }
 
     // MANIPULATORS
     ~ternary() {
-      std::vector<std::unique_ptr<ternary>> _stack{};
+      std::vector<std::shared_ptr<ternary>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](ternary &_node) {
         if (std::holds_alternative<TNode>(_node.v_)) {
@@ -455,10 +455,10 @@ struct LoopifyTreeVariants {
     };
 
     struct Quad {
-      std::unique_ptr<quadtree> a0;
-      std::unique_ptr<quadtree> a1;
-      std::unique_ptr<quadtree> a2;
-      std::unique_ptr<quadtree> a3;
+      std::shared_ptr<quadtree> a0;
+      std::shared_ptr<quadtree> a1;
+      std::shared_ptr<quadtree> a2;
+      std::shared_ptr<quadtree> a3;
     };
 
     using variant_t = std::variant<QLeaf, Quad>;
@@ -511,10 +511,10 @@ struct LoopifyTreeVariants {
           _dst->v_ = QLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<Quad>(_src->v());
-          _dst->v_ = Quad{_alt.a0 ? std::make_unique<quadtree>() : nullptr,
-                          _alt.a1 ? std::make_unique<quadtree>() : nullptr,
-                          _alt.a2 ? std::make_unique<quadtree>() : nullptr,
-                          _alt.a3 ? std::make_unique<quadtree>() : nullptr};
+          _dst->v_ = Quad{_alt.a0 ? std::make_shared<quadtree>() : nullptr,
+                          _alt.a1 ? std::make_shared<quadtree>() : nullptr,
+                          _alt.a2 ? std::make_shared<quadtree>() : nullptr,
+                          _alt.a3 ? std::make_shared<quadtree>() : nullptr};
           auto &_dst_alt = std::get<Quad>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -537,15 +537,15 @@ struct LoopifyTreeVariants {
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad{std::make_unique<quadtree>(std::move(a0)),
-                           std::make_unique<quadtree>(std::move(a1)),
-                           std::make_unique<quadtree>(std::move(a2)),
-                           std::make_unique<quadtree>(std::move(a3))});
+      return quadtree(Quad{std::make_shared<quadtree>(std::move(a0)),
+                           std::make_shared<quadtree>(std::move(a1)),
+                           std::make_shared<quadtree>(std::move(a2)),
+                           std::make_shared<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::unique_ptr<quadtree>> _stack{};
+      std::vector<std::shared_ptr<quadtree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](quadtree &_node) {
         if (std::holds_alternative<Quad>(_node.v_)) {
@@ -899,8 +899,8 @@ struct LoopifyTreeVariants {
     };
 
     struct LNode {
-      std::unique_ptr<leaf_tree> a0;
-      std::unique_ptr<leaf_tree> a1;
+      std::shared_ptr<leaf_tree> a0;
+      std::shared_ptr<leaf_tree> a1;
     };
 
     using variant_t = std::variant<LLeaf, LNode>;
@@ -953,8 +953,8 @@ struct LoopifyTreeVariants {
           _dst->v_ = LLeaf{_alt.a0};
         } else {
           const auto &_alt = std::get<LNode>(_src->v());
-          _dst->v_ = LNode{_alt.a0 ? std::make_unique<leaf_tree>() : nullptr,
-                           _alt.a1 ? std::make_unique<leaf_tree>() : nullptr};
+          _dst->v_ = LNode{_alt.a0 ? std::make_shared<leaf_tree>() : nullptr,
+                           _alt.a1 ? std::make_shared<leaf_tree>() : nullptr};
           auto &_dst_alt = std::get<LNode>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -971,13 +971,13 @@ struct LoopifyTreeVariants {
     static leaf_tree lleaf(uint64_t a0) { return leaf_tree(LLeaf{a0}); }
 
     static leaf_tree lnode(leaf_tree a0, leaf_tree a1) {
-      return leaf_tree(LNode{std::make_unique<leaf_tree>(std::move(a0)),
-                             std::make_unique<leaf_tree>(std::move(a1))});
+      return leaf_tree(LNode{std::make_shared<leaf_tree>(std::move(a0)),
+                             std::make_shared<leaf_tree>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~leaf_tree() {
-      std::vector<std::unique_ptr<leaf_tree>> _stack{};
+      std::vector<std::shared_ptr<leaf_tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](leaf_tree &_node) {
         if (std::holds_alternative<LNode>(_node.v_)) {

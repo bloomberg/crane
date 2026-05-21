@@ -14,7 +14,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -66,7 +66,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -82,19 +82,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -165,7 +165,7 @@ struct FunctionVernac {
       uint64_t n;
       uint64_t p;
       uint64_t a2;
-      std::unique_ptr<R_div2> _res;
+      std::shared_ptr<R_div2> _res;
     };
 
     using variant_t = std::variant<R_div2_0, R_div2_1, R_div2_2>;
@@ -224,7 +224,7 @@ struct FunctionVernac {
         } else {
           const auto &_alt = std::get<R_div2_2>(_src->v());
           _dst->v_ = R_div2_2{_alt.n, _alt.p, _alt.a2,
-                              _alt._res ? std::make_unique<R_div2>() : nullptr};
+                              _alt._res ? std::make_shared<R_div2>() : nullptr};
           auto &_dst_alt = std::get<R_div2_2>(_dst->v_);
           if (_alt._res) {
             _stack.push_back({_alt._res.get(), _dst_alt._res.get()});
@@ -241,12 +241,12 @@ struct FunctionVernac {
 
     static R_div2 r_div2_2(uint64_t n, uint64_t p, uint64_t a2, R_div2 _res) {
       return R_div2(
-          R_div2_2{n, p, a2, std::make_unique<R_div2>(std::move(_res))});
+          R_div2_2{n, p, a2, std::make_shared<R_div2>(std::move(_res))});
     }
 
     // MANIPULATORS
     ~R_div2() {
-      std::vector<std::unique_ptr<R_div2>> _stack{};
+      std::vector<std::shared_ptr<R_div2>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](R_div2 &_node) {
         if (std::holds_alternative<R_div2_2>(_node.v_)) {
@@ -374,7 +374,7 @@ struct FunctionVernac {
       uint64_t x;
       List<uint64_t> xs;
       uint64_t a3;
-      std::unique_ptr<R_list_sum> _res;
+      std::shared_ptr<R_list_sum> _res;
     };
 
     using variant_t = std::variant<R_list_sum_0, R_list_sum_1>;
@@ -429,7 +429,7 @@ struct FunctionVernac {
           const auto &_alt = std::get<R_list_sum_1>(_src->v());
           _dst->v_ = R_list_sum_1{
               _alt.l.clone(), _alt.x, _alt.xs.clone(), _alt.a3,
-              _alt._res ? std::make_unique<R_list_sum>() : nullptr};
+              _alt._res ? std::make_shared<R_list_sum>() : nullptr};
           auto &_dst_alt = std::get<R_list_sum_1>(_dst->v_);
           if (_alt._res) {
             _stack.push_back({_alt._res.get(), _dst_alt._res.get()});
@@ -449,12 +449,12 @@ struct FunctionVernac {
                                    R_list_sum _res) {
       return R_list_sum(
           R_list_sum_1{std::move(l), x, std::move(xs), a3,
-                       std::make_unique<R_list_sum>(std::move(_res))});
+                       std::make_shared<R_list_sum>(std::move(_res))});
     }
 
     // MANIPULATORS
     ~R_list_sum() {
-      std::vector<std::unique_ptr<R_list_sum>> _stack{};
+      std::vector<std::shared_ptr<R_list_sum>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](R_list_sum &_node) {
         if (std::holds_alternative<R_list_sum_1>(_node.v_)) {

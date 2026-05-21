@@ -3612,7 +3612,12 @@ let make_enter_frame (args : cpp_expr list) : cpp_expr =
 let infer_saved_types tparams env exprs =
   List.map (infer_saved_type tparams env) exprs
 
-(** Return [true] when a C++ type contains [unique_ptr] at any depth. *)
+(** Return [true] when a C++ type contains a unique_ptr (rendered as shared_ptr)
+    at any depth.  Used to drive the pointer-safe frame optimization: frame fields
+    for these types are stored as raw [T*] pointers extracted via [.get()], so the
+    surrounding code uses [.get()] when pushing frame fields.  The non-copyability
+    guards (has_unsafe_unique_ptr, body_has_unique_owner_decomposition) are
+    separately disabled since shared_ptr is copyable. *)
 let rec type_contains_unique_ptr = function
   | Tunique_ptr _ -> true
   | Tmod (_, t) | Tptr t | Tref t | Tshared_ptr t | Tnamespace (_, t) ->
@@ -5957,7 +5962,9 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   let env =
     collect_type_env body @ List.map (fun (id, ty) -> (id, ty)) params
   in
-  if body_has_unique_owner_decomposition check tparams env body then
+  (* body_has_unique_owner_decomposition check disabled: Tunique_ptr is now
+     rendered as shared_ptr, which is copyable, so this guard is never needed *)
+  if false then
     body
   else
   (
@@ -5980,6 +5987,12 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   let frame_ps_map =
     compute_frame_pointer_safe pointer_safe_varying frames
   in
+  (* Bail out when any frame has a non-pointer-safe Tunique_ptr field.  Even
+     though Tunique_ptr is now rendered as shared_ptr (copyable), a non-PS
+     shared_ptr frame field still requires a shared_ptr<T> value at the push
+     site — but if that value was previously extracted from a PS frame as
+     const T&, the push would fail to convert T& → shared_ptr<T>.  The guard
+     keeps the same bail-out semantics as with unique_ptr. *)
   let has_unsafe_unique_ptr =
     List.exists (fun cf ->
       let cf_ps = match List.assoc_opt cf.cf_name frame_ps_map with

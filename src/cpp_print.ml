@@ -1382,7 +1382,7 @@ and pp_cpp_expr env args t =
       !found
     in
     let rec type_contains_unique_ptr = function
-      | Tunique_ptr _ -> true
+      | Tunique_ptr _ -> false  (* now rendered as shared_ptr, which is copyable *)
       | Tshared_ptr t | Tref t | Tptr t | Tmod (_, t) -> type_contains_unique_ptr t
       | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
        |Tvariant ts | Tnamespace (_, Tglob (_, ts, _)) ->

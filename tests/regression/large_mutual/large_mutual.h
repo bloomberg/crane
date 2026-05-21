@@ -16,23 +16,23 @@ struct LargeMutual {
     // TYPES
     struct SAssign {
       uint64_t a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a1;
     };
 
     struct SSeq {
-      std::unique_ptr<stmt> a0;
-      std::unique_ptr<stmt> a1;
+      std::shared_ptr<stmt> a0;
+      std::shared_ptr<stmt> a1;
     };
 
     struct SIf {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<stmt> a1;
-      std::unique_ptr<stmt> a2;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<stmt> a1;
+      std::shared_ptr<stmt> a2;
     };
 
     struct SWhile {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<stmt> a1;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<stmt> a1;
     };
 
     struct SSkip {};
@@ -92,12 +92,12 @@ struct LargeMutual {
           const auto &_alt = std::get<SAssign>(_src->v());
           _dst->v_ = SAssign{
               _alt.a0,
-              _alt.a1 ? std::make_unique<LargeMutual::expr>(_alt.a1->clone())
+              _alt.a1 ? std::make_shared<LargeMutual::expr>(_alt.a1->clone())
                       : nullptr};
         } else if (std::holds_alternative<SSeq>(_src->v())) {
           const auto &_alt = std::get<SSeq>(_src->v());
-          _dst->v_ = SSeq{_alt.a0 ? std::make_unique<stmt>() : nullptr,
-                          _alt.a1 ? std::make_unique<stmt>() : nullptr};
+          _dst->v_ = SSeq{_alt.a0 ? std::make_shared<stmt>() : nullptr,
+                          _alt.a1 ? std::make_shared<stmt>() : nullptr};
           auto &_dst_alt = std::get<SSeq>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -108,10 +108,10 @@ struct LargeMutual {
         } else if (std::holds_alternative<SIf>(_src->v())) {
           const auto &_alt = std::get<SIf>(_src->v());
           _dst->v_ = SIf{
-              _alt.a0 ? std::make_unique<LargeMutual::bexpr>(_alt.a0->clone())
+              _alt.a0 ? std::make_shared<LargeMutual::bexpr>(_alt.a0->clone())
                       : nullptr,
-              _alt.a1 ? std::make_unique<stmt>() : nullptr,
-              _alt.a2 ? std::make_unique<stmt>() : nullptr};
+              _alt.a1 ? std::make_shared<stmt>() : nullptr,
+              _alt.a2 ? std::make_shared<stmt>() : nullptr};
           auto &_dst_alt = std::get<SIf>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -122,9 +122,9 @@ struct LargeMutual {
         } else if (std::holds_alternative<SWhile>(_src->v())) {
           const auto &_alt = std::get<SWhile>(_src->v());
           _dst->v_ = SWhile{
-              _alt.a0 ? std::make_unique<LargeMutual::bexpr>(_alt.a0->clone())
+              _alt.a0 ? std::make_shared<LargeMutual::bexpr>(_alt.a0->clone())
                       : nullptr,
-              _alt.a1 ? std::make_unique<stmt>() : nullptr};
+              _alt.a1 ? std::make_shared<stmt>() : nullptr};
           auto &_dst_alt = std::get<SWhile>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -138,30 +138,30 @@ struct LargeMutual {
 
     // CREATORS
     static stmt sassign(uint64_t a0, expr a1) {
-      return stmt(SAssign{a0, std::make_unique<expr>(std::move(a1))});
+      return stmt(SAssign{a0, std::make_shared<expr>(std::move(a1))});
     }
 
     static stmt sseq(stmt a0, stmt a1) {
-      return stmt(SSeq{std::make_unique<stmt>(std::move(a0)),
-                       std::make_unique<stmt>(std::move(a1))});
+      return stmt(SSeq{std::make_shared<stmt>(std::move(a0)),
+                       std::make_shared<stmt>(std::move(a1))});
     }
 
     static stmt sif(bexpr a0, stmt a1, stmt a2) {
-      return stmt(SIf{std::make_unique<bexpr>(std::move(a0)),
-                      std::make_unique<stmt>(std::move(a1)),
-                      std::make_unique<stmt>(std::move(a2))});
+      return stmt(SIf{std::make_shared<bexpr>(std::move(a0)),
+                      std::make_shared<stmt>(std::move(a1)),
+                      std::make_shared<stmt>(std::move(a2))});
     }
 
     static stmt swhile(bexpr a0, stmt a1) {
-      return stmt(SWhile{std::make_unique<bexpr>(std::move(a0)),
-                         std::make_unique<stmt>(std::move(a1))});
+      return stmt(SWhile{std::make_shared<bexpr>(std::move(a0)),
+                         std::make_shared<stmt>(std::move(a1))});
     }
 
     static stmt sskip() { return stmt(SSkip{}); }
 
     // MANIPULATORS
     ~stmt() {
-      std::vector<std::unique_ptr<stmt>> _stack{};
+      std::vector<std::shared_ptr<stmt>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](stmt &_node) {
         if (std::holds_alternative<SSeq>(_node.v_)) {
@@ -216,19 +216,19 @@ struct LargeMutual {
     };
 
     struct EAdd {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct EMul {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct ECond {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<expr> a1;
-      std::unique_ptr<expr> a2;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<expr> a1;
+      std::shared_ptr<expr> a2;
     };
 
     using variant_t = std::variant<ENum, EVar, EAdd, EMul, ECond>;
@@ -290,8 +290,8 @@ struct LargeMutual {
           _dst->v_ = EVar{_alt.a0};
         } else if (std::holds_alternative<EAdd>(_src->v())) {
           const auto &_alt = std::get<EAdd>(_src->v());
-          _dst->v_ = EAdd{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = EAdd{_alt.a0 ? std::make_shared<expr>() : nullptr,
+                          _alt.a1 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<EAdd>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -301,8 +301,8 @@ struct LargeMutual {
           }
         } else if (std::holds_alternative<EMul>(_src->v())) {
           const auto &_alt = std::get<EMul>(_src->v());
-          _dst->v_ = EMul{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<expr>() : nullptr};
+          _dst->v_ = EMul{_alt.a0 ? std::make_shared<expr>() : nullptr,
+                          _alt.a1 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<EMul>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -313,10 +313,10 @@ struct LargeMutual {
         } else {
           const auto &_alt = std::get<ECond>(_src->v());
           _dst->v_ = ECond{
-              _alt.a0 ? std::make_unique<LargeMutual::bexpr>(_alt.a0->clone())
+              _alt.a0 ? std::make_shared<LargeMutual::bexpr>(_alt.a0->clone())
                       : nullptr,
-              _alt.a1 ? std::make_unique<expr>() : nullptr,
-              _alt.a2 ? std::make_unique<expr>() : nullptr};
+              _alt.a1 ? std::make_shared<expr>() : nullptr,
+              _alt.a2 ? std::make_shared<expr>() : nullptr};
           auto &_dst_alt = std::get<ECond>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -335,24 +335,24 @@ struct LargeMutual {
     static expr evar(uint64_t a0) { return expr(EVar{a0}); }
 
     static expr eadd(expr a0, expr a1) {
-      return expr(EAdd{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return expr(EAdd{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static expr emul(expr a0, expr a1) {
-      return expr(EMul{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return expr(EMul{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static expr econd(bexpr a0, expr a1, expr a2) {
-      return expr(ECond{std::make_unique<bexpr>(std::move(a0)),
-                        std::make_unique<expr>(std::move(a1)),
-                        std::make_unique<expr>(std::move(a2))});
+      return expr(ECond{std::make_shared<bexpr>(std::move(a0)),
+                        std::make_shared<expr>(std::move(a1)),
+                        std::make_shared<expr>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack{};
+      std::vector<std::shared_ptr<expr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](expr &_node) {
         if (std::holds_alternative<EAdd>(_node.v_)) {
@@ -406,27 +406,27 @@ struct LargeMutual {
     struct BFalse {};
 
     struct BEq {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct BLt {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct BAnd {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<bexpr> a1;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<bexpr> a1;
     };
 
     struct BOr {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<bexpr> a1;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<bexpr> a1;
     };
 
     struct BNot {
-      std::unique_ptr<bexpr> a0;
+      std::shared_ptr<bexpr> a0;
     };
 
     using variant_t = std::variant<BTrue, BFalse, BEq, BLt, BAnd, BOr, BNot>;
@@ -491,21 +491,21 @@ struct LargeMutual {
         } else if (std::holds_alternative<BEq>(_src->v())) {
           const auto &_alt = std::get<BEq>(_src->v());
           _dst->v_ = BEq{
-              _alt.a0 ? std::make_unique<LargeMutual::expr>(_alt.a0->clone())
+              _alt.a0 ? std::make_shared<LargeMutual::expr>(_alt.a0->clone())
                       : nullptr,
-              _alt.a1 ? std::make_unique<LargeMutual::expr>(_alt.a1->clone())
+              _alt.a1 ? std::make_shared<LargeMutual::expr>(_alt.a1->clone())
                       : nullptr};
         } else if (std::holds_alternative<BLt>(_src->v())) {
           const auto &_alt = std::get<BLt>(_src->v());
           _dst->v_ = BLt{
-              _alt.a0 ? std::make_unique<LargeMutual::expr>(_alt.a0->clone())
+              _alt.a0 ? std::make_shared<LargeMutual::expr>(_alt.a0->clone())
                       : nullptr,
-              _alt.a1 ? std::make_unique<LargeMutual::expr>(_alt.a1->clone())
+              _alt.a1 ? std::make_shared<LargeMutual::expr>(_alt.a1->clone())
                       : nullptr};
         } else if (std::holds_alternative<BAnd>(_src->v())) {
           const auto &_alt = std::get<BAnd>(_src->v());
-          _dst->v_ = BAnd{_alt.a0 ? std::make_unique<bexpr>() : nullptr,
-                          _alt.a1 ? std::make_unique<bexpr>() : nullptr};
+          _dst->v_ = BAnd{_alt.a0 ? std::make_shared<bexpr>() : nullptr,
+                          _alt.a1 ? std::make_shared<bexpr>() : nullptr};
           auto &_dst_alt = std::get<BAnd>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -515,8 +515,8 @@ struct LargeMutual {
           }
         } else if (std::holds_alternative<BOr>(_src->v())) {
           const auto &_alt = std::get<BOr>(_src->v());
-          _dst->v_ = BOr{_alt.a0 ? std::make_unique<bexpr>() : nullptr,
-                         _alt.a1 ? std::make_unique<bexpr>() : nullptr};
+          _dst->v_ = BOr{_alt.a0 ? std::make_shared<bexpr>() : nullptr,
+                         _alt.a1 ? std::make_shared<bexpr>() : nullptr};
           auto &_dst_alt = std::get<BOr>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -526,7 +526,7 @@ struct LargeMutual {
           }
         } else {
           const auto &_alt = std::get<BNot>(_src->v());
-          _dst->v_ = BNot{_alt.a0 ? std::make_unique<bexpr>() : nullptr};
+          _dst->v_ = BNot{_alt.a0 ? std::make_shared<bexpr>() : nullptr};
           auto &_dst_alt = std::get<BNot>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -542,32 +542,32 @@ struct LargeMutual {
     static bexpr bfalse() { return bexpr(BFalse{}); }
 
     static bexpr beq(expr a0, expr a1) {
-      return bexpr(BEq{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return bexpr(BEq{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static bexpr blt(expr a0, expr a1) {
-      return bexpr(BLt{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return bexpr(BLt{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static bexpr band(bexpr a0, bexpr a1) {
-      return bexpr(BAnd{std::make_unique<bexpr>(std::move(a0)),
-                        std::make_unique<bexpr>(std::move(a1))});
+      return bexpr(BAnd{std::make_shared<bexpr>(std::move(a0)),
+                        std::make_shared<bexpr>(std::move(a1))});
     }
 
     static bexpr bor(bexpr a0, bexpr a1) {
-      return bexpr(BOr{std::make_unique<bexpr>(std::move(a0)),
-                       std::make_unique<bexpr>(std::move(a1))});
+      return bexpr(BOr{std::make_shared<bexpr>(std::move(a0)),
+                       std::make_shared<bexpr>(std::move(a1))});
     }
 
     static bexpr bnot(bexpr a0) {
-      return bexpr(BNot{std::make_unique<bexpr>(std::move(a0))});
+      return bexpr(BNot{std::make_shared<bexpr>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~bexpr() {
-      std::vector<std::unique_ptr<bexpr>> _stack{};
+      std::vector<std::shared_ptr<bexpr>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](bexpr &_node) {
         if (std::holds_alternative<BAnd>(_node.v_)) {

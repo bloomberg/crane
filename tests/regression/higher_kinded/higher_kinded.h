@@ -23,8 +23,8 @@ struct HigherKinded {
     };
 
     struct Branch {
-      std::unique_ptr<Tree<A>> a0;
-      std::unique_ptr<Tree<A>> a1;
+      std::shared_ptr<Tree<A>> a0;
+      std::shared_ptr<Tree<A>> a1;
     };
 
     using variant_t = std::variant<Leaf, Branch>;
@@ -77,8 +77,8 @@ struct HigherKinded {
           _dst->v_ = Leaf{_alt.a0};
         } else {
           const auto &_alt = std::get<Branch>(_src->v());
-          _dst->v_ = Branch{_alt.a0 ? std::make_unique<Tree<A>>() : nullptr,
-                            _alt.a1 ? std::make_unique<Tree<A>>() : nullptr};
+          _dst->v_ = Branch{_alt.a0 ? std::make_shared<Tree<A>>() : nullptr,
+                            _alt.a1 ? std::make_shared<Tree<A>>() : nullptr};
           auto &_dst_alt = std::get<Branch>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -98,21 +98,21 @@ struct HigherKinded {
         this->v_ = Leaf{A(a0)};
       } else {
         const auto &[a0, a1] = std::get<typename Tree<_U>::Branch>(_other.v());
-        this->v_ = Branch{a0 ? std::make_unique<Tree<A>>(*a0) : nullptr,
-                          a1 ? std::make_unique<Tree<A>>(*a1) : nullptr};
+        this->v_ = Branch{a0 ? std::make_shared<Tree<A>>(*a0) : nullptr,
+                          a1 ? std::make_shared<Tree<A>>(*a1) : nullptr};
       }
     }
 
     static Tree<A> leaf(A a0) { return Tree(Leaf{std::move(a0)}); }
 
     static Tree<A> branch(Tree<A> a0, Tree<A> a1) {
-      return Tree(Branch{std::make_unique<Tree<A>>(std::move(a0)),
-                         std::make_unique<Tree<A>>(std::move(a1))});
+      return Tree(Branch{std::make_shared<Tree<A>>(std::move(a0)),
+                         std::make_shared<Tree<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~Tree() {
-      std::vector<std::unique_ptr<Tree<A>>> _stack{};
+      std::vector<std::shared_ptr<Tree<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](Tree<A> &_node) {
         if (std::holds_alternative<Branch>(_node.v_)) {

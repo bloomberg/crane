@@ -6,16 +6,16 @@
 MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>
 MemSafetyProbe::build_adders(
     const MemSafetyProbe::mylist<MemSafetyProbe::tree> &trees) {
-  std::unique_ptr<MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>>
+  std::shared_ptr<MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>>
       _head{};
-  std::unique_ptr<MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>>
+  std::shared_ptr<MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>>
       *_write = &_head;
   MemSafetyProbe::mylist<MemSafetyProbe::tree> _loop_trees = trees;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mynil>(
             _loop_trees.v())) {
-      *_write = std::make_unique<
+      *_write = std::make_shared<
           MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>>(
           mylist<std::function<uint64_t(uint64_t)>>::mynil());
       break;
@@ -24,7 +24,7 @@ MemSafetyProbe::build_adders(
           typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mycons>(
           _loop_trees.v());
       const MemSafetyProbe::mylist<MemSafetyProbe::tree> &a1_value = *a1;
-      auto _cell = std::make_unique<
+      auto _cell = std::make_shared<
           MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>>(
           typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
               [=](uint64_t _x0) mutable -> uint64_t {

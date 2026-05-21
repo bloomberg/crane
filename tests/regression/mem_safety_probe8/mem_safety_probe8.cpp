@@ -126,18 +126,18 @@ uint64_t MemSafetyProbe8::tree_weighted(
 
 /// TEST 3: Deep tree traversal — more iterations, more frames.
 MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(uint64_t n) {
-  std::unique_ptr<MemSafetyProbe8::tree> _head{};
-  std::unique_ptr<MemSafetyProbe8::tree> *_write = &_head;
+  std::shared_ptr<MemSafetyProbe8::tree> _head{};
+  std::shared_ptr<MemSafetyProbe8::tree> *_write = &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_unique<MemSafetyProbe8::tree>(tree::leaf());
+      *_write = std::make_shared<MemSafetyProbe8::tree>(tree::leaf());
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_unique<MemSafetyProbe8::tree>(typename tree::Node(
+      auto _cell = std::make_shared<MemSafetyProbe8::tree>(typename tree::Node(
           nullptr, _loop_n,
-          std::make_unique<MemSafetyProbe8::tree>(tree::leaf())));
+          std::make_shared<MemSafetyProbe8::tree>(tree::leaf())));
       *_write = std::move(_cell);
       _write = &std::get<typename tree::Node>((*_write)->v_mut()).a0;
       _loop_n = n_;

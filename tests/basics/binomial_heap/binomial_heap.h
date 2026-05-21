@@ -15,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -67,7 +67,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -83,19 +83,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -128,8 +128,8 @@ struct BinomialHeap {
     // TYPES
     struct Node {
       key a0;
-      std::unique_ptr<tree> a1;
-      std::unique_ptr<tree> a2;
+      std::shared_ptr<tree> a1;
+      std::shared_ptr<tree> a2;
     };
 
     struct Leaf {};
@@ -181,8 +181,8 @@ struct BinomialHeap {
         tree *_dst = _frame._dst;
         if (std::holds_alternative<Node>(_src->v())) {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0, _alt.a1 ? std::make_unique<tree>() : nullptr,
-                          _alt.a2 ? std::make_unique<tree>() : nullptr};
+          _dst->v_ = Node{_alt.a0, _alt.a1 ? std::make_shared<tree>() : nullptr,
+                          _alt.a2 ? std::make_shared<tree>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a1) {
             _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
@@ -199,15 +199,15 @@ struct BinomialHeap {
 
     // CREATORS
     static tree node(key a0, tree a1, tree a2) {
-      return tree(Node{std::move(a0), std::make_unique<tree>(std::move(a1)),
-                       std::make_unique<tree>(std::move(a2))});
+      return tree(Node{std::move(a0), std::make_shared<tree>(std::move(a1)),
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     static tree leaf() { return tree(Leaf{}); }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
+      std::vector<std::shared_ptr<tree>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](tree &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

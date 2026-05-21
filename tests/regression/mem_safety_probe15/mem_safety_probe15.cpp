@@ -163,18 +163,18 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
 /// TEST 5: Deep left-spine tree.
 /// Stresses the frame stack depth.
 MemSafetyProbe15::tree MemSafetyProbe15::left_spine(uint64_t n) {
-  std::unique_ptr<MemSafetyProbe15::tree> _head{};
-  std::unique_ptr<MemSafetyProbe15::tree> *_write = &_head;
+  std::shared_ptr<MemSafetyProbe15::tree> _head{};
+  std::shared_ptr<MemSafetyProbe15::tree> *_write = &_head;
   uint64_t _loop_n = std::move(n);
   while (true) {
     if (_loop_n <= 0) {
-      *_write = std::make_unique<MemSafetyProbe15::tree>(tree::leaf());
+      *_write = std::make_shared<MemSafetyProbe15::tree>(tree::leaf());
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_unique<MemSafetyProbe15::tree>(typename tree::Node(
+      auto _cell = std::make_shared<MemSafetyProbe15::tree>(typename tree::Node(
           nullptr, _loop_n,
-          std::make_unique<MemSafetyProbe15::tree>(tree::leaf())));
+          std::make_shared<MemSafetyProbe15::tree>(tree::leaf())));
       *_write = std::move(_cell);
       _write = &std::get<typename tree::Node>((*_write)->v_mut()).a0;
       _loop_n = n_;

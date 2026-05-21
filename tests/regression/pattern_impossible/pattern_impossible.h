@@ -49,8 +49,8 @@ struct PatternImpossible {
     };
 
     struct Node {
-      std::unique_ptr<nested> a0;
-      std::unique_ptr<nested> a1;
+      std::shared_ptr<nested> a0;
+      std::shared_ptr<nested> a1;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -103,8 +103,8 @@ struct PatternImpossible {
           _dst->v_ = Leaf{_alt.a0};
         } else {
           const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_unique<nested>() : nullptr,
-                          _alt.a1 ? std::make_unique<nested>() : nullptr};
+          _dst->v_ = Node{_alt.a0 ? std::make_shared<nested>() : nullptr,
+                          _alt.a1 ? std::make_shared<nested>() : nullptr};
           auto &_dst_alt = std::get<Node>(_dst->v_);
           if (_alt.a0) {
             _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -121,13 +121,13 @@ struct PatternImpossible {
     static nested leaf(uint64_t a0) { return nested(Leaf{a0}); }
 
     static nested node(nested a0, nested a1) {
-      return nested(Node{std::make_unique<nested>(std::move(a0)),
-                         std::make_unique<nested>(std::move(a1))});
+      return nested(Node{std::make_shared<nested>(std::move(a0)),
+                         std::make_shared<nested>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~nested() {
-      std::vector<std::unique_ptr<nested>> _stack{};
+      std::vector<std::shared_ptr<nested>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](nested &_node) {
         if (std::holds_alternative<Node>(_node.v_)) {

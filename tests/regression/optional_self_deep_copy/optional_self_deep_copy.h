@@ -19,7 +19,7 @@ struct OptionalSelfDeepCopy {
     struct Stop {};
 
     struct More {
-      std::unique_ptr<std::optional<std::unique_ptr<chain>>> a0;
+      std::shared_ptr<std::optional<std::shared_ptr<chain>>> a0;
     };
 
     using variant_t = std::variant<Stop, More>;
@@ -73,8 +73,8 @@ struct OptionalSelfDeepCopy {
           const auto &_alt = std::get<More>(_src->v());
           _dst->v_ = More{
               _alt.a0
-                  ? std::make_unique<std::optional<std::unique_ptr<chain>>>(
-                        *_alt.a0 ? std::make_optional(std::make_unique<chain>())
+                  ? std::make_shared<std::optional<std::shared_ptr<chain>>>(
+                        *_alt.a0 ? std::make_optional(std::make_shared<chain>())
                                  : std::nullopt)
                   : nullptr};
           auto &_dst_alt = std::get<More>(_dst->v_);
@@ -90,14 +90,14 @@ struct OptionalSelfDeepCopy {
     // CREATORS
     static chain stop() { return chain(Stop{}); }
 
-    static chain more(std::optional<std::unique_ptr<chain>> a0) {
-      return chain(More{std::make_unique<std::optional<std::unique_ptr<chain>>>(
+    static chain more(std::optional<std::shared_ptr<chain>> a0) {
+      return chain(More{std::make_shared<std::optional<std::shared_ptr<chain>>>(
           std::move(a0))});
     }
 
     // MANIPULATORS
     ~chain() {
-      std::vector<std::unique_ptr<chain>> _stack{};
+      std::vector<std::shared_ptr<chain>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](chain &_node) {
         if (std::holds_alternative<More>(_node.v_)) {

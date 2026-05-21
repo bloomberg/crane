@@ -31,7 +31,7 @@ struct DocComments {
     /// Cons cell: an element followed by the rest of the list.
     struct Mycons {
       A a;
-      std::unique_ptr<mylist<A>> l;
+      std::shared_ptr<mylist<A>> l;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -84,7 +84,7 @@ struct DocComments {
         } else {
           const auto &_alt = std::get<Mycons>(_src->v());
           _dst->v_ =
-              Mycons{_alt.a, _alt.l ? std::make_unique<mylist<A>>() : nullptr};
+              Mycons{_alt.a, _alt.l ? std::make_shared<mylist<A>>() : nullptr};
           auto &_dst_alt = std::get<Mycons>(_dst->v_);
           if (_alt.l) {
             _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -100,7 +100,7 @@ struct DocComments {
         this->v_ = Mynil{};
       } else {
         const auto &[a, l] = std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{A(a), l ? std::make_unique<mylist<A>>(*l) : nullptr};
+        this->v_ = Mycons{A(a), l ? std::make_shared<mylist<A>>(*l) : nullptr};
       }
     }
 
@@ -108,12 +108,12 @@ struct DocComments {
 
     static mylist<A> mycons(A a, mylist<A> l) {
       return mylist(
-          Mycons{std::move(a), std::make_unique<mylist<A>>(std::move(l))});
+          Mycons{std::move(a), std::make_shared<mylist<A>>(std::move(l))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
+      std::vector<std::shared_ptr<mylist<A>>> _stack{};
       _stack.reserve(8);
       auto _drain = [&](mylist<A> &_node) {
         if (std::holds_alternative<Mycons>(_node.v_)) {

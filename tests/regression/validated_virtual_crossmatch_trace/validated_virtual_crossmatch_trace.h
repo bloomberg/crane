@@ -15,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -67,7 +67,7 @@ public:
         _dst->v_ = Nil{};
       } else {
         const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
+        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
         auto &_dst_alt = std::get<Cons>(_dst->v_);
         if (_alt.l) {
           _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
@@ -83,19 +83,19 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
+    std::vector<std::shared_ptr<List<A>>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](List<A> &_node) {
       if (std::holds_alternative<Cons>(_node.v_)) {
@@ -177,43 +177,43 @@ struct Uint {
   struct Nil {};
 
   struct D0 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D1 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D2 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D3 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D4 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D5 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D6 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D7 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D8 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   struct D9 {
-    std::unique_ptr<Uint> a0;
+    std::shared_ptr<Uint> a0;
   };
 
   using variant_t = std::variant<Nil, D0, D1, D2, D3, D4, D5, D6, D7, D8, D9>;
@@ -283,70 +283,70 @@ public:
         _dst->v_ = Nil{};
       } else if (std::holds_alternative<D0>(_src->v())) {
         const auto &_alt = std::get<D0>(_src->v());
-        _dst->v_ = D0{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D0{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D0>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D1>(_src->v())) {
         const auto &_alt = std::get<D1>(_src->v());
-        _dst->v_ = D1{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D1{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D1>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D2>(_src->v())) {
         const auto &_alt = std::get<D2>(_src->v());
-        _dst->v_ = D2{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D2{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D2>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D3>(_src->v())) {
         const auto &_alt = std::get<D3>(_src->v());
-        _dst->v_ = D3{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D3{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D3>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D4>(_src->v())) {
         const auto &_alt = std::get<D4>(_src->v());
-        _dst->v_ = D4{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D4{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D4>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D5>(_src->v())) {
         const auto &_alt = std::get<D5>(_src->v());
-        _dst->v_ = D5{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D5{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D5>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D6>(_src->v())) {
         const auto &_alt = std::get<D6>(_src->v());
-        _dst->v_ = D6{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D6{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D6>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D7>(_src->v())) {
         const auto &_alt = std::get<D7>(_src->v());
-        _dst->v_ = D7{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D7{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D7>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D8>(_src->v())) {
         const auto &_alt = std::get<D8>(_src->v());
-        _dst->v_ = D8{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D8{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D8>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
         const auto &_alt = std::get<D9>(_src->v());
-        _dst->v_ = D9{_alt.a0 ? std::make_unique<Uint>() : nullptr};
+        _dst->v_ = D9{_alt.a0 ? std::make_shared<Uint>() : nullptr};
         auto &_dst_alt = std::get<D9>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -360,48 +360,48 @@ public:
   static Uint nil() { return Uint(Nil{}); }
 
   static Uint d0(Uint a0) {
-    return Uint(D0{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D0{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d1(Uint a0) {
-    return Uint(D1{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D1{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d2(Uint a0) {
-    return Uint(D2{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D2{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d3(Uint a0) {
-    return Uint(D3{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D3{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d4(Uint a0) {
-    return Uint(D4{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D4{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d5(Uint a0) {
-    return Uint(D5{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D5{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d6(Uint a0) {
-    return Uint(D6{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D6{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d7(Uint a0) {
-    return Uint(D7{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D7{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d8(Uint a0) {
-    return Uint(D8{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D8{std::make_shared<Uint>(std::move(a0))});
   }
 
   static Uint d9(Uint a0) {
-    return Uint(D9{std::make_unique<Uint>(std::move(a0))});
+    return Uint(D9{std::make_shared<Uint>(std::move(a0))});
   }
 
   // MANIPULATORS
   ~Uint() {
-    std::vector<std::unique_ptr<Uint>> _stack{};
+    std::vector<std::shared_ptr<Uint>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Uint &_node) {
       if (std::holds_alternative<D0>(_node.v_)) {
@@ -486,67 +486,67 @@ struct Uint0 {
   struct Nil0 {};
 
   struct D10 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D11 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D12 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D13 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D14 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D15 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D16 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D17 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D18 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct D19 {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct Da {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct Db {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct Dc {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct Dd {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct De {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   struct Df {
-    std::unique_ptr<Uint0> a0;
+    std::shared_ptr<Uint0> a0;
   };
 
   using variant_t = std::variant<Nil0, D10, D11, D12, D13, D14, D15, D16, D17,
@@ -629,112 +629,112 @@ public:
         _dst->v_ = Nil0{};
       } else if (std::holds_alternative<D10>(_src->v())) {
         const auto &_alt = std::get<D10>(_src->v());
-        _dst->v_ = D10{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D10{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D10>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D11>(_src->v())) {
         const auto &_alt = std::get<D11>(_src->v());
-        _dst->v_ = D11{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D11{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D11>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D12>(_src->v())) {
         const auto &_alt = std::get<D12>(_src->v());
-        _dst->v_ = D12{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D12{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D12>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D13>(_src->v())) {
         const auto &_alt = std::get<D13>(_src->v());
-        _dst->v_ = D13{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D13{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D13>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D14>(_src->v())) {
         const auto &_alt = std::get<D14>(_src->v());
-        _dst->v_ = D14{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D14{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D14>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D15>(_src->v())) {
         const auto &_alt = std::get<D15>(_src->v());
-        _dst->v_ = D15{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D15{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D15>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D16>(_src->v())) {
         const auto &_alt = std::get<D16>(_src->v());
-        _dst->v_ = D16{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D16{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D16>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D17>(_src->v())) {
         const auto &_alt = std::get<D17>(_src->v());
-        _dst->v_ = D17{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D17{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D17>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D18>(_src->v())) {
         const auto &_alt = std::get<D18>(_src->v());
-        _dst->v_ = D18{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D18{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D18>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<D19>(_src->v())) {
         const auto &_alt = std::get<D19>(_src->v());
-        _dst->v_ = D19{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = D19{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<D19>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Da>(_src->v())) {
         const auto &_alt = std::get<Da>(_src->v());
-        _dst->v_ = Da{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = Da{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Da>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Db>(_src->v())) {
         const auto &_alt = std::get<Db>(_src->v());
-        _dst->v_ = Db{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = Db{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Db>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Dc>(_src->v())) {
         const auto &_alt = std::get<Dc>(_src->v());
-        _dst->v_ = Dc{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = Dc{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Dc>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<Dd>(_src->v())) {
         const auto &_alt = std::get<Dd>(_src->v());
-        _dst->v_ = Dd{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = Dd{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Dd>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else if (std::holds_alternative<De>(_src->v())) {
         const auto &_alt = std::get<De>(_src->v());
-        _dst->v_ = De{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = De{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<De>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
         }
       } else {
         const auto &_alt = std::get<Df>(_src->v());
-        _dst->v_ = Df{_alt.a0 ? std::make_unique<Uint0>() : nullptr};
+        _dst->v_ = Df{_alt.a0 ? std::make_shared<Uint0>() : nullptr};
         auto &_dst_alt = std::get<Df>(_dst->v_);
         if (_alt.a0) {
           _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
@@ -748,72 +748,72 @@ public:
   static Uint0 nil0() { return Uint0(Nil0{}); }
 
   static Uint0 d10(Uint0 a0) {
-    return Uint0(D10{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D10{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d11(Uint0 a0) {
-    return Uint0(D11{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D11{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d12(Uint0 a0) {
-    return Uint0(D12{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D12{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d13(Uint0 a0) {
-    return Uint0(D13{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D13{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d14(Uint0 a0) {
-    return Uint0(D14{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D14{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d15(Uint0 a0) {
-    return Uint0(D15{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D15{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d16(Uint0 a0) {
-    return Uint0(D16{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D16{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d17(Uint0 a0) {
-    return Uint0(D17{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D17{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d18(Uint0 a0) {
-    return Uint0(D18{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D18{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 d19(Uint0 a0) {
-    return Uint0(D19{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(D19{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 da(Uint0 a0) {
-    return Uint0(Da{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(Da{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 db(Uint0 a0) {
-    return Uint0(Db{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(Db{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 dc(Uint0 a0) {
-    return Uint0(Dc{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(Dc{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 dd(Uint0 a0) {
-    return Uint0(Dd{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(Dd{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 de(Uint0 a0) {
-    return Uint0(De{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(De{std::make_shared<Uint0>(std::move(a0))});
   }
 
   static Uint0 df(Uint0 a0) {
-    return Uint0(Df{std::make_unique<Uint0>(std::move(a0))});
+    return Uint0(Df{std::make_shared<Uint0>(std::move(a0))});
   }
 
   // MANIPULATORS
   ~Uint0() {
-    std::vector<std::unique_ptr<Uint0>> _stack{};
+    std::vector<std::shared_ptr<Uint0>> _stack{};
     _stack.reserve(8);
     auto _drain = [&](Uint0 &_node) {
       if (std::holds_alternative<D10>(_node.v_)) {
